@@ -1,6 +1,6 @@
 # Multi-Agent -Custom Automation Engine Solution Accelerator
 
-MENU: [**USER STORY**](#user-story) \| [**SIMPLE DEPLOY**](#simple-deploy)  \| [**SUPPORTING DOCUMENTATION**](#supporting-documentation) \|
+MENU: [**USER STORY**](#user-story) \| [**SIMPLE DEPLOY**](#quick-deploy)  \| [**SUPPORTING DOCUMENTATION**](#supporting-documentation) \|
 
 <h2><img src="./documentation/images/readme/userStory.png" width="64">
 <br/>
@@ -71,7 +71,7 @@ This guide provides step-by-step instructions for deploying your application usi
 
 There are several ways to deploy the solution.  You can deploy to run in Azure in one click, or manually, or you can deploy locally.
 
-## One Click Azure Deployment
+## Quick Deploy
 
 <h2><img src="./documentation/images/readme/oneClickDeploy.png" width="64"></h2>
 
@@ -172,6 +172,7 @@ az containerapp create \
 
 ```
 <br></br>
+
 ## Supporting documentation
 
 
