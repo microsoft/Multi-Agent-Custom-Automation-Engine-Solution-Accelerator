@@ -42,6 +42,7 @@
      ```bash
      az ad signed-in-user show --query id -o tsv
      ```
+     You will also be prompted for locations for Cosmos and Open AI services.  This is to allow separate regions where there may be service quota restrictions
 
 5. **Create a `.env` file:**
 
@@ -53,22 +54,28 @@
 
 7. **(Optional) Set up a virtual environment:**
 
-   - If you are using `venv`, create and activate your virtual environment.
+   - If you are using `venv`, create and activate your virtual environment for both the frontend and backend folders.
 
-8. **Install requirements:**
+8. **Install requirements - frontend:**
 
-   - Open a terminal in the `src` folder and run:
+   - In each of the frontend and backend folders -
+     Open a terminal in the `src` folder and run:
      ```bash
      pip install -r requirements.txt
      ```
 
 9. **Run the application:**
-
+   - From the src/backend directory:
    ```bash
    python app.py
    ```
+   - In a new terminal from the src/frontend directory
+  ```bash
+   python frontend_server.py
+   ```
 
-10. Open a browser and navigate to `http://localhost:8000`
+10. Open a browser and navigate to `http://localhost:3000`
+11. To see swagger API documentation, you can navigate to `http://localhost:8000/docs`
 
 ## Debugging the solution locally
 
