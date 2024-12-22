@@ -80,51 +80,66 @@ There are several ways to deploy the solution.  You can deploy to run in Azure i
 When Deployment is complete, follow steps in [Set Up Authentication in Azure App Service](./documentation/azure_app_service_auth_setup.md) to add app authentication to your web app running on Azure App Service
 
 ## Local Deployment
-To run the solution site and API backend locally, See the [local deployment guide](./documentation/LocalDeployment.md).
+To run the solution site and API backend only locally for development and debugging purposes, See the [local deployment guide](./documentation/LocalDeployment.md).
 
 ## Manual Azure Deployment
+Manual Deployment differs from the ‘Quick Deploy’ option in that it will install an Azure Container Registry (ACR) service, and relies on the installer to build and push the necessary containers to this ACR.  This allows you to build and push your own code changes and provides a sample solution you can customize based on your requirements.
+
 ### Prerequisites
 
-- Azure CLI installed
+- Current Azure CLI installed
+  You can update to the latest version using ```az upgrade```
 - Azure account with appropriate permissions
 - Docker installed
-- Azure Container Registry installed
 
-### Get Admin Credentials from ACR
+### Deploy the Azure Services
+All of the necessary Azure services can be deployed using the /deploy/macae.bicep script.  This script will require the following parameters:
+
+```
+Az login
+az account set --subscription <SUBSCRIPTION_ID>
+az group create --name <RG_NAME> --location <RG_LOCATION>
+```
+To deploy the script you can use the Azure CLI.
+```
+az deployment group create \
+  --resource-group <RG_NAME> \
+  --template-file <BICEP_FILE> \
+  --name <DEPLOYMENT_NAME>
+```
+
+Note: if you are using windows with PowerShell, the continuation character (currently ‘\’) should change to the tick mark (‘`’).
+
+The template will require you fill in locations for Cosmos and OpenAI services.  This is to avoid the possibility of regional quota errors for either of these resources.
+
+### Create the Containers
+#### Get admin credentials from ACR
 
 Retrieve the admin credentials for your Azure Container Registry (ACR):
 
 ```sh
 az acr credential show \
---name acrcontoso7wx5mg43sbnl4 \
---resource-group rg-ssattiraju
+--name <e.g. macaeacr2t62qyozi76bs> \
+--resource-group <rg-name>
 ```
 
-### Login to ACR
+#### Login to ACR
 
 Login to your Azure Container Registry:
 
 ```sh
-az acr login --name acrcontoso7wx5mg43sbnl4
+az acr login --name <e.g. macaeacr2t62qyozi76bs>
 ```
 
-### Build Image
+#### Build and push the image
 
-Build the Docker image and push it to your Azure Container Registry:
+Build the frontend and backend Docker images and push them  to your Azure Container Registry. Run the following from the src/backend and the src/frontend directory contexts:
 
 ```sh
 az acr build \
---registry acrcontoso7wx5mg43sbnl4 \
---resource-group rg-name \
---image macae:latest .
-```
-
-### List the Image Created
-
-List the images in your Azure Container Registry:
-
-```sh
-az acr repository list --name acrcontoso7wx5mg43sbnl4
+--registry <e.g. macaeacr2t62qyozi76bs> \
+--resource-group <rg-name> \
+--image <e.g. backendmacae:latest> .
 ```
 
 ### Upgrade Container App Extension
@@ -132,46 +147,69 @@ az acr repository list --name acrcontoso7wx5mg43sbnl4
 Ensure you have the latest version of the Azure Container Apps extension:
 `az extension add --name containerapp --upgrade`
 
-### Get List of Available Locations
+### Add images to the Container APP and Web App services
 
-Retrieve a list of available Azure locations:
-`az account list-locations -o table`
+To add your newly created backend image: 
+- Navigate to the Container App Service in the Azure portal
+- Click on Application/Containers in the left pane
+- Click on the "Edit and deploy" button in the upper left of the containers pane
+- In the "Create and deploy new revision" page, click on your container image 'backend'.  This will give you the option of reconfiguring the container image, and also has an Environment variables tab
+- Change the properties page to 
+  - point to your Azure Container registry with a private image type and your image name (e.g. backendmacae:latest)
+  - under "Authentication type" select "Managed Identity" and choose the 'mace-containerapp-pull'... identity setup in the bicep template
+- In the environment variables section add the following (each with a 'Manual entry' source):
 
-### Create Apps Environment
+        name: 'COSMOSDB_ENDPOINT'
+        value: \<Cosmos endpoint>
 
-Create an environment for your Azure Container Apps:
+        name: 'COSMOSDB_DATABASE'
+        value: 'autogen'
+	    Note: To change the default, you will need to create the database in Cosmos
+			  
+        name: 'COSMOSDB_CONTAINER'
+        value: 'memory'
 
-```sh
-az containerapp env create \
---name python-container-env \
---resource-group rg-name \
---location southeastasia
+        name: 'AZURE_OPENAI_ENDPOINT'
+        value: <Azure OpenAI endpoint>
+
+        name: 'AZURE_OPENAI_DEPLOYMENT_NAME'
+        value: 'gpt-4o'
+
+        name: 'AZURE_OPENAI_API_VERSION'
+        value: '2024-08-01-preview'
+		Note: Version should be updated based on latest available
+
+        name: 'FRONTEND_SITE_NAME'
+        value: 'https://<website Name>.azurewebsites.net'
+
+- Click 'Save' and deploy your new revision
+
+To add the new container to your website run the following:
+
+```
+az webapp config container set --resource-group macae_full_deploy2_rg \
+--name macae-frontend-2t62qyozi76bs \
+--container-image-name macaeacr2t62qyozi76bs.azurecr.io/frontendmacae:latest  \
+--container-registry-url https://macaeacr2t62qyozi76bs.azurecr.io
 ```
 
-### Get Credentials
 
-```sh
-az acr credential show -n acrcontoso7wx5mg43sbnl4
-```
+### Add the Entra identity provider to the Azure Web App
+To add the identity provider, please follow the steps outlined in [Set Up Authentication in Azure App Service](./documentation/azure_app_service_auth_setup.md)
 
-### Create container app
+### Run locally and debug
 
-create the container app with the config
+To debug the solution, you can use the Cosmos and OpenAI services you have manually deployed.  To do this, you need to ensure that your Azure identity has the required permissions on the Cosmos and Open AI services. 
 
-```sh
-az containerapp create \
- --name python-container-app \
- --resource-group rg-name \
- --image acrcontoso7wx5mg43sbnl4.azurecr.io/macae:latest \
- --environment python-container-env \
- --ingress external --target-port 8000 \
- --registry-server acrcontoso7wx5mg43sbnl4.azurecr.io \
- --registry-username password \
- --registry-password REGISTRY_PASSWORD \
- --query properties.configuration.ingress.fqdn
+- For OpeAI service, you can add yourself to the ‘Cognitive Services OpenAI User’ permission in the Access Control (IAM) pane of the Azure portal.  
+- Cosmos is a little more difficult as it requires permissions be added through script.  See these examples for more information: 
+  - [Use data plane role-based access control - Azure Cosmos DB for NoSQL | Microsoft Learn](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/security/how-to-grant-data-plane-role-based-access?tabs=built-in-definition%2Cpython&pivots=azure-interface-cli) 
+  - [az cosmosdb sql role assignment | Microsoft Learn](https://learn.microsoft.com/en-us/cli/azure/cosmosdb/sql/role/assignment?view=azure-cli-latest#az-cosmosdb-sql-role-assignment-create) 
 
-```
-<br></br>
+Add the appropriate endpoints from Cosmos and OpenAI services to your .env file.  
+Note that you can configure the name of the Cosmos database in the configuration.  This can be helpful if you wish to separate the data messages generated in local debugging from those associated with the cloud based solution.  If you choose to use a different database, you will need to create that database in the Cosmos instance as this is not done automatically.
+
+If you are using VSCode, you can use the debug configuration shown in the [local deployment guide](./documentation/LocalDeployment.md).
 
 ## Supporting documentation
 
