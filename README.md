@@ -142,11 +142,6 @@ az acr build \
 --image <e.g. backendmacae:latest> .
 ```
 
-### Upgrade Container App Extension
-
-Ensure you have the latest version of the Azure Container Apps extension:
-`az extension add --name containerapp --upgrade`
-
 ### Add images to the Container APP and Web App services
 
 To add your newly created backend image: 
