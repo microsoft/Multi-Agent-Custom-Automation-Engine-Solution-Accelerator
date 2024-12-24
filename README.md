@@ -96,7 +96,7 @@ Manual Deployment differs from the ‘Quick Deploy’ option in that it will ins
 All of the necessary Azure services can be deployed using the /deploy/macae.bicep script.  This script will require the following parameters:
 
 ```
-Az login
+az login
 az account set --subscription <SUBSCRIPTION_ID>
 az group create --name <RG_NAME> --location <RG_LOCATION>
 ```
