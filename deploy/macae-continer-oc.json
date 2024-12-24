@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.32.4.45862",
-      "templateHash": "13409532170922983631"
+      "templateHash": "17567587246932458853"
     }
   },
   "parameters": {
@@ -362,10 +362,6 @@
                 {
                   "name": "AZURE_OPENAI_API_VERSION",
                   "value": "[variables('aoaiApiVersion')]"
-                },
-                {
-                  "name": "DEV_BYPASS_AUTH",
-                  "value": "true"
                 },
                 {
                   "name": "FRONTEND_SITE_NAME",
