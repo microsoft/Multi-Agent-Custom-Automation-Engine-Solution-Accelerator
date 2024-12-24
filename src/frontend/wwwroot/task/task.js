@@ -673,7 +673,7 @@
           console.log("approveStages", data);
           approve
             ? notyf.success(`All stages approved.`)
-            : notyf.error(`All stages rejected.`);
+            : notyf.error(`All stages cancelled.`);
           taskDetails();
         })
         .catch((error) => {
