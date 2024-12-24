@@ -1,4 +1,4 @@
-# Multi-Agent-Custom Automation Engine Solution Accelerator
+# Multi-Agent: Custom Automation Engine – Solution Accelerator
 
 MENU: [**USER STORY**](#user-story) \| [**QUICK DEPLOY**](#quick-deploy)  \| [**SUPPORTING DOCUMENTATION**](#supporting-documentation) \|
 
