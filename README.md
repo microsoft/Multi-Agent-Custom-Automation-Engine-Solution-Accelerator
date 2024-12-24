@@ -1,6 +1,6 @@
-# Multi-Agent -Custom Automation Engine Solution Accelerator
+# Multi-Agent-Custom Automation Engine Solution Accelerator
 
-MENU: [**USER STORY**](#user-story) \| [**SIMPLE DEPLOY**](#quick-deploy)  \| [**SUPPORTING DOCUMENTATION**](#supporting-documentation) \|
+MENU: [**USER STORY**](#user-story) \| [**QUICK DEPLOY**](#quick-deploy)  \| [**SUPPORTING DOCUMENTATION**](#supporting-documentation) \|
 
 <h2><img src="./documentation/images/readme/userStory.png" width="64">
 <br/>
@@ -194,7 +194,7 @@ To add the identity provider, please follow the steps outlined in [Set Up Authen
 
 ### Run locally and debug
 
-To debug the solution, you can use the Cosmos and OpenAI services you have manually deployed.  To do this, you need to ensure that your Azure identity has the required permissions on the Cosmos and Open AI services. 
+To debug the solution, you can use the Cosmos and OpenAI services you have manually deployed.  To do this, you need to ensure that your Azure identity has the required permissions on the Cosmos and OpenAI services. 
 
 - For OpeAI service, you can add yourself to the ‘Cognitive Services OpenAI User’ permission in the Access Control (IAM) pane of the Azure portal.  
 - Cosmos is a little more difficult as it requires permissions be added through script.  See these examples for more information: 
