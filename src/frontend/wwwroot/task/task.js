@@ -584,6 +584,9 @@
     if (task.overall_status === "completed") {
       removeClassesExcept(taskStatusTag, "tag");
       taskStatusTag.classList.add("is-success");
+    } else if (task.overall_status === "in_progress") {
+      removeClassesExcept(taskStatusTag, "tag");
+      taskStatusTag.classList.add("is-info");
     }
   };
 
