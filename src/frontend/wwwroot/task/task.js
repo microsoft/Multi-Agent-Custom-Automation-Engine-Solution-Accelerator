@@ -791,6 +791,7 @@
               taskMessageAddButton.classList.remove("is-loading");
 
               taskMessageTextarea.value = "";
+              fetchPlanDetails(taskStore.id);
 
               // Reset character count to 0
               const charCount = document.getElementById("charCount");
@@ -798,6 +799,7 @@
                 charCount.textContent = "0";
               }
               updateButtonImage();
+              
               notyf.success("Additional details registered in plan.");
             })
             .catch((error) => {
