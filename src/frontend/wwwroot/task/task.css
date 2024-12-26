@@ -94,6 +94,7 @@
 
 .menu-list a.menu-stage span {
   flex: 1;
+  word-break: break-word;
 }
 
 .menu-list a.menu-stage.rejected span {

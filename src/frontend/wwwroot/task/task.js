@@ -245,33 +245,33 @@
 
               switch (stage.status) {
                 case "planned":
-                  stageStatusIcon = `<i class="fa-solid fa-calendar-week mr-3"></i>`;
+                  stageStatusIcon = `<i class="fa-solid fa-calendar-week mr-2"></i>`;
                   break;
                 case "awaiting_feedback":
-                  stageStatusIcon = `<i class="fa-solid fa-person-circle-exclamation mr-3 has-text-warning"></i>`;
+                  stageStatusIcon = `<i class="fa-solid fa-person-circle-exclamation mr-2 has-text-warning"></i>`;
                   break;
                 case "approved":
-                  stageStatusIcon = `<i class="fa-solid fa-calendar-check mr-3 has-text-info"></i>`;
+                  stageStatusIcon = `<i class="fa-solid fa-calendar-check mr-2 has-text-info"></i>`;
                   break;
                 case "rejected":
-                  stageStatusIcon = `<i class="fa-solid fa-calendar-xmark mr-3 has-text-grey-light"></i>`;
+                  stageStatusIcon = `<i class="fa-solid fa-calendar-xmark mr-2 has-text-grey-light"></i>`;
                   break;
                 case "action_requested":
-                  stageStatusIcon = `<i class="fa-solid fa-calendar-day mr-3 has-text-info fa-beat"></i>`;
+                  stageStatusIcon = `<i class="fa-solid fa-calendar-day mr-2 has-text-info fa-beat"></i>`;
                   break;
                 case "completed":
-                  stageStatusIcon = `<i class="fa-solid fa-calendar-check mr-3 has-text-success"></i>`;
+                  stageStatusIcon = `<i class="fa-solid fa-calendar-check mr-2 has-text-success"></i>`;
                   break;
                 case "failed":
-                  stageStatusIcon = `<i class="fa-solid fa-calendar-day mr-3 has-text-danger"></i>`;
+                  stageStatusIcon = `<i class="fa-solid fa-calendar-day mr-2 has-text-danger"></i>`;
                   break;
                 default:
-                  stageStatusIcon = `<i class="fa-solid fa-calendar-week mr-3"></i>`;
+                  stageStatusIcon = `<i class="fa-solid fa-calendar-week mr-2"></i>`;
               }
 
               if (stage.human_approval_status === "rejected") {
                 stageRejected = "rejected";
-                stageStatusIcon = `<i class="fa-solid fa-calendar-xmark mr-3 has-text-grey-light"></i>`;
+                stageStatusIcon = `<i class="fa-solid fa-calendar-xmark mr-2 has-text-grey-light"></i>`;
               }
 
               if (stage.human_approval_status === "requested")
