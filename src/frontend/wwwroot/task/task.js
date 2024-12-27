@@ -125,6 +125,16 @@
     element.className = classToKeep;
   };
 
+  const handleDisableOfActions = (status) => {
+    if(status === "completed"){
+      taskPauseButton.disabled=true;
+      taskCancelButton.disabled=true;
+    } else {
+      taskPauseButton.disabled=false;
+      taskCancelButton.disabled=false;
+    }
+  }
+
   const taskHeaderActions = () => {
     if (taskPauseButton) {
       taskPauseButton.addEventListener("click", (event) => {
@@ -151,6 +161,7 @@
     if (taskCancelButton) {
       taskCancelButton.addEventListener("click", (event) => {
         const apiTaskStore = JSON.parse(sessionStorage.getItem("apiTask"));
+        handleDisableOfActions("completed")
         actionStages(apiTaskStore, false);
       });
     }
@@ -277,8 +288,8 @@
               if (stage.human_approval_status === "requested")
                 stageActions = `
                                     <div class="menu-stage-actions">
-                                        <i class="fa-solid fa-square-check ml-3 menu-stage-action has-text-info" data-action="approved" data-stage="${stageBase64}"></i>
-                                        <i class="fa-solid fa-square-xmark ml-1 menu-stage-action" data-action="rejected" data-stage="${stageBase64}"></i>
+                                        <i title="Approve" class="fa-solid fa-square-check ml-3 menu-stage-action has-text-info" data-action="approved" data-stage="${stageBase64}"></i>
+                                        <i title="Reject" class="fa-solid fa-square-xmark ml-1 menu-stage-action" data-action="rejected" data-stage="${stageBase64}"></i>
                                     </div>
                                 `;
 
@@ -588,6 +599,7 @@
       removeClassesExcept(taskStatusTag, "tag");
       taskStatusTag.classList.add("is-info");
     }
+    handleDisableOfActions(task.overall_status)
   };
 
   const isHumanFeedbackPending = () => {
