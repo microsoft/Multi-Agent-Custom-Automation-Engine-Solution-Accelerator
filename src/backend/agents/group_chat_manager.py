@@ -2,6 +2,7 @@
 
 import logging
 from datetime import datetime
+import re
 from typing import Dict, List
 
 from autogen_core.base import AgentId, MessageContext
@@ -239,14 +240,22 @@ class GroupChatManager(RoutedAgent):
             action=action_with_history,
             agent=step.agent,
         )
-        logging.info(f"Sending ActionRequest to {step.agent.value.title()}")
+        logging.info(f"Sending ActionRequest to {step.agent.value}")
+              
+        if step.agent != "":
+            agent_name = step.agent.value
+            formatted_agent = re.sub(
+                r"([a-z])([A-Z])", r"\1 \2", agent_name
+            )
+        else:
+            raise ValueError(f"Check {step.agent} is missing")
 
         await self._memory.add_item(
             AgentMessage(
                 session_id=session_id,
                 user_id=self._user_id,
                 plan_id=step.plan_id,
-                content=f"Requesting {step.agent.value.title()} to perform action: {step.action}",
+                content=f"Requesting {formatted_agent} to perform action: {step.action}",
                 source="GroupChatManager",
                 step_id=step.id,
             )
