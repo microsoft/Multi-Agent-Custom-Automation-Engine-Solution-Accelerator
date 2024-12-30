@@ -34,12 +34,35 @@
 }
 
 .task-details {
-  max-width: 1280px;
+  width: 100%;
 }
+.colChatSec {
+  width: 55%;
+}
+/*Notification message styles start*/
+/* Ensures block-level elements (like <p>, <pre>, etc.) wrap inside the message */
+.notification p,
+.notification pre {
+  margin: 0;
+  word-wrap: break-word;
+  white-space: pre-wrap; /* Allow preformatted text to wrap */
+}
+.message-content {
+  max-width: 100%;
+  overflow: hidden;
+  word-break: break-word;
+  line-height: 1.4;
+}
+/* Optional: Add word-breaking for URLs */
+.notification a {
+  word-wrap: break-word;
+  word-break: break-word;
+  text-decoration: underline;
+}
+/*Notification message styles end*/
 
 .task-progress {
   height: 40vh;
-  max-width: 843px;
   overflow-y: auto;
   background-color: white;
   border-radius: var(--bulma-radius);
@@ -58,9 +81,12 @@
 }
 
 .task-progress .notification {
-  max-width: 744px;
-  display: inline-block;
   padding: 0.5rem 1rem;
+  display: block;
+  max-width: 100%;
+  word-wrap: break-word;
+  box-sizing: border-box;
+  overflow-wrap: break-word;
 }
 
 .menu-list .menu-item,
@@ -96,7 +122,7 @@
 
 .menu-list a.menu-stage span {
   flex: 1;
-  word-break: break-word;
+  word-break: break-word; /*this for stages span alignment*/
 }
 
 .menu-list a.menu-stage.rejected span {
