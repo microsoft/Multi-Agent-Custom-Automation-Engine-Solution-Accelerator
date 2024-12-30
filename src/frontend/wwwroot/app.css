@@ -34,7 +34,9 @@ body {
 #app .asside {
   background: rgba(231, 236, 243, 0.7);
 }
-
+ul#tasksStats.menu-list {
+  min-height: 100px;
+}
 @media (min-width: 1800px) {
   #app .asside {
     max-width: 400px;
@@ -83,7 +85,6 @@ body {
 #app .iframe {
   width: 100%;
   background-color: transparent;
-  /* overflow-y: auto; */
 }
 
 #app .context-switch {
