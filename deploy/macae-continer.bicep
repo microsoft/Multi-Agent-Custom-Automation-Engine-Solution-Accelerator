@@ -276,10 +276,6 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
               value: aoaiApiVersion
             }
             {
-              name: 'DEV_BYPASS_AUTH'
-              value: 'true'
-            }
-            {
               name: 'FRONTEND_SITE_NAME'
               value: 'https://${format(uniqueNameFormat, 'frontend')}.azurewebsites.net'
             }

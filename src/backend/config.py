@@ -40,7 +40,6 @@ class Config:
     AZURE_OPENAI_ENDPOINT = GetRequiredConfig("AZURE_OPENAI_ENDPOINT")
     AZURE_OPENAI_API_KEY = GetOptionalConfig("AZURE_OPENAI_API_KEY")
 
-    DEV_BYPASS_AUTH = GetBoolConfig("DEV_BYPASS_AUTH")
     FRONTEND_SITE_NAME = GetOptionalConfig("FRONTEND_SITE_NAME", "http://127.0.0.1:3000")
     
 

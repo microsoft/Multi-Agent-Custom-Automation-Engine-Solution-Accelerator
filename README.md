@@ -1,6 +1,6 @@
-# Multi-Agent -Custom Automation Engine Solution Accelerator
+# Multi-Agent: Custom Automation Engine – Solution Accelerator
 
-MENU: [**USER STORY**](#user-story) \| [**SIMPLE DEPLOY**](#simple-deploy)  \| [**SUPPORTING DOCUMENTATION**](#supporting-documentation) \|
+MENU: [**USER STORY**](#user-story) \| [**QUICK DEPLOY**](#quick-deploy)  \| [**SUPPORTING DOCUMENTATION**](#supporting-documentation) \|
 
 <h2><img src="./documentation/images/readme/userStory.png" width="64">
 <br/>
@@ -41,7 +41,7 @@ This application is an AI-driven orchestration system that manages a group of AI
 - Incorporate human feedback into the workflow.
 - Maintain state across sessions with persistent storage.
 
-This system is intended for developing and deploying custom AI solutions for specific customers. This code has not been tested as an end-to-end, reliable, RAI compliant production application- it is a foundation to help accelerate building out multi-agent systems. You are encouraged to add your own data and functions to the agents, and then you must apply your own performance and safety evaluation testing frameworks to this system before deploying it.
+This system is intended for developing and deploying custom AI solutions for specific customers. This code has not been tested as an end-to-end, reliable production application- it is a foundation to help accelerate building out multi-agent systems. You are encouraged to add your own data and functions to the agents, and then you must apply your own performance and safety evaluation testing frameworks to this system before deploying it.
 
 \
 ![image](./documentation/images/readme/macae-application.png)
@@ -71,7 +71,7 @@ This guide provides step-by-step instructions for deploying your application usi
 
 There are several ways to deploy the solution.  You can deploy to run in Azure in one click, or manually, or you can deploy locally.
 
-## One Click Azure Deployment
+## Quick Deploy
 
 <h2><img src="./documentation/images/readme/oneClickDeploy.png" width="64"></h2>
 
@@ -80,98 +80,132 @@ There are several ways to deploy the solution.  You can deploy to run in Azure i
 When Deployment is complete, follow steps in [Set Up Authentication in Azure App Service](./documentation/azure_app_service_auth_setup.md) to add app authentication to your web app running on Azure App Service
 
 ## Local Deployment
-To run the solution site and API backend locally, See the [local deployment guide](./documentation/LocalDeployment.md).
+To run the solution site and API backend only locally for development and debugging purposes, See the [local deployment guide](./documentation/LocalDeployment.md).
 
 ## Manual Azure Deployment
+Manual Deployment differs from the ‘Quick Deploy’ option in that it will install an Azure Container Registry (ACR) service, and relies on the installer to build and push the necessary containers to this ACR.  This allows you to build and push your own code changes and provides a sample solution you can customize based on your requirements.
+
 ### Prerequisites
 
-- Azure CLI installed
+- Current Azure CLI installed
+  You can update to the latest version using ```az upgrade```
 - Azure account with appropriate permissions
 - Docker installed
-- Azure Container Registry installed
 
-### Get Admin Credentials from ACR
+### Deploy the Azure Services
+All of the necessary Azure services can be deployed using the /deploy/macae.bicep script.  This script will require the following parameters:
+
+```
+az login
+az account set --subscription <SUBSCRIPTION_ID>
+az group create --name <RG_NAME> --location <RG_LOCATION>
+```
+To deploy the script you can use the Azure CLI.
+```
+az deployment group create \
+  --resource-group <RG_NAME> \
+  --template-file <BICEP_FILE> \
+  --name <DEPLOYMENT_NAME>
+```
+
+Note: if you are using windows with PowerShell, the continuation character (currently ‘\’) should change to the tick mark (‘`’).
+
+The template will require you fill in locations for Cosmos and OpenAI services.  This is to avoid the possibility of regional quota errors for either of these resources.
+
+### Create the Containers
+#### Get admin credentials from ACR
 
 Retrieve the admin credentials for your Azure Container Registry (ACR):
 
 ```sh
 az acr credential show \
---name acrcontoso7wx5mg43sbnl4 \
---resource-group rg-ssattiraju
+--name <e.g. macaeacr2t62qyozi76bs> \
+--resource-group <rg-name>
 ```
 
-### Login to ACR
+#### Login to ACR
 
 Login to your Azure Container Registry:
 
 ```sh
-az acr login --name acrcontoso7wx5mg43sbnl4
+az acr login --name <e.g. macaeacr2t62qyozi76bs>
 ```
 
-### Build Image
+#### Build and push the image
 
-Build the Docker image and push it to your Azure Container Registry:
+Build the frontend and backend Docker images and push them  to your Azure Container Registry. Run the following from the src/backend and the src/frontend directory contexts:
 
 ```sh
 az acr build \
---registry acrcontoso7wx5mg43sbnl4 \
---resource-group rg-name \
---image macae:latest .
+--registry <e.g. macaeacr2t62qyozi76bs> \
+--resource-group <rg-name> \
+--image <e.g. backendmacae:latest> .
 ```
 
-### List the Image Created
+### Add images to the Container APP and Web App services
 
-List the images in your Azure Container Registry:
+To add your newly created backend image: 
+- Navigate to the Container App Service in the Azure portal
+- Click on Application/Containers in the left pane
+- Click on the "Edit and deploy" button in the upper left of the containers pane
+- In the "Create and deploy new revision" page, click on your container image 'backend'.  This will give you the option of reconfiguring the container image, and also has an Environment variables tab
+- Change the properties page to 
+  - point to your Azure Container registry with a private image type and your image name (e.g. backendmacae:latest)
+  - under "Authentication type" select "Managed Identity" and choose the 'mace-containerapp-pull'... identity setup in the bicep template
+- In the environment variables section add the following (each with a 'Manual entry' source):
 
-```sh
-az acr repository list --name acrcontoso7wx5mg43sbnl4
-```
+        name: 'COSMOSDB_ENDPOINT'
+        value: \<Cosmos endpoint>
 
-### Upgrade Container App Extension
+        name: 'COSMOSDB_DATABASE'
+        value: 'autogen'
+	    Note: To change the default, you will need to create the database in Cosmos
+			  
+        name: 'COSMOSDB_CONTAINER'
+        value: 'memory'
 
-Ensure you have the latest version of the Azure Container Apps extension:
-`az extension add --name containerapp --upgrade`
+        name: 'AZURE_OPENAI_ENDPOINT'
+        value: <Azure OpenAI endpoint>
 
-### Get List of Available Locations
+        name: 'AZURE_OPENAI_DEPLOYMENT_NAME'
+        value: 'gpt-4o'
 
-Retrieve a list of available Azure locations:
-`az account list-locations -o table`
+        name: 'AZURE_OPENAI_API_VERSION'
+        value: '2024-08-01-preview'
+		Note: Version should be updated based on latest available
 
-### Create Apps Environment
+        name: 'FRONTEND_SITE_NAME'
+        value: 'https://<website Name>.azurewebsites.net'
 
-Create an environment for your Azure Container Apps:
+- Click 'Save' and deploy your new revision
 
-```sh
-az containerapp env create \
---name python-container-env \
---resource-group rg-name \
---location southeastasia
-```
-
-### Get Credentials
-
-```sh
-az acr credential show -n acrcontoso7wx5mg43sbnl4
-```
-
-### Create container app
-
-create the container app with the config
-
-```sh
-az containerapp create \
- --name python-container-app \
- --resource-group rg-name \
- --image acrcontoso7wx5mg43sbnl4.azurecr.io/macae:latest \
- --environment python-container-env \
- --ingress external --target-port 8000 \
- --registry-server acrcontoso7wx5mg43sbnl4.azurecr.io \
- --registry-username password \
- --registry-password REGISTRY_PASSWORD \
- --query properties.configuration.ingress.fqdn
+To add the new container to your website run the following:
 
 ```
-<br></br>
+az webapp config container set --resource-group macae_full_deploy2_rg \
+--name macae-frontend-2t62qyozi76bs \
+--container-image-name macaeacr2t62qyozi76bs.azurecr.io/frontendmacae:latest  \
+--container-registry-url https://macaeacr2t62qyozi76bs.azurecr.io
+```
+
+
+### Add the Entra identity provider to the Azure Web App
+To add the identity provider, please follow the steps outlined in [Set Up Authentication in Azure App Service](./documentation/azure_app_service_auth_setup.md)
+
+### Run locally and debug
+
+To debug the solution, you can use the Cosmos and OpenAI services you have manually deployed.  To do this, you need to ensure that your Azure identity has the required permissions on the Cosmos and OpenAI services. 
+
+- For OpeAI service, you can add yourself to the ‘Cognitive Services OpenAI User’ permission in the Access Control (IAM) pane of the Azure portal.  
+- Cosmos is a little more difficult as it requires permissions be added through script.  See these examples for more information: 
+  - [Use data plane role-based access control - Azure Cosmos DB for NoSQL | Microsoft Learn](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/security/how-to-grant-data-plane-role-based-access?tabs=built-in-definition%2Cpython&pivots=azure-interface-cli) 
+  - [az cosmosdb sql role assignment | Microsoft Learn](https://learn.microsoft.com/en-us/cli/azure/cosmosdb/sql/role/assignment?view=azure-cli-latest#az-cosmosdb-sql-role-assignment-create) 
+
+Add the appropriate endpoints from Cosmos and OpenAI services to your .env file.  
+Note that you can configure the name of the Cosmos database in the configuration.  This can be helpful if you wish to separate the data messages generated in local debugging from those associated with the cloud based solution.  If you choose to use a different database, you will need to create that database in the Cosmos instance as this is not done automatically.
+
+If you are using VSCode, you can use the debug configuration shown in the [local deployment guide](./documentation/LocalDeployment.md).
+
 ## Supporting documentation
 
 
@@ -179,7 +213,7 @@ az containerapp create \
 
 ### How to customize
 
-This solution is designed to be easily customizable. You can modify the front end site, or even build your own front end and attach to the backend API. You can further customize the backend by adding your own agents with their own specific capabilities. Deeper technical information to aid in this customization can be found in this [document](.\documentation\CustomizeSolution.md).
+This solution is designed to be easily customizable. You can modify the front end site, or even build your own front end and attach to the backend API. You can further customize the backend by adding your own agents with their own specific capabilities. Deeper technical information to aid in this customization can be found in this [document](./documentation/CustomizeSolution.md).
 
 ### Additional resources
 

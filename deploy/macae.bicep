@@ -1,21 +1,16 @@
 @description('Location for all resources.')
-param location string = 'EastUS2' //Fixed for model availability, change back to resourceGroup().location
+param location string = resourceGroup().location
+
+@description('location for Cosmos DB resources.')
+// prompt for this as there is often quota restrictions
+param cosmosLocation string
 
 @description('Location for OpenAI resources.')
-param azureOpenAILocation string = 'EastUS' //Fixed for model availability
+// prompt for this as there is often quota restrictions
+param azureOpenAILocation string
 
 @description('A prefix to add to the start of all resource names. Note: A "unique" suffix will also be added')
 param prefix string = 'macae'
-
-@description('The container image name and tag to deploy to the backend container app, if this is not set the container app just default to an empty image')
-param backendContainerImageNameTag  string = ''
-
-@description('The container image name and tag for the frontend application, if this is not set the container app just default to an empty image')
-param frontendContainerImageNameTag string = ''
-
-@secure()
-@description('The visitor code/password that must be provided to access the container app. If left as-is, a new password will be generated and output. If this is set to empty a new code will be generated on each restart.')
-param visitorPassword string = base64(newGuid())
 
 @description('Tags to apply to all deployed resources')
 param tags object = {}
@@ -31,21 +26,26 @@ param resourceSize {
     maxReplicas: int
   }
 } = {
-  gpt4oCapacity: 15
-  cosmosThroughput: 400
+  gpt4oCapacity: 50
+  cosmosThroughput: 1000
   containerAppSize: {
-    cpu: '1.0'
-    memory: '2.0Gi'
-    minReplicas: 0
+    cpu: '2.0'
+    memory: '4.0Gi'
+    minReplicas: 1
     maxReplicas: 1
   }
 }
 
+
+// var appVersion = 'latest'
+// var resgistryName = 'biabcontainerreg'
+// var dockerRegistryUrl = 'https://${resgistryName}.azurecr.io'
+var placeholderImage = 'hello-world:latest'
+
 var uniqueNameFormat = '${prefix}-{0}-${uniqueString(resourceGroup().id, prefix)}'
 var uniqueShortNameFormat = '${toLower(prefix)}{0}${uniqueString(resourceGroup().id, prefix)}'
-var aoaiApiVersion = '2024-08-01-preview'
-var emptyContainerImage = 'alpine:latest'
-param frontendSiteName string = '${prefix}-frontend-${uniqueString(resourceGroup().id)}'
+//var aoaiApiVersion = '2024-08-01-preview'
+
 
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: format(uniqueNameFormat, 'logs')
@@ -111,9 +111,38 @@ resource acaAoaiRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-
   }
 }
 
+resource acr 'Microsoft.ContainerRegistry/registries@2023-11-01-preview' = {
+  name: format(uniqueShortNameFormat, 'acr')
+  location: location
+  sku: {
+    name: 'Standard'
+  }
+  properties: {
+    adminUserEnabled: true  // Add this line
+  }
+}
+
+resource pullIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-07-31-preview' = {
+  name: format(uniqueNameFormat, 'containerapp-pull')
+  location: location
+}
+
+resource acrPullDefinition 'Microsoft.Authorization/roleDefinitions@2022-05-01-preview' existing = {
+  name: '7f951dda-4ed3-4680-a7ca-43fe172d538d' //'AcrPull'
+}
+
+resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(acr.id, pullIdentity.id, acrPullDefinition.id)
+  properties: {
+    principalId: pullIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: acrPullDefinition.id
+  }
+}
+
 resource cosmos 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
   name: format(uniqueNameFormat, 'cosmos')
-  location: location
+  location: cosmosLocation
   tags: tags
   kind: 'GlobalDocumentDB'
   properties: {
@@ -122,7 +151,7 @@ resource cosmos 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
     locations: [
       {
         failoverPriority: 0
-        locationName: location
+        locationName: cosmosLocation
       }
     ]
   }
@@ -161,35 +190,6 @@ resource cosmos 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
   }
 }
 
-resource acr 'Microsoft.ContainerRegistry/registries@2023-11-01-preview' = {
-  name: format(uniqueShortNameFormat, 'acr')
-  location: location
-  sku: {
-    name: 'Standard'
-  }
-  properties: {
-    adminUserEnabled: true  // Add this line
-  }
-}
-
-resource pullIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-07-31-preview' = {
-  name: format(uniqueNameFormat, 'containerapp-pull')
-  location: location
-}
-
-resource acrPullDefinition 'Microsoft.Authorization/roleDefinitions@2022-05-01-preview' existing = {
-  name: '7f951dda-4ed3-4680-a7ca-43fe172d538d' //'AcrPull'
-}
-
-resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(acr.id, pullIdentity.id, acrPullDefinition.id)
-  properties: {
-    principalId: pullIdentity.properties.principalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: acrPullDefinition.id
-  }
-}
-
 resource containerAppEnv 'Microsoft.App/managedEnvironments@2024-03-01' = {
   name: format(uniqueNameFormat, 'containerapp')
   location: location
@@ -222,12 +222,13 @@ resource acaCosomsRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleA
   }
 }
 
+@description('')
 resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: '${prefix}-backend'
   location: location
   tags: tags
   identity: {
-    type: 'SystemAssigned,UserAssigned'
+    type: 'SystemAssigned, UserAssigned'
     userAssignedIdentities: {
       '${pullIdentity.id}': {}
     }
@@ -238,14 +239,14 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
       ingress: {
         targetPort: 8000
         external: true
+        corsPolicy: {
+          allowedOrigins: [
+            'https://${format(uniqueNameFormat, 'frontend')}.azurewebsites.net'
+            'http://${format(uniqueNameFormat, 'frontend')}.azurewebsites.net'
+          ]
+        }
       }
       activeRevisionsMode: 'Single'
-      registries: [
-        {
-          server: acr.properties.loginServer
-          identity: pullIdentity.id
-        }
-      ]
     }
     template: {
       scale: {
@@ -265,55 +266,51 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
       containers: [
         {
           name: 'backend'
-          image: empty(trim(backendContainerImageNameTag ))
-            ? emptyContainerImage
-            : '${acr.properties.loginServer}/${backendContainerImageNameTag }'
+          image: placeholderImage
           resources: {
             cpu: json(resourceSize.containerAppSize.cpu)
             memory: resourceSize.containerAppSize.memory
           }
-          env: [
-            {
-              name: 'COSMOSDB_ENDPOINT'
-              value: cosmos.properties.documentEndpoint
-            }
-            {
-              name: 'COSMOSDB_DATABASE'
-              value: cosmos::autogenDb.name
-            }
-            {
-              name: 'COSMOSDB_CONTAINER'
-              value: cosmos::autogenDb::memoryContainer.name
-            }
-            {
-              name: 'AZURE_OPENAI_ENDPOINT'
-              value: openai.properties.endpoint
-            }
-            {
-              name: 'AZURE_OPENAI_DEPLOYMENT_NAME'
-              value: openai::gpt4o.name
-            }
-            {
-              name: 'AZURE_OPENAI_API_VERSION'
-              value: aoaiApiVersion
-            }
-            {
-              name: 'VISITOR_PASSWORD'
-              value: visitorPassword
-            }
-            {
-              name: 'FRONTEND_SITE_NAME'
-              value: 'https://${frontendSiteName}.azurewebsites.net'
-            }
-          ]
         }
+        //   env: [
+        //     {
+        //       name: 'COSMOSDB_ENDPOINT'
+        //       value: cosmos.properties.documentEndpoint
+        //     }
+        //     {
+        //       name: 'COSMOSDB_DATABASE'
+        //       value: cosmos::autogenDb.name
+        //     }
+        //     {
+        //       name: 'COSMOSDB_CONTAINER'
+        //       value: cosmos::autogenDb::memoryContainer.name
+        //     }
+        //     {
+        //       name: 'AZURE_OPENAI_ENDPOINT'
+        //       value: openai.properties.endpoint
+        //     }
+        //     {
+        //       name: 'AZURE_OPENAI_DEPLOYMENT_NAME'
+        //       value: openai::gpt4o.name
+        //     }
+        //     {
+        //       name: 'AZURE_OPENAI_API_VERSION'
+        //       value: aoaiApiVersion
+        //     }
+        //     {
+        //       name: 'FRONTEND_SITE_NAME'
+        //       value: 'https://${format(uniqueNameFormat, 'frontend')}.azurewebsites.net'
+        //     }
+        //   ]
+        // }
       ]
     }
+    
   }
-}
 
+  }
 resource frontendAppServicePlan 'Microsoft.Web/serverfarms@2021-02-01' = {
-  name: '${prefix}-frontend-plan-${uniqueString(resourceGroup().id)}'
+  name: format(uniqueNameFormat, 'frontend-plan')
   location: location
   tags: tags
   sku: {
@@ -328,7 +325,7 @@ resource frontendAppServicePlan 'Microsoft.Web/serverfarms@2021-02-01' = {
 }
 
 resource frontendAppService 'Microsoft.Web/sites@2021-02-01' = {
-  name: frontendSiteName
+  name: format(uniqueNameFormat, 'frontend')
   location: location
   tags: tags
   kind: 'app,linux,container'  // Add this line
@@ -336,19 +333,11 @@ resource frontendAppService 'Microsoft.Web/sites@2021-02-01' = {
     serverFarmId: frontendAppServicePlan.id
     reserved: true
     siteConfig: {
-      linuxFxVersion:'DOCKER|nginx:latest'
+      linuxFxVersion:''//'DOCKER|${frontendDockerImageURL}'
       appSettings: [
         {
           name: 'DOCKER_REGISTRY_SERVER_URL'
-          value: 'https://${acr.properties.loginServer}'
-        }
-        {
-          name: 'DOCKER_REGISTRY_SERVER_USERNAME'
-          value: acr.listCredentials().username
-        }
-        {
-          name: 'DOCKER_REGISTRY_SERVER_PASSWORD'
-          value: acr.listCredentials().passwords[0].value
+          value: acr.properties.loginServer
         }
         {
           name: 'WEBSITES_PORT'
@@ -365,14 +354,13 @@ resource frontendAppService 'Microsoft.Web/sites@2021-02-01' = {
       ]
     }
   }
+  dependsOn: [containerApp]
+  identity: {
+    type: 'SystemAssigned, UserAssigned'
+    userAssignedIdentities: {
+      '${pullIdentity.id}': {}
+    }
+  }
 }
 
-var backendBuildImageTag = 'backend:latest'
-var frontendBuildImageTag = 'frontend:latest'
-
-output buildBackendCommand string = 'az acr build -r ${acr.name} -t ${acr.name}.azurecr.io/${backendBuildImageTag} ./macae/backend'
-output runBackendCommand string = 'az containerapp update -n ${containerApp.name} -g ${resourceGroup().name} --image ${acr.properties.loginServer}/${backendBuildImageTag}'
-output buildFrontendCommand string = 'az acr build -r ${acr.name} -t ${acr.name}.azurecr.io/${frontendBuildImageTag} ./macae/frontend'
-output runFrontendCommand string = 'az webapp config container set --name ${frontendAppService.name} --resource-group ${resourceGroup().name} --docker-custom-image-name ${acr.properties.loginServer}/${frontendBuildImageTag} --docker-registry-server-url ${acr.properties.loginServer}'
 output cosmosAssignCli string = 'az cosmosdb sql role assignment create --resource-group "${resourceGroup().name}" --account-name "${cosmos.name}" --role-definition-id "${cosmos::contributorRoleDefinition.id}" --scope "${cosmos.id}" --principal-id "fill-in"'
-output backendApiUrl string = containerApp.properties.configuration.ingress.fqdn
