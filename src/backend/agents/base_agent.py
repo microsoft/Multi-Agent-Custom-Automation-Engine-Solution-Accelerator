@@ -13,6 +13,7 @@ from autogen_core.components.tools import Tool
 from context.cosmos_memory import CosmosBufferedChatCompletionContext
 from models.messages import (ActionRequest, ActionResponse,
                              AgentMessage, Step, StepStatus)
+from azure.monitor.events.extension import track_event
 
 class BaseAgent(RoutedAgent):
     def __init__(
@@ -94,14 +95,53 @@ class BaseAgent(RoutedAgent):
                     step_id=message.step_id,
                 )
             )
+            
+            track_event(
+                "Base agent added into the cosmos",
+                {
+                    "session_id": message.session_id,
+                    "user_id": self._user_id,
+                    "plan_id": message.plan_id,
+                    "content": f"{result}",
+                    "source": self._agent_name,
+                    "step_id": message.step_id,
+                },
+            )
+            
         except Exception as e:
-            print(f"Error during LLM call: {e}")
+            logging.info(f"Error during LLM call: {e}")
+            track_event(
+                "Error during llm call in Base Agent, captured into the cosmos",
+                {
+                    "session_id": message.session_id,
+                    "user_id": self._user_id,
+                    "plan_id": message.plan_id,
+                    "content": f"{e}",
+                    "source": self._agent_name,
+                    "step_id": message.step_id,
+                },
+            )
+            
             return
         print(f"Task completed: {result}")
 
         step.status = StepStatus.completed
         step.agent_reply = result
         await self._model_context.update_step(step)
+        
+        track_event(
+            "Updated Base agent step and updated into the cosmos",
+            {
+                "status": StepStatus.completed,
+                "session_id": message.session_id,
+                "agent_reply": f"{result}",
+                "user_id": self._user_id,
+                "plan_id": message.plan_id,
+                "content": f"{result}",
+                "source": self._agent_name,
+                "step_id": message.step_id,
+            },
+        )
 
         action_response = ActionResponse(
             step_id=step.id,

@@ -15,6 +15,7 @@ from models.messages import (
     AgentMessage,
     Step,
 )
+from azure.monitor.events.extension import track_event
 
 
 @default_subscription
@@ -59,6 +60,17 @@ class HumanAgent(RoutedAgent):
             )
         )
         logging.info(f"HumanAgent received feedback for step: {step}")
+        track_event(
+            f"HumanAgent received feedback for step: {step} and added into the cosmos",
+            {
+                "session_id": message.session_id,
+                "user_id": self.user_id,
+                "plan_id": step.plan_id,
+                "content": f"Received feedback for step: {step.action}",
+                "source": "HumanAgent",
+                "step_id": message.step_id,
+            },
+        )
 
         # Notify the GroupChatManager that the step has been completed
         await self._memory.add_item(
@@ -71,3 +83,14 @@ class HumanAgent(RoutedAgent):
             )
         )
         logging.info(f"HumanAgent sent approval request for step: {step}")
+        
+        track_event(
+            f"HumanAgent sent approval request for step {step} and added into the cosmos",
+            {
+                "session_id": message.session_id,
+                "user_id": self.user_id,
+                "plan_id": step.plan_id,
+                "step_id": message.step_id,
+                "agent_id": self.group_chat_manager_id,
+            },
+        )
