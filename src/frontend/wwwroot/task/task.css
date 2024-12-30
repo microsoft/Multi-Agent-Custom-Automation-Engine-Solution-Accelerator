@@ -12,7 +12,6 @@
 .task-asside {
   min-height: 100vh;
   max-width: 500px;
-  min-width: 250px;
 }
 
 .task-asside.is-audit {
@@ -40,6 +39,7 @@
 
 .task-progress {
   height: 40vh;
+  max-width: 843px;
   overflow-y: auto;
   background-color: white;
   border-radius: var(--bulma-radius);
@@ -58,6 +58,7 @@
 }
 
 .task-progress .notification {
+  max-width: 744px;
   display: inline-block;
   padding: 0.5rem 1rem;
 }
@@ -95,7 +96,7 @@
 
 .menu-list a.menu-stage span {
   flex: 1;
-  word-break: break-word; /*this for stages span alignment*/
+  word-break: break-word;
 }
 
 .menu-list a.menu-stage.rejected span {
