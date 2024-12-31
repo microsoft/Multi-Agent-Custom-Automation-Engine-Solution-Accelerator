@@ -73,7 +73,7 @@ class PlannerAgent(RoutedAgent):
         logging.info(f"Plan generated: {plan.summary}")
         
         track_event(
-            f"Generated a plan with {len(steps)} steps and added plan into the cosmos",
+            f"Planner - Generated a plan with {len(steps)} steps and added plan into the cosmos",
             {
                 "session_id": message.session_id,
                 "user_id": self._user_id,
@@ -100,7 +100,7 @@ class PlannerAgent(RoutedAgent):
             )
             
             track_event(
-                "Additional information requested and added into the cosmos",
+                "Planner - Additional information requested and added into the cosmos",
                 {
                     "session_id": message.session_id,
                     "user_id": self._user_id,
@@ -137,7 +137,7 @@ class PlannerAgent(RoutedAgent):
         )
         
         track_event(
-            "Store HumanAgent clarification and added into the cosmos",
+            "Planner - Store HumanAgent clarification and added into the cosmos",
             {
                 "session_id": message.session_id,
                 "user_id": self._user_id,
@@ -267,7 +267,7 @@ class PlannerAgent(RoutedAgent):
             await self._memory.add_plan(plan)
             
             track_event(
-                "Initial plan and added into the cosmos",
+                "Planner - Initial plan and added into the cosmos",
                 {
                     "session_id": self._session_id,
                     "user_id": self._user_id,
@@ -293,7 +293,7 @@ class PlannerAgent(RoutedAgent):
                 )
                 await self._memory.add_step(step)
                 track_event(
-                    "Added planned individual step into the cosmos",
+                    "Planner - Added planned individual step into the cosmos",
                     {
                         "plan_id": plan.id,
                         "action": step_data.action,
@@ -311,7 +311,7 @@ class PlannerAgent(RoutedAgent):
         except Exception as e:
             logging.error(f"Error in create_structured_plan: {e}")
             track_event(
-                f"Error in create_structured_plan: {e} into the cosmos",
+                f"Planner - Error in create_structured_plan: {e} into the cosmos",
                 {
                     "session_id": self._session_id,
                     "user_id": self._user_id,

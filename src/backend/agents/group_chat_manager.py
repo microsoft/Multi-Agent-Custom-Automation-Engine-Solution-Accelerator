@@ -68,7 +68,7 @@ class GroupChatManager(RoutedAgent):
         )
 
         track_event(
-            "Received and added input task into the cosmos",
+            "Group Chat Manager - Received and added input task into the cosmos",
             {
                 "session_id": message.session_id,
                 "user_id": self._user_id,
@@ -170,7 +170,7 @@ class GroupChatManager(RoutedAgent):
                     step.human_approval_status = HumanFeedbackStatus.rejected
                     self._memory.update_step(step)
                     track_event(
-                        "GroupChatManager that the step has been rejected and updated into the cosmos",
+                        "Group Chat Manager - Steps has been rejected and updated into the cosmos",
                         {
                             "status": StepStatus.rejected,
                             "session_id": message.session_id,
@@ -194,7 +194,7 @@ class GroupChatManager(RoutedAgent):
                     step.human_approval_status = HumanFeedbackStatus.rejected
                     self._memory.update_step(step)
                     track_event(
-                        "GroupChatManager that the step has been rejected and updated into the cosmos",
+                        "Group Chat Manager - Step has been rejected and updated into the cosmos",
                         {
                             "status": StepStatus.rejected,
                             "session_id": message.session_id,
@@ -219,7 +219,7 @@ class GroupChatManager(RoutedAgent):
         step.status = StepStatus.completed
         await self._memory.update_step(step)
         track_event(
-            "Received human feedback, hence updating step and updated into the cosmos",
+            "Group Chat Manager - Received human feedback, Updating step and updated into the cosmos",
             {
                 "status": StepStatus.completed,
                 "session_id": step.session_id,
@@ -247,7 +247,7 @@ class GroupChatManager(RoutedAgent):
         step.status = StepStatus.action_requested
         await self._memory.update_step(step)
         track_event(
-            "Update step to action_requested and updated into the cosmos",
+            "Group Chat Manager - Update step to action_requested and updated into the cosmos",
             {
                 "status": StepStatus.action_requested,
                 "session_id": step.session_id,
@@ -312,7 +312,7 @@ class GroupChatManager(RoutedAgent):
         )
 
         track_event(
-            f"Requesting GroupChatManager {step.agent.value.title()} to perform the action and added into the cosmos",
+            f"Group Chat Manager - Requesting {step.agent.value.title()} to perform the action and added into the cosmos",
             {
                 "session_id": session_id,
                 "user_id": self._user_id,
@@ -346,7 +346,7 @@ class GroupChatManager(RoutedAgent):
                 "Marking the step as complete - Since we have received the human feedback"
             )
             track_event(
-                "Marking the step as complete - Since we have received the human feedback and updated into the cosmos",
+                "Group Chat Manager - Steps completed - Received the human feedback and updated into the cosmos",
                 {
                     "session_id": session_id,
                     "user_id": self._user_id,

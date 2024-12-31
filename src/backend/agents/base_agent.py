@@ -97,7 +97,7 @@ class BaseAgent(RoutedAgent):
             )
             
             track_event(
-                "Base agent added into the cosmos",
+                "Base agent - Added into the cosmos",
                 {
                     "session_id": message.session_id,
                     "user_id": self._user_id,
@@ -111,7 +111,7 @@ class BaseAgent(RoutedAgent):
         except Exception as e:
             logging.info(f"Error during LLM call: {e}")
             track_event(
-                "Error during llm call in Base Agent, captured into the cosmos",
+                "Base agent - Error during llm call, captured into the cosmos",
                 {
                     "session_id": message.session_id,
                     "user_id": self._user_id,
@@ -130,7 +130,7 @@ class BaseAgent(RoutedAgent):
         await self._model_context.update_step(step)
         
         track_event(
-            "Updated Base agent step and updated into the cosmos",
+            "Base agent - Updated step and updated into the cosmos",
             {
                 "status": StepStatus.completed,
                 "session_id": message.session_id,

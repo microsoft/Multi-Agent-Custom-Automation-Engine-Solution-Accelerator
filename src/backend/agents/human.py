@@ -61,7 +61,7 @@ class HumanAgent(RoutedAgent):
         )
         logging.info(f"HumanAgent received feedback for step: {step}")
         track_event(
-            f"HumanAgent received feedback for step: {step} and added into the cosmos",
+            f"Human Agent - Received feedback for step: {step} and added into the cosmos",
             {
                 "session_id": message.session_id,
                 "user_id": self.user_id,
@@ -85,7 +85,7 @@ class HumanAgent(RoutedAgent):
         logging.info(f"HumanAgent sent approval request for step: {step}")
         
         track_event(
-            f"HumanAgent sent approval request for step {step} and added into the cosmos",
+            f"Human Agent - Approval request sent for step {step} and added into the cosmos",
             {
                 "session_id": message.session_id,
                 "user_id": self.user_id,
