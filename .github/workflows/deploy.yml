@@ -56,7 +56,7 @@ jobs:
           az deployment group create \
             --resource-group ${{ env.RESOURCE_GROUP_NAME }} \
             --template-file deploy/macae.bicep
-            --parameters cosmosLocation=eastus azureOpenAILocation=eastus
+            --parameters azureOpenAILocation=eastus cosmosLocation=eastus 
 
 
       - name: Send Notification on Failure
