@@ -1,8 +1,13 @@
 @description('Location for all resources.')
-param location string = 'EastUS2' //Fixed for model availability, change back to resourceGroup().location
+param location string = resourceGroup().location
+
+@description('location for Cosmos DB resources.')
+// prompt for this as there is often quota restrictions
+param cosmosLocation string
 
 @description('Location for OpenAI resources.')
-param azureOpenAILocation string = 'EastUS' //Fixed for model availability
+// prompt for this as there is often quota restrictions
+param azureOpenAILocation string
 
 @description('A prefix to add to the start of all resource names. Note: A "unique" suffix will also be added')
 param prefix string = 'macae'
@@ -60,7 +65,7 @@ resource devAoaiRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-
 
 resource cosmos 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
   name: format(uniqueNameFormat, 'cosmos')
-  location: location
+  location: cosmosLocation
   tags: tags
   kind: 'GlobalDocumentDB'
   properties: {
@@ -69,7 +74,7 @@ resource cosmos 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
     locations: [
       {
         failoverPriority: 0
-        locationName: location
+        locationName: cosmosLocation
       }
     ]
   }
@@ -126,5 +131,3 @@ output AZURE_OPENAI_ENDPOINT string = openai.properties.endpoint
 output AZURE_OPENAI_DEPLOYMENT_NAME string = openai::gpt4o.name
 output AZURE_OPENAI_API_VERSION string = aoaiApiVersion
 
-// For legacy purposes, output the CLI commands to assign the roles
-//output cosmosAssignCli string = 'az cosmosdb sql role assignment create --resource-group "${resourceGroup().name}" --account-name "${cosmos.name}" --role-definition-id "${cosmos::contributorRoleDefinition.id}" --scope "${cosmos.id}" --principal-id "fill-in"'
