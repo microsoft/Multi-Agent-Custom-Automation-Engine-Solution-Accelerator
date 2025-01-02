@@ -55,7 +55,7 @@ jobs:
           set -e
           az deployment group create \
             --resource-group ${{ env.RESOURCE_GROUP_NAME }} \
-            --template-file deploy/macae.bicep
+            --template-file deploy/macae.bicep \
             --parameters azureOpenAILocation=eastus cosmosLocation=eastus
 
 
