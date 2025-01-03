@@ -15,36 +15,45 @@ This application is an AI-driven orchestration system that manages a group of AI
 This code has not been tested as an end-to-end, reliable production application- it is a foundation to help accelerate building out multi-agent systems. You are encouraged to add your own data and functions to the agents, and then you must apply your own performance and safety evaluation testing frameworks to this system before deploying it.
 
 Below, we'll dive into the details of each component, focusing on the endpoints, data types, and the flow of information through the system.
-
 # Table of Contents
 
-- [Accelerating your own Multi-Agent -Custom Automation Engine MVP](#accelerating-your-own-multi-agent--custom-automation-engine-mvp)
+- [Accelerating your own Multi-Agent - Custom Automation Engine MVP](#accelerating-your-own-multi-agent---custom-automation-engine-mvp)
   - [Technical Overview](#technical-overview)
 - [Table of Contents](#table-of-contents)
   - [Endpoints](#endpoints)
     - [/input\_task](#input_task)
     - [/human\_feedback](#human_feedback)
-    - [/get\_latest\_plan\_by\_session/{session\_id}](#get_latest_plan_by_sessionsession_id)
-    - [/get\_steps\_by\_plan/{plan\_id}](#get_steps_by_planplan_id)
+    - [/get\_latest\_plan\_by\_session/{session\_id}](#get_latest_plan_by_session-session_id)
+    - [/steps/{plan\_id}](#stepsplan_id)
+    - [/agent\_messages/{session\_id}](#agent_messagessession_id)
+    - [/messages](#messages)
     - [/delete\_all\_messages](#delete_all_messages)
+    - [/api/agent-tools](#apiagent-tools)
   - [Data Types and Models](#data-types-and-models)
     - [Messages](#messages)
-      - [InputTask](#inputtask)
+      - [BaseDataModel](#basedatamodel)
+      - [AgentMessage](#agentmessage)
+      - [Session](#session)
       - [Plan](#plan)
       - [Step](#step)
-      - [HumanFeedback](#humanfeedback)
+      - [PlanWithSteps](#planwithsteps)
+      - [InputTask](#inputtask)
       - [ApprovalRequest](#approvalrequest)
+      - [HumanFeedback](#humanfeedback)
+      - [HumanClarification](#humanclarification)
       - [ActionRequest](#actionrequest)
       - [ActionResponse](#actionresponse)
-    - [Agents](#agents)
-      - [Agent Types:](#agent-types)
+      - [PlanStateUpdate](#planstateupdate)
+      - [GroupChatMessage](#groupchatmessage)
+      - [RequestToSpeak](#requesttospeak)
+    - [Enums](#enums)
+      - [DataType](#datatype)
+      - [BAgentType](#bagenttype)
+      - [StepStatus](#stepstatus)
+      - [PlanStatus](#planstatus)
+      - [HumanFeedbackStatus](#humanfeedbackstatus)
   - [Application Flow](#application-flow)
     - [Initialization](#initialization)
-    - [Input Task Handling](#input-task-handling)
-    - [Planning](#planning)
-    - [Step Execution and Approval](#step-execution-and-approval)
-    - [Human Feedback](#human-feedback)
-    - [Action Execution by Specialized Agents](#action-execution-by-specialized-agents)
   - [Agents Overview](#agents-overview)
     - [GroupChatManager](#groupchatmanager)
     - [PlannerAgent](#planneragent)
@@ -52,8 +61,9 @@ Below, we'll dive into the details of each component, focusing on the endpoints,
     - [Specialized Agents](#specialized-agents)
   - [Persistent Storage with Cosmos DB](#persistent-storage-with-cosmos-db)
   - [Utilities](#utilities)
-    - [`initialize` Function](#initialize-function)
+    - [`initialize_runtime_and_context` Function](#initialize_runtime_and_context-function)
   - [Summary](#summary)
+
 
 ## Endpoints
 
@@ -63,7 +73,7 @@ Below, we'll dive into the details of each component, focusing on the endpoints,
 **Description:** Receives the initial input task from the user.  
 
 **Request Headers:**
-- `Authorization`: Bearer token for authentication.
+
 - `user_id`: User ID extracted from the authentication header.
 
 **Request Body:** `InputTask`
@@ -92,7 +102,6 @@ Below, we'll dive into the details of each component, focusing on the endpoints,
 **Description:** Receives human feedback on a step (e.g., approval, rejection, or modification).  
 
 **Request Headers:**
-- `Authorization`: Bearer token for authentication.
 - `user_id`: User ID extracted from the authentication header.
 
 **Request Body:** `HumanFeedback`
@@ -122,7 +131,6 @@ Below, we'll dive into the details of each component, focusing on the endpoints,
 **Description:** Receives human clarification on a plan.  
 
 **Request Headers:**
-- `Authorization`: Bearer token for authentication.
 - `user_id`: User ID extracted from the authentication header.
 
 **Request Body:** `HumanClarification`
@@ -147,7 +155,7 @@ Below, we'll dive into the details of each component, focusing on the endpoints,
 **Description:** Approves a step or multiple steps in a plan.  
 
 **Request Headers:**
-- `Authorization`: Bearer token for authentication.
+
 - `user_id`: User ID extracted from the authentication header.
 
 **Request Body:** `HumanFeedback`
@@ -175,7 +183,7 @@ Below, we'll dive into the details of each component, focusing on the endpoints,
 **Description:** Retrieves all plans for the current user or the plan for a specific session.  
 
 **Request Headers:**
-- `Authorization`: Bearer token for authentication.
+
 - `user_id`: User ID extracted from the authentication header.
 
 **Query Parameters:**
@@ -213,7 +221,7 @@ Below, we'll dive into the details of each component, focusing on the endpoints,
 **Description:** Retrieves all steps associated with a specific plan.  
 
 **Request Headers:**
-- `Authorization`: Bearer token for authentication.
+
 - `user_id`: User ID extracted from the authentication header.
 
 **Path Parameters:**
@@ -241,7 +249,6 @@ Below, we'll dive into the details of each component, focusing on the endpoints,
 **Description:** Retrieves all agent messages for a specific session.  
 
 **Request Headers:**
-- `Authorization`: Bearer token for authentication.
 - `user_id`: User ID extracted from the authentication header.
 
 **Path Parameters:**
@@ -268,7 +275,7 @@ Below, we'll dive into the details of each component, focusing on the endpoints,
 **Description:** Deletes all messages across sessions.  
 
 **Request Headers:**
-- `Authorization`: Bearer token for authentication.
+
 - `user_id`: User ID extracted from the authentication header.
 
 **Response:**
@@ -290,7 +297,7 @@ Below, we'll dive into the details of each component, focusing on the endpoints,
 **Description:** Retrieves all messages across sessions.  
 
 **Request Headers:**
-- `Authorization`: Bearer token for authentication.
+
 - `user_id`: User ID extracted from the authentication header.
 
 **Response:**
