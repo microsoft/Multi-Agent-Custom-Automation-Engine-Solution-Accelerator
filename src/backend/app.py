@@ -63,11 +63,6 @@ async def input_task_endpoint(input_task: InputTask, request: Request):
     tags:
       - Input Task
     parameters:
-      - name: Authorization
-        in: header
-        type: string
-        required: true
-        description: Bearer token for authentication
       - name: user_id
         in: header
         type: string
@@ -146,11 +141,6 @@ async def human_feedback_endpoint(human_feedback: HumanFeedback, request: Reques
     tags:
       - Feedback
     parameters:
-      - name: Authorization
-        in: header
-        type: string
-        required: true
-        description: Bearer token for authentication
       - name: user_id
         in: header
         type: string
@@ -226,11 +216,6 @@ async def human_clarification_endpoint(human_clarification: HumanClarification, 
     tags:
       - Clarification
     parameters:
-      - name: Authorization
-        in: header
-        type: string
-        required: true
-        description: Bearer token for authentication
       - name: user_id
         in: header
         type: string
@@ -294,11 +279,6 @@ async def approve_step_endpoint(human_feedback: HumanFeedback, request: Request)
     tags:
       - Approval
     parameters:
-      - name: Authorization
-        in: header
-        type: string
-        required: true
-        description: Bearer token for authentication
       - name: user_id
         in: header
         type: string
@@ -377,11 +357,6 @@ async def get_plans(request: Request, session_id: Optional[str] = Query(None)) -
     tags:
       - Plans
     parameters:
-      - name: Authorization
-        in: header
-        type: string
-        required: true
-        description: Bearer token for authentication
       - name: session_id
         in: query
         type: string
@@ -475,11 +450,6 @@ async def get_steps_by_plan(plan_id: str, request: Request) -> List[Step]:
     tags:
       - Steps
     parameters:
-      - name: Authorization
-        in: header
-        type: string
-        required: true
-        description: Bearer token for authentication
       - name: plan_id
         in: path
         type: string
@@ -542,11 +512,6 @@ async def get_agent_messages(session_id: str, request: Request) -> List[AgentMes
     tags:
       - Agent Messages
     parameters:
-      - name: Authorization
-        in: header
-        type: string
-        required: true
-        description: Bearer token for authentication
       - name: session_id
         in: path
         type: string
@@ -605,12 +570,6 @@ async def delete_all_messages(request: Request) -> dict[str, str]:
     ---
     tags:
       - Messages
-    parameters:
-      - name: Authorization
-        in: header
-        type: string
-        required: true
-        description: Bearer token for authentication
     responses:
       200:
         description: Confirmation of deletion
@@ -649,12 +608,6 @@ async def get_all_messages(request: Request):
     ---
     tags:
       - Messages
-    parameters:
-      - name: Authorization
-        in: header
-        type: string
-        required: true
-        description: Bearer token for authentication
     responses:
       200:
         description: List of all messages across sessions
