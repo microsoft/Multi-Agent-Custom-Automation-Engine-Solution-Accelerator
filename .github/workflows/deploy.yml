@@ -138,7 +138,7 @@ jobs:
 
           echo "Building the container image..."
           # Build the image
-          az acr build -r ${acr_name} -t ${backend_build_image_tag} ./agnext-biab-02
+          az acr build -r ${acr_name} -t ${backend_build_image_tag} ./src/backend
           echo "Backend image build completed successfully."
 
           frontend_container_app_name="macae-backend"
@@ -146,12 +146,10 @@ jobs:
 
           echo "Building the container image..."
           # Build the image
-          az acr build -r ${acr_name} -t ${frontend_build_image_tag} ./agnext-biab-02
+          az acr build -r ${acr_name} -t ${frontend_build_image_tag} ./src/frontend
           echo "Frontend image build completed successfully."
 
           # Add the new container to the website
-
-          
 
 
         
