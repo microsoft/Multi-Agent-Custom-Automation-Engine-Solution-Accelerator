@@ -31,7 +31,7 @@ jobs:
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
           COMMON_PART="ci-biab"
           # UNIQUE_RG_NAME="${COMMON_PART}${TIMESTAMP}"
-          UNIQUE_RG_NAME="rg-biab-hotfix"
+          UNIQUE_RG_NAME="psl-biab-manual"
           echo "RESOURCE_GROUP_NAME=${UNIQUE_RG_NAME}" >> $GITHUB_ENV
           echo "Generated Resource_GROUP_PREFIX: ${UNIQUE_RG_NAME}" 
       
