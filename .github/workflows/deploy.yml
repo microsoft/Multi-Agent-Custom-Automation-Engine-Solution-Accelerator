@@ -150,10 +150,7 @@ jobs:
           echo "Frontend image build completed successfully."
 
           # Add the new container to the website
-          az webapp config container set --resource-group ${{ env.RESOURCE_GROUP_NAME }}) \
-          --name ${frontend_container_app_name} \
-          --container-image-name ${acr_name}.azurecr.io/frontend:latest  \
-          --container-registry-url https://${acr_name}.azurecr.io
+          az webapp config container set --resource-group ${{ env.RESOURCE_GROUP_NAME }}) --name ${frontend_container_app_name} --container-image-name ${acr_name}.azurecr.io/frontend:latest --container-registry-url https://${acr_name}.azurecr.io
                   
           
       # - name: Delete Bicep Deployment
