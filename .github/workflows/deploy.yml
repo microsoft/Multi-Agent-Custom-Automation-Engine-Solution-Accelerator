@@ -79,7 +79,7 @@ jobs:
       #       -d "$EMAIL_BODY" || echo "Failed to send notification"
   
     
-      - name: Get OpenAI, Container Registry Resource from Resource Group
+      - name: Get OpenAI, App Service and Container Registry Resource from Resource Group
         id: get_openai_resource
         run: |
 
@@ -98,23 +98,6 @@ jobs:
             echo "OpenAI resource name: ${openai_resource_name}" 
           fi
 
-          echo "Fetching container registry resource from resource group ${{ env.RESOURCE_GROUP_NAME }}..."
-
-          # Fetch Azure Container Registry name
-          acr_name=$(az acr list --resource-group ${{ env.RESOURCE_GROUP_NAME }} --query "[0].name" -o tsv)
-
-          if [ -z "$acr_name" ]; then
-            echo "No Azure Container Registry found in resource group ${{ env.RESOURCE_GROUP_NAME }}."
-            exit 1
-          else
-            echo "ACR_NAME=${acr_name}" >> $GITHUB_ENV
-            echo "Azure Container Registry name: ${acr_name}"
-          fi
-
-      - name: Get Azure App Service Resource from Resource Group
-        id: get_app_service_resource
-        run: |
-          set -e
           echo "Fetching Azure App Service resource from resource group ${{ env.RESOURCE_GROUP_NAME }}..."
           
           # Run the az resource list command to get the App Service resource name
@@ -128,36 +111,49 @@ jobs:
             echo "Azure App Service resource name: ${app_service_name}" 
           fi
 
+          echo "Fetching container registry resource from resource group ${{ env.RESOURCE_GROUP_NAME }}..."
+
+          # Fetch Azure Container Registry name
+          acr_name=$(az acr list --resource-group ${{ env.RESOURCE_GROUP_NAME }} --query "[0].name" -o tsv)
+
+          if [ -z "$acr_name" ]; then
+            echo "No Azure Container Registry found in resource group ${{ env.RESOURCE_GROUP_NAME }}."
+            exit 1
+          else
+            echo "ACR_NAME=${acr_name}" >> $GITHUB_ENV
+            echo "Azure Container Registry name: ${acr_name}"
+          fi
 
       
-      # - name: Build the image and update the container app
-      #   id: build-and-update
-      #   run: |
+      - name: Build the image and update the container app
+        id: build-and-update
+        run: |
 
-      #     set -e
-      #     # Define variables for acr and container app names
-      #     acr_name="${{ env.ACR_NAME }}"
-      #     echo "ACR name: {$acr_name}"
-      #     backend_container_app_name="macae-backend"
-      #     buildImageTag="backend:latest"
+          set -e
+          # Define variables for acr and container app names
+          acr_name="${{ env.ACR_NAME }}"
+          echo "ACR name: {$acr_name}"
+          backend_container_app_name="macae-backend"
+          backend_build_image_tag="backend:latest"
 
-      #     echo "Building the container image..."
-      #     # Build the image
-      #     az acr build -r ${acr_name} -t ${buildImageTag} ./agnext-biab-02
-      #     echo "Backend image build completed successfully."
+          echo "Building the container image..."
+          # Build the image
+          az acr build -r ${acr_name} -t ${backend_build_image_tag} ./agnext-biab-02
+          echo "Backend image build completed successfully."
 
-      #     echo "Updating the container app..."
-      #     # Update the container app
-      #     az containerapp update -n ${container_app_name} -g ${{ env.RESOURCE_GROUP_NAME }} --image ${acr_name}.azurecr.io/${buildImageTag}
-      #     echo "Backend container app update completed successfully."
+          frontend_container_app_name="macae-backend"
+          frontend_build_image_tag="frontend:latest"
 
-      #     frontend_container_app_name="macae-backend"
-      #     buildImageTag="backend:latest"
+          echo "Building the container image..."
+          # Build the image
+          az acr build -r ${acr_name} -t ${frontend_build_image_tag} ./agnext-biab-02
+          echo "Frontend image build completed successfully."
 
-      #     echo "Building the container image..."
-      #     # Build the image
-      #     az acr build -r ${acr_name} -t ${buildImageTag} ./agnext-biab-02
-      #     echo "Image build completed successfully."
+          # Add the new container to the website
+
+          
+
+
         
           
       # - name: Delete Bicep Deployment
