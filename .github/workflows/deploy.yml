@@ -153,74 +153,74 @@ jobs:
           az webapp config container set --resource-group ${{ env.RESOURCE_GROUP_NAME }} --name ${frontend_container_app_name} --container-image-name ${acr_name}.azurecr.io/frontend:latest --container-registry-url https://${acr_name}.azurecr.io
                   
           
-      # - name: Delete Bicep Deployment
-      #   if: success()
-      #   run: |
-      #     set -e  
-      #     echo "Checking if resource group exists..."
-      #     rg_exists=$(az group exists --name ${{ env.RESOURCE_GROUP_NAME }})
-      #     if [ "$rg_exists" = "true" ]; then
-      #       echo "Resource group exist. Cleaning..."
-      #       az group delete \
-      #           --name ${{ env.RESOURCE_GROUP_NAME }} \
-      #           --yes \
-      #           --no-wait
-      #       echo "Resource group deleted...  ${{ env.RESOURCE_GROUP_NAME }}"
-      #     else
-      #       echo "Resource group does not exists."
-      #     fi
+      - name: Delete Bicep Deployment
+        if: success()
+        run: |
+          set -e  
+          echo "Checking if resource group exists..."
+          rg_exists=$(az group exists --name ${{ env.RESOURCE_GROUP_NAME }})
+          if [ "$rg_exists" = "true" ]; then
+            echo "Resource group exist. Cleaning..."
+            az group delete \
+                --name ${{ env.RESOURCE_GROUP_NAME }} \
+                --yes \
+                --no-wait
+            echo "Resource group deleted...  ${{ env.RESOURCE_GROUP_NAME }}"
+          else
+            echo "Resource group does not exists."
+          fi
 
 
-      # - name: Wait for resource deletion to complete
-      #   run: |
+      - name: Wait for resource deletion to complete
+        run: |
 
           
-      #     # Add resources to the array
-      #     resources_to_check=("${{ env.OPENAI_RESOURCE_NAME }}")
+          # Add resources to the array
+          resources_to_check=("${{ env.OPENAI_RESOURCE_NAME }}")
 
-      #     echo "List of resources to check: ${resources_to_check[@]}"
+          echo "List of resources to check: ${resources_to_check[@]}"
 
-      #     # Maximum number of retries
-      #     max_retries=3
+          # Maximum number of retries
+          max_retries=3
 
-      #     # Retry intervals in seconds (30, 60, 120)
-      #     retry_intervals=(30 60 120)
+          # Retry intervals in seconds (30, 60, 120)
+          retry_intervals=(30 60 120)
 
-      #     # Retry mechanism to check resources
-      #     retries=0
-      #     while true; do
-      #       resource_found=false
+          # Retry mechanism to check resources
+          retries=0
+          while true; do
+            resource_found=false
 
-      #       # Get the list of resources in YAML format again on each retry
-      #       resource_list=$(az resource list --resource-group ${{ env.RESOURCE_GROUP_NAME }} --output yaml)
+            # Get the list of resources in YAML format again on each retry
+            resource_list=$(az resource list --resource-group ${{ env.RESOURCE_GROUP_NAME }} --output yaml)
 
-      #       # Iterate through the resources to check
-      #       for resource in "${resources_to_check[@]}"; do
-      #         echo "Checking resource: $resource"
-      #         if echo "$resource_list" | grep -q "name: $resource"; then
-      #           echo "Resource '$resource' exists in the resource group."
-      #           resource_found=true
-      #         else
-      #           echo "Resource '$resource' does not exist in the resource group."
-      #         fi
-      #       done
+            # Iterate through the resources to check
+            for resource in "${resources_to_check[@]}"; do
+              echo "Checking resource: $resource"
+              if echo "$resource_list" | grep -q "name: $resource"; then
+                echo "Resource '$resource' exists in the resource group."
+                resource_found=true
+              else
+                echo "Resource '$resource' does not exist in the resource group."
+              fi
+            done
 
-      #       # If any resource exists, retry
-      #       if [ "$resource_found" = true ]; then
-      #         retries=$((retries + 1))
-      #         if [ "$retries" -gt "$max_retries" ]; then
-      #           echo "Maximum retry attempts reached. Exiting."
-      #           break
-      #         else
-      #           # Wait for the appropriate interval for the current retry
-      #           echo "Waiting for ${retry_intervals[$retries-1]} seconds before retrying..."
-      #           sleep ${retry_intervals[$retries-1]}
-      #         fi
-      #       else
-      #         echo "No resources found. Exiting."
-      #         break
-      #       fi
-      #     done
+            # If any resource exists, retry
+            if [ "$resource_found" = true ]; then
+              retries=$((retries + 1))
+              if [ "$retries" -gt "$max_retries" ]; then
+                echo "Maximum retry attempts reached. Exiting."
+                break
+              else
+                # Wait for the appropriate interval for the current retry
+                echo "Waiting for ${retry_intervals[$retries-1]} seconds before retrying..."
+                sleep ${retry_intervals[$retries-1]}
+              fi
+            else
+              echo "No resources found. Exiting."
+              break
+            fi
+          done
 
           
       # - name: Purging the Resources
