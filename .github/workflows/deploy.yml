@@ -30,8 +30,7 @@ jobs:
           echo "Generating a unique resource group name..."
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
           COMMON_PART="ci-biab"
-          # UNIQUE_RG_NAME="${COMMON_PART}${TIMESTAMP}"
-          UNIQUE_RG_NAME="psl-biab-manual2"
+          UNIQUE_RG_NAME="${COMMON_PART}${TIMESTAMP}"
           echo "RESOURCE_GROUP_NAME=${UNIQUE_RG_NAME}" >> $GITHUB_ENV
           echo "Generated Resource_GROUP_PREFIX: ${UNIQUE_RG_NAME}" 
       
@@ -44,39 +43,39 @@ jobs:
           rg_exists=$(az group exists --name ${{ env.RESOURCE_GROUP_NAME }})
           if [ "$rg_exists" = "false" ]; then
             echo "Resource group does not exist. Creating..."
-            az group create --name ${{ env.RESOURCE_GROUP_NAME }} --location eastus2 || { echo "Error creating resource group"; exit 1; }
+            az group create --name ${{ env.RESOURCE_GROUP_NAME }} --location eastus || { echo "Error creating resource group"; exit 1; }
           else
             echo "Resource group already exists."
           fi
 
 
-      # - name: Deploy Bicep Template
-      #   id: deploy
-      #   run: |
-      #     set -e
-      #     az deployment group create \
-      #       --resource-group ${{ env.RESOURCE_GROUP_NAME }} \
-      #       --template-file deploy/macae.bicep \
-      #       --parameters azureOpenAILocation=eastus2 cosmosLocation=eastus2
+      - name: Deploy Bicep Template
+        id: deploy
+        run: |
+          set -e
+          az deployment group create \
+            --resource-group ${{ env.RESOURCE_GROUP_NAME }} \
+            --template-file deploy/macae.bicep \
+            --parameters azureOpenAILocation=eastus cosmosLocation=eastus
 
 
-      # - name: Send Notification on Failure
-      #   if: failure()
-      #   run: |
-      #     RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      - name: Send Notification on Failure
+        if: failure()
+        run: |
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       
-      #     # Construct the email body
-      #     EMAIL_BODY=$(cat <<EOF
-      #     {
-      #       "body": "<p>Dear Team,</p><p>We would like to inform you that the Multi-Agent-Custom-Automation-Engine-Solution-Accelerator Automation process has encountered an issue and has failed to complete successfully.</p><p><strong>Build URL:</strong> ${RUN_URL}<br> ${OUTPUT}</p><p>Please investigate the matter at your earliest convenience.</p><p>Best regards,<br>Your Automation Team</p>"
-      #     }
-      #     EOF
-      #     )
+          # Construct the email body
+          EMAIL_BODY=$(cat <<EOF
+          {
+            "body": "<p>Dear Team,</p><p>We would like to inform you that the Multi-Agent-Custom-Automation-Engine-Solution-Accelerator Automation process has encountered an issue and has failed to complete successfully.</p><p><strong>Build URL:</strong> ${RUN_URL}<br> ${OUTPUT}</p><p>Please investigate the matter at your earliest convenience.</p><p>Best regards,<br>Your Automation Team</p>"
+          }
+          EOF
+          )
       
-      #     # Send the notification
-      #     curl -X POST "${{ secrets.LOGIC_APP_URL }}" \
-      #       -H "Content-Type: application/json" \
-      #       -d "$EMAIL_BODY" || echo "Failed to send notification"
+          # Send the notification
+          curl -X POST "${{ secrets.LOGIC_APP_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "$EMAIL_BODY" || echo "Failed to send notification"
   
     
       - name: Get OpenAI, App Service and Container Registry Resource from Resource Group
@@ -125,32 +124,32 @@ jobs:
           fi
 
       
-      # - name: Build the image and update the container app
-      #   id: build-and-update
-      #   run: |
+      - name: Build the image and update the container app
+        id: build-and-update
+        run: |
 
-      #     set -e
-      #     # Define variables for acr and container app names
-      #     acr_name="${{ env.ACR_NAME }}"
-      #     echo "ACR name: {$acr_name}"
-      #     backend_container_app_name="macae-backend"
-      #     backend_build_image_tag="backend:latest"
+          set -e
+          # Define variables for acr and container app names
+          acr_name="${{ env.ACR_NAME }}"
+          echo "ACR name: {$acr_name}"
+          backend_container_app_name="macae-backend"
+          backend_build_image_tag="backend:latest"
 
-      #     echo "Building the container image..."
-      #     # Build the image
-      #     az acr build -r ${acr_name} -t ${backend_build_image_tag} ./src/backend
-      #     echo "Backend image build completed successfully."
+          echo "Building the container image..."
+          # Build the image
+          az acr build -r ${acr_name} -t ${backend_build_image_tag} ./src/backend
+          echo "Backend image build completed successfully."
 
-      #     frontend_container_app_name="${{ env.APP_SERVICE_NAME }}"
-      #     frontend_build_image_tag="frontend:latest"
+          frontend_container_app_name="${{ env.APP_SERVICE_NAME }}"
+          frontend_build_image_tag="frontend:latest"
 
-      #     echo "Building the container image..."
-      #     # Build the image
-      #     az acr build -r ${acr_name} -t ${frontend_build_image_tag} ./src/frontend
-      #     echo "Frontend image build completed successfully."
+          echo "Building the container image..."
+          # Build the image
+          az acr build -r ${acr_name} -t ${frontend_build_image_tag} ./src/frontend
+          echo "Frontend image build completed successfully."
 
-      #     # Add the new container to the website
-      #     az webapp config container set --resource-group ${{ env.RESOURCE_GROUP_NAME }} --name ${frontend_container_app_name} --container-image-name ${acr_name}.azurecr.io/frontend:latest --container-registry-url https://${acr_name}.azurecr.io
+          # Add the new container to the website
+          az webapp config container set --resource-group ${{ env.RESOURCE_GROUP_NAME }} --name ${frontend_container_app_name} --container-image-name ${acr_name}.azurecr.io/frontend:latest --container-registry-url https://${acr_name}.azurecr.io
                   
           
       - name: Delete Bicep Deployment
