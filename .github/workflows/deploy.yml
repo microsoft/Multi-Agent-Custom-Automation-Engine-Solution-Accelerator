@@ -153,22 +153,22 @@ jobs:
       #     az webapp config container set --resource-group ${{ env.RESOURCE_GROUP_NAME }} --name ${frontend_container_app_name} --container-image-name ${acr_name}.azurecr.io/frontend:latest --container-registry-url https://${acr_name}.azurecr.io
                   
           
-      # - name: Delete Bicep Deployment
-      #   if: success()
-      #   run: |
-      #     set -e  
-      #     echo "Checking if resource group exists..."
-      #     rg_exists=$(az group exists --name ${{ env.RESOURCE_GROUP_NAME }})
-      #     if [ "$rg_exists" = "true" ]; then
-      #       echo "Resource group exist. Cleaning..."
-      #       az group delete \
-      #           --name ${{ env.RESOURCE_GROUP_NAME }} \
-      #           --yes \
-      #           --no-wait
-      #       echo "Resource group deleted...  ${{ env.RESOURCE_GROUP_NAME }}"
-      #     else
-      #       echo "Resource group does not exists."
-      #     fi
+      - name: Delete Bicep Deployment
+        if: success()
+        run: |
+          set -e  
+          echo "Checking if resource group exists..."
+          rg_exists=$(az group exists --name ${{ env.RESOURCE_GROUP_NAME }})
+          if [ "$rg_exists" = "true" ]; then
+            echo "Resource group exist. Cleaning..."
+            az group delete \
+                --name ${{ env.RESOURCE_GROUP_NAME }} \
+                --yes \
+                --no-wait
+            echo "Resource group deleted...  ${{ env.RESOURCE_GROUP_NAME }}"
+          else
+            echo "Resource group does not exists."
+          fi
 
 
       - name: Wait for resource deletion to complete
@@ -223,19 +223,19 @@ jobs:
           done
 
           
-      # - name: Purging the Resources
-      #   if: success()
-      #   run: |
+      - name: Purging the Resources
+        if: success()
+        run: |
 
-      #     set -e 
-      #     echo "Azure OpenAI: ${{ env.OPENAI_RESOURCE_NAME }}"
+          set -e 
+          echo "Azure OpenAI: ${{ env.OPENAI_RESOURCE_NAME }}"
 
-      #     # Purge OpenAI Resource
-      #     echo "Purging the OpenAI Resource..."
-      #     if ! az resource delete --ids /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/providers/Microsoft.CognitiveServices/locations/eastus/resourceGroups/${{ env.RESOURCE_GROUP_NAME }}/deletedAccounts/${{ env.OPENAI_RESOURCE_NAME }} --verbose; then
-      #       echo "Failed to purge openai resource: ${{ env.OPENAI_RESOURCE_NAME }}"
-      #     else
-      #       echo "Purged the openai resource: ${{ env.OPENAI_RESOURCE_NAME }}"
-      #     fi
+          # Purge OpenAI Resource
+          echo "Purging the OpenAI Resource..."
+          if ! az resource delete --ids /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/providers/Microsoft.CognitiveServices/locations/eastus/resourceGroups/${{ env.RESOURCE_GROUP_NAME }}/deletedAccounts/${{ env.OPENAI_RESOURCE_NAME }} --verbose; then
+            echo "Failed to purge openai resource: ${{ env.OPENAI_RESOURCE_NAME }}"
+          else
+            echo "Purged the openai resource: ${{ env.OPENAI_RESOURCE_NAME }}"
+          fi
 
-      #     echo "Resource purging completed successfully"
+          echo "Resource purging completed successfully"
