@@ -63,7 +63,7 @@ async def input_task_endpoint(input_task: InputTask, request: Request):
     tags:
       - Input Task
     parameters:
-      - name: user_id
+      - name: user_principal_id
         in: header
         type: string
         required: true
@@ -141,7 +141,7 @@ async def human_feedback_endpoint(human_feedback: HumanFeedback, request: Reques
     tags:
       - Feedback
     parameters:
-      - name: user_id
+      - name: user_principal_id
         in: header
         type: string
         required: true
@@ -216,7 +216,7 @@ async def human_clarification_endpoint(human_clarification: HumanClarification, 
     tags:
       - Clarification
     parameters:
-      - name: user_id
+      - name: user_principal_id
         in: header
         type: string
         required: true
@@ -279,7 +279,7 @@ async def approve_step_endpoint(human_feedback: HumanFeedback, request: Request)
     tags:
       - Approval
     parameters:
-      - name: user_id
+      - name: user_principal_id
         in: header
         type: string
         required: true

@@ -74,22 +74,22 @@ Below, we'll dive into the details of each component, focusing on the endpoints,
 
 **Request Headers:**
 
-- `user_id`: User ID extracted from the authentication header.
+- `user_principal_id`: User ID (`user_id`) extracted from the authentication header.
 
 **Request Body:** `InputTask`
 - `session_id`: Optional string. If not provided, a new UUID will be generated.
 - `description`: The description of the task the user wants to accomplish.
-- `user_id`: The user ID associated with the task.
+
 
 **Response:**
 - `status`: Confirmation message.
 - `session_id`: The session ID associated with the task.
 - `plan_id`: The ID of the plan generated.
 - `description`: The task description.
-- `user_id`: The user ID associated with the task.
+
 
 **Flow:**
-1. Validates the `Authorization` header and extracts the `user_id`.
+1. Validates header and extracts `user_principal_id` as  `user_id`.
 2. Generates a `session_id` if not provided.
 3. Initializes agents and context for the session.
 4. Sends the `InputTask` message to the `GroupChatManager`.
@@ -102,7 +102,7 @@ Below, we'll dive into the details of each component, focusing on the endpoints,
 **Description:** Receives human feedback on a step (e.g., approval, rejection, or modification).  
 
 **Request Headers:**
-- `user_id`: User ID extracted from the authentication header.
+- `user_principal_id`: User ID (`user_id`) extracted from the authentication header.
 
 **Request Body:** `HumanFeedback`
 - `step_id`: The ID of the step to provide feedback for.
@@ -111,7 +111,6 @@ Below, we'll dive into the details of each component, focusing on the endpoints,
 - `approved`: Boolean indicating if the step is approved.
 - `human_feedback`: Optional string containing any comments.
 - `updated_action`: Optional string if the action was modified.
-- `user_id`: The user ID providing the feedback.
 
 **Response:**
 - `status`: Confirmation message.
@@ -119,7 +118,7 @@ Below, we'll dive into the details of each component, focusing on the endpoints,
 - `step_id`: The step ID associated with the feedback.
 
 **Flow:**
-1. Validates the `Authorization` header and extracts the `user_id`.
+1. Validates header and extracts `user_principal_id` as  `user_id`.
 2. Initializes runtime and context for the session.
 3. Sends the `HumanFeedback` message to the `HumanAgent`.
 4. Returns the `status`, `session_id`, and `step_id`.
@@ -131,20 +130,19 @@ Below, we'll dive into the details of each component, focusing on the endpoints,
 **Description:** Receives human clarification on a plan.  
 
 **Request Headers:**
-- `user_id`: User ID extracted from the authentication header.
+- `user_principal_id`: User ID (`user_id`) extracted from the authentication header.
 
 **Request Body:** `HumanClarification`
 - `plan_id`: The ID of the plan requiring clarification.
 - `session_id`: The session ID associated with the plan.
 - `human_clarification`: Clarification details provided by the user.
-- `user_id`: The user ID providing the clarification.
 
 **Response:**
 - `status`: Confirmation message.
 - `session_id`: The session ID associated with the plan.
 
 **Flow:**
-1. Validates the `Authorization` header and extracts the `user_id`.
+1. Validates header and extracts `user_principal_id` as  `user_id`.
 2. Initializes runtime and context for the session.
 3. Sends the `HumanClarification` message to the `PlannerAgent`.
 4. Returns the `status` and `session_id`.
@@ -156,7 +154,7 @@ Below, we'll dive into the details of each component, focusing on the endpoints,
 
 **Request Headers:**
 
-- `user_id`: User ID extracted from the authentication header.
+- `user_principal_id`: User ID (`user_id`) extracted from the authentication header.
 
 **Request Body:** `HumanFeedback`
 - `step_id`: Optional step ID to approve. If not provided, all steps are approved.
@@ -165,13 +163,12 @@ Below, we'll dive into the details of each component, focusing on the endpoints,
 - `approved`: Boolean indicating whether the step(s) are approved.
 - `human_feedback`: Optional string containing any comments.
 - `updated_action`: Optional string if the action was modified.
-- `user_id`: The user ID providing the approval.
 
 **Response:**
 - `status`: A confirmation message indicating the approval result.
 
 **Flow:**
-1. Validates the `Authorization` header and extracts the `user_id`.
+1. Validates header and extracts `user_principal_id` as  `user_id`.
 2. Initializes runtime and context for the session.
 3. Sends the `HumanFeedback` approval message to the `GroupChatManager`.
 4. If `step_id` is provided, approves the specific step; otherwise, approves all steps.
@@ -184,7 +181,7 @@ Below, we'll dive into the details of each component, focusing on the endpoints,
 
 **Request Headers:**
 
-- `user_id`: User ID extracted from the authentication header.
+- `user_principal_id`: User ID (`user_id`) extracted from the authentication header.
 
 **Query Parameters:**
 - `session_id` (optional): Retrieve the plan for this specific session ID. If not provided, all plans for the user are retrieved.
@@ -206,7 +203,7 @@ Below, we'll dive into the details of each component, focusing on the endpoints,
     - `updated_action`: Optional modified action based on feedback.
 
 **Flow:**
-1. Validates the `Authorization` header and extracts the `user_id`.
+1. Validates header and extracts `user_principal_id` as  `user_id`.
 2. If `session_id` is provided:
    - Retrieves the plan for the specified session ID.
    - Fetches the steps for the plan.
@@ -222,7 +219,7 @@ Below, we'll dive into the details of each component, focusing on the endpoints,
 
 **Request Headers:**
 
-- `user_id`: User ID extracted from the authentication header.
+- `user_principal_id`: User ID (`user_id`) extracted from the authentication header.
 
 **Path Parameters:**
 - `plan_id`: The ID of the plan to retrieve steps for.
@@ -239,7 +236,7 @@ Below, we'll dive into the details of each component, focusing on the endpoints,
   - `updated_action`: Optional modified action based on feedback.
 
 **Flow:**
-1. Validates the `Authorization` header and extracts the `user_id`.
+1. Validates header and extracts `user_principal_id` as  `user_id`.
 2. Retrieves the steps for the specified `plan_id`.
 3. Returns the list of steps with their details.
 
@@ -249,7 +246,7 @@ Below, we'll dive into the details of each component, focusing on the endpoints,
 **Description:** Retrieves all agent messages for a specific session.  
 
 **Request Headers:**
-- `user_id`: User ID extracted from the authentication header.
+- `user_principal_id`: User ID (`user_id`) extracted from the authentication header.
 
 **Path Parameters:**
 - `session_id`: The ID of the session to retrieve agent messages for.
@@ -265,7 +262,7 @@ Below, we'll dive into the details of each component, focusing on the endpoints,
   - `step_id`: Optional step ID associated with the message.
 
 **Flow:**
-1. Validates the `Authorization` header and extracts the `user_id`.
+1. Validates header and extracts `user_principal_id` as  `user_id`.
 2. Retrieves the agent messages for the specified `session_id`.
 3. Returns the list of agent messages with their details.
 
@@ -276,14 +273,14 @@ Below, we'll dive into the details of each component, focusing on the endpoints,
 
 **Request Headers:**
 
-- `user_id`: User ID extracted from the authentication header.
+- `user_principal_id`: User ID (`user_id`) extracted from the authentication header.
 
 **Response:**
 - A confirmation message:
   - `status`: A status message indicating all messages were deleted.
 
 **Flow:**
-1. Validates the `Authorization` header and extracts the `user_id`.
+1. Validates header and extracts `user_principal_id` as  `user_id`.
 2. Deletes all messages across sessions, including:
    - Plans
    - Sessions
@@ -298,19 +295,18 @@ Below, we'll dive into the details of each component, focusing on the endpoints,
 
 **Request Headers:**
 
-- `user_id`: User ID extracted from the authentication header.
+- `user_principal_id`: User ID (`user_id`) extracted from the authentication header.
 
 **Response:**
 - A list of all messages with their details:
   - `id`: Unique ID of the message.
   - `data_type`: The type of the message (e.g., session, step, plan, agent_message).
   - `session_id`: The session ID associated with the message.
-  - `user_id`: The user ID associated with the message.
   - `content`: The content of the message.
   - `ts`: The timestamp of the message.
 
 **Flow:**
-1. Validates the `Authorization` header and extracts the `user_id`.
+1. Validates header and extracts `user_principal_id` as  `user_id`.
 2. Retrieves all messages across sessions.
 3. Returns the list of messages with their details.
 
