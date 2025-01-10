@@ -309,7 +309,7 @@ class PlannerAgent(RoutedAgent):
             return plan, steps
 
         except Exception as e:
-            logging.error(f"Error in create_structured_plan: {e}")
+            logging.exception(f"Error in create_structured_plan: {e}")
             track_event(
                 f"Planner - Error in create_structured_plan: {e} into the cosmos",
                 {

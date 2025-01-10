@@ -109,7 +109,7 @@ class BaseAgent(RoutedAgent):
             )
             
         except Exception as e:
-            logging.info(f"Error during LLM call: {e}")
+            logging.exception(f"Error during LLM call: {e}")
             track_event(
                 "Base agent - Error during llm call, captured into the cosmos",
                 {
