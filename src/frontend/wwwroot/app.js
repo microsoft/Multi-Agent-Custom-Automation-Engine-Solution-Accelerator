@@ -110,11 +110,31 @@
 
     const fetchTasksIfNeeded = async () => {
         const taskStore = JSON.parse(sessionStorage.getItem('task'));
+
+        const sanitizeHeaderValue = (value) => {
+            // Ensure the value is a valid UTF-8 string and URL-encode non-ASCII characters
+            return encodeURIComponent(value);
+        };
+        
+        const sanitizeHeaders = (headers) => {
+            const sanitizedHeaders = {};
+            for (const key in headers) {
+                if (headers.hasOwnProperty(key)) {
+                    const sanitizedKey = sanitizeHeaderValue(key);  // Sanitize the key
+                    const sanitizedValue = sanitizeHeaderValue(headers[key]);  // Sanitize the value
+                    sanitizedHeaders[sanitizedKey] = sanitizedValue;
+                }
+            }
+            return sanitizedHeaders;
+        };
+
         window.headers
             .then(headers => {
+                const sanitized = sanitizeHeaders(headers);
+                console.log("Sanitized Headers:", sanitized);
                 fetch(apiEndpoint + '/plans', {
                     method: 'GET',
-                    headers: headers,
+                    headers: sanitized,
                 })
                     .then(response => response.json())
                     .then(data => {
