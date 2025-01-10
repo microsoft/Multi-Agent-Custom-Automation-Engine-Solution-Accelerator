@@ -159,7 +159,7 @@ class PlannerAgent(RoutedAgent):
         logging.info("Plan updated with HumanClarification.")
         
         track_event(
-            "Plan updated with HumanClarification and added into the cosmos",
+            "Planner - Updated with HumanClarification and added into the cosmos",
             {
                 "session_id": message.session_id,
                 "user_id": self._user_id,

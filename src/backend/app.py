@@ -123,7 +123,7 @@ async def input_task_endpoint(input_task: InputTask, request: Request):
     
     # Log custom event for successful input task processing
     track_event(
-        "InputTaskProcessed-1",
+        "InputTaskProcessed",
         {
             "status": f"Plan created:\n {plan.summary}",
             "session_id": input_task.session_id,
