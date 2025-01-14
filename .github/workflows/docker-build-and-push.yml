@@ -64,7 +64,7 @@ jobs:
           docker push ${{ secrets.ACR_LOGIN_SERVER }}/mac-webapp:latest && \
           echo "Frontend image built and pushed successfully."
 
-      - name: Build and push Docker images valen (Dev/Demo)
+      - name: Build and push Docker images (Dev/Demo)
         if: ${{ github.ref_name == 'dev' || github.ref_name == 'demo' }}
         run: |
           cd src/backend
