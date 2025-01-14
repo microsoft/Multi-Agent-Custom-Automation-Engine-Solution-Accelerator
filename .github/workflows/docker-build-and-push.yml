@@ -55,25 +55,25 @@ jobs:
         if: ${{ github.ref_name == 'main' }}
         run: |
           cd src/backend
-          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/macae-backend:latest -f Dockerfile . && \
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/macae-backend:latest && \
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/macae-backend:${{ env.TAG }} -f Dockerfile . && \
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/macae-backend:${{ env.TAG }} && \
           echo "Backend image built and pushed successfully."
 
           cd ../frontend
-          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/mac-webapp:latest -f Dockerfile . && \
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/mac-webapp:latest && \
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/mac-webapp:${{ env.TAG }} -f Dockerfile . && \
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/mac-webapp:${{ env.TAG }} && \
           echo "Frontend image built and pushed successfully."
 
       - name: Build and push Docker images (Dev/Demo)
         if: ${{ github.ref_name == 'dev' || github.ref_name == 'demo' }}
         run: |
           cd src/backend
-          docker build -t ${{ secrets.ACR_DEV_LOGIN_SERVER }}/macae-backend:{{ env.TAG }} -f Dockerfile . && \
-          docker push ${{ secrets.ACR_DEV_LOGIN_SERVER }}/macae-backend:{{ env.TAG }} && \
+          docker build -t ${{ secrets.ACR_DEV_LOGIN_SERVER }}/macae-backend:${{ env.TAG }} -f Dockerfile . && \
+          docker push ${{ secrets.ACR_DEV_LOGIN_SERVER }}/macae-backend:${{ env.TAG }} && \
           echo "Dev/Demo Backend image built and pushed successfully."
 
           cd ../frontend
-          docker build -t ${{ secrets.ACR_DEV_LOGIN_SERVER }}/mac-webapp:{{ env.TAG }} -f Dockerfile . && \
-          docker push ${{ secrets.ACR_DEV_LOGIN_SERVER }}/mac-webapp:{{ env.TAG }} && \
+          docker build -t ${{ secrets.ACR_DEV_LOGIN_SERVER }}/mac-webapp:${{ env.TAG }} -f Dockerfile . && \
+          docker push ${{ secrets.ACR_DEV_LOGIN_SERVER }}/mac-webapp:${{ env.TAG }} && \
           echo "Dev/Demo Frontend image built and pushed successfully."
           
