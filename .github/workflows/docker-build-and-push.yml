@@ -50,15 +50,27 @@ jobs:
             echo "TAG=demo" >> $GITHUB_ENV
           elif [[ "${{ github.ref }}" == "refs/heads/hotfix" ]]; then
             echo "TAG=hotfix" >> $GITHUB_ENV
+          else
+            echo "TAG=github.ref_name" >> $GITHUB_ENV
           fi
-      - name: Build and push Docker images
+          
+      - name: Build and push Docker images optionally
         run: |
           cd src/backend
           docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/macaebackend:${{ env.TAG }} -f Dockerfile . && \
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/macaebackend:${{ env.TAG }} && \
-          echo "Backend image built and pushed successfully."
+          if [[ "${{ env.TAG }}" == "latest" || "${{ env.TAG }}" == "dev" || "${{ env.TAG }}" == "demo" || "${{ env.TAG }}" == "hotfix"  ]]; then
+            docker push ${{ secrets.ACR_LOGIN_SERVER }}/macaebackend:${{ env.TAG }} && \
+            echo "Backend image built and pushed successfully."
+          else
+            echo "Skipping Docker push for backend with tag: ${{ env.TAG }}"
+          fi
           cd ../frontend
           docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/macaefrontend:${{ env.TAG }} -f Dockerfile . && \
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/macaefrontend:${{ env.TAG }} && \
-          echo "Frontend image built and pushed successfully."
+          if [[ "${{ env.TAG }}" == "latest" || "${{ env.TAG }}" == "dev" || "${{ env.TAG }}" == "demo" || "${{ env.TAG }}" == "hotfix"  ]]; then
+            docker push ${{ secrets.ACR_LOGIN_SERVER }}/macaefrontend:${{ env.TAG }} && \
+            echo "Frontend image built and pushed successfully."
+          else
+            echo "Skipping Docker push for frontend with tag: ${{ env.TAG }}"
+          fi
+
           
