@@ -5,8 +5,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.32.4.45862",
-      "templateHash": "17567587246932458853"
+      "version": "0.27.1.19265",
+      "templateHash": "11215378996849738193"
     }
   },
   "parameters": {
@@ -225,6 +225,7 @@
         "principalType": "ServicePrincipal"
       },
       "dependsOn": [
+        "aoaiUserRoleDefinition",
         "containerApp",
         "openai"
       ]
@@ -366,6 +367,10 @@
                 {
                   "name": "FRONTEND_SITE_NAME",
                   "value": "[format('https://{0}.azurewebsites.net', format(variables('uniqueNameFormat'), 'frontend'))]"
+                },
+                {
+                  "name": "APPLICATIONINSIGHTS_INSTRUMENTATION_KEY",
+                  "value": "[reference('appInsights').ConnectionString]"
                 }
               ]
             }
@@ -373,6 +378,7 @@
         }
       },
       "dependsOn": [
+        "appInsights",
         "cosmos::autogenDb",
         "containerAppEnv",
         "cosmos",
