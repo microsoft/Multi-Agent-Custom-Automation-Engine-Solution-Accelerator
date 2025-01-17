@@ -44,19 +44,29 @@
      ```
      You will also be prompted for locations for Cosmos and Open AI services.  This is to allow separate regions where there may be service quota restrictions
 
-5. **Create a `.env` file:**
+5. **Grant access to Azure Cosmos DB data plane and Azure OpenAI:**
+
+    ```bash
+    az cosmosdb sql role assignment create --resource-group <solution-accelerator-rg> --account-name <cosmos-db-account-name> --role-definition-name "Cosmos DB Built-in Data Contributor" --principal-id <aad-user-object-id> --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.DocumentDB/databaseAccounts/<cosmos-db-account-name>
+    ```
+
+    ```bash
+    az role assignment create --assignee <aad-user-upn> --role "Cognitive Services OpenAI User" --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.CognitiveServices/accounts/<azure-openai-account-name>
+    ```
+
+6. **Create a `.env` file:**
 
    - Navigate to the `src` folder and create a `.env` file based on the provided `.env.sample` file.
 
-6. **Fill in the `.env` file:**
+7. **Fill in the `.env` file:**
 
    - Use the output from the deployment or check the Azure Portal under "Deployments" in the resource group.
 
-7. **(Optional) Set up a virtual environment:**
+8. **(Optional) Set up a virtual environment:**
 
    - If you are using `venv`, create and activate your virtual environment for both the frontend and backend folders.
 
-8. **Install requirements - frontend:**
+9. **Install requirements - frontend:**
 
    - In each of the frontend and backend folders -
      Open a terminal in the `src` folder and run:
@@ -64,7 +74,7 @@
      pip install -r requirements.txt
      ```
 
-9. **Run the application:**
+10. **Run the application:**
    - From the src/backend directory:
    ```bash
    python app.py
@@ -74,8 +84,8 @@
    python frontend_server.py
    ```
 
-10. Open a browser and navigate to `http://localhost:3000`
-11. To see swagger API documentation, you can navigate to `http://localhost:8000/docs`
+11. Open a browser and navigate to `http://localhost:3000`
+12. To see swagger API documentation, you can navigate to `http://localhost:8000/docs`
 
 ## Debugging the solution locally
 
