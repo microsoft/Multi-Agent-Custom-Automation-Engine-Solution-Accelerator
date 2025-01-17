@@ -22,8 +22,6 @@ from models.messages import (
     StepStatus,
 )
 
-from datetime import datetime
-from typing import List
 from azure.monitor.events.extension import track_event
 
 

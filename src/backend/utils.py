@@ -24,7 +24,6 @@ from agents.tech_support import TechSupportAgent, get_tech_support_tools
 from config import Config
 from context.cosmos_memory import CosmosBufferedChatCompletionContext
 from models.messages import BAgentType
-import logging
 
 # Initialize logging
 # from otlp_tracing import configure_oltp_tracing

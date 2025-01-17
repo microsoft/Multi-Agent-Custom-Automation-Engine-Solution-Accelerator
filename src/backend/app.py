@@ -20,7 +20,6 @@ from models.messages import (
     PlanWithSteps,
 )
 from utils import initialize_runtime_and_context, retrieve_all_agent_tools, rai_success
-import asyncio
 from fastapi.middleware.cors import CORSMiddleware
 from azure.monitor.opentelemetry import configure_azure_monitor
 from azure.monitor.events.extension import track_event

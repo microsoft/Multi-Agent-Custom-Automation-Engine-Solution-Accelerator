@@ -25,7 +25,7 @@ from models.messages import (
     StepStatus,
     HumanFeedbackStatus,
 )
-from typing import Optional
+
 from azure.monitor.events.extension import track_event
 
 
