@@ -177,6 +177,9 @@ To add your newly created backend image:
         name: 'FRONTEND_SITE_NAME'
         value: 'https://<website Name>.azurewebsites.net'
 
+        name: 'APPLICATIONINSIGHTS_INSTRUMENTATION_KEY'
+        value: <Application Insights Instrumentation Key>
+
 - Click 'Save' and deploy your new revision
 
 To add the new container to your website run the following:
