@@ -50,7 +50,7 @@ jobs:
           elif [[ "${{ github.ref }}" == "refs/heads/hotfix" ]]; then
             echo "TAG=hotfix" >> $GITHUB_ENV
           else
-            echo "TAG=github.ref_name" >> $GITHUB_ENV
+            echo "TAG=${{ github.ref }}" >> $GITHUB_ENV
           fi
           
       - name: Build and push Docker images optionally
