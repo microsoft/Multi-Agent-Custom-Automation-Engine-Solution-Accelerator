@@ -6,10 +6,13 @@ import uuid
 from typing import Any, Dict, List, Optional, Type
 
 from autogen_core.components.model_context import BufferedChatCompletionContext
-from autogen_core.components.models import (AssistantMessage,
-                                            FunctionExecutionResultMessage,
-                                            LLMMessage, SystemMessage,
-                                            UserMessage)
+from autogen_core.components.models import (
+    AssistantMessage,
+    FunctionExecutionResultMessage,
+    LLMMessage,
+    SystemMessage,
+    UserMessage,
+)
 from azure.cosmos.partition_key import PartitionKey
 
 from config import Config
@@ -141,9 +144,7 @@ class CosmosBufferedChatCompletionContext(BufferedChatCompletionContext):
 
     async def get_plan_by_session(self, session_id: str) -> Optional[Plan]:
         """Retrieve a plan associated with a session."""
-        query = (
-            "SELECT * FROM c WHERE c.session_id=@session_id AND c.user_id=@user_id AND c.data_type=@data_type"
-        )
+        query = "SELECT * FROM c WHERE c.session_id=@session_id AND c.user_id=@user_id AND c.data_type=@data_type"
         parameters = [
             {"name": "@session_id", "value": session_id},
             {"name": "@data_type", "value": "plan"},

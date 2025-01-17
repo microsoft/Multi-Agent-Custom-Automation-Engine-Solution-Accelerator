@@ -2,15 +2,12 @@
 import logging
 
 from autogen_core.base import AgentId, MessageContext
-from autogen_core.components import (RoutedAgent, default_subscription,
-                                     message_handler)
+from autogen_core.components import RoutedAgent, default_subscription, message_handler
 
 from context.cosmos_memory import CosmosBufferedChatCompletionContext
 from models.messages import (
     ApprovalRequest,
     HumanFeedback,
-    HumanClarification,
-    HumanFeedbackStatus,
     StepStatus,
     AgentMessage,
     Step,
@@ -23,7 +20,7 @@ class HumanAgent(RoutedAgent):
     def __init__(
         self,
         memory: CosmosBufferedChatCompletionContext,
-        user_id:str,
+        user_id: str,
         group_chat_manager_id: AgentId,
     ) -> None:
         super().__init__("HumanAgent")
@@ -83,7 +80,7 @@ class HumanAgent(RoutedAgent):
             )
         )
         logging.info(f"HumanAgent sent approval request for step: {step}")
-        
+
         track_event(
             f"Human Agent - Approval request sent for step {step} and added into the cosmos",
             {

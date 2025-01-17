@@ -2,11 +2,16 @@ import os
 import uvicorn
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, PlainTextResponse
+from fastapi.responses import (
+    FileResponse,
+    HTMLResponse,
+    RedirectResponse,
+    PlainTextResponse,
+)
 from fastapi.staticfiles import StaticFiles
 
 # Resolve wwwroot path relative to this script
-WWWROOT_PATH = os.path.join(os.path.dirname(__file__), 'wwwroot')
+WWWROOT_PATH = os.path.join(os.path.dirname(__file__), "wwwroot")
 
 # Debugging information
 print(f"Current Working Directory: {os.getcwd()}")
@@ -18,6 +23,7 @@ print(f"Files in wwwroot: {os.listdir(WWWROOT_PATH)}")
 app = FastAPI()
 
 import html
+
 
 @app.get("/config.js", response_class=PlainTextResponse)
 def get_config():
@@ -58,6 +64,7 @@ async def catch_all(full_path: str):
             content=f"app.html not found. Current path: {app_html_path}",
             status_code=404,
         )
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=3000)

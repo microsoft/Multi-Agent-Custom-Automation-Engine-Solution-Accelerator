@@ -12,15 +12,12 @@ from autogen_core.components.models import AzureOpenAIChatCompletionClient
 from context.cosmos_memory import CosmosBufferedChatCompletionContext
 from models.messages import (
     ActionRequest,
-    ActionResponse,
     AgentMessage,
-    ApprovalRequest,
     BAgentType,
     HumanFeedback,
     HumanFeedbackStatus,
     InputTask,
     Plan,
-    PlanStatus,
     Step,
     StepStatus,
 )
@@ -291,12 +288,10 @@ class GroupChatManager(RoutedAgent):
             agent=step.agent,
         )
         logging.info(f"Sending ActionRequest to {step.agent.value}")
-              
+
         if step.agent != "":
             agent_name = step.agent.value
-            formatted_agent = re.sub(
-                r"([a-z])([A-Z])", r"\1 \2", agent_name
-            )
+            formatted_agent = re.sub(r"([a-z])([A-Z])", r"\1 \2", agent_name)
         else:
             raise ValueError(f"Check {step.agent} is missing")
 

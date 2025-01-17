@@ -5,19 +5,19 @@ import uuid
 from typing import List, Optional
 
 from autogen_core.base import MessageContext
-from autogen_core.components import (RoutedAgent, default_subscription,
-                                     message_handler)
-from autogen_core.components.models import (AzureOpenAIChatCompletionClient,
-                                            LLMMessage, UserMessage)
+from autogen_core.components import RoutedAgent, default_subscription, message_handler
+from autogen_core.components.models import (
+    AzureOpenAIChatCompletionClient,
+    LLMMessage,
+    UserMessage,
+)
 from pydantic import BaseModel
 
 from context.cosmos_memory import CosmosBufferedChatCompletionContext
 from models.messages import (
-    ActionRequest,
     AgentMessage,
     HumanClarification,
     BAgentType,
-    HumanFeedback,
     InputTask,
     Plan,
     PlanStatus,
@@ -27,6 +27,7 @@ from models.messages import (
 )
 from typing import Optional
 from azure.monitor.events.extension import track_event
+
 
 @default_subscription
 class PlannerAgent(RoutedAgent):
@@ -72,7 +73,7 @@ class PlannerAgent(RoutedAgent):
                 )
             )
             logging.info(f"Plan generated: {plan.summary}")
-            
+
             track_event(
                 f"Planner - Generated a plan with {len(steps)} steps and added plan into the cosmos",
                 {
@@ -99,7 +100,7 @@ class PlannerAgent(RoutedAgent):
                 logging.info(
                     f"Additional information requested: {plan.human_clarification_request}"
                 )
-                        
+
                 track_event(
                     "Planner - Additional information requested and added into the cosmos",
                     {
@@ -136,7 +137,7 @@ class PlannerAgent(RoutedAgent):
                 step_id="",
             )
         )
-        
+
         track_event(
             "Planner - Store HumanAgent clarification and added into the cosmos",
             {
@@ -146,7 +147,7 @@ class PlannerAgent(RoutedAgent):
                 "source": "HumanAgent",
             },
         )
-        
+
         await self._memory.add_item(
             AgentMessage(
                 session_id=message.session_id,
@@ -158,7 +159,7 @@ class PlannerAgent(RoutedAgent):
             )
         )
         logging.info("Plan updated with HumanClarification.")
-        
+
         track_event(
             "Planner - Updated with HumanClarification and added into the cosmos",
             {
@@ -170,7 +171,6 @@ class PlannerAgent(RoutedAgent):
         )
 
     def _generate_instruction(self, objective: str) -> str:
-
         # TODO FIX HARDCODED AGENT NAMES AT BOTTOM OF PROMPT
         agents = ", ".join([agent for agent in self._available_agents])
 
@@ -252,18 +252,18 @@ class PlannerAgent(RoutedAgent):
             # Parse the LLM response
             parsed_result = json.loads(content)
             structured_plan = StructuredOutputPlan(**parsed_result)
-                        
+
             if not structured_plan.steps:
                 track_event(
                     "Planner agent - No steps found",
                     {
-                        "session_id":self._session_id,
-                        "user_id":self._user_id,
-                        "initial_goal":structured_plan.initial_goal,
-                        "overall_status":"No steps found",
-                        "source":"PlannerAgent",
-                        "summary":structured_plan.summary_plan_and_steps,
-                        "human_clarification_request":structured_plan.human_clarification_request
+                        "session_id": self._session_id,
+                        "user_id": self._user_id,
+                        "initial_goal": structured_plan.initial_goal,
+                        "overall_status": "No steps found",
+                        "source": "PlannerAgent",
+                        "summary": structured_plan.summary_plan_and_steps,
+                        "human_clarification_request": structured_plan.human_clarification_request,
                     },
                 )
                 raise ValueError("No steps found")
@@ -281,7 +281,7 @@ class PlannerAgent(RoutedAgent):
             )
             # Store the plan in memory
             await self._memory.add_plan(plan)
-            
+
             track_event(
                 "Planner - Initial plan and added into the cosmos",
                 {

@@ -1,11 +1,13 @@
 # config.py
-import logging
 import os
 
 from autogen_core.components.models import AzureOpenAIChatCompletionClient
 from azure.cosmos.aio import CosmosClient
-from azure.identity.aio import (ClientSecretCredential, DefaultAzureCredential,
-                                get_bearer_token_provider)
+from azure.identity.aio import (
+    ClientSecretCredential,
+    DefaultAzureCredential,
+    get_bearer_token_provider,
+)
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -25,7 +27,6 @@ def GetBoolConfig(name):
     return name in os.environ and os.environ[name].lower() in ["true", "1"]
 
 
-
 class Config:
     AZURE_TENANT_ID = GetOptionalConfig("AZURE_TENANT_ID")
     AZURE_CLIENT_ID = GetOptionalConfig("AZURE_CLIENT_ID")
@@ -40,8 +41,9 @@ class Config:
     AZURE_OPENAI_ENDPOINT = GetRequiredConfig("AZURE_OPENAI_ENDPOINT")
     AZURE_OPENAI_API_KEY = GetOptionalConfig("AZURE_OPENAI_API_KEY")
 
-    FRONTEND_SITE_NAME = GetOptionalConfig("FRONTEND_SITE_NAME", "http://127.0.0.1:3000")
-    
+    FRONTEND_SITE_NAME = GetOptionalConfig(
+        "FRONTEND_SITE_NAME", "http://127.0.0.1:3000"
+    )
 
     __azure_credentials = DefaultAzureCredential()
     __comos_client = None

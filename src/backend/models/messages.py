@@ -2,10 +2,13 @@ import uuid
 from enum import Enum
 from typing import Literal, Optional
 
-from autogen_core.components.models import (AssistantMessage,
-                                            FunctionExecutionResultMessage,
-                                            LLMMessage, SystemMessage,
-                                            UserMessage)
+from autogen_core.components.models import (
+    AssistantMessage,
+    FunctionExecutionResultMessage,
+    LLMMessage,
+    SystemMessage,
+    UserMessage,
+)
 from pydantic import BaseModel, Field
 
 
@@ -108,6 +111,7 @@ class Plan(BaseDataModel):
     human_clarification_request: Optional[str] = None
     human_clarification_response: Optional[str] = None
     ts: Optional[int] = None
+
 
 # Step model
 

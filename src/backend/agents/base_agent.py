@@ -3,17 +3,26 @@ from typing import Any, List, Mapping
 
 from autogen_core.base import AgentId, MessageContext
 from autogen_core.components import RoutedAgent, message_handler
-from autogen_core.components.models import (AssistantMessage,
-                                            AzureOpenAIChatCompletionClient,
-                                            LLMMessage, SystemMessage,
-                                            UserMessage)
+from autogen_core.components.models import (
+    AssistantMessage,
+    AzureOpenAIChatCompletionClient,
+    LLMMessage,
+    SystemMessage,
+    UserMessage,
+)
 from autogen_core.components.tool_agent import tool_agent_caller_loop
 from autogen_core.components.tools import Tool
 
 from context.cosmos_memory import CosmosBufferedChatCompletionContext
-from models.messages import (ActionRequest, ActionResponse,
-                             AgentMessage, Step, StepStatus)
+from models.messages import (
+    ActionRequest,
+    ActionResponse,
+    AgentMessage,
+    Step,
+    StepStatus,
+)
 from azure.monitor.events.extension import track_event
+
 
 class BaseAgent(RoutedAgent):
     def __init__(
@@ -95,7 +104,7 @@ class BaseAgent(RoutedAgent):
                     step_id=message.step_id,
                 )
             )
-            
+
             track_event(
                 "Base agent - Added into the cosmos",
                 {
@@ -107,7 +116,7 @@ class BaseAgent(RoutedAgent):
                     "step_id": message.step_id,
                 },
             )
-            
+
         except Exception as e:
             logging.exception(f"Error during LLM call: {e}")
             track_event(
@@ -121,14 +130,14 @@ class BaseAgent(RoutedAgent):
                     "step_id": message.step_id,
                 },
             )
-            
+
             return
         print(f"Task completed: {result}")
 
         step.status = StepStatus.completed
         step.agent_reply = result
         await self._model_context.update_step(step)
-        
+
         track_event(
             "Base agent - Updated step and updated into the cosmos",
             {
