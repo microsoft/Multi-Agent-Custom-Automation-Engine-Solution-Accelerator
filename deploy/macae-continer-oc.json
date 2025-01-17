@@ -5,8 +5,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.27.1.19265",
-      "templateHash": "11215378996849738193"
+      "version": "0.32.4.45862",
+      "templateHash": "13282901028774763433"
     }
   },
   "parameters": {
@@ -225,7 +225,6 @@
         "principalType": "ServicePrincipal"
       },
       "dependsOn": [
-        "aoaiUserRoleDefinition",
         "containerApp",
         "openai"
       ]
