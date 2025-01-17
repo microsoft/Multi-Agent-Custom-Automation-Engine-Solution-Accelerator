@@ -60,55 +60,56 @@ class PlannerAgent(RoutedAgent):
             [UserMessage(content=instruction, source="PlannerAgent")]
         )
 
-        await self._memory.add_item(
-            AgentMessage(
-                session_id=message.session_id,
-                user_id=self._user_id,
-                plan_id=plan.id,
-                content=f"Generated a plan with {len(steps)} steps. Click the blue check box beside each step to complete it, click the x to remove this step.",
-                source="PlannerAgent",
-                step_id="",
-            )
-        )
-        logging.info(f"Plan generated: {plan.summary}")
-        
-        track_event(
-            f"Planner - Generated a plan with {len(steps)} steps and added plan into the cosmos",
-            {
-                "session_id": message.session_id,
-                "user_id": self._user_id,
-                "plan_id": plan.id,
-                "content": f"Generated a plan with {len(steps)} steps. Click the blue check box beside each step to complete it, click the x to remove this step.",
-                "source": "PlannerAgent",
-            },
-        )
-
-        if plan.human_clarification_request is not None:
-            # if the plan identified that user information was required, send a message asking the user for it
+        if steps:
             await self._memory.add_item(
                 AgentMessage(
                     session_id=message.session_id,
                     user_id=self._user_id,
                     plan_id=plan.id,
-                    content=f"I require additional information before we can proceed: {plan.human_clarification_request}",
+                    content=f"Generated a plan with {len(steps)} steps. Click the blue check box beside each step to complete it, click the x to remove this step.",
                     source="PlannerAgent",
                     step_id="",
                 )
             )
-            logging.info(
-                f"Additional information requested: {plan.human_clarification_request}"
-            )
+            logging.info(f"Plan generated: {plan.summary}")
             
             track_event(
-                "Planner - Additional information requested and added into the cosmos",
+                f"Planner - Generated a plan with {len(steps)} steps and added plan into the cosmos",
                 {
                     "session_id": message.session_id,
                     "user_id": self._user_id,
                     "plan_id": plan.id,
-                    "content": f"I require additional information before we can proceed: {plan.human_clarification_request}",
+                    "content": f"Generated a plan with {len(steps)} steps. Click the blue check box beside each step to complete it, click the x to remove this step.",
                     "source": "PlannerAgent",
                 },
             )
+
+            if plan.human_clarification_request is not None:
+                # if the plan identified that user information was required, send a message asking the user for it
+                await self._memory.add_item(
+                    AgentMessage(
+                        session_id=message.session_id,
+                        user_id=self._user_id,
+                        plan_id=plan.id,
+                        content=f"I require additional information before we can proceed: {plan.human_clarification_request}",
+                        source="PlannerAgent",
+                        step_id="",
+                    )
+                )
+                logging.info(
+                    f"Additional information requested: {plan.human_clarification_request}"
+                )
+                        
+                track_event(
+                    "Planner - Additional information requested and added into the cosmos",
+                    {
+                        "session_id": message.session_id,
+                        "user_id": self._user_id,
+                        "plan_id": plan.id,
+                        "content": f"I require additional information before we can proceed: {plan.human_clarification_request}",
+                        "source": "PlannerAgent",
+                    },
+                )
 
         return plan
 
@@ -251,6 +252,21 @@ class PlannerAgent(RoutedAgent):
             # Parse the LLM response
             parsed_result = json.loads(content)
             structured_plan = StructuredOutputPlan(**parsed_result)
+                        
+            if not structured_plan.steps:
+                track_event(
+                    "Planner agent - No steps found",
+                    {
+                        "session_id":self._session_id,
+                        "user_id":self._user_id,
+                        "initial_goal":structured_plan.initial_goal,
+                        "overall_status":"No steps found",
+                        "source":"PlannerAgent",
+                        "summary":structured_plan.summary_plan_and_steps,
+                        "human_clarification_request":structured_plan.human_clarification_request
+                    },
+                )
+                raise ValueError("No steps found")
 
             # Create the Plan instance
             plan = Plan(
@@ -318,17 +334,17 @@ class PlannerAgent(RoutedAgent):
                     "initial_goal": "Error generating plan",
                     "overall_status": PlanStatus.failed,
                     "source": "PlannerAgent",
-                    "summary": "Error generating plan",
+                    "summary": f"Error generating plan: {e}",
                 },
             )
             # Handle the error, possibly by creating a plan with an error step
             plan = Plan(
-                id=str(uuid.uuid4()),
+                id="",  # No need of plan id as the steps are not getting created
                 session_id=self._session_id,
                 user_id=self._user_id,
                 initial_goal="Error generating plan",
                 overall_status=PlanStatus.failed,
                 source="PlannerAgent",
-                summary="Error generating plan",
+                summary=f"Error generating plan: {e}",
             )
             return plan, []

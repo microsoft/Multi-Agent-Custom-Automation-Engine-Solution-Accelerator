@@ -103,10 +103,11 @@
         })
           .then((response) => response.json())
           .then((data) => {
-            if (data.status == "Plan not created") {
+            if (data.status == "Plan not created" || data.plan_id == "") {
               notyf.error("Unable to create plan for this task.");
               newTaskPrompt.disabled = false;
               startTaskButton.disabled = false;
+              hideOverlay();
               return;
             }
 
