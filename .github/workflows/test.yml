@@ -38,6 +38,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r src/backend/requirements.txt
           pip install pytest-cov
+          pip install pytest-asyncio
 
       - name: Check if test files exist
         id: check_tests
