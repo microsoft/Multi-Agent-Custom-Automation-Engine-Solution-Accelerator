@@ -221,6 +221,21 @@
         fetchTaskStages(data[0]);
 
         sessionStorage.setItem("apiTask", JSON.stringify(data[0]));
+        const isHumanClarificationRequestNull = data?.[0]?.human_clarification_request === null
+        const taskMessageTextareaElement =document.getElementById("taskMessageTextarea");
+        const taskMessageAddButton = document.getElementById("taskMessageAddButton");
+        if(isHumanClarificationRequestNull && taskMessageTextareaElement){
+          taskMessageTextareaElement.setAttribute('disabled', true)
+        } else {
+          taskMessageTextareaElement.removeAttribute('disabled')
+        }
+        if(isHumanClarificationRequestNull && taskMessageAddButton){
+          taskMessageAddButton.setAttribute('disabled', true)
+          taskMessageAddButton.style.cursor = 'not-allowed';
+        } else {
+          taskMessageAddButton.removeAttribute('disabled')
+          taskMessageAddButton.style.cursor = 'pointer';
+        }
       })
       .catch((error) => {
         console.error("Error:", error);
