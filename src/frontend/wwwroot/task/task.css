@@ -22,9 +22,6 @@
   margin: 3rem 1rem;
 }
 
-.task-asside .task-menu .menu-label:first-of-type {
-  margin-top: 137px;
-}
 
 .task-asside .title {
   font-size: 1.25rem;
@@ -35,6 +32,7 @@
 
 .task-details {
   width: 100%;
+  padding: 2rem;
 }
 .colChatSec {
   width: 55%;
@@ -268,4 +266,9 @@ textarea {
 
 .send-button:hover {
   color: #0056b3;
+}
+
+.menu.task-menu {
+  position: sticky;
+  top: 0;
 }
