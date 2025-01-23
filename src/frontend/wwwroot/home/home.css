@@ -258,3 +258,12 @@ textarea:disabled {
 .send-button:hover {
   color: #0056b3;
 }
+
+.card.is-hoverable.quick-task > .card-content {
+  min-height: 225px;
+}
+
+.prompt-container {
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
