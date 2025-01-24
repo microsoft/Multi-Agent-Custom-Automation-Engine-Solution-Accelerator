@@ -224,10 +224,14 @@
         const isHumanClarificationRequestNull = data?.[0]?.human_clarification_request === null
         const taskMessageTextareaElement =document.getElementById("taskMessageTextarea");
         const taskMessageAddButton = document.getElementById("taskMessageAddButton");
+        const textInputContainer = document.getElementsByClassName("text-input-container");
+        
         if(isHumanClarificationRequestNull && taskMessageTextareaElement){
           taskMessageTextareaElement.setAttribute('disabled', true)
+          taskMessageTextareaElement.style.backgroundColor = "lightgray"
         } else {
           taskMessageTextareaElement.removeAttribute('disabled')
+          taskMessageTextareaElement.style.backgroundColor = "white"
         }
         if(isHumanClarificationRequestNull && taskMessageAddButton){
           taskMessageAddButton.setAttribute('disabled', true)
@@ -236,6 +240,13 @@
           taskMessageAddButton.removeAttribute('disabled')
           taskMessageAddButton.style.cursor = 'pointer';
         }
+
+        if(isHumanClarificationRequestNull && textInputContainer[0]){ 
+          textInputContainer[0].style.backgroundColor = 'lightgray';
+        } else { 
+          textInputContainer[0].style.backgroundColor = 'white';
+        }
+
       })
       .catch((error) => {
         console.error("Error:", error);

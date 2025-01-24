@@ -241,7 +241,6 @@ textarea {
   justify-content: space-between;
   align-items: left;
   padding: 0px 5px;
-  background-color: white;
 }
 
 .bottom-bar {
@@ -251,7 +250,6 @@ textarea {
   padding: 3px 10px;
   border-top: none;
   border-bottom: 4px solid #0f6cbd;
-  background-color: white;
 }
 
 .send-button {
