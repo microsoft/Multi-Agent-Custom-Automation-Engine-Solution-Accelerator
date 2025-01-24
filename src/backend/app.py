@@ -23,6 +23,7 @@ from utils import initialize_runtime_and_context, retrieve_all_agent_tools, rai_
 from fastapi.middleware.cors import CORSMiddleware
 from azure.monitor.opentelemetry import configure_azure_monitor
 from azure.monitor.events.extension import track_event
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 configure_azure_monitor(
     connection_string=os.getenv("APPLICATIONINSIGHTS_INSTRUMENTATION_KEY")
@@ -44,6 +45,8 @@ logging.getLogger("azure.monitor.opentelemetry.exporter.export._base").setLevel(
 
 # Initialize the FastAPI app
 app = FastAPI()
+
+FastAPIInstrumentor.instrument_app(app)
 
 frontend_url = Config.FRONTEND_SITE_NAME
 

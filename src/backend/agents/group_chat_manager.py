@@ -305,12 +305,12 @@ class GroupChatManager(RoutedAgent):
         )
 
         track_event(
-            f"Group Chat Manager - Requesting {step.agent.value.title()} to perform the action and added into the cosmos",
+            f"Group Chat Manager - Requesting {formatted_agent} to perform the action and added into the cosmos",
             {
                 "session_id": session_id,
                 "user_id": self._user_id,
                 "plan_id": step.plan_id,
-                "content": f"Requesting {step.agent.value.title()} to perform action: {step.action}",
+                "content": f"Requesting {formatted_agent} to perform action: {step.action}",
                 "source": "GroupChatManager",
                 "step_id": step.id,
             },
