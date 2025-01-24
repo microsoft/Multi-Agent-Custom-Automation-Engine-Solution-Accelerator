@@ -6,8 +6,8 @@ from autogen_core.components.models import AzureOpenAIChatCompletionClient
 from autogen_core.components.tools import FunctionTool, Tool
 from typing_extensions import Annotated
 
-from agents.base_agent import BaseAgent
-from context.cosmos_memory import CosmosBufferedChatCompletionContext
+from src.backend.agents.base_agent import BaseAgent
+from src.backend.context.cosmos_memory import CosmosBufferedChatCompletionContext
 
 formatting_instructions = "Instructions: returning the output of this function call verbatim to the user in markdown. Then write AGENT SUMMARY: and then include a summary of what you did."
 
@@ -523,7 +523,6 @@ async def get_tech_information(
     Document Name: Contoso's IT Policy and Procedure Manual
     Domain: IT Policy
     Description: A comprehensive guide detailing the IT policies and procedures at Contoso, including acceptable use, security protocols, and incident reporting.
-
     At Contoso, we prioritize the security and efficiency of our IT infrastructure. All employees are required to adhere to the following policies:
     - Use strong passwords and change them every 90 days.
     - Report any suspicious emails to the IT department immediately.

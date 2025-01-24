@@ -39,15 +39,16 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
+
       - name: Set Docker image tag
         run: |
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          if [[ "${{ github.head.ref }}" == "main" ]]; then
             echo "TAG=latest" >> $GITHUB_ENV
-          elif [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+          elif [[ "${{ github.head.ref }}" == "dev" ]]; then
             echo "TAG=dev" >> $GITHUB_ENV
-          elif [[ "${{ github.ref }}" == "refs/heads/demo" ]]; then
+          elif [[ "${{ github.head.ref }}" == "demo" ]]; then
             echo "TAG=demo" >> $GITHUB_ENV
-          elif [[ "${{ github.ref }}" == "refs/heads/hotfix" ]]; then
+          elif [[ "${{ github.head.ref }}" == "hotfix" ]]; then
             echo "TAG=hotfix" >> $GITHUB_ENV
           else
             echo "TAG=pullrequest-ignore" >> $GITHUB_ENV

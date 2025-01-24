@@ -3,7 +3,9 @@ from typing import Any, Dict, List, Optional
 from autogen_core.base import AgentId
 from autogen_core.base.intervention import DefaultInterventionHandler
 
-from models.messages import GetHumanInputMessage, GroupChatMessage
+from src.backend.models.messages import GroupChatMessage
+
+from src.backend.models.messages import GetHumanInputMessage
 
 
 class NeedsUserInputHandler(DefaultInterventionHandler):

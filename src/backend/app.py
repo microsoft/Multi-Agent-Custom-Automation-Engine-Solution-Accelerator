@@ -4,13 +4,13 @@ import logging
 import os
 import uuid
 from typing import List, Optional
-from middleware.health_check import HealthCheckMiddleware
+from src.backend.middleware.health_check import HealthCheckMiddleware
 from autogen_core.base import AgentId
 from fastapi import FastAPI, HTTPException, Query, Request
-from auth.auth_utils import get_authenticated_user_details
-from config import Config
-from context.cosmos_memory import CosmosBufferedChatCompletionContext
-from models.messages import (
+from src.backend.auth.auth_utils import get_authenticated_user_details
+from src.backend.config import Config
+from src.backend.context.cosmos_memory import CosmosBufferedChatCompletionContext
+from src.backend.models.messages import (
     HumanFeedback,
     HumanClarification,
     InputTask,
@@ -19,7 +19,11 @@ from models.messages import (
     AgentMessage,
     PlanWithSteps,
 )
-from utils import initialize_runtime_and_context, retrieve_all_agent_tools, rai_success
+from src.backend.utils import (
+    initialize_runtime_and_context,
+    retrieve_all_agent_tools,
+    rai_success,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from azure.monitor.opentelemetry import configure_azure_monitor
 from azure.monitor.events.extension import track_event
@@ -153,9 +157,11 @@ async def input_task_endpoint(input_task: InputTask, request: Request):
     track_event(
         "InputTaskProcessed",
         {
-            "status": f"Plan created:\n {plan.summary}"
-            if plan.id
-            else "Error occurred: Plan ID is empty",
+            "status": (
+                f"Plan created:\n {plan.summary}"
+                if plan.id
+                else "Error occurred: Plan ID is empty"
+            ),
             "session_id": input_task.session_id,
             "plan_id": plan.id,
             "description": input_task.description,
@@ -163,9 +169,11 @@ async def input_task_endpoint(input_task: InputTask, request: Request):
     )
 
     return {
-        "status": f"Plan created:\n {plan.summary}"
-        if plan.id
-        else "Error occurred: Plan ID is empty",
+        "status": (
+            f"Plan created:\n {plan.summary}"
+            if plan.id
+            else "Error occurred: Plan ID is empty"
+        ),
         "session_id": input_task.session_id,
         "plan_id": plan.id,
         "description": input_task.description,

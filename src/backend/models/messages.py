@@ -293,3 +293,11 @@ class RequestToSpeak(BaseModel):
 
     def to_dict(self):
         return self.model_dump()
+
+
+class GetHumanInputMessage:
+    def __init__(self, message):
+        self.message = message
+
+    def __str__(self):
+        return f"GetHumanInputMessage: {self.message}"
