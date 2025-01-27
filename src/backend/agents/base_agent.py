@@ -21,7 +21,7 @@ from models.messages import (
     Step,
     StepStatus,
 )
-from azure.monitor.events.extension import track_event
+from event_utils import track_event_if_configured
 
 
 class BaseAgent(RoutedAgent):
@@ -105,7 +105,7 @@ class BaseAgent(RoutedAgent):
                 )
             )
 
-            track_event(
+            track_event_if_configured(
                 "Base agent - Added into the cosmos",
                 {
                     "session_id": message.session_id,
@@ -119,7 +119,7 @@ class BaseAgent(RoutedAgent):
 
         except Exception as e:
             logging.exception(f"Error during LLM call: {e}")
-            track_event(
+            track_event_if_configured(
                 "Base agent - Error during llm call, captured into the cosmos",
                 {
                     "session_id": message.session_id,
@@ -138,7 +138,7 @@ class BaseAgent(RoutedAgent):
         step.agent_reply = result
         await self._model_context.update_step(step)
 
-        track_event(
+        track_event_if_configured(
             "Base agent - Updated step and updated into the cosmos",
             {
                 "status": StepStatus.completed,

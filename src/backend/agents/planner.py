@@ -26,7 +26,7 @@ from models.messages import (
     HumanFeedbackStatus,
 )
 
-from azure.monitor.events.extension import track_event
+from event_utils import track_event_if_configured
 
 
 @default_subscription
@@ -74,7 +74,7 @@ class PlannerAgent(RoutedAgent):
             )
             logging.info(f"Plan generated: {plan.summary}")
 
-            track_event(
+            track_event_if_configured(
                 f"Planner - Generated a plan with {len(steps)} steps and added plan into the cosmos",
                 {
                     "session_id": message.session_id,
@@ -101,7 +101,7 @@ class PlannerAgent(RoutedAgent):
                     f"Additional information requested: {plan.human_clarification_request}"
                 )
 
-                track_event(
+                track_event_if_configured(
                     "Planner - Additional information requested and added into the cosmos",
                     {
                         "session_id": message.session_id,
@@ -138,7 +138,7 @@ class PlannerAgent(RoutedAgent):
             )
         )
 
-        track_event(
+        track_event_if_configured(
             "Planner - Store HumanAgent clarification and added into the cosmos",
             {
                 "session_id": message.session_id,
@@ -160,7 +160,7 @@ class PlannerAgent(RoutedAgent):
         )
         logging.info("Plan updated with HumanClarification.")
 
-        track_event(
+        track_event_if_configured(
             "Planner - Updated with HumanClarification and added into the cosmos",
             {
                 "session_id": message.session_id,
@@ -254,7 +254,7 @@ class PlannerAgent(RoutedAgent):
             structured_plan = StructuredOutputPlan(**parsed_result)
 
             if not structured_plan.steps:
-                track_event(
+                track_event_if_configured(
                     "Planner agent - No steps found",
                     {
                         "session_id": self._session_id,
@@ -282,7 +282,7 @@ class PlannerAgent(RoutedAgent):
             # Store the plan in memory
             await self._memory.add_plan(plan)
 
-            track_event(
+            track_event_if_configured(
                 "Planner - Initial plan and added into the cosmos",
                 {
                     "session_id": self._session_id,
@@ -308,7 +308,7 @@ class PlannerAgent(RoutedAgent):
                     human_approval_status=HumanFeedbackStatus.requested,
                 )
                 await self._memory.add_step(step)
-                track_event(
+                track_event_if_configured(
                     "Planner - Added planned individual step into the cosmos",
                     {
                         "plan_id": plan.id,
@@ -326,7 +326,7 @@ class PlannerAgent(RoutedAgent):
 
         except Exception as e:
             logging.exception(f"Error in create_structured_plan: {e}")
-            track_event(
+            track_event_if_configured(
                 f"Planner - Error in create_structured_plan: {e} into the cosmos",
                 {
                     "session_id": self._session_id,
