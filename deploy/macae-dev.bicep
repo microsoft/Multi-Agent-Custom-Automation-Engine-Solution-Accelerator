@@ -63,6 +63,29 @@ resource devAoaiRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-
   }
 }
 
+resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
+  name: format(uniqueNameFormat, 'logs')
+  location: location
+  tags: tags
+  properties: {
+    retentionInDays: 30
+    sku: {
+      name: 'PerGB2018'
+    }
+  }
+}
+
+resource appInsights 'Microsoft.Insights/components@2020-02-02-preview' = {
+  name: format(uniqueNameFormat, 'appins')
+  location: location
+  kind: 'web'
+  properties: {
+    Application_Type: 'web'
+    WorkspaceResourceId: logAnalytics.id
+  }
+}
+
+
 resource cosmos 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
   name: format(uniqueNameFormat, 'cosmos')
   location: cosmosLocation
@@ -130,4 +153,4 @@ output COSMOSDB_CONTAINER string = cosmos::autogenDb::memoryContainer.name
 output AZURE_OPENAI_ENDPOINT string = openai.properties.endpoint
 output AZURE_OPENAI_DEPLOYMENT_NAME string = openai::gpt4o.name
 output AZURE_OPENAI_API_VERSION string = aoaiApiVersion
-
+output APPLICATIONINSIGHTS_INSTRUMENTATION_KEY string = appInsights.properties.ConnectionString
