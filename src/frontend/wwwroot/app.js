@@ -1,4 +1,4 @@
-(() => {    
+(() => {
     window.headers = GetAuthDetails();
     const apiEndpoint = sessionStorage.getItem('apiEndpoint') || BACKEND_API_URL;
     const goHomeButton = document.getElementById("goHomeButton");
