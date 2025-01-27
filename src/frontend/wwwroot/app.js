@@ -1,6 +1,6 @@
-(() => {
+(() => {    
     window.headers = GetAuthDetails();
-    const apiEndpoint = BACKEND_API_URL;
+    const apiEndpoint = sessionStorage.getItem('apiEndpoint') || BACKEND_API_URL;
     const goHomeButton = document.getElementById("goHomeButton");
     const newTaskButton = document.getElementById("newTaskButton");
     const closeModalButtons = document.querySelectorAll(".modal-close-button");
@@ -27,21 +27,21 @@
     };
 
     const switchView = () => {
-        console.log("switchView called");
         const viewIframe = document.getElementById('viewIframe');
-        const viewRoute = getQueryParam('v');
-        console.log("viewRoute:", viewRoute);
-        const viewContext = sessionStorage.getItem('context');
-        const noCache = '?nocache=' + new Date().getTime();
-        switch (viewRoute) {
-            case 'home':
-                viewIframe.src = 'home/home.html' + noCache;
-                break;
-            case 'task':
-                viewIframe.src = `task/${viewContext}.html` + noCache;
-                break;
-            default:
-                viewIframe.src = 'home/home.html';
+        if (viewIframe) {
+            const viewRoute = getQueryParam('v');
+            const viewContext = sessionStorage.getItem('context');
+            const noCache = '?nocache=' + new Date().getTime();
+            switch (viewRoute) {
+                case 'home':
+                    viewIframe.src = 'home/home.html' + noCache;
+                    break;
+                case 'task':
+                    viewIframe.src = `task/${viewContext}.html` + noCache;
+                    break;
+                default:
+                    viewIframe.src = 'home/home.html';
+            }
         }
     };
     // get user session 
@@ -55,7 +55,6 @@
                   return null;
               }
               const payload = await response.json();
-              console.log(payload)
 
               if (payload) {
                   return payload;
@@ -75,17 +74,21 @@
     };
 
     const homeActions = () => {
-        newTaskButton.addEventListener('click', (event) => {
-            event.preventDefault();
-            setQueryParam('v', 'home');
-            switchView();
-        });
-        goHomeButton.addEventListener('click', (event) => {
-            event.preventDefault();
-            setQueryParam('v', 'home');
-            switchView();
-        });
+        if (newTaskButton && goHomeButton) {
+            newTaskButton.addEventListener('click', (event) => {
+                event.preventDefault();
+                setQueryParam('v', 'home');
+                switchView();
+            });
+    
+            goHomeButton.addEventListener('click', (event) => {
+                event.preventDefault();
+                setQueryParam('v', 'home');
+                switchView();
+            });
+        }
     };
+
     const messageListeners = () => {
 
         window.addEventListener('message', (event) => {
@@ -119,9 +122,9 @@
                     .then(response => response.json())
                     .then(data => {
         
-                        console.log('getMyTasks', data);
-        
-                        myTasksMenu.innerHTML = '';
+                        if (myTasksMenu){
+                            myTasksMenu.innerHTML = '';
+                        }
         
                         if (data && data.length > 0) {
         
@@ -148,8 +151,10 @@
                                     <div class="tag is-dark ml-3">${completedSteps}/${task.total_steps}</div>
                                 </a>
                                 `;
-        
-                                myTasksMenu.appendChild(newTaskItem);
+                                
+                                if(myTasksMenu){
+                                    myTasksMenu.appendChild(newTaskItem);
+                                }
         
                                 newTaskItem.querySelector('.menu-task').addEventListener('click', (event) => {
                                     const sessionId = event.target.closest('.menu-task').dataset.id;
@@ -177,11 +182,13 @@
                                 if (task.overall_status === 'rejected') stagesRejectedCount++;
         
                                 const addS = (word, count) => (count === 1) ? word : word + 's';
-        
-                                tasksStats.innerHTML = `
-                                    <li><a><strong>${inCompletedTaskCount}</strong> ${addS('task', inCompletedTaskCount)} completed</a></li>
-                                    <li><a><strong>${inProgressTaskCount}</strong> ${addS('task', inProgressTaskCount)} in progress</a></li>
-                                `;
+                                
+                                if(tasksStats){
+                                    tasksStats.innerHTML = `
+                                        <li><a><strong>${inCompletedTaskCount}</strong> ${addS('task', inCompletedTaskCount)} completed</a></li>
+                                        <li><a><strong>${inProgressTaskCount}</strong> ${addS('task', inProgressTaskCount)} in progress</a></li>
+                                    `;
+                                }
         
                                 taskCount++;
         
@@ -215,7 +222,6 @@
         if (!userInfo) {
             console.error("Authentication failed. Access to tasks is restricted.");
         } else {
-            console.log('Authenticated User Info:', userInfo);
             sessionStorage.setItem('userInfo', userInfo);
             await fetchTasksIfNeeded();  // Fetch tasks after initialization if needed
         }

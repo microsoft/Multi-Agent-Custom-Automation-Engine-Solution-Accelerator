@@ -204,8 +204,6 @@
   };
 
   const fetchPlanDetails = async (session_id) => {
-    console.log("/plans?session_id:", window.headers);
-
     const headers = await window.headers;
 
     return fetch(apiEndpoint + "/plans?session_id=" + session_id, {
@@ -214,8 +212,6 @@
     })
       .then((response) => response.json())
       .then((data) => {
-        console.log("fetchPlanDetails", data[0]);
-
         updateTaskStatusDetails(data[0]);
         updateTaskProgress(data[0]);
         fetchTaskStages(data[0]);
@@ -265,8 +261,6 @@
       })
         .then((response) => response.json())
         .then((data) => {
-          console.log("fetchTaskStages", data);
-
           if (taskStagesMenu) taskStagesMenu.innerHTML = "";
           let taskStageCount = 0;
           let taskStageApprovalStatus = 0;
@@ -402,8 +396,6 @@
       })
         .then((response) => response.json())
         .then((data) => {
-          console.log("fetchTaskMessages", data);
-
           const toAgentName = (str) => {
             return str.replace(/([a-z])([A-Z])/g, "$1 $2");
           };
@@ -445,8 +437,6 @@
             sessionStorage.getItem("context") &&
             sessionStorage.getItem("context") === "customer"
           ) {
-            console.log("contextFilter", contextFilter(data));
-
             data = contextFilter(data);
           }
 
@@ -674,7 +664,6 @@
       })
         .then((response) => response.json())
         .then((data) => {
-          console.log("actionStage", data);
           action === "approved"
             ? notyf.success(`Stage "${stageObj.action}" approved.`)
             : notyf.error(`Stage "${stageObj.action}" rejected.`);
@@ -826,8 +815,6 @@
           })
             .then((response) => response.json())
             .then((data) => {
-              console.log("taskMessage", data);
-
               taskMessageTextarea.disabled = false;
               taskMessageAddButton.disabled = false;
               taskMessageAddButton.classList.remove("is-loading");
