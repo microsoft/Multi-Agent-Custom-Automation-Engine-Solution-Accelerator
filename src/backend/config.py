@@ -90,7 +90,7 @@ class Config:
         if Config.AZURE_OPENAI_API_KEY == "":
             # Use DefaultAzureCredential for auth
             Config.__aoai_chatCompletionClient = AzureOpenAIChatCompletionClient(
-                model= Config.AZURE_OPENAI_MODEL_NAME,
+                model=Config.AZURE_OPENAI_MODEL_NAME,
                 azure_deployment=Config.AZURE_OPENAI_DEPLOYMENT_NAME,
                 api_version=Config.AZURE_OPENAI_API_VERSION,
                 azure_endpoint=Config.AZURE_OPENAI_ENDPOINT,
