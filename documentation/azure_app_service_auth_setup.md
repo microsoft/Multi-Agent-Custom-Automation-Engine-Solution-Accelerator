@@ -18,7 +18,7 @@
 
 ![Add Provider](./images/azure-app-service-auth-setup/AppAuthIdentityProviderAdd.png)
 
-5. Accept the default values and click on `Add` button to go back to the previous page with the identify provider added.
+5. Accept the default values and click on `Add` button to go back to the previous page with the idenity provider added.
 
 ![Add Provider](./images/azure-app-service-auth-setup/AppAuthIdentityProviderAdded.png)
 
