@@ -56,9 +56,9 @@
      ```bash
      az role assignment create --assignee <aad-user-upn> --role "Cognitive Services OpenAI User" --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.CognitiveServices/accounts/<azure-openai-account-name>
      ```
-		**Using a Different Database in Cosmos:**
+      **Using a Different Database in Cosmos:**
 
-		You can set the solution up to use a different database in Cosmos. For example, you can name it something like autogen-dev. To do this:
+      You can set the solution up to use a different database in Cosmos. For example, you can name it something like autogen-dev. To do this:
 		1. Change the environment variable **COSMOSDB_DATABASE** to the new database name.
  		2. You will need to create the database in the Cosmos DB account. You can do this from the Data Explorer pane in the portal, click on the drop down labeled “_+ New Container_” and provide all the necessary details.
 
