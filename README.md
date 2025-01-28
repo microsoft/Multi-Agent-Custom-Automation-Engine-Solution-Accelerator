@@ -1,4 +1,4 @@
-# Multi-Agent: Custom Automation Engine – Solution Accelerator
+# Multi-Agent-Custom-Automation-Engine – Solution Accelerator
 
 MENU: [**USER STORY**](#user-story) \| [**QUICK DEPLOY**](#quick-deploy)  \| [**SUPPORTING DOCUMENTATION**](#supporting-documentation) \|
 
@@ -13,23 +13,23 @@ Problem:
 Agentic AI systems are set to transform the way businesses operate, however it can be fairly complex to build an initial MVP to demonstrate this value. 
 
 Solution:
-The Multi-Agent -Custom Automation Engine Solution Accelerator provides a ready to go application to use as the base of the MVP, or as a reference, allowing you to hit the ground running.
+The Multi-Agent-Custom Automation Engine Solution Accelerator provides a ready to go application to use as the base of the MVP, or as a reference, allowing you to hit the ground running.
 
 ### Technology Note
 This accelerator uses the AutoGen framework from Microsoft Research.  This is an open source project that is maintained by [Microsoft Research’s AI Frontiers Lab](https://www.microsoft.com/research/lab/ai-frontiers/). Please see this [blog post](https://devblogs.microsoft.com/autogen/microsofts-agentic-frameworks-autogen-and-semantic-kernel/) for the latest information on using the AutoGen framework in production solutions.
 
 ### Use cases / scenarios
 The multi-agent approach allows users to utilize multiple AI agents simultaneously for repeatable tasks, ensuring consistency and efficiency. 
-The agents collaborate with a manager on various assignments for onboarding a new employee , such as HR and tech support AI working together to set up software accounts, configure hardware, schedule onboarding meetings, register employees for benefits, and send welcome emails. Additionally, these agents can handle tasks like procurement and drafting press releases.
+The agents collaborate with a manager on various assignments for onboarding a new employee, such as HR and tech support AI working together to set up software accounts, configure hardware, schedule onboarding meetings, register employees for benefits, and send welcome emails. Additionally, these agents can handle tasks like procurement and drafting press releases.
 
 ### Business value
-Multi-agent systems represent the next wave of Generative AI use cases, offering entirely new opportunities to drive efficiencies in your business. The Multi-Agent -Custom Automation Engine Solution Accelerator demonstrates several key benefits:
+Multi-agent systems represent the next wave of Generative AI use cases, offering entirely new opportunities to drive efficiencies in your business. The Multi-Agent-Custom-Automation-Engine Solution Accelerator demonstrates several key benefits:
 
 - **Allows people to focus on what matters:** by doing the heavy lifting involved with coordinating activities across an organization, peoples’ time is freed up to focus on their specializations.
 - **Enabling GenAI to scale:** by not needing to build one application after another, organizations are able to reduce the friction of adopting GenAI across their entire organization. One capability can unlock almost unlimited use cases.
 - **Applicable to most industries:** these are common challenges that most organizations face, across most industries.
 
-Whilst still an emerging area, investing in agentic use cases, digitatization and developing tools will be key to ensuring you are able to leverage these new technologies and seize the GenAI moment.
+Whilst still an emerging area, investing in agentic use cases, digitization and developing tools will be key to ensuring you are able to leverage these new technologies and seize the GenAI moment.
 
 ### Technical key features
 
@@ -185,10 +185,10 @@ To add your newly created backend image:
 To add the new container to your website run the following:
 
 ```
-az webapp config container set --resource-group macae_full_deploy2_rg \
---name macae-frontend-2t62qyozi76bs \
---container-image-name macaeacr2t62qyozi76bs.azurecr.io/frontendmacae:latest  \
---container-registry-url https://macaeacr2t62qyozi76bs.azurecr.io
+az webapp config container set --resource-group <resource_group_name> \
+--name <container_name> \
+--container-image-name <e.g. macaeacr2t62qyozi76bs.azurecr.io/frontendmacae:latest>  \
+--container-registry-url <e.g. https://macaeacr2t62qyozi76bs.azurecr.io>
 ```
 
 
@@ -199,7 +199,7 @@ To add the identity provider, please follow the steps outlined in [Set Up Authen
 
 To debug the solution, you can use the Cosmos and OpenAI services you have manually deployed.  To do this, you need to ensure that your Azure identity has the required permissions on the Cosmos and OpenAI services. 
 
-- For OpeAI service, you can add yourself to the ‘Cognitive Services OpenAI User’ permission in the Access Control (IAM) pane of the Azure portal.  
+- For OpenAI service, you can add yourself to the ‘Cognitive Services OpenAI User’ permission in the Access Control (IAM) pane of the Azure portal.  
 - Cosmos is a little more difficult as it requires permissions be added through script.  See these examples for more information: 
   - [Use data plane role-based access control - Azure Cosmos DB for NoSQL | Microsoft Learn](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/security/how-to-grant-data-plane-role-based-access?tabs=built-in-definition%2Cpython&pivots=azure-interface-cli) 
   - [az cosmosdb sql role assignment | Microsoft Learn](https://learn.microsoft.com/en-us/cli/azure/cosmosdb/sql/role/assignment?view=azure-cli-latest#az-cosmosdb-sql-role-assignment-create) 

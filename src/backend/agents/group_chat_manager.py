@@ -22,7 +22,7 @@ from models.messages import (
     StepStatus,
 )
 
-from azure.monitor.events.extension import track_event
+from event_utils import track_event_if_configured
 
 
 @default_subscription
@@ -62,7 +62,7 @@ class GroupChatManager(RoutedAgent):
             )
         )
 
-        track_event(
+        track_event_if_configured(
             "Group Chat Manager - Received and added input task into the cosmos",
             {
                 "session_id": message.session_id,
@@ -164,7 +164,7 @@ class GroupChatManager(RoutedAgent):
                     step.status = StepStatus.rejected
                     step.human_approval_status = HumanFeedbackStatus.rejected
                     self._memory.update_step(step)
-                    track_event(
+                    track_event_if_configured(
                         "Group Chat Manager - Steps has been rejected and updated into the cosmos",
                         {
                             "status": StepStatus.rejected,
@@ -188,7 +188,7 @@ class GroupChatManager(RoutedAgent):
                     step.status = StepStatus.rejected
                     step.human_approval_status = HumanFeedbackStatus.rejected
                     self._memory.update_step(step)
-                    track_event(
+                    track_event_if_configured(
                         "Group Chat Manager - Step has been rejected and updated into the cosmos",
                         {
                             "status": StepStatus.rejected,
@@ -213,7 +213,7 @@ class GroupChatManager(RoutedAgent):
         step.human_feedback = received_human_feedback
         step.status = StepStatus.completed
         await self._memory.update_step(step)
-        track_event(
+        track_event_if_configured(
             "Group Chat Manager - Received human feedback, Updating step and updated into the cosmos",
             {
                 "status": StepStatus.completed,
@@ -241,7 +241,7 @@ class GroupChatManager(RoutedAgent):
         # Update step status to 'action_requested'
         step.status = StepStatus.action_requested
         await self._memory.update_step(step)
-        track_event(
+        track_event_if_configured(
             "Group Chat Manager - Update step to action_requested and updated into the cosmos",
             {
                 "status": StepStatus.action_requested,
@@ -304,7 +304,7 @@ class GroupChatManager(RoutedAgent):
             )
         )
 
-        track_event(
+        track_event_if_configured(
             f"Group Chat Manager - Requesting {step.agent.value.title()} to perform the action and added into the cosmos",
             {
                 "session_id": session_id,
@@ -338,7 +338,7 @@ class GroupChatManager(RoutedAgent):
             logging.info(
                 "Marking the step as complete - Since we have received the human feedback"
             )
-            track_event(
+            track_event_if_configured(
                 "Group Chat Manager - Steps completed - Received the human feedback and updated into the cosmos",
                 {
                     "session_id": session_id,
