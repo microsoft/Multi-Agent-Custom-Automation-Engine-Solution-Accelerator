@@ -2,19 +2,17 @@
 import logging
 
 from autogen_core.base import AgentId, MessageContext
-from autogen_core.components import (RoutedAgent, default_subscription,
-                                     message_handler)
+from autogen_core.components import RoutedAgent, default_subscription, message_handler
 
 from context.cosmos_memory import CosmosBufferedChatCompletionContext
 from models.messages import (
     ApprovalRequest,
     HumanFeedback,
-    HumanClarification,
-    HumanFeedbackStatus,
     StepStatus,
     AgentMessage,
     Step,
 )
+from azure.monitor.events.extension import track_event
 
 
 @default_subscription
@@ -22,7 +20,7 @@ class HumanAgent(RoutedAgent):
     def __init__(
         self,
         memory: CosmosBufferedChatCompletionContext,
-        user_id:str,
+        user_id: str,
         group_chat_manager_id: AgentId,
     ) -> None:
         super().__init__("HumanAgent")
@@ -59,6 +57,17 @@ class HumanAgent(RoutedAgent):
             )
         )
         logging.info(f"HumanAgent received feedback for step: {step}")
+        track_event(
+            f"Human Agent - Received feedback for step: {step} and added into the cosmos",
+            {
+                "session_id": message.session_id,
+                "user_id": self.user_id,
+                "plan_id": step.plan_id,
+                "content": f"Received feedback for step: {step.action}",
+                "source": "HumanAgent",
+                "step_id": message.step_id,
+            },
+        )
 
         # Notify the GroupChatManager that the step has been completed
         await self._memory.add_item(
@@ -71,3 +80,14 @@ class HumanAgent(RoutedAgent):
             )
         )
         logging.info(f"HumanAgent sent approval request for step: {step}")
+
+        track_event(
+            f"Human Agent - Approval request sent for step {step} and added into the cosmos",
+            {
+                "session_id": message.session_id,
+                "user_id": self.user_id,
+                "plan_id": step.plan_id,
+                "step_id": message.step_id,
+                "agent_id": self.group_chat_manager_id,
+            },
+        )

@@ -1,99 +1,136 @@
 <!DOCTYPE html>
 <html lang="en-US" data-theme="light">
-
-<head>
+  <head>
     <meta charset="utf-8" />
     <title>Task</title>
-    <link rel="stylesheet" href="task.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css">
-</head>
+    <link rel="stylesheet" href="task.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css"
+    />
+  </head>
 
-<body>
+  <body>
     <div id="taskLoader">
-        <i class="fa-solid fa-circle-notch fa-spin"></i>
-        <span class="mt-3"></span>
+      <i class="fa-solid fa-circle-notch fa-spin"></i>
+      <span class="mt-3"></span>
     </div>
     <div class="is-flex is-flex is-flex-direction-column is-flex-grow-1">
-        <div class="columns is-gapless">
-            <div class="column asside task-asside border-right is-one-quarter">
-                <!-- Task menu start -->
-                <aside class="menu task-menu">
-                    <h2 class="title mt-6">Task plan</h2>
-                    <p class="menu-label">Stages</p>
-                    <ul class="menu-list mx-2">
-                        <li>
-                            <ul id="taskStagesMenu" class="menu-stages"></ul>
-                        </li>
-                    </ul>
-                </aside>
-                <!-- Task menu end -->
-            </div>
-            <div class="column">
-                <section class="task-details section is-flex is-flex-direction-column">
-
-                    <!-- Task nav start -->
-                    <div class="columns">
-                        <div class="column">
-                            <h1 id="taskName" class="title"></h1>
-                        </div>
-                        <div class="column">
-                            <div class="buttons has-addons is-pulled-right">
-                                <button class="button" id="taskPauseButton" title="Start/Pause">
-                                    <span class="icon is-small">
-                                        <i class="fa-regular fa-circle-pause"></i>
-                                    </span>
-                                </button>
-                                <button id="taskCancelButton" class="button" title="Cancel">Cancel</button>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Task nav end -->
-
-                    <!-- Task status start -->
-                    <div class="columns">
-                        <div class="column is-two-fifths border-right">
-                            <p class="mb-3"><strong>Status:</strong>
-                                <tag id="taskStatusTag" class="tag is-info">In Progress</tag>
-                            </p>
-                            <div id="taskStatusDetails"></div>
-                        </div>
-                        <div class="column has-text-right">
-                            <div id="taskDetailsAgents" class="is-flex is-justify-content-end task-stats"></div>
-                            <strong id="taskAgentsHumans"></strong>
-                        </div>
-                        <div class="column has-text-right">
-                            <div class="is-size-1 task-stats has-text-info" id="taskProgressPercentage"></div>
-                            <strong id="taskProgress"></strong>
-                        </div>
-                    </div>
-                    <progress id="taskProgressBar" class="progress is-link mb-3" value="0" max="100"></progress>
-                    <!-- Task status end -->
-
-                    <!-- Task progress start -->
-                    <div id="taskMessages" class="task-progress px-3 py-3"></div>
-                    <div class="text-input-container">
-                        <textarea id="taskMessageTextarea" maxlength="1000" placeholder="Add more info to this task..."></textarea>
-                        <div class="middle-bar">
-                          <span class="char-count"><span id="charCount">0</span>/1000</span>
-                        </div>
-                        <div class="bottom-bar">
-                          <span class="icons">
-                            <img src="../assets/images/stars.svg" alt="stars">
-                          </span>
-                          <button class="send-button" id="taskMessageAddButton">
-                            <img src="../assets/images/air-button.svg" id="startTaskButton">
-                          </button>
-                        </div>
-                      </div>
-                    <!-- Task progress end -->
-                </section>
-            </div>
+      <div class="columns is-gapless">
+        <div class="column asside task-asside border-right is-one-quarter">
+          <!-- Task menu start -->
+          <aside class="menu task-menu">
+            <h2 class="title mt-6">Task plan</h2>
+            <p class="menu-label">Stages</p>
+            <ul class="menu-list">
+              <li>
+                <ul id="taskStagesMenu" class="menu-stages"></ul>
+              </li>
+            </ul>
+          </aside>
+          <!-- Task menu end -->
         </div>
+        <div class="column colChatSec">
+          <section
+            class="task-details section is-flex is-flex-direction-column"
+          >
+            <!-- Task nav start -->
+            <div class="columns">
+              <div class="column">
+                <h1 id="taskName" class="title"></h1>
+              </div>
+              <div class="column">
+                <div class="buttons has-addons is-pulled-right">
+                  <button
+                    class="button"
+                    id="taskPauseButton"
+                    title="Start/Pause"
+                  >
+                    <span class="icon is-small">
+                      <i class="fa-regular fa-circle-pause"></i>
+                    </span>
+                  </button>
+                  <button id="taskCancelButton" class="button" title="Cancel">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+            <!-- Task nav end -->
+
+            <!-- Task status start -->
+            <div class="columns">
+              <div class="column is-two-fifths border-right">
+                <p class="mb-3">
+                  <strong>Status:</strong>
+                  <tag id="taskStatusTag" class="tag is-info">In Progress</tag>
+                </p>
+                <div id="taskStatusDetails"></div>
+              </div>
+              <div class="column has-text-right">
+                <div
+                  id="taskDetailsAgents"
+                  class="is-flex is-justify-content-end task-stats"
+                ></div>
+                <strong id="taskAgentsHumans"></strong>
+              </div>
+              <div class="column has-text-right">
+                <div
+                  class="is-size-1 task-stats has-text-info"
+                  id="taskProgressPercentage"
+                ></div>
+                <strong id="taskProgress"></strong>
+              </div>
+            </div>
+            <progress
+              id="taskProgressBar"
+              class="progress is-link mb-3"
+              value="0"
+              max="100"
+            ></progress>
+            <!-- Task status end -->
+
+            <!-- Task progress start -->
+            <div id="taskMessages" class="task-progress px-3 py-3"></div>
+            <div class="text-input-container">
+              <textarea
+                id="taskMessageTextarea"
+                maxlength="1000"
+                placeholder="Add more info to this task..."
+              ></textarea>
+              <div class="middle-bar">
+                <span class="char-count"
+                  ><span id="charCount">0</span>/1000</span
+                >
+              </div>
+              <div class="bottom-bar">
+                <span class="icons">
+                  <img src="../assets/images/stars.svg" alt="stars" />
+                </span>
+                <button class="send-button" id="taskMessageAddButton">
+                  <img
+                    src="../assets/images/air-button.svg"
+                    id="startTaskButton"
+                  />
+                </button>
+              </div>
+            </div>
+            <!-- Task progress end -->
+          </section>
+        </div>
+      </div>
     </div>
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
-    <script type="text/javascript" src="https://unpkg.com/showdown/dist/showdown.min.js"></script>
+    <script
+      type="text/javascript"
+      src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"
+    ></script>
+    <script
+      type="text/javascript"
+      src="https://unpkg.com/showdown/dist/showdown.min.js"
+    ></script>
     <script src="../utils.js"></script>
     <script src="../app.js"></script>
     <script type="text/javascript" src="task.js"></script>
     <script src="../utils.js"></script>
-</body>
+  </body>
+</html>

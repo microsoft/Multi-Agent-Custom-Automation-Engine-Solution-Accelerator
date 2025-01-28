@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.32.4.45862",
-      "templateHash": "13409532170922983631"
+      "templateHash": "13282901028774763433"
     }
   },
   "parameters": {
@@ -364,12 +364,12 @@
                   "value": "[variables('aoaiApiVersion')]"
                 },
                 {
-                  "name": "DEV_BYPASS_AUTH",
-                  "value": "true"
-                },
-                {
                   "name": "FRONTEND_SITE_NAME",
                   "value": "[format('https://{0}.azurewebsites.net', format(variables('uniqueNameFormat'), 'frontend'))]"
+                },
+                {
+                  "name": "APPLICATIONINSIGHTS_INSTRUMENTATION_KEY",
+                  "value": "[reference('appInsights').ConnectionString]"
                 }
               ]
             }
@@ -377,6 +377,7 @@
         }
       },
       "dependsOn": [
+        "appInsights",
         "cosmos::autogenDb",
         "containerAppEnv",
         "cosmos",

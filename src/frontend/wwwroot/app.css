@@ -4,191 +4,239 @@
 
 /* App global */
 
-html {
-    overflow-y: auto;
+html,
+body {
+  overflow-x: hidden;
+  overflow-y: auto;
+  height: 100%;
 }
 
 body {
-    position: relative;
-    background: rgb(247, 249, 251);
-    min-height: 100vh;
+  position: relative;
+  background: rgb(247, 249, 251);
+  min-height: 100vh;
 }
 
 .border-right {
-    border-right: 1px solid hsl(221, 14%, calc(86% + 0%));
+  border-right: 1px solid hsl(221, 14%, calc(86% + 0%));
 }
 
 /* App template */
 
 #app .columns {
-    min-height: 100vh;
+  min-height: 100vh;
+  height: 100%;
 }
-
+#app .modal,
+#app .menu {
+  overflow: hidden; /* Prevent scrolling within modals and menus */
+}
 #app .asside {
-    background: rgba(231, 236, 243, 0.7);
+  background: rgba(231, 236, 243, 0.7);
 }
-
+ul#tasksStats.menu-list {
+  min-height: 100px;
+}
 @media (min-width: 1800px) {
-    #app .asside {
-        max-width: 400px;
-    }
+  #app .asside {
+    max-width: 400px;
+  }
 }
 
 #app .menu-logo {
-    font-size: 1.25rem;
-    font-weight: 700;
-    cursor: pointer;
+  font-size: 1.25rem;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 #app .menu-logo img {
-    width: 30px;
+  width: 30px;
 }
 
 #app .asside .menu-list a {
-    background-color: transparent;
+  background-color: transparent;
 }
 
 #app .asside .menu-list a.is-active {
-    background-color: rgb(71, 80, 235);
+  background-color: rgb(71, 80, 235);
 }
 
 #app .asside .menu-list a.is-active i {
-    color: white !important;
+  color: white !important;
 }
 
 #app .asside .menu-list a.is-active:hover {
-    background-color: rgb(71, 80, 235);
+  background-color: rgb(71, 80, 235);
 }
 
 #app .asside .menu-list a.menu-task {
-    display: flex;
-    align-items: center;
+  display: flex;
+  align-items: center;
 }
 
 #app .asside .menu-list a.menu-task span {
-    flex: 1;
+  flex: 1;
 }
 
 #app .asside .menu-list a:hover {
-    background-color: rgba(0, 0, 0, 0.1);
+  background-color: rgba(0, 0, 0, 0.1);
 }
 
 #app .iframe {
-    width: 100%;
-    background-color: transparent;
-    overflow-y: auto;
+  width: 100%;
+  background-color: transparent;
 }
 
 #app .context-switch {
-    position: fixed;
-    bottom: 50px;
-    right: calc(50% - 220px);
-    z-index: 3;
+  position: fixed;
+  bottom: 50px;
+  right: calc(50% - 220px);
+  z-index: 3;
 }
 
 .is-avatar.is-rounded {
-    border-radius: var(--bulma-radius-rounded);
+  border-radius: var(--bulma-radius-rounded);
 }
 
 .is-avatar.is-agent {
-    display: flex;
-    /* background-color: rgba(231, 236, 243, 0.7); */
-    background-color: rgba(70, 79, 235, 0.25);
+  display: flex;
+  /* background-color: rgba(231, 236, 243, 0.7); */
+  background-color: rgba(70, 79, 235, 0.25);
 }
 
 .is-avatar.is-agent img {
-    width: 75%;
-    height: 75%;
-    margin: 13%;
+  width: 75%;
+  height: 75%;
+  margin: 13%;
 }
 
-
-
 @keyframes moveImage {
-    0% {
-        transform: rotate(0deg);
-    }
+  0% {
+    transform: rotate(0deg);
+  }
 
-    50% {
-        transform: rotate(-3deg);
-    }
+  50% {
+    transform: rotate(-3deg);
+  }
 
-    100% {
-        transform: rotate(3deg);
-    }
+  100% {
+    transform: rotate(3deg);
+  }
 }
 
 .is-avatar.is-agent img.manager {
-    background-color: rgba(220, 56, 72, .35);
-    box-shadow: 0 0 0 4px rgba(220, 56, 72, .35);
-    animation: moveImage .3s infinite alternate;
+  background-color: rgba(220, 56, 72, 0.35);
+  box-shadow: 0 0 0 4px rgba(220, 56, 72, 0.35);
+  animation: moveImage 0.3s infinite alternate;
 }
 
 .is-avatar.is-agent img.hr_agent {
-    background-color: rgba(0, 209, 178, .35);
-    box-shadow: 0 0 0 4px rgba(0, 209, 178, .35);
-    animation: moveImage .5s infinite alternate;
+  background-color: rgba(0, 209, 178, 0.35);
+  box-shadow: 0 0 0 4px rgba(0, 209, 178, 0.35);
+  animation: moveImage 0.5s infinite alternate;
 }
 
 .is-avatar.is-agent img.procurement_agent {
-    background-color: rgba(255, 183, 15, .35);
-    box-shadow: 0 0 0 4px rgba(255, 183, 15, .35);
-    animation: moveImage .1s infinite alternate;
+  background-color: rgba(255, 183, 15, 0.35);
+  box-shadow: 0 0 0 4px rgba(255, 183, 15, 0.35);
+  animation: moveImage 0.1s infinite alternate;
 }
 
 .is-avatar.is-agent img.tech_agent {
-    background-color: rgba(178, 222, 39, .35);
-    box-shadow: 0 0 0 4px rgba(178, 222, 39, .35);
-    animation: moveImage .7s infinite alternate;
+  background-color: rgba(178, 222, 39, 0.35);
+  box-shadow: 0 0 0 4px rgba(178, 222, 39, 0.35);
+  animation: moveImage 0.7s infinite alternate;
 }
 
 .is-avatar.is-agent img.unknown {
-    background-color: rgba(39, 57, 222, 0.35);
-    box-shadow: 0 0 0 4px rgba(39, 57, 222, 0.35);
-    animation: moveImage .7s infinite alternate;
+  background-color: rgba(39, 57, 222, 0.35);
+  box-shadow: 0 0 0 4px rgba(39, 57, 222, 0.35);
+  animation: moveImage 0.7s infinite alternate;
 }
 
 .is-avatar.has-status::after {
-    content: "";
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    width: 30%;
-    height: 30%;
-    border-radius: 50%;
-    background-color: rgb(255, 255, 255);
-    border: 2px solid rgb(255, 255, 255);
+  content: "";
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 30%;
+  height: 30%;
+  border-radius: 50%;
+  background-color: rgb(255, 255, 255);
+  border: 2px solid rgb(255, 255, 255);
 }
 
 .is-avatar.has-status.has-status-active::after {
-    background-color: hsl(var(--bulma-success-h), var(--bulma-success-s), var(--bulma-success-l));
+  background-color: hsl(
+    var(--bulma-success-h),
+    var(--bulma-success-s),
+    var(--bulma-success-l)
+  );
 }
 
 .is-avatar.has-status.has-status-busy::after {
-    background-color: hsl(var(--bulma-danger-h), var(--bulma-danger-s), var(--bulma-danger-l));
+  background-color: hsl(
+    var(--bulma-danger-h),
+    var(--bulma-danger-s),
+    var(--bulma-danger-l)
+  );
 }
 
 .is-avatar.has-status.has-status-paused::after {
-    background-color: hsl(var(--bulma-dark-h), var(--bulma-dark-s), var(--bulma-dark-l));
+  background-color: hsl(
+    var(--bulma-dark-h),
+    var(--bulma-dark-s),
+    var(--bulma-dark-l)
+  );
 }
 
 .button.is-greyed-out {
-    background-color: #e0e0e0;
-    color: lightgrey;
-    cursor: not-allowed;
+  background-color: #e0e0e0;
+  color: lightgrey;
+  cursor: not-allowed;
 }
 
 .button.is-selected {
-    background-color: #d3d3d3;
-    color: #000;
+  background-color: #d3d3d3;
+  color: #000;
 }
 
-
 .notyf__toast {
-    max-width: 100% !important;
-    border-radius: var(--bulma-control-radius) !important;
+  max-width: 100% !important;
+  border-radius: var(--bulma-control-radius) !important;
 }
 
 .notyf__wrapper {
-    padding: 0.75rem 0.5rem !important;
+  padding: 0.75rem 0.5rem !important;
 }
+/* Menu list scroll style start*/
+#app .asside .menu-list {
+  max-height: 300px;
+  overflow-y: scroll;
+  padding-right: 2px;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+/* Hide the scrollbar initially (before hover) */
+#app .asside .menu-list::-webkit-scrollbar {
+  width: 8px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0s 0.3s;
+}
+/* Style the scrollbar thumb (the draggable part) */
+#app .asside .menu-list::-webkit-scrollbar-thumb {
+  border-radius: 10px;
+  transition: background-color 0.3s ease;
+}
+/* Show the scrollbar and thumb when hovering */
+#app .asside .menu-list:hover::-webkit-scrollbar {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.3s ease, visibility 0s;
+}
+/* Style the thumb when hovering */
+#app .asside .menu-list:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+}
+/* Menu list scroll style end*/

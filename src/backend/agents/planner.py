@@ -5,19 +5,19 @@ import uuid
 from typing import List, Optional
 
 from autogen_core.base import MessageContext
-from autogen_core.components import (RoutedAgent, default_subscription,
-                                     message_handler)
-from autogen_core.components.models import (AzureOpenAIChatCompletionClient,
-                                            LLMMessage, UserMessage)
+from autogen_core.components import RoutedAgent, default_subscription, message_handler
+from autogen_core.components.models import (
+    AzureOpenAIChatCompletionClient,
+    LLMMessage,
+    UserMessage,
+)
 from pydantic import BaseModel
 
 from context.cosmos_memory import CosmosBufferedChatCompletionContext
 from models.messages import (
-    ActionRequest,
     AgentMessage,
     HumanClarification,
     BAgentType,
-    HumanFeedback,
     InputTask,
     Plan,
     PlanStatus,
@@ -25,7 +25,9 @@ from models.messages import (
     StepStatus,
     HumanFeedbackStatus,
 )
-from typing import Optional
+
+from azure.monitor.events.extension import track_event
+
 
 @default_subscription
 class PlannerAgent(RoutedAgent):
@@ -59,33 +61,56 @@ class PlannerAgent(RoutedAgent):
             [UserMessage(content=instruction, source="PlannerAgent")]
         )
 
-        await self._memory.add_item(
-            AgentMessage(
-                session_id=message.session_id,
-                user_id=self._user_id,
-                plan_id=plan.id,
-                content=f"Generated a plan with {len(steps)} steps. Click the blue check box beside each step to complete it, click the x to remove this step.",
-                source="PlannerAgent",
-                step_id="",
-            )
-        )
-        logging.info(f"Plan generated: {plan.summary}")
-
-        if plan.human_clarification_request is not None:
-            # if the plan identified that user information was required, send a message asking the user for it
+        if steps:
             await self._memory.add_item(
                 AgentMessage(
                     session_id=message.session_id,
                     user_id=self._user_id,
                     plan_id=plan.id,
-                    content=f"I require additional information before we can proceed: {plan.human_clarification_request}",
+                    content=f"Generated a plan with {len(steps)} steps. Click the blue check box beside each step to complete it, click the x to remove this step.",
                     source="PlannerAgent",
                     step_id="",
                 )
             )
-            logging.info(
-                f"Additional information requested: {plan.human_clarification_request}"
+            logging.info(f"Plan generated: {plan.summary}")
+
+            track_event(
+                f"Planner - Generated a plan with {len(steps)} steps and added plan into the cosmos",
+                {
+                    "session_id": message.session_id,
+                    "user_id": self._user_id,
+                    "plan_id": plan.id,
+                    "content": f"Generated a plan with {len(steps)} steps. Click the blue check box beside each step to complete it, click the x to remove this step.",
+                    "source": "PlannerAgent",
+                },
             )
+
+            if plan.human_clarification_request is not None:
+                # if the plan identified that user information was required, send a message asking the user for it
+                await self._memory.add_item(
+                    AgentMessage(
+                        session_id=message.session_id,
+                        user_id=self._user_id,
+                        plan_id=plan.id,
+                        content=f"I require additional information before we can proceed: {plan.human_clarification_request}",
+                        source="PlannerAgent",
+                        step_id="",
+                    )
+                )
+                logging.info(
+                    f"Additional information requested: {plan.human_clarification_request}"
+                )
+
+                track_event(
+                    "Planner - Additional information requested and added into the cosmos",
+                    {
+                        "session_id": message.session_id,
+                        "user_id": self._user_id,
+                        "plan_id": plan.id,
+                        "content": f"I require additional information before we can proceed: {plan.human_clarification_request}",
+                        "source": "PlannerAgent",
+                    },
+                )
 
         return plan
 
@@ -112,6 +137,17 @@ class PlannerAgent(RoutedAgent):
                 step_id="",
             )
         )
+
+        track_event(
+            "Planner - Store HumanAgent clarification and added into the cosmos",
+            {
+                "session_id": message.session_id,
+                "user_id": self._user_id,
+                "content": f"{message.human_clarification}",
+                "source": "HumanAgent",
+            },
+        )
+
         await self._memory.add_item(
             AgentMessage(
                 session_id=message.session_id,
@@ -124,8 +160,17 @@ class PlannerAgent(RoutedAgent):
         )
         logging.info("Plan updated with HumanClarification.")
 
-    def _generate_instruction(self, objective: str) -> str:
+        track_event(
+            "Planner - Updated with HumanClarification and added into the cosmos",
+            {
+                "session_id": message.session_id,
+                "user_id": self._user_id,
+                "content": "Thanks. The plan has been updated.",
+                "source": "PlannerAgent",
+            },
+        )
 
+    def _generate_instruction(self, objective: str) -> str:
         # TODO FIX HARDCODED AGENT NAMES AT BOTTOM OF PROMPT
         agents = ", ".join([agent for agent in self._available_agents])
 
@@ -208,6 +253,21 @@ class PlannerAgent(RoutedAgent):
             parsed_result = json.loads(content)
             structured_plan = StructuredOutputPlan(**parsed_result)
 
+            if not structured_plan.steps:
+                track_event(
+                    "Planner agent - No steps found",
+                    {
+                        "session_id": self._session_id,
+                        "user_id": self._user_id,
+                        "initial_goal": structured_plan.initial_goal,
+                        "overall_status": "No steps found",
+                        "source": "PlannerAgent",
+                        "summary": structured_plan.summary_plan_and_steps,
+                        "human_clarification_request": structured_plan.human_clarification_request,
+                    },
+                )
+                raise ValueError("No steps found")
+
             # Create the Plan instance
             plan = Plan(
                 id=str(uuid.uuid4()),
@@ -222,6 +282,19 @@ class PlannerAgent(RoutedAgent):
             # Store the plan in memory
             await self._memory.add_plan(plan)
 
+            track_event(
+                "Planner - Initial plan and added into the cosmos",
+                {
+                    "session_id": self._session_id,
+                    "user_id": self._user_id,
+                    "initial_goal": structured_plan.initial_goal,
+                    "overall_status": PlanStatus.in_progress,
+                    "source": "PlannerAgent",
+                    "summary": structured_plan.summary_plan_and_steps,
+                    "human_clarification_request": structured_plan.human_clarification_request,
+                },
+            )
+
             # Create the Step instances and store them in memory
             steps = []
             for step_data in structured_plan.steps:
@@ -235,20 +308,43 @@ class PlannerAgent(RoutedAgent):
                     human_approval_status=HumanFeedbackStatus.requested,
                 )
                 await self._memory.add_step(step)
+                track_event(
+                    "Planner - Added planned individual step into the cosmos",
+                    {
+                        "plan_id": plan.id,
+                        "action": step_data.action,
+                        "agent": step_data.agent,
+                        "status": StepStatus.planned,
+                        "session_id": self._session_id,
+                        "user_id": self._user_id,
+                        "human_approval_status": HumanFeedbackStatus.requested,
+                    },
+                )
                 steps.append(step)
 
             return plan, steps
 
         except Exception as e:
-            logging.error(f"Error in create_structured_plan: {e}")
+            logging.exception(f"Error in create_structured_plan: {e}")
+            track_event(
+                f"Planner - Error in create_structured_plan: {e} into the cosmos",
+                {
+                    "session_id": self._session_id,
+                    "user_id": self._user_id,
+                    "initial_goal": "Error generating plan",
+                    "overall_status": PlanStatus.failed,
+                    "source": "PlannerAgent",
+                    "summary": f"Error generating plan: {e}",
+                },
+            )
             # Handle the error, possibly by creating a plan with an error step
             plan = Plan(
-                id=str(uuid.uuid4()),
+                id="",  # No need of plan id as the steps are not getting created
                 session_id=self._session_id,
                 user_id=self._user_id,
                 initial_goal="Error generating plan",
                 overall_status=PlanStatus.failed,
                 source="PlannerAgent",
-                summary="Error generating plan",
+                summary=f"Error generating plan: {e}",
             )
             return plan, []

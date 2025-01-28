@@ -1,0 +1,242 @@
+name: CI-Validate Deployment-Multi-Agent-Custom-Automation-Engine-Solution-Accelerator
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '0 6,18 * * *'  # Runs at 6:00 AM and 6:00 PM GMT
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Azure CLI
+        run: |
+          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+          az --version  # Verify installation
+
+      - name: Login to Azure
+        run: |
+          az login --service-principal -u ${{ secrets.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_TENANT_ID }}
+
+      - name: Install Bicep CLI
+        run: az bicep install
+
+      - name: Generate Resource Group Name
+        id: generate_rg_name
+        run: |
+          echo "Generating a unique resource group name..."
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          COMMON_PART="ci-biab"
+          UNIQUE_RG_NAME="${COMMON_PART}${TIMESTAMP}"
+          echo "RESOURCE_GROUP_NAME=${UNIQUE_RG_NAME}" >> $GITHUB_ENV
+          echo "Generated Resource_GROUP_PREFIX: ${UNIQUE_RG_NAME}" 
+      
+
+      - name: Check and Create Resource Group
+        id: check_create_rg
+        run: |
+          set -e  
+          echo "Checking if resource group exists..."
+          rg_exists=$(az group exists --name ${{ env.RESOURCE_GROUP_NAME }})
+          if [ "$rg_exists" = "false" ]; then
+            echo "Resource group does not exist. Creating..."
+            az group create --name ${{ env.RESOURCE_GROUP_NAME }} --location eastus || { echo "Error creating resource group"; exit 1; }
+          else
+            echo "Resource group already exists."
+          fi
+
+
+      - name: Deploy Bicep Template
+        id: deploy
+        run: |
+          set -e
+          az deployment group create \
+            --resource-group ${{ env.RESOURCE_GROUP_NAME }} \
+            --template-file deploy/macae.bicep \
+            --parameters azureOpenAILocation=eastus cosmosLocation=eastus2
+
+
+      - name: Send Notification on Failure
+        if: failure()
+        run: |
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      
+          # Construct the email body
+          EMAIL_BODY=$(cat <<EOF
+          {
+            "body": "<p>Dear Team,</p><p>We would like to inform you that the Multi-Agent-Custom-Automation-Engine-Solution-Accelerator Automation process has encountered an issue and has failed to complete successfully.</p><p><strong>Build URL:</strong> ${RUN_URL}<br> ${OUTPUT}</p><p>Please investigate the matter at your earliest convenience.</p><p>Best regards,<br>Your Automation Team</p>"
+          }
+          EOF
+          )
+      
+          # Send the notification
+          curl -X POST "${{ secrets.LOGIC_APP_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "$EMAIL_BODY" || echo "Failed to send notification"
+  
+    
+      - name: Get OpenAI, App Service and Container Registry Resource from Resource Group
+        id: get_openai_resource
+        run: |
+
+
+          set -e
+          echo "Fetching OpenAI resource from resource group ${{ env.RESOURCE_GROUP_NAME }}..."
+          
+          # Run the az resource list command to get the OpenAI resource name
+          openai_resource_name=$(az resource list --resource-group ${{ env.RESOURCE_GROUP_NAME }} --resource-type "Microsoft.CognitiveServices/accounts" --query "[0].name" -o tsv)
+
+          if [ -z "$openai_resource_name" ]; then
+            echo "No OpenAI resource found in resource group ${{ env.RESOURCE_GROUP_NAME }}."
+            exit 1
+          else
+            echo "OPENAI_RESOURCE_NAME=${openai_resource_name}" >> $GITHUB_ENV
+            echo "OpenAI resource name: ${openai_resource_name}" 
+          fi
+
+          echo "Fetching Azure App Service resource from resource group ${{ env.RESOURCE_GROUP_NAME }}..."
+          
+          # Run the az resource list command to get the App Service resource name
+          app_service_name=$(az resource list --resource-group ${{ env.RESOURCE_GROUP_NAME }} --resource-type "Microsoft.Web/sites" --query "[0].name" -o tsv)
+
+          if [ -z "$app_service_name" ]; then
+            echo "No Azure App Service resource found in resource group ${{ env.RESOURCE_GROUP_NAME }}."
+            exit 1
+          else
+            echo "APP_SERVICE_NAME=${app_service_name}" >> $GITHUB_ENV
+            echo "Azure App Service resource name: ${app_service_name}" 
+          fi
+
+          echo "Fetching container registry resource from resource group ${{ env.RESOURCE_GROUP_NAME }}..."
+
+          # Fetch Azure Container Registry name
+          acr_name=$(az acr list --resource-group ${{ env.RESOURCE_GROUP_NAME }} --query "[0].name" -o tsv)
+
+          if [ -z "$acr_name" ]; then
+            echo "No Azure Container Registry found in resource group ${{ env.RESOURCE_GROUP_NAME }}."
+            exit 1
+          else
+            echo "ACR_NAME=${acr_name}" >> $GITHUB_ENV
+            echo "Azure Container Registry name: ${acr_name}"
+          fi
+
+      
+      - name: Build the image and update the container app
+        id: build-and-update
+        run: |
+
+          set -e
+          # Define variables for acr and container app names
+          acr_name="${{ env.ACR_NAME }}"
+          echo "ACR name: {$acr_name}"
+          backend_container_app_name="macae-backend"
+          backend_build_image_tag="backend:latest"
+
+          echo "Building the container image..."
+          # Build the image
+          az acr build -r ${acr_name} -t ${backend_build_image_tag} ./src/backend
+          echo "Backend image build completed successfully."
+
+          frontend_container_app_name="${{ env.APP_SERVICE_NAME }}"
+          frontend_build_image_tag="frontend:latest"
+
+          echo "Building the container image..."
+          # Build the image
+          az acr build -r ${acr_name} -t ${frontend_build_image_tag} ./src/frontend
+          echo "Frontend image build completed successfully."
+
+          # Add the new container to the website
+          az webapp config container set --resource-group ${{ env.RESOURCE_GROUP_NAME }} --name ${frontend_container_app_name} --container-image-name ${acr_name}.azurecr.io/frontend:latest --container-registry-url https://${acr_name}.azurecr.io
+                  
+          
+      - name: Delete Bicep Deployment
+        if: success()
+        run: |
+          set -e  
+          echo "Checking if resource group exists..."
+          rg_exists=$(az group exists --name ${{ env.RESOURCE_GROUP_NAME }})
+          if [ "$rg_exists" = "true" ]; then
+            echo "Resource group exist. Cleaning..."
+            az group delete \
+                --name ${{ env.RESOURCE_GROUP_NAME }} \
+                --yes \
+                --no-wait
+            echo "Resource group deleted...  ${{ env.RESOURCE_GROUP_NAME }}"
+          else
+            echo "Resource group does not exists."
+          fi
+
+
+      - name: Wait for resource deletion to complete
+        run: |
+
+          
+          # Add resources to the array
+          resources_to_check=("${{ env.OPENAI_RESOURCE_NAME }}")
+
+          echo "List of resources to check: ${resources_to_check[@]}"
+
+          # Maximum number of retries
+          max_retries=3
+
+          # Retry intervals in seconds (30, 60, 120)
+          retry_intervals=(30 60 120)
+
+          # Retry mechanism to check resources
+          retries=0
+          while true; do
+            resource_found=false
+
+            # Get the list of resources in YAML format again on each retry
+            resource_list=$(az resource list --resource-group ${{ env.RESOURCE_GROUP_NAME }} --output yaml)
+
+            # Iterate through the resources to check
+            for resource in "${resources_to_check[@]}"; do
+              echo "Checking resource: $resource"
+              if echo "$resource_list" | grep -q "name: $resource"; then
+                echo "Resource '$resource' exists in the resource group."
+                resource_found=true
+              else
+                echo "Resource '$resource' does not exist in the resource group."
+              fi
+            done
+
+            # If any resource exists, retry
+            if [ "$resource_found" = true ]; then
+              retries=$((retries + 1))
+              if [ "$retries" -gt "$max_retries" ]; then
+                echo "Maximum retry attempts reached. Exiting."
+                break
+              else
+                # Wait for the appropriate interval for the current retry
+                echo "Waiting for ${retry_intervals[$retries-1]} seconds before retrying..."
+                sleep ${retry_intervals[$retries-1]}
+              fi
+            else
+              echo "No resources found. Exiting."
+              break
+            fi
+          done
+
+          
+      - name: Purging the Resources
+        if: success()
+        run: |
+
+          set -e 
+          echo "Azure OpenAI: ${{ env.OPENAI_RESOURCE_NAME }}"
+
+          # Purge OpenAI Resource
+          echo "Purging the OpenAI Resource..."
+          if ! az resource delete --ids /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/providers/Microsoft.CognitiveServices/locations/eastus/resourceGroups/${{ env.RESOURCE_GROUP_NAME }}/deletedAccounts/${{ env.OPENAI_RESOURCE_NAME }} --verbose; then
+            echo "Failed to purge openai resource: ${{ env.OPENAI_RESOURCE_NAME }}"
+          else
+            echo "Purged the openai resource: ${{ env.OPENAI_RESOURCE_NAME }}"
+          fi
+
+          echo "Resource purging completed successfully"

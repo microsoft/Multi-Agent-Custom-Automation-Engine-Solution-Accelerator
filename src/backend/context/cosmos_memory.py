@@ -6,10 +6,13 @@ import uuid
 from typing import Any, Dict, List, Optional, Type
 
 from autogen_core.components.model_context import BufferedChatCompletionContext
-from autogen_core.components.models import (AssistantMessage,
-                                            FunctionExecutionResultMessage,
-                                            LLMMessage, SystemMessage,
-                                            UserMessage)
+from autogen_core.components.models import (
+    AssistantMessage,
+    FunctionExecutionResultMessage,
+    LLMMessage,
+    SystemMessage,
+    UserMessage,
+)
 from azure.cosmos.partition_key import PartitionKey
 
 from config import Config
@@ -60,7 +63,7 @@ class CosmosBufferedChatCompletionContext(BufferedChatCompletionContext):
             await self._container.create_item(body=document)
             logging.info(f"Item added to Cosmos DB - {document['id']}")
         except Exception as e:
-            logging.error(f"Failed to add item to Cosmos DB: {e}")
+            logging.exception(f"Failed to add item to Cosmos DB: {e}")
             # print(f"Failed to add item to Cosmos DB: {e}")
 
     async def update_item(self, item: BaseDataModel) -> None:
@@ -71,7 +74,7 @@ class CosmosBufferedChatCompletionContext(BufferedChatCompletionContext):
             await self._container.upsert_item(body=document)
             # logging.info(f"Item updated in Cosmos DB: {document}")
         except Exception as e:
-            logging.error(f"Failed to update item in Cosmos DB: {e}")
+            logging.exception(f"Failed to update item in Cosmos DB: {e}")
 
     async def get_item_by_id(
         self, item_id: str, partition_key: str, model_class: Type[BaseDataModel]
@@ -84,7 +87,7 @@ class CosmosBufferedChatCompletionContext(BufferedChatCompletionContext):
             )
             return model_class.model_validate(item)
         except Exception as e:
-            logging.error(f"Failed to retrieve item from Cosmos DB: {e}")
+            logging.exception(f"Failed to retrieve item from Cosmos DB: {e}")
             return None
 
     async def query_items(
@@ -103,7 +106,7 @@ class CosmosBufferedChatCompletionContext(BufferedChatCompletionContext):
                 result_list.append(model_class.model_validate(item))
             return result_list
         except Exception as e:
-            logging.error(f"Failed to query items from Cosmos DB: {e}")
+            logging.exception(f"Failed to query items from Cosmos DB: {e}")
             return []
 
     # Methods to add and retrieve Sessions, Plans, and Steps
@@ -141,9 +144,7 @@ class CosmosBufferedChatCompletionContext(BufferedChatCompletionContext):
 
     async def get_plan_by_session(self, session_id: str) -> Optional[Plan]:
         """Retrieve a plan associated with a session."""
-        query = (
-            "SELECT * FROM c WHERE c.session_id=@session_id AND c.user_id=@user_id AND c.data_type=@data_type"
-        )
+        query = "SELECT * FROM c WHERE c.session_id=@session_id AND c.user_id=@user_id AND c.data_type=@data_type"
         parameters = [
             {"name": "@session_id", "value": session_id},
             {"name": "@data_type", "value": "plan"},
@@ -214,7 +215,7 @@ class CosmosBufferedChatCompletionContext(BufferedChatCompletionContext):
             await self._container.create_item(body=message_dict)
             # logging.info(f"Message added to Cosmos DB: {message_dict}")
         except Exception as e:
-            logging.error(f"Failed to add message to Cosmos DB: {e}")
+            logging.exception(f"Failed to add message to Cosmos DB: {e}")
 
     async def get_messages(self) -> List[LLMMessage]:
         """Get recent messages for the session."""
@@ -256,7 +257,7 @@ class CosmosBufferedChatCompletionContext(BufferedChatCompletionContext):
                 messages.append(message)
             return messages
         except Exception as e:
-            logging.error(f"Failed to load messages from Cosmos DB: {e}")
+            logging.exception(f"Failed to load messages from Cosmos DB: {e}")
             return []
 
     # Generic method to get data by type
@@ -278,7 +279,7 @@ class CosmosBufferedChatCompletionContext(BufferedChatCompletionContext):
             ]
             return await self.query_items(query, parameters, model_class)
         except Exception as e:
-            logging.error(f"Failed to query data by type from Cosmos DB: {e}")
+            logging.exception(f"Failed to query data by type from Cosmos DB: {e}")
             return []
 
     # Additional utility methods
@@ -290,7 +291,7 @@ class CosmosBufferedChatCompletionContext(BufferedChatCompletionContext):
             await self._container.delete_item(item=item_id, partition_key=partition_key)
             # logging.info(f"Item {item_id} deleted from Cosmos DB")
         except Exception as e:
-            logging.error(f"Failed to delete item from Cosmos DB: {e}")
+            logging.exception(f"Failed to delete item from Cosmos DB: {e}")
 
     async def delete_items_by_query(
         self, query: str, parameters: List[Dict[str, Any]]
@@ -307,7 +308,7 @@ class CosmosBufferedChatCompletionContext(BufferedChatCompletionContext):
                 )
                 # logging.info(f"Item {item_id} deleted from Cosmos DB")
         except Exception as e:
-            logging.error(f"Failed to delete items from Cosmos DB: {e}")
+            logging.exception(f"Failed to delete items from Cosmos DB: {e}")
 
     async def delete_all_messages(self, data_type) -> None:
         """Delete all messages from Cosmos DB."""
@@ -334,7 +335,7 @@ class CosmosBufferedChatCompletionContext(BufferedChatCompletionContext):
                 messages_list.append(item)
             return messages_list
         except Exception as e:
-            logging.error(f"Failed to get messages from Cosmos DB: {e}")
+            logging.exception(f"Failed to get messages from Cosmos DB: {e}")
             return []
 
     async def close(self) -> None:

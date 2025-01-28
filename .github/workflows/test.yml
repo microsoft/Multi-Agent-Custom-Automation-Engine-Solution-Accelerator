@@ -1,0 +1,62 @@
+name: Test Workflow with Coverage
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - demo
+      - hotfix
+  pull_request:
+    types:
+      - opened
+      - ready_for_review
+      - reopened
+      - synchronize
+    branches:
+      - main
+      - main
+      - dev
+      - demo
+      - hotfix
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r src/backend/requirements.txt
+          pip install pytest-cov
+          pip install pytest-asyncio
+
+      - name: Check if test files exist
+        id: check_tests
+        run: |
+          if [ -z "$(find src -type f -name 'test_*.py')" ]; then
+            echo "No test files found, skipping tests."
+            echo "skip_tests=true" >> $GITHUB_ENV
+          else
+            echo "Test files found, running tests."
+            echo "skip_tests=false" >> $GITHUB_ENV
+          fi
+
+      - name: Run tests with coverage
+        if: env.skip_tests == 'false'
+        run: |
+          pytest --cov=. --cov-report=term-missing --cov-report=xml
+          
+      - name: Skip coverage report if no tests
+        if: env.skip_tests == 'true'
+        run: |
+          echo "Skipping coverage report because no tests were found."
