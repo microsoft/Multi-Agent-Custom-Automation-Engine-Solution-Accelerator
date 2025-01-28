@@ -22,7 +22,7 @@
      ```
    - To specify a tenant, use:
      ```bash
-     az login --tenant 16b3c013-0000-0000-0000-000000000
+     az login --tenant <tenant_id>
      ```
 
 3. **Create a Resource Group:**
@@ -42,21 +42,39 @@
      ```bash
      az ad signed-in-user show --query id -o tsv
      ```
-     You will also be prompted for locations for Cosmos and Open AI services.  This is to allow separate regions where there may be service quota restrictions
+     You will also be prompted for locations for Cosmos and Open AI services.  This is to allow separate regions where there may be service quota restrictions.
 
-5. **Create a `.env` file:**
+   - **Additional Notes**:
+
+     **Role Assignments in Bicep Deployment:**
+     
+      The macae-dev.bicep deployment includes the assignment of the appropriate roles to AOAI and Cosmos services. If you want to modify an existing implementation—for example, to use resources deployed as part of the simple deployment for local debugging—you will need to add your own credentials to access the Cosmos and AOAI services. You can add these permissions using the following commands:
+     ```bash
+     az cosmosdb sql role assignment create --resource-group <solution-accelerator-rg> --account-name <cosmos-db-account-name> --role-definition-name "Cosmos DB Built-in Data Contributor" --principal-id <aad-user-object-id> --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.DocumentDB/databaseAccounts/<cosmos-db-account-name>
+     ```
+
+     ```bash
+     az role assignment create --assignee <aad-user-upn> --role "Cognitive Services OpenAI User" --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.CognitiveServices/accounts/<azure-openai-account-name>
+     ```
+		**Using a Different Database in Cosmos:**
+
+		You can set the solution up to use a different database in Cosmos. For example, you can name it something like autogen-dev. To do this:
+		1. Change the environment variable **COSMOSDB_DATABASE** to the new database name.
+ 		2. You will need to create the database in the Cosmos DB account. You can do this from the Data Explorer pane in the portal, click on the drop down labeled “_+ New Container_” and provide all the necessary details.
+
+6. **Create a `.env` file:**
 
    - Navigate to the `src` folder and create a `.env` file based on the provided `.env.sample` file.
 
-6. **Fill in the `.env` file:**
+7. **Fill in the `.env` file:**
 
    - Use the output from the deployment or check the Azure Portal under "Deployments" in the resource group.
 
-7. **(Optional) Set up a virtual environment:**
+8. **(Optional) Set up a virtual environment:**
 
    - If you are using `venv`, create and activate your virtual environment for both the frontend and backend folders.
 
-8. **Install requirements - frontend:**
+9. **Install requirements - frontend:**
 
    - In each of the frontend and backend folders -
      Open a terminal in the `src` folder and run:
@@ -64,7 +82,7 @@
      pip install -r requirements.txt
      ```
 
-9. **Run the application:**
+10. **Run the application:**
    - From the src/backend directory:
    ```bash
    python app.py
