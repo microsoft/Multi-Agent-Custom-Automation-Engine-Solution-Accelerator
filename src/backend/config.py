@@ -37,6 +37,7 @@ class Config:
     COSMOSDB_CONTAINER = GetRequiredConfig("COSMOSDB_CONTAINER")
 
     AZURE_OPENAI_DEPLOYMENT_NAME = GetRequiredConfig("AZURE_OPENAI_DEPLOYMENT_NAME")
+    AZURE_OPENAI_MODEL_NAME = GetOptionalConfig("AZURE_OPENAI_MODEL_NAME", default=AZURE_OPENAI_DEPLOYMENT_NAME)
     AZURE_OPENAI_API_VERSION = GetRequiredConfig("AZURE_OPENAI_API_VERSION")
     AZURE_OPENAI_ENDPOINT = GetRequiredConfig("AZURE_OPENAI_ENDPOINT")
     AZURE_OPENAI_API_KEY = GetOptionalConfig("AZURE_OPENAI_API_KEY")
@@ -89,7 +90,8 @@ class Config:
         if Config.AZURE_OPENAI_API_KEY == "":
             # Use DefaultAzureCredential for auth
             Config.__aoai_chatCompletionClient = AzureOpenAIChatCompletionClient(
-                model=Config.AZURE_OPENAI_DEPLOYMENT_NAME,
+                model= Config.AZURE_OPENAI_MODEL_NAME,
+                azure_deployment=Config.AZURE_OPENAI_DEPLOYMENT_NAME,
                 api_version=Config.AZURE_OPENAI_API_VERSION,
                 azure_endpoint=Config.AZURE_OPENAI_ENDPOINT,
                 azure_ad_token_provider=Config.GetTokenProvider(
@@ -101,7 +103,8 @@ class Config:
         else:
             # Fallback behavior to use API key
             Config.__aoai_chatCompletionClient = AzureOpenAIChatCompletionClient(
-                model=Config.AZURE_OPENAI_DEPLOYMENT_NAME,
+                model=Config.AZURE_OPENAI_MODEL_NAME,
+                azure_deployment=Config.AZURE_OPENAI_DEPLOYMENT_NAME,
                 api_version=Config.AZURE_OPENAI_API_VERSION,
                 azure_endpoint=Config.AZURE_OPENAI_ENDPOINT,
                 api_key=Config.AZURE_OPENAI_API_KEY,
