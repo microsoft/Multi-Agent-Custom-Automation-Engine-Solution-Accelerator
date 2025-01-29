@@ -304,7 +304,6 @@ class GroupChatManager(RoutedAgent):
             )
         )
 
-
         track_event_if_configured(
             f"Group Chat Manager - Requesting {formatted_agent} to perform the action and added into the cosmos",
             {
