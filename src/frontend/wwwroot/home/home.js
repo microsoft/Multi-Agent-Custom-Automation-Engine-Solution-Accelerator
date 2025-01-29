@@ -111,8 +111,6 @@
               return;
             }
 
-            console.log("startTaskButton", data);
-
             newTaskPrompt.disabled = false;
             startTaskButton.disabled = false;
             startTaskButton.classList.remove("is-loading");

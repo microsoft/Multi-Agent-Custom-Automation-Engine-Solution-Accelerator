@@ -12,7 +12,7 @@ from models.messages import (
     AgentMessage,
     Step,
 )
-from azure.monitor.events.extension import track_event
+from event_utils import track_event_if_configured
 
 
 @default_subscription
@@ -57,7 +57,7 @@ class HumanAgent(RoutedAgent):
             )
         )
         logging.info(f"HumanAgent received feedback for step: {step}")
-        track_event(
+        track_event_if_configured(
             f"Human Agent - Received feedback for step: {step} and added into the cosmos",
             {
                 "session_id": message.session_id,
@@ -81,7 +81,7 @@ class HumanAgent(RoutedAgent):
         )
         logging.info(f"HumanAgent sent approval request for step: {step}")
 
-        track_event(
+        track_event_if_configured(
             f"Human Agent - Approval request sent for step {step} and added into the cosmos",
             {
                 "session_id": message.session_id,

@@ -1,4 +1,4 @@
-# Multi-Agent: Custom Automation Engine – Solution Accelerator : Responsible AI FAQ 
+# Multi-Agent-Custom-Automation-Engine – Solution Accelerator : Responsible AI FAQ 
 
 ## What is the Multi Agent: Custom Automation Engine – Solution Accelerator? 
 Multi Agent: Custom Automation Engine – Solution Accelerator is an open-source GitHub Repository that enables users to solve complex tasks using multiple agents. The accelerator is designed to be generic across business tasks.  The user enters a task and a planning LLM formulates a plan to complete that task.  The system then dynamically generates agents which can complete the task.  The system also allows the user to create actions that agents can take (for example sending emails or scheduling orientation sessions for new employees).  These actions are taken into account by the planner and dynamically created agents may be empowered to take these actions.

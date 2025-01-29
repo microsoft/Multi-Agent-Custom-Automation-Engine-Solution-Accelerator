@@ -22,9 +22,6 @@
   margin: 3rem 1rem;
 }
 
-.task-asside .task-menu .menu-label:first-of-type {
-  margin-top: 137px;
-}
 
 .task-asside .title {
   font-size: 1.25rem;
@@ -35,6 +32,7 @@
 
 .task-details {
   width: 100%;
+  padding: 2rem;
 }
 .colChatSec {
   width: 55%;
@@ -243,7 +241,6 @@ textarea {
   justify-content: space-between;
   align-items: left;
   padding: 0px 5px;
-  background-color: white;
 }
 
 .bottom-bar {
@@ -253,7 +250,6 @@ textarea {
   padding: 3px 10px;
   border-top: none;
   border-bottom: 4px solid #0f6cbd;
-  background-color: white;
 }
 
 .send-button {
@@ -268,4 +264,9 @@ textarea {
 
 .send-button:hover {
   color: #0056b3;
+}
+
+.menu.task-menu {
+  position: sticky;
+  top: 0;
 }
