@@ -1,4 +1,10 @@
-# app.py
+#!/usr/bin/env python
+import os
+import sys
+
+# Add the parent directory (the one that contains the "src" folder) to sys.path.
+# This allows absolute imports such as "from src.backend.middleware.health_check" to work.
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 import asyncio
 import logging
 import os
