@@ -211,7 +211,7 @@ ul#tasksStats.menu-list {
 }
 /* Menu list scroll style start*/
 #app .asside .menu-list {
-  max-height: 300px;
+  max-height: calc(100vh - 450px);
   overflow-y: scroll;
   padding-right: 2px;
   transition: all 0.3s ease;
