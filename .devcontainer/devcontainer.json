@@ -1,0 +1,32 @@
+{
+    "name": "Multi Agent Custom Automation Engine Solution Accelerator",
+    "image": "mcr.microsoft.com/devcontainers/python:3.10",
+    "features": {
+        "ghcr.io/devcontainers/features/azure-cli:1.0.8": {},
+        "ghcr.io/azure/azure-dev/azd:latest": {},
+        "ghcr.io/rchaganti/vsc-devcontainer-features/azurebicep:1.0.5": {}
+    },
+
+
+    "postCreateCommand": "sudo chmod +x .devcontainer/setupEnv.sh && ./.devcontainer/setupEnv.sh",
+    
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-azuretools.azure-dev",
+                "ms-azuretools.vscode-bicep",
+                "ms-python.python"
+            ]
+        },
+        "codespaces": {
+            "openFiles": [
+              "README.md"
+            ]
+        }
+    },
+    
+    "remoteUser": "vscode",
+    "hostRequirements": {
+        "memory": "8gb"
+    }
+}
