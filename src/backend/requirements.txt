@@ -14,3 +14,8 @@ opentelemetry-instrumentation-fastapi
 opentelemetry-instrumentation-openai
 opentelemetry-exporter-otlp-proto-http
 opentelemetry-exporter-otlp-proto-grpc
+
+# Testing tools
+pytest>=8.2,<9  # Compatible version for pytest-asyncio
+pytest-asyncio==0.24.0
+pytest-cov==5.0.0
