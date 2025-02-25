@@ -280,7 +280,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
               value: 'https://${format(uniqueNameFormat, 'frontend')}.azurewebsites.net'
             }
             {
-              name: 'APPLICATIONINSIGHTS_INSTRUMENTATION_KEY'
+              name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
               value: appInsights.properties.ConnectionString
             }
           ]

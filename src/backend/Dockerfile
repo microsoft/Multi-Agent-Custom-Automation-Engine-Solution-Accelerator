@@ -3,7 +3,7 @@ FROM python:3.11-slim
 
 
 # Backend app setup
-WORKDIR /app/backend
+WORKDIR /src/backend
 COPY . .  
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
