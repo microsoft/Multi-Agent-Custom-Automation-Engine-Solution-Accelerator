@@ -1,16 +1,21 @@
-# app.py
+#!/usr/bin/env python
+import os
+import sys
+
+# Add the parent directory (the one that contains the "src" folder) to sys.path.
+# This allows absolute imports such as "from src.backend.middleware.health_check" to work
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 import asyncio
 import logging
-import os
 import uuid
 from typing import List, Optional
-from middleware.health_check import HealthCheckMiddleware
+from src.backend.middleware.health_check import HealthCheckMiddleware
 from autogen_core.base import AgentId
 from fastapi import FastAPI, HTTPException, Query, Request
-from auth.auth_utils import get_authenticated_user_details
-from config import Config
-from context.cosmos_memory import CosmosBufferedChatCompletionContext
-from models.messages import (
+from src.backend.auth.auth_utils import get_authenticated_user_details
+from src.backend.config import Config
+from src.backend.context.cosmos_memory import CosmosBufferedChatCompletionContext
+from src.backend.models.messages import (
     HumanFeedback,
     HumanClarification,
     InputTask,
@@ -19,15 +24,15 @@ from models.messages import (
     AgentMessage,
     PlanWithSteps,
 )
-from utils import initialize_runtime_and_context, retrieve_all_agent_tools, rai_success
-from event_utils import track_event_if_configured
+from src.backend.utils import initialize_runtime_and_context, retrieve_all_agent_tools, rai_success
+from src.backend.event_utils import track_event_if_configured
 from fastapi.middleware.cors import CORSMiddleware
 from azure.monitor.opentelemetry import configure_azure_monitor
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 
 # Check if the Application Insights Instrumentation Key is set in the environment variables
-instrumentation_key = os.getenv("APPLICATIONINSIGHTS_INSTRUMENTATION_KEY")
+instrumentation_key = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
 if instrumentation_key:
     # Configure Application Insights if the Instrumentation Key is found
     configure_azure_monitor(connection_string=instrumentation_key)

@@ -6,8 +6,8 @@ from autogen_core.components.models import AzureOpenAIChatCompletionClient
 from autogen_core.components.tools import FunctionTool, Tool
 from typing_extensions import Annotated
 
-from agents.base_agent import BaseAgent
-from context.cosmos_memory import CosmosBufferedChatCompletionContext
+from src.backend.agents.base_agent import BaseAgent
+from src.backend.context.cosmos_memory import CosmosBufferedChatCompletionContext
 
 
 # Define new Procurement tools (functions)

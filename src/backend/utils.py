@@ -10,20 +10,21 @@ from autogen_core.base import AgentId
 from autogen_core.components.tool_agent import ToolAgent
 from autogen_core.components.tools import Tool
 
-from agents.group_chat_manager import GroupChatManager
-from agents.hr import HrAgent, get_hr_tools
-from agents.human import HumanAgent
-from agents.marketing import MarketingAgent, get_marketing_tools
-from agents.planner import PlannerAgent
-from agents.procurement import ProcurementAgent, get_procurement_tools
-from agents.product import ProductAgent, get_product_tools
-from agents.generic import GenericAgent, get_generic_tools
-from agents.tech_support import TechSupportAgent, get_tech_support_tools
+from src.backend.agents.group_chat_manager import GroupChatManager
+from src.backend.agents.hr import HrAgent, get_hr_tools
+from src.backend.agents.human import HumanAgent
+from src.backend.agents.marketing import MarketingAgent, get_marketing_tools
+from src.backend.agents.planner import PlannerAgent
+from src.backend.agents.procurement import ProcurementAgent, get_procurement_tools
+from src.backend.agents.product import ProductAgent, get_product_tools
+from src.backend.agents.generic import GenericAgent, get_generic_tools
+from src.backend.agents.tech_support import TechSupportAgent, get_tech_support_tools
 
 # from agents.misc import MiscAgent
-from config import Config
-from context.cosmos_memory import CosmosBufferedChatCompletionContext
-from models.messages import BAgentType
+from src.backend.config import Config
+from src.backend.context.cosmos_memory import CosmosBufferedChatCompletionContext
+from src.backend.models.messages import BAgentType
+# from collections import defaultdict
 
 # Initialize logging
 # from otlp_tracing import configure_oltp_tracing
@@ -68,8 +69,6 @@ async def initialize_runtime_and_context(
     Returns:
         Tuple[SingleThreadedAgentRuntime, CosmosBufferedChatCompletionContext]: The runtime and context for the session.
     """
-    global runtime_dict
-    global aoai_model_client
 
     if user_id is None:
         raise ValueError(
