@@ -1,4 +1,4 @@
-# Accelerating your own Multi-Agent -Custom Automation Engine MVP
+# Accelerating your own Multi-Agent - Custom Automation Engine MVP
 
 As the name suggests, this project is designed to accelerate development of Multi-Agent solutions in your environment.  The example solution presented shows how such a solution would be implemented and provides example agent definitions along with stubs for possible tools those agents could use to accomplish tasks.  You will want to implement real functions in your own environment, to be used by agents customized around your own use cases. Users can choose the LLM that is optimized for responsible use. The default LLM is GPT-4o which inherits the existing responsible AI mechanisms and filters from the LLM provider. We encourage developers to review [OpenAI’s Usage policies](https://openai.com/policies/usage-policies/) and [Azure OpenAI’s Code of Conduct](https://learn.microsoft.com/en-us/legal/cognitive-services/openai/code-of-conduct) when using GPT-4o. This document is designed to provide the in-depth technical information to allow you to add these customizations. Once the agents and tools have been developed, you will likely want to implement your own real world front end solution to replace the example in this accelerator.
 
@@ -8,7 +8,7 @@ This application is an AI-driven orchestration system that manages a group of AI
 
 - Receive input tasks from users.
 - Generate a detailed plan to accomplish the task using a Planner agent.
-- Execute the plan by delegating steps to specialized agents (e.g., HR, Legal, Marketing).
+- Execute the plan by delegating steps to specialized agents (e.g., HR, Procurement, Marketing).
 - Incorporate human feedback into the workflow.
 - Maintain state across sessions with persistent storage.
 
@@ -17,319 +17,191 @@ This code has not been tested as an end-to-end, reliable production application-
 Below, we'll dive into the details of each component, focusing on the endpoints, data types, and the flow of information through the system.
 # Table of Contents
 
-- [Accelerating your own Multi-Agent - Custom Automation Engine MVP](#accelerating-your-own-multi-agent---custom-automation-engine-mvp)
-  - [Technical Overview](#technical-overview)
 - [Table of Contents](#table-of-contents)
-  - [Endpoints](#endpoints)
-    - [/input\_task](#input_task)
-    - [/human\_feedback](#human_feedback)
-    - [/get\_latest\_plan\_by\_session/{session\_id}](#get_latest_plan_by_session-session_id)
-    - [/steps/{plan\_id}](#stepsplan_id)
-    - [/agent\_messages/{session\_id}](#agent_messagessession_id)
-    - [/messages](#messages)
-    - [/delete\_all\_messages](#delete_all_messages)
-    - [/api/agent-tools](#apiagent-tools)
-  - [Data Types and Models](#data-types-and-models)
-    - [Messages](#messages)
-      - [BaseDataModel](#basedatamodel)
-      - [AgentMessage](#agentmessage)
-      - [Session](#session)
-      - [Plan](#plan)
-      - [Step](#step)
-      - [PlanWithSteps](#planwithsteps)
-      - [InputTask](#inputtask)
-      - [ApprovalRequest](#approvalrequest)
-      - [HumanFeedback](#humanfeedback)
-      - [HumanClarification](#humanclarification)
-      - [ActionRequest](#actionrequest)
-      - [ActionResponse](#actionresponse)
-      - [PlanStateUpdate](#planstateupdate)
-      - [GroupChatMessage](#groupchatmessage)
-      - [RequestToSpeak](#requesttospeak)
-    - [Enums](#enums)
-      - [DataType](#datatype)
-      - [BAgentType](#bagenttype)
-      - [StepStatus](#stepstatus)
-      - [PlanStatus](#planstatus)
-      - [HumanFeedbackStatus](#humanfeedbackstatus)
-  - [Application Flow](#application-flow)
-    - [Initialization](#initialization)
-  - [Agents Overview](#agents-overview)
-    - [GroupChatManager](#groupchatmanager)
-    - [PlannerAgent](#planneragent)
-    - [HumanAgent](#humanagent)
-    - [Specialized Agents](#specialized-agents)
-  - [Persistent Storage with Cosmos DB](#persistent-storage-with-cosmos-db)
-  - [Utilities](#utilities)
-    - [`initialize_runtime_and_context` Function](#initialize_runtime_and_context-function)
-  - [Summary](#summary)
-
-
-## Endpoints
-
-### /input_task
-
-**Method:** POST  
-**Description:** Receives the initial input task from the user.  
-
-**Request Headers:**
-
-- `user_principal_id`: User ID (`user_id`) extracted from the authentication header.
-
-**Request Body:** `InputTask`
-- `session_id`: Optional string. If not provided, a new UUID will be generated.
-- `description`: The description of the task the user wants to accomplish.
-
-
-**Response:**
-- `status`: Confirmation message.
-- `session_id`: The session ID associated with the task.
-- `plan_id`: The ID of the plan generated.
-- `description`: The task description.
-
-
-**Flow:**
-1. Validates header and extracts `user_principal_id` as  `user_id`.
-2. Generates a `session_id` if not provided.
-3. Initializes agents and context for the session.
-4. Sends the `InputTask` message to the `GroupChatManager`.
-5. Returns the `status`, `session_id`, `plan_id`, `description`, and `user_id`.
-
-
-### /human_feedback
-
-**Method:** POST  
-**Description:** Receives human feedback on a step (e.g., approval, rejection, or modification).  
-
-**Request Headers:**
-- `user_principal_id`: User ID (`user_id`) extracted from the authentication header.
-
-**Request Body:** `HumanFeedback`
-- `step_id`: The ID of the step to provide feedback for.
-- `plan_id`: The ID of the plan.
-- `session_id`: The session ID.
-- `approved`: Boolean indicating if the step is approved.
-- `human_feedback`: Optional string containing any comments.
-- `updated_action`: Optional string if the action was modified.
-
-**Response:**
-- `status`: Confirmation message.
-- `session_id`: The session ID.
-- `step_id`: The step ID associated with the feedback.
-
-**Flow:**
-1. Validates header and extracts `user_principal_id` as  `user_id`.
-2. Initializes runtime and context for the session.
-3. Sends the `HumanFeedback` message to the `HumanAgent`.
-4. Returns the `status`, `session_id`, and `step_id`.
-
-
-### /human_clarification_on_plan
-
-**Method:** POST  
-**Description:** Receives human clarification on a plan.  
-
-**Request Headers:**
-- `user_principal_id`: User ID (`user_id`) extracted from the authentication header.
-
-**Request Body:** `HumanClarification`
-- `plan_id`: The ID of the plan requiring clarification.
-- `session_id`: The session ID associated with the plan.
-- `human_clarification`: Clarification details provided by the user.
-
-**Response:**
-- `status`: Confirmation message.
-- `session_id`: The session ID associated with the plan.
-
-**Flow:**
-1. Validates header and extracts `user_principal_id` as  `user_id`.
-2. Initializes runtime and context for the session.
-3. Sends the `HumanClarification` message to the `PlannerAgent`.
-4. Returns the `status` and `session_id`.
-
-### /approve_step_or_steps
-
-**Method:** POST  
-**Description:** Approves a step or multiple steps in a plan.  
-
-**Request Headers:**
-
-- `user_principal_id`: User ID (`user_id`) extracted from the authentication header.
-
-**Request Body:** `HumanFeedback`
-- `step_id`: Optional step ID to approve. If not provided, all steps are approved.
-- `plan_id`: The ID of the plan.
-- `session_id`: The session ID associated with the plan.
-- `approved`: Boolean indicating whether the step(s) are approved.
-- `human_feedback`: Optional string containing any comments.
-- `updated_action`: Optional string if the action was modified.
-
-**Response:**
-- `status`: A confirmation message indicating the approval result.
-
-**Flow:**
-1. Validates header and extracts `user_principal_id` as  `user_id`.
-2. Initializes runtime and context for the session.
-3. Sends the `HumanFeedback` approval message to the `GroupChatManager`.
-4. If `step_id` is provided, approves the specific step; otherwise, approves all steps.
-5. Returns the `status` message indicating the result of the approval.
-
-### /plans
-
-**Method:** GET  
-**Description:** Retrieves all plans for the current user or the plan for a specific session.  
-
-**Request Headers:**
-
-- `user_principal_id`: User ID (`user_id`) extracted from the authentication header.
-
-**Query Parameters:**
-- `session_id` (optional): Retrieve the plan for this specific session ID. If not provided, all plans for the user are retrieved.
-
-**Response:**
-- A list of plans with their details:
-  - `id`: Unique ID of the plan.
-  - `session_id`: The session ID associated with the plan.
-  - `initial_goal`: The initial goal derived from the user's input.
-  - `overall_status`: The status of the plan (e.g., in_progress, completed, failed).
-  - `steps`: A list of steps associated with the plan, each including:
-    - `id`: Unique ID of the step.
-    - `plan_id`: ID of the plan the step belongs to.
-    - `action`: The action to be performed.
-    - `agent`: The agent responsible for the step.
-    - `status`: The status of the step (e.g., planned, approved, completed).
-    - `agent_reply`: Optional response from the agent after execution.
-    - `human_feedback`: Optional feedback provided by the user.
-    - `updated_action`: Optional modified action based on feedback.
-
-**Flow:**
-1. Validates header and extracts `user_principal_id` as  `user_id`.
-2. If `session_id` is provided:
-   - Retrieves the plan for the specified session ID.
-   - Fetches the steps for the plan.
-3. If `session_id` is not provided:
-   - Retrieves all plans for the user.
-   - Fetches the steps for each plan concurrently.
-4. Returns the plan(s) along with their steps.
-
-### /steps/{plan_id}
-
-**Method:** GET  
-**Description:** Retrieves all steps associated with a specific plan.  
-
-**Request Headers:**
-
-- `user_principal_id`: User ID (`user_id`) extracted from the authentication header.
-
-**Path Parameters:**
-- `plan_id`: The ID of the plan to retrieve steps for.
-
-**Response:**
-- A list of steps with their details:
-  - `id`: Unique ID of the step.
-  - `plan_id`: The ID of the plan the step belongs to.
-  - `action`: The action to be performed.
-  - `agent`: The agent responsible for the step.
-  - `status`: The status of the step (e.g., planned, approved, completed).
-  - `agent_reply`: Optional response from the agent after execution.
-  - `human_feedback`: Optional feedback provided by the user.
-  - `updated_action`: Optional modified action based on feedback.
-
-**Flow:**
-1. Validates header and extracts `user_principal_id` as  `user_id`.
-2. Retrieves the steps for the specified `plan_id`.
-3. Returns the list of steps with their details.
-
-### /agent_messages/{session_id}
-
-**Method:** GET  
-**Description:** Retrieves all agent messages for a specific session.  
-
-**Request Headers:**
-- `user_principal_id`: User ID (`user_id`) extracted from the authentication header.
-
-**Path Parameters:**
-- `session_id`: The ID of the session to retrieve agent messages for.
-
-**Response:**
-- A list of agent messages with their details:
-  - `id`: Unique ID of the agent message.
-  - `session_id`: The session ID associated with the message.
-  - `plan_id`: The ID of the plan related to the agent message.
-  - `content`: The content of the message.
-  - `source`: The source of the message (e.g., agent type).
-  - `ts`: The timestamp of the message.
-  - `step_id`: Optional step ID associated with the message.
-
-**Flow:**
-1. Validates header and extracts `user_principal_id` as  `user_id`.
-2. Retrieves the agent messages for the specified `session_id`.
-3. Returns the list of agent messages with their details.
-
-### /messages
-
-**Method:** DELETE  
-**Description:** Deletes all messages across sessions.  
-
-**Request Headers:**
-
-- `user_principal_id`: User ID (`user_id`) extracted from the authentication header.
-
-**Response:**
-- A confirmation message:
-  - `status`: A status message indicating all messages were deleted.
-
-**Flow:**
-1. Validates header and extracts `user_principal_id` as  `user_id`.
-2. Deletes all messages across sessions, including:
-   - Plans
-   - Sessions
-   - Steps
-   - Agent messages
-3. Returns a confirmation `status` message.
-
-### /messages
-
-**Method:** GET  
-**Description:** Retrieves all messages across sessions.  
-
-**Request Headers:**
-
-- `user_principal_id`: User ID (`user_id`) extracted from the authentication header.
-
-**Response:**
-- A list of all messages with their details:
-  - `id`: Unique ID of the message.
-  - `data_type`: The type of the message (e.g., session, step, plan, agent_message).
-  - `session_id`: The session ID associated with the message.
-  - `content`: The content of the message.
-  - `ts`: The timestamp of the message.
-
-**Flow:**
-1. Validates header and extracts `user_principal_id` as  `user_id`.
-2. Retrieves all messages across sessions.
-3. Returns the list of messages with their details.
-
-### /api/agent-tools
-
-**Method:** GET  
-**Description:** Retrieves all available agent tools and their descriptions.  
-
-**Response:**
-- A list of agent tools with their details:
-  - `agent`: The name of the agent associated with the tool.
-  - `function`: The name of the tool function.
-  - `description`: A detailed description of what the tool does.
-  - `arguments`: The arguments required by the tool function.
-
-**Flow:**
-1. Retrieves all agent tools and their metadata.
-2. Returns the list of agent tools with their details.
-
-
-## Models and Datatypes
-### Models
-#### **`BaseDataModel`**
+  - [Accelerating your own Multi-Agent - Custom Automation Engine MVP](#accelerating-your-own-multi-agent---custom-automation-engine-mvp)
+    - [Technical Overview](#technical-overview)
+    - [Adding a New Agent to the Multi-Agent System](#adding-a-new-agent-to-the-multi-agent-system)
+    - [API Reference](#api-reference)
+    - [Models and Datatypes](#models-and-datatypes)
+    - [Application Flow](#application-flow)
+    - [Agents Overview](#agents-overview)
+    - [Persistent Storage with Cosmos DB](#persistent-storage-with-cosmos-db)
+    - [Utilities](#utilities)
+    - [Summary](#summary)
+
+
+## Adding a New Agent to the Multi-Agent System
+
+This guide details the steps required to add a new agent to the Multi-Agent Custom Automation Engine. The process includes registering the agent, defining its capabilities through tools, and ensuring the PlannerAgent includes the new agent when generating activity plans.
+
+### **Step 1: Define the New Agent's Tools**
+Every agent is equipped with a set of tools (functions) that it can call to perform specific tasks. These tools need to be defined first.
+
+1. **Create New Tools**: In a new or existing file, define the tools your agent will use.
+
+    Example (for a `BakerAgent`):
+    ```python
+    from autogen_core.components.tools import FunctionTool, Tool
+    from typing import List
+
+    async def bake_cookies(cookie_type: str, quantity: int) -> str:
+        return f"Baked {quantity} {cookie_type} cookies."
+
+    async def prepare_dough(dough_type: str) -> str:
+        return f"Prepared {dough_type} dough."
+
+    def get_baker_tools() -> List[Tool]:
+        return [
+            FunctionTool(bake_cookies, description="Bake cookies of a specific type.", name="bake_cookies"),
+            FunctionTool(prepare_dough, description="Prepare dough of a specific type.", name="prepare_dough"),
+        ]
+    ```
+
+
+2. **Implement the Agent Class**
+Create a new agent class that inherits from `BaseAgent`.
+
+Example (for `BakerAgent`):
+```python
+from agents.base_agent import BaseAgent
+
+class BakerAgent(BaseAgent):
+    def __init__(self, model_client, session_id, user_id, memory, tools, agent_id):
+        super().__init__(
+            "BakerAgent",
+            model_client,
+            session_id,
+            user_id,
+            memory,
+            tools,
+            agent_id,
+            system_message="You are an AI Agent specialized in baking tasks.",
+        )
+```
+### **Step 2: Register the new Agent in the messages**
+Update  `messages.py` to include the new agent.
+
+ ```python
+    class BAgentType(str, Enum):
+        baker_agent = "BakerAgent"
+```
+
+### **Step 3: Register the Agent in the Initialization Process**
+Update the `initialize_runtime_and_context` function in `utils.py` to include the new agent.
+
+1. **Import new agent**:
+    ```python
+    from agents.baker_agent import BakerAgent, get_baker_tools
+    ```
+
+2. **Add the bakers tools**:
+    ```python
+    baker_tools = get_baker_tools()
+    ```
+
+3. **Generate Agent IDs**:
+    ```python
+    baker_agent_id = AgentId("baker_agent", session_id)
+    baker_tool_agent_id = AgentId("baker_tool_agent", session_id)
+    ```
+
+4. **Register to ToolAgent**:
+    ```python
+    await ToolAgent.register(
+        runtime,
+        "baker_tool_agent",
+        lambda: ToolAgent("Baker tool execution agent", baker_tools),
+    )
+    ```
+
+5. **Register the Agent and ToolAgent**:
+    ```python
+    await BakerAgent.register(
+        runtime,
+        baker_agent_id.type,
+        lambda: BakerAgent(
+            aoai_model_client,
+            session_id,
+            user_id,
+            cosmos_memory,
+            get_baker_tools(),
+            baker_tool_agent_id,
+        ),
+    )
+    ```
+6. **Add to agent_ids**:
+    ```python
+    agent_ids = {
+        BAgentType.baker_agent: baker_agent_id,
+    ```
+7. **Add to retrieve_all_agent_tools**:
+    ```python
+    def retrieve_all_agent_tools() -> List[Dict[str, Any]]:
+        baker_tools: List[Tool] = get_baker_tools()
+    ```
+8. **Append baker_tools to functions**:
+    ```python
+    for tool in baker_tools:
+        functions.append(
+            {
+                "agent": "BakerAgent",
+                "function": tool.name,
+                "description": tool.description,
+                "arguments": str(tool.schema["parameters"]["properties"]),
+            }
+        )
+    ```
+### **Step 4: Update home page**
+Update  `src/frontend/wwwroot/home/home.html` adding new html block 
+
+1. **Add a new UI element was added to allow users to request baking tasks from the BakerAgent**
+```html
+    <div class="column">
+        <div class="card is-hoverable quick-task">
+            <div class="card-content">
+                <i class="fa-solid fa-list-check has-text-info mb-3"></i><br />
+                <strong>Bake Cookies</strong>
+                <p class="quick-task-prompt">Please bake 12 chocolate chip cookies for tomorrow's event.</p>
+            </div>
+        </div>
+    </div>
+```   
+### **Step 5: Update tasks**
+Update `src/frontend/wwwroot/task/task.js` 
+
+1. **Add `BakerAgent` as a recognized agent type in the frontend JavaScript file**
+```js
+    case "BakerAgent":
+        agentIcon = "manager";
+        break;
+```
+### **Step 6: Validate the Integration**
+Deploy the updated system and ensure the new agent is properly included in the planning process. For example, if the user requests to bake cookies, the `PlannerAgent` should:
+
+- Identify the `BakerAgent` as the responsible agent.
+- Call `bake_cookies` or `prepare_dough` from the agent's toolset.
+
+### **Step 7: Update Documentation**
+Ensure that the system documentation reflects the addition of the new agent and its capabilities. Update the `README.md` and any related technical documentation to include information about the `BakerAgent`.
+
+### **Step 8: Testing**
+Thoroughly test the agent in both automated and manual scenarios. Verify that:
+
+- The agent responds correctly to tasks.
+- The PlannerAgent includes the new agent in relevant plans.
+- The agent's tools are executed as expected.
+
+Following these steps will successfully integrate a new agent into the Multi-Agent Custom Automation Engine.
+
+### API Reference
+To view the API reference, go to the API endpoint in a browser and add "/docs".  This will bring up a full Swagger environment and reference documentation for the REST API included with this accelerator. For example, ```https://macae-backend.eastus2.azurecontainerapps.io/docs```.  
+If you prefer ReDoc, this is available by appending "/redoc".
+
+![docs interface](./images/customize_solution/redoc_ui.png)
+
+### Models and Datatypes
+#### Models
+##### **`BaseDataModel`**
 The `BaseDataModel` is a foundational class for creating structured data models using Pydantic. It provides the following attributes:
 
 - **`id`**: A unique identifier for the data, generated using `uuid`.
@@ -625,7 +497,7 @@ The human can provide feedback on a step via the `/human_feedback` endpoint:
 
 If a step is approved:
 
-1. The `GroupChatManager` sends an `ActionRequest` to the appropriate specialized agent (e.g., `HrAgent`, `LegalAgent`).
+1. The `GroupChatManager` sends an `ActionRequest` to the appropriate specialized agent (e.g., `HrAgent`, `ProcurementAgent`).
 2. The specialized agent executes the action using tools and LLMs.
 3. The agent sends an `ActionResponse` back to the `GroupChatManager`.
 4. The `GroupChatManager` updates the step status and proceeds to the next step.
@@ -692,7 +564,9 @@ If a step is approved:
 
 **Common Implementation:**  
 All specialized agents inherit from `BaseAgent`, which handles common functionality.  
-**Code Reference:** `base_agent.py`, `hr.py`, `legal.py`, etc.
+**Code Reference:** `base_agent.py`, `hr.py`, etc.
+
+![agent flow](./images/customize_solution/logic_flow.svg)
 
 ## Persistent Storage with Cosmos DB
 
