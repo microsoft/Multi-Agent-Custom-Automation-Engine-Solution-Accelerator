@@ -1,19 +1,19 @@
 (() => {
     window.headers = GetAuthDetails();
-    const apiEndpoint = sessionStorage.getItem('apiEndpoint') || BACKEND_API_URL;
+    const apiEndpoint = getStoredData('apiEndpoint') || BACKEND_API_URL;
     const goHomeButton = document.getElementById("goHomeButton");
     const newTaskButton = document.getElementById("newTaskButton");
     const closeModalButtons = document.querySelectorAll(".modal-close-button");
     const myTasksMenu = document.getElementById("myTasksMenu");
     const tasksStats = document.getElementById("tasksStats");
 
-    //if (!sessionStorage.getItem('apiEndpoint')) sessionStorage.setItem('apiEndpoint', apiEndpoint);
+    //if (!sessionStorage.getItem('apiEndpoint')) setStoredData('apiEndpoint', apiEndpoint);
     // Force rewrite of apiEndpoint
-    sessionStorage.setItem('apiEndpoint', apiEndpoint);
-    sessionStorage.setItem('context', 'employee');
+    setStoredData('apiEndpoint', apiEndpoint);
+    setStoredData('context', 'employee');
     // Refresh rate is set
-    if (!sessionStorage.getItem('apiRefreshRate')) sessionStorage.setItem('apiRefreshRate', 5000);
-    if (!sessionStorage.getItem('actionStagesRun')) sessionStorage.setItem('actionStagesRun', []);
+    if (!getStoredData('apiRefreshRate')) setStoredData('apiRefreshRate', 5000);
+    if (!getStoredData('actionStagesRun')) setStoredData('actionStagesRun', []);
 
     const getQueryParam = (param) => {
         const urlParams = new URLSearchParams(window.location.search);
@@ -30,7 +30,7 @@
         const viewIframe = document.getElementById('viewIframe');
         if (viewIframe) {
             const viewRoute = getQueryParam('v');
-            const viewContext = sessionStorage.getItem('context');
+            const viewContext = getStoredData('context');
             const noCache = '?nocache=' + new Date().getTime();
             switch (viewRoute) {
                 case 'home':
@@ -112,7 +112,7 @@
     }
 
     const fetchTasksIfNeeded = async () => {
-        const taskStore = JSON.parse(sessionStorage.getItem('task'));
+        const taskStore = JSON.parse(getStoredData('task'));
         window.headers
             .then(headers => {
                 fetch(apiEndpoint + '/plans', {
@@ -164,7 +164,7 @@
                                     setQueryParam('v', 'task');
                                     switchView();
         
-                                    sessionStorage.setItem('task', JSON.stringify({
+                                    setStoredData('task', JSON.stringify({
                                         id: sessionId,
                                         name: taskName
                                     }));
@@ -222,7 +222,7 @@
         if (!userInfo) {
             console.error("Authentication failed. Access to tasks is restricted.");
         } else {
-            sessionStorage.setItem('userInfo', userInfo);
+            setStoredData('userInfo', userInfo);
             await fetchTasksIfNeeded();  // Fetch tasks after initialization if needed
         }
     };

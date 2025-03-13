@@ -68,3 +68,16 @@ window.GetAuthDetails = async () => {
         return  headers;
     }
 };
+
+// window.addEventListener("beforeunload", () => {
+//     localStorage.clear();
+// });
+
+window.getStoredData = (key)=> {
+   return localStorage.getItem(key)
+}
+
+window.setStoredData = (key, value)=> {
+    localStorage.setItem(key, value)
+}
+

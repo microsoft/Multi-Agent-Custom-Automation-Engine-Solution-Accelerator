@@ -1,7 +1,7 @@
 (() => {
   const markdownConverter = new showdown.Converter();
-  const apiEndpoint = sessionStorage.getItem("apiEndpoint");
-  const taskStore = JSON.parse(sessionStorage.getItem("task"));
+  const apiEndpoint = getStoredData("apiEndpoint");
+  const taskStore = JSON.parse(getStoredData("task"));
   const taskName = document.getElementById("taskName");
   const taskStatusTag = document.getElementById("taskStatusTag");
   const taskStagesMenu = document.getElementById("taskStagesMenu");
@@ -91,12 +91,12 @@
         agentIcon = "manager";
         break;
       case "HumanAgent":
-        let userNumber = sessionStorage.getItem("userNumber");
+        let userNumber = getStoredData("userNumber");
         if (userNumber == null) {
           // Generate a random number between 0 and 6
           userNumber = Math.floor(Math.random() * 6);
           // Create the icon name by concatenating 'user' with the random number
-          sessionStorage.setItem("userNumber", userNumber);
+          setStoredData("userNumber", userNumber);
         }
         let iconName = "user" + userNumber;
         agentIcon = iconName;
@@ -160,7 +160,7 @@
 
     if (taskCancelButton) {
       taskCancelButton.addEventListener("click", (event) => {
-        const apiTaskStore = JSON.parse(sessionStorage.getItem("apiTask"));
+        const apiTaskStore = JSON.parse(getStoredData("apiTask"));
         handleDisableOfActions("completed")
         actionStages(apiTaskStore, false);
       });
@@ -216,7 +216,7 @@
         updateTaskProgress(data[0]);
         fetchTaskStages(data[0]);
 
-        sessionStorage.setItem("apiTask", JSON.stringify(data[0]));
+        setStoredData("apiTask", JSON.stringify(data[0]));
         const isHumanClarificationRequestNull = data?.[0]?.human_clarification_request === null
         const taskMessageTextareaElement =document.getElementById("taskMessageTextarea");
         const taskMessageAddButton = document.getElementById("taskMessageAddButton");
@@ -359,15 +359,15 @@
 
             updateTaskDetailsAgents([...new Set(taskAgents)]);
 
-            sessionStorage.setItem("showApproveAll", false);
+            setStoredData("showApproveAll", false);
 
             // Feature approve all removed for this version
             // if (isHumanFeedbackPending()) {
-            //     sessionStorage.setItem('showApproveAll', false);
+            //     setStoredData('showApproveAll', false);
             //     console.log('showApproveAll status', "showApproveAll is false");
 
             // } else {
-            //     sessionStorage.setItem('showApproveAll', taskStageApprovalStatus === taskStageCount);
+            //     setStoredData('showApproveAll', taskStageApprovalStatus === taskStageCount);
             //     console.log('showApproveAll status', taskStageApprovalStatus === taskStageCount);
 
             // }
@@ -434,8 +434,8 @@
           // console.log(groupByStepId(data));
 
           if (
-            sessionStorage.getItem("context") &&
-            sessionStorage.getItem("context") === "customer"
+            getStoredData("context") &&
+            getStoredData("context") === "customer"
           ) {
             data = contextFilter(data);
           }
@@ -461,7 +461,7 @@
               messages.forEach((message) => {
                 const messageItem = document.createElement("div");
                 const showApproveAll =
-                  sessionStorage.getItem("showApproveAll") === "true" &&
+                  getStoredData("showApproveAll") === "true" &&
                   data.length === messageCount;
 
                 let approveAllStagesButton = "";
@@ -475,8 +475,8 @@
                     : "has-status-active";
 
                 if (
-                  sessionStorage.getItem("context") &&
-                  sessionStorage.getItem("context") !== "customer"
+                  getStoredData("context") &&
+                  getStoredData("context") !== "customer"
                 ) {
                   if (showApproveAll) {
                     console.log("Creating approveAllStagesButton");
@@ -534,8 +534,8 @@
                 taskMessages.appendChild(messageItem);
 
                 if (
-                  sessionStorage.getItem("context") &&
-                  sessionStorage.getItem("context") !== "customer"
+                  getStoredData("context") &&
+                  getStoredData("context") !== "customer"
                 ) {
                   if (showApproveAll) {
                     document
@@ -560,20 +560,19 @@
             }
 
             if (
-              sessionStorage.getItem("context") &&
-              sessionStorage.getItem("context") === "customer" &&
-              !sessionStorage
-                .getItem("actionStagesRun")
+              getStoredData("context") &&
+              getStoredData("context") === "customer" &&
+              !getStoredData("actionStagesRun")
                 .includes(task.session_id)
             ) {
               actionStages(task, true);
 
               let actionStagesRun = JSON.parse(
-                sessionStorage.getItem("actionStagesRun") || "[]"
+                getStoredData("actionStagesRun") || "[]"
               );
 
               actionStagesRun.push(task.session_id);
-              sessionStorage.setItem(
+              setStoredData(
                 "actionStagesRun",
                 JSON.stringify(actionStagesRun)
               );
@@ -623,7 +622,7 @@
   };
 
   const isHumanFeedbackPending = () => {
-    const storedData = sessionStorage.getItem("apiTask");
+    const storedData = getStoredData("apiTask");
     const planDetails = JSON.parse(storedData);
     return (
       planDetails.human_clarification_request !== null &&
@@ -770,7 +769,7 @@
           // Continue polling by calling fetchLoop again
           setTimeout(
             () => fetchLoop(id),
-            Number(sessionStorage.getItem("apiRefreshRate"))
+            Number(getStoredData("apiRefreshRate"))
           );
         } catch (error) {
           console.error("Error in fetchLoop:", error);
