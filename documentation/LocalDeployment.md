@@ -9,6 +9,7 @@
 # Local setup
 
 > **Note for macOS Developers**: If you are using macOS on Apple Silicon (ARM64) the DevContainer will **not** work. This is due to a limitation with the Azure Functions Core Tools (see [here](https://github.com/Azure/azure-functions-core-tools/issues/3112)). We recommend using the [Non DevContainer Setup](./NON_DEVCONTAINER_SETUP.md) instructions to run the accelerator locally.
+
 The easiest way to run this accelerator is in a VS Code Dev Containers, which will open the project in your local VS Code using the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers):
 
 1. Start Docker Desktop (install it if not already installed)
@@ -96,8 +97,8 @@ The files for the dev container are located in `/.devcontainer/` folder.
       **Using a Different Database in Cosmos:**
 
       You can set the solution up to use a different database in Cosmos. For example, you can name it something like autogen-dev. To do this:
-		1. Change the environment variable **COSMOSDB_DATABASE** to the new database name.
- 		2. You will need to create the database in the Cosmos DB account. You can do this from the Data Explorer pane in the portal, click on the drop down labeled “_+ New Container_” and provide all the necessary details.
+    1. Change the environment variable **COSMOSDB_DATABASE** to the new database name.
+    2. You will need to create the database in the Cosmos DB account. You can do this from the Data Explorer pane in the portal, click on the drop down labeled “_+ New Container_” and provide all the necessary details.
 
 6. **Create a `.env` file:**
 

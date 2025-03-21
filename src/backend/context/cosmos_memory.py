@@ -15,8 +15,8 @@ from autogen_core.components.models import (
 )
 from azure.cosmos.partition_key import PartitionKey
 
-from config import Config
-from models.messages import BaseDataModel, Plan, Session, Step, AgentMessage
+from src.backend.config import Config
+from src.backend.models.messages import BaseDataModel, Plan, Session, Step, AgentMessage
 
 
 class CosmosBufferedChatCompletionContext(BufferedChatCompletionContext):

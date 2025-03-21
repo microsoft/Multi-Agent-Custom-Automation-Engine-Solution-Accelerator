@@ -68,3 +68,22 @@ window.GetAuthDetails = async () => {
         return  headers;
     }
 };
+
+window.getStoredData = (key)=> {
+    let data = localStorage.getItem(key);
+
+        // If not found in localStorage, check sessionStorage
+        if (!data) {
+            data = sessionStorage.getItem(key);
+            if (data) {
+                // Move data from sessionStorage to localStorage
+                setStoredData(key, data);
+                sessionStorage.removeItem(key); // Optional cleanup
+            }
+        }
+        return data;
+}
+
+window.setStoredData = (key, value)=> {
+    localStorage.setItem(key, value)
+}

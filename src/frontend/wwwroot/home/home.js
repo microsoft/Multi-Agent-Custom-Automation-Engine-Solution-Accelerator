@@ -4,7 +4,7 @@
     ripple: false,
     duration: 3000,
   });
-  const apiEndpoint = sessionStorage.getItem("apiEndpoint");
+  const apiEndpoint = getStoredData("apiEndpoint");
   const newTaskPrompt = document.getElementById("newTaskPrompt");
   const startTaskButton = document.getElementById("startTaskButton");
   const startTaskButtonContainer = document.querySelector(".send-button");

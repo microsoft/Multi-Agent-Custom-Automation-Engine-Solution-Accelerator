@@ -13,8 +13,8 @@ from autogen_core.components.models import (
 )
 from pydantic import BaseModel
 
-from context.cosmos_memory import CosmosBufferedChatCompletionContext
-from models.messages import (
+from src.backend.context.cosmos_memory import CosmosBufferedChatCompletionContext
+from src.backend.models.messages import (
     AgentMessage,
     HumanClarification,
     BAgentType,
@@ -26,7 +26,7 @@ from models.messages import (
     HumanFeedbackStatus,
 )
 
-from event_utils import track_event_if_configured
+from src.backend.event_utils import track_event_if_configured
 
 
 @default_subscription

@@ -13,15 +13,15 @@ from autogen_core.components.models import (
 from autogen_core.components.tool_agent import tool_agent_caller_loop
 from autogen_core.components.tools import Tool
 
-from context.cosmos_memory import CosmosBufferedChatCompletionContext
-from models.messages import (
+from src.backend.context.cosmos_memory import CosmosBufferedChatCompletionContext
+from src.backend.models.messages import (
     ActionRequest,
     ActionResponse,
     AgentMessage,
     Step,
     StepStatus,
 )
-from event_utils import track_event_if_configured
+from src.backend.event_utils import track_event_if_configured
 
 
 class BaseAgent(RoutedAgent):
