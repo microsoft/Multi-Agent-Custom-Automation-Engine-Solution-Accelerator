@@ -5,8 +5,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.33.93.31351",
-      "templateHash": "9524414973084491660"
+      "version": "0.34.44.8038",
+      "templateHash": "4215337980430060491"
     }
   },
   "parameters": {
@@ -63,7 +63,7 @@
         }
       },
       "defaultValue": {
-        "gpt4oCapacity": 50,
+        "gpt4oCapacity": 5,
         "containerAppSize": {
           "cpu": "2.0",
           "memory": "4.0Gi",
@@ -376,12 +376,12 @@
       },
       "dependsOn": [
         "appInsights",
-        "cosmos::autogenDb",
         "containerAppEnv",
         "cosmos",
-        "openai::gpt4o",
+        "cosmos::autogenDb",
         "cosmos::autogenDb::memoryContainer",
         "openai",
+        "openai::gpt4o",
         "pullIdentity"
       ],
       "metadata": {

@@ -36,7 +36,7 @@ resource openai 'Microsoft.CognitiveServices/accounts@2023-10-01-preview' = {
     name: 'gpt-4o'
     sku: {
       name: 'GlobalStandard'
-      capacity: 15
+      capacity: 5
     }
     properties: {
       model: {

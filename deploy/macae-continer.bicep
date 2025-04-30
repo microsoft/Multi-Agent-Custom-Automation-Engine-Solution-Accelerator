@@ -22,7 +22,7 @@ param resourceSize {
     maxReplicas: int
   }
 } = {
-  gpt4oCapacity: 50
+  gpt4oCapacity: 5
   containerAppSize: {
     cpu: '2.0'
     memory: '4.0Gi'

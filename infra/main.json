@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.34.44.8038",
-      "templateHash": "2906892014954666053"
+      "templateHash": "3131309205289650458"
     }
   },
   "parameters": {
@@ -63,7 +63,7 @@
         }
       },
       "defaultValue": {
-        "gpt4oCapacity": 1,
+        "gpt4oCapacity": 5,
         "containerAppSize": {
           "cpu": "2.0",
           "memory": "4.0Gi",
