@@ -1,6 +1,6 @@
 targetScope = 'resourceGroup'
-@description('Location for all resources.')
-param location string
+// @description('Location for all resources.')
+// param location string
 
 @allowed([
   'australiaeast'
@@ -28,15 +28,12 @@ param location string
   'westus3'
 ])
 @description('Location for all Ai services resources. This location can be different from the resource group location.')
-param azureOpenAILocation string = 'eastus2' // The location used for all deployed resources.  This location must be in the same region as the resource group.
+param azureOpenAILocation string //= 'eastus2' // The location used for all deployed resources.  This location must be in the same region as the resource group.
 
 @minLength(3)
 @maxLength(20)
-@description('A unique prefix for all resources in this deployment. This should be 3-20 characters long:')
-param environmentName string
- 
-var uniqueId = toLower(uniqueString(subscription().id, environmentName, resourceGroup().location))
-var solutionPrefix = 'ma${padLeft(take(uniqueId, 12), 12, '0')}'
+@description('Prefix for all resources created by this template.  This prefix will be used to create unique names for all resources.  The prefix must be unique within the resource group.')
+param prefix string //= 'macae'
 
 @description('Tags to apply to all deployed resources')
 param tags object = {}
@@ -61,8 +58,9 @@ param resourceSize {
 }
 param capacity int = 140
 
+var location = resourceGroup().location
 var modelVersion = '2024-08-06'
-var aiServicesName = '${solutionPrefix}-aiservices'
+var aiServicesName = '${prefix}-aiservices'
 var deploymentType = 'GlobalStandard'
 var gptModelVersion = 'gpt-4o'
 var appVersion = 'fnd01'
@@ -73,7 +71,7 @@ var dockerRegistryUrl = 'https://${resgistryName}.azurecr.io'
 var backendDockerImageURL = '${resgistryName}.azurecr.io/macaebackend:${appVersion}'
 var frontendDockerImageURL = '${resgistryName}.azurecr.io/macaefrontend:${appVersion}'
 
-var uniqueNameFormat = '${solutionPrefix}-{0}-${uniqueString(resourceGroup().id, solutionPrefix)}'
+var uniqueNameFormat = '${prefix}-{0}-${uniqueString(resourceGroup().id, prefix)}'
 var aoaiApiVersion = '2025-01-01-preview'
 
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
@@ -123,7 +121,7 @@ resource aiServices 'Microsoft.CognitiveServices/accounts@2024-04-01-preview' = 
     apiProperties: {
       //statisticsEnabled: false
     }
-    //disableLocalAuth: true
+    disableLocalAuth: true
   }
 }
 
@@ -149,7 +147,7 @@ resource aiServicesDeployments 'Microsoft.CognitiveServices/accounts/deployments
 module kvault 'deploy_keyvault.bicep' = {
   name: 'deploy_keyvault'
   params: {
-    solutionName: solutionPrefix
+    solutionName: prefix
     solutionLocation: location
     managedIdentityObjectId: managedIdentityModule.outputs.managedIdentityOutput.objectId
   }
@@ -163,7 +161,7 @@ module kvault 'deploy_keyvault.bicep' = {
 module aifoundry 'deploy_ai_foundry.bicep' = {
   name: 'deploy_ai_foundry'
   params: {
-    solutionName: solutionPrefix
+    solutionName: prefix
     solutionLocation: azureOpenAILocation
     keyVaultName: kvault.outputs.keyvaultName
     gptModelName: gptModelVersion
@@ -279,7 +277,7 @@ resource acaCosomsRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleA
 
 @description('')
 resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
-  name: '${solutionPrefix}-backend'
+  name: '${prefix}-backend'
   location: location
   tags: tags
   identity: {
@@ -448,7 +446,7 @@ resource frontendAppService 'Microsoft.Web/sites@2021-02-01' = {
 }
 
 resource aiHubProject 'Microsoft.MachineLearningServices/workspaces@2024-01-01-preview' existing = {
-  name: '${solutionPrefix}-aiproject' // aiProjectName must be calculated - available at main start.
+  name: '${prefix}-aiproject' // aiProjectName must be calculated - available at main start.
 }
 
 resource aiDeveloper 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
@@ -469,7 +467,7 @@ var cosmosAssignCli = 'az cosmosdb sql role assignment create --resource-group "
 module managedIdentityModule 'deploy_managed_identity.bicep' = {
   name: 'deploy_managed_identity'
   params: {
-    solutionName: solutionPrefix
+    solutionName: prefix
     //solutionLocation: location
     managedIdentityId: pullIdentity.id
     managedIdentityPropPrin: pullIdentity.properties.principalId
