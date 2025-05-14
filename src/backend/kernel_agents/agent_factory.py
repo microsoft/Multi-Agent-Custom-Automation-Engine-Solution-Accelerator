@@ -77,6 +77,9 @@ class AgentFactory:
     # Cache of agent instances by session_id and agent_type
     _agent_cache: Dict[str, Dict[AgentType, BaseAgent]] = {}
 
+    # Cache of threads
+    _thread_cache: Dict[str, AzureAIAgentThread] = {}
+
     # Cache of Azure AI Agent instances
     _azure_ai_agent_cache: Dict[str, Dict[str, AzureAIAgent]] = {}
 
@@ -91,6 +94,7 @@ class AgentFactory:
         system_message: Optional[str] = None,
         response_format: Optional[Any] = None,
         client: Optional[Any] = None,
+        thread: Optional[AzureAIAgentThread] = None,
         **kwargs,
     ) -> BaseAgent:
         """Create an agent of the specified type.
@@ -168,6 +172,7 @@ class AgentFactory:
                     "tools": tools,
                     "system_message": system_message,
                     "client": client,
+                    "thread": thread,
                     **kwargs,
                 }.items()
                 if k in valid_keys
@@ -222,6 +227,11 @@ class AgentFactory:
         planner_agent_type = AgentType.PLANNER
         group_chat_manager_type = AgentType.GROUP_CHAT_MANAGER
 
+        if cls._thread_cache is None or session_id not in cls._thread_cache:
+            #Create thread for agent conversation
+            thread = AzureAIAgentThread(client=client)
+            cls._thread_cache[session_id] = thread
+
         try:
             if client is None:
                 # Create the AIProjectClient instance using the config
@@ -229,7 +239,8 @@ class AgentFactory:
                 client = config.get_ai_project_client()
         except Exception as client_exc:
             logger.error(f"Error creating AIProjectClient: {client_exc}")
-        # Initialize cache for this session if it doesn't exist
+
+        # Initialize agent cache for this session if it doesn't exist
         if session_id not in cls._agent_cache:
             cls._agent_cache[session_id] = {}
 
@@ -246,6 +257,7 @@ class AgentFactory:
                 temperature=temperature,
                 client=client,
                 memory_store=memory_store,
+                thread=cls._thread_cache[session_id],
             )
 
         # Create agent name to instance mapping for the planner

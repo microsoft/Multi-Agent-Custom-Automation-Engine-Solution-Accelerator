@@ -25,6 +25,7 @@ class TechSupportAgent(BaseAgent):
         agent_name: str = AgentType.TECH_SUPPORT.value,
         client=None,
         definition=None,
+        thread=None,
     ) -> None:
         """Initialize the Tech Support Agent.
 
@@ -62,6 +63,7 @@ class TechSupportAgent(BaseAgent):
             system_message=system_message,
             client=client,
             definition=definition,
+            thread=thread,
         )
 
     @classmethod
@@ -84,6 +86,7 @@ class TechSupportAgent(BaseAgent):
         system_message = kwargs.get("system_message", None)
         agent_name = kwargs.get("agent_name")
         client = kwargs.get("client")
+        thread = kwargs.get("thread")
 
         try:
             logging.info("Initializing TechSupportAgent from async init azure AI Agent")
@@ -104,6 +107,7 @@ class TechSupportAgent(BaseAgent):
                 system_message=system_message,
                 agent_name=agent_name,
                 client=client,
+                thread=thread,
                 definition=agent_definition,
             )
 

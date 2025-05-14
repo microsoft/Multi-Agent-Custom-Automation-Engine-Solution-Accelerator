@@ -12,6 +12,7 @@ from context.cosmos_memory_kernel import CosmosMemoryContext
 from event_utils import track_event_if_configured
 from models.messages_kernel import (ActionRequest, ActionResponse,
                                     AgentMessage, Step, StepStatus)
+from semantic_kernel.agents import AzureAIAgentThread  # pylint:disable=E0611
 from semantic_kernel.agents.azure_ai.azure_ai_agent import AzureAIAgent
 from semantic_kernel.functions import KernelFunction
 from semantic_kernel.functions.kernel_arguments import KernelArguments
@@ -34,6 +35,7 @@ class BaseAgent(AzureAIAgent):
         system_message: Optional[str] = None,
         client=None,
         definition=None,
+        thread: AzureAIAgentThread=None,
     ):
         """Initialize the base agent.
 
@@ -74,19 +76,12 @@ class BaseAgent(AzureAIAgent):
         self._tools = tools
         self._system_message = system_message
         self._chat_history = [{"role": "system", "content": self._system_message}]
-        # self._agent = None  # Will be initialized in async_init
+        self._message = None  # Will be initialized in handle_action_request
+        self._thread = thread
 
         # Required properties for AgentGroupChat compatibility
         self.name = agent_name  # This is crucial for AgentGroupChat to identify agents
 
-    # @property
-    # def plugins(self) -> Optional[dict[str, Callable]]:
-    #     """Get the plugins for this agent.
-
-    #     Returns:
-    #         A list of plugins, or None if not applicable.
-    #     """
-    #     return None
     @staticmethod
     def default_system_message(agent_name=None) -> str:
         name = agent_name
@@ -114,32 +109,17 @@ class BaseAgent(AzureAIAgent):
                 status=StepStatus.failed,
                 message="Step not found in memory.",
             )
-            return response.json()
+            return response.model_dump_json()
 
-        # Add messages to chat history for context
-        # This gives the agent visibility of the conversation history
-        self._chat_history.extend(
-            [
-                {"role": "assistant", "content": action_request.action},
-                {
-                    "role": "user",
-                    "content": f"{step.human_feedback}. Now make the function call",
-                },
-            ]
-        )
+        self._message = [
+            action_request.action
+        ]
 
         try:
-            # Use the agent to process the action
-            # chat_history = self._chat_history.copy()
-
-            # Call the agent to handle the action
-            thread = None
-            # thread = self.client.agents.get_thread(
-            #     thread=step.session_id
-            # )  # AzureAIAgentThread(thread_id=step.session_id)
+            # Use the agent to process the action request
             async_generator = self.invoke(
-                messages=f"{str(self._chat_history)}\n\nPlease perform this action",
-                thread=thread,
+                messages=self._message,
+                thread=self._thread,
             )
 
             response_content = ""
@@ -148,6 +128,10 @@ class BaseAgent(AzureAIAgent):
             async for chunk in async_generator:
                 if chunk is not None:
                     response_content += str(chunk)
+
+            # Log the messages in the thread
+            # async for msg in self._thread.get_messages():
+            #     logging.info(f"thread messages - role:{msg.role} - content:{msg.content}")
 
             logging.info(f"Response content length: {len(response_content)}")
             logging.info(f"Response content: {response_content}")

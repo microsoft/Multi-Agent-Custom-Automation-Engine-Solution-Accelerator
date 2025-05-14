@@ -7,6 +7,7 @@ from azure.ai.projects.aio import AIProjectClient
 from azure.cosmos.aio import CosmosClient
 from azure.identity import ClientSecretCredential, DefaultAzureCredential
 from dotenv import load_dotenv
+from semantic_kernel.agents import AzureAIAgentThread  # pylint:disable=E0611
 from semantic_kernel.agents.azure_ai.azure_ai_agent import AzureAIAgent
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.functions import KernelFunction
