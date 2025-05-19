@@ -1,14 +1,11 @@
 """MarketingTools class provides various marketing functions for a marketing agent."""
-
-import inspect
-from typing import Callable, List
-
-from semantic_kernel.functions import kernel_function
-from models.messages_kernel import AgentType
-
 import inspect
 import json
-from typing import Any, Dict, List, get_type_hints
+from typing import Callable, List, get_type_hints
+
+from models.messages_kernel import AgentType
+
+from semantic_kernel.functions import kernel_function
 
 
 class MarketingTools:
@@ -278,6 +275,7 @@ class MarketingTools:
     @staticmethod
     @kernel_function(description="Develop customer personas for a specific segment.")
     async def develop_customer_personas(segment_name: str) -> str:
+        """ Develop customer personas for a specific segment. """
         return f"Customer personas developed for segment '{segment_name}'."
 
     # This function does NOT have the kernel_function annotation
@@ -290,7 +288,6 @@ class MarketingTools:
         Returns:
             str: JSON string containing the methods' information
         """
-
         tools_list = []
 
         # Get all methods from the class that have the kernel_function annotation
@@ -320,7 +317,7 @@ class MarketingTools:
                 type_hints = get_type_hints(method)
 
                 # Process parameters
-                for param_name, param in sig.parameters.items():
+                for param_name, param in sig.parameters.items(): 
                     # Skip first parameter 'cls' for class methods (though we're using staticmethod now)
                     if param_name in ["cls", "self"]:
                         continue
@@ -345,7 +342,6 @@ class MarketingTools:
                                 param_type = "string"
 
                     # Create parameter description
-                    param_desc = param_name.replace("_", " ")
                     args_dict[param_name] = {
                         "description": param_name,
                         "title": param_name.replace("_", " ").title(),
@@ -370,7 +366,8 @@ class MarketingTools:
     @classmethod
     def get_all_kernel_functions(cls) -> dict[str, Callable]:
         """
-        Returns a dictionary of all methods in this class that have the @kernel_function annotation.
+        Return a dictionary of all methods in this class that have the @kernel_function annotation.
+
         This function itself is not annotated with @kernel_function.
 
         Returns:

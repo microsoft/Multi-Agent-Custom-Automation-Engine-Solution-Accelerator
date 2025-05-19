@@ -5,20 +5,13 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.34.44.8038",
-      "templateHash": "7719893060553487435"
+      "version": "0.35.1.17967",
+      "templateHash": "18228555099764132241"
     }
   },
   "parameters": {
-    "location": {
-      "type": "string",
-      "metadata": {
-        "description": "Location for all resources."
-      }
-    },
     "azureOpenAILocation": {
       "type": "string",
-      "defaultValue": "eastus2",
       "allowedValues": [
         "australiaeast",
         "brazilsouth",
@@ -50,7 +43,6 @@
     },
     "prefix": {
       "type": "string",
-      "defaultValue": "macae",
       "minLength": 3,
       "maxLength": 20,
       "metadata": {
@@ -107,6 +99,7 @@
     }
   },
   "variables": {
+    "location": "[resourceGroup().location]",
     "modelVersion": "2024-08-06",
     "aiServicesName": "[format('{0}-aiservices', parameters('prefix'))]",
     "deploymentType": "GlobalStandard",
@@ -190,7 +183,7 @@
       "type": "Microsoft.OperationalInsights/workspaces",
       "apiVersion": "2023-09-01",
       "name": "[format(variables('uniqueNameFormat'), 'logs')]",
-      "location": "[parameters('location')]",
+      "location": "[variables('location')]",
       "tags": "[parameters('tags')]",
       "properties": {
         "retentionInDays": 30,
@@ -203,7 +196,7 @@
       "type": "Microsoft.Insights/components",
       "apiVersion": "2020-02-02-preview",
       "name": "[format(variables('uniqueNameFormat'), 'appins')]",
-      "location": "[parameters('location')]",
+      "location": "[variables('location')]",
       "kind": "web",
       "properties": {
         "Application_Type": "web",
@@ -217,7 +210,7 @@
       "type": "Microsoft.CognitiveServices/accounts",
       "apiVersion": "2024-04-01-preview",
       "name": "[variables('aiServicesName')]",
-      "location": "[parameters('location')]",
+      "location": "[variables('location')]",
       "sku": {
         "name": "S0"
       },
@@ -277,7 +270,7 @@
       "type": "Microsoft.DocumentDB/databaseAccounts",
       "apiVersion": "2024-05-15",
       "name": "[format(variables('uniqueNameFormat'), 'cosmos')]",
-      "location": "[parameters('location')]",
+      "location": "[variables('location')]",
       "tags": "[parameters('tags')]",
       "kind": "GlobalDocumentDB",
       "properties": {
@@ -286,7 +279,7 @@
         "locations": [
           {
             "failoverPriority": 0,
-            "locationName": "[parameters('location')]"
+            "locationName": "[variables('location')]"
           }
         ],
         "capabilities": [
@@ -301,13 +294,13 @@
       "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
       "apiVersion": "2023-07-31-preview",
       "name": "[format(variables('uniqueNameFormat'), 'containerapp-pull')]",
-      "location": "[parameters('location')]"
+      "location": "[variables('location')]"
     },
     "containerAppEnv": {
       "type": "Microsoft.App/managedEnvironments",
       "apiVersion": "2024-03-01",
       "name": "[format(variables('uniqueNameFormat'), 'containerapp')]",
-      "location": "[parameters('location')]",
+      "location": "[variables('location')]",
       "tags": "[parameters('tags')]",
       "properties": {
         "daprAIConnectionString": "[reference('appInsights').ConnectionString]",
@@ -315,7 +308,7 @@
           "destination": "log-analytics",
           "logAnalyticsConfiguration": {
             "customerId": "[reference('logAnalytics').customerId]",
-            "sharedKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', format(variables('uniqueNameFormat'), 'logs')), '2023-09-01').primarySharedKey]"
+            "sharedKey": "[listKeys('logAnalytics', '2023-09-01').primarySharedKey]"
           }
         }
       },
@@ -342,7 +335,7 @@
       "type": "Microsoft.App/containerApps",
       "apiVersion": "2024-03-01",
       "name": "[format('{0}-backend', parameters('prefix'))]",
-      "location": "[parameters('location')]",
+      "location": "[variables('location')]",
       "tags": "[parameters('tags')]",
       "identity": {
         "type": "SystemAssigned, UserAssigned",
@@ -468,7 +461,7 @@
       "type": "Microsoft.Web/serverfarms",
       "apiVersion": "2021-02-01",
       "name": "[format(variables('uniqueNameFormat'), 'frontend-plan')]",
-      "location": "[parameters('location')]",
+      "location": "[variables('location')]",
       "tags": "[parameters('tags')]",
       "sku": {
         "name": "P1v2",
@@ -484,7 +477,7 @@
       "type": "Microsoft.Web/sites",
       "apiVersion": "2021-02-01",
       "name": "[format(variables('uniqueNameFormat'), 'frontend')]",
-      "location": "[parameters('location')]",
+      "location": "[variables('location')]",
       "tags": "[parameters('tags')]",
       "kind": "app,linux,container",
       "properties": {
@@ -568,7 +561,7 @@
             "value": "[parameters('prefix')]"
           },
           "solutionLocation": {
-            "value": "[parameters('location')]"
+            "value": "[variables('location')]"
           },
           "managedIdentityObjectId": {
             "value": "[reference('managedIdentityModule').outputs.managedIdentityOutput.value.objectId]"
@@ -580,8 +573,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.34.44.8038",
-              "templateHash": "10664495342911727649"
+              "version": "0.35.1.17967",
+              "templateHash": "5761607453167859573"
             }
           },
           "parameters": {
@@ -706,7 +699,7 @@
             "value": "[reference('aiServices').endpoint]"
           },
           "aiServicesKey": {
-            "value": "[listKeys(resourceId('Microsoft.CognitiveServices/accounts', variables('aiServicesName')), '2024-04-01-preview').key1]"
+            "value": "[listKeys('aiServices', '2024-04-01-preview').key1]"
           },
           "aiServicesId": {
             "value": "[resourceId('Microsoft.CognitiveServices/accounts', variables('aiServicesName'))]"
@@ -718,8 +711,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.34.44.8038",
-              "templateHash": "8087543237770345715"
+              "version": "0.35.1.17967",
+              "templateHash": "9490638595753234802"
             }
           },
           "parameters": {
@@ -1112,8 +1105,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.34.44.8038",
-              "templateHash": "11364190519186458619"
+              "version": "0.35.1.17967",
+              "templateHash": "12327197428621494853"
             }
           },
           "parameters": {
@@ -1199,7 +1192,7 @@
             "value": "2.69.0"
           },
           "location": {
-            "value": "[parameters('location')]"
+            "value": "[variables('location')]"
           },
           "managedIdentities": {
             "value": {
