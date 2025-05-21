@@ -1,6 +1,7 @@
 # app_kernel.py
 import asyncio
 import logging
+import os
 import uuid
 from typing import Dict, List, Optional
 
@@ -9,6 +10,7 @@ from app_config import config
 from auth.auth_utils import get_authenticated_user_details
 
 # Azure monitoring
+from azure.monitor.opentelemetry import configure_azure_monitor
 from config_kernel import Config
 from event_utils import track_event_if_configured
 
@@ -32,19 +34,19 @@ from models.messages_kernel import (
 # Updated import for KernelArguments
 from utils_kernel import initialize_runtime_and_context, rai_success
 
-# # Check if the Application Insights Instrumentation Key is set in the environment variables
-# connection_string = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
-# if connection_string:
-#     # Configure Application Insights if the Instrumentation Key is found
-#     configure_azure_monitor(connection_string=connection_string)
-#     logging.info(
-#         "Application Insights configured with the provided Instrumentation Key"
-#     )
-# else:
-#     # Log a warning if the Instrumentation Key is not found
-#     logging.warning(
-#         "No Application Insights Instrumentation Key found. Skipping configuration"
-#     )
+# Check if the Application Insights Instrumentation Key is set in the environment variables
+connection_string = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
+if connection_string:
+    # Configure Application Insights if the Instrumentation Key is found
+    configure_azure_monitor(connection_string=connection_string)
+    logging.info(
+        "Application Insights configured with the provided Instrumentation Key"
+    )
+else:
+    # Log a warning if the Instrumentation Key is not found
+    logging.warning(
+        "No Application Insights Instrumentation Key found. Skipping configuration"
+    )
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
