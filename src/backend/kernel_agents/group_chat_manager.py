@@ -380,7 +380,7 @@ class GroupChatManager(BaseAgent):
 
         if step.agent != "":
             agent_name = step.agent.value
-            formatted_agent = agent_name
+            formatted_agent = agent_name.replace("_", " ")
         else:
             raise ValueError(f"Check {step.agent} is missing")
 
