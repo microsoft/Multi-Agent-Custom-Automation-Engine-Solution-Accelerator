@@ -456,4 +456,5 @@ __pycache__/
 *.xsd.cs
 
 *.whl
-!autogen_core-0.3.dev0-py3-none-any.whl
+.azure
+.github/copilot-instructions.md

@@ -1,12 +1,12 @@
 import os
-import uvicorn
 
+import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import (
     FileResponse,
     HTMLResponse,
-    RedirectResponse,
     PlainTextResponse,
+    RedirectResponse,
 )
 from fastapi.staticfiles import StaticFiles
 
@@ -29,10 +29,11 @@ import html
 def get_config():
     backend_url = html.escape(os.getenv("BACKEND_API_URL", "http://localhost:8000"))
     auth_enabled = html.escape(os.getenv("AUTH_ENABLED", "True"))
-    return f'''
+    backend_url = backend_url + "/api"
+    return f"""
         const BACKEND_API_URL = "{backend_url}";
         const AUTH_ENABLED = "{auth_enabled}";
-        '''
+        """
 
 
 # Redirect root to app.html

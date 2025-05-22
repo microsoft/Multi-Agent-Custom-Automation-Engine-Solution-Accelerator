@@ -24,10 +24,10 @@ jobs:
           export GPT_MIN_CAPACITY="50"
           export AZURE_REGIONS="${{ vars.AZURE_REGIONS }}"
 
-          chmod +x deploy/scripts/checkquota.sh
-          if ! deploy/scripts/checkquota.sh; then
+          chmod +x infra/scripts/checkquota.sh
+          if ! infra/scripts/checkquota.sh; then
             # If quota check fails due to insufficient quota, set the flag
-            if grep -q "No region with sufficient quota found" deploy/scripts/checkquota.sh; then
+            if grep -q "No region with sufficient quota found" infra/scripts/checkquota.sh; then
               echo "QUOTA_FAILED=true" >> $GITHUB_ENV
             fi
             exit 1  # Fail the pipeline if any other failure occurs
@@ -73,9 +73,9 @@ jobs:
         id: generate_rg_name
         run: |
           echo "Generating a unique resource group name..."
-          TIMESTAMP=$(date +%Y%m%d%H%M%S)
-          COMMON_PART="ci-biab"
-          UNIQUE_RG_NAME="${COMMON_PART}${TIMESTAMP}"
+          ACCL_NAME="macae"  # Account name as specified
+          SHORT_UUID=$(uuidgen | cut -d'-' -f1)
+          UNIQUE_RG_NAME="arg-${ACCL_NAME}-${SHORT_UUID}"
           echo "RESOURCE_GROUP_NAME=${UNIQUE_RG_NAME}" >> $GITHUB_ENV
           echo "Generated Resource_GROUP_PREFIX: ${UNIQUE_RG_NAME}" 
       
@@ -100,7 +100,7 @@ jobs:
           set -e
           az deployment group create \
             --resource-group ${{ env.RESOURCE_GROUP_NAME }} \
-            --template-file deploy/macae.bicep \
+            --template-file infra/macae.bicep \
             --parameters azureOpenAILocation=${{env.AZURE_LOCATION }} cosmosLocation=${{env.AZURE_LOCATION }}
 
 
@@ -168,34 +168,6 @@ jobs:
             echo "Azure Container Registry name: ${acr_name}"
           fi
 
-      
-      - name: Build the image and update the container app
-        id: build-and-update
-        run: |
-
-          set -e
-          # Define variables for acr and container app names
-          acr_name="${{ env.ACR_NAME }}"
-          echo "ACR name: {$acr_name}"
-          backend_container_app_name="macae-backend"
-          backend_build_image_tag="backend:latest"
-
-          echo "Building the container image..."
-          # Build the image
-          az acr build -r ${acr_name} -t ${backend_build_image_tag} ./src/backend
-          echo "Backend image build completed successfully."
-
-          frontend_container_app_name="${{ env.APP_SERVICE_NAME }}"
-          frontend_build_image_tag="frontend:latest"
-
-          echo "Building the container image..."
-          # Build the image
-          az acr build -r ${acr_name} -t ${frontend_build_image_tag} ./src/frontend
-          echo "Frontend image build completed successfully."
-
-          # Add the new container to the website
-          az webapp config container set --resource-group ${{ env.RESOURCE_GROUP_NAME }} --name ${frontend_container_app_name} --container-image-name ${acr_name}.azurecr.io/frontend:latest --container-registry-url https://${acr_name}.azurecr.io
-                  
           
       - name: Delete Bicep Deployment
         if: success()
