@@ -20,7 +20,7 @@ window.GetAuthDetails = async () => {
             // Check if the request is successful
             if (!authResponse.ok) {
                 if(getStoredData('authEnabled') === 'false') {
-                    //Authentication is disabled. Will use mock user
+                    //Authentication is disabled. Will use mock user 
                     console.log("Authentication Disabled. Using mock user details.");
 
                     const headers = getMockUserHeaders();
