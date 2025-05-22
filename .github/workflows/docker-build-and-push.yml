@@ -52,21 +52,26 @@ jobs:
           else
             echo "TAG=pullrequest-ignore" >> $GITHUB_ENV
           fi
+      
+      - name: Get registry
+        id: registry
+        run: |
+          echo "ext_registry=${{ secrets.ACR_LOGIN_SERVER || 'acrlogin.azurecr.io'}}" >> $GITHUB_OUTPUT
           
       - name: Build and push Docker images optionally
         run: |
           cd src/backend
-          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/macaebackend:${{ env.TAG }} -f Dockerfile . && \
+          docker build -t ${{ steps.registry.outputs.ext_registry }}/macaebackend:${{ env.TAG }} -f Dockerfile . && \
           if [[ "${{ env.TAG }}" == "latest" || "${{ env.TAG }}" == "dev" || "${{ env.TAG }}" == "demo" || "${{ env.TAG }}" == "hotfix"  ]]; then
-            docker push ${{ secrets.ACR_LOGIN_SERVER }}/macaebackend:${{ env.TAG }} && \
+            docker push ${{ steps.registry.outputs.ext_registry }}/macaebackend:${{ env.TAG }} && \
             echo "Backend image built and pushed successfully."
           else
             echo "Skipping Docker push for backend with tag: ${{ env.TAG }}"
           fi
           cd ../frontend
-          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/macaefrontend:${{ env.TAG }} -f Dockerfile . && \
+          docker build -t ${{ steps.registry.outputs.ext_registry }}/macaefrontend:${{ env.TAG }} -f Dockerfile . && \
           if [[ "${{ env.TAG }}" == "latest" || "${{ env.TAG }}" == "dev" || "${{ env.TAG }}" == "demo" || "${{ env.TAG }}" == "hotfix"  ]]; then
-            docker push ${{ secrets.ACR_LOGIN_SERVER }}/macaefrontend:${{ env.TAG }} && \
+            docker push ${{ steps.registry.outputs.ext_registry }}/macaefrontend:${{ env.TAG }} && \
             echo "Frontend image built and pushed successfully."
           else
             echo "Skipping Docker push for frontend with tag: ${{ env.TAG }}"
