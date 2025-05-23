@@ -1,0 +1,80 @@
+/* StepCard.css */
+.step-card {
+  margin: 16px 0;
+  max-width: 100%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.step-card-header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.step-id {
+  font-weight: 600;
+}
+
+.step-badges {
+  display: flex;
+  gap: 8px;
+}
+
+.status-badge {
+  margin-right: 8px;
+}
+
+.agent-badge {
+  margin-right: 8px;
+}
+
+.step-card-content {
+  padding: 0 16px 16px 16px;
+}
+
+.action-label, .reply-label, .feedback-label {
+  margin-top: 12px;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.action-text, .reply-text, .feedback-text {
+  white-space: pre-wrap;
+}
+
+.step-divider {
+  margin: 12px 0;
+}
+
+.step-card-footer {
+  padding-top: 12px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.feedback-section {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.feedback-input, .action-input {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.feedback-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.decision-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}

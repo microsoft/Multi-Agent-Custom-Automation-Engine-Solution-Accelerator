@@ -1,0 +1,88 @@
+/* PlanView.css */
+.plan-view-container {
+  max-width: 960px;
+  margin: 24px auto;
+  padding: 0 16px;
+}
+
+.plan-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.plan-title {
+  font-weight: 600;
+}
+
+.plan-status-badge {
+  font-weight: 500;
+}
+
+.plan-card {
+  margin-bottom: 24px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.card-content {
+  padding: 0 16px 16px 16px;
+}
+
+.plan-goal-label, .plan-summary-label, .plan-clarification-label, .plan-response-label {
+  font-weight: 600;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.plan-goal-text, .plan-summary-text, .plan-clarification-text, .plan-response-text {
+  margin-bottom: 12px;
+  white-space: pre-wrap;
+}
+
+.plan-divider {
+  margin: 12px 0;
+}
+
+.plan-progress {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.progress-text {
+  font-weight: 500;
+}
+
+.steps-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.steps-title {
+  font-weight: 600;
+}
+
+.awaiting-badge {
+  font-weight: 500;
+}
+
+.steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.plan-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+}
+
+.plan-error, .plan-empty {
+  margin: 24px auto;
+  max-width: 800px;
+}
