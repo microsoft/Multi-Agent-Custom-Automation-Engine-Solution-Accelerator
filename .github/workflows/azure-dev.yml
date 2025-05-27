@@ -2,9 +2,7 @@ name: Azure Template Validation
 on:
   push:
     branches:
-      - dev
       - main
-      - feature/azd-semantickernel
   workflow_dispatch:
 
 permissions:
@@ -15,69 +13,19 @@ permissions:
 jobs:
   template_validation_job:
     runs-on: ubuntu-latest
-    name: Template validation
+    name: template validation
     steps:
-      # Step 1: Checkout the code from your repository
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # Step 2: Set up Python
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.9"
-
-      # Step 3: Create and populate the virtual environment
-      - name: Create virtual environment and install dependencies
-        run: |
-          python -m venv .venv
-          source .venv/bin/activate
-          python -m pip install --upgrade pip
-          pip install azure-mgmt-resource azure-identity azure-core azure-mgmt-subscription azure-cli-core
-          # Install any other dependencies that might be needed
-          pip freeze > requirements-installed.txt
-          echo "Virtual environment created with these packages:"
-          cat requirements-installed.txt
-
-      # Step 4: Create azd directory if it doesn't exist
-      - name: Create azd directory
-        run: |
-          mkdir -p ./.azd || true
-          touch ./.azd/.env || true
-
-      # Step 5: Validate the Azure template
-      - name: Validate Azure Template
-        uses: microsoft/template-validation-action@v0.3.5
+      - uses: microsoft/template-validation-action@Latest
         id: validation
         env:
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          AZURE_ENV_NAME: ${{ secrets.AZURE_ENV_NAME }}
-          AZURE_LOCATION: ${{ secrets.AZURE_LOCATION }}
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
+          AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Step 6: Debug output in case of failure
-      - name: Debug on failure
-        if: failure()
-        run: |
-          echo "Validation failed. Checking environment:"
-          ls -la
-          if [ -d ".venv" ]; then
-            echo ".venv directory exists"
-            ls -la .venv/bin/
-          else
-            echo ".venv directory does not exist"
-          fi
-          if [ -d "tva_*" ]; then
-            echo "TVA directory exists:"
-            find . -name "tva_*" -type d
-            ls -la $(find . -name "tva_*" -type d)
-          else
-            echo "No TVA directory found"
-          fi
-
-      # Step 7: Print the result of the validation
-      - name: Print result
-        if: success()
+      - name: print result
         run: cat ${{ steps.validation.outputs.resultFile }}

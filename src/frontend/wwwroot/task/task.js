@@ -26,6 +26,7 @@
     ? startTaskButtonContainer.querySelector("img")
     : null;
 
+  const textInputContainer = document.getElementsByClassName("text-input-container");
   const notyf = new Notyf({
     position: { x: "right", y: "top" },
     ripple: false,
@@ -136,9 +137,16 @@
   };
 
   const handleDisableOfActions = (status) => {
-    if (status === "completed") {
-      taskPauseButton.disabled = true;
-      taskCancelButton.disabled = true;
+    if(status === "completed"){
+      taskPauseButton.disabled=true;
+      taskCancelButton.disabled=true;
+      taskMessageTextarea.disabled = true;
+      taskMessageTextarea.style.backgroundColor = "#efefef";
+      taskMessageTextarea.style.cursor = 'not-allowed';
+      taskMessageAddButton.setAttribute('disabled', true)
+      taskMessageAddButton.style.cursor = 'not-allowed';
+      textInputContainer[0].style.backgroundColor = '#efefef';
+      textInputContainer[0].style.cursor = 'not-allowed';
     } else {
       taskPauseButton.disabled = false;
       taskCancelButton.disabled = false;

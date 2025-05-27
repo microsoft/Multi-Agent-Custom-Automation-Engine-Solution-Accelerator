@@ -525,8 +525,8 @@ class CosmosMemoryContext(MemoryStoreBase):
 
         try:
             query = """
-                SELECT DISTINCT c.collection 
-                FROM c 
+                SELECT DISTINCT c.collection
+                FROM c
                 WHERE c.data_type = 'memory' AND c.session_id = @session_id
             """
             parameters = [{"name": "@session_id", "value": self.session_id}]
@@ -595,7 +595,7 @@ class CosmosMemoryContext(MemoryStoreBase):
     ) -> Optional[MemoryRecord]:
         """Retrieve a memory record."""
         query = """
-            SELECT * FROM c 
+            SELECT * FROM c
             WHERE c.collection=@collection AND c.key=@key AND c.session_id=@session_id AND c.data_type=@data_type
         """
         parameters = [
@@ -625,7 +625,7 @@ class CosmosMemoryContext(MemoryStoreBase):
     async def remove_memory_record(self, collection: str, key: str) -> None:
         """Remove a memory record."""
         query = """
-            SELECT c.id FROM c 
+            SELECT c.id FROM c
             WHERE c.collection=@collection AND c.key=@key AND c.session_id=@session_id AND c.data_type=@data_type
         """
         parameters = [
@@ -668,7 +668,7 @@ class CosmosMemoryContext(MemoryStoreBase):
             query = """
                 SELECT *
                 FROM c
-                WHERE c.collection = @collection 
+                WHERE c.collection = @collection
                 AND c.data_type = 'memory'
                 AND c.session_id = @session_id
                 ORDER BY c._ts DESC

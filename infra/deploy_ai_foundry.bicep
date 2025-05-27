@@ -9,18 +9,21 @@ param aiServicesEndpoint string
 param aiServicesKey string
 param aiServicesId string
 
-var storageName = '${solutionName}hubstorage'
+// Load the abbrevations file required to name the azure resources.
+var abbrs = loadJsonContent('./abbreviations.json')
+
+var storageName = '${abbrs.storage.storageAccount}${solutionName}hub'
 var storageSkuName = 'Standard_LRS'
-var aiServicesName = '${solutionName}-aiservices'
-var workspaceName = '${solutionName}-workspace'
-var keyvaultName = '${solutionName}-kv'
+var aiServicesName = '${abbrs.ai.aiServices}${solutionName}'
+var workspaceName = '${abbrs.managementGovernance.logAnalyticsWorkspace}${solutionName}hub'
+//var keyvaultName = '${abbrs.security.keyVault}${solutionName}'
 var location = solutionLocation 
-var aiHubName = '${solutionName}-aihub'
+var aiHubName = '${abbrs.ai.aiHub}${solutionName}'
 var aiHubFriendlyName = aiHubName
-var aiHubDescription = 'AI Hub for KM template'
-var aiProjectName = '${solutionName}-aiproject'
+var aiHubDescription = 'AI Hub for MACAE template'
+var aiProjectName = '${abbrs.ai.aiHubProject}${solutionName}'
 var aiProjectFriendlyName = aiProjectName
-var aiSearchName = '${solutionName}-search'
+var aiSearchName = '${abbrs.ai.aiSearch}${solutionName}'
 
 
 resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' existing = {
@@ -133,11 +136,8 @@ resource aiHub 'Microsoft.MachineLearningServices/workspaces@2023-08-01-preview'
     properties: {
       category: 'AIServices'
       target: aiServicesEndpoint
-      authType: 'ApiKey'
+      authType: 'AAD'
       isSharedToAll: true
-      credentials: {
-        key: aiServicesKey
-      }
       metadata: {
         ApiType: 'Azure'
         ResourceId: aiServicesId
@@ -156,6 +156,19 @@ resource aiHubProject 'Microsoft.MachineLearningServices/workspaces@2024-01-01-p
   properties: {
     friendlyName: aiProjectFriendlyName
     hubResourceId: aiHub.id
+  }
+}
+
+resource aiDeveloper 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
+  name: '64702f94-c441-49e6-a78b-ef80e0188fee'
+}
+
+resource aiDevelopertoAIProject 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(aiHubProject.id, aiDeveloper.id)
+  scope: resourceGroup()
+  properties: {
+    roleDefinitionId: aiDeveloper.id
+    principalId: aiHubProject.identity.principalId
   }
 }
 
@@ -287,7 +300,7 @@ resource azureLocatioEntry 'Microsoft.KeyVault/vaults/secrets@2021-11-01-preview
   }
 }
 
-output keyvaultName string = keyvaultName
+output keyvaultName string = keyVaultName
 output keyvaultId string = keyVault.id
 
 output aiServicesName string = aiServicesName 

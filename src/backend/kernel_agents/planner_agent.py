@@ -1,43 +1,25 @@
+import datetime
 import logging
 import uuid
-import json
-import re
-import datetime
-from typing import Dict, List, Optional, Any, Tuple
-from pydantic import BaseModel, Field
-from azure.ai.projects.models import (
-    ResponseFormatJsonSchema,
-    ResponseFormatJsonSchemaType,
-)
-import semantic_kernel as sk
-from semantic_kernel.functions import KernelFunction
-from semantic_kernel.functions.kernel_arguments import KernelArguments
-from semantic_kernel.agents import (
-    AzureAIAgent,
-    AzureAIAgentSettings,
-    AzureAIAgentThread,
-)
-from kernel_agents.agent_base import BaseAgent
+from typing import Any, Dict, List, Optional, Tuple
+
+from azure.ai.projects.models import (ResponseFormatJsonSchema,
+                                      ResponseFormatJsonSchemaType)
 from context.cosmos_memory_kernel import CosmosMemoryContext
-from models.messages_kernel import (
-    AgentMessage,
-    AgentType,
-    InputTask,
-    Plan,
-    PlannerResponsePlan,
-    Step,
-    StepStatus,
-    PlanStatus,
-    HumanFeedbackStatus,
-)
 from event_utils import track_event_if_configured
-from app_config import config
-from kernel_tools.hr_tools import HrTools
+from kernel_agents.agent_base import BaseAgent
 from kernel_tools.generic_tools import GenericTools
+from kernel_tools.hr_tools import HrTools
 from kernel_tools.marketing_tools import MarketingTools
 from kernel_tools.procurement_tools import ProcurementTools
 from kernel_tools.product_tools import ProductTools
 from kernel_tools.tech_support_tools import TechSupportTools
+from models.messages_kernel import (AgentMessage, AgentType,
+                                    HumanFeedbackStatus, InputTask, Plan,
+                                    PlannerResponsePlan, PlanStatus, Step,
+                                    StepStatus)
+from semantic_kernel.functions import KernelFunction
+from semantic_kernel.functions.kernel_arguments import KernelArguments
 
 
 class PlannerAgent(BaseAgent):
@@ -123,35 +105,61 @@ class PlannerAgent(BaseAgent):
         """
         return "You are a Planner agent responsible for creating and managing plans. You analyze tasks, break them down into steps, and assign them to the appropriate specialized agents."
 
-    async def async_init(self) -> None:
-        """Asynchronously initialize the PlannerAgent.
+    @classmethod
+    async def create(
+        cls,
+        **kwargs: Dict[str, Any],
+    ) -> None:
+        """Asynchronously create the PlannerAgent.
 
         Creates the Azure AI Agent for planning operations.
 
         Returns:
             None
         """
+
+        session_id = kwargs.get("session_id")
+        user_id = kwargs.get("user_id")
+        memory_store = kwargs.get("memory_store")
+        tools = kwargs.get("tools", None)
+        system_message = kwargs.get("system_message", None)
+        agent_name = kwargs.get("agent_name")
+        available_agents = kwargs.get("available_agents", None)
+        agent_instances = kwargs.get("agent_instances", None)
+        client = kwargs.get("client")
+
+        # Create the instruction template
+
         try:
             logging.info("Initializing PlannerAgent from async init azure AI Agent")
 
-            # Get the agent template - defined in function to allow for easy updates
-            instructions = self._get_template()
-            if not self._agent:
-                # Create the Azure AI Agent using AppConfig with string instructions
-                self._agent = await config.create_azure_ai_agent(
-                    agent_name=self._agent_name,
-                    instructions=instructions,  # Pass the formatted string, not an object
-                    temperature=0.0,
-                    response_format=ResponseFormatJsonSchemaType(
-                        json_schema=ResponseFormatJsonSchema(
-                            name=PlannerResponsePlan.__name__,
-                            description=f"respond with {PlannerResponsePlan.__name__.lower()}",
-                            schema=PlannerResponsePlan.model_json_schema(),
-                        )
-                    ),
-                )
-                logging.info("Successfully created Azure AI Agent for PlannerAgent")
-            return True
+            # Create the Azure AI Agent using AppConfig with string instructions
+            agent_definition = await cls._create_azure_ai_agent_definition(
+                agent_name=agent_name,
+                instructions=cls._get_template(),  # Pass the formatted string, not an object
+                temperature=0.0,
+                response_format=ResponseFormatJsonSchemaType(
+                    json_schema=ResponseFormatJsonSchema(
+                        name=PlannerResponsePlan.__name__,
+                        description=f"respond with {PlannerResponsePlan.__name__.lower()}",
+                        schema=PlannerResponsePlan.model_json_schema(),
+                    )
+                ),
+            )
+
+            return cls(
+                session_id=session_id,
+                user_id=user_id,
+                memory_store=memory_store,
+                tools=tools,
+                system_message=system_message,
+                agent_name=agent_name,
+                available_agents=available_agents,
+                agent_instances=agent_instances,
+                client=client,
+                definition=agent_definition,
+            )
+
         except Exception as e:
             logging.error(f"Failed to create Azure AI Agent for PlannerAgent: {e}")
             raise
@@ -309,31 +317,12 @@ class PlannerAgent(BaseAgent):
             # Get template variables as a dictionary
             args = self._generate_args(input_task.description)
 
-            # Use the Azure AI Agent instead of direct function invocation
-            if self._agent is None:
-                # Initialize the agent if it's not already done
-                await self.async_init()
-
-            if self._agent is None:
-                raise RuntimeError("Failed to initialize Azure AI Agent for planning")
-
-            # Log detailed information about the instruction being sent
-            # logging.info(f"Invoking PlannerAgent with instruction length: {len(instruction)}")
-
             # Create kernel arguments - make sure we explicitly emphasize the task
             kernel_args = KernelArguments(**args)
-            # kernel_args["input"] = f"TASK: {input_task.description}\n\n{instruction}"
 
-            # Get the schema for our expected response format
-
-            # Ensure we're using the right pattern for Azure AI agents with semantic kernel
-            # Properly handle async generation
-            # thread = AzureAIAgentThread(
-            #     thread_id=input_task.session_id, client=self.client
-            # )
             thread = None
             # thread = self.client.agents.create_thread(thread_id=input_task.session_id)
-            async_generator = self._agent.invoke(
+            async_generator = self.invoke(
                 arguments=kernel_args,
                 settings={
                     "temperature": 0.0,  # Keep temperature low for consistent planning
@@ -450,8 +439,6 @@ class PlannerAgent(BaseAgent):
             # Create a fallback dummy plan when parsing fails
             logging.info("Creating fallback dummy plan due to parsing error")
 
-            import datetime
-
             # Create a dummy plan with the original task description
             dummy_plan = Plan(
                 id=str(uuid.uuid4()),
@@ -546,7 +533,8 @@ class PlannerAgent(BaseAgent):
             "tools_str": tools_str,
         }
 
-    def _get_template(self):
+    @staticmethod
+    def _get_template():
         """Generate the instruction template for the LLM."""
         # Build the instruction with proper format placeholders for .format() method
 
@@ -580,7 +568,17 @@ class PlannerAgent(BaseAgent):
 
             Ensure the summary of the plan and the overall steps is less than 50 words.
 
-            Identify any additional information that might be required to complete the task. Include this information in the plan in the human_clarification_request field of the plan. If it is not required, leave it as null. Do not include information that you are waiting for clarification on in the string of the action field, as this otherwise won't get updated.
+            Identify any additional information that might be required to complete the task. Include this information in the plan in the human_clarification_request field of the plan. If it is not required, leave it as null.
+
+            When identifying required information, consider what input a GenericAgent or fallback LLM model would need to perform the task correctly. This may include:
+            - Input data, text, or content to process
+            - A question to answer or topic to describe
+            - Any referenced material that is mentioned but not actually included (e.g., "the given text")
+            - A clear subject or target when the task instruction is too vague (e.g., "describe," "summarize," or "analyze" without specifying what to describe)
+
+            If such required input is missing—even if not explicitly referenced—generate a concise clarification request in the human_clarification_request field.
+
+            Do not include information that you are waiting for clarification on in the string of the action field, as this otherwise won't get updated.
 
             You must prioritise using the provided functions to accomplish each step. First evaluate each and every function the agents have access too. Only if you cannot find a function needed to complete the task, and you have reviewed each and every function, and determined why each are not suitable, there are two options you can take when generating the plan.
             First evaluate whether the step could be handled by a typical large language model, without any specialised functions. For example, tasks such as "add 32 to 54", or "convert this SQL code to a python script", or "write a 200 word story about a fictional product strategy".

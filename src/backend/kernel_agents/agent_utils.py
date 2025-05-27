@@ -2,8 +2,7 @@ import json
 from typing import Optional
 
 import semantic_kernel as sk
-from semantic_kernel.kernel_pydantic import KernelBaseModel
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from context.cosmos_memory_kernel import CosmosMemoryContext
 from models.messages_kernel import Step

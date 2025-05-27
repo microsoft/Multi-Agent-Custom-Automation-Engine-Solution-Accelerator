@@ -14,10 +14,10 @@ opentelemetry-instrumentation-fastapi
 opentelemetry-instrumentation-openai
 opentelemetry-exporter-otlp-proto-http
 
-semantic-kernel[azure]
-azure-ai-projects 
+semantic-kernel[azure]==1.28.1
+azure-ai-projects==1.0.0b10 
 openai 
-azure-ai-inference 
+azure-ai-inference==1.0.0b9 
 azure-search-documents 
 azure-ai-evaluation
 

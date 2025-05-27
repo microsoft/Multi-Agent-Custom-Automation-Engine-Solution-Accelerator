@@ -1,36 +1,28 @@
 """Factory for creating agents in the Multi-Agent Custom Automation Engine."""
 
-import logging
-from typing import Dict, List, Callable, Any, Optional, Type
-from types import SimpleNamespace
-from semantic_kernel import Kernel
-from semantic_kernel.functions import KernelFunction
-from semantic_kernel.agents.azure_ai.azure_ai_agent import AzureAIAgent
 import inspect
-
-from kernel_agents.agent_base import BaseAgent
+import logging
+from typing import Any, Dict, Optional, Type
 
 # Import the new AppConfig instance
 from app_config import config
-
+from azure.ai.projects.models import (ResponseFormatJsonSchema,
+                                      ResponseFormatJsonSchemaType)
+from context.cosmos_memory_kernel import CosmosMemoryContext
+from kernel_agents.agent_base import BaseAgent
+from kernel_agents.generic_agent import GenericAgent
+from kernel_agents.group_chat_manager import GroupChatManager
 # Import all specialized agent implementations
 from kernel_agents.hr_agent import HrAgent
 from kernel_agents.human_agent import HumanAgent
 from kernel_agents.marketing_agent import MarketingAgent
-from kernel_agents.generic_agent import GenericAgent
-from kernel_agents.tech_support_agent import TechSupportAgent
+from kernel_agents.planner_agent import PlannerAgent  # Add PlannerAgent import
 from kernel_agents.procurement_agent import ProcurementAgent
 from kernel_agents.product_agent import ProductAgent
-from kernel_agents.planner_agent import PlannerAgent  # Add PlannerAgent import
-from kernel_agents.group_chat_manager import GroupChatManager
-from semantic_kernel.prompt_template.prompt_template_config import PromptTemplateConfig
-from context.cosmos_memory_kernel import CosmosMemoryContext
-from models.messages_kernel import PlannerResponsePlan, AgentType
-
-from azure.ai.projects.models import (
-    ResponseFormatJsonSchema,
-    ResponseFormatJsonSchemaType,
-)
+from kernel_agents.tech_support_agent import TechSupportAgent
+from models.messages_kernel import AgentType, PlannerResponsePlan
+# pylint:disable=E0611
+from semantic_kernel.agents.azure_ai.azure_ai_agent import AzureAIAgent
 
 logger = logging.getLogger(__name__)
 
@@ -156,40 +148,6 @@ class AgentFactory:
         )
         tools = None
 
-        # Build the agent definition (functions schema)
-        definition = None
-
-        try:
-            if client is None:
-                # Create the AIProjectClient instance using the config
-                # This is a placeholder; replace with actual client creation logic
-                client = config.get_ai_project_client()
-        except Exception as client_exc:
-            logger.error(f"Error creating AIProjectClient: {client_exc}")
-            raise
-
-        try:
-            # Create the agent definition using the AIProjectClient (project-based pattern)
-            # For GroupChatManager, create a definition with minimal configuration
-            if client is not None:
-
-                definition = await client.agents.create_agent(
-                    model=config.AZURE_OPENAI_DEPLOYMENT_NAME,
-                    name=agent_type_str,
-                    instructions=system_message,
-                    temperature=temperature,
-                    response_format=response_format,  # Add response_format if required
-                )
-                logger.info(
-                    f"Successfully created agent definition for {agent_type_str}"
-                )
-        except Exception as agent_exc:
-            logger.error(
-                f"Error creating agent definition with AIProjectClient for {agent_type_str}: {agent_exc}"
-            )
-
-            raise
-
         # Create the agent instance using the project-based pattern
         try:
             # Filter kwargs to only those accepted by the agent's __init__
@@ -205,18 +163,11 @@ class AgentFactory:
                     "tools": tools,
                     "system_message": system_message,
                     "client": client,
-                    "definition": definition,
                     **kwargs,
                 }.items()
                 if k in valid_keys
             }
-            agent = agent_class(**filtered_kwargs)
-
-            # Initialize the agent asynchronously if it has async_init
-            if hasattr(agent, "async_init") and inspect.iscoroutinefunction(
-                agent.async_init
-            ):
-                init_result = await agent.async_init()
+            agent = await agent_class.create(**filtered_kwargs)
 
         except Exception as e:
             logger.error(

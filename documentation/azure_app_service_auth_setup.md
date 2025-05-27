@@ -18,7 +18,7 @@
 
 ![Add Provider](./images/azure-app-service-auth-setup/AppAuthIdentityProviderAdd.png)
 
-5. Accept the default values and click on `Add` button to go back to the previous page with the idenity provider added.
+5. Accept the default values and click on `Add` button to go back to the previous page with the identity provider added.
 
 ![Add Provider](./images/azure-app-service-auth-setup/AppAuthIdentityProviderAdded.png)
 
@@ -40,7 +40,7 @@
 
 ![Add Details](./images/azure-app-service-auth-setup/AddDetails.png)
 
-5. After application is created sucessfully, then click on `Add a Redirect URL`.
+5. After application is created successfully, then click on `Add a Redirect URL`.
 
 ![Redirect URL](./images/azure-app-service-auth-setup/AddRedirectURL.png)
 
@@ -53,6 +53,6 @@
 ![Web](./images/azure-app-service-auth-setup/Web.png)
 
 8. Enter the `web app URL` (Provide the app service name in place of XXXX) and Save. Then go back to [Step 1](#step-1-add-authentication-in-azure-app-service-configuration) and follow from _Point 4_ choose `Pick an existing app registration in this directory` from the Add an Identity Provider page and provide the newly registered App Name.
-E.g. https://appservicename.azurewebsites.net/.auth/login/aad/callback
+E.g. <<https://<< appservicename >>.azurewebsites.net/.auth/login/aad/callback>>
 
 ![Add Details](./images/azure-app-service-auth-setup/WebAppURL.png)

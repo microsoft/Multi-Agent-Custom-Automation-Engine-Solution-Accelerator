@@ -1,7 +1,6 @@
 from typing import Any, Dict, List, Optional
 
 import semantic_kernel as sk
-from semantic_kernel.kernel_arguments import KernelArguments
 from semantic_kernel.kernel_pydantic import KernelBaseModel
 
 

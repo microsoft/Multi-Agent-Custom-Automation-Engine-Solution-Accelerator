@@ -257,7 +257,7 @@ The files for the dev container are located in `/.devcontainer/` folder.
 
 4. **Deploy the Bicep template:**
 
-   - You can use the Bicep extension for VSCode (Right-click the `.bicep` file, then select "Show deployment plane") or use the Azure CLI:
+   - You can use the Bicep extension for VSCode (Right-click the `.bicep` file, then select "Show  deployment plan") or use the Azure CLI:
      ```bash
      az deployment group create -g <resource-group-name> -f deploy/macae-dev.bicep --query 'properties.outputs'
      ```

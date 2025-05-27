@@ -1,21 +1,15 @@
 # app_kernel.py
 import asyncio
-import json
 import logging
-import os
-import re
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 # Semantic Kernel imports
-import semantic_kernel as sk
 from app_config import config
 from auth.auth_utils import get_authenticated_user_details
 
 # Azure monitoring
-from azure.monitor.opentelemetry import configure_azure_monitor
 from config_kernel import Config
-from context.cosmos_memory_kernel import CosmosMemoryContext
 from event_utils import track_event_if_configured
 
 # FastAPI imports
@@ -26,21 +20,17 @@ from kernel_agents.agent_factory import AgentFactory
 # Local imports
 from middleware.health_check import HealthCheckMiddleware
 from models.messages_kernel import (
-    ActionRequest,
-    ActionResponse,
     AgentMessage,
     AgentType,
     HumanClarification,
     HumanFeedback,
     InputTask,
-    Plan,
     PlanWithSteps,
     Step,
 )
 
 # Updated import for KernelArguments
-from semantic_kernel.functions.kernel_arguments import KernelArguments
-from utils_kernel import get_agents, initialize_runtime_and_context, rai_success
+from utils_kernel import initialize_runtime_and_context, rai_success
 
 # # Check if the Application Insights Instrumentation Key is set in the environment variables
 # connection_string = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
