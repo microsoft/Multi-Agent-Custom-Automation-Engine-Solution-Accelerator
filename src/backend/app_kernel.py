@@ -137,9 +137,8 @@ async def input_task_endpoint(input_task: InputTask, request: Request):
         # Convert input task to JSON for the kernel function, add user_id here
 
         # Use the planner to handle the task
-        result = await group_chat_manager.handle_input_task(input_task)
+        await group_chat_manager.handle_input_task(input_task)
 
-        print(f"Result: {result}")
         # Get plan from memory store
         plan = await memory_store.get_plan_by_session(input_task.session_id)
 
@@ -176,7 +175,6 @@ async def input_task_endpoint(input_task: InputTask, request: Request):
         }
 
     except Exception as e:
-        logging.exception(f"Error handling input task: {e}")
         track_event_if_configured(
             "InputTaskError",
             {
@@ -779,18 +777,17 @@ async def delete_all_messages(request: Request) -> Dict[str, str]:
     authenticated_user = get_authenticated_user_details(request_headers=request.headers)
     user_id = authenticated_user["user_principal_id"]
     if not user_id:
+        track_event_if_configured(
+            "UserIdNotFound", {"status_code": 400, "detail": "no user"}
+        )
         raise HTTPException(status_code=400, detail="no user")
 
     # Initialize memory context
     kernel, memory_store = await initialize_runtime_and_context("", user_id)
 
-    logging.info("Deleting all plans")
     await memory_store.delete_all_items("plan")
-    logging.info("Deleting all sessions")
     await memory_store.delete_all_items("session")
-    logging.info("Deleting all steps")
     await memory_store.delete_all_items("step")
-    logging.info("Deleting all agent_messages")
     await memory_store.delete_all_items("agent_message")
 
     # Clear the agent factory cache
@@ -840,6 +837,9 @@ async def get_all_messages(request: Request):
     authenticated_user = get_authenticated_user_details(request_headers=request.headers)
     user_id = authenticated_user["user_principal_id"]
     if not user_id:
+        track_event_if_configured(
+            "UserIdNotFound", {"status_code": 400, "detail": "no user"}
+        )
         raise HTTPException(status_code=400, detail="no user")
 
     # Initialize memory context

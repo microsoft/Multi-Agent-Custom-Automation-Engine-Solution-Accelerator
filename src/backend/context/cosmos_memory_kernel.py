@@ -84,7 +84,6 @@ class CosmosMemoryContext(MemoryStoreBase):
                 id=self._cosmos_container,
                 partition_key=PartitionKey(path="/session_id"),
             )
-            logging.info("Successfully connected to CosmosDB")
         except Exception as e:
             logging.error(
                 f"Failed to initialize CosmosDB container: {e}. Continuing without CosmosDB for testing."

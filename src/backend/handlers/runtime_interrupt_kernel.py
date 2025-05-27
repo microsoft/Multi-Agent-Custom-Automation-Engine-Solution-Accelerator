@@ -55,10 +55,6 @@ class NeedsUserInputHandler:
         Returns:
             The original message (for pass-through functionality)
         """
-        print(
-            f"NeedsUserInputHandler received message: {message} from sender: {sender_type}/{sender_key}"
-        )
-
         if isinstance(message, GetHumanInputMessage):
             self.question_for_human = message
             self.messages.append(
@@ -67,7 +63,6 @@ class NeedsUserInputHandler:
                     "content": message.content,
                 }
             )
-            print("Captured question for human in NeedsUserInputHandler")
         elif isinstance(message, GroupChatMessage):
             # Ensure we extract content consistently with the original implementation
             content = (
@@ -81,7 +76,6 @@ class NeedsUserInputHandler:
                     "content": content,
                 }
             )
-            print(f"Captured group chat message in NeedsUserInputHandler - {message}")
         elif isinstance(message, dict) and "content" in message:
             # Handle messages directly from AzureAIAgent
             self.question_for_human = GetHumanInputMessage(content=message["content"])
@@ -91,7 +85,6 @@ class NeedsUserInputHandler:
                     "content": message["content"],
                 }
             )
-            print("Captured question from AzureAIAgent in NeedsUserInputHandler")
 
         return message
 
@@ -111,7 +104,6 @@ class NeedsUserInputHandler:
         """Get captured messages and clear buffer."""
         messages = self.messages.copy()
         self.messages.clear()
-        print("Returning and clearing captured messages in NeedsUserInputHandler")
         return messages
 
 
@@ -133,10 +125,6 @@ class AssistantResponseHandler:
         Returns:
             The original message (for pass-through functionality)
         """
-        print(
-            f"on_message called in AssistantResponseHandler with message from sender: {sender_type} - {message}"
-        )
-
         if hasattr(message, "body") and sender_type in ["writer", "editor"]:
             # Ensure we're handling the content consistently with the original implementation
             self.assistant_response = (
@@ -144,13 +132,9 @@ class AssistantResponseHandler:
                 if hasattr(message.body, "content")
                 else str(message.body)
             )
-            print("Assistant response set in AssistantResponseHandler")
         elif isinstance(message, dict) and "value" in message and sender_type:
             # Handle message from AzureAIAgent
             self.assistant_response = message["value"]
-            print(
-                "Assistant response from AzureAIAgent set in AssistantResponseHandler"
-            )
 
         return message
 
@@ -158,13 +142,11 @@ class AssistantResponseHandler:
     def has_response(self) -> bool:
         """Check if response is available."""
         has_response = self.assistant_response is not None
-        print(f"has_response called, returning: {has_response}")
         return has_response
 
     def get_response(self) -> Optional[str]:
         """Get captured response."""
         response = self.assistant_response
-        print(f"get_response called, returning: {response}")
         return response
 
 
@@ -201,7 +183,6 @@ def register_handlers(kernel: sk.Kernel, session_id: str) -> tuple:
     kernel.set_variable(f"input_handler_{session_id}", user_input_handler)
     kernel.set_variable(f"response_handler_{session_id}", assistant_handler)
 
-    print(f"Registered handlers for session {session_id} with kernel")
     return user_input_handler, assistant_handler
 
 

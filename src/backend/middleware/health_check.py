@@ -53,7 +53,6 @@ class HealthCheckMiddleware(BaseHTTPMiddleware):
 
         for name, check in self.checks.items():
             if not name or not check:
-                logging.warning(f"Check '{name}' is not valid")
                 continue
             try:
                 if not callable(check) or not hasattr(check, "__await__"):
