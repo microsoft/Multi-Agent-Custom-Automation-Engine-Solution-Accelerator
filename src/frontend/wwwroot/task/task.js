@@ -528,6 +528,12 @@
                                                 ${markdownConverter.makeHtml(
                   message.content
                 )} ${approveAllStagesButton}
+                ${message.source !== "Planner_Agent" && message.source !== "Group_Chat_Manager" ? `
+                  <div class="is-size-7 has-text-weight-medium has-text-grey-light is-flex" style="font-style: italic;">
+                    Disclaimer: Example function stub - not implemented
+                  </div>
+                ` : ''}
+                    
                                             </div>
                                         </div>
                                     </div>
