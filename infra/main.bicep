@@ -729,8 +729,8 @@ var aiFoundryAiServicesModelDeployment = {
   version: '2024-08-06'
   sku: {
     name: 'GlobalStandard'
-    //Curently the capacity is set to 140 for opinanal performance. 
-    capacity: aiFoundryAiServicesConfiguration.?modelCapcity ?? 140
+    //Currently the capacity is set to 140 for optimal performance.
+    capacity: aiFoundryAiServicesConfiguration.?modelCapacity ?? 140
   }
   raiPolicyName: 'Microsoft.Default'
 }
@@ -833,10 +833,7 @@ var aiFoundryStorageAccountResourceName = aiFoundryStorageAccountConfiguration.?
 
 module aiFoundryStorageAccount 'br/public:avm/res/storage/storage-account:0.18.2' = if (aiFoundryStorageAccountEnabled) {
   name: take('avm.res.storage.storage-account.${aiFoundryStorageAccountResourceName}', 64)
-  dependsOn: [
-    privateDnsZonesAiFoundryStorageAccount
-  ]
-  params: {
+    params: {
     name: aiFoundryStorageAccountResourceName
     location: aiFoundryStorageAccountConfiguration.?location ?? azureOpenAILocation
     tags: aiFoundryStorageAccountConfiguration.?tags ?? tags
@@ -855,7 +852,7 @@ module aiFoundryStorageAccount 'br/public:avm/res/storage/storage-account:0.18.2
       diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
     }
     publicNetworkAccess: virtualNetworkEnabled ? 'Disabled' : 'Enabled'
-    allowBlobPublicAccess: virtualNetworkEnabled ? false : true
+    allowBlobPublicAccess: false
     privateEndpoints: virtualNetworkEnabled
       ? map(items(storageAccountPrivateDnsZones), zone => {
           name: 'pep-${zone.value}-${aiFoundryStorageAccountResourceName}'
@@ -901,7 +898,7 @@ var aiFoundryAiHubEnabled = aiFoundryAiHubConfiguration.?enabled ?? true
 var aiFoundryAiHubName = aiFoundryAiHubConfiguration.?name ?? 'aih-${solutionPrefix}'
 module aiFoundryAiHub 'modules/ai-hub.bicep' = if (aiFoundryAiHubEnabled) {
   name: take('module.ai-hub.${aiFoundryAiHubName}', 64)
-  dependsOn: [
+    dependsOn: [
     privateDnsZonesAiFoundryWorkspaceHub
   ]
   params: {
@@ -994,6 +991,7 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.12.0' = if (co
     diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
     databaseAccountOfferType: 'Standard'
     enableFreeTier: false
+    defaultConsistencyLevel: 'Session'
     networkRestrictions: {
       networkAclBypass: 'None'
       publicNetworkAccess: virtualNetworkEnabled ? 'Disabled' : 'Enabled'
@@ -1030,6 +1028,7 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.12.0' = if (co
       {
         locationName: cosmosDbAccountConfiguration.?location ?? solutionLocation
         failoverPriority: 0
+        isZoneRedundant: false
       }
     ]
     capabilitiesToAdd: [
@@ -1061,13 +1060,13 @@ var containerAppEnvironmentEnabled = containerAppEnvironmentConfiguration.?enabl
 var containerAppEnvironmentResourceName = containerAppEnvironmentConfiguration.?name ?? 'cae-${solutionPrefix}'
 module containerAppEnvironment 'modules/container-app-environment.bicep' = if (containerAppEnvironmentEnabled) {
   name: take('module.container-app-environment.${containerAppEnvironmentResourceName}', 64)
-  params: {
+  params: {    
     name: containerAppEnvironmentResourceName
     tags: containerAppEnvironmentConfiguration.?tags ?? tags
     location: containerAppEnvironmentConfiguration.?location ?? solutionLocation
     logAnalyticsResourceName: logAnalyticsWorkspace.outputs.name
     publicNetworkAccess: 'Enabled'
-    zoneRedundant: virtualNetworkEnabled ? true : false
+    zoneRedundant: false
     applicationInsightsConnectionString: applicationInsights.outputs.connectionString
     enableTelemetry: enableTelemetry
     subnetResourceId: virtualNetworkEnabled
