@@ -1,0 +1,44 @@
+/* TaskDetails.css */
+.task-details-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #fafafa; /* tokens.colorNeutralBackground1 equivalent */
+  overflow: auto;
+}
+
+.task-details-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.task-details-progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.task-details-subtask-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-details-agent-card {
+  cursor: default;
+  padding: 12px;
+}
+
+.task-details-add-button {
+  align-self: flex-start;
+}
+
+.task-details-section-title {
+  font-weight: 600; /* tokens.fontWeightSemibold equivalent */
+}
+
+.task-details-task-title {
+  font-weight: 600; /* tokens.fontWeightSemibold equivalent */
+}

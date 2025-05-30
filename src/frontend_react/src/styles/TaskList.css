@@ -1,0 +1,22 @@
+/* TaskList Component Styles */
+
+.task-list-task-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    cursor: pointer;
+    background-color: #fafafa; /* tokens.colorNeutralBackground1 */
+    transition-property: background-color;
+    transition-duration: 0.1s; /* tokens.durationFaster */
+    transition-timing-function: cubic-bezier(0.33, 0.00, 0.67, 1.00); /* tokens.curveEasyEase */
+}
+
+.task-list-task-item:hover {
+    background-color: #f5f5f5; /* tokens.colorNeutralBackground1Hover */
+}
+
+.task-list-task-date {
+    font-size: 0.75rem; /* tokens.fontSizeBase200 */
+    color: #616161; /* tokens.colorNeutralForeground2 */
+}
