@@ -15,14 +15,14 @@ The Multi-Agent Custom Automation Engine solution accelerator allows users to sp
 </div>
 <br/>
 
-<h2><img src="./documentation/images/readme/solution-overview.png" width="48" />
+<h2><img src="./docs/images/readme/solution-overview.png" width="48" />
 Solution overview
 </h2>
 
 The solution leverages Azure OpenAI Service, Azure Container Apps, Azure Cosmos DB, and Azure Container Registry to create an intelligent automation pipeline. It uses a multi-agent approach where specialized AI agents work together to plan, execute, and validate tasks based on user input.
 
 ### Solution architecture
-|![image](./documentation/images/readme/macae-architecture.png)|
+|![image](./docs/images/readme/macae-architecture.png)|
 |---|
 
 
@@ -30,7 +30,7 @@ The solution leverages Azure OpenAI Service, Azure Container Apps, Azure Cosmos 
 ### How to customize
 If you'd like to customize the solution accelerator, here are some common areas to start:
 
-[Custom scenario](./documentation/CustomizeSolution.md)
+[Custom scenario](./docs/CustomizeSolution.md)
 
 <br/>
 
@@ -63,14 +63,14 @@ If you'd like to customize the solution accelerator, here are some common areas 
 </details>
 
 <br /><br />
-<h2><img src="./documentation/images/readme/quick-deploy.png" width="48" />
+<h2><img src="./docs/images/readme/quick-deploy.png" width="48" />
 Quick deploy
 </h2>
 
 ### How to install or deploy
 Follow the quick deploy steps on the deployment guide to deploy this solution to your own Azure subscription.
 
-[Click here to launch the deployment guide](./documentation/DeploymentGuide.md)
+[Click here to launch the deployment guide](./docs/DeploymentGuide.md)
 <br/><br/>
 
 | [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) | [![Open in Dev Containers](https://img.shields.io/static/v1?style=for-the-badge&label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) |
@@ -79,13 +79,13 @@ Follow the quick deploy steps on the deployment guide to deploy this solution to
 <br/>
 
 > ⚠️ **Important: Check Azure OpenAI Quota Availability**
- <br/>To ensure sufficient quota is available in your subscription, please follow [quota check instructions guide](./documentation/quota_check.md) before you deploy the solution.
+ <br/>To ensure sufficient quota is available in your subscription, please follow [quota check instructions guide](./docs/quota_check.md) before you deploy the solution.
 
 <br/>
 
 ### Prerequisites and Costs
 
-To deploy this solution accelerator, ensure you have access to an [Azure subscription](https://azure.microsoft.com/free/) with the necessary permissions to create **resource groups and resources**. Follow the steps in [Azure Account Set Up](./documentation/AzureAccountSetUp.md).
+To deploy this solution accelerator, ensure you have access to an [Azure subscription](https://azure.microsoft.com/free/) with the necessary permissions to create **resource groups and resources**. Follow the steps in [Azure Account Set Up](./docs/AzureAccountSetUp.md).
 
 Check the [Azure Products by Region](https://azure.microsoft.com/en-us/explore/global-infrastructure/products-by-region/table) page and select a **region** where the following services are available: Azure OpenAI Service, Azure AI Search, and Azure Semantic Search.
 
@@ -107,11 +107,11 @@ Use the [Azure pricing calculator](https://azure.microsoft.com/en-us/pricing/cal
 either by deleting the resource group in the Portal or running `azd down`.
 
 <br /><br />
-<h2><img src="./documentation/images/readme/business-scenario.png" width="48" />
+<h2><img src="./docs/images/readme/business-scenario.png" width="48" />
 Business Scenario
 </h2>
 
-|![image](./documentation/images/readme/macae-application.png)|
+|![image](./docs/images/readme/macae-application.png)|
 |---|
 
 <br/>
@@ -148,7 +148,7 @@ By using the *Multi-Agent Custom Automation Engine* solution accelerator, users 
 
 <br /><br />
 
-<h2><img src="./documentation/images/readme/supporting-documentation.png" width="48" />
+<h2><img src="./docs/images/readme/supporting-documentation.png" width="48" />
 Supporting documentation
 </h2>
 
@@ -185,7 +185,7 @@ Have questions, find a bug, or want to request a feature? [Submit a new issue](h
 <br/>
 
 ## Responsible AI Transparency FAQ 
-Please refer to [Transparency FAQ](./documentation/TRANSPARENCY_FAQ.md) for responsible AI transparency details of this solution accelerator.
+Please refer to [Transparency FAQ](./docs/TRANSPARENCY_FAQ.md) for responsible AI transparency details of this solution accelerator.
 
 <br/>
 
