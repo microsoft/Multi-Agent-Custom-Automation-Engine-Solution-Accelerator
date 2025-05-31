@@ -7,3 +7,7 @@ param virtualMachineConfiguration = {
   adminUsername: 'adminuser'
   adminPassword: 'P@ssw0rd1234'
 }
+
+param logAnalyticsWorkspaceConfiguration = {
+  existingWorkspaceResourceId: ''
+}

@@ -34,6 +34,7 @@ param logAnalyticsWorkspaceConfiguration logAnalyticsWorkspaceConfigurationType 
   sku: 'PerGB2018'
   tags: tags
   dataRetentionInDays: 365
+  existingWorkspaceResourceId: ''
 }
 
 @description('Optional. The configuration to apply for the Multi-Agent Custom Automation Engine Application Insights resource.')
@@ -255,7 +256,10 @@ resource avmTelemetry 'Microsoft.Resources/deployments@2024-03-01' = if (enableT
 // Log Analytics configuration defaults
 var logAnalyticsWorkspaceEnabled = logAnalyticsWorkspaceConfiguration.?enabled ?? true
 var logAnalyticsWorkspaceResourceName = logAnalyticsWorkspaceConfiguration.?name ?? 'log-${solutionPrefix}'
-module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0.11.2' = if (logAnalyticsWorkspaceEnabled) {
+var existingWorkspaceResourceId = logAnalyticsWorkspaceConfiguration.?existingWorkspaceResourceId ?? ''
+var useExistingWorkspace = existingWorkspaceResourceId != ''
+
+module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0.11.2' = if (logAnalyticsWorkspaceEnabled && !useExistingWorkspace) {
   name: take('avm.res.operational-insights.workspace.${logAnalyticsWorkspaceResourceName}', 64)
   params: {
     name: logAnalyticsWorkspaceResourceName
@@ -268,6 +272,8 @@ module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0
   }
 }
 
+var logAnalyticsWorkspaceId = useExistingWorkspace ? existingWorkspaceResourceId : logAnalyticsWorkspace.outputs.resourceId
+
 // ========== Application Insights ========== //
 // WAF best practices for Application Insights: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/application-insights
 // Application Insights configuration defaults
@@ -277,12 +283,12 @@ module applicationInsights 'br/public:avm/res/insights/component:0.6.0' = if (ap
   name: take('avm.res.insights.component.${applicationInsightsResourceName}', 64)
   params: {
     name: applicationInsightsResourceName
-    workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId
+    workspaceResourceId: logAnalyticsWorkspaceId
     location: applicationInsightsConfiguration.?location ?? solutionLocation
     enableTelemetry: enableTelemetry
     tags: applicationInsightsConfiguration.?tags ?? tags
     retentionInDays: applicationInsightsConfiguration.?retentionInDays ?? 365
-    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
+    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
     kind: 'web'
     disableIpMasking: false
     flowType: 'Bluefield'
@@ -315,7 +321,7 @@ module networkSecurityGroupBackend 'br/public:avm/res/network/network-security-g
     location: networkSecurityGroupBackendConfiguration.?location ?? solutionLocation
     tags: networkSecurityGroupBackendConfiguration.?tags ?? tags
     enableTelemetry: enableTelemetry
-    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
+    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
     securityRules: networkSecurityGroupBackendConfiguration.?securityRules ?? [
       // {
       //   name: 'DenySshRdpOutbound' //Azure Bastion
@@ -346,7 +352,7 @@ module networkSecurityGroupContainers 'br/public:avm/res/network/network-securit
     location: networkSecurityGroupContainersConfiguration.?location ?? solutionLocation
     tags: networkSecurityGroupContainersConfiguration.?tags ?? tags
     enableTelemetry: enableTelemetry
-    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
+    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
     securityRules: networkSecurityGroupContainersConfiguration.?securityRules ?? [
       // {
       //   name: 'DenySshRdpOutbound' //Azure Bastion
@@ -377,7 +383,7 @@ module networkSecurityGroupBastion 'br/public:avm/res/network/network-security-g
     location: networkSecurityGroupBastionConfiguration.?location ?? solutionLocation
     tags: networkSecurityGroupBastionConfiguration.?tags ?? tags
     enableTelemetry: enableTelemetry
-    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
+    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
     securityRules: networkSecurityGroupBastionConfiguration.?securityRules ?? [
       {
         name: 'AllowHttpsInBound'
@@ -534,7 +540,7 @@ module networkSecurityGroupAdministration 'br/public:avm/res/network/network-sec
     location: networkSecurityGroupAdministrationConfiguration.?location ?? solutionLocation
     tags: networkSecurityGroupAdministrationConfiguration.?tags ?? tags
     enableTelemetry: enableTelemetry
-    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
+    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
     securityRules: networkSecurityGroupAdministrationConfiguration.?securityRules ?? [
       // {
       //   name: 'DenySshRdpOutbound' //Azure Bastion
@@ -651,12 +657,12 @@ module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.13.0' = if (v
         name: 'nic-${virtualMachineResourceName}'
         //networkSecurityGroupResourceId: virtualMachineConfiguration.?nicConfigurationConfiguration.networkSecurityGroupResourceId
         //nicSuffix: 'nic-${virtualMachineResourceName}'
-        diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
+        diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
         ipConfigurations: [
           {
             name: '${virtualMachineResourceName}-nic01-ipconfig01'
             subnetResourceId: virtualMachineConfiguration.?subnetResourceId ?? virtualNetwork.outputs.subnetResourceIds[1]
-            diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
+            diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
           }
         ]
       }
@@ -730,7 +736,7 @@ var aiFoundryAiServicesModelDeployment = {
   sku: {
     name: 'GlobalStandard'
     //Curently the capacity is set to 140 for opinanal performance. 
-    capacity: aiFoundryAiServicesConfiguration.?modelCapcity ?? 140
+    capacity: aiFoundryAiServicesConfiguration.?modelCapacity ?? 140
   }
   raiPolicyName: 'Microsoft.Default'
 }
@@ -742,7 +748,7 @@ module aiFoundryAiServices 'br/public:avm/res/cognitive-services/account:0.10.2'
     tags: aiFoundryAiServicesConfiguration.?tags ?? tags
     location: aiFoundryAiServicesConfiguration.?location ?? azureOpenAILocation
     enableTelemetry: enableTelemetry
-    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
+    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
     sku: aiFoundryAiServicesConfiguration.?sku ?? 'S0'
     kind: 'AIServices'
     disableLocalAuth: false //Should be set to true for WAF aligned configuration
@@ -841,7 +847,7 @@ module aiFoundryStorageAccount 'br/public:avm/res/storage/storage-account:0.18.2
     location: aiFoundryStorageAccountConfiguration.?location ?? azureOpenAILocation
     tags: aiFoundryStorageAccountConfiguration.?tags ?? tags
     enableTelemetry: enableTelemetry
-    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
+    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
     skuName: aiFoundryStorageAccountConfiguration.?sku ?? 'Standard_ZRS'
     allowSharedKeyAccess: false
     networkAcls: {
@@ -852,7 +858,7 @@ module aiFoundryStorageAccount 'br/public:avm/res/storage/storage-account:0.18.2
       deleteRetentionPolicyEnabled: false
       containerDeleteRetentionPolicyDays: 7
       containerDeleteRetentionPolicyEnabled: false
-      diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
+      diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
     }
     publicNetworkAccess: virtualNetworkEnabled ? 'Disabled' : 'Enabled'
     allowBlobPublicAccess: virtualNetworkEnabled ? false : true
@@ -912,7 +918,7 @@ module aiFoundryAiHub 'modules/ai-hub.bicep' = if (aiFoundryAiHubEnabled) {
     aiFoundryAiServicesName: aiFoundryAiServices.outputs.name
     applicationInsightsResourceId: applicationInsights.outputs.resourceId
     enableTelemetry: enableTelemetry
-    logAnalyticsWorkspaceResourceId: logAnalyticsWorkspace.outputs.resourceId
+    logAnalyticsWorkspaceResourceId: logAnalyticsWorkspaceId
     storageAccountResourceId: aiFoundryStorageAccount.outputs.resourceId
     virtualNetworkEnabled: virtualNetworkEnabled
     privateEndpoints: virtualNetworkEnabled
@@ -948,7 +954,7 @@ module aiFoundryAiProject 'br/public:avm/res/machine-learning-services/workspace
     location: aiFoundryAiProjectConfiguration.?location ?? azureOpenAILocation
     tags: aiFoundryAiProjectConfiguration.?tags ?? tags
     enableTelemetry: enableTelemetry
-    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
+    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
     sku: aiFoundryAiProjectConfiguration.?sku ?? 'Basic'
     kind: 'Project'
     hubResourceId: aiFoundryAiHub.outputs.resourceId
@@ -991,7 +997,7 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.12.0' = if (co
     location: cosmosDbAccountConfiguration.?location ?? solutionLocation
     tags: cosmosDbAccountConfiguration.?tags ?? tags
     enableTelemetry: enableTelemetry
-    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
+    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
     databaseAccountOfferType: 'Standard'
     enableFreeTier: false
     networkRestrictions: {
@@ -1065,7 +1071,7 @@ module containerAppEnvironment 'modules/container-app-environment.bicep' = if (c
     name: containerAppEnvironmentResourceName
     tags: containerAppEnvironmentConfiguration.?tags ?? tags
     location: containerAppEnvironmentConfiguration.?location ?? solutionLocation
-    logAnalyticsResourceName: logAnalyticsWorkspace.outputs.name
+    logAnalyticsResourceId: logAnalyticsWorkspaceId
     publicNetworkAccess: 'Enabled'
     zoneRedundant: virtualNetworkEnabled ? true : false
     applicationInsightsConnectionString: applicationInsights.outputs.connectionString
@@ -1210,7 +1216,7 @@ module webServerFarm 'br/public:avm/res/web/serverfarm:0.4.1' = if (webServerFar
     skuName: webServerFarmConfiguration.?skuName ?? 'P1v3'
     skuCapacity: webServerFarmConfiguration.?skuCapacity ?? 3
     reserved: true
-    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
+    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
     kind: 'linux'
     zoneRedundant: false //TODO: make it zone redundant for waf aligned
   }
@@ -1231,7 +1237,7 @@ module webSite 'br/public:avm/res/web/site:0.15.1' = if (webSiteEnabled) {
     enableTelemetry: enableTelemetry
     serverFarmResourceId: webSiteConfiguration.?environmentResourceId ?? webServerFarm.?outputs.resourceId
     appInsightResourceId: applicationInsights.outputs.resourceId
-    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
+    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
     publicNetworkAccess: 'Enabled' //TODO: use Azure Front Door WAF or Application Gateway WAF instead
     siteConfig: {
       linuxFxVersion: 'DOCKER|${webSiteConfiguration.?containerImageRegistryDomain ?? 'biabcontainerreg.azurecr.io'}/${webSiteConfiguration.?containerImageName ?? 'macaefrontend'}:${webSiteConfiguration.?containerImageTag ?? 'latest'}'
@@ -1292,6 +1298,9 @@ type logAnalyticsWorkspaceConfigurationType = {
   @description('Optional. The number of days to retain the data in the Log Analytics Workspace. If empty, it will be set to 365 days.')
   @maxValue(730)
   dataRetentionInDays: int?
+
+  @description('Optional: Existing Log Analytics Workspace Resource ID')
+  existingWorkspaceResourceId: string?
 }
 
 @export()

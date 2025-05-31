@@ -5,6 +5,7 @@ param solutionLocation = readEnvironmentVariable('AZURE_LOCATION', 'swedencentra
 param azureOpenAILocation = readEnvironmentVariable('AZURE_ENV_OPENAI_LOCATION', 'swedencentral')
 param logAnalyticsWorkspaceConfiguration = {
   dataRetentionInDays: 30
+  existingWorkspaceResourceId: ''
 }
 param applicationInsightsConfiguration = {
   retentionInDays: 30
