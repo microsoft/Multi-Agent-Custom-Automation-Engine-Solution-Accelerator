@@ -1,7 +1,6 @@
 import logging
 from typing import Dict, List, Optional
 
-import semantic_kernel as sk
 from context.cosmos_memory_kernel import CosmosMemoryContext
 from kernel_agents.agent_base import BaseAgent
 from kernel_tools.generic_tools import GenericTools

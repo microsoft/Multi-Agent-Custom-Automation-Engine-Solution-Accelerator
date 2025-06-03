@@ -18,7 +18,7 @@ on:
       - dev
       - demo
       - hotfix
-  workflow_dispatch: 
+  workflow_dispatch:
 
 jobs:
   build-and-push:
@@ -32,14 +32,24 @@ jobs:
         uses: docker/setup-buildx-action@v1
 
       - name: Log in to Azure Container Registry
-        if: ${{ (github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo' || github.ref_name == 'hotfix') }}
+        if: ${{ github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo' || github.ref_name == 'hotfix' }}
         uses: azure/docker-login@v2
         with:
           login-server: ${{ secrets.ACR_LOGIN_SERVER || 'acrlogin.azurecr.io' }}
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      - name: Set Docker image tag
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+      
+      - name: Get registry
+        id: registry
+        run: |
+          echo "ext_registry=${{ secrets.ACR_LOGIN_SERVER || 'acrlogin.azurecr.io'}}" >> $GITHUB_OUTPUT
+
+      - name: Determine Tag Name Based on Branch
+        id: determine_tag
         run: |
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             echo "TAG=latest" >> $GITHUB_ENV
@@ -52,24 +62,30 @@ jobs:
           else
             echo "TAG=pullrequest-ignore" >> $GITHUB_ENV
           fi
-          
-      - name: Build and push Docker images optionally
-        run: |
-          cd src/backend
-          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/macaebackend:${{ env.TAG }} -f Dockerfile . && \
-          if [[ "${{ env.TAG }}" == "latest" || "${{ env.TAG }}" == "dev" || "${{ env.TAG }}" == "demo" || "${{ env.TAG }}" == "hotfix"  ]]; then
-            docker push ${{ secrets.ACR_LOGIN_SERVER }}/macaebackend:${{ env.TAG }} && \
-            echo "Backend image built and pushed successfully."
-          else
-            echo "Skipping Docker push for backend with tag: ${{ env.TAG }}"
-          fi
-          cd ../frontend
-          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/macaefrontend:${{ env.TAG }} -f Dockerfile . && \
-          if [[ "${{ env.TAG }}" == "latest" || "${{ env.TAG }}" == "dev" || "${{ env.TAG }}" == "demo" || "${{ env.TAG }}" == "hotfix"  ]]; then
-            docker push ${{ secrets.ACR_LOGIN_SERVER }}/macaefrontend:${{ env.TAG }} && \
-            echo "Frontend image built and pushed successfully."
-          else
-            echo "Skipping Docker push for frontend with tag: ${{ env.TAG }}"
-          fi
 
-          
+      - name: Set Historical Tag
+        run: |
+          DATE_TAG=$(date +'%Y-%m-%d')
+          RUN_ID=${{ github.run_number }}
+          # Create historical tag using TAG, DATE_TAG, and RUN_ID
+          echo "HISTORICAL_TAG=${{ env.TAG }}_${DATE_TAG}_${RUN_ID}" >> $GITHUB_ENV
+
+      - name: Build and optionally push Backend Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./src/backend
+          file: ./src/backend/Dockerfile
+          push: ${{ env.TAG != 'pullrequest-ignore' }}
+          tags: |
+            ${{ steps.registry.outputs.ext_registry }}/macaebackend:${{ env.TAG }}
+            ${{ steps.registry.outputs.ext_registry }}/macaebackend:${{ env.HISTORICAL_TAG }}
+  
+      - name: Build and optionally push Frontend Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./src/frontend
+          file: ./src/frontend/Dockerfile
+          push: ${{ env.TAG != 'pullrequest-ignore' }}
+          tags: |
+            ${{ steps.registry.outputs.ext_registry }}/macaefrontend:${{ env.TAG }}
+            ${{ steps.registry.outputs.ext_registry }}/macaefrontend:${{ env.HISTORICAL_TAG }}

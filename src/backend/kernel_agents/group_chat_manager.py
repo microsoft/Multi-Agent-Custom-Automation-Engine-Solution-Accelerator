@@ -1,20 +1,14 @@
-import json
 import logging
-import re
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
-import semantic_kernel as sk
 from context.cosmos_memory_kernel import CosmosMemoryContext
 from event_utils import track_event_if_configured
 from kernel_agents.agent_base import BaseAgent
-from models.messages_kernel import (ActionRequest, ActionResponse,
-                                    AgentMessage, AgentType, HumanFeedback,
-                                    HumanFeedbackStatus, InputTask, Plan,
-                                    PlanStatus, Step, StepStatus)
-from semantic_kernel.agents import AgentGroupChat  # pylint: disable=E0611
-from semantic_kernel.agents.strategies import (SequentialSelectionStrategy,
-                                               TerminationStrategy)
+from models.messages_kernel import (ActionRequest, AgentMessage, AgentType,
+                                    HumanFeedback, HumanFeedbackStatus, InputTask,
+                                    Plan, Step, StepStatus)
+# pylint: disable=E0611
 from semantic_kernel.functions.kernel_function import KernelFunction
 
 
@@ -386,7 +380,7 @@ class GroupChatManager(BaseAgent):
 
         if step.agent != "":
             agent_name = step.agent.value
-            formatted_agent = agent_name
+            formatted_agent = agent_name.replace("_", " ")
         else:
             raise ValueError(f"Check {step.agent} is missing")
 

@@ -1,18 +1,13 @@
 // ========== Managed Identity ========== //
 targetScope = 'resourceGroup'
 
-@minLength(3)
-@maxLength(15)
-@description('Solution Name')
-param solutionName string
-
 @description('Solution Location')
 //param solutionLocation string
 param managedIdentityId string
 param managedIdentityPropPrin string
 param managedIdentityLocation string
-@description('Name')
-param miName string = '${ solutionName }-managed-identity'
+@description('Managed Identity Name')
+param miName string
 
 // resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
 //   name: miName

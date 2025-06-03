@@ -6,7 +6,7 @@ To deploy this solution accelerator, ensure you have access to an [Azure subscri
 
 Check the [Azure Products by Region](https://azure.microsoft.com/en-us/explore/global-infrastructure/products-by-region/?products=all&regions=all) page and select a **region** where the following services are available:
 
-- [Azure OpenAI Service](https://learn.microsoft.com/en-us/azure/ai-services/openai/)
+- [Azure AI Foundry](https://learn.microsoft.com/en-us/azure/ai-foundry/)
 - [Azure Container Apps](https://learn.microsoft.com/en-us/azure/container-apps/)
 - [Azure Container Registry](https://learn.microsoft.com/en-us/azure/container-registry/)
 - [Azure Cosmos DB](https://learn.microsoft.com/en-us/azure/cosmos-db/)
@@ -27,6 +27,40 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 This will allow the scripts to run for the current session without permanently changing your system's policy.
 
 ## Deployment Options & Steps
+
+### Sandbox or WAF Aligned Deployment Options
+
+The [`infra`](../infra) folder of the Multi Agent Solution Accelerator contains the [`main.bicep`](../infra/main.bicep) Bicep script, which defines all Azure infrastructure components for this solution.
+
+By default, the `azd up` command uses the [`main.bicepparam`](../infra/main.bicepparam) file to deploy the solution. This file is pre-configured for a **sandbox environment** — ideal for development and proof-of-concept scenarios, with minimal security and cost controls for rapid iteration.
+
+For **production deployments**, the repository also provides [`main.waf-aligned.bicepparam`](../infra/main.waf-aligned.bicepparam), which applies a [Well-Architected Framework (WAF) aligned](https://learn.microsoft.com/en-us/azure/well-architected/) configuration. This option enables additional Azure best practices for reliability, security, cost optimization, operational excellence, and performance efficiency, such as:
+
+- Enhanced network security (e.g., Network protection with private endpoints)
+- Stricter access controls and managed identities
+- Logging, monitoring, and diagnostics enabled by default
+- Resource tagging and cost management recommendations
+
+**How to choose your deployment configuration:**
+- Use the default [`main.bicepparam`](../infra/main.bicepparam) for a sandbox/dev environment.
+- For a WAF-aligned, production-ready deployment, copy the contents of [`main.waf-aligned.bicepparam`](../infra/main.waf-aligned.bicepparam) into `main.bicepparam` before running `azd up`.
+
+> [!TIP]
+> Always review and adjust parameter values (such as region, capacity, security settings and log analytics workspace configuration) to match your organization’s requirements before deploying. For production, ensure you have sufficient quota and follow the principle of least privilege for all identities and role assignments.
+
+> To reuse an existing Log Analytics workspace, update the existingWorkspaceResourceId field under the logAnalyticsWorkspaceConfiguration parameter in the bicepparam file with the resource ID of your existing workspace.
+For example: 
+```
+param logAnalyticsWorkspaceConfiguration = {
+  dataRetentionInDays: 30
+  existingWorkspaceResourceId: '/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.OperationalInsights/workspaces/<workspace-name>'
+}
+```
+
+> [!IMPORTANT]
+> The WAF-aligned configuration is under active development. More Azure Well-Architected recommendations will be added in future updates.
+
+### Deployment Steps 
 
 Pick from the options below to see step-by-step instructions for GitHub Codespaces, VS Code Dev Containers, Local Environments, and Bicep deployments.
 
@@ -257,7 +291,7 @@ The files for the dev container are located in `/.devcontainer/` folder.
 
 4. **Deploy the Bicep template:**
 
-   - You can use the Bicep extension for VSCode (Right-click the `.bicep` file, then select "Show deployment plane") or use the Azure CLI:
+   - You can use the Bicep extension for VSCode (Right-click the `.bicep` file, then select "Show  deployment plan") or use the Azure CLI:
      ```bash
      az deployment group create -g <resource-group-name> -f deploy/macae-dev.bicep --query 'properties.outputs'
      ```

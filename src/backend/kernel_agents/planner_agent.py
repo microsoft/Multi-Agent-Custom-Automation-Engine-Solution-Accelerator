@@ -1,12 +1,8 @@
 import datetime
-import json
 import logging
-import re
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
-import semantic_kernel as sk
-from app_config import config
 from azure.ai.projects.models import (ResponseFormatJsonSchema,
                                       ResponseFormatJsonSchemaType)
 from context.cosmos_memory_kernel import CosmosMemoryContext
@@ -22,7 +18,6 @@ from models.messages_kernel import (AgentMessage, AgentType,
                                     HumanFeedbackStatus, InputTask, Plan,
                                     PlannerResponsePlan, PlanStatus, Step,
                                     StepStatus)
-from pydantic import BaseModel, Field
 from semantic_kernel.functions import KernelFunction
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 
@@ -450,8 +445,6 @@ class PlannerAgent(BaseAgent):
             # Create a fallback dummy plan when parsing fails
             logging.info("Creating fallback dummy plan due to parsing error")
 
-            import datetime
-
             # Create a dummy plan with the original task description
             dummy_plan = Plan(
                 id=str(uuid.uuid4()),
@@ -581,7 +574,17 @@ class PlannerAgent(BaseAgent):
 
             Ensure the summary of the plan and the overall steps is less than 50 words.
 
-            Identify any additional information that might be required to complete the task. Include this information in the plan in the human_clarification_request field of the plan. If it is not required, leave it as null. Do not include information that you are waiting for clarification on in the string of the action field, as this otherwise won't get updated.
+            Identify any additional information that might be required to complete the task. Include this information in the plan in the human_clarification_request field of the plan. If it is not required, leave it as null.
+
+            When identifying required information, consider what input a GenericAgent or fallback LLM model would need to perform the task correctly. This may include:
+            - Input data, text, or content to process
+            - A question to answer or topic to describe
+            - Any referenced material that is mentioned but not actually included (e.g., "the given text")
+            - A clear subject or target when the task instruction is too vague (e.g., "describe," "summarize," or "analyze" without specifying what to describe)
+
+            If such required input is missing—even if not explicitly referenced—generate a concise clarification request in the human_clarification_request field.
+
+            Do not include information that you are waiting for clarification on in the string of the action field, as this otherwise won't get updated.
 
             You must prioritise using the provided functions to accomplish each step. First evaluate each and every function the agents have access too. Only if you cannot find a function needed to complete the task, and you have reviewed each and every function, and determined why each are not suitable, there are two options you can take when generating the plan.
             First evaluate whether the step could be handled by a typical large language model, without any specialised functions. For example, tasks such as "add 32 to 54", or "convert this SQL code to a python script", or "write a 200 word story about a fictional product strategy".

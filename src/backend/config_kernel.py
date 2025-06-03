@@ -1,18 +1,3 @@
-# config_kernel.py
-import os
-import logging
-import semantic_kernel as sk
-from semantic_kernel.kernel import Kernel
-
-# Updated imports for compatibility
-try:
-    # Try newer structure
-    from semantic_kernel.contents import ChatHistory
-except ImportError:
-    # Fall back to older structure for compatibility
-    from semantic_kernel.connectors.ai.chat_completion_client import ChatHistory
-from semantic_kernel.agents.azure_ai.azure_ai_agent import AzureAIAgent
-
 # Import AppConfig from app_config
 from app_config import config
 

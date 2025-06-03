@@ -1,11 +1,7 @@
-import json
 import logging
-import os
-from abc import ABC, abstractmethod
-from typing import (Any, Awaitable, Callable, Dict, List, Mapping, Optional,
-                    Union)
+from abc import abstractmethod
+from typing import (Any, List, Mapping, Optional)
 
-import semantic_kernel as sk
 # Import the new AppConfig instance
 from app_config import config
 from context.cosmos_memory_kernel import CosmosMemoryContext
@@ -14,8 +10,6 @@ from models.messages_kernel import (ActionRequest, ActionResponse,
                                     AgentMessage, Step, StepStatus)
 from semantic_kernel.agents.azure_ai.azure_ai_agent import AzureAIAgent
 from semantic_kernel.functions import KernelFunction
-from semantic_kernel.functions.kernel_arguments import KernelArguments
-from semantic_kernel.functions.kernel_function_decorator import kernel_function
 
 # Default formatting instructions used across agents
 DEFAULT_FORMATTING_INSTRUCTIONS = "Instructions: returning the output of this function call verbatim to the user in markdown. Then write AGENT SUMMARY: and then include a summary of what you did."

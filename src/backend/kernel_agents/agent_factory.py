@@ -2,8 +2,7 @@
 
 import inspect
 import logging
-from types import SimpleNamespace
-from typing import Any, Callable, Dict, List, Optional, Type
+from typing import Any, Dict, Optional, Type
 
 # Import the new AppConfig instance
 from app_config import config
@@ -22,12 +21,8 @@ from kernel_agents.procurement_agent import ProcurementAgent
 from kernel_agents.product_agent import ProductAgent
 from kernel_agents.tech_support_agent import TechSupportAgent
 from models.messages_kernel import AgentType, PlannerResponsePlan
-from semantic_kernel import Kernel
-from semantic_kernel.agents import AzureAIAgentThread  # pylint:disable=E0611
+# pylint:disable=E0611
 from semantic_kernel.agents.azure_ai.azure_ai_agent import AzureAIAgent
-from semantic_kernel.functions import KernelFunction
-from semantic_kernel.prompt_template.prompt_template_config import \
-    PromptTemplateConfig
 
 logger = logging.getLogger(__name__)
 
@@ -173,7 +168,6 @@ class AgentFactory:
                 if k in valid_keys
             }
             agent = await agent_class.create(**filtered_kwargs)
-
 
         except Exception as e:
             logger.error(

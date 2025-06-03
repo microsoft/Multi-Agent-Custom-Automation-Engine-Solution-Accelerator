@@ -1,7 +1,6 @@
 import logging
 from typing import Dict, List, Optional
 
-import semantic_kernel as sk
 from context.cosmos_memory_kernel import CosmosMemoryContext
 from kernel_agents.agent_base import BaseAgent
 from kernel_tools.hr_tools import HrTools
@@ -110,7 +109,7 @@ class HrAgent(BaseAgent):
         except Exception as e:
             logging.error(f"Failed to create Azure AI Agent for PlannerAgent: {e}")
             raise
-        
+
     @staticmethod
     def default_system_message(agent_name=None) -> str:
         """Get the default system message for the agent.

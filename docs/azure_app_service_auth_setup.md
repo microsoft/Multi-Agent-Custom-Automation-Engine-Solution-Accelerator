@@ -53,6 +53,6 @@
 ![Web](./images/azure-app-service-auth-setup/Web.png)
 
 8. Enter the `web app URL` (Provide the app service name in place of XXXX) and Save. Then go back to [Step 1](#step-1-add-authentication-in-azure-app-service-configuration) and follow from _Point 4_ choose `Pick an existing app registration in this directory` from the Add an Identity Provider page and provide the newly registered App Name.
-E.g. https://appservicename.azurewebsites.net/.auth/login/aad/callback
+E.g. <<https://<< appservicename >>.azurewebsites.net/.auth/login/aad/callback>>
 
 ![Add Details](./images/azure-app-service-auth-setup/WebAppURL.png)

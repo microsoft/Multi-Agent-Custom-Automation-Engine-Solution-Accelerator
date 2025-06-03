@@ -5,14 +5,20 @@ metadata description = 'This module contains the resources required to deploy th
 @maxLength(19)
 param solutionPrefix string = 'macae${uniqueString(deployer().objectId, deployer().tenantId, subscription().subscriptionId, resourceGroup().id)}'
 
-@description('Capacity of the AI Foundry AI Services resource. The default value is 140.')
-param aiFoundryCapacity int 
-
-@description('Optional. Location for all Resources.')
+@description('Required. Location for all Resources except AI Foundry.')
 param solutionLocation string = resourceGroup().location
 
 @description('Optional. Enable/Disable usage telemetry for module.')
 param enableTelemetry bool = true
+
+// Restricting deployment to only supported Azure OpenAI regions validated with GPT-4o model
+@allowed(['australiaeast', 'eastus2', 'francecentral', 'japaneast', 'norwayeast', 'swedencentral', 'uksouth', 'westus'])
+@description('Azure OpenAI Location')
+param azureOpenAILocation string
+
+// @description('Set this if you want to deploy to a different region than the resource group. Otherwise, it will use the resource group location by default.')
+// param AZURE_LOCATION string=''
+// param solutionLocation string = empty(AZURE_LOCATION) ? resourceGroup().location
 
 @description('Optional. The tags to apply to all deployed Azure resources.')
 param tags object = {
@@ -23,17 +29,18 @@ param tags object = {
 @description('Optional. The configuration to apply for the Multi-Agent Custom Automation Engine Log Analytics Workspace resource.')
 param logAnalyticsWorkspaceConfiguration logAnalyticsWorkspaceConfigurationType = {
   enabled: true
-  name: '${solutionPrefix}law'
+  name: 'log-${solutionPrefix}'
   location: solutionLocation
   sku: 'PerGB2018'
   tags: tags
   dataRetentionInDays: 365
+  existingWorkspaceResourceId: ''
 }
 
 @description('Optional. The configuration to apply for the Multi-Agent Custom Automation Engine Application Insights resource.')
 param applicationInsightsConfiguration applicationInsightsConfigurationType = {
   enabled: true
-  name: '${solutionPrefix}api'
+  name: 'appi-${solutionPrefix}'
   location: solutionLocation
   tags: tags
   retentionInDays: 365
@@ -42,7 +49,7 @@ param applicationInsightsConfiguration applicationInsightsConfigurationType = {
 @description('Optional. The configuration to apply for the Multi-Agent Custom Automation Engine Managed Identity resource.')
 param userAssignedManagedIdentityConfiguration userAssignedManagedIdentityType = {
   enabled: true
-  name: '${solutionPrefix}mid'
+  name: 'id-${solutionPrefix}'
   location: solutionLocation
   tags: tags
 }
@@ -50,7 +57,7 @@ param userAssignedManagedIdentityConfiguration userAssignedManagedIdentityType =
 @description('Optional. The configuration to apply for the Multi-Agent Custom Automation Engine Network Security Group resource for the backend subnet.')
 param networkSecurityGroupBackendConfiguration networkSecurityGroupConfigurationType = {
   enabled: true
-  name: '${solutionPrefix}nsg-backend'
+  name: 'nsg-backend-${solutionPrefix}'
   location: solutionLocation
   tags: tags
   securityRules: null //Default value set on module configuration
@@ -59,7 +66,7 @@ param networkSecurityGroupBackendConfiguration networkSecurityGroupConfiguration
 @description('Optional. The configuration to apply for the Multi-Agent Custom Automation Engine Network Security Group resource for the containers subnet.')
 param networkSecurityGroupContainersConfiguration networkSecurityGroupConfigurationType = {
   enabled: true
-  name: '${solutionPrefix}nsg-containers'
+  name: 'nsg-containers-${solutionPrefix}'
   location: solutionLocation
   tags: tags
   securityRules: null //Default value set on module configuration
@@ -68,7 +75,7 @@ param networkSecurityGroupContainersConfiguration networkSecurityGroupConfigurat
 @description('Optional. The configuration to apply for the Multi-Agent Custom Automation Engine Network Security Group resource for the Bastion subnet.')
 param networkSecurityGroupBastionConfiguration networkSecurityGroupConfigurationType = {
   enabled: true
-  name: '${solutionPrefix}nsg-bastion'
+  name: 'nsg-bastion-${solutionPrefix}'
   location: solutionLocation
   tags: tags
   securityRules: null //Default value set on module configuration
@@ -77,7 +84,7 @@ param networkSecurityGroupBastionConfiguration networkSecurityGroupConfiguration
 @description('Optional. The configuration to apply for the Multi-Agent Custom Automation Engine Network Security Group resource for the administration subnet.')
 param networkSecurityGroupAdministrationConfiguration networkSecurityGroupConfigurationType = {
   enabled: true
-  name: '${solutionPrefix}nsg-administration'
+  name: 'nsg-administration-${solutionPrefix}'
   location: solutionLocation
   tags: tags
   securityRules: null //Default value set on module configuration
@@ -86,7 +93,7 @@ param networkSecurityGroupAdministrationConfiguration networkSecurityGroupConfig
 @description('Optional. The configuration to apply for the Multi-Agent Custom Automation Engine virtual network resource.')
 param virtualNetworkConfiguration virtualNetworkConfigurationType = {
   enabled: true
-  name: '${solutionPrefix}vnw'
+  name: 'vnet-${solutionPrefix}'
   location: solutionLocation
   tags: tags
   addressPrefixes: null //Default value set on module configuration
@@ -96,18 +103,18 @@ param virtualNetworkConfiguration virtualNetworkConfigurationType = {
 @description('Optional. The configuration to apply for the Multi-Agent Custom Automation Engine bastion resource.')
 param bastionConfiguration bastionConfigurationType = {
   enabled: true
-  name: '${solutionPrefix}bst'
+  name: 'bas-${solutionPrefix}'
   location: solutionLocation
   tags: tags
   sku: 'Standard'
   virtualNetworkResourceId: null //Default value set on module configuration
-  publicIpResourceName: '${solutionPrefix}pipbst'
+  publicIpResourceName: 'pip-bas${solutionPrefix}'
 }
 
 @description('Optional. Configuration for the Windows virtual machine.')
 param virtualMachineConfiguration virtualMachineConfigurationType = {
   enabled: true
-  name: '${solutionPrefix}vmw'
+  name: 'vm${solutionPrefix}'
   location: solutionLocation
   tags: tags
   adminUsername: 'adminuser'
@@ -119,23 +126,19 @@ param virtualMachineConfiguration virtualMachineConfigurationType = {
 @description('Optional. The configuration to apply for the AI Foundry AI Services resource.')
 param aiFoundryAiServicesConfiguration aiServicesConfigurationType = {
   enabled: true
-  name: '${solutionPrefix}aifsvc'
-  location: contains(
-      ['West US', 'westus', 'Sweden Central', 'swedencentral', 'Australia East', 'australiaeast'],
-      solutionLocation
-    )
-    ? solutionLocation
-    : 'West US'
+  name: 'aisa-${solutionPrefix}'
+  location: azureOpenAILocation
   sku: 'S0'
   deployments: null //Default value set on module configuration
   subnetResourceId: null //Default value set on module configuration
+  modelCapacity: 140
 }
 
 @description('Optional. The configuration to apply for the AI Foundry Storage Account resource.')
 param aiFoundryStorageAccountConfiguration storageAccountType = {
   enabled: true
-  name: replace('${solutionPrefix}aifstg', '-', '')
-  location: solutionLocation
+  name: replace('sthub${solutionPrefix}', '-', '')
+  location: azureOpenAILocation
   tags: tags
   sku: 'Standard_ZRS'
   subnetResourceId: null //Default value set on module configuration
@@ -144,8 +147,8 @@ param aiFoundryStorageAccountConfiguration storageAccountType = {
 @description('Optional. The configuration to apply for the AI Foundry AI Hub resource.')
 param aiFoundryAiHubConfiguration aiHubType = {
   enabled: true
-  name: '${solutionPrefix}aifhub'
-  location: solutionLocation
+  name: 'aih-${solutionPrefix}'
+  location: azureOpenAILocation
   sku: 'Basic'
   tags: tags
   subnetResourceId: null //Default value set on module configuration
@@ -154,8 +157,8 @@ param aiFoundryAiHubConfiguration aiHubType = {
 @description('Optional. The configuration to apply for the AI Foundry AI Project resource.')
 param aiFoundryAiProjectConfiguration aiProjectConfigurationType = {
   enabled: true
-  name: '${solutionPrefix}aifprj'
-  location: solutionLocation
+  name: 'aihb-${solutionPrefix}'
+  location: azureOpenAILocation
   sku: 'Basic'
   tags: tags
 }
@@ -163,7 +166,7 @@ param aiFoundryAiProjectConfiguration aiProjectConfigurationType = {
 @description('Optional. The configuration to apply for the Cosmos DB Account resource.')
 param cosmosDbAccountConfiguration cosmosDbAccountConfigurationType = {
   enabled: true
-  name: '${solutionPrefix}cdb'
+  name: 'cosmos-${solutionPrefix}'
   location: solutionLocation
   tags: tags
   subnetResourceId: null //Default value set on module configuration
@@ -173,7 +176,7 @@ param cosmosDbAccountConfiguration cosmosDbAccountConfigurationType = {
 @description('Optional. The configuration to apply for the Container App Environment resource.')
 param containerAppEnvironmentConfiguration containerAppEnvironmentConfigurationType = {
   enabled: true
-  name: '${solutionPrefix}cen'
+  name: 'cae-${solutionPrefix}'
   location: solutionLocation
   tags: tags
   subnetResourceId: null //Default value set on module configuration
@@ -182,7 +185,7 @@ param containerAppEnvironmentConfiguration containerAppEnvironmentConfigurationT
 @description('Optional. The configuration to apply for the Container App resource.')
 param containerAppConfiguration containerAppConfigurationType = {
   enabled: true
-  name: '${solutionPrefix}cap'
+  name: 'ca-${solutionPrefix}'
   location: solutionLocation
   tags: tags
   environmentResourceId: null //Default value set on module configuration
@@ -201,7 +204,7 @@ param containerAppConfiguration containerAppConfigurationType = {
 @description('Optional. The configuration to apply for the Web Server Farm resource.')
 param webServerFarmConfiguration webServerFarmConfigurationType = {
   enabled: true
-  name: '${solutionPrefix}wsf'
+  name: 'asp-${solutionPrefix}'
   location: solutionLocation
   skuName: 'P1v3'
   skuCapacity: 3
@@ -211,7 +214,7 @@ param webServerFarmConfiguration webServerFarmConfigurationType = {
 @description('Optional. The configuration to apply for the Web Server Farm resource.')
 param webSiteConfiguration webSiteConfigurationType = {
   enabled: true
-  name: '${solutionPrefix}wap'
+  name: 'app-${solutionPrefix}'
   location: solutionLocation
   containerImageRegistryDomain: 'biabcontainerreg.azurecr.io'
   containerImageName: 'macaefrontend'
@@ -252,8 +255,11 @@ resource avmTelemetry 'Microsoft.Resources/deployments@2024-03-01' = if (enableT
 // WAF best practices for Log Analytics: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/azure-log-analytics
 // Log Analytics configuration defaults
 var logAnalyticsWorkspaceEnabled = logAnalyticsWorkspaceConfiguration.?enabled ?? true
-var logAnalyticsWorkspaceResourceName = logAnalyticsWorkspaceConfiguration.?name ?? '${solutionPrefix}law'
-module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0.11.2' = if (logAnalyticsWorkspaceEnabled) {
+var logAnalyticsWorkspaceResourceName = logAnalyticsWorkspaceConfiguration.?name ?? 'log-${solutionPrefix}'
+var existingWorkspaceResourceId = logAnalyticsWorkspaceConfiguration.?existingWorkspaceResourceId ?? ''
+var useExistingWorkspace = existingWorkspaceResourceId != ''
+
+module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0.11.2' = if (logAnalyticsWorkspaceEnabled && !useExistingWorkspace) {
   name: take('avm.res.operational-insights.workspace.${logAnalyticsWorkspaceResourceName}', 64)
   params: {
     name: logAnalyticsWorkspaceResourceName
@@ -266,21 +272,23 @@ module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0
   }
 }
 
+var logAnalyticsWorkspaceId = useExistingWorkspace ? existingWorkspaceResourceId : logAnalyticsWorkspace.outputs.resourceId
+
 // ========== Application Insights ========== //
 // WAF best practices for Application Insights: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/application-insights
 // Application Insights configuration defaults
 var applicationInsightsEnabled = applicationInsightsConfiguration.?enabled ?? true
-var applicationInsightsResourceName = applicationInsightsConfiguration.?name ?? '${solutionPrefix}api'
+var applicationInsightsResourceName = applicationInsightsConfiguration.?name ?? 'appi-${solutionPrefix}'
 module applicationInsights 'br/public:avm/res/insights/component:0.6.0' = if (applicationInsightsEnabled) {
   name: take('avm.res.insights.component.${applicationInsightsResourceName}', 64)
   params: {
     name: applicationInsightsResourceName
-    workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId
+    workspaceResourceId: logAnalyticsWorkspaceId
     location: applicationInsightsConfiguration.?location ?? solutionLocation
     enableTelemetry: enableTelemetry
     tags: applicationInsightsConfiguration.?tags ?? tags
     retentionInDays: applicationInsightsConfiguration.?retentionInDays ?? 365
-    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
+    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
     kind: 'web'
     disableIpMasking: false
     flowType: 'Bluefield'
@@ -290,7 +298,7 @@ module applicationInsights 'br/public:avm/res/insights/component:0.6.0' = if (ap
 // ========== User assigned identity Web Site ========== //
 // WAF best practices for identity and access management: https://learn.microsoft.com/en-us/azure/well-architected/security/identity-access
 var userAssignedManagedIdentityEnabled = userAssignedManagedIdentityConfiguration.?enabled ?? true
-var userAssignedManagedIdentityResourceName = userAssignedManagedIdentityConfiguration.?name ?? '${solutionPrefix}uaid'
+var userAssignedManagedIdentityResourceName = userAssignedManagedIdentityConfiguration.?name ?? 'id-${solutionPrefix}'
 module userAssignedIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.4.1' = if (userAssignedManagedIdentityEnabled) {
   name: take('avm.res.managed-identity.user-assigned-identity.${userAssignedManagedIdentityResourceName}', 64)
   params: {
@@ -305,7 +313,7 @@ module userAssignedIdentity 'br/public:avm/res/managed-identity/user-assigned-id
 // WAF best practices for virtual networks: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/virtual-network
 // WAF recommendations for networking and connectivity: https://learn.microsoft.com/en-us/azure/well-architected/security/networking
 var networkSecurityGroupBackendEnabled = networkSecurityGroupBackendConfiguration.?enabled ?? true
-var networkSecurityGroupBackendResourceName = networkSecurityGroupBackendConfiguration.?name ?? '${solutionPrefix}nsg-backend'
+var networkSecurityGroupBackendResourceName = networkSecurityGroupBackendConfiguration.?name ?? 'nsg-backend-${solutionPrefix}'
 module networkSecurityGroupBackend 'br/public:avm/res/network/network-security-group:0.5.1' = if (virtualNetworkEnabled && networkSecurityGroupBackendEnabled) {
   name: take('avm.res.network.network-security-group.${networkSecurityGroupBackendResourceName}', 64)
   params: {
@@ -313,7 +321,7 @@ module networkSecurityGroupBackend 'br/public:avm/res/network/network-security-g
     location: networkSecurityGroupBackendConfiguration.?location ?? solutionLocation
     tags: networkSecurityGroupBackendConfiguration.?tags ?? tags
     enableTelemetry: enableTelemetry
-    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
+    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
     securityRules: networkSecurityGroupBackendConfiguration.?securityRules ?? [
       // {
       //   name: 'DenySshRdpOutbound' //Azure Bastion
@@ -336,7 +344,7 @@ module networkSecurityGroupBackend 'br/public:avm/res/network/network-security-g
 }
 
 var networkSecurityGroupContainersEnabled = networkSecurityGroupContainersConfiguration.?enabled ?? true
-var networkSecurityGroupContainersResourceName = networkSecurityGroupContainersConfiguration.?name ?? '${solutionPrefix}nsg-containers'
+var networkSecurityGroupContainersResourceName = networkSecurityGroupContainersConfiguration.?name ?? 'nsg-containers-${solutionPrefix}'
 module networkSecurityGroupContainers 'br/public:avm/res/network/network-security-group:0.5.1' = if (virtualNetworkEnabled && networkSecurityGroupContainersEnabled) {
   name: take('avm.res.network.network-security-group.${networkSecurityGroupContainersResourceName}', 64)
   params: {
@@ -344,7 +352,7 @@ module networkSecurityGroupContainers 'br/public:avm/res/network/network-securit
     location: networkSecurityGroupContainersConfiguration.?location ?? solutionLocation
     tags: networkSecurityGroupContainersConfiguration.?tags ?? tags
     enableTelemetry: enableTelemetry
-    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
+    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
     securityRules: networkSecurityGroupContainersConfiguration.?securityRules ?? [
       // {
       //   name: 'DenySshRdpOutbound' //Azure Bastion
@@ -367,7 +375,7 @@ module networkSecurityGroupContainers 'br/public:avm/res/network/network-securit
 }
 
 var networkSecurityGroupBastionEnabled = networkSecurityGroupBastionConfiguration.?enabled ?? true
-var networkSecurityGroupBastionResourceName = networkSecurityGroupBastionConfiguration.?name ?? '${solutionPrefix}nsg-bastion'
+var networkSecurityGroupBastionResourceName = networkSecurityGroupBastionConfiguration.?name ?? 'nsg-bastion-${solutionPrefix}'
 module networkSecurityGroupBastion 'br/public:avm/res/network/network-security-group:0.5.1' = if (virtualNetworkEnabled && networkSecurityGroupBastionEnabled) {
   name: take('avm.res.network.network-security-group.${networkSecurityGroupBastionResourceName}', 64)
   params: {
@@ -375,7 +383,7 @@ module networkSecurityGroupBastion 'br/public:avm/res/network/network-security-g
     location: networkSecurityGroupBastionConfiguration.?location ?? solutionLocation
     tags: networkSecurityGroupBastionConfiguration.?tags ?? tags
     enableTelemetry: enableTelemetry
-    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
+    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
     securityRules: networkSecurityGroupBastionConfiguration.?securityRules ?? [
       {
         name: 'AllowHttpsInBound'
@@ -524,7 +532,7 @@ module networkSecurityGroupBastion 'br/public:avm/res/network/network-security-g
 }
 
 var networkSecurityGroupAdministrationEnabled = networkSecurityGroupAdministrationConfiguration.?enabled ?? true
-var networkSecurityGroupAdministrationResourceName = networkSecurityGroupAdministrationConfiguration.?name ?? '${solutionPrefix}nsg-administration'
+var networkSecurityGroupAdministrationResourceName = networkSecurityGroupAdministrationConfiguration.?name ?? 'nsg-administration-${solutionPrefix}'
 module networkSecurityGroupAdministration 'br/public:avm/res/network/network-security-group:0.5.1' = if (virtualNetworkEnabled && networkSecurityGroupAdministrationEnabled) {
   name: take('avm.res.network.network-security-group.${networkSecurityGroupAdministrationResourceName}', 64)
   params: {
@@ -532,7 +540,7 @@ module networkSecurityGroupAdministration 'br/public:avm/res/network/network-sec
     location: networkSecurityGroupAdministrationConfiguration.?location ?? solutionLocation
     tags: networkSecurityGroupAdministrationConfiguration.?tags ?? tags
     enableTelemetry: enableTelemetry
-    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
+    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
     securityRules: networkSecurityGroupAdministrationConfiguration.?securityRules ?? [
       // {
       //   name: 'DenySshRdpOutbound' //Azure Bastion
@@ -558,7 +566,7 @@ module networkSecurityGroupAdministration 'br/public:avm/res/network/network-sec
 // WAF best practices for virtual networks: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/virtual-network
 // WAF recommendations for networking and connectivity: https://learn.microsoft.com/en-us/azure/well-architected/security/networking
 var virtualNetworkEnabled = virtualNetworkConfiguration.?enabled ?? true
-var virtualNetworkResourceName = virtualNetworkConfiguration.?name ?? '${solutionPrefix}vnw'
+var virtualNetworkResourceName = virtualNetworkConfiguration.?name ?? 'vnet-${solutionPrefix}'
 module virtualNetwork 'br/public:avm/res/network/virtual-network:0.6.1' = if (virtualNetworkEnabled) {
   name: take('avm.res.network.virtual-network.${virtualNetworkResourceName}', 64)
   params: {
@@ -603,7 +611,7 @@ module virtualNetwork 'br/public:avm/res/network/virtual-network:0.6.1' = if (vi
   }
 }
 var bastionEnabled = bastionConfiguration.?enabled ?? true
-var bastionResourceName = bastionConfiguration.?name ?? '${solutionPrefix}bst'
+var bastionResourceName = bastionConfiguration.?name ?? 'bas-${solutionPrefix}'
 
 // ========== Bastion host ========== //
 // WAF best practices for virtual networks: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/virtual-network
@@ -618,7 +626,7 @@ module bastionHost 'br/public:avm/res/network/bastion-host:0.6.1' = if (virtualN
     tags: bastionConfiguration.?tags ?? tags
     virtualNetworkResourceId: bastionConfiguration.?virtualNetworkResourceId ?? virtualNetwork.?outputs.?resourceId
     publicIPAddressObject: {
-      name: bastionConfiguration.?publicIpResourceName ?? '${solutionPrefix}pipbst'
+      name: bastionConfiguration.?publicIpResourceName ?? 'pip-bas${solutionPrefix}'
     }
     disableCopyPaste: false
     enableFileCopy: false
@@ -632,7 +640,7 @@ module bastionHost 'br/public:avm/res/network/bastion-host:0.6.1' = if (virtualN
 // ========== Virtual machine ========== //
 // WAF best practices for virtual machines: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/virtual-machines
 var virtualMachineEnabled = virtualMachineConfiguration.?enabled ?? true
-var virtualMachineResourceName = virtualMachineConfiguration.?name ?? '${solutionPrefix}vmw'
+var virtualMachineResourceName = virtualMachineConfiguration.?name ?? 'vm${solutionPrefix}'
 module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.13.0' = if (virtualNetworkEnabled && virtualMachineEnabled) {
   name: take('avm.res.compute.virtual-machine.${virtualMachineResourceName}', 64)
   params: {
@@ -646,14 +654,15 @@ module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.13.0' = if (v
     adminPassword: virtualMachineConfiguration.?adminPassword ?? guid(solutionPrefix, subscription().subscriptionId)
     nicConfigurations: [
       {
+        name: 'nic-${virtualMachineResourceName}'
         //networkSecurityGroupResourceId: virtualMachineConfiguration.?nicConfigurationConfiguration.networkSecurityGroupResourceId
-        nicSuffix: '${virtualMachineResourceName}-nic01'
-        diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
+        //nicSuffix: 'nic-${virtualMachineResourceName}'
+        diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
         ipConfigurations: [
           {
             name: '${virtualMachineResourceName}-nic01-ipconfig01'
             subnetResourceId: virtualMachineConfiguration.?subnetResourceId ?? virtualNetwork.outputs.subnetResourceIds[1]
-            diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
+            diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
           }
         ]
       }
@@ -665,6 +674,7 @@ module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.13.0' = if (v
       version: 'latest'
     }
     osDisk: {
+      name: 'osdisk-${virtualMachineResourceName}'
       createOption: 'FromImage'
       managedDisk: {
         storageAccountType: 'Premium_ZRS'
@@ -706,13 +716,18 @@ module privateDnsZonesAiServices 'br/public:avm/res/network/private-dns-zone:0.7
       name: zone
       tags: tags
       enableTelemetry: enableTelemetry
-      virtualNetworkLinks: [{ virtualNetworkResourceId: virtualNetwork.outputs.resourceId }]
+      virtualNetworkLinks: [
+        {
+          name: 'vnetlink-${split(zone, '.')[1]}'
+          virtualNetworkResourceId: virtualNetwork.outputs.resourceId
+        }
+      ]
     }
   }
 ]
 
 // NOTE: Required version 'Microsoft.CognitiveServices/accounts@2024-04-01-preview' not available in AVM
-var aiFoundryAiServicesResourceName = aiFoundryAiServicesConfiguration.?name ?? '${solutionPrefix}aifsvc'
+var aiFoundryAiServicesResourceName = aiFoundryAiServicesConfiguration.?name ?? 'aisa-${solutionPrefix}'
 var aiFoundryAIservicesEnabled = aiFoundryAiServicesConfiguration.?enabled ?? true
 var aiFoundryAiServicesModelDeployment = {
   format: 'OpenAI'
@@ -721,7 +736,7 @@ var aiFoundryAiServicesModelDeployment = {
   sku: {
     name: 'GlobalStandard'
     //Curently the capacity is set to 140 for opinanal performance. 
-    capacity: aiFoundryCapacity
+    capacity: aiFoundryAiServicesConfiguration.?modelCapacity ?? 140
   }
   raiPolicyName: 'Microsoft.Default'
 }
@@ -731,9 +746,9 @@ module aiFoundryAiServices 'br/public:avm/res/cognitive-services/account:0.10.2'
   params: {
     name: aiFoundryAiServicesResourceName
     tags: aiFoundryAiServicesConfiguration.?tags ?? tags
-    location: aiFoundryAiServicesConfiguration.?location ?? solutionLocation
+    location: aiFoundryAiServicesConfiguration.?location ?? azureOpenAILocation
     enableTelemetry: enableTelemetry
-    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
+    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
     sku: aiFoundryAiServicesConfiguration.?sku ?? 'S0'
     kind: 'AIServices'
     disableLocalAuth: false //Should be set to true for WAF aligned configuration
@@ -747,6 +762,8 @@ module aiFoundryAiServices 'br/public:avm/res/cognitive-services/account:0.10.2'
     privateEndpoints: virtualNetworkEnabled
       ? ([
           {
+            name: 'pep-${aiFoundryAiServicesResourceName}'
+            customNetworkInterfaceName: 'nic-${aiFoundryAiServicesResourceName}'
             subnetResourceId: aiFoundryAiServicesConfiguration.?subnetResourceId ?? virtualNetwork.outputs.subnetResourceIds[0]
             privateDnsZoneGroup: {
               privateDnsZoneGroupConfigs: map(objectKeys(openAiPrivateDnsZones), zone => {
@@ -806,6 +823,7 @@ module privateDnsZonesAiFoundryStorageAccount 'br/public:avm/res/network/private
       enableTelemetry: enableTelemetry
       virtualNetworkLinks: [
         {
+          name: 'vnetlink-${split(zone, '.')[1]}'
           virtualNetworkResourceId: virtualNetwork.outputs.resourceId
         }
       ]
@@ -814,7 +832,7 @@ module privateDnsZonesAiFoundryStorageAccount 'br/public:avm/res/network/private
 ]
 var aiFoundryStorageAccountEnabled = aiFoundryStorageAccountConfiguration.?enabled ?? true
 var aiFoundryStorageAccountResourceName = aiFoundryStorageAccountConfiguration.?name ?? replace(
-  '${solutionPrefix}aifstg',
+  'sthub${solutionPrefix}',
   '-',
   ''
 )
@@ -826,10 +844,10 @@ module aiFoundryStorageAccount 'br/public:avm/res/storage/storage-account:0.18.2
   ]
   params: {
     name: aiFoundryStorageAccountResourceName
-    location: aiFoundryStorageAccountConfiguration.?location ?? solutionLocation
+    location: aiFoundryStorageAccountConfiguration.?location ?? azureOpenAILocation
     tags: aiFoundryStorageAccountConfiguration.?tags ?? tags
     enableTelemetry: enableTelemetry
-    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
+    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
     skuName: aiFoundryStorageAccountConfiguration.?sku ?? 'Standard_ZRS'
     allowSharedKeyAccess: false
     networkAcls: {
@@ -840,7 +858,7 @@ module aiFoundryStorageAccount 'br/public:avm/res/storage/storage-account:0.18.2
       deleteRetentionPolicyEnabled: false
       containerDeleteRetentionPolicyDays: 7
       containerDeleteRetentionPolicyEnabled: false
-      diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
+      diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
     }
     publicNetworkAccess: virtualNetworkEnabled ? 'Disabled' : 'Enabled'
     allowBlobPublicAccess: virtualNetworkEnabled ? false : true
@@ -878,6 +896,7 @@ module privateDnsZonesAiFoundryWorkspaceHub 'br/public:avm/res/network/private-d
       tags: tags
       virtualNetworkLinks: [
         {
+          name: 'vnetlink-${split(zone, '.')[1]}'
           virtualNetworkResourceId: virtualNetwork.outputs.resourceId
         }
       ]
@@ -885,7 +904,7 @@ module privateDnsZonesAiFoundryWorkspaceHub 'br/public:avm/res/network/private-d
   }
 ]
 var aiFoundryAiHubEnabled = aiFoundryAiHubConfiguration.?enabled ?? true
-var aiFoundryAiHubName = aiFoundryAiHubConfiguration.?name ?? '${solutionPrefix}aifhub'
+var aiFoundryAiHubName = aiFoundryAiHubConfiguration.?name ?? 'aih-${solutionPrefix}'
 module aiFoundryAiHub 'modules/ai-hub.bicep' = if (aiFoundryAiHubEnabled) {
   name: take('module.ai-hub.${aiFoundryAiHubName}', 64)
   dependsOn: [
@@ -893,20 +912,20 @@ module aiFoundryAiHub 'modules/ai-hub.bicep' = if (aiFoundryAiHubEnabled) {
   ]
   params: {
     name: aiFoundryAiHubName
-    location: aiFoundryAiHubConfiguration.?location ?? solutionLocation
+    location: aiFoundryAiHubConfiguration.?location ?? azureOpenAILocation
     tags: aiFoundryAiHubConfiguration.?tags ?? tags
     sku: aiFoundryAiHubConfiguration.?sku ?? 'Basic'
     aiFoundryAiServicesName: aiFoundryAiServices.outputs.name
     applicationInsightsResourceId: applicationInsights.outputs.resourceId
     enableTelemetry: enableTelemetry
-    logAnalyticsWorkspaceResourceId: logAnalyticsWorkspace.outputs.resourceId
+    logAnalyticsWorkspaceResourceId: logAnalyticsWorkspaceId
     storageAccountResourceId: aiFoundryStorageAccount.outputs.resourceId
     virtualNetworkEnabled: virtualNetworkEnabled
     privateEndpoints: virtualNetworkEnabled
       ? [
           {
-            name: 'pep-${mlTargetSubResource}-${aiFoundryAiHubName}'
-            customNetworkInterfaceName: 'nic-${mlTargetSubResource}-${aiFoundryAiHubName}'
+            name: 'pep-${aiFoundryAiHubName}'
+            customNetworkInterfaceName: 'nic-${aiFoundryAiHubName}'
             service: mlTargetSubResource
             subnetResourceId: virtualNetworkEnabled
               ? aiFoundryAiHubConfiguration.?subnetResourceId ?? virtualNetwork.?outputs.?subnetResourceIds[0]
@@ -926,16 +945,16 @@ module aiFoundryAiHub 'modules/ai-hub.bicep' = if (aiFoundryAiHubEnabled) {
 // AI Foundry: AI Project
 // WAF best practices for Open AI: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/azure-openai
 var aiFoundryAiProjectEnabled = aiFoundryAiProjectConfiguration.?enabled ?? true
-var aiFoundryAiProjectName = aiFoundryAiProjectConfiguration.?name ?? '${solutionPrefix}aifprj'
+var aiFoundryAiProjectName = aiFoundryAiProjectConfiguration.?name ?? 'aihb-${solutionPrefix}'
 
 module aiFoundryAiProject 'br/public:avm/res/machine-learning-services/workspace:0.12.0' = if (aiFoundryAiProjectEnabled) {
   name: take('avm.res.machine-learning-services.workspace.${aiFoundryAiProjectName}', 64)
   params: {
     name: aiFoundryAiProjectName
-    location: aiFoundryAiProjectConfiguration.?location ?? solutionLocation
+    location: aiFoundryAiProjectConfiguration.?location ?? azureOpenAILocation
     tags: aiFoundryAiProjectConfiguration.?tags ?? tags
     enableTelemetry: enableTelemetry
-    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
+    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
     sku: aiFoundryAiProjectConfiguration.?sku ?? 'Basic'
     kind: 'Project'
     hubResourceId: aiFoundryAiHub.outputs.resourceId
@@ -956,24 +975,29 @@ module privateDnsZonesCosmosDb 'br/public:avm/res/network/private-dns-zone:0.7.0
   params: {
     name: 'privatelink.documents.azure.com'
     enableTelemetry: enableTelemetry
-    virtualNetworkLinks: [{ virtualNetworkResourceId: virtualNetwork.outputs.resourceId }]
+    virtualNetworkLinks: [
+      {
+        name: 'vnetlink-cosmosdb'
+        virtualNetworkResourceId: virtualNetwork.outputs.resourceId
+      }
+    ]
     tags: tags
   }
 }
 
 var cosmosDbAccountEnabled = cosmosDbAccountConfiguration.?enabled ?? true
-var cosmosDbResourceName = cosmosDbAccountConfiguration.?name ?? '${solutionPrefix}cdb'
-var cosmosDbDatabaseName = 'autogen'
+var cosmosDbResourceName = cosmosDbAccountConfiguration.?name ?? 'cosmos-${solutionPrefix}'
+var cosmosDbDatabaseName = 'macae'
 var cosmosDbDatabaseMemoryContainerName = 'memory'
 module cosmosDb 'br/public:avm/res/document-db/database-account:0.12.0' = if (cosmosDbAccountEnabled) {
   name: take('avm.res.document-db.database-account.${cosmosDbResourceName}', 64)
   params: {
     // Required parameters
-    name: cosmosDbAccountConfiguration.?name ?? '${solutionPrefix}cdb'
+    name: cosmosDbAccountConfiguration.?name ?? 'cosmos-${solutionPrefix}'
     location: cosmosDbAccountConfiguration.?location ?? solutionLocation
     tags: cosmosDbAccountConfiguration.?tags ?? tags
     enableTelemetry: enableTelemetry
-    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
+    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
     databaseAccountOfferType: 'Standard'
     enableFreeTier: false
     networkRestrictions: {
@@ -983,6 +1007,8 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.12.0' = if (co
     privateEndpoints: virtualNetworkEnabled
       ? [
           {
+            name: 'pep-${cosmosDbResourceName}'
+            customNetworkInterfaceName: 'nic-${cosmosDbResourceName}'
             privateDnsZoneGroup: {
               privateDnsZoneGroupConfigs: [{ privateDnsZoneResourceId: privateDnsZonesCosmosDb.outputs.resourceId }]
             }
@@ -1038,14 +1064,14 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.12.0' = if (co
 // ========== Backend Container App Environment ========== //
 // WAF best practices for container apps: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/azure-container-apps
 var containerAppEnvironmentEnabled = containerAppEnvironmentConfiguration.?enabled ?? true
-var containerAppEnvironmentResourceName = containerAppEnvironmentConfiguration.?name ?? '${solutionPrefix}cen'
+var containerAppEnvironmentResourceName = containerAppEnvironmentConfiguration.?name ?? 'cae-${solutionPrefix}'
 module containerAppEnvironment 'modules/container-app-environment.bicep' = if (containerAppEnvironmentEnabled) {
   name: take('module.container-app-environment.${containerAppEnvironmentResourceName}', 64)
   params: {
     name: containerAppEnvironmentResourceName
     tags: containerAppEnvironmentConfiguration.?tags ?? tags
     location: containerAppEnvironmentConfiguration.?location ?? solutionLocation
-    logAnalyticsResourceName: logAnalyticsWorkspace.outputs.name
+    logAnalyticsResourceId: logAnalyticsWorkspaceId
     publicNetworkAccess: 'Enabled'
     zoneRedundant: virtualNetworkEnabled ? true : false
     applicationInsightsConnectionString: applicationInsights.outputs.connectionString
@@ -1066,7 +1092,7 @@ module containerAppEnvironment 'modules/container-app-environment.bicep' = if (c
 // ========== Backend Container App Service ========== //
 // WAF best practices for container apps: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/azure-container-apps
 var containerAppEnabled = containerAppConfiguration.?enabled ?? true
-var containerAppResourceName = containerAppConfiguration.?name ?? '${solutionPrefix}cap'
+var containerAppResourceName = containerAppConfiguration.?name ?? 'ca-${solutionPrefix}'
 module containerApp 'br/public:avm/res/app/container-app:0.14.2' = if (containerAppEnabled) {
   name: take('avm.res.app.container-app.${containerAppResourceName}', 64)
   params: {
@@ -1151,7 +1177,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.14.2' = if (container
           }
           {
             name: 'AZURE_AI_AGENT_PROJECT_CONNECTION_STRING'
-            value: '${toLower(replace(solutionLocation,' ',''))}.api.azureml.ms;${subscription().subscriptionId};${resourceGroup().name};${aiFoundryAiProjectName}'
+            value: '${toLower(replace(azureOpenAILocation,' ',''))}.api.azureml.ms;${subscription().subscriptionId};${resourceGroup().name};${aiFoundryAiProjectName}'
             //Location should be the AI Foundry AI Project location
           }
           {
@@ -1177,7 +1203,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.14.2' = if (container
 }
 
 var webServerFarmEnabled = webServerFarmConfiguration.?enabled ?? true
-var webServerFarmResourceName = webServerFarmConfiguration.?name ?? '${solutionPrefix}wsf'
+var webServerFarmResourceName = webServerFarmConfiguration.?name ?? 'asp-${solutionPrefix}'
 
 // ========== Frontend server farm ========== //
 // WAF best practices for web app service: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/app-service-web-apps
@@ -1190,7 +1216,7 @@ module webServerFarm 'br/public:avm/res/web/serverfarm:0.4.1' = if (webServerFar
     skuName: webServerFarmConfiguration.?skuName ?? 'P1v3'
     skuCapacity: webServerFarmConfiguration.?skuCapacity ?? 3
     reserved: true
-    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
+    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
     kind: 'linux'
     zoneRedundant: false //TODO: make it zone redundant for waf aligned
   }
@@ -1200,7 +1226,7 @@ module webServerFarm 'br/public:avm/res/web/serverfarm:0.4.1' = if (webServerFar
 // WAF best practices for web app service: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/app-service-web-apps
 var webSiteEnabled = webSiteConfiguration.?enabled ?? true
 
-var webSiteName = '${solutionPrefix}wap'
+var webSiteName = 'app-${solutionPrefix}'
 module webSite 'br/public:avm/res/web/site:0.15.1' = if (webSiteEnabled) {
   name: take('avm.res.web.site.${webSiteName}', 64)
   params: {
@@ -1211,7 +1237,7 @@ module webSite 'br/public:avm/res/web/site:0.15.1' = if (webSiteEnabled) {
     enableTelemetry: enableTelemetry
     serverFarmResourceId: webSiteConfiguration.?environmentResourceId ?? webServerFarm.?outputs.resourceId
     appInsightResourceId: applicationInsights.outputs.resourceId
-    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId }]
+    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
     publicNetworkAccess: 'Enabled' //TODO: use Azure Front Door WAF or Application Gateway WAF instead
     siteConfig: {
       linuxFxVersion: 'DOCKER|${webSiteConfiguration.?containerImageRegistryDomain ?? 'biabcontainerreg.azurecr.io'}/${webSiteConfiguration.?containerImageName ?? 'macaefrontend'}:${webSiteConfiguration.?containerImageTag ?? 'latest'}'
@@ -1272,6 +1298,9 @@ type logAnalyticsWorkspaceConfigurationType = {
   @description('Optional. The number of days to retain the data in the Log Analytics Workspace. If empty, it will be set to 365 days.')
   @maxValue(730)
   dataRetentionInDays: int?
+
+  @description('Optional: Existing Log Analytics Workspace Resource ID')
+  existingWorkspaceResourceId: string?
 }
 
 @export()
@@ -1644,7 +1673,7 @@ type aiServicesConfigurationType = {
 
   @description('Optional. Location for the AI Services resource.')
   @metadata({ azd: { type: 'location' } })
-  location: ('West US' | 'westus' | 'Sweden Central' | 'swedencentral' | 'Australia East' | 'australiaeast')?
+  location: string?
 
   @description('Optional. The tags to set for the AI Services resource.')
   tags: object?
@@ -1674,6 +1703,9 @@ type aiServicesConfigurationType = {
 
   @description('Optional. The model deployments to set for the AI Services resource.')
   deployments: deploymentType[]?
+
+  @description('Optional. The capacity to set for AI Services GTP model.')
+  modelCapacity: int?
 }
 
 @export()

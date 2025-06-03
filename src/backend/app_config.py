@@ -1,15 +1,12 @@
 # app_config.py
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Optional
 
 from azure.ai.projects.aio import AIProjectClient
 from azure.cosmos.aio import CosmosClient
-from azure.identity import ClientSecretCredential, DefaultAzureCredential
+from azure.identity import DefaultAzureCredential
 from dotenv import load_dotenv
-from semantic_kernel.agents.azure_ai.azure_ai_agent import AzureAIAgent
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.functions import KernelFunction
 from semantic_kernel.kernel import Kernel
 
 # Load environment variables from .env file

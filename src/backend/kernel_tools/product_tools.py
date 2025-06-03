@@ -7,9 +7,8 @@ from typing import Annotated, Callable, List
 
 from semantic_kernel.functions import kernel_function
 from models.messages_kernel import AgentType
-import inspect
 import json
-from typing import Any, Dict, List, get_type_hints
+from typing import get_type_hints
 
 
 class ProductTools:
@@ -672,7 +671,7 @@ class ProductTools:
                                 param_type = "string"
 
                     # Create parameter description
-                    param_desc = param_name.replace("_", " ")
+                    # param_desc = param_name.replace("_", " ")
                     args_dict[param_name] = {
                         "description": param_name,
                         "title": param_name.replace("_", " ").title(),
