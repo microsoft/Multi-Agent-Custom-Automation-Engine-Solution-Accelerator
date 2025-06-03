@@ -439,7 +439,13 @@ class PlannerAgent(BaseAgent):
             return plan, steps
 
         except Exception as e:
-            logging.exception(f"Error creating structured plan: {e}")
+            error_message = str(e)
+            if "Rate limit is exceeded" in error_message:
+                logging.warning("Rate limit hit. Consider retrying after some delay.")
+                raise
+            else:
+                logging.exception(f"Error creating structured plan: {e}")
+        
 
             # Create a fallback dummy plan when parsing fails
             logging.info("Creating fallback dummy plan due to parsing error")

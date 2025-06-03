@@ -195,7 +195,7 @@ async def input_task_endpoint(input_task: InputTask, request: Request):
                 "error": str(e),
             },
         )
-        raise HTTPException(status_code=400, detail="Error creating plan")
+        raise HTTPException(status_code=400, detail=f"Error creating plan: {e}")
 
 
 @app.post("/api/human_feedback")

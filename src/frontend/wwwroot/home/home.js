@@ -103,6 +103,16 @@
         })
           .then((response) => response.json())
           .then((data) => {
+            // Check if 'detail' field contains rate limit error
+            if (data.detail && data.detail.includes("Rate limit is exceeded")) {
+              notyf.error("Application temporarily unavailable due to quota limits. Please try again later.");
+              newTaskPrompt.disabled = false;
+              startTaskButton.disabled = false;
+              startTaskButton.classList.remove("is-loading");
+              hideOverlay();
+              return;
+            }
+            
             if (data.status == "Plan not created" || data.plan_id == "") {
               notyf.error("Unable to create plan for this task.");
               newTaskPrompt.disabled = false;
