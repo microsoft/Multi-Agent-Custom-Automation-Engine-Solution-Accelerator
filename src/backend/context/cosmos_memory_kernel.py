@@ -231,6 +231,17 @@ class CosmosMemoryContext(MemoryStoreBase):
         plans = await self.query_items(query, parameters, Plan)
         return plans[0] if plans else None
 
+    async def get_plan_by_plan_id(self, plan_id: str) -> Optional[Plan]:
+        """Retrieve a plan associated with a session."""
+        query = "SELECT * FROM c WHERE c.id=@id AND c.user_id=@user_id AND c.data_type=@data_type"
+        parameters = [
+            {"name": "@id", "value": plan_id},
+            {"name": "@data_type", "value": "plan"},
+            {"name": "@user_id", "value": self.user_id},
+        ]
+        plans = await self.query_items(query, parameters, Plan)
+        return plans[0] if plans else None
+
     async def get_thread_by_session(self, session_id: str) -> Optional[Any]:
         """Retrieve a plan associated with a session."""
         query = "SELECT * FROM c WHERE c.session_id=@session_id AND c.user_id=@user_id AND c.data_type=@data_type"

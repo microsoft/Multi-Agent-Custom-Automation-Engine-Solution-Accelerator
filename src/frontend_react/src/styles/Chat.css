@@ -1,0 +1,319 @@
+.chat-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  max-width: 728px;
+  margin: 0 auto; /* ✅ centers it */
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 16px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  position: relative;
+}
+
+.messages p {
+  margin: 8px 0;
+  white-space: pre-wrap;
+  line-height: 1.5rem;
+}
+
+.messages li {
+  white-space: normal;
+  margin: 0;
+}
+
+.messages ol,
+.messages ul {
+  display: block;
+  list-style-type: decimal;
+  margin-block-start: 0px;
+  margin-block-end: 0px;
+  margin-inline-start: 0px;
+  margin-inline-end: 0px;
+  padding-inline-start: 24px;
+  unicode-bidi: isolate;
+}
+
+.messages a {
+  color: var(--colorBrandForeground1);
+}
+
+code.language-tsx,
+code.language-bash {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background-color: var(--colorNeutralBackground1);
+  border-radius: 4px;
+}
+
+code.language-tsx {
+  display: flex;
+}
+
+pre {
+  display: inline-block;
+  /* Shrink-wrap to content */
+  max-width: 100%;
+  /* Do not exceed parent's width */
+  white-space: pre-wrap;
+  /* Allow wrapping of long lines */
+  word-break: break-word;
+  /* Break words if necessary */
+  overflow-wrap: break-word;
+  /* Provide fallback for older browsers */
+  background-color: var(--colorNeutralBackground1);
+  padding: 4px 8px;
+  border-radius: 4px;
+  overflow: scroll;
+}
+
+pre code.language-bash {
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  /* Optional: add padding, background, border-radius, etc. */
+  background-color: transparent;
+}
+
+.message {
+  /* Prevents messages from getting too wide */
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 8px;
+  /* Ensures width only expands as needed */
+  word-wrap: break-word;
+  /* Prevents overflow issues */
+  word-break: break-word;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.message.user {
+  margin-left: auto;
+  max-width: 80%;
+}
+
+.message.assistant {
+  margin-right: auto;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.message-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+  gap: 8px;
+}
+
+.message-role {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.bot-tag {
+  font-size: 12px;
+  background-color: #f0f0f0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  color: #666;
+}
+
+.message-content {
+  background-color: #f0f0f0;
+  padding: 12px 16px;
+  border-radius: 8px;
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+
+.message.user .message-content {
+  background-color: #0078d4;
+  color: white;
+  padding: 12px 16px;
+  border-radius: 8px;
+  align-self: flex-end;
+  margin-left: auto;
+}
+
+.message.assistant .message-content {
+  background-color: #f0f0f0;
+  color: #333;
+  padding: 12px 16px;
+  border-radius: 8px;
+  align-self: flex-start;
+}
+
+/* Message action buttons - like thumbs up/down */
+.message-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.action-button {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: #666;
+  border-radius: 4px;
+}
+
+.action-button:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.input-container {
+  display: flex;
+  padding: 16px;
+  border-top: 1px solid #ccc;
+}
+
+.input-field {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  resize: none;
+  font-family: var(--fontFamilyBase);
+  font-size: var(--fontSizeBase300);
+  line-height: 1.5;
+  min-height: 44px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+input {
+  flex: 1;
+  padding: 5px;
+  border: 1px solid #ccc;
+}
+
+button {
+  margin-left: 5px;
+  padding: 5px 10px;
+  background-color: #0078D4;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.typing-indicator {
+  font-size: 14px;
+  color: #666;
+}
+
+.typing-indicator .dots {
+  animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+  0% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.3;
+  }
+}
+
+/* Input Container */
+.input-wrapper {
+  margin: 0 16px 16px 16px;
+  display: inline-flex;
+  /* Allows height to expand dynamically */
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+  width: calc(100% - 32px);
+  padding: 8px;
+  border-radius: 8px;
+  background-color: var(--colorNeutralBackground1);
+  border: 1px solid var(--colorNeutralStroke1);
+  transition: border-color 0.2s ease-in-out;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* Hover and Active States */
+.input-wrapper:hover {
+  border-color: var(--colorNeutralStroke1Hover);
+}
+
+.input-wrapper:active {
+  border-color: var(--colorNeutralStroke1Pressed);
+}
+
+/* Focus State */
+.input-wrapper.focused {
+  border-color: var(--colorNeutralStroke1Pressed);
+}
+
+/* Focus Indicator (Purple Line Animation, Bottom Only) */
+.focus-indicator {
+  position: absolute;
+  bottom: 0;
+  /* Ensures it's at the bottom */
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: var(--colorCompoundBrandStroke);
+  transform: scaleX(0);
+  transition: transform 0.2s ease-in-out;
+}
+
+.input-wrapper.focused .focus-indicator {
+  transform: scaleX(1);
+  /* Expands when input is focused */
+}
+
+/* AI Generated Tag Container */
+.ai-tag-container {
+  margin-bottom: 4px;
+  /* Adds a small gap between the tag and the message */
+  display: flex;
+  align-items: center;
+}
+
+.assistant-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.assistant-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.scroll-to-bottom {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  /* Optional styling */
+  border-radius: 50%;
+  padding: 8px;
+  cursor: pointer;
+  /* box-shadow: var(--shadow8); */
+  margin-bottom: 40px;
+}
