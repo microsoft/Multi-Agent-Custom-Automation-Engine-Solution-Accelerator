@@ -8,7 +8,8 @@ from context.cosmos_memory_kernel import CosmosMemoryContext
 from event_utils import track_event_if_configured
 from models.messages_kernel import (ActionRequest, ActionResponse,
                                     AgentMessage, Step, StepStatus)
-from semantic_kernel.agents.azure_ai.azure_ai_agent import AzureAIAgent
+from semantic_kernel.agents.azure_ai.azure_ai_agent import AzureAIAgent, AzureAIAgentThread
+from semantic_kernel.agents.azure_ai.azure_ai_agent_settings import AzureAIAgentSettings
 from semantic_kernel.functions import KernelFunction
 
 # Default formatting instructions used across agents

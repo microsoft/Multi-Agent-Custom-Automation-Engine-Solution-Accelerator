@@ -3,7 +3,7 @@ import logging
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
-from azure.ai.projects.models import (ResponseFormatJsonSchema,
+from azure.ai.agents.models import (ResponseFormatJsonSchema,
                                       ResponseFormatJsonSchemaType)
 from context.cosmos_memory_kernel import CosmosMemoryContext
 from event_utils import track_event_if_configured
@@ -133,36 +133,42 @@ class PlannerAgent(BaseAgent):
         try:
             logging.info("Initializing PlannerAgent from async init azure AI Agent")
 
+            # Construct response_format with the required 'type' field
+            response_format = {
+                "type": "json_schema",  # Add the missing type field
+                "json_schema": {
+                    "name": PlannerResponsePlan.__name__,
+                    "description": f"respond with {PlannerResponsePlan.__name__.lower()}",
+                    "schema": PlannerResponsePlan.model_json_schema()
+                }
+            }
+
             # Create the Azure AI Agent using AppConfig with string instructions
             agent_definition = await cls._create_azure_ai_agent_definition(
                 agent_name=agent_name,
-                instructions=cls._get_template(),  # Pass the formatted string, not an object
+                instructions=cls._get_template(),  # Pass the formatted string
                 temperature=0.0,
-                response_format=ResponseFormatJsonSchemaType(
-                    json_schema=ResponseFormatJsonSchema(
-                        name=PlannerResponsePlan.__name__,
-                        description=f"respond with {PlannerResponsePlan.__name__.lower()}",
-                        schema=PlannerResponsePlan.model_json_schema(),
-                    )
-                ),
+                response_format=response_format,
             )
 
-            return cls(
-                session_id=session_id,
-                user_id=user_id,
-                memory_store=memory_store,
-                tools=tools,
-                system_message=system_message,
-                agent_name=agent_name,
-                available_agents=available_agents,
-                agent_instances=agent_instances,
-                client=client,
-                definition=agent_definition,
-            )
-
-        except Exception as e:
-            logging.error(f"Failed to create Azure AI Agent for PlannerAgent: {e}")
+        except Exception as exc:
+            logging.error("Error initializing PlannerAgent definition: %s", exc)
             raise
+
+        return cls(
+            session_id=session_id,
+            user_id=user_id,
+            memory_store=memory_store,
+            tools=tools,
+            system_message=system_message,
+            agent_name=agent_name,
+            available_agents=available_agents,
+            agent_instances=agent_instances,
+            client=client,
+            definition=agent_definition,
+        )
+
+
 
     async def handle_input_task(self, input_task: InputTask) -> str:
         """Handle the initial input task from the user.

@@ -49,9 +49,7 @@ class AppConfig:
         self.AZURE_AI_SUBSCRIPTION_ID = self._get_required("AZURE_AI_SUBSCRIPTION_ID")
         self.AZURE_AI_RESOURCE_GROUP = self._get_required("AZURE_AI_RESOURCE_GROUP")
         self.AZURE_AI_PROJECT_NAME = self._get_required("AZURE_AI_PROJECT_NAME")
-        self.AZURE_AI_AGENT_PROJECT_CONNECTION_STRING = self._get_required(
-            "AZURE_AI_AGENT_PROJECT_CONNECTION_STRING"
-        )
+        self.AZURE_AI_AGENT_ENDPOINT = self._get_required("AZURE_AI_AGENT_ENDPOINT")
 
         # Cached clients and resources
         self._azure_credentials = None
@@ -177,10 +175,8 @@ class AppConfig:
                     "Unable to acquire Azure credentials; ensure DefaultAzureCredential is configured"
                 )
 
-            connection_string = self.AZURE_AI_AGENT_PROJECT_CONNECTION_STRING
-            self._ai_project_client = AIProjectClient.from_connection_string(
-                credential=credential, conn_str=connection_string
-            )
+            endpoint = self.AZURE_AI_AGENT_ENDPOINT
+            self._ai_project_client = AIProjectClient(endpoint=endpoint, credential=credential)
 
             return self._ai_project_client
         except Exception as exc:
