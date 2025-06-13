@@ -20,11 +20,11 @@ This will create a virtual environment directory named microsoft inside your cur
 Installing Playwright Pytest from Virtual Environment
 
 - To install libraries run "pip install -r requirements.txt"
-- Install the required browsers "playwright install"
+
 
 Run test cases
 
-- To run test cases from your 'tests' folder : "pytest --headed --html=report/report.html"
+- To run test cases from your 'tests/e2e-test' folder : "pytest --html=report.html --self-contained-html"
 
 Create .env file in project root level with web app url and client credentials
 
