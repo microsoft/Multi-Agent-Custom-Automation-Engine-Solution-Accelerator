@@ -1,0 +1,79 @@
+/* Light Mode (Default) */
+:root {
+    --color-text: #1e293b;
+    --color-selection: #cbd5e1;
+
+    --color-atrule: #7c3aed;
+    --color-attr-name: #ea580c;
+    --color-attr-value: #15803d;
+    --color-boolean: #7c3aed;
+    --color-comment: #64748b;
+    --color-function: #7c3aed;
+    --color-number: #f97316;
+    --color-string: #15803d;
+    --color-tag: #e11d48;
+    --color-punctuation: #2563eb;
+}
+
+/* Dark Mode */
+body.dark-mode {
+    --color-text: #c3cee3;
+    --color-selection: #363636;
+
+    --color-atrule: #c792ea;
+    --color-attr-name: #ffcb6b;
+    --color-attr-value: #c3e88d;
+    --color-boolean: #c792ea;
+    --color-comment: #546e7a;
+    --color-function: #c792ea;
+    --color-number: #fd9170;
+    --color-string: #c3e88d;
+    --color-tag: #f07178;
+    --color-punctuation: #89ddff;
+}
+
+/* Base Syntax Highlighting */
+code[class*="language-"],
+pre[class*="language-"] {
+    text-align: left;
+    white-space: pre;
+    word-spacing: normal;
+    word-break: normal;
+    word-wrap: normal;
+    color: var(--color-text);
+    font-family: Roboto Mono, monospace;
+    font-size: .95em;
+    line-height: 1.8em;
+    tab-size: 4;
+    hyphens: none;
+}
+
+code[class*="language-"]::selection,
+pre[class*="language-"]::selection {
+    background: var(--color-selection);
+}
+
+:not(pre) > code[class*="language-"] {
+    white-space: normal;
+    border-radius: 0.2em;
+    padding: 0.1em;
+}
+
+pre[class*="language-"] {
+    overflow: auto;
+    position: relative;
+    margin: 0.5em 0;
+    padding: 1.25em 1em;
+}
+
+/* Token Colors */
+.token.atrule { color: var(--color-atrule); }
+.token.attr-name { color: var(--color-attr-name); }
+.token.attr-value { color: var(--color-attr-value); }
+.token.boolean { color: var(--color-boolean); }
+.token.comment { color: var(--color-comment); }
+.token.function { color: var(--color-function); }
+.token.number { color: var(--color-number); }
+.token.string { color: var(--color-string); }
+.token.tag { color: var(--color-tag); }
+.token.punctuation { color: var(--color-punctuation); }

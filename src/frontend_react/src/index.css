@@ -1,0 +1,46 @@
+body, html, :root {
+    min-height: 100vh;
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+}
+
+
+/* Global Custom Scrollbar */
+::-webkit-scrollbar {
+    overflow-y: auto; /* Ensure scrollable content */
+    scrollbar-width: thin; /* For Firefox */
+    scrollbar-color: rgba(100, 100, 100, 0.7) transparent; /* For Firefox */
+  }
+  
+  /* Webkit-based browsers */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background-color: rgba(100, 100, 100, 0.7);
+    border-radius: 3px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(100, 100, 100, 1);
+  }
+  
+  ::-webkit-scrollbar-track {
+    /* background: red; */
+  }
+  
+  * {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+
+  .chart-container canvas {
+    --chartBarColor: var(--colorBrandBackground);
+    --chartHoverColor: var(--colorBrandBackgroundHover);
+    --chartBorderColor: var(--colorBrandForeground1);
+    --chartLineColor: var(--colorBrandForeground1);
+    --chartPointColor: var(--colorBrandBackground);
+    --chartPointBorderColor: var(--colorBrandForeground1);
+}
