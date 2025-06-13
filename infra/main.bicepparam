@@ -18,9 +18,9 @@ param applicationInsightsConfiguration = {
 param virtualNetworkConfiguration = {
   enabled: false
 }
-param aiFoundryStorageAccountConfiguration = {
-  sku: 'Standard_LRS'
-}
+// param aiFoundryStorageAccountConfiguration = {
+//   sku: 'Standard_LRS'
+// }
 param webServerFarmConfiguration = {
   skuCapacity: 1
   skuName: 'B2'
