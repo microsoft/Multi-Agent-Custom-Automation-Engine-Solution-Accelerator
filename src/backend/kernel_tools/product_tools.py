@@ -1,7 +1,7 @@
 """ProductTools class for managing product-related tasks in a mobile plan context."""
 
 import inspect
-import time
+# import time
 from datetime import datetime
 from typing import Annotated, Callable, List
 
@@ -30,7 +30,7 @@ class ProductTools:
             f"These changes have been completed and should be reflected in your app in 5-10 minutes."
             f"\n\n{formatting_instructions}"
         )
-        time.sleep(2)
+        # time.sleep(2)
         return analysis
 
     @staticmethod
