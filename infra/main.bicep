@@ -194,7 +194,7 @@ param containerAppConfiguration containerAppConfigurationType = {
   containerMemory: '4.0Gi'
   containerImageRegistryDomain: 'biabcontainerreg.azurecr.io'
   containerImageName: 'macaebackend'
-  containerImageTag: 'latest'
+  containerImageTag: 'dev01'
   containerName: 'backend'
   ingressTargetPort: 8000
   maxReplicas: 1
@@ -218,7 +218,7 @@ param webSiteConfiguration webSiteConfigurationType = {
   location: solutionLocation
   containerImageRegistryDomain: 'biabcontainerreg.azurecr.io'
   containerImageName: 'macaefrontend'
-  containerImageTag: 'latest'
+  containerImageTag: 'dev01'
   containerName: 'backend'
   tags: tags
   environmentResourceId: null //Default value set on module configuration
@@ -1133,7 +1133,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.14.2' = if (container
     containers: [
       {
         name: containerAppConfiguration.?containerName ?? 'backend'
-        image: '${containerAppConfiguration.?containerImageRegistryDomain ?? 'biabcontainerreg.azurecr.io'}/${containerAppConfiguration.?containerImageName ?? 'macaebackend'}:${containerAppConfiguration.?containerImageTag ?? 'latest'}'
+        image: '${containerAppConfiguration.?containerImageRegistryDomain ?? 'biabcontainerreg.azurecr.io'}/${containerAppConfiguration.?containerImageName ?? 'macaebackend'}:${containerAppConfiguration.?containerImageTag ?? 'dev01'}'
         resources: {
           //TODO: Make cpu and memory parameterized
           cpu: containerAppConfiguration.?containerCpu ?? '2.0'
@@ -1241,7 +1241,7 @@ module webSite 'br/public:avm/res/web/site:0.15.1' = if (webSiteEnabled) {
     diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
     publicNetworkAccess: 'Enabled' //TODO: use Azure Front Door WAF or Application Gateway WAF instead
     siteConfig: {
-      linuxFxVersion: 'DOCKER|${webSiteConfiguration.?containerImageRegistryDomain ?? 'biabcontainerreg.azurecr.io'}/${webSiteConfiguration.?containerImageName ?? 'macaefrontend'}:${webSiteConfiguration.?containerImageTag ?? 'latest'}'
+      linuxFxVersion: 'DOCKER|${webSiteConfiguration.?containerImageRegistryDomain ?? 'biabcontainerreg.azurecr.io'}/${webSiteConfiguration.?containerImageName ?? 'macaefrontend'}:${webSiteConfiguration.?containerImageTag ?? 'dev01'}'
     }
     appSettingsKeyValuePairs: {
       SCM_DO_BUILD_DURING_DEPLOYMENT: 'true'

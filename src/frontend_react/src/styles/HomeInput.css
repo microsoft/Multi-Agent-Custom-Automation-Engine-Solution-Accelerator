@@ -1,0 +1,111 @@
+/* HomeInput Component Styles */
+
+.home-input-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.home-input-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+  position: relative;
+}
+
+.home-input-center-content {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 728px;
+  gap: 32px;
+}
+
+.home-input-title-wrapper {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.home-input-input-section {
+  width: 100%;
+  margin-bottom: 32px;
+}
+
+.home-input-input-wrapper {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: #fafafa; /* tokens.colorNeutralBackground1 */
+  border: 1px solid #d1d1d1; /* tokens.colorNeutralStroke1 */
+  border-radius: 8px;
+}
+
+.home-input-input-field {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 0;
+  border: none;
+  outline: none;
+  background-color: transparent;
+  font-size: 0.875rem; /* tokens.fontSizeBase300 */
+  color: #242424; /* tokens.colorNeutralForeground1 */
+  resize: none;
+}
+
+.home-input-input-field::placeholder {
+  color: #707070; /* tokens.colorNeutralForeground3 */
+}
+
+.home-input-send-button {
+  min-width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background-color: #0f6cbd; /* tokens.colorBrandBackground */
+  color: #ffffff; /* tokens.colorNeutralForegroundInverted */
+  border: none;
+  cursor: pointer;
+}
+
+.home-input-quick-tasks-section {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.home-input-quick-tasks-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.home-input-quick-tasks {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.home-input-ai-footer {
+  padding-bottom: 8px;
+  margin-top: 8px;
+  text-align: center;
+  color: #707070; /* tokens.colorNeutralForeground3 */
+}
+
+.home-input-refresh-button {
+  font-size: 0.75rem; /* tokens.fontSizeBase200 */
+  color: #0f6cbd; /* tokens.colorBrandForeground1 */
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
