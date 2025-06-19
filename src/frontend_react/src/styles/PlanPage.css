@@ -1,0 +1,81 @@
+/* PlanPage.css */
+.plan-page-container {
+  max-width: 960px;
+  margin: 24px auto;
+  padding: 0 16px;
+}
+
+.plan-page-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+  gap: 12px;
+}
+
+.plan-page-back-button {
+  padding: 8px;
+  min-width: auto;
+}
+
+.plan-page-title {
+  font-weight: 600;
+  font-size: 24px;
+}
+
+.plan-page-error {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+.plan-page-error .card-content {
+  padding: 0 16px 16px 16px;
+  text-align: center;
+}
+
+.error-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #d13438;
+}
+
+.plan-page-content {
+  margin-top: 16px;
+}
+
+/* Loading state */
+.plan-page-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+
+.loadingWrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .plan-page-container {
+    margin: 16px auto;
+    padding: 0 12px;
+  }
+  
+  .plan-page-title {
+    font-size: 20px;
+  }
+  
+  .plan-page-header {
+    margin-bottom: 16px;
+  }
+}

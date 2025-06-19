@@ -230,6 +230,17 @@ class CosmosMemoryContext(MemoryStoreBase):
         plans = await self.query_items(query, parameters, Plan)
         return plans[0] if plans else None
 
+    async def get_plan_by_plan_id(self, plan_id: str) -> Optional[Plan]:
+        """Retrieve a plan associated with a session."""
+        query = "SELECT * FROM c WHERE c.id=@id AND c.user_id=@user_id AND c.data_type=@data_type"
+        parameters = [
+            {"name": "@id", "value": plan_id},
+            {"name": "@data_type", "value": "plan"},
+            {"name": "@user_id", "value": self.user_id},
+        ]
+        plans = await self.query_items(query, parameters, Plan)
+        return plans[0] if plans else None
+
     async def get_thread_by_session(self, session_id: str) -> Optional[Any]:
         """Retrieve a plan associated with a session."""
         query = "SELECT * FROM c WHERE c.session_id=@session_id AND c.user_id=@user_id AND c.data_type=@data_type"
@@ -257,7 +268,7 @@ class CosmosMemoryContext(MemoryStoreBase):
 
     async def get_all_plans(self) -> List[Plan]:
         """Retrieve all plans."""
-        query = "SELECT * FROM c WHERE c.user_id=@user_id AND c.data_type=@data_type ORDER BY c._ts DESC OFFSET 0 LIMIT 5"
+        query = "SELECT * FROM c WHERE c.user_id=@user_id AND c.data_type=@data_type ORDER BY c._ts DESC OFFSET 0 LIMIT 10"
         parameters = [
             {"name": "@data_type", "value": "plan"},
             {"name": "@user_id", "value": self.user_id},
@@ -423,6 +434,27 @@ class CosmosMemoryContext(MemoryStoreBase):
             query = "SELECT * FROM c WHERE c.session_id=@session_id AND c.user_id=@user_id AND c.data_type=@data_type ORDER BY c._ts ASC"
             parameters = [
                 {"name": "@session_id", "value": self.session_id},
+                {"name": "@data_type", "value": data_type},
+                {"name": "@user_id", "value": self.user_id},
+            ]
+            return await self.query_items(query, parameters, model_class)
+        except Exception as e:
+            logging.exception(f"Failed to query data by type from Cosmos DB: {e}")
+            return []
+
+    async def get_data_by_type_and_session_id(
+        self, data_type: str, session_id: str
+    ) -> List[BaseDataModel]:
+        """Query the Cosmos DB for documents with the matching data_type, session_id and user_id."""
+        await self.ensure_initialized()
+        if self._container is None:
+            return []
+
+        model_class = self.MODEL_CLASS_MAPPING.get(data_type, BaseDataModel)
+        try:
+            query = "SELECT * FROM c WHERE c.session_id=@session_id AND c.user_id=@user_id AND c.data_type=@data_type ORDER BY c._ts ASC"
+            parameters = [
+                {"name": "@session_id", "value": session_id},
                 {"name": "@data_type", "value": data_type},
                 {"name": "@user_id", "value": self.user_id},
             ]

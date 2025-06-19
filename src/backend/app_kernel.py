@@ -70,7 +70,7 @@ frontend_url = Config.FRONTEND_SITE_NAME
 # Add this near the top of your app.py, after initializing the app
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[frontend_url],  # Add your frontend server URL
+    allow_origins=["*"],  # Add your frontend server URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -519,10 +519,12 @@ async def approve_step_endpoint(
         return {"status": "All steps approved"}
 
 
-@app.get("/api/plans", response_model=List[PlanWithSteps])
+@app.get("/api/plans")
 async def get_plans(
-    request: Request, session_id: Optional[str] = Query(None)
-) -> List[PlanWithSteps]:
+    request: Request,
+    session_id: Optional[str] = Query(None),
+    plan_id: Optional[str] = Query(None),
+):
     """
     Retrieve plans for the current user.
 
@@ -607,6 +609,24 @@ async def get_plans(
         plan_with_steps = PlanWithSteps(**plan.model_dump(), steps=steps)
         plan_with_steps.update_step_counts()
         return [plan_with_steps]
+    if plan_id:
+        plan = await memory_store.get_plan_by_plan_id(plan_id=plan_id)
+        if not plan:
+            track_event_if_configured(
+                "GetPlanBySessionNotFound",
+                {"status_code": 400, "detail": "Plan not found"},
+            )
+            raise HTTPException(status_code=404, detail="Plan not found")
+
+        # Use get_steps_by_plan to match the original implementation
+        steps = await memory_store.get_steps_by_plan(plan_id=plan.id)
+        messages = await memory_store.get_data_by_type_and_session_id(
+            "agent_message", session_id=plan.session_id
+        )
+
+        plan_with_steps = PlanWithSteps(**plan.model_dump(), steps=steps)
+        plan_with_steps.update_step_counts()
+        return [plan_with_steps, messages]
 
     all_plans = await memory_store.get_all_plans()
     # Fetch steps for all plans concurrently
@@ -753,6 +773,74 @@ async def get_agent_messages(session_id: str, request: Request) -> List[AgentMes
         session_id or "", user_id
     )
     agent_messages = await memory_store.get_data_by_type("agent_message")
+    return agent_messages
+
+
+@app.get("/api/agent_messages_by_plan/{plan_id}", response_model=List[AgentMessage])
+async def get_agent_messages_by_plan(
+    plan_id: str, request: Request
+) -> List[AgentMessage]:
+    """
+    Retrieve agent messages for a specific session.
+
+    ---
+    tags:
+      - Agent Messages
+    parameters:
+      - name: session_id
+        in: path
+        type: string
+        required: true
+        in: path
+        type: string
+        required: true
+        description: The ID of the session to retrieve agent messages for
+    responses:
+      200:
+        description: List of agent messages associated with the specified session
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                description: Unique ID of the agent message
+              session_id:
+                type: string
+                description: Session ID associated with the message
+              plan_id:
+                type: string
+                description: Plan ID related to the agent message
+              content:
+                type: string
+                description: Content of the message
+              source:
+                type: string
+                description: Source of the message (e.g., agent type)
+              timestamp:
+                type: string
+                format: date-time
+                description: Timestamp of the message
+              step_id:
+                type: string
+                description: Optional step ID associated with the message
+      400:
+        description: Missing or invalid user information
+      404:
+        description: Agent messages not found
+    """
+    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    user_id = authenticated_user["user_principal_id"]
+    if not user_id:
+        track_event_if_configured(
+            "UserIdNotFound", {"status_code": 400, "detail": "no user"}
+        )
+        raise HTTPException(status_code=400, detail="no user")
+
+    # Initialize memory context
+    kernel, memory_store = await initialize_runtime_and_context("", user_id)
+    agent_messages = await memory_store.get_data_by_type_and_plan_id("agent_message")
     return agent_messages
 
 

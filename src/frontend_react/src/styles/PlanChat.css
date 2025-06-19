@@ -1,0 +1,51 @@
+/* PlanChat Component Styles */
+
+.plan-chat-message-content {
+    display: flex;
+    flex-direction: column;
+    white-space: pre-wrap;
+    width: 100%;
+}
+
+.plan-chat-scroll-button {
+    background-color: transparent;
+    border: 1px solid var(--colorNeutralStroke3);
+    backdrop-filter: saturate(180%) blur(16px);
+}
+
+.plan-chat-input-container {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+}
+
+.plan-chat-input-wrapper {
+    display: flex;
+    width: 100%;
+    max-width: 768px;
+    margin: 0px 16px;
+}
+
+
+/* NEW */
+
+.plan-chat-header {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 8px;
+}
+
+.plan-chat-speaker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--colorNeutralForeground3, #666);
+}
+
+
+
+
+
+
