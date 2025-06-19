@@ -69,7 +69,7 @@ const PlanPage: React.FC = () => {
                 }
 
                 setError(null);
-                const data = await PlanDataService.fetchPlanData(planId);
+                const data = await PlanDataService.fetchPlanData(planId,navigate);
                 console.log("Fetched plan data:", data);
                 setPlanData(data);
             } catch (err) {
@@ -146,7 +146,7 @@ const PlanPage: React.FC = () => {
 
 
     useEffect(() => {
-        loadPlanData();
+        loadPlanData(true);
     }, [loadPlanData]);
 
     const handleNewTaskButton = () => {

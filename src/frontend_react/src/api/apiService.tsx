@@ -160,7 +160,7 @@ export class APIService {
 
         if (useCache) {
             const cachedPlan = this._cache.get<{ plan_with_steps: PlanWithSteps; messages: PlanMessage[] }>(cacheKey);
-            //if (cachedPlan) return cachedPlan;
+            if (cachedPlan) return cachedPlan;
 
             return this._requestTracker.trackRequest(cacheKey, fetcher);
         }
