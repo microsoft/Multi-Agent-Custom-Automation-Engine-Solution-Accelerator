@@ -118,7 +118,13 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
               </div>
             </div>
             <div>
-              <Body1Strong>{planData.plan.initial_goal}</Body1Strong>
+              <Tooltip content={planData.plan.initial_goal} relationship={"label"}>
+                <Body1Strong
+                  className="goal-text"
+                >
+                  {planData.plan.initial_goal}
+                </Body1Strong>
+              </Tooltip>
               <br />
               <Text size={200}>
                 {completedCount} of {total} completed
