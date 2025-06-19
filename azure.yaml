@@ -2,19 +2,4 @@
 name: multi-agent-custom-automation-engine-solution-accelerator
 metadata:
   template: multi-agent-custom-automation-engine-solution-accelerator@1.0
-hooks:
-  preprovision:
-    posix:
-      shell: sh
-      run: >
-        chmod u+r+x ./infra/scripts/validate_model_deployment_quota.sh; chmod u+r+x ./infra/scripts/validate_model_quota.sh; ./infra/scripts/validate_model_deployment_quota.sh --subscription "$AZURE_SUBSCRIPTION_ID" --location "${AZURE_ENV_OPENAI_LOCATION:-swedencentral}" --models-parameter "aiModelDeployments"
-      interactive: false
-      continueOnError: false
 
-    windows:
-      shell: pwsh
-      run: >
-        $location = if ($env:AZURE_ENV_OPENAI_LOCATION) { $env:AZURE_ENV_OPENAI_LOCATION } else { "swedencentral" };
-        ./infra/scripts/validate_model_deployment_quotas.ps1 -SubscriptionId $env:AZURE_SUBSCRIPTION_ID -Location $location -ModelsParameter "aiModelDeployments"
-      interactive: false
-      continueOnError: false
