@@ -22,10 +22,12 @@ Solution overview
 The solution leverages Azure OpenAI Service, Azure Container Apps, Azure Cosmos DB, and Azure Container Registry to create an intelligent automation pipeline. It uses a multi-agent approach where specialized AI agents work together to plan, execute, and validate tasks based on user input.
 
 ### Solution architecture
-|![image](./docs/images/readme/macae-architecture.png)|
+|![image](./docs/images/readme/architecture.png)|
 |---|
 
-
+### Agentic architecture
+|![image](./docs/images/readme/agent_flow.png)|
+|---|
 
 ### How to customize
 If you'd like to customize the solution accelerator, here are some common areas to start:
@@ -111,7 +113,7 @@ either by deleting the resource group in the Portal or running `azd down`.
 Business Scenario
 </h2>
 
-|![image](./docs/images/readme/macae-application.png)|
+|![image](./docs/images/readme/application.png)|
 |---|
 
 <br/>
