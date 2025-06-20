@@ -10,10 +10,10 @@ export class PlanDataService {    /**
      * @param planId Plan ID to fetch
      * @returns Promise with processed plan data
      */
-    static async fetchPlanData(planId: string): Promise<ProcessedPlanData> {
+    static async fetchPlanData(planId: string,useCache:boolean): Promise<ProcessedPlanData> {
         try {
             // Use optimized getPlanById method for better performance
-            const planBody = await apiService.getPlanById(planId);
+            const planBody = await apiService.getPlanById(planId,useCache);
             return this.processPlanData(planBody.plan_with_steps, planBody.messages || []);
         } catch (error) {
             console.log('Failed to fetch plan data:', error);

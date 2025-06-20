@@ -197,7 +197,7 @@ class PlannerAgent(BaseAgent):
                     session_id=input_task.session_id,
                     user_id=self._user_id,
                     plan_id=plan.id,
-                    content=f"Generated a plan with {len(steps)} steps. Click the check box beside each step to complete it, click the x to reject this step.",
+                    content=f"Generated a plan with {len(steps)} steps. Click the checkmark beside each step in the panel to approve, click the x to reject a step.",
                     source=AgentType.PLANNER.value,
                     step_id="",
                 )
@@ -209,7 +209,7 @@ class PlannerAgent(BaseAgent):
                     "session_id": input_task.session_id,
                     "user_id": self._user_id,
                     "plan_id": plan.id,
-                    "content": f"Generated a plan with {len(steps)} steps. Click the check box beside each step to complete it, click the x to reject this step.",
+                    "content": f"Generated a plan with {len(steps)} steps. Click the checkmark beside each step in the panel to approve, click the x to reject a step.",
                     "source": AgentType.PLANNER.value,
                 },
             )

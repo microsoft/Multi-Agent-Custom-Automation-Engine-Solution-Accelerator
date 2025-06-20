@@ -24,6 +24,8 @@ export class TaskService {
             const task: Task = {
                 id: plan.session_id,
                 name: plan.initial_goal,
+                completed_steps: plan.completed,
+                total_steps: plan.total_steps,
                 status: apiService.isPlanComplete(plan) ? 'completed' : 'inprogress',
                 date: new Date(plan.timestamp).toLocaleDateString('en-US', {
                     month: 'short',
