@@ -4,6 +4,9 @@ metadata description = 'This module contains the resources required to deploy th
 @description('Set to true if you want to deploy WAF-aligned infrastructure.')
 param useWafAlignedArchitecture bool
 
+@description('Optional. The resource ID of an existing AI Foundry Project to reuse.')
+param existingAIFoundryResourceId string = ''
+
 @description('Optional. The prefix to add in the default names given to all deployed Azure resources.')
 @maxLength(19)
 param solutionPrefix string = 'macae${uniqueString(deployer().objectId, deployer().tenantId, subscription().subscriptionId, resourceGroup().id)}'
@@ -830,7 +833,9 @@ resource aiServices 'Microsoft.CognitiveServices/accounts@2025-04-01-preview' ex
     ]
 }
 
-resource aiFoundryProject 'Microsoft.CognitiveServices/accounts/projects@2025-04-01-preview' = {
+var useExistingAIProject = !empty(existingAIFoundryResourceId)
+
+resource aiFoundryProject 'Microsoft.CognitiveServices/accounts/projects@2025-04-01-preview' = if (!useExistingAIProject) {
   parent: aiServices
   name: aiFoundryAiProjectName
   location: aiFoundryAiProjectConfiguration.?location ?? azureOpenAILocation
@@ -843,13 +848,20 @@ resource aiFoundryProject 'Microsoft.CognitiveServices/accounts/projects@2025-04
   }
 }
 
+resource existingAIProject 'Microsoft.CognitiveServices/accounts/projects@2025-04-01-preview' existing = if (useExistingAIProject) {
+  name: last(split(existingAIFoundryResourceId, '/'))
+  scope: resourceGroup(split(existingAIFoundryResourceId, '/')[2], split(existingAIFoundryResourceId, '/')[4])
+}
+
+var aiProjectId = useExistingAIProject ? existingAIFoundryResourceId : aiFoundryProject.id
+
 resource aiUser 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
   name: '53ca6127-db72-4b80-b1b0-d745d6d5456d'
 }
 
 resource aiUserAccessProj 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(containerApp.name, aiFoundryProject.id, aiUser.id)
-  scope: aiFoundryProject
+  name: guid(containerApp.name, aiProjectId, aiUser.id)
+  scope: resourceGroup() //existingAIProject
   properties: {
     roleDefinitionId: aiUser.id
     principalId: containerApp.outputs.?systemAssignedMIPrincipalId!
@@ -857,8 +869,8 @@ resource aiUserAccessProj 'Microsoft.Authorization/roleAssignments@2022-04-01' =
 }
 
 resource aiUserAccessFoundry 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(containerApp.name, aiServices.id, aiUser.id)
-  scope: aiServices
+  name: guid(containerApp.name, aiProjectId, aiUser.id)
+  scope: resourceGroup()//aiServices
   properties: {
     roleDefinitionId: aiUser.id
     principalId: containerApp.outputs.?systemAssignedMIPrincipalId!
@@ -870,8 +882,8 @@ resource aiDeveloper 'Microsoft.Authorization/roleDefinitions@2022-04-01' existi
 }
 
 resource aiDeveloperAccessFoundry 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(containerApp.name, aiServices.id, aiDeveloper.id)
-  scope: aiFoundryProject
+  name: guid(containerApp.name,aiProjectId, aiDeveloper.id)
+  scope: resourceGroup()//existingAIProject
   properties: {
     roleDefinitionId: aiDeveloper.id
     principalId: containerApp.outputs.?systemAssignedMIPrincipalId!
@@ -884,7 +896,7 @@ resource cognitiveServiceOpenAIUser 'Microsoft.Authorization/roleDefinitions@202
 
 resource cognitiveServiceOpenAIUserAccessFoundry 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(containerApp.name, aiServices.id, cognitiveServiceOpenAIUser.id)
-  scope: aiServices
+  scope: resourceGroup() //aiServices
   properties: {
     roleDefinitionId: cognitiveServiceOpenAIUser.id
     principalId: containerApp.outputs.?systemAssignedMIPrincipalId!
