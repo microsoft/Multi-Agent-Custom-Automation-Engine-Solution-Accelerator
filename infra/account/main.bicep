@@ -287,7 +287,10 @@ output name string = useExistingService ? cognitiveServiceExisting.name : cognit
 output resourceId string = useExistingService ? cognitiveServiceExisting.id : cognitiveServiceNew.id
 
 @description('The resource group the cognitive services account was deployed into.')
-output resourceGroupName string =  useExistingService ? existingCognitiveServiceDetails[3] : resourceGroup().name
+output subscriptionId string =  useExistingService ? existingCognitiveServiceDetails[2] : subscription().subscriptionId
+
+@description('The resource group the cognitive services account was deployed into.')
+output resourceGroupName string =  useExistingService ? existingCognitiveServiceDetails[4] : resourceGroup().name
 
 @description('The service endpoint of the cognitive services account.')
 output endpoint string = useExistingService ? cognitiveServiceExisting.properties.endpoint : cognitiveService.properties.endpoint
