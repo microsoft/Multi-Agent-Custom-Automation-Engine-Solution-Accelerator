@@ -10,7 +10,7 @@ from app_config import config
 from auth.auth_utils import get_authenticated_user_details
 
 # Azure monitoring
-# from azure.monitor.opentelemetry import configure_azure_monitor
+from azure.monitor.opentelemetry import configure_azure_monitor
 from config_kernel import Config
 from event_utils import track_event_if_configured
 
@@ -38,7 +38,7 @@ from utils_kernel import initialize_runtime_and_context, rai_success
 connection_string = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
 if connection_string:
     # Configure Application Insights if the Instrumentation Key is found
-    # configure_azure_monitor(connection_string=connection_string)
+    configure_azure_monitor(connection_string=connection_string)
     logging.info(
         "Application Insights configured with the provided Instrumentation Key"
     )
