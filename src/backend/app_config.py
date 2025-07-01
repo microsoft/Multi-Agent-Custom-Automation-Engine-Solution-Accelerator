@@ -3,7 +3,7 @@ import logging
 import os
 from typing import Optional
 
-from azure.ai.projects.aio import AIProjectClient
+from azure.ai.agents.aio import AIProjectClient
 from azure.cosmos.aio import CosmosClient
 from azure.identity import DefaultAzureCredential
 from dotenv import load_dotenv

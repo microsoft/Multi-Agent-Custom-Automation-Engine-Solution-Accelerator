@@ -59,6 +59,8 @@ jobs:
             echo "TAG=demo" >> $GITHUB_ENV
           elif [[ "${{ github.ref }}" == "refs/heads/hotfix" ]]; then
             echo "TAG=hotfix" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == "refs/heads/psl-bug--19944" ]]; then
+            echo "TAG=psl-bug--19944" >> $GITHUB_ENV
           else
             echo "TAG=pullrequest-ignore" >> $GITHUB_ENV
           fi
