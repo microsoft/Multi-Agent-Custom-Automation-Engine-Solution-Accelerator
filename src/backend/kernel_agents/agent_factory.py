@@ -23,6 +23,8 @@ from kernel_agents.tech_support_agent import TechSupportAgent
 from models.messages_kernel import AgentType, PlannerResponsePlan
 # pylint:disable=E0611
 from semantic_kernel.agents.azure_ai.azure_ai_agent import AzureAIAgent
+from kernel_tools.kernel_initializer import create_kernel
+from kernel_tools.sk_function_tool import SKFunctionTool
 
 logger = logging.getLogger(__name__)
 
@@ -146,7 +148,12 @@ class AgentFactory:
         agent_type_str = cls._agent_type_strings.get(
             agent_type, agent_type.value.lower()
         )
-        tools = None
+        #tools = None
+        kernel = create_kernel()
+        tools = [
+            SKFunctionTool(plugin_name="time", function_name="now", kernel=kernel)
+            # You can add more SK functions here as needed
+        ]
 
         # Create the agent instance using the project-based pattern
         try:
