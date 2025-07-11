@@ -31,7 +31,7 @@ export class TaskService {
         completed_steps: plan.completed,
         total_steps: plan.total_steps,
         status: apiService.isPlanComplete(plan) ? "completed" : "inprogress",
-        date: new Intl.DateTimeFormat(undefined, {
+        date: new Intl.DateTimeFormat(plan?.user_locale, {
           dateStyle: "long",
           // timeStyle: "short",
         }).format(new Date(plan.timestamp)),

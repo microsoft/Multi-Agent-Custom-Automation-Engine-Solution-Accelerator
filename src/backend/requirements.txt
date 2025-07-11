@@ -20,6 +20,7 @@ openai==1.84.0
 azure-ai-inference==1.0.0b9 
 azure-search-documents 
 azure-ai-evaluation
+Babel
 
 opentelemetry-exporter-otlp-proto-grpc
 

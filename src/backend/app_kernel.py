@@ -4,6 +4,8 @@ import logging
 import os
 import uuid
 from typing import Dict, List, Optional
+import uvicorn
+import locale
 
 # Semantic Kernel imports
 from app_config import config
@@ -70,7 +72,7 @@ frontend_url = Config.FRONTEND_SITE_NAME
 # Add this near the top of your app.py, after initializing the app
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[frontend_url],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -85,6 +87,25 @@ logging.info("Added health check middleware")
 async def input_task_endpoint(input_task: InputTask, request: Request):
     """
     Receive the initial input task from the user.
+
+    ---
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            session_id:
+              type: string
+              description: Session ID for the task
+            description:
+              type: string
+              description: Description of the task to be performed
+            user_locale:
+              type: string
+              description: User's locale preference (e.g., 'en_US', 'en_GB', 'de_DE')
+              default: 'en_GB'
     """
     # Fix 1: Properly await the async rai_success function
     if not await rai_success(input_task.description):
@@ -115,6 +136,9 @@ async def input_task_endpoint(input_task: InputTask, request: Request):
     if not input_task.session_id:
         input_task.session_id = str(uuid.uuid4())
 
+    # Extract user locale from request headers or input task
+    user_locale = request.headers.get("X-User-Locale", input_task.user_locale or "en_GB")
+
     try:
         # Create all agents instead of just the planner agent
         # This ensures other agents are created first and the planner has access to them
@@ -132,6 +156,7 @@ async def input_task_endpoint(input_task: InputTask, request: Request):
             user_id=user_id,
             memory_store=memory_store,
             client=client,
+            user_locale=user_locale,  # ✅ Add this
         )
 
         group_chat_manager = agents[AgentType.GROUP_CHAT_MANAGER.value]
@@ -229,6 +254,10 @@ async def human_feedback_endpoint(human_feedback: HumanFeedback, request: Reques
             user_id:
               type: string
               description: The user ID providing the feedback
+            user_locale:
+              type: string
+              description: User's locale preference (e.g., 'en_US', 'en_GB', 'de_DE')
+              default: 'en_GB'
     responses:
       200:
         description: Feedback received successfully
@@ -256,6 +285,9 @@ async def human_feedback_endpoint(human_feedback: HumanFeedback, request: Reques
         human_feedback.session_id, user_id
     )
 
+    # Extract user locale from request headers or feedback object
+    user_locale = request.headers.get("X-User-Locale", human_feedback.user_locale or "en_GB")
+
     client = None
     try:
         client = config.get_ai_project_client()
@@ -268,6 +300,7 @@ async def human_feedback_endpoint(human_feedback: HumanFeedback, request: Reques
         user_id=user_id,
         memory_store=memory_store,
         client=client,
+        user_locale=user_locale,  # ✅ Add this
     )
 
     if human_agent is None:
@@ -476,6 +509,10 @@ async def approve_step_endpoint(
     kernel, memory_store = await initialize_runtime_and_context(
         human_feedback.session_id, user_id
     )
+
+    # Extract user locale from request headers or feedback object
+    user_locale = request.headers.get("X-User-Locale", human_feedback.user_locale or "en_GB")
+
     client = None
     try:
         client = config.get_ai_project_client()
@@ -486,6 +523,7 @@ async def approve_step_endpoint(
         user_id=user_id,
         memory_store=memory_store,
         client=client,
+        user_locale=user_locale,  # ✅ Add this
     )
 
     # Send the approval to the group chat manager
@@ -639,6 +677,16 @@ async def get_plans(
         plan_with_steps = PlanWithSteps(**plan.model_dump(), steps=steps)
         plan_with_steps.update_step_counts()
         list_of_plans_with_steps.append(plan_with_steps)
+
+    # Print local system preference date format, selected language, and language code
+
+    # Get system locale settings
+    system_locale = locale.getdefaultlocale()
+    language_code = system_locale[0] if system_locale else "unknown"
+
+    # Add "local_system_language_selecetd" to each plan
+    for plan in list_of_plans_with_steps:
+        plan.user_locale = language_code.replace("_", "-")
 
     return list_of_plans_with_steps
 
@@ -970,8 +1018,184 @@ async def get_agent_tools():
     return []
 
 
-# Run the app
-if __name__ == "__main__":
-    import uvicorn
+@app.post("/api/tasks")
+async def handle_task(request: Request):
+    """
+    Handle individual tasks with user locale support.
+    This endpoint demonstrates how to pass user_locale to agent tools.
 
+    Expected request body:
+    {
+        "task_type": "schedule_orientation",
+        "employee_name": "John Doe",
+        "date": "2025-07-15",
+        "user_locale": "en_US"
+    }
+    """
+    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    user_id = authenticated_user["user_principal_id"]
+    if not user_id:
+        track_event_if_configured(
+            "UserIdNotFound", {"status_code": 400, "detail": "no user"}
+        )
+        raise HTTPException(status_code=400, detail="no user")
+
+    try:
+        data = await request.json()
+        user_locale = data.get("user_locale", "en_GB")  # fallback to en_GB
+        task_type = data.get("task_type")
+
+        # Import the HR tools
+        from kernel_tools.hr_tools import HrTools
+
+        if task_type == "schedule_orientation":
+            employee_name = data.get("employee_name")
+            date = data.get("date")
+
+            if not employee_name or not date:
+                raise HTTPException(status_code=400, detail="employee_name and date are required")
+
+            # Example: Call the HR tool function with user_locale
+            result = await HrTools.schedule_orientation_session(
+                employee_name=employee_name,
+                date=date,
+                user_locale=user_locale
+            )
+
+            track_event_if_configured(
+                "TaskExecuted",
+                {
+                    "task_type": task_type,
+                    "user_locale": user_locale,
+                    "employee_name": employee_name,
+                    "date": date,
+                },
+            )
+
+            return {
+                "status": "success",
+                "result": result,
+                "user_locale": user_locale
+            }
+
+        elif task_type == "schedule_performance_review":
+            employee_name = data.get("employee_name")
+            date = data.get("date")
+
+            if not employee_name or not date:
+                raise HTTPException(status_code=400, detail="employee_name and date are required")
+
+            result = await HrTools.schedule_performance_review(
+                employee_name=employee_name,
+                date=date,
+                user_locale=user_locale
+            )
+
+            return {
+                "status": "success",
+                "result": result,
+                "user_locale": user_locale
+            }
+
+        elif task_type == "process_leave_request":
+            employee_name = data.get("employee_name")
+            leave_type = data.get("leave_type")
+            start_date = data.get("start_date")
+            end_date = data.get("end_date")
+
+            if not all([employee_name, leave_type, start_date, end_date]):
+                raise HTTPException(status_code=400, detail="employee_name, leave_type, start_date, and end_date are required")
+
+            result = await HrTools.process_leave_request(
+                employee_name=employee_name,
+                leave_type=leave_type,
+                start_date=start_date,
+                end_date=end_date,
+                user_locale=user_locale
+            )
+
+            return {
+                "status": "success",
+                "result": result,
+                "user_locale": user_locale
+            }
+
+        elif task_type == "add_mobile_extras_pack":
+            # Example for Product tools
+            from kernel_tools.product_tools import ProductTools
+
+            new_extras_pack_name = data.get("new_extras_pack_name")
+            start_date = data.get("start_date")
+
+            if not new_extras_pack_name or not start_date:
+                raise HTTPException(status_code=400, detail="new_extras_pack_name and start_date are required")
+
+            result = await ProductTools.add_mobile_extras_pack(
+                new_extras_pack_name=new_extras_pack_name,
+                start_date=start_date,
+                user_locale=user_locale
+            )
+
+            return {
+                "status": "success",
+                "result": result,
+                "user_locale": user_locale
+            }
+
+        else:
+            raise HTTPException(status_code=400, detail=f"Unsupported task_type: {task_type}")
+
+    except Exception as e:
+        track_event_if_configured(
+            "TaskError",
+            {
+                "error": str(e),
+                "task_type": data.get("task_type") if 'data' in locals() else "unknown",
+            },
+        )
+        raise HTTPException(status_code=400, detail=f"Error executing task: {e}")
+
+
+@app.get("/api/tasks/examples")
+async def get_task_examples():
+    """
+    Get examples of how to use the /api/tasks endpoint with different locales.
+
+    Returns example request payloads for testing the user_locale functionality.
+    """
+    examples = {
+        "schedule_orientation_us": {
+            "task_type": "schedule_orientation",
+            "employee_name": "John Doe",
+            "date": "2025-07-15",
+            "user_locale": "en_US"
+        },
+        "schedule_orientation_uk": {
+            "task_type": "schedule_orientation",
+            "employee_name": "Jane Smith",
+            "date": "2025-07-15",
+            "user_locale": "en_GB"
+        },
+        "process_leave_request": {
+            "task_type": "process_leave_request",
+            "employee_name": "Alice Johnson",
+            "leave_type": "Annual Leave",
+            "start_date": "2025-08-01",
+            "end_date": "2025-08-15",
+            "user_locale": "en_GB"
+        },
+        "add_mobile_extras": {
+            "task_type": "add_mobile_extras_pack",
+            "new_extras_pack_name": "International Roaming Pack",
+            "start_date": "2025-07-20",
+            "user_locale": "en_US"
+        }
+    }
+
+    return {
+        "message": "Example requests for /api/tasks endpoint",
+        "examples": examples,
+        "usage": "POST /api/tasks with any of the example payloads to see locale-specific date formatting"
+    }
+if __name__ == "__main__":
     uvicorn.run("app_kernel:app", host="127.0.0.1", port=8000, reload=True)
