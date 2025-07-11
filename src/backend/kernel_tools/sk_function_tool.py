@@ -1,5 +1,5 @@
 from typing import Any
-from azure.ai.agents import ToolDefinition
+from azure.ai.agents.models import ToolDefinition
 from semantic_kernel import Kernel
 
 class SKFunctionTool(ToolDefinition):
