@@ -277,7 +277,7 @@ module existing_cognigive_service_dependencies 'modules/dependencies.bicep' = if
     projectName: projectName
     projectDescription: projectDescription
     azureExistingAIProjectResourceId: existingFoundryProjectResourceId
-    location: location
+    location: cognitiveServiceExisting.?location!
     deployments: deployments
     diagnosticSettings: diagnosticSettings
     lock: lock
@@ -311,8 +311,8 @@ output endpoint string = useExistingService ? cognitiveServiceExisting.propertie
 output endpoints endpointType = useExistingService ? cognitiveServiceExisting.properties.endpoints : cognitiveService.properties.endpoints
 
 @description('The principal ID of the system assigned identity.')
-output systemAssignedMIPrincipalId string? = useExistingService ? cognitiveServiceExisting.identity.principalId : cognitiveService.?identity.?principalId
- 
+output systemAssignedMIPrincipalId string? = useExistingService ? cognitiveServiceExisting.?identity.?principalId : cognitiveService.?identity.?principalId
+
 @description('The location the resource was deployed into.')
 output location string = useExistingService ? cognitiveServiceExisting.location : cognitiveService.location
  

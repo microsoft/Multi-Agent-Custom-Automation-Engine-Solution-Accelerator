@@ -2,7 +2,7 @@
 param name string
 
 @description('Required. The location of the Project resource.')
-param location string = resourceGroup().location
+param location string
 
 @description('Optional. The description of the AI Foundry project to create. Defaults to the project name.')
 param desc string = name
@@ -40,11 +40,19 @@ resource aiProject 'Microsoft.CognitiveServices/accounts/projects@2025-04-01-pre
   }
 }
 
+// Assign identity to existing project
+resource existingProject 'Microsoft.CognitiveServices/accounts/projects@2025-04-01-preview' = if (useExistingProject && !empty(existingProjName)) {
+  name: existingProjName
+  parent: cogServiceReference
+  location: location
+  identity: { type: 'SystemAssigned' }
+}
+
 @description('AI Project metadata including name, resource ID, and API endpoint.')
 output aiProjectInfo aiProjectOutputType = {
-  name: useExistingProject ? existingProjName : aiProject.name
-  resourceId: useExistingProject ? azureExistingAIProjectResourceId : aiProject.id
-  apiEndpoint: useExistingProject ? existingProjEndpoint : aiProject.properties.endpoints['AI Foundry API']
+  name: useExistingProject ? existingProject.name : aiProject.name
+  resourceId: useExistingProject ? existingProject.id : aiProject.id
+  apiEndpoint: useExistingProject ? existingProject.properties.endpoints['AI Foundry API'] : aiProject.properties.endpoints['AI Foundry API']
 }
 
 @export()
