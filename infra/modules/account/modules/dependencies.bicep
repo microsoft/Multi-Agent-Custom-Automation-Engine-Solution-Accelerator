@@ -23,8 +23,8 @@ param name string
 ])
 param sku string = 'S0'
 
-@description('Optional. Location for all Resources.')
-param location string = resourceGroup().location
+@description('Optional. Location for Cognitive Services.')
+param location string
 
 @description('Optional. Tags of the resource.')
 param tags object?
