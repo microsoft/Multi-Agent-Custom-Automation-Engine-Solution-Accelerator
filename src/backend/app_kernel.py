@@ -4,6 +4,8 @@ import logging
 import os
 import uuid
 from typing import Dict, List, Optional
+import uvicorn
+import locale
 
 # Semantic Kernel imports
 from app_config import config
@@ -85,6 +87,25 @@ logging.info("Added health check middleware")
 async def input_task_endpoint(input_task: InputTask, request: Request):
     """
     Receive the initial input task from the user.
+
+    ---
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            session_id:
+              type: string
+              description: Session ID for the task
+            description:
+              type: string
+              description: Description of the task to be performed
+            user_locale:
+              type: string
+              description: User's locale preference (e.g., 'en_US', 'en_GB', 'de_DE')
+              default: 'en_GB'
     """
     # Fix 1: Properly await the async rai_success function
     if not await rai_success(input_task.description):
@@ -115,6 +136,9 @@ async def input_task_endpoint(input_task: InputTask, request: Request):
     if not input_task.session_id:
         input_task.session_id = str(uuid.uuid4())
 
+    # Extract user locale from request headers or input task
+    user_locale = request.headers.get("X-User-Locale", input_task.user_locale or "en_GB")
+
     try:
         # Create all agents instead of just the planner agent
         # This ensures other agents are created first and the planner has access to them
@@ -132,6 +156,7 @@ async def input_task_endpoint(input_task: InputTask, request: Request):
             user_id=user_id,
             memory_store=memory_store,
             client=client,
+            user_locale=user_locale,
         )
 
         group_chat_manager = agents[AgentType.GROUP_CHAT_MANAGER.value]
@@ -229,6 +254,10 @@ async def human_feedback_endpoint(human_feedback: HumanFeedback, request: Reques
             user_id:
               type: string
               description: The user ID providing the feedback
+            user_locale:
+              type: string
+              description: User's locale preference (e.g., 'en_US', 'en_GB', 'de_DE')
+              default: 'en_GB'
     responses:
       200:
         description: Feedback received successfully
@@ -256,6 +285,9 @@ async def human_feedback_endpoint(human_feedback: HumanFeedback, request: Reques
         human_feedback.session_id, user_id
     )
 
+    # Extract user locale from request headers or feedback object
+    user_locale = request.headers.get("X-User-Locale", human_feedback.user_locale or "en_GB")
+
     client = None
     try:
         client = config.get_ai_project_client()
@@ -268,6 +300,7 @@ async def human_feedback_endpoint(human_feedback: HumanFeedback, request: Reques
         user_id=user_id,
         memory_store=memory_store,
         client=client,
+        user_locale=user_locale,
     )
 
     if human_agent is None:
@@ -476,6 +509,10 @@ async def approve_step_endpoint(
     kernel, memory_store = await initialize_runtime_and_context(
         human_feedback.session_id, user_id
     )
+
+    # Extract user locale from request headers or feedback object
+    user_locale = request.headers.get("X-User-Locale", human_feedback.user_locale or "en_GB")
+
     client = None
     try:
         client = config.get_ai_project_client()
@@ -486,6 +523,7 @@ async def approve_step_endpoint(
         user_id=user_id,
         memory_store=memory_store,
         client=client,
+        user_locale=user_locale,
     )
 
     # Send the approval to the group chat manager
@@ -639,6 +677,16 @@ async def get_plans(
         plan_with_steps = PlanWithSteps(**plan.model_dump(), steps=steps)
         plan_with_steps.update_step_counts()
         list_of_plans_with_steps.append(plan_with_steps)
+
+    # Print local system preference date format, selected language, and language code
+
+    # Get system locale settings
+    system_locale = locale.getdefaultlocale()
+    language_code = system_locale[0] if system_locale else "unknown"
+
+    # Add "local_system_language_selecetd" to each plan
+    for plan in list_of_plans_with_steps:
+        plan.user_locale = language_code.replace("_", "-")
 
     return list_of_plans_with_steps
 
@@ -969,9 +1017,5 @@ async def get_agent_tools():
     """
     return []
 
-
-# Run the app
 if __name__ == "__main__":
-    import uvicorn
-
     uvicorn.run("app_kernel:app", host="127.0.0.1", port=8000, reload=True)

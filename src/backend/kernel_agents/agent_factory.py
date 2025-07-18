@@ -1,4 +1,4 @@
-"""Factory for creating agents in the Multi-Agent Custom Automation Engine."""
+"""Factory for creating agents in Multi-Agent Custom Automation Engine."""
 
 import inspect
 import logging
@@ -21,6 +21,13 @@ from kernel_agents.procurement_agent import ProcurementAgent
 from kernel_agents.product_agent import ProductAgent
 from kernel_agents.tech_support_agent import TechSupportAgent
 from models.messages_kernel import AgentType, PlannerResponsePlan
+# Import all tool classes to generate agent_tools_list
+from kernel_tools.hr_tools import HrTools
+from kernel_tools.marketing_tools import MarketingTools
+from kernel_tools.product_tools import ProductTools
+from kernel_tools.procurement_tools import ProcurementTools
+from kernel_tools.tech_support_tools import TechSupportTools
+from kernel_tools.generic_tools import GenericTools
 # pylint:disable=E0611
 from semantic_kernel.agents.azure_ai.azure_ai_agent import AzureAIAgent
 
@@ -190,6 +197,7 @@ class AgentFactory:
         temperature: float = 0.0,
         memory_store: Optional[CosmosMemoryContext] = None,
         client: Optional[Any] = None,
+        user_locale: str = "en_GB",
     ) -> Dict[AgentType, BaseAgent]:
         """Create all agent types for a session in a specific order.
 
@@ -279,6 +287,9 @@ class AgentFactory:
         agents[planner_agent_type] = planner_agent
 
         # Phase 3: Create group chat manager with all agents including the planner
+        # Generate the agent tools list for the GroupChatManager
+        agent_tools_list = cls._generate_agent_tools_list()
+
         group_chat_manager = await cls.create_agent(
             agent_type=AgentType.GROUP_CHAT_MANAGER,
             session_id=session_id,
@@ -286,6 +297,8 @@ class AgentFactory:
             temperature=temperature,
             client=client,
             agent_instances=agent_instances,  # Pass agent instances to the planner
+            agent_tools_list=agent_tools_list,
+            user_locale=user_locale,
         )
         agents[group_chat_manager_type] = group_chat_manager
 
@@ -327,3 +340,32 @@ class AgentFactory:
             cls._agent_cache.clear()
             cls._azure_ai_agent_cache.clear()
             logger.info("Cleared all agent caches")
+
+    @classmethod
+    def _generate_agent_tools_list(cls) -> list[str]:
+        """Generate a list of all available tool names across all agents.
+
+        Returns:
+            List of tool names that can be used by agents
+        """
+        tool_classes = [
+            HrTools,
+            MarketingTools,
+            ProductTools,
+            ProcurementTools,
+            TechSupportTools,
+            GenericTools,
+        ]
+
+        all_tools = []
+        for tool_class in tool_classes:
+            # Get all methods from the tool class
+            for name in dir(tool_class):
+                # Skip private methods and special methods
+                if not name.startswith("_") and name != "generate_tools_json_doc":
+                    # Check if it's a callable method
+                    method = getattr(tool_class, name)
+                    if callable(method):
+                        all_tools.append(f"{tool_class.__name__}.{name}")
+
+        return all_tools

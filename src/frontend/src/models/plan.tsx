@@ -99,6 +99,7 @@ export interface PlanWithSteps extends Plan {
     completed: number;
     /** Count of steps failed */
     failed: number;
+    user_locale?: string; // Added to store the user's locale for date formatting
 }
 
 

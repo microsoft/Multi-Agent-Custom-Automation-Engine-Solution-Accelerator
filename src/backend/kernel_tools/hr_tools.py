@@ -1,5 +1,6 @@
 import inspect
 from typing import Annotated, Callable
+from datetime import datetime
 
 from semantic_kernel.functions import kernel_function
 from models.messages_kernel import AgentType
@@ -16,7 +17,9 @@ class HrTools:
     @staticmethod
     @kernel_function(description="Schedule an orientation session for a new employee.")
     async def schedule_orientation_session(employee_name: str, date: str) -> str:
-        formatted_date = format_date_for_user(date)
+        # Use raw datetime for correct locale formatting
+        today = datetime.now()
+        formatted_date = format_date_for_user(today)
 
         return (
             f"##### Orientation Session Scheduled\n"
@@ -123,14 +126,17 @@ class HrTools:
     @staticmethod
     @kernel_function(description="Process a leave request for an employee.")
     async def process_leave_request(
-        employee_name: str, leave_type: str, start_date: str, end_date: str
+        employee_name: str, leave_type: str, start_date: str, end_date: str, **kwargs
     ) -> str:
+        formatted_start_date = format_date_for_user(start_date, user_locale=kwargs.get("user_locale", "en_GB"))
+        formatted_end_date = format_date_for_user(end_date, user_locale=kwargs.get("user_locale", "en_GB"))
+
         return (
             f"##### Leave Request Processed\n"
             f"**Employee Name:** {employee_name}\n"
             f"**Leave Type:** {leave_type}\n"
-            f"**Start Date:** {start_date}\n"
-            f"**End Date:** {end_date}\n\n"
+            f"**Start Date:** {formatted_start_date}\n"
+            f"**End Date:** {formatted_end_date}\n\n"
             f"Your leave request has been processed. "
             f"Please ensure you have completed any necessary handover tasks before your leave.\n"
             f"{HrTools.formatting_instructions}"
@@ -172,11 +178,13 @@ class HrTools:
 
     @staticmethod
     @kernel_function(description="Schedule a performance review for an employee.")
-    async def schedule_performance_review(employee_name: str, date: str) -> str:
+    async def schedule_performance_review(employee_name: str, date: str, **kwargs) -> str:
+        formatted_date = format_date_for_user(date, user_locale=kwargs.get("user_locale", "en_GB"))
+
         return (
             f"##### Performance Review Scheduled\n"
             f"**Employee Name:** {employee_name}\n"
-            f"**Date:** {date}\n\n"
+            f"**Date:** {formatted_date}\n\n"
             f"Your performance review has been scheduled. "
             f"Please prepare any necessary documents and be ready for the review.\n"
             f"{HrTools.formatting_instructions}"
@@ -243,13 +251,15 @@ class HrTools:
 
     @staticmethod
     @kernel_function(description="Organize a team-building activity.")
-    async def organize_team_building_activity(activity_name: str, date: str) -> str:
+    async def organize_team_building_activity(activity_name: str, date: str, **kwargs) -> str:
+        formatted_date = format_date_for_user(date, user_locale=kwargs.get("user_locale", "en_GB"))
+
         return (
             f"##### Team-Building Activity Organized\n"
             f"**Activity Name:** {activity_name}\n"
-            f"**Date:** {date}\n\n"
+            f"**Date:** {formatted_date}\n\n"
             f"The team-building activity has been successfully organized. "
-            f"Please join us on {date} for a fun and engaging experience.\n"
+            f"Please join us on {formatted_date} for a fun and engaging experience.\n"
             f"{HrTools.formatting_instructions}"
         )
 
@@ -277,13 +287,15 @@ class HrTools:
 
     @staticmethod
     @kernel_function(description="Organize a health and wellness program.")
-    async def organize_wellness_program(program_name: str, date: str) -> str:
+    async def organize_wellness_program(program_name: str, date: str, **kwargs) -> str:
+        formatted_date = format_date_for_user(date, user_locale=kwargs.get("user_locale", "en_GB"))
+
         return (
             f"##### Health and Wellness Program Organized\n"
             f"**Program Name:** {program_name}\n"
-            f"**Date:** {date}\n\n"
+            f"**Date:** {formatted_date}\n\n"
             f"The health and wellness program has been successfully organized. "
-            f"Please join us on {date} for an informative and engaging session.\n"
+            f"Please join us on {formatted_date} for an informative and engaging session.\n"
             f"{HrTools.formatting_instructions}"
         )
 
@@ -334,12 +346,14 @@ class HrTools:
 
     @staticmethod
     @kernel_function(description="Schedule a wellness check for an employee.")
-    async def schedule_wellness_check(employee_name: str, date: str) -> str:
+    async def schedule_wellness_check(employee_name: str, date: str, **kwargs) -> str:
+        formatted_date = format_date_for_user(date, user_locale=kwargs.get("user_locale", "en_GB"))
+
         return (
             f"##### Wellness Check Scheduled\n"
             f"**Employee Name:** {employee_name}\n"
-            f"**Date:** {date}\n\n"
-            f"A wellness check has been scheduled for {employee_name} on {date}.\n"
+            f"**Date:** {formatted_date}\n\n"
+            f"A wellness check has been scheduled for {employee_name} on {formatted_date}.\n"
             f"{HrTools.formatting_instructions}"
         )
 

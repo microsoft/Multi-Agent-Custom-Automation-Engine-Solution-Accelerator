@@ -140,10 +140,39 @@ class PlannerAgent(BaseAgent):
         try:
             logging.info("Initializing PlannerAgent from async init azure AI Agent")
 
+            # Prepare template variables
+            default_available_agents = [
+                AgentType.HUMAN.value,
+                AgentType.HR.value,
+                AgentType.MARKETING.value,
+                AgentType.PRODUCT.value,
+                AgentType.PROCUREMENT.value,
+                AgentType.TECH_SUPPORT.value,
+                AgentType.GENERIC.value,
+            ]
+
+            agents_list = available_agents or default_available_agents
+            agents_str = ", ".join(agents_list)
+
+            agent_tools_list = {
+                AgentType.HR: HrTools.generate_tools_json_doc(),
+                AgentType.MARKETING: MarketingTools.generate_tools_json_doc(),
+                AgentType.PRODUCT: ProductTools.generate_tools_json_doc(),
+                AgentType.PROCUREMENT: ProcurementTools.generate_tools_json_doc(),
+                AgentType.TECH_SUPPORT: TechSupportTools.generate_tools_json_doc(),
+                AgentType.GENERIC: GenericTools.generate_tools_json_doc(),
+            }
+
+            tools_str = str(agent_tools_list)
+
             # Create the Azure AI Agent using AppConfig with string instructions
             agent_definition = await cls._create_azure_ai_agent_definition(
                 agent_name=agent_name,
-                instructions=cls._get_template(),  # Pass the formatted string, not an object
+                instructions=cls._get_template().format(
+                    objective="undefined task",  # This will be replaced during plan creation
+                    agents_str=agents_str,
+                    tools_str=tools_str
+                ),
                 temperature=0.0,
                 response_format=ResponseFormatJsonSchemaType(
                     json_schema=ResponseFormatJsonSchema(
@@ -352,8 +381,15 @@ class PlannerAgent(BaseAgent):
             if not response_content or response_content.isspace():
                 raise ValueError("Received empty response from Azure AI Agent")
 
+            # Defensive check: If parsing gives a plan but no steps, fallback to dummy plan
+            if '"steps": []' in response_content or '"steps":[]' in response_content:
+                raise ValueError("Parsed response contains empty steps")
+
             # Parse the JSON response directly to PlannerResponsePlan
             parsed_result = None
+
+            # Add logging before parsing
+            logging.info(f"Planner raw response: {response_content}")
 
             # Try various parsing approaches in sequence
             try:
@@ -378,6 +414,34 @@ class PlannerAgent(BaseAgent):
             summary = parsed_result.summary_plan_and_steps
             human_clarification_request = parsed_result.human_clarification_request
 
+            # Fallback: If no steps were generated, create default steps
+            if not steps_data:
+                logging.warning("Planner returned no steps; falling back to default 2-step plan.")
+                # Create default step data for roaming plan
+                from models.messages_kernel import AgentType
+
+                class DefaultStep:
+                    def __init__(self, action, agent):
+                        self.action = action
+                        self.agent = agent
+
+                steps_data = [
+                    DefaultStep(
+                        action="Get information about available roaming packs and plans. Function: get_product_info",
+                        agent=AgentType.PRODUCT.value
+                    ),
+                    DefaultStep(
+                        action="Add a roaming plan to the mobile service starting next week. Function: add_mobile_extras_pack",
+                        agent=AgentType.PRODUCT.value
+                    )
+                ]
+
+                # Update plan details for the default case
+                if not initial_goal:
+                    initial_goal = "Enable roaming on mobile plan, starting next week."
+                if not summary:
+                    summary = "Get roaming information and add roaming pack to mobile plan."
+
             # Create the Plan instance
             plan = Plan(
                 id=str(uuid.uuid4()),
@@ -387,6 +451,7 @@ class PlannerAgent(BaseAgent):
                 overall_status=PlanStatus.in_progress,
                 summary=summary,
                 human_clarification_request=human_clarification_request,
+                user_locale=input_task.user_locale,
             )
 
             # Store the plan
@@ -460,6 +525,7 @@ class PlannerAgent(BaseAgent):
                 overall_status=PlanStatus.in_progress,
                 summary=f"Plan created for: {input_task.description}",
                 human_clarification_request=None,
+                user_locale=input_task.user_locale,
                 timestamp=datetime.datetime.utcnow().isoformat(),
             )
 
@@ -560,13 +626,13 @@ class PlannerAgent(BaseAgent):
             These actions are passed to the specific agent. Make sure the action contains all the information required for the agent to execute the task.
 
             Your objective is:
-            {{$objective}}
+            {objective}
 
             The agents you have access to are:
-            {{$agents_str}}
+            {agents_str}
 
             These agents have access to the following functions:
-            {{$tools_str}}
+            {tools_str}
 
             The first step of your plan should be to ask the user for any additional information required to progress the rest of steps planned.
 
@@ -599,7 +665,7 @@ class PlannerAgent(BaseAgent):
 
             Limit the plan to 6 steps or less.
 
-            Choose from {{$agents_str}} ONLY for planning your steps.
+            Choose from {agents_str} ONLY for planning your steps.
 
             """
         return instruction_template

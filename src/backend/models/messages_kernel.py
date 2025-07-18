@@ -176,6 +176,7 @@ class Plan(BaseDataModel):
     summary: Optional[str] = None
     human_clarification_request: Optional[str] = None
     human_clarification_response: Optional[str] = None
+    user_locale: Optional[str] = "en_GB"  # User's locale preference
 
 
 class Step(BaseDataModel):
@@ -262,6 +263,7 @@ class InputTask(KernelBaseModel):
 
     session_id: str
     description: str  # Initial goal
+    user_locale: Optional[str] = "en_GB"  # User's locale preference
 
 
 class ApprovalRequest(KernelBaseModel):
@@ -284,6 +286,7 @@ class HumanFeedback(KernelBaseModel):
     approved: bool
     human_feedback: Optional[str] = None
     updated_action: Optional[str] = None
+    user_locale: Optional[str] = "en_GB"  # User's locale preference
 
 
 class HumanClarification(KernelBaseModel):
@@ -292,6 +295,7 @@ class HumanClarification(KernelBaseModel):
     plan_id: str
     session_id: str
     human_clarification: str
+    user_locale: Optional[str] = "en_GB"  # User's locale preference
 
 
 class ActionRequest(KernelBaseModel):

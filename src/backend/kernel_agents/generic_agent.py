@@ -124,15 +124,16 @@ class GenericAgent(BaseAgent):
         return GenericTools.get_all_kernel_functions()
 
     # Explicitly inherit handle_action_request from the parent class
-    async def handle_action_request(self, action_request_json: str) -> str:
+    async def handle_action_request(self, action_request_json: str, **kwargs) -> str:
         """Handle an action request from another agent or the system.
 
         This method is inherited from BaseAgent but explicitly included here for clarity.
 
         Args:
             action_request_json: The action request as a JSON string
+            **kwargs: Additional keyword arguments (e.g., user_locale)
 
         Returns:
             A JSON string containing the action response
         """
-        return await super().handle_action_request(action_request_json)
+        return await super().handle_action_request(action_request_json, **kwargs)

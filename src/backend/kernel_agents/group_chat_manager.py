@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime
 from typing import Dict, List, Optional
+import re
 
 from context.cosmos_memory_kernel import CosmosMemoryContext
 from event_utils import track_event_if_configured
@@ -32,6 +33,7 @@ class GroupChatManager(BaseAgent):
         agent_instances: Optional[Dict[str, BaseAgent]] = None,
         client=None,
         definition=None,
+        **kwargs,
     ) -> None:
         """Initialize the GroupChatManager Agent.
 
@@ -76,6 +78,7 @@ class GroupChatManager(BaseAgent):
         ]
         self._agent_tools_list = agent_tools_list or []
         self._agent_instances = agent_instances or {}
+        self._user_locale = kwargs.get("user_locale", "en_GB")
 
         # Create the Azure AI Agent for group chat operations
         # This will be initialized in async_init
@@ -85,51 +88,38 @@ class GroupChatManager(BaseAgent):
     async def create(
         cls,
         **kwargs: Dict[str, str],
-    ) -> None:
-        """Asynchronously create the PlannerAgent.
-
-        Creates the Azure AI Agent for planning operations.
-
-        Returns:
-            None
+    ) -> "GroupChatManager":
         """
-
-        session_id = kwargs.get("session_id")
-        user_id = kwargs.get("user_id")
-        memory_store = kwargs.get("memory_store")
-        tools = kwargs.get("tools", None)
-        system_message = kwargs.get("system_message", None)
-        agent_name = kwargs.get("agent_name")
-        agent_tools_list = kwargs.get("agent_tools_list", None)
-        agent_instances = kwargs.get("agent_instances", None)
-        client = kwargs.get("client")
+        Asynchronously create the GroupChatManager agent.
+        """
 
         try:
             logging.info("Initializing GroupChatAgent from async init azure AI Agent")
 
-            # Create the Azure AI Agent using AppConfig with string instructions
+            # Extract only the values needed for the definition
+            system_message = kwargs.get("system_message")
+            agent_name = kwargs.get("agent_name")
+
             agent_definition = await cls._create_azure_ai_agent_definition(
                 agent_name=agent_name,
-                instructions=system_message,  # Pass the formatted string, not an object
+                instructions=system_message,
                 temperature=0.0,
                 response_format=None,
             )
 
-            return cls(
-                session_id=session_id,
-                user_id=user_id,
-                memory_store=memory_store,
-                tools=tools,
-                system_message=system_message,
-                agent_name=agent_name,
-                agent_tools_list=agent_tools_list,
-                agent_instances=agent_instances,
-                client=client,
-                definition=agent_definition,
-            )
+            # Add agent definition explicitly and remove duplicate keys
+            kwargs["definition"] = agent_definition
+
+            # Remove duplicate keys to avoid "multiple values" errors
+            for key in ["agent_name", "session_id", "user_id", "memory_store", "tools", "system_message",
+                        "agent_tools_list", "agent_instances", "client"]:
+                if key not in kwargs:
+                    raise ValueError(f"Missing required parameter: {key}")
+
+            return cls(**kwargs)
 
         except Exception as e:
-            logging.error(f"Failed to create Azure AI Agent for PlannerAgent: {e}")
+            logging.error(f"Failed to create Azure AI Agent for GroupChatManager: {e}")
             raise
 
     @staticmethod
@@ -224,13 +214,15 @@ class GroupChatManager(BaseAgent):
 
         # Provide generic context to the model
         current_date = datetime.now().strftime("%Y-%m-%d")
-        formatted_date = format_date_for_user(current_date)
-        general_information = f"Today's date is {formatted_date}."
-
-        # Get the general background information provided by the user in regards to the overall plan (not the steps) to add as context.
+        # Use the plan's user_locale if available, otherwise fall back to instance default
         plan = await self._memory_store.get_plan_by_session(
             session_id=message.session_id
         )
+        user_locale = getattr(plan, 'user_locale', self._user_locale) if plan else self._user_locale
+        formatted_date = format_date_for_user(current_date, user_locale=user_locale)
+        general_information = f"Today's date is {formatted_date}."
+
+        # Get the general background information provided by the user in regards to the overall plan (not the steps) to add as context.
         if plan.human_clarification_response:
             received_human_feedback_on_plan = (
                 f"{plan.human_clarification_request}: {plan.human_clarification_response}"
@@ -339,6 +331,20 @@ class GroupChatManager(BaseAgent):
             },
         )
 
+        # Format any ISO date (yyyy-mm-dd) inside the step.action text
+        def format_dates_in_action(action_text: str, locale: str) -> str:
+            date_pattern = r"\b(\d{4}-\d{2}-\d{2})\b"
+            return re.sub(
+                date_pattern,
+                lambda m: format_date_for_user(m.group(1), user_locale=locale),
+                action_text
+            )
+
+        # Localize dates in the action
+        plan = await self._memory_store.get_plan_by_session(session_id=session_id)
+        user_locale = getattr(plan, 'user_locale', self._user_locale) if plan else self._user_locale
+        step.action = format_dates_in_action(step.action, user_locale)
+
         # generate conversation history for the invoked agent
         plan = await self._memory_store.get_plan_by_session(session_id=session_id)
         steps: List[Step] = await self._memory_store.get_steps_by_plan(plan.id)
@@ -370,6 +376,20 @@ class GroupChatManager(BaseAgent):
         logging.info(f"Formatted string: {formatted_string}")
 
         action_with_history = f"{formatted_string}. Here is the step to action: {step.action}. ONLY perform the steps and actions required to complete this specific step, the other steps have already been completed. Only use the conversational history for additional information, if it's required to complete the step you have been assigned."
+
+        # BEFORE sending ActionRequest - Apply locale-specific date formatting for HR actions
+        if step.agent == AgentType.HR:
+            # Get current date and format it according to user locale
+            current_date = datetime.now().strftime("%Y-%m-%d")
+            plan = await self._memory_store.get_plan_by_session(session_id=session_id)
+            user_locale = getattr(plan, 'user_locale', self._user_locale) if plan else self._user_locale
+
+            # Format the date before including it in HR actions
+            formatted_date = format_date_for_user(current_date, user_locale=user_locale)
+
+            # If the action contains date-related HR tasks, ensure formatted date is used
+            # This ensures HR functions like schedule_orientation_session receive locale-formatted dates
+            action_with_history = action_with_history.replace(current_date, formatted_date)
 
         # Send action request to the appropriate agent
         action_request = ActionRequest(
@@ -433,6 +453,7 @@ class GroupChatManager(BaseAgent):
             # Use the agent from the step to determine which agent to send to
             agent = self._agent_instances[step.agent.value]
             await agent.handle_action_request(
-                action_request
+                action_request,
+                user_locale=self._user_locale
             )  # this function is in base_agent.py
             logging.info(f"Sent ActionRequest to {step.agent.value}")

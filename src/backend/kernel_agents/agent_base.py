@@ -86,11 +86,12 @@ class BaseAgent(AzureAIAgent):
         name = agent_name
         return f"You are an AI assistant named {name}. Help the user by providing accurate and helpful information."
 
-    async def handle_action_request(self, action_request: ActionRequest) -> str:
+    async def handle_action_request(self, action_request: ActionRequest, **kwargs) -> str:
         """Handle an action request from another agent or the system.
 
         Args:
-            action_request_json: The action request as a JSON string
+            action_request: The action request object
+            **kwargs: Additional keyword arguments (e.g., user_locale)
 
         Returns:
             A JSON string containing the action response
