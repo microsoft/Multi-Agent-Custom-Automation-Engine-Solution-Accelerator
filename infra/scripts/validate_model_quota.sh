@@ -2,7 +2,7 @@
 
 LOCATION=""
 MODEL=""
-DEPLOYMENT_TYPE="Standard"
+DEPLOYMENT_TYPE="GlobalStandard"
 CAPACITY=0
 
 ALL_REGIONS=('australiaeast' 'eastus2' 'francecentral' 'japaneast' 'norwayeast' 'swedencentral' 'uksouth' 'westus')

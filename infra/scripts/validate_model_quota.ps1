@@ -1,7 +1,7 @@
 param (
     [string]$Location,
     [string]$Model,
-    [string]$DeploymentType = "Standard",
+    [string]$DeploymentType = "GlobalStandard",
     [int]$Capacity
 )
 
