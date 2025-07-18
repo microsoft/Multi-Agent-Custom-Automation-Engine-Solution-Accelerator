@@ -29,6 +29,7 @@ resource aiUserAccessFoundry 'Microsoft.Authorization/roleAssignments@2022-04-01
   properties: {
     roleDefinitionId: aiUser.id
     principalId: principalId
+    principalType: 'ServicePrincipal'
   }
 }
 
@@ -38,6 +39,7 @@ resource aiDeveloperAccessFoundry 'Microsoft.Authorization/roleAssignments@2022-
   properties: {
     roleDefinitionId: aiDeveloper.id
     principalId: principalId
+    principalType: 'ServicePrincipal'
   }
 }
 
@@ -47,5 +49,6 @@ resource cognitiveServiceOpenAIUserAccessFoundry 'Microsoft.Authorization/roleAs
   properties: {
     roleDefinitionId: cognitiveServiceOpenAIUser.id
     principalId: principalId
+    principalType: 'ServicePrincipal'
   }
 }
