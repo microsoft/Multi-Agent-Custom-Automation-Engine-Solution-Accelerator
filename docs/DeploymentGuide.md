@@ -153,7 +153,8 @@ When you start the deployment, most parameters will have **default values**, but
 | **GPT Model Capacity**          | Sets the GPT model capacity.                                 | 150        |
 | **Image Tag**                  | Docker image tag used for container deployments.                                    | latest            |
 | **Enable Telemetry**           | Enables telemetry for monitoring and diagnostics.                                    | true              |
-
+| **Existing Log Analytics Workspace**        | To reuse an existing Log Analytics Workspace ID instead of creating a new one.              | *(none)*          |
+| **Existing Azure AI Foundry Project**        | To reuse an existing Azure AI Foundry Project ID instead of creating a new one.              | *(none)*          |
 
 </details>
 
@@ -173,6 +174,14 @@ To adjust quota settings, follow these [steps](./AzureGPTQuotaSettings.md).
   <summary><b>Reusing an Existing Log Analytics Workspace</b></summary>
 
   Guide to get your [Existing Workspace ID](/docs/re-use-log-analytics.md)
+
+</details>
+
+<details>
+
+  <summary><b>Reusing an Existing Azure AI Foundry Project</b></summary>
+
+  Guide to get your [Existing Project ID](/docs/re-use-foundry-project.md)
 
 </details>
 
