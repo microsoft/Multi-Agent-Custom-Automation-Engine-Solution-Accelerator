@@ -1,0 +1,38 @@
+name: Deploy with Federated Credentials
+
+on:
+  push:
+    branches: [main, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AZURE_SUBSCRIPTION_ID: 6e146a14-b670-478e-8581-2ace792c7675
+  AZURE_LOCATION: eastus2
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'production' || 'development' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install azd
+        run: |
+          curl -fsSL https://aka.ms/install-azd.sh | bash
+
+      - name: Log in with Azure (Federated Credentials)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Azure Dev Deploy
+        run: |
+          azd env new ${{ github.ref_name }} --location ${{ env.AZURE_LOCATION }} --subscription ${{ env.AZURE_SUBSCRIPTION_ID }}
+          azd deploy

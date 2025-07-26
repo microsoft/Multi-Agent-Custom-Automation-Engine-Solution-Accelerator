@@ -117,7 +117,7 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({ reloadTasks,restReload }) 
       <PanelLeft panelWidth={280} panelResize={true}>
         <PanelLeftToolbar
           linkTo="/"
-          panelTitle="Contoso"
+          panelTitle="DLM"
           panelIcon={<ContosoLogo />}
         >
           <Tooltip content="New task" relationship={"label"} />
