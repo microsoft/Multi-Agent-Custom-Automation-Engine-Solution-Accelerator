@@ -7,6 +7,68 @@
     width: 100%;
 }
 
+/* Streaming chat container improvements */
+.chat-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.messages {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+    /* Ensure proper scrolling on all browsers */
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Custom scrollbar for better UX */
+.messages::-webkit-scrollbar {
+    width: 8px;
+}
+
+.messages::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.messages::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.messages::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Thinking animation styles */
+.thinking-message {
+    border-left: 3px solid #0078d4;
+    background-color: #f8f9fa;
+}
+
+.thinking-content {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui;
+}
+
+.thinking-cursor {
+    animation: blink 1s infinite;
+    color: #0078d4;
+    font-weight: bold;
+}
+
+@keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+}
+
+.thinking-tag {
+    background-color: #e3f2fd !important;
+    color: #1976d2 !important;
+}
+
 .plan-chat-scroll-button {
     background-color: transparent;
     border: 1px solid var(--colorNeutralStroke3);
@@ -42,6 +104,56 @@
   gap: 6px;
   font-size: 12px;
   color: var(--colorNeutralForeground3, #666);
+}
+
+/* Streaming Chat Styles */
+.streaming-processing {
+    border-left: 3px solid var(--colorNeutralForeground3);
+    background-color: var(--colorNeutralBackground2);
+}
+
+.streaming-success {
+    border-left: 3px solid #107C10;
+    background-color: rgba(16, 124, 16, 0.05);
+}
+
+.streaming-error {
+    border-left: 3px solid #D13438;
+    background-color: rgba(209, 52, 56, 0.05);
+}
+
+.streaming-result {
+    border-left: 3px solid var(--colorBrandBackground);
+    background-color: var(--colorBrandBackground2);
+}
+
+.streaming-reasoning {
+    border-left: 3px solid #0078D4;
+    background-color: #F8F9FA;
+    padding: 12px;
+    margin: 8px 0;
+}
+
+.streaming-clarification {
+    border-left: 3px solid #8A2BE2;
+    background-color: #FAF8FF;
+    padding: 12px;
+    margin: 8px 0;
+}
+
+.streaming-completion {
+    border-left: 3px solid #28A745;
+    background-color: #F0FFF0;
+    padding: 12px;
+    margin: 8px 0;
+    font-weight: 600;
+    color: #155724;
+}
+
+.message-timestamp {
+    font-size: 11px;
+    color: var(--colorNeutralForeground4);
+    margin-top: 4px;
 }
 
 

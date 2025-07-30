@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
     Text,
     ToggleButton,
@@ -14,6 +14,7 @@ import { Step, ProcessedPlanData } from "@/models";
 import PlanPanelLeft from "@/components/content/PlanPanelLeft";
 import ContentToolbar from "@/coral/components/Content/ContentToolbar";
 import PlanChat from "@/components/content/PlanChat";
+import PlanStreamingChat from "@/components/content/PlanStreamingChat";
 import PlanPanelRight from "@/components/content/PlanPanelRight";
 import InlineToaster, {
     useInlineToaster,
@@ -30,6 +31,7 @@ import LoadingMessage, { loadingMessages } from "@/coral/components/LoadingMessa
 const PlanPage: React.FC = () => {
     const { planId } = useParams<{ planId: string }>();
     const navigate = useNavigate();
+    const location = useLocation();
     const { showToast, dismissToast } = useInlineToaster();
 
     const [input, setInput] = useState("");
@@ -42,8 +44,38 @@ const PlanPage: React.FC = () => {
         null
     );
     const [reloadLeftList, setReloadLeftList] = useState(true);
-
     const [loadingMessage, setLoadingMessage] = useState(loadingMessages[0]);
+    
+    // New state for streaming functionality
+    const [isNewPlan, setIsNewPlan] = useState<boolean>(false);
+    const [showStreaming, setShowStreaming] = useState<boolean>(false);
+    const [streamingComplete, setStreamingComplete] = useState<boolean>(false);
+    const [streamingStarted, setStreamingStarted] = useState<boolean>(false); // Add flag to track if streaming started
+    
+    // Use a ref to track which plan ID we've already initiated streaming for
+    const streamingInitiatedForPlan = useRef<string | null>(null);
+
+    // Reset streaming state when planId changes
+    useEffect(() => {
+        if (planId !== streamingInitiatedForPlan.current) {
+            setStreamingStarted(false);
+            setStreamingComplete(false);
+            setShowStreaming(false);
+            streamingInitiatedForPlan.current = null;
+        }
+    }, [planId]);
+
+    // Check if this is a new plan that needs streaming
+    useEffect(() => {
+        const state = location.state as any;
+        const isCreateRoute = location.pathname.endsWith('/create');
+        
+        if ((state?.isNewPlan && state?.autoStartGeneration) || isCreateRoute) {
+            setIsNewPlan(true);
+            setShowStreaming(true);
+            setStreamingStarted(true); // Mark that streaming was initiated
+        }
+    }, [location.state, location.pathname]);
 
     // 🌀 Cycle loading messages while loading
     useEffect(() => {
@@ -62,7 +94,21 @@ const PlanPage: React.FC = () => {
             (plan) => plan.plan.id === planId
         );
         setPlanData(currentPlan || null);
-    }, [allPlans,planId]);
+        
+        // Check if this is a new plan without steps and show streaming (only if not already started)
+        if (currentPlan && 
+            planId &&
+            (!currentPlan.steps || currentPlan.steps.length === 0) && 
+            !streamingComplete && 
+            !streamingStarted &&
+            streamingInitiatedForPlan.current !== planId) {
+            
+            console.log(`Initiating streaming for plan ${planId}`);
+            setShowStreaming(true);
+            setStreamingStarted(true);
+            streamingInitiatedForPlan.current = planId; // Mark this plan as having streaming initiated
+        }
+    }, [allPlans, planId, streamingComplete, streamingStarted]);
 
     const loadPlanData = useCallback(
         async (navigate: boolean = true) => {
@@ -79,14 +125,16 @@ const PlanPage: React.FC = () => {
 
                 setError(null);
                 const data = await PlanDataService.fetchPlanData(planId,navigate);
-                let plans = [...allPlans];
-                const existingIndex = plans.findIndex(p => p.plan.id === data.plan.id);
-                if (existingIndex !== -1) {
-                    plans[existingIndex] = data;
-                } else {
-                    plans.push(data);
-                }
-                setAllPlans(plans);
+                setAllPlans(prevPlans => {
+                    const plans = [...prevPlans];
+                    const existingIndex = plans.findIndex(p => p.plan.id === data.plan.id);
+                    if (existingIndex !== -1) {
+                        plans[existingIndex] = data;
+                    } else {
+                        plans.push(data);
+                    }
+                    return plans;
+                });
                 //setPlanData(data);
             } catch (err) {
                 console.log("Failed to load plan data:", err);
@@ -97,7 +145,7 @@ const PlanPage: React.FC = () => {
                 setLoading(false);
             }
         },
-        [planId]
+        [planId] // Removed allPlans dependency to prevent unnecessary recreations
     );
 
     const handleOnchatSubmit = useCallback(
@@ -120,7 +168,10 @@ const PlanPage: React.FC = () => {
                 setInput("");
                 dismissToast(id);
                 showToast("Clarification submitted successfully", "success");
-                await loadPlanData(false);
+                // Only reload plan data if not currently streaming
+                if (!showStreaming && !streamingStarted) {
+                    await loadPlanData(false);
+                }
             } catch (error) {
                 dismissToast(id);
                 showToast("Failed to submit clarification", "error");
@@ -130,7 +181,7 @@ const PlanPage: React.FC = () => {
                 setSubmitting(false);
             }
         },
-        [planData, loadPlanData]
+        [planData, loadPlanData, showStreaming, streamingStarted]
     );
 
     const handleApproveStep = useCallback(
@@ -144,7 +195,10 @@ const PlanPage: React.FC = () => {
                 dismissToast(id);
                 showToast(`Step ${approve ? "approved" : "rejected"} successfully`, "success");
                 if (approveRejectDetails && Object.keys(approveRejectDetails).length > 0) {
-                    await loadPlanData(false);
+                    // Only reload plan data if not currently streaming
+                    if (!showStreaming && !streamingStarted) {
+                        await loadPlanData(false);
+                    }
                 }
                 setReloadLeftList(true);
             } catch (error) {
@@ -156,17 +210,42 @@ const PlanPage: React.FC = () => {
                 setSubmitting(false);
             }
         },
-        [loadPlanData]
+        [loadPlanData, showStreaming, streamingStarted]
     );
 
 
+    // Load plan data when planId changes (but not during active streaming)
     useEffect(() => {
-        loadPlanData(true);
-    }, [loadPlanData]);
+        if (planId && !showStreaming && !streamingStarted) {
+            loadPlanData(true);
+        }
+    }, [planId, showStreaming, streamingStarted]);
 
     const handleNewTaskButton = () => {
         NewTaskService.handleNewTaskFromPlan(navigate);
     };
+
+    // Streaming handlers
+    const handleStreamComplete = useCallback(async () => {
+        setStreamingComplete(true);
+        setShowStreaming(false); // Hide streaming chat to enable regular chat
+        showToast("Plan generation completed! You can now provide clarifications.", "success");
+        
+        // Reload plan data to show the generated steps
+        await loadPlanData(false);
+        setReloadLeftList(true);
+        
+        // If we're on the create route, redirect to the regular plan view immediately
+        // so users can use the chat input for clarifications
+        if (location.pathname.endsWith('/create')) {
+            navigate(`/plan/${planId}`, { replace: true });
+        }
+    }, [loadPlanData, showToast, location.pathname, navigate, planId]);
+
+    const handleStreamError = useCallback((error: string) => {
+        setShowStreaming(false);
+        showToast(`Plan generation failed: ${error}`, "error");
+    }, [showToast]);
 
     if (!planId) {
         return (
@@ -203,14 +282,24 @@ const PlanPage: React.FC = () => {
                                     />
                                 </PanelRightToggles>
                             </ContentToolbar>
-                            <PlanChat
-                                planData={planData}
-                                OnChatSubmit={handleOnchatSubmit}
-                                loading={loading}
-                                setInput={setInput}
-                                submittingChatDisableInput={submittingChatDisableInput}
-                                input={input}
-                            />
+                            
+                            {/* Show streaming chat for new plans during generation */}
+                            {showStreaming && planId ? (
+                                <PlanStreamingChat
+                                    planId={planId}
+                                    onStreamComplete={handleStreamComplete}
+                                    onStreamError={handleStreamError}
+                                />
+                            ) : (
+                                <PlanChat
+                                    planData={planData}
+                                    OnChatSubmit={handleOnchatSubmit}
+                                    loading={loading}
+                                    setInput={setInput}
+                                    submittingChatDisableInput={submittingChatDisableInput}
+                                    input={input}
+                                />
+                            )}
                         </>
                     )}
                 </Content>

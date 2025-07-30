@@ -67,7 +67,10 @@ const HomeInput: React.FC<HomeInputProps> = ({
                 if (response.plan_id && response.plan_id !== null) {
                     showToast("Plan created!", "success");
                     dismissToast(id);
-                    navigate(`/plan/${response.plan_id}`);
+                    // Navigate to the create page to show streaming generation
+                    navigate(`/plan/${response.plan_id}/create`, { 
+                        state: { isNewPlan: true, autoStartGeneration: true } 
+                    });
                 } else {
                     console.log("Invalid plan:", response.status);
                     showToast("Failed to create plan", "error");

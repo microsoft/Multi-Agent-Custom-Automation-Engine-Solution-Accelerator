@@ -16,6 +16,7 @@ import {
 const API_ENDPOINTS = {
     INPUT_TASK: '/input_task',
     CREATE_PLAN: '/create_plan',
+    GENERATE_PLAN: '/generate_plan',
     PLANS: '/plans',
     STEPS: '/steps',
     HUMAN_FEEDBACK: '/human_feedback',
@@ -115,6 +116,37 @@ export class APIService {
      */
     async createPlan(inputTask: InputTask): Promise<{ plan_id: string; status: string; session_id: string }> {
         return apiClient.post(API_ENDPOINTS.CREATE_PLAN, inputTask);
+    }
+
+    /**
+     * Generate plan details with reasoning stream
+     * @param planId The plan ID to generate steps for
+     * @returns ReadableStream for streaming response
+     */
+    async generatePlanStream(planId: string): Promise<ReadableStream<Uint8Array>> {
+        // Import the config functions
+        const { headerBuilder, getApiUrl } = await import('./config');
+        
+        const authHeaders = headerBuilder();
+        const apiUrl = getApiUrl();
+        
+        const response = await fetch(`${apiUrl}${API_ENDPOINTS.GENERATE_PLAN}/${planId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...authHeaders,
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        if (!response.body) {
+            throw new Error('Response body is null');
+        }
+
+        return response.body;
     }
 
     /**
