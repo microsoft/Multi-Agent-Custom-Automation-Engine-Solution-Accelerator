@@ -3,6 +3,7 @@ import asyncio
 import logging
 import os
 import uuid
+import time
 from typing import Dict, List, Optional
 
 # Semantic Kernel imports
@@ -17,6 +18,7 @@ from event_utils import track_event_if_configured
 # FastAPI imports
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse, Response
 from kernel_agents.agent_factory import AgentFactory
 
 # Local imports
@@ -66,6 +68,9 @@ logging.getLogger("azure.monitor.opentelemetry.exporter.export._base").setLevel(
 
 # Initialize the FastAPI app
 app = FastAPI()
+
+# Add a simple in-memory store to track active streaming requests with timestamps
+active_streams = {}  # Changed to dict to store timestamps
 
 frontend_url = Config.FRONTEND_SITE_NAME
 
@@ -314,6 +319,153 @@ async def create_plan_endpoint(input_task: InputTask, request: Request):
             },
         )
         raise HTTPException(status_code=400, detail=f"Error creating plan: {e}")
+
+
+@app.options("/api/generate_plan/{plan_id}")
+async def generate_plan_options(plan_id: str):
+    """Handle CORS preflight for generate_plan endpoint"""
+    return Response(
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
+
+
+@app.post("/api/generate_plan/{plan_id}")
+async def generate_plan_endpoint(plan_id: str, request: Request):
+    """
+    Generate detailed plan with steps using reasoning LLM and stream the process.
+    
+    ---
+    tags:
+      - Plans
+    parameters:
+      - name: plan_id
+        in: path
+        type: string
+        required: true
+        description: The ID of the plan to generate steps for
+      - name: user_principal_id
+        in: header
+        type: string
+        required: true
+        description: User ID extracted from the authentication header
+    responses:
+      200:
+        description: Streaming response of the reasoning process
+        content:
+          text/plain:
+            schema:
+              type: string
+              description: Stream of reasoning process and final JSON
+      400:
+        description: Plan not found or other error
+        schema:
+          type: object
+          properties:
+            detail:
+              type: string
+              description: Error message
+    """
+    # Get authenticated user first
+    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    user_id = authenticated_user["user_principal_id"]
+
+    if not user_id:
+        track_event_if_configured(
+            "UserIdNotFound", {"status_code": 400, "detail": "no user"}
+        )
+        raise HTTPException(status_code=400, detail="no user")
+
+    # Clean up stale streams (older than 5 minutes)
+    current_time = time.time()
+    stale_streams = [k for k, v in active_streams.items() if current_time - v > 300]
+    for stale_key in stale_streams:
+        active_streams.pop(stale_key, None)
+        logging.info(f"Cleaned up stale stream: {stale_key}")
+
+    # Check if there's already an active stream for this plan + user combination
+    stream_key = f"stream_{plan_id}_{user_id}"
+    logging.info(f"Received stream request for plan {plan_id} from user {user_id}, active streams: {list(active_streams.keys())}")
+    if stream_key in active_streams:
+        logging.warning(f"Duplicate stream request for plan {plan_id} from user {user_id}, rejecting. Active streams: {list(active_streams.keys())}")
+        raise HTTPException(status_code=429, detail="Stream already in progress for this plan")
+
+    try:
+        # Add to active streams with timestamp
+        active_streams[stream_key] = current_time
+        logging.info(f"Added stream {stream_key} to active streams. Current active: {list(active_streams.keys())}")
+        
+        # Initialize memory store
+        kernel, memory_store = await initialize_runtime_and_context("", user_id)
+
+        # Get the existing plan
+        plan = await memory_store.get_plan_by_plan_id(plan_id)
+        if not plan:
+            track_event_if_configured(
+                "PlanNotFound",
+                {"plan_id": plan_id, "error": "Plan not found"},
+            )
+            active_streams.pop(stream_key, None)  # Remove from active streams
+            logging.info(f"Plan {plan_id} not found, removed stream from active streams")
+            raise HTTPException(status_code=404, detail="Plan not found")
+
+        # Generate streaming response
+        async def generate_reasoning_stream():
+            try:
+                logging.info(f"Starting stream for plan {plan_id}")
+                
+                # Import the reasoning generation function
+                from utils_kernel import generate_plan_with_reasoning_stream
+                
+                # Stream the reasoning process and get the final result
+                async for chunk in generate_plan_with_reasoning_stream(plan.initial_goal, plan_id, memory_store):
+                    yield f"data: {chunk}\n\n"
+                
+                # Send completion signal
+                yield f"data: [DONE]\n\n"
+                logging.info(f"Completed stream for plan {plan_id}")
+                
+            except Exception as e:
+                error_msg = f"Error during plan generation: {str(e)}"
+                logging.error(error_msg)
+                yield f"data: ERROR: {error_msg}\n\n"
+            finally:
+                # Always remove from active streams when done
+                active_streams.pop(stream_key, None)
+                logging.info(f"Removed stream {stream_key} from active streams. Remaining: {list(active_streams.keys())}")
+
+        return StreamingResponse(
+            generate_reasoning_stream(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "*",
+                "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            }
+        )
+
+    except HTTPException:
+        # Remove from active streams on HTTP errors
+        active_streams.pop(stream_key, None)
+        logging.info(f"HTTP error, removed stream {stream_key} from active streams")
+        raise
+    except Exception as e:
+        # Remove from active streams on other errors
+        active_streams.pop(stream_key, None)
+        logging.error(f"Error in generate_plan_endpoint: {e}, removed stream {stream_key} from active streams")
+        track_event_if_configured(
+            "GeneratePlanError",
+            {
+                "plan_id": plan_id,
+                "error": str(e),
+            },
+        )
+        raise HTTPException(status_code=400, detail=f"Error generating plan: {e}")
 
 
 @app.post("/api/human_feedback")
@@ -1096,6 +1248,27 @@ async def get_agent_tools():
                 description: Arguments required by the tool function
     """
     return []
+
+
+@app.get("/api/test_stream")
+async def test_stream():
+    """Simple test endpoint for streaming"""
+    async def generate_test_stream():
+        for i in range(5):
+            yield f"data: Test message {i+1}\n\n"
+            await asyncio.sleep(0.5)
+        yield f"data: [DONE]\n\n"
+
+    return StreamingResponse(
+        generate_test_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
 
 
 # Run the app
