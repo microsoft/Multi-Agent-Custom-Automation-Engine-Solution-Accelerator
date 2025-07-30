@@ -15,6 +15,7 @@ import {
 // Constants for endpoints
 const API_ENDPOINTS = {
     INPUT_TASK: '/input_task',
+    CREATE_PLAN: '/create_plan',
     PLANS: '/plans',
     STEPS: '/steps',
     HUMAN_FEEDBACK: '/human_feedback',
@@ -105,6 +106,15 @@ export class APIService {
      */
     async submitInputTask(inputTask: InputTask): Promise<InputTaskResponse> {
         return apiClient.post(API_ENDPOINTS.INPUT_TASK, inputTask);
+    }
+
+    /**
+     * Create a new plan with RAI validation
+     * @param inputTask The task description and optional session ID
+     * @returns Promise with the response containing plan ID and status
+     */
+    async createPlan(inputTask: InputTask): Promise<{ plan_id: string; status: string; session_id: string }> {
+        return apiClient.post(API_ENDPOINTS.CREATE_PLAN, inputTask);
     }
 
     /**

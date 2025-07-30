@@ -27,6 +27,8 @@ from models.messages_kernel import (
     HumanClarification,
     HumanFeedback,
     InputTask,
+    Plan,
+    PlanStatus,
     PlanWithSteps,
     Step,
 )
@@ -179,6 +181,132 @@ async def input_task_endpoint(input_task: InputTask, request: Request):
     except Exception as e:
         track_event_if_configured(
             "InputTaskError",
+            {
+                "session_id": input_task.session_id,
+                "description": input_task.description,
+                "error": str(e),
+            },
+        )
+        raise HTTPException(status_code=400, detail=f"Error creating plan: {e}")
+
+
+@app.post("/api/create_plan")
+async def create_plan_endpoint(input_task: InputTask, request: Request):
+    """
+    Create a new plan without full processing.
+    
+    ---
+    tags:
+      - Plans
+    parameters:
+      - name: user_principal_id
+        in: header
+        type: string
+        required: true
+        description: User ID extracted from the authentication header
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            session_id:
+              type: string
+              description: Session ID for the plan
+            description:
+              type: string
+              description: The task description to validate and create plan for
+    responses:
+      200:
+        description: Plan created successfully
+        schema:
+          type: object
+          properties:
+            plan_id:
+              type: string
+              description: The ID of the newly created plan
+            status:
+              type: string
+              description: Success message
+            session_id:
+              type: string
+              description: Session ID associated with the plan
+      400:
+        description: RAI check failed or invalid input
+        schema:
+          type: object
+          properties:
+            detail:
+              type: string
+              description: Error message
+    """
+    # Perform RAI check on the description
+    if not await rai_success(input_task.description):
+        track_event_if_configured(
+            "RAI failed",
+            {
+                "status": "Plan not created - RAI check failed",
+                "description": input_task.description,
+                "session_id": input_task.session_id,
+            },
+        )
+        raise HTTPException(
+            status_code=400, 
+            detail="Task description failed safety validation. Please revise your request."
+        )
+
+    # Get authenticated user
+    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    user_id = authenticated_user["user_principal_id"]
+
+    if not user_id:
+        track_event_if_configured(
+            "UserIdNotFound", {"status_code": 400, "detail": "no user"}
+        )
+        raise HTTPException(status_code=400, detail="no user")
+
+    # Generate session ID if not provided
+    if not input_task.session_id:
+        input_task.session_id = str(uuid.uuid4())
+
+    try:
+        # Initialize memory store
+        kernel, memory_store = await initialize_runtime_and_context(
+            input_task.session_id, user_id
+        )
+
+        # Create a new Plan object
+        plan = Plan(
+            session_id=input_task.session_id,
+            user_id=user_id,
+            initial_goal=input_task.description,
+            overall_status=PlanStatus.in_progress,
+            source=AgentType.PLANNER.value
+        )
+
+        # Save the plan to the database
+        await memory_store.add_plan(plan)
+
+        # Log successful plan creation
+        track_event_if_configured(
+            "PlanCreated",
+            {
+                "status": f"Plan created with ID: {plan.id}",
+                "session_id": input_task.session_id,
+                "plan_id": plan.id,
+                "description": input_task.description,
+            },
+        )
+
+        return {
+            "plan_id": plan.id,
+            "status": "Plan created successfully",
+            "session_id": input_task.session_id,
+        }
+
+    except Exception as e:
+        track_event_if_configured(
+            "CreatePlanError",
             {
                 "session_id": input_task.session_id,
                 "description": input_task.description,

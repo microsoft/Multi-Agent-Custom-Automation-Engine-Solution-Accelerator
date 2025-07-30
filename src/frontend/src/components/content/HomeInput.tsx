@@ -57,7 +57,7 @@ const HomeInput: React.FC<HomeInputProps> = ({
             let id = showToast("Creating a plan", "progress");
 
             try {
-                const response = await TaskService.submitInputTask(input.trim());
+                const response = await TaskService.createPlan(input.trim());
                 setInput("");
 
                 if (textareaRef.current) {
@@ -76,7 +76,10 @@ const HomeInput: React.FC<HomeInputProps> = ({
             } catch (error) {
                 console.log("Failed to create plan:", error);
                 dismissToast(id);
-                showToast("Something went wrong", "error");
+                
+                // Show more specific error message if available
+                const errorMessage = error instanceof Error ? error.message : "Something went wrong";
+                showToast(errorMessage, "error");
             } finally {
                 setInput("");
                 setSubmitting(false);
