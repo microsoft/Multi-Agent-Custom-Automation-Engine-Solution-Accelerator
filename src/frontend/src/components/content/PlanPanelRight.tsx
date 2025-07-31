@@ -10,7 +10,18 @@ const PlanPanelRight: React.FC<TaskDetailsProps> = ({
     OnApproveStep,
     processingSubtaskId
 }) => {
-    if (!planData) return null;
+    // Only show panel when there are tasks created with relevant agents
+    // Hide panel during initial streaming or when no steps exist
+    const shouldShowPanel = planData && 
+                            planData.steps && 
+                            planData.steps.length > 0 && 
+                            planData.agents && 
+                            planData.agents.length > 0 &&
+                            !loading;
+
+    if (!shouldShowPanel) {
+        return null; // Hide the panel completely
+    }
 
     return (
         <PanelRight
@@ -19,8 +30,7 @@ const PlanPanelRight: React.FC<TaskDetailsProps> = ({
             panelResize={true}
             panelType="first"
         >
-
-            <div >
+            <div>
                 <TaskDetails
                     planData={planData}
                     OnApproveStep={OnApproveStep}

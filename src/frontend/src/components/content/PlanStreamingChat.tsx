@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, forwardRef, useImperativeHandle } from 'react';
 import {
     Body1,
     Spinner,
@@ -11,12 +11,13 @@ import {
     DiamondRegular,
     QuestionCircle24Regular
 } from '@fluentui/react-icons';
-import { Copy } from '../../coral/imports/bundleicons';
+import { Copy, Send } from '../../coral/imports/bundleicons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypePrism from 'rehype-prism';
 import { apiService } from '../../api/apiService';
 import { TaskService } from '../../services/TaskService';
+import ChatInput from "@/coral/modules/ChatInput";
 import '../../styles/PlanChat.css';
 import '../../styles/Chat.css';
 import '../../styles/prism-material-oceanic.css';
@@ -31,13 +32,19 @@ interface PlanStreamingChatProps {
     planId: string;
     onStreamComplete: () => void;
     onStreamError: (error: string) => void;
+    onChatSubmit?: (message: string) => void; // For clarifications after completion
+    planData?: any; // Plan data for context
+    isStepApprovalInProgress?: boolean; // Track if step approval is in progress to disable chat
 }
 
-const PlanStreamingChat: React.FC<PlanStreamingChatProps> = ({
+const PlanStreamingChat = forwardRef<any, PlanStreamingChatProps>(({
     planId,
     onStreamComplete,
-    onStreamError
-}) => {
+    onStreamError,
+    onChatSubmit,
+    planData,
+    isStepApprovalInProgress = false
+}, ref) => {
     const [messages, setMessages] = useState<StreamMessage[]>([]);
     const [isStreaming, setIsStreaming] = useState(false);
     const [isComplete, setIsComplete] = useState(false);
@@ -47,6 +54,10 @@ const PlanStreamingChat: React.FC<PlanStreamingChatProps> = ({
     const [currentThought, setCurrentThought] = useState<string>(''); // For real-time reasoning
     const [isThinking, setIsThinking] = useState(false); // Show thinking indicator
     const [reasoningPhase, setReasoningPhase] = useState<'thinking' | 'planning' | 'complete' | 'clarification'>('thinking');
+    const [reasoningComplete, setReasoningComplete] = useState(false);
+    const [chatInput, setChatInput] = useState(''); // For clarification input
+    const [submittingChat, setSubmittingChat] = useState(false); // Chat submission state
+    const [clarificationSubmitted, setClarificationSubmitted] = useState(false); // Disable input after clarification
     
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -57,6 +68,38 @@ const PlanStreamingChat: React.FC<PlanStreamingChatProps> = ({
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         setShowScrollButton(false);
+    };
+
+    const handleChatSubmit = async () => {
+        if (!chatInput.trim() || clarificationSubmitted) return;
+        
+        setSubmittingChat(true);
+        try {
+            // Add user message to UI first
+            addMessage('content', `**User:** ${chatInput.trim()}`);
+            
+            // Clear input and disable immediately like old experience
+            const userInput = chatInput.trim();
+            setChatInput('');
+            setClarificationSubmitted(true); // Disable input like old experience
+            
+            // Use the original human clarification API
+            const response = await apiService.submitClarification(
+                planId, 
+                planData?.session_id || '', 
+                userInput
+            );
+            
+            // Start streaming agent responses like original experience
+            await startClarificationStream(userInput);
+            
+        } catch (error) {
+            console.error('Failed to submit clarification:', error);
+            addMessage('error', 'Failed to submit clarification. Please try again.');
+            setClarificationSubmitted(false); // Re-enable input on error
+        } finally {
+            setSubmittingChat(false);
+        }
     };
 
     useEffect(() => {
@@ -73,6 +116,8 @@ const PlanStreamingChat: React.FC<PlanStreamingChatProps> = ({
             setCurrentThought('');
             setIsStreaming(false);
             setIsComplete(false);
+            setReasoningComplete(false); // Reset reasoning complete state
+            setClarificationSubmitted(false); // Reset clarification state
             setError(null);
             setIsStarting(false);
             setIsThinking(false);
@@ -138,6 +183,97 @@ const PlanStreamingChat: React.FC<PlanStreamingChatProps> = ({
 
     const lastCallTimeRef = useRef<number>(0);
 
+    // New function to handle clarification streaming like original experience
+    const startClarificationStream = async (clarificationText: string) => {
+        try {
+            addMessage('processing', 'Processing clarification with relevant agents...');
+            
+            // Use the new streaming endpoint for real agent responses
+            const stream = await apiService.submitClarificationStream(
+                planId, 
+                planData?.session_id || '', 
+                clarificationText
+            );
+            
+            const reader = stream.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const data = line.slice(6);
+                        if (data.trim() && data !== '[DONE]') {
+                            addMessage('content', data);
+                        }
+                    }
+                }
+            }
+            
+            // Re-enable input for next interaction
+            setClarificationSubmitted(false);
+            
+        } catch (error) {
+            console.error('Clarification streaming error:', error);
+            addMessage('error', 'Failed to process clarification with agents');
+            setClarificationSubmitted(false);
+        }
+    };
+
+    // Function to handle step approval streaming like original experience
+    const handleStepApproval = async (step: any, total: number, completed: number, approved: boolean) => {
+        try {
+            addMessage('processing', `${approved ? 'Approving' : 'Rejecting'} step with relevant agents...`);
+            
+            // Use the new streaming API for step approval
+            const stream = await apiService.approveStepStreamNew(
+                step.id,
+                planId,
+                planData?.session_id || step.session_id || '',
+                approved
+            );
+            
+            const reader = stream.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const data = line.slice(6);
+                        if (data.trim() && data !== '[DONE]') {
+                            addMessage('content', data);
+                        }
+                    }
+                }
+            }
+            
+            // Step approval streaming completed successfully
+        } catch (error) {
+            console.error('Step approval streaming error:', error);
+            addMessage('error', `Failed to ${approved ? 'approve' : 'reject'} step`);
+        }
+    };
+
+    // Expose step approval function to parent component
+    useImperativeHandle(ref, () => ({
+        handleStepApproval: handleStepApproval
+    }), []);
+
     const startStreaming = async () => {
         console.log(`startStreaming called for plan ${planId}`);
         if (!planId) {
@@ -166,10 +302,11 @@ const PlanStreamingChat: React.FC<PlanStreamingChatProps> = ({
             setIsStreaming(true);
             setIsThinking(true); // Start thinking phase
             setReasoningPhase('thinking');
+            setReasoningComplete(false); // Reset reasoning complete state
             setCurrentThought('');
             accumulatedReasoningRef.current = ''; // Reset accumulated reasoning
             setError(null);
-            setMessages([]); // Clear previous messages
+            // Don't clear messages - keep existing content
             setIsComplete(false);
             
             // Cancel any existing request
@@ -180,7 +317,8 @@ const PlanStreamingChat: React.FC<PlanStreamingChatProps> = ({
             // Create new abort controller
             abortControllerRef.current = new AbortController();
             
-            addMessage('processing', 'Starting plan generation...');
+            // Don't add processing message during thinking phase
+            // addMessage('processing', 'Starting plan generation...');
 
             // Add a small delay to ensure the UI is ready
             await new Promise(resolve => setTimeout(resolve, 500));
@@ -243,11 +381,11 @@ const PlanStreamingChat: React.FC<PlanStreamingChatProps> = ({
                         }
 
                         if (data.startsWith('[PROCESSING]')) {
-                            setIsThinking(false);
-                            setReasoningPhase('planning');
+                            // Don't change to planning yet - keep thinking until reasoning is complete
                             addMessage('processing', data.slice(12));
                         } else if (data.startsWith('[REASONING_COMPLETE]')) {
                             setIsThinking(false);
+                            setReasoningComplete(true);
                             setReasoningPhase('planning');
                             // Preserve the reasoning content by adding it as a reasoning message
                             if (accumulatedReasoningRef.current.trim()) {
@@ -274,7 +412,7 @@ const PlanStreamingChat: React.FC<PlanStreamingChatProps> = ({
                                 streamingRef.current = false;
                                 
                                 // Add a simple completion message
-                                addMessage('success', `✅ Plan created successfully with ${planData.steps_created || 'multiple'} steps! You can now provide clarifications or ask questions about the plan.`);
+                                addMessage('success', `✅ Plan created successfully with ${planData.steps_created || 'multiple'} steps! You can now review and approve each step to proceed.`);
                                 
                                 // Keep the reasoning history visible and notify completion
                                 onStreamComplete();
@@ -427,38 +565,138 @@ const PlanStreamingChat: React.FC<PlanStreamingChatProps> = ({
                 }}
             >
                 <div className="message-wrapper">
-                    {/* Header message */}
-                    <div className="message assistant">
+                    {/* Single unified reasoning and planning message - ChatGPT style */}
+                    <div className="message assistant unified-reasoning-message">
                         <div className="plan-chat-header">
                             <div className="plan-chat-speaker">
-                                <Body1 className="speaker-name">AI Reasoning Engine</Body1>
+                                <Body1 className="speaker-name">Planner Agent</Body1>
                                 <Tag size="extra-small" shape="rounded" appearance="brand" className="bot-tag">
-                                    {isThinking ? 'THINKING' : 
-                                     reasoningPhase === 'planning' ? 'PLANNING' : 
-                                     isComplete || reasoningPhase === 'complete' ? 'COMPLETE' : 'BOT'}
+                                    BOT
                                 </Tag>
                             </div>
                         </div>
                         <Body1>
                             <div className="plan-chat-message-content">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrism]}>
-                                    {isThinking 
-                                        ? "🤔 I'm thinking through your request and analyzing the best approach..."
-                                        : reasoningPhase === 'planning'
-                                        ? "📋 Creating your detailed plan with actionable steps..."
-                                        : isComplete 
-                                        ? "✅ Plan generation complete! I've created a detailed plan with steps for your task."
-                                        : "Preparing to generate your plan..."
-                                    }
-                                </ReactMarkdown>
+                                {/* Collapsible Reasoning Section - ChatGPT o1 style */}
+                                {(isThinking || (currentThought && currentThought.trim())) && (
+                                    <div style={{ marginBottom: '16px' }}>
+                                        <details open={isThinking} style={{ marginBottom: '12px' }}>
+                                            <summary style={{ 
+                                                cursor: 'pointer', 
+                                                fontWeight: 'bold',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '8px',
+                                                padding: '8px',
+                                                backgroundColor: '#f0f4ff',
+                                                borderRadius: '6px',
+                                                border: '1px solid #d1e7ff'
+                                            }}>
+                                                <span>{isThinking ? 'Thinking...' : 'Reasoning'}</span>
+                                                {isThinking && <Spinner size="tiny" />}
+                                            </summary>
+                                            <div style={{ 
+                                                background: '#f8f9fa', 
+                                                padding: '12px', 
+                                                borderRadius: '8px', 
+                                                fontSize: '14px',
+                                                fontFamily: 'monospace',
+                                                whiteSpace: 'pre-wrap',
+                                                border: '1px solid #e1e4e8',
+                                                maxHeight: '400px',
+                                                overflowY: 'auto',
+                                                overflowX: 'hidden',
+                                                wordWrap: 'break-word',
+                                                marginTop: '8px'
+                                            }}>
+                                                {currentThought || 'Analyzing your request...'}
+                                                {isThinking && <span className="thinking-cursor">|</span>}
+                                            </div>
+                                        </details>
+                                    </div>
+                                )}
+
+                                {/* Plan Content Area */}
+                                <div className="plan-content-area">
+                                    {isComplete ? (
+                                        <div>
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrism]}>
+                                                **Plan Generation Complete!**
+                                            </ReactMarkdown>
+                                            
+                                            {/* Show the final plan content */}
+                                            <div style={{ 
+                                                marginTop: '16px',
+                                                padding: '16px',
+                                                backgroundColor: '#f0fff4',
+                                                borderRadius: '8px',
+                                                border: '1px solid #90ee90'
+                                            }}>
+                                                {messages
+                                                    .filter(msg => msg.type === 'content' || msg.type === 'processing')
+                                                    .map((message, index) => (
+                                                        <div key={index} style={{ marginBottom: index < messages.length - 1 ? '12px' : '0' }}>
+                                                            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrism]}>
+                                                                {formatContent(message)}
+                                                            </ReactMarkdown>
+                                                        </div>
+                                                    ))
+                                                }
+                                            </div>
+                                        </div>
+                                    ) : reasoningComplete && reasoningPhase === 'planning' && messages.filter(msg => msg.type === 'content' || msg.type === 'processing').length > 0 ? (
+                                        <div style={{ 
+                                            padding: '12px',
+                                            backgroundColor: '#fff9e6',
+                                            borderRadius: '8px',
+                                            border: '1px solid #ffd700'
+                                        }}>
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrism]}>
+                                                Creating your detailed plan with actionable steps...
+                                            </ReactMarkdown>
+                                            
+                                            {/* Show planning content as it streams */}
+                                            {messages
+                                                .filter(msg => msg.type === 'content' || msg.type === 'processing')
+                                                .map((message, index) => (
+                                                    <div key={index} style={{ marginTop: '8px' }}>
+                                                        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrism]}>
+                                                            {formatContent(message)}
+                                                        </ReactMarkdown>
+                                                    </div>
+                                                ))
+                                            }
+                                        </div>
+                                    ) : null}
+                                </div>
+
                                 <div className="assistant-footer">
                                     <div className="assistant-actions">
+                                        <div>
+                                            <Button
+                                                onClick={() => {
+                                                    // Copy the entire reasoning and plan content
+                                                    const content = `${currentThought}\n\n${messages
+                                                        .filter(msg => msg.type === 'content' || msg.type === 'processing')
+                                                        .map(msg => formatContent(msg))
+                                                        .join('\n\n')}`;
+                                                    navigator.clipboard.writeText(content);
+                                                }}
+                                                title="Copy Response"
+                                                appearance="subtle"
+                                                style={{ height: 28, width: 28 }}
+                                                icon={<Copy />}
+                                            />
+                                        </div>
+                                        
                                         <Tag
                                             icon={<DiamondRegular />}
                                             appearance="filled"
                                             size="extra-small"
                                         >
-                                            AI reasoning process in real-time
+                                            {isThinking ? 'Thinking...' : 
+                                             reasoningComplete ? 'Response complete' : 
+                                             'Bot response'}
                                         </Tag>
                                     </div>
                                 </div>
@@ -466,100 +704,156 @@ const PlanStreamingChat: React.FC<PlanStreamingChatProps> = ({
                         </Body1>
                     </div>
 
-                    {/* Thinking display - similar to ChatGPT reasoning - show during thinking and after completion if we have content */}
-                    {(isThinking || (currentThought && currentThought.trim())) && (
-                        <div className="message assistant thinking-message">
-                            <div className="plan-chat-header">
-                                <div className="plan-chat-speaker">
-                                    <Body1 className="speaker-name">
-                                        {isThinking ? '🧠 Thinking...' : '💭 Reasoning Complete'}
-                                    </Body1>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                        {isThinking && <Spinner size="tiny" />}
-                                        <Tag size="extra-small" shape="rounded" appearance="outline" className="thinking-tag">
-                                            {isThinking ? 'REASONING' : 'THOUGHT'}
-                                        </Tag>
-                                    </div>
-                                </div>
-                            </div>
-                            <Body1>
-                                <div className="plan-chat-message-content thinking-content">
-                                    <details open={true}>
-                                        <summary style={{ cursor: 'pointer', marginBottom: '8px', fontWeight: 'bold' }}>
-                                            {isThinking ? 'View reasoning process...' : 'AI Reasoning Process'}
-                                        </summary>
-                                        <div style={{ 
-                                            background: '#f8f9fa', 
-                                            padding: '12px', 
-                                            borderRadius: '8px', 
-                                            fontSize: '14px',
-                                            fontFamily: 'monospace',
-                                            whiteSpace: 'pre-wrap',
-                                            border: '1px solid #e1e4e8',
-                                            maxHeight: '500px',
-                                            overflowY: 'auto',
-                                            overflowX: 'hidden',
-                                            wordWrap: 'break-word'
-                                        }}>
-                                            {currentThought || 'Analyzing your request...'}
-                                            {isThinking && <span className="thinking-cursor">|</span>}
-                                        </div>
-                                    </details>
-                                </div>
-                            </Body1>
-                        </div>
-                    )}
-
-                    {/* Streaming messages */}
-                    {messages.map((message, index) => (
-                        <div key={index} className={getMessageClass(message.type)}>
-                            <div className="plan-chat-header">
-                                <div className="plan-chat-speaker">
-                                    <Body1 className="speaker-name">
-                                        {message.type === 'processing' ? 'Planning...' : 
-                                         message.type === 'success' ? 'Success' :
-                                         message.type === 'error' ? 'Error' :
-                                         message.type === 'result' ? 'Result' : 
-                                         message.type === 'reasoning' ? 'AI Reasoning' : 
-                                         message.type === 'clarification' ? 'Clarification Request' : 
-                                         message.type === 'completion' ? 'Plan Generated' : 'Content'}
-                                    </Body1>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                        {getMessageIcon(message.type)}
+                    {/* Hidden - all content is now unified above */}
+                    {/* Show error messages separately if they exist */}
+                    {messages
+                        .filter(message => message.type === 'error')
+                        .map((message, index) => (
+                            <div key={index} className="message assistant error-message">
+                                <div className="plan-chat-header">
+                                    <div className="plan-chat-speaker">
+                                        <Body1 className="speaker-name">Planner Agent</Body1>
                                         <Tag size="extra-small" shape="rounded" appearance="brand" className="bot-tag">
-                                            AI
+                                            BOT
                                         </Tag>
                                     </div>
                                 </div>
-                            </div>
-                            <Body1>
-                                <div className="plan-chat-message-content">
-                                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrism]}>
-                                        {formatContent(message)}
-                                    </ReactMarkdown>
-                                    <div className="assistant-footer">
-                                        <div className="assistant-actions">
-                                            <div>
-                                                <Button
-                                                    onClick={() => navigator.clipboard.writeText(message.content)}
-                                                    title="Copy Response"
-                                                    appearance="subtle"
-                                                    style={{ height: 28, width: 28 }}
-                                                    icon={<Copy />}
-                                                />
-                                            </div>
-                                            <div className="message-timestamp">
-                                                {message.timestamp.toLocaleTimeString()}
+                                <Body1>
+                                    <div className="plan-chat-message-content" style={{ 
+                                        backgroundColor: '#fff5f5', 
+                                        border: '1px solid #fed7d7', 
+                                        borderRadius: '8px', 
+                                        padding: '12px' 
+                                    }}>
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrism]}>
+                                            {formatContent(message)}
+                                        </ReactMarkdown>
+                                        
+                                        <div className="assistant-footer">
+                                            <div className="assistant-actions">
+                                                <div>
+                                                    <Button
+                                                        onClick={() => navigator.clipboard.writeText(message.content)}
+                                                        title="Copy Response"
+                                                        appearance="subtle"
+                                                        style={{ height: 28, width: 28 }}
+                                                        icon={<Copy />}
+                                                    />
+                                                </div>
+                                                <Tag
+                                                    icon={<DiamondRegular />}
+                                                    appearance="filled"
+                                                    size="extra-small"
+                                                >
+                                                    Bot response
+                                                </Tag>
                                             </div>
                                         </div>
                                     </div>
+                                </Body1>
+                            </div>
+                        ))
+                    }
+                    
+                    {/* Show clarification requests separately if they exist */}
+                    {messages
+                        .filter(message => message.type === 'clarification')
+                        .map((message, index) => (
+                            <div key={index} className="message assistant clarification-message">
+                                <div className="plan-chat-header">
+                                    <div className="plan-chat-speaker">
+                                        <Body1 className="speaker-name">Planner Agent</Body1>
+                                        <Tag size="extra-small" shape="rounded" appearance="brand" className="bot-tag">
+                                            BOT
+                                        </Tag>
+                                    </div>
                                 </div>
-                            </Body1>
-                        </div>
-                    ))}
+                                <Body1>
+                                    <div className="plan-chat-message-content" style={{ 
+                                        backgroundColor: '#f0f8ff', 
+                                        border: '1px solid #bde4ff', 
+                                        borderRadius: '8px', 
+                                        padding: '12px' 
+                                    }}>
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrism]}>
+                                            {formatContent(message)}
+                                        </ReactMarkdown>
+                                        
+                                        <div className="assistant-footer">
+                                            <div className="assistant-actions">
+                                                <div>
+                                                    <Button
+                                                        onClick={() => navigator.clipboard.writeText(message.content)}
+                                                        title="Copy Response"
+                                                        appearance="subtle"
+                                                        style={{ height: 28, width: 28 }}
+                                                        icon={<Copy />}
+                                                    />
+                                                </div>
+                                                <Tag
+                                                    icon={<DiamondRegular />}
+                                                    appearance="filled"
+                                                    size="extra-small"
+                                                >
+                                                    Bot response
+                                                </Tag>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Body1>
+                            </div>
+                        ))
+                    }
                     <div ref={messagesEndRef} />
                 </div>
             </div>
+
+            {/* Chat Input - Show when reasoning is complete, enabled for clarifications but disabled during step approval */}
+            {isComplete && (
+                <div style={{ 
+                    borderTop: '1px solid #e1e4e8', 
+                    padding: '16px', 
+                    backgroundColor: '#fafbfc',
+                    marginTop: '8px'
+                }}>
+                    <div style={{ marginBottom: '8px' }}>
+                        <Body1 style={{ fontWeight: 'bold', color: '#0066cc' }}>
+                            {isStepApprovalInProgress ? 'Chat Disabled During Approval' : 'Chat with Planner Agent'}
+                        </Body1>
+                        {clarificationSubmitted && !isStepApprovalInProgress && (
+                            <Body1 style={{ fontSize: '12px', color: '#666', fontStyle: 'italic' }}>
+                                Processing clarification with agents...
+                            </Body1>
+                        )}
+                        {isStepApprovalInProgress && (
+                            <Body1 style={{ fontSize: '12px', color: '#ff6b35', fontStyle: 'italic' }}>
+                                Chat disabled while step approval is in progress
+                            </Body1>
+                        )}
+                        {!planData?.enableChat && !isStepApprovalInProgress && !clarificationSubmitted && (
+                            <Body1 style={{ fontSize: '12px', color: '#0066cc', fontStyle: 'italic' }}>
+                                Plan ready - use chat for clarifications or proceed to approve steps
+                            </Body1>
+                        )}
+                    </div>
+                    <ChatInput
+                        value={chatInput}
+                        placeholder={clarificationSubmitted ? "Processing clarification..." : 
+                                   isStepApprovalInProgress ? "Chat disabled during step approval" :
+                                   "Ask questions or provide clarifications about the plan..."}
+                        onChange={setChatInput}
+                        onEnter={handleChatSubmit}
+                        disabledChat={submittingChat || clarificationSubmitted || isStepApprovalInProgress}
+                    >
+                        <Button
+                            appearance="subtle"
+                            onClick={handleChatSubmit}
+                            disabled={submittingChat || !chatInput.trim() || clarificationSubmitted || !planData?.enableChat || isStepApprovalInProgress}
+                            icon={<Send />}
+                        />
+                    </ChatInput>
+                </div>
+            )}
 
             {showScrollButton && (
                 <Tag
@@ -578,6 +872,6 @@ const PlanStreamingChat: React.FC<PlanStreamingChatProps> = ({
             )}
         </div>
     );
-};
+});
 
 export default PlanStreamingChat;

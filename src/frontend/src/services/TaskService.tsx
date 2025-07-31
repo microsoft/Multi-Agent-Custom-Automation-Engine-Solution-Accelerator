@@ -139,6 +139,35 @@ export class TaskService {
     };
   }
   /**
+   * Clean agent name for better display
+   * @param text The agent name to clean
+   * @returns Cleaned agent name that's more readable
+   */
+  static cleanAgentName(text: string): string {
+    if (!text) return "";
+    
+    // Replace specific agent names first
+    let cleanedText = text
+      .replace("Hr_Agent", "HR Agent")
+      .replace("Marketing_Agent", "Marketing Agent")
+      .replace("Procurement_Agent", "Procurement Agent")
+      .replace("Product_Agent", "Product Agent")
+      .replace("Tech_Support_Agent", "Tech Support Agent")
+      .replace("Group_Chat_Manager", "Group Chat Manager")
+      .replace("Planner_Agent", "Planner Agent")
+      .replace("Human_Agent", "Human Agent")
+      .replace("Generic_Agent", "Generic Agent");
+    
+    // Clean up any remaining underscores by replacing with spaces
+    cleanedText = cleanedText.replace(/_/g, " ");
+    
+    // Clean up multiple spaces and trim
+    cleanedText = cleanedText.replace(/\s+/g, " ").trim();
+    
+    return cleanedText;
+  }
+
+  /**
    * Clean text by converting any non-alphanumeric character to spaces
    * @param text The text string to clean
    * @returns Cleaned text string with only letters, numbers, and spaces
@@ -190,7 +219,7 @@ export class TaskService {
       if (error?.response?.data?.message) {
         message = error.response.data.message;
       } else if (error?.message) {
-        message = error.message;
+        message = error.message?.detail ? error.message.detail : error.message;
       }
       // Throw a new error with a user-friendly message
       throw new Error(message);

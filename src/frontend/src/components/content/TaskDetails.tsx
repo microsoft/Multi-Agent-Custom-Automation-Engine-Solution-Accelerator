@@ -26,11 +26,78 @@ import PanelRightToolbar from "@/coral/components/Panels/PanelRightToolbar";
 import "../../styles/TaskDetails.css";
 import ProgressCircle from "@/coral/components/Progress/ProgressCircle";
 
+// Helper functions for agent display
+const getAgentColor = (agentName: string): string => {
+  const cleanName = TaskService.cleanAgentName(agentName).toLowerCase();
+  const colorMap: Record<string, string> = {
+    'hr agent': '#4F46E5',       // Indigo
+    'marketing agent': '#059669', // Emerald
+    'finance agent': '#DC2626',   // Red
+    'it agent': '#2563EB',        // Blue
+    'operations agent': '#7C2D12', // Orange
+    'sales agent': '#9333EA',     // Purple
+    'legal agent': '#374151',     // Gray
+    'project manager': '#059669', // Green
+    'data analyst': '#DC2626',    // Rose
+    'research agent': '#2563EB',  // Sky
+    'customer service agent': '#EA580C', // Orange
+    'supply chain agent': '#7C2D12',     // Amber
+  };
+  
+  // Default color if agent not in map
+  return colorMap[cleanName] || '#6B7280';
+};
+
+const getAgentInitials = (agentName: string): string => {
+  const cleanName = TaskService.cleanAgentName(agentName);
+  const words = cleanName.split(' ').filter(word => word.length > 0);
+  
+  if (words.length === 1) {
+    return words[0].substring(0, 2).toUpperCase();
+  } else if (words.length >= 2) {
+    return (words[0][0] + words[1][0]).toUpperCase();
+  }
+  
+  return 'AG'; // Default fallback
+};
+
+const getAgentRole = (agentName: string): string => {
+  const cleanName = TaskService.cleanAgentName(agentName).toLowerCase();
+  const roleMap: Record<string, string> = {
+    'hr agent': 'Human Resources Specialist',
+    'marketing agent': 'Marketing & Brand Strategy',
+    'finance agent': 'Financial Analysis & Planning',
+    'it agent': 'Information Technology Support',
+    'operations agent': 'Operations & Process Management',
+    'sales agent': 'Sales & Revenue Generation',
+    'legal agent': 'Legal Affairs & Compliance',
+    'project manager': 'Project Management & Coordination',
+    'data analyst': 'Data Analysis & Insights',
+    'research agent': 'Research & Market Intelligence',
+    'customer service agent': 'Customer Support & Relations',
+    'supply chain agent': 'Supply Chain & Logistics',
+  };
+  
+  return roleMap[cleanName] || 'Specialized Assistant';
+};
+
 const TaskDetails: React.FC<TaskDetailsProps> = ({
   planData,
   loading,
   OnApproveStep,
 }) => {
+  // Handle null planData gracefully during streaming
+  if (!planData) {
+    return (
+      <div className="task-details">
+        <PanelRightToolbar panelTitle="Plan Details" />
+        <div style={{ padding: "16px", textAlign: "center" }}>
+          <Text>Loading plan details...</Text>
+        </div>
+      </div>
+    );
+  }
+
   const [steps, setSteps] = useState<Step[]>(planData.steps || []);
   const [completedCount, setCompletedCount] = useState(
     planData?.plan.completed || 0
@@ -55,6 +122,7 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
     switch (status) {
       case "completed":
       case "accepted":
+      case "approved": // Add approved status for green checkmark
         return <CheckmarkCircle20Filled className="status-icon-completed" />;
 
       case "rejected":
@@ -149,11 +217,50 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
                       <Caption1>{functionOrDetails}</Caption1>
                     )}
                   </Body1>
+                  
+                  {/* Show approval status feedback */}
+                  {step._isActionLoading && (
+                    <div style={{ 
+                      marginTop: '8px',
+                      padding: '6px 12px',
+                      backgroundColor: '#FEF3C7',
+                      border: '1px solid #F59E0B',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      color: '#D97706',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      <span>🔄</span>
+                      <span>Approving task...</span>
+                    </div>
+                  )}
+                  
+                  {step.human_approval_status === "rejected" && (
+                    <div style={{ 
+                      marginTop: '8px',
+                      padding: '6px 12px',
+                      backgroundColor: '#FEE2E2',
+                      border: '1px solid #EF4444',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      color: '#DC2626',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      <span>❌</span>
+                      <span>Task rejected</span>
+                    </div>
+                  )}
                     <div className="task-details-action-buttons">
                     {step.human_approval_status !== "accepted" &&
-                      step.human_approval_status !== "rejected" && (
+                      step.human_approval_status !== "rejected" && 
+                      step.status !== "approved" && 
+                      step.status !== "rejected" && (
                       <>
-                        <Tooltip relationship="label" content={canInteract ? "Approve" : "You must first provide feedback to the planner"}>
+                        <Tooltip relationship="label" content={canInteract ? "Approve" : "Step approval is currently disabled. Complete any clarification requests or ongoing approvals first."}>
                         <Button
                           icon={<Checkmark20Regular />}
                           appearance="subtle"
@@ -195,7 +302,7 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
                         />
                         </Tooltip>
 
-                        <Tooltip relationship="label" content={canInteract ? "Reject" : "You must first provide feedback to the planner"}>
+                        <Tooltip relationship="label" content={canInteract ? "Reject" : "Step approval is currently disabled. Complete any clarification requests or ongoing approvals first."}>
                         <Button
                           icon={<Dismiss20Regular />}
                           appearance="subtle"
@@ -246,19 +353,50 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
 
       <div className="task-details-agents-container">
         <div className="task-details-agents-header">
-          <Body1Strong>Agents</Body1Strong>
+          <Body1Strong>AI Agents Assigned</Body1Strong>
+          <Caption1 style={{ color: '#666', marginTop: '4px' }}>
+            {agents.length} agent{agents.length !== 1 ? 's' : ''} will work on this plan
+          </Caption1>
         </div>
         <div className="task-details-agents-list">
-          {agents.map((agent) => (
-            <div key={agent} className="task-details-agent-card">
-              <Avatar name={agent} size={32} />
-              <div className="task-details-agent-details">
-                <span className="task-details-agent-name">
-                  {TaskService.cleanTextToSpaces(agent)}
-                </span>
+          {agents.map((agent, index) => {
+            const cleanAgentName = TaskService.cleanAgentName(agent);
+            const agentColor = getAgentColor(agent);
+            return (
+              <div key={agent} className="task-details-agent-card" style={{
+                borderLeft: `3px solid ${agentColor}`,
+                backgroundColor: `${agentColor}08`,
+                marginBottom: '8px'
+              }}>
+                <div style={{ 
+                  width: '32px', 
+                  height: '32px', 
+                  borderRadius: '50%', 
+                  backgroundColor: agentColor,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  fontSize: '14px'
+                }}>
+                  {getAgentInitials(cleanAgentName)}
+                </div>
+                <div className="task-details-agent-details">
+                  <span className="task-details-agent-name" style={{ 
+                    fontWeight: '600', 
+                    color: agentColor,
+                    display: 'block'
+                  }}>
+                    {cleanAgentName}
+                  </span>
+                  <Caption1 style={{ color: '#666', fontSize: '11px' }}>
+                    {getAgentRole(agent)}
+                  </Caption1>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

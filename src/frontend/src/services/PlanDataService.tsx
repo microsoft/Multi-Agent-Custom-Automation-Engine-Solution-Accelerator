@@ -42,10 +42,12 @@ export class PlanDataService {
     plan: PlanWithSteps,
     messages: PlanMessage[]
   ): ProcessedPlanData {
-    // Extract unique agents from steps
+    // Extract unique agents from steps, excluding planning/orchestration agents
     const uniqueAgents = new Set<AgentType>();
     plan.steps.forEach((step) => {
-      if (step.agent) {
+      if (step.agent && 
+          step.agent !== AgentType.PLANNER && 
+          step.agent !== AgentType.GROUP_CHAT_MANAGER) {
         uniqueAgents.add(step.agent);
       }
     });
@@ -63,10 +65,11 @@ export class PlanDataService {
     const hasClarificationResponse =
       plan.human_clarification_response != null &&
       plan.human_clarification_response.trim().length > 0;
-    const enableChat = hasClarificationRequest && !hasClarificationResponse;
-    const enableStepButtons =
-      (hasClarificationRequest && hasClarificationResponse) ||
-      (!hasClarificationRequest && !hasClarificationResponse);
+    
+    // Chat is enabled for clarifications when plan is ready, but disabled during step approval
+    // This allows users to ask questions about the plan before approving steps
+    const enableChat = true; // Always enable chat for clarifications
+    const enableStepButtons = true; // Step buttons always enabled for task approval
     return {
       plan,
       agents,

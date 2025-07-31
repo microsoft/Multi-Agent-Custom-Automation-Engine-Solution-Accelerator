@@ -71,10 +71,53 @@ const PlanChat: React.FC<PlanChatProps> = ({
     setShowScrollButton(false);
   };
 
-  if (!planData)
+  if (!planData) {
+    // If no plan data, still show the chat input for user to provide clarifications
     return (
-      <ContentNotFound subtitle="The requested page could not be found." />
+      <div className="chat-container">
+        <div className="messages" ref={messagesContainerRef}>
+          <div className="message-wrapper">
+            <div className="message assistant">
+              <div className="plan-chat-header">
+                <div className="plan-chat-speaker">
+                  <Body1 className="speaker-name">AI Assistant</Body1>
+                  <Tag size="extra-small" shape="rounded" appearance="brand">
+                    Ready
+                  </Tag>
+                </div>
+              </div>
+              <Body1>
+                <div className="plan-chat-message-content">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrism]}>
+                    Plan completed! Feel free to ask questions or provide additional clarifications.
+                  </ReactMarkdown>
+                </div>
+              </Body1>
+            </div>
+          </div>
+        </div>
+
+        <div className="plan-chat-input-container" ref={inputContainerRef}>
+          <div className="plan-chat-input-wrapper">
+            <ChatInput
+              value={input}
+              placeholder="Ask questions or provide clarifications about your plan..."
+              onChange={setInput}
+              onEnter={() => OnChatSubmit(input)}
+              disabledChat={submittingChatDisableInput}
+            >
+              <Button
+                appearance="subtle"
+                onClick={() => OnChatSubmit(input)}
+                disabled={submittingChatDisableInput}
+                icon={<Send />}
+              />
+            </ChatInput>
+          </div>
+        </div>
+      </div>
     );
+  }
   return (
     <div className="chat-container">
       <div className="messages" ref={messagesContainerRef}>

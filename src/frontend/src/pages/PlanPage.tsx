@@ -10,6 +10,7 @@ import CoralShellRow from "../coral/components/Layout/CoralShellRow";
 import Content from "../coral/components/Content/Content";
 import { NewTaskService } from "../services/NewTaskService";
 import { PlanDataService } from "../services/PlanDataService";
+import { apiService } from "../api/apiService";
 import { Step, ProcessedPlanData } from "@/models";
 import PlanPanelLeft from "@/components/content/PlanPanelLeft";
 import ContentToolbar from "@/coral/components/Content/ContentToolbar";
@@ -45,6 +46,8 @@ const PlanPage: React.FC = () => {
     );
     const [reloadLeftList, setReloadLeftList] = useState(true);
     const [loadingMessage, setLoadingMessage] = useState(loadingMessages[0]);
+    const streamingChatRef = useRef<any>(null); // Ref to access streaming chat methods
+    const [isStepApprovalInProgress, setIsStepApprovalInProgress] = useState(false); // Track step approval state
     
     // New state for streaming functionality
     const [isNewPlan, setIsNewPlan] = useState<boolean>(false);
@@ -121,10 +124,16 @@ const PlanPage: React.FC = () => {
                     setLoading(true);
                     setError(null);
                     setProcessingSubtaskId(null);
+                } else {
+                    // For streaming, only clear error but keep existing planData
+                    setError(null);
                 }
 
                 setError(null);
                 const data = await PlanDataService.fetchPlanData(planId,navigate);
+                // Set planData for both streaming and non-streaming scenarios
+                setPlanData(data);
+                
                 setAllPlans(prevPlans => {
                     const plans = [...prevPlans];
                     const existingIndex = plans.findIndex(p => p.plan.id === data.plan.id);
@@ -135,7 +144,6 @@ const PlanPage: React.FC = () => {
                     }
                     return plans;
                 });
-                //setPlanData(data);
             } catch (err) {
                 console.log("Failed to load plan data:", err);
                 setError(
@@ -187,19 +195,52 @@ const PlanPage: React.FC = () => {
     const handleApproveStep = useCallback(
         async (step: Step, total: number, completed: number, approve: boolean) => {
             setProcessingSubtaskId(step.id);
+            setIsStepApprovalInProgress(true); // Disable chat during approval
             const toastMessage = approve ? "Approving step" : "Rejecting step";
             let id = showToast(toastMessage, "progress");
             setSubmitting(true);
             try {
-                let approveRejectDetails = await PlanDataService.stepStatus(step, approve);
-                dismissToast(id);
-                showToast(`Step ${approve ? "approved" : "rejected"} successfully`, "success");
-                if (approveRejectDetails && Object.keys(approveRejectDetails).length > 0) {
-                    // Only reload plan data if not currently streaming
-                    if (!showStreaming && !streamingStarted) {
-                        await loadPlanData(false);
+                // Use the streaming chat's step approval method if available
+                if (streamingChatRef.current?.handleStepApproval) {
+                    await streamingChatRef.current.handleStepApproval(step, total, completed, approve);
+                } else {
+                    // Fallback to direct API call (shouldn't happen normally)
+                    const stream = await apiService.approveStepStreamNew(
+                        step.id,
+                        step.plan_id,
+                        step.session_id,
+                        approve
+                    );
+
+                    // Process the streaming response
+                    const reader = stream.getReader();
+                    const decoder = new TextDecoder();
+                    let buffer = '';
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop() || '';
+
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                const data = line.slice(6);
+                                if (data.trim() && data !== '[DONE]') {
+                                    console.log('Agent response:', data);
+                                }
+                            }
+                        }
                     }
                 }
+
+                dismissToast(id);
+                showToast(`Step ${approve ? "approved" : "rejected"} successfully`, "success");
+                
+                // Always reload plan data after step approval to show updated status
+                await loadPlanData(false);
                 setReloadLeftList(true);
             } catch (error) {
                 dismissToast(id);
@@ -208,18 +249,38 @@ const PlanPage: React.FC = () => {
             } finally {
                 setProcessingSubtaskId(null);
                 setSubmitting(false);
+                setIsStepApprovalInProgress(false); // Re-enable chat after approval completes
             }
         },
         [loadPlanData, showStreaming, streamingStarted]
     );
 
 
-    // Load plan data when planId changes (but not during active streaming)
+    // Load plan data when planId changes (but avoid unnecessary API calls for cached plans)
     useEffect(() => {
-        if (planId && !showStreaming && !streamingStarted) {
-            loadPlanData(true);
+        if (!planId) return;
+        
+        // Check if we already have this plan in allPlans (from previous navigation)
+        const existingPlan = allPlans.find(plan => plan.plan.id === planId);
+        
+        if (existingPlan && !showStreaming && !streamingStarted) {
+            // Use cached data for completed plans, no API call needed - just show the history
+            console.log(`Using cached data for plan ${planId} - showing history without API call`);
+            setPlanData(existingPlan);
+            setLoading(false);
+            setError(null);
+            return;
         }
-    }, [planId, showStreaming, streamingStarted]);
+        
+        // Only make API calls for new plans not in cache or when streaming
+        if (!showStreaming && !streamingStarted) {
+            console.log(`Loading new plan data for ${planId}`);
+            loadPlanData(true);
+        } else if (showStreaming || streamingStarted) {
+            // For streaming plans, load basic plan data without clearing UI
+            loadPlanData(false);
+        }
+    }, [planId, showStreaming, streamingStarted, allPlans]);
 
     const handleNewTaskButton = () => {
         NewTaskService.handleNewTaskFromPlan(navigate);
@@ -228,19 +289,19 @@ const PlanPage: React.FC = () => {
     // Streaming handlers
     const handleStreamComplete = useCallback(async () => {
         setStreamingComplete(true);
-        setShowStreaming(false); // Hide streaming chat to enable regular chat
-        showToast("Plan generation completed! You can now provide clarifications.", "success");
+        // Don't hide streaming chat - keep it visible to show the reasoning process
+        // setShowStreaming(false); // REMOVED - keep reasoning visible
+        setLoading(false); // Ensure loading is false
+        setSubmitting(false); // Ensure chat input is not disabled
+        showToast("Plan generation completed! You can now review and approve each step.", "success");
         
         // Reload plan data to show the generated steps
         await loadPlanData(false);
         setReloadLeftList(true);
         
-        // If we're on the create route, redirect to the regular plan view immediately
-        // so users can use the chat input for clarifications
-        if (location.pathname.endsWith('/create')) {
-            navigate(`/plan/${planId}`, { replace: true });
-        }
-    }, [loadPlanData, showToast, location.pathname, navigate, planId]);
+        // Keep the URL as is - don't redirect automatically
+        // Users can navigate manually if they want to change the URL
+    }, [loadPlanData, showToast]);
 
     const handleStreamError = useCallback((error: string) => {
         setShowStreaming(false);
@@ -283,20 +344,25 @@ const PlanPage: React.FC = () => {
                                 </PanelRightToggles>
                             </ContentToolbar>
                             
-                            {/* Show streaming chat for new plans during generation */}
-                            {showStreaming && planId ? (
+                            {/* Always show streaming chat for plans - both during generation and after completion */}
+                            {planId ? (
                                 <PlanStreamingChat
+                                    ref={streamingChatRef}
                                     planId={planId}
                                     onStreamComplete={handleStreamComplete}
                                     onStreamError={handleStreamError}
+                                    onChatSubmit={handleOnchatSubmit}
+                                    planData={planData}
+                                    isStepApprovalInProgress={isStepApprovalInProgress}
                                 />
                             ) : (
+                                /* Fallback to regular chat if no planId */
                                 <PlanChat
                                     planData={planData}
                                     OnChatSubmit={handleOnchatSubmit}
-                                    loading={loading}
+                                    loading={false}
                                     setInput={setInput}
-                                    submittingChatDisableInput={submittingChatDisableInput}
+                                    submittingChatDisableInput={false}
                                     input={input}
                                 />
                             )}

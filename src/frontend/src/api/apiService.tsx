@@ -21,7 +21,9 @@ const API_ENDPOINTS = {
     STEPS: '/steps',
     HUMAN_FEEDBACK: '/human_feedback',
     APPROVE_STEPS: '/approve_step_or_steps',
+    APPROVE_STEPS_STREAM: '/approve_step_or_steps_stream',
     HUMAN_CLARIFICATION: '/human_clarification_on_plan',
+    HUMAN_CLARIFICATION_STREAM: '/human_clarification_on_plan_stream',
     AGENT_MESSAGES: '/agent_messages',
     MESSAGES: '/messages'
 };
@@ -136,6 +138,51 @@ export class APIService {
                 'Content-Type': 'application/json',
                 ...authHeaders,
             },
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        if (!response.body) {
+            throw new Error('Response body is null');
+        }
+
+        return response.body;
+    }
+
+    /**
+     * Approve step with streaming response like original experience
+     * @param stepId Step ID to approve
+     * @param planId Plan ID
+     * @param sessionId Session ID
+     * @param approved Whether the step is approved
+     * @returns ReadableStream for streaming response
+     */
+    async approveStepStream(
+        stepId: string,
+        planId: string,
+        sessionId: string,
+        approved: boolean
+    ): Promise<ReadableStream<Uint8Array>> {
+        // Import the config functions
+        const { headerBuilder, getApiUrl } = await import('./config');
+        
+        const authHeaders = headerBuilder();
+        const apiUrl = getApiUrl();
+        
+        const response = await fetch(`${apiUrl}${API_ENDPOINTS.APPROVE_STEPS}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...authHeaders,
+            },
+            body: JSON.stringify({
+                step_id: stepId,
+                plan_id: planId,
+                session_id: sessionId,
+                approved
+            })
         });
 
         if (!response.ok) {
@@ -508,6 +555,93 @@ export class APIService {
      */
     clearCache(): void {
         this._cache.clear();
+    }
+
+    /**
+     * Submit clarification for a plan with streaming response
+     * @param planId Plan ID
+     * @param sessionId Session ID
+     * @param clarification Clarification text
+     * @returns ReadableStream for streaming response
+     */
+    async submitClarificationStream(
+        planId: string,
+        sessionId: string,
+        clarification: string
+    ): Promise<ReadableStream<Uint8Array>> {
+        // Import the config functions
+        const { headerBuilder, getApiUrl } = await import('./config');
+        
+        const authHeaders = headerBuilder();
+        const apiUrl = getApiUrl();
+        
+        const response = await fetch(`${apiUrl}${API_ENDPOINTS.HUMAN_CLARIFICATION_STREAM}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...authHeaders,
+            },
+            body: JSON.stringify({
+                plan_id: planId,
+                session_id: sessionId,
+                human_clarification: clarification
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        if (!response.body) {
+            throw new Error('Response body is null');
+        }
+
+        return response.body;
+    }
+
+    /**
+     * Approve step with streaming response
+     * @param stepId Step ID to approve
+     * @param planId Plan ID
+     * @param sessionId Session ID
+     * @param approved Whether the step is approved
+     * @returns ReadableStream for streaming response
+     */
+    async approveStepStreamNew(
+        stepId: string,
+        planId: string,
+        sessionId: string,
+        approved: boolean
+    ): Promise<ReadableStream<Uint8Array>> {
+        // Import the config functions
+        const { headerBuilder, getApiUrl } = await import('./config');
+        
+        const authHeaders = headerBuilder();
+        const apiUrl = getApiUrl();
+        
+        const response = await fetch(`${apiUrl}${API_ENDPOINTS.APPROVE_STEPS_STREAM}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...authHeaders,
+            },
+            body: JSON.stringify({
+                step_id: stepId,
+                plan_id: planId,
+                session_id: sessionId,
+                approved
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        if (!response.body) {
+            throw new Error('Response body is null');
+        }
+
+        return response.body;
     }
 
     /**

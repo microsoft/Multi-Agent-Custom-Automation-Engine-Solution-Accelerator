@@ -65,9 +65,10 @@ const HomeInput: React.FC<HomeInputProps> = ({
                 }
 
                 if (response.plan_id && response.plan_id !== null) {
-                    showToast("Plan created!", "success");
                     dismissToast(id);
-                    // Navigate to the create page to show streaming generation
+                    // Navigate immediately to show unified reasoning + planning experience
+                    showToast("Starting planner agent reasoning...", "success");
+                    // Navigate immediately to the create page to show unified experience
                     navigate(`/plan/${response.plan_id}/create`, { 
                         state: { isNewPlan: true, autoStartGeneration: true } 
                     });
