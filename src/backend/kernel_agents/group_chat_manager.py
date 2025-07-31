@@ -309,12 +309,12 @@ class GroupChatManager(BaseAgent):
             step.human_approval_status = HumanFeedbackStatus.rejected
 
         step.human_feedback = received_human_feedback
-        step.status = StepStatus.completed
+        # Don't set status to completed here - keep the approved/rejected status
         await self._memory_store.update_step(step)
         track_event_if_configured(
             f"{AgentType.GROUP_CHAT_MANAGER.value} - Received human feedback, Updating step and updated into the cosmos",
             {
-                "status": StepStatus.completed,
+                "status": step.status,  # Use the actual status (approved/rejected)
                 "session_id": step.session_id,
                 "user_id": self._user_id,
                 "human_feedback": received_human_feedback,

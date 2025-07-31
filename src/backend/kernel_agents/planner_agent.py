@@ -370,7 +370,7 @@ class PlannerAgent(BaseAgent):
                 logging.exception(f"Error during parsing attempts: {parsing_exception}")
                 raise ValueError("Failed to parse JSON response")
 
-            # At this point, we have a valid parsed_result
+          
 
             # Extract plan details
             initial_goal = parsed_result.initial_goal

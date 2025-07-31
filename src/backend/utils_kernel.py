@@ -496,6 +496,7 @@ Think through the task systematically, break it down into logical steps, assign 
                     plan_summary = plan_data.get("plan", {}).get("summary", "Plan created successfully")
                     plan.summary = plan_summary
                     plan.overall_status = PlanStatus.in_progress
+                    
                     await memory_store.update_plan(plan)
                     
                     # Single processing message with all the info
@@ -564,6 +565,7 @@ Think through the task systematically, break it down into logical steps, assign 
                 if plan:
                     plan.summary = "Plan created but could not parse detailed steps from response"
                     plan.overall_status = PlanStatus.in_progress
+                    
                     await memory_store.update_plan(plan)
                     
                     # Create a basic step

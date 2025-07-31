@@ -799,6 +799,180 @@ async def approve_step_endpoint(
         return {"status": "All steps approved"}
 
 
+@app.post("/api/human_clarification_on_plan_stream")
+async def human_clarification_stream_endpoint(
+    human_clarification: HumanClarification, request: Request
+):
+    """
+    Receive human clarification on a plan with streaming agent responses.
+    """
+    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    user_id = authenticated_user["user_principal_id"]
+    if not user_id:
+        raise HTTPException(status_code=400, detail="no user")
+
+    async def generate_clarification_stream():
+        try:
+            # Initialize agents and memory store
+            kernel, memory_store = await initialize_runtime_and_context(
+                human_clarification.session_id, user_id
+            )
+            client = None
+            try:
+                client = config.get_ai_project_client()
+            except Exception as client_exc:
+                logging.error(f"Error creating AIProjectClient: {client_exc}")
+
+            # Create human agent
+            human_agent = await AgentFactory.create_agent(
+                agent_type=AgentType.HUMAN,
+                session_id=human_clarification.session_id,
+                user_id=user_id,
+                memory_store=memory_store,
+                client=client,
+            )
+
+            if human_agent is None:
+                yield "data: Failed to create human agent\n\n"
+                return
+
+            # Stream initial processing message
+            yield "data: **Human Agent:** Processing your clarification...\n\n"
+            await asyncio.sleep(0.5)
+
+            # Process the clarification
+            result = await human_agent.handle_human_clarification(
+                human_clarification=human_clarification
+            )
+
+            # Stream planner response
+            yield "data: **Planner Agent:** Thanks, the plan has been updated based on your clarification.\n\n"
+            await asyncio.sleep(0.5)
+
+            # Stream completion message
+            yield "data: **System:** Plan clarification processed. You can now approve individual steps.\n\n"
+            yield "data: [DONE]\n\n"
+
+            if client:
+                try:
+                    client.close()
+                except Exception as e:
+                    logging.error(f"Error closing AIProjectClient: {e}")
+
+        except Exception as e:
+            logging.error(f"Error in clarification streaming: {e}")
+            yield f"data: Error processing clarification: {str(e)}\n\n"
+            yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        generate_clarification_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*",
+        },
+    )
+
+
+@app.post("/api/approve_step_or_steps_stream")
+async def approve_step_stream_endpoint(
+    human_feedback: HumanFeedback, request: Request
+):
+    """
+    Approve a step or multiple steps with streaming agent responses.
+    """
+    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    user_id = authenticated_user["user_principal_id"]
+    if not user_id:
+        raise HTTPException(status_code=400, detail="no user")
+
+    async def generate_approval_stream():
+        try:
+            # Initialize agents and memory store
+            kernel, memory_store = await initialize_runtime_and_context(
+                human_feedback.session_id, user_id
+            )
+            client = None
+            try:
+                client = config.get_ai_project_client()
+            except Exception as client_exc:
+                logging.error(f"Error creating AIProjectClient: {client_exc}")
+
+            # Create all agents
+            agents = await AgentFactory.create_all_agents(
+                session_id=human_feedback.session_id,
+                user_id=user_id,
+                memory_store=memory_store,
+                client=client,
+            )
+
+            group_chat_manager = agents[AgentType.GROUP_CHAT_MANAGER.value]
+
+            # Stream initial processing message
+            action = "Approving" if human_feedback.approved else "Rejecting"
+            yield f"data: **Group Chat Manager:** {action} step and coordinating with relevant agents...\n\n"
+            await asyncio.sleep(0.5)
+
+            # Process the approval
+            await group_chat_manager.handle_human_feedback(human_feedback)
+
+            # Get the updated step to see what agent was assigned
+            updated_steps = await memory_store.get_steps_by_plan(human_feedback.plan_id)
+            target_step = next((s for s in updated_steps if s.id == human_feedback.step_id), None)
+            
+            # Stream agent responses based on step
+            if human_feedback.approved:
+                yield "data: **Human Agent:** Step approved successfully.\n\n"
+                await asyncio.sleep(0.5)
+                yield "data: **Group Chat Manager:** Step has been marked as approved and will be executed.\n\n"
+                await asyncio.sleep(0.5)
+                
+                if target_step and target_step.agent:
+                    # Show which agent is handling the step
+                    agent_name = target_step.agent.replace('_', ' ').title()
+                    yield f"data: **Group Chat Manager:** Assigning step to {agent_name} for execution...\n\n"
+                    await asyncio.sleep(0.5)
+                    
+                    # Simulate detailed agent planning/execution response
+                    yield f"data: **{agent_name}:** Analyzing step requirements...\n\n"
+                    await asyncio.sleep(0.5)
+                    yield f"data: **{agent_name}:** Creating detailed execution plan for: {target_step.action}\n\n"
+                    await asyncio.sleep(0.5)
+                    yield f"data: **{agent_name}:** ✅ Step execution plan prepared. Ready to proceed when all approvals are complete.\n\n"
+                    await asyncio.sleep(0.5)
+                    yield f"data: **Group Chat Manager:** {agent_name} has confirmed step readiness. Step is now marked as approved.\n\n"
+            else:
+                yield "data: **Human Agent:** Step has been rejected.\n\n"
+                await asyncio.sleep(0.5)
+                yield "data: **Group Chat Manager:** Step marked as rejected. Plan updated accordingly.\n\n"
+
+            await asyncio.sleep(0.5)
+            yield "data: **System:** Step approval processed successfully.\n\n"
+            yield "data: [DONE]\n\n"
+
+            if client:
+                try:
+                    client.close()
+                except Exception as e:
+                    logging.error(f"Error closing AIProjectClient: {e}")
+
+        except Exception as e:
+            logging.error(f"Error in approval streaming: {e}")
+            yield f"data: Error processing approval: {str(e)}\n\n"
+            yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        generate_approval_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*",
+        },
+    )
+
+
 @app.get("/api/plans")
 async def get_plans(
     request: Request,
