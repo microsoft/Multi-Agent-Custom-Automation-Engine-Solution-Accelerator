@@ -1,5 +1,6 @@
 # app_kernel.py
 import asyncio
+import json
 import logging
 import os
 import uuid
@@ -15,7 +16,7 @@ from config_kernel import Config
 from event_utils import track_event_if_configured
 
 # FastAPI imports
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, HTTPException, Query, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from kernel_agents.agent_factory import AgentFactory
 
@@ -29,7 +30,9 @@ from models.messages_kernel import (
     InputTask,
     PlanWithSteps,
     Step,
+    TeamConfiguration,
 )
+from services.json_service import JsonService
 
 # Updated import for KernelArguments
 from utils_kernel import initialize_runtime_and_context, rai_success
@@ -968,6 +971,351 @@ async def get_agent_tools():
                 description: Arguments required by the tool function
     """
     return []
+
+
+@app.post("/api/upload_team_config")
+async def upload_team_config_endpoint(request: Request, file: UploadFile = File(...)):
+    """
+    Upload and save a team configuration JSON file.
+
+    ---
+    tags:
+      - Team Configuration
+    parameters:
+      - name: user_principal_id
+        in: header
+        type: string
+        required: true
+        description: User ID extracted from the authentication header
+      - name: file
+        in: formData
+        type: file
+        required: true
+        description: JSON file containing team configuration
+    responses:
+      200:
+        description: Team configuration uploaded successfully
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+            config_id:
+              type: string
+            team_id:
+              type: string
+            name:
+              type: string
+      400:
+        description: Invalid request or file format
+      401:
+        description: Missing or invalid user information
+      500:
+        description: Internal server error
+    """
+    # Validate user authentication
+    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    user_id = authenticated_user["user_principal_id"]
+    if not user_id:
+        raise HTTPException(
+            status_code=401, detail="Missing or invalid user information"
+        )
+
+    # Validate file is provided and is JSON
+    if not file:
+        raise HTTPException(status_code=400, detail="No file provided")
+
+    if not file.filename.endswith(".json"):
+        raise HTTPException(status_code=400, detail="File must be a JSON file")
+
+    try:
+        # Read and parse JSON content
+        content = await file.read()
+        try:
+            json_data = json.loads(content.decode("utf-8"))
+        except json.JSONDecodeError as e:
+            raise HTTPException(
+                status_code=400, detail=f"Invalid JSON format: {str(e)}"
+            )
+
+        # Initialize memory store and service
+        kernel, memory_store = await initialize_runtime_and_context("", user_id)
+        json_service = JsonService(memory_store)
+
+        # Validate and parse the team configuration
+        try:
+            team_config = await json_service.validate_and_parse_team_config(
+                json_data, user_id
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+        # Save the configuration
+        try:
+            config_id = await json_service.save_team_configuration(team_config)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=500, detail=f"Failed to save configuration: {str(e)}"
+            )
+
+        # Track the event
+        track_event_if_configured(
+            "Team configuration uploaded",
+            {
+                "status": "success",
+                "config_id": config_id,
+                "team_id": team_config.team_id,
+                "user_id": user_id,
+                "agents_count": len(team_config.agents),
+                "tasks_count": len(team_config.starting_tasks),
+            },
+        )
+
+        return {
+            "status": "success",
+            "config_id": config_id,
+            "team_id": team_config.team_id,
+            "name": team_config.name,
+            "message": "Team configuration uploaded and saved successfully",
+        }
+
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except Exception as e:
+        # Log and return generic error for unexpected exceptions
+        logging.error(f"Unexpected error uploading team configuration: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error occurred")
+
+
+@app.get("/api/team_configs")
+async def get_team_configs_endpoint(request: Request):
+    """
+    Retrieve all team configurations for the current user.
+
+    ---
+    tags:
+      - Team Configuration
+    parameters:
+      - name: user_principal_id
+        in: header
+        type: string
+        required: true
+        description: User ID extracted from the authentication header
+    responses:
+      200:
+        description: List of team configurations for the user
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              team_id:
+                type: string
+              name:
+                type: string
+              status:
+                type: string
+              created:
+                type: string
+              created_by:
+                type: string
+              description:
+                type: string
+              logo:
+                type: string
+              plan:
+                type: string
+              agents:
+                type: array
+              starting_tasks:
+                type: array
+      401:
+        description: Missing or invalid user information
+    """
+    # Validate user authentication
+    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    user_id = authenticated_user["user_principal_id"]
+    if not user_id:
+        raise HTTPException(
+            status_code=401, detail="Missing or invalid user information"
+        )
+
+    try:
+        # Initialize memory store and service
+        kernel, memory_store = await initialize_runtime_and_context("", user_id)
+        json_service = JsonService(memory_store)
+
+        # Retrieve all team configurations
+        team_configs = await json_service.get_all_team_configurations(user_id)
+
+        # Convert to dictionaries for response
+        configs_dict = [config.model_dump() for config in team_configs]
+
+        return configs_dict
+
+    except Exception as e:
+        logging.error(f"Error retrieving team configurations: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error occurred")
+
+
+@app.get("/api/team_configs/{config_id}")
+async def get_team_config_by_id_endpoint(config_id: str, request: Request):
+    """
+    Retrieve a specific team configuration by ID.
+
+    ---
+    tags:
+      - Team Configuration
+    parameters:
+      - name: config_id
+        in: path
+        type: string
+        required: true
+        description: The ID of the team configuration to retrieve
+      - name: user_principal_id
+        in: header
+        type: string
+        required: true
+        description: User ID extracted from the authentication header
+    responses:
+      200:
+        description: Team configuration details
+        schema:
+          type: object
+          properties:
+            id:
+              type: string
+            team_id:
+              type: string
+            name:
+              type: string
+            status:
+              type: string
+            created:
+              type: string
+            created_by:
+              type: string
+            description:
+              type: string
+            logo:
+              type: string
+            plan:
+              type: string
+            agents:
+              type: array
+            starting_tasks:
+              type: array
+      401:
+        description: Missing or invalid user information
+      404:
+        description: Team configuration not found
+    """
+    # Validate user authentication
+    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    user_id = authenticated_user["user_principal_id"]
+    if not user_id:
+        raise HTTPException(
+            status_code=401, detail="Missing or invalid user information"
+        )
+
+    try:
+        # Initialize memory store and service
+        kernel, memory_store = await initialize_runtime_and_context("", user_id)
+        json_service = JsonService(memory_store)
+
+        # Retrieve the specific team configuration
+        team_config = await json_service.get_team_configuration(config_id, user_id)
+
+        if team_config is None:
+            raise HTTPException(status_code=404, detail="Team configuration not found")
+
+        # Convert to dictionary for response
+        return team_config.model_dump()
+
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except Exception as e:
+        logging.error(f"Error retrieving team configuration: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error occurred")
+
+
+@app.delete("/api/team_configs/{config_id}")
+async def delete_team_config_endpoint(config_id: str, request: Request):
+    """
+    Delete a team configuration by ID.
+
+    ---
+    tags:
+      - Team Configuration
+    parameters:
+      - name: config_id
+        in: path
+        type: string
+        required: true
+        description: The ID of the team configuration to delete
+      - name: user_principal_id
+        in: header
+        type: string
+        required: true
+        description: User ID extracted from the authentication header
+    responses:
+      200:
+        description: Team configuration deleted successfully
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+            message:
+              type: string
+            config_id:
+              type: string
+      401:
+        description: Missing or invalid user information
+      404:
+        description: Team configuration not found
+    """
+    # Validate user authentication
+    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    user_id = authenticated_user["user_principal_id"]
+    if not user_id:
+        raise HTTPException(
+            status_code=401, detail="Missing or invalid user information"
+        )
+
+    try:
+        # Initialize memory store and service
+        kernel, memory_store = await initialize_runtime_and_context("", user_id)
+        json_service = JsonService(memory_store)
+
+        # Delete the team configuration
+        deleted = await json_service.delete_team_configuration(config_id, user_id)
+
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Team configuration not found")
+
+        # Track the event
+        track_event_if_configured(
+            "Team configuration deleted",
+            {"status": "success", "config_id": config_id, "user_id": user_id},
+        )
+
+        return {
+            "status": "success",
+            "message": "Team configuration deleted successfully",
+            "config_id": config_id,
+        }
+
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except Exception as e:
+        logging.error(f"Error deleting team configuration: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error occurred")
 
 
 # Run the app

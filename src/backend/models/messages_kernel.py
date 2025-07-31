@@ -93,7 +93,9 @@ class BaseDataModel(KernelBaseModel):
     """Base data model with common fields."""
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    timestamp: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: Optional[datetime] = Field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
 
 
 # Basic message class for Semantic Kernel compatibility
@@ -212,6 +214,46 @@ class AzureIdAgent(BaseDataModel):
     action: str
     agent: AgentType
     agent_id: str
+
+
+class TeamAgent(KernelBaseModel):
+    """Represents an agent within a team."""
+
+    input_key: str
+    type: str
+    name: str
+    system_message: str = ""
+    description: str = ""
+    icon: str
+    index_name: str = ""
+
+
+class StartingTask(KernelBaseModel):
+    """Represents a starting task for a team."""
+
+    id: str
+    name: str
+    prompt: str
+    created: str
+    creator: str
+    logo: str
+
+
+class TeamConfiguration(BaseDataModel):
+    """Represents a team configuration stored in the database."""
+
+    data_type: Literal["team_config"] = Field("team_config", Literal=True)
+    team_id: str
+    name: str
+    status: str
+    created: str
+    created_by: str
+    agents: List[TeamAgent] = Field(default_factory=list)
+    description: str = ""
+    logo: str = ""
+    plan: str = ""
+    starting_tasks: List[StartingTask] = Field(default_factory=list)
+    user_id: str  # Who uploaded this configuration
 
 
 class PlanWithSteps(Plan):
