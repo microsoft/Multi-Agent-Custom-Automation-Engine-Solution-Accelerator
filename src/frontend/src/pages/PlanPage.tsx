@@ -124,7 +124,6 @@ const PlanPage: React.FC = () => {
             } catch (error) {
                 dismissToast(id);
                 showToast("Failed to submit clarification", "error");
-                console.log("Failed to submit clarification:", error);
             } finally {
                 setInput("");
                 setSubmitting(false);
@@ -150,7 +149,6 @@ const PlanPage: React.FC = () => {
             } catch (error) {
                 dismissToast(id);
                 showToast(`Failed to ${approve ? "approve" : "reject"} step`, "error");
-                console.log(`Failed to ${approve ? "approve" : "reject"} step:`, error);
             } finally {
                 setProcessingSubtaskId(null);
                 setSubmitting(false);

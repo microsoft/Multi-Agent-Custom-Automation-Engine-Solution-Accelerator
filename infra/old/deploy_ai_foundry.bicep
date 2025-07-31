@@ -169,6 +169,7 @@ resource aiDevelopertoAIProject 'Microsoft.Authorization/roleAssignments@2022-04
   properties: {
     roleDefinitionId: aiDeveloper.id
     principalId: aiHubProject.identity.principalId
+    principalType: 'ServicePrincipal'
   }
 }
 

@@ -18,7 +18,7 @@ By default this template will use the environment name as the prefix to prevent 
 | `AZURE_ENV_MODEL_CAPACITY`       | int | `150`      | Sets the GPT model capacity.                                                |
 | `AZURE_ENV_IMAGETAG`            | string | `latest`          | Docker image tag used for container deployments.                                                   |
 | `AZURE_ENV_ENABLE_TELEMETRY`    | bool   | `true`            | Enables telemetry for monitoring and diagnostics.                                                  |
-| `AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID` | string  | `<Existing Workspace Id>`     | Set this if you want to reuse an existing Log Analytics Workspace instead of creating a new one.     |
+| `AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID` | string  | Guide to get your [Existing Workspace ID](/docs/re-use-log-analytics.md) | Set this if you want to reuse an existing Log Analytics Workspace instead of creating a new one.     |
 ---
 
 ## How to Set a Parameter

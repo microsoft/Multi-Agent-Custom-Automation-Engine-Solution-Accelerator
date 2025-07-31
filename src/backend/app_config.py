@@ -5,7 +5,7 @@ from typing import Optional
 
 from azure.ai.projects.aio import AIProjectClient
 from azure.cosmos.aio import CosmosClient
-from azure.identity import DefaultAzureCredential
+from helpers.azure_credential_utils import get_azure_credential
 from dotenv import load_dotenv
 from semantic_kernel.kernel import Kernel
 
@@ -106,23 +106,6 @@ class AppConfig:
         """
         return name in os.environ and os.environ[name].lower() in ["true", "1"]
 
-    def get_azure_credentials(self):
-        """Get Azure credentials using DefaultAzureCredential.
-
-        Returns:
-            DefaultAzureCredential instance for Azure authentication
-        """
-        # Cache the credentials object
-        if self._azure_credentials is not None:
-            return self._azure_credentials
-
-        try:
-            self._azure_credentials = DefaultAzureCredential()
-            return self._azure_credentials
-        except Exception as exc:
-            logging.warning("Failed to create DefaultAzureCredential: %s", exc)
-            return None
-
     def get_cosmos_database_client(self):
         """Get a Cosmos DB client for the configured database.
 
@@ -132,7 +115,7 @@ class AppConfig:
         try:
             if self._cosmos_client is None:
                 self._cosmos_client = CosmosClient(
-                    self.COSMOSDB_ENDPOINT, credential=self.get_azure_credentials()
+                    self.COSMOSDB_ENDPOINT, credential=get_azure_credential()
                 )
 
             if self._cosmos_database is None:
@@ -169,10 +152,10 @@ class AppConfig:
             return self._ai_project_client
 
         try:
-            credential = self.get_azure_credentials()
+            credential = get_azure_credential()
             if credential is None:
                 raise RuntimeError(
-                    "Unable to acquire Azure credentials; ensure DefaultAzureCredential is configured"
+                    "Unable to acquire Azure credentials; ensure Managed Identity is configured"
                 )
 
             endpoint = self.AZURE_AI_AGENT_ENDPOINT
@@ -182,6 +165,22 @@ class AppConfig:
         except Exception as exc:
             logging.error("Failed to create AIProjectClient: %s", exc)
             raise
+
+    def get_user_local_browser_language(self) -> str:
+        """Get the user's local browser language from environment variables.
+
+        Returns:
+            The user's local browser language or 'en-US' if not set
+        """
+        return self._get_optional("USER_LOCAL_BROWSER_LANGUAGE", "en-US")
+
+    def set_user_local_browser_language(self, language: str):
+        """Set the user's local browser language in environment variables.
+
+        Args:
+            language: The language code to set (e.g., 'en-US')
+        """
+        os.environ["USER_LOCAL_BROWSER_LANGUAGE"] = language
 
 
 # Create a global instance of AppConfig

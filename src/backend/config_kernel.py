@@ -1,5 +1,6 @@
 # Import AppConfig from app_config
 from app_config import config
+from helpers.azure_credential_utils import get_azure_credential
 
 
 # This file is left as a lightweight wrapper around AppConfig for backward compatibility
@@ -31,7 +32,7 @@ class Config:
     @staticmethod
     def GetAzureCredentials():
         """Get Azure credentials using the AppConfig implementation."""
-        return config.get_azure_credentials()
+        return get_azure_credential()
 
     @staticmethod
     def GetCosmosDatabaseClient():

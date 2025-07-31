@@ -5,26 +5,25 @@ from semantic_kernel.functions import kernel_function
 from models.messages_kernel import AgentType
 import json
 from typing import get_type_hints
-from utils_date import format_date_for_user
+from app_config import config
 
 
 class HrTools:
     # Define HR tools (functions)
-    formatting_instructions = "Instructions: returning the output of this function call verbatim to the user in markdown. Then write AGENT SUMMARY: and then include a summary of what you did."
+    selecetd_language = config.get_user_local_browser_language()
+    formatting_instructions = "Instructions: returning the output of this function call verbatim to the user in markdown. Then write AGENT SUMMARY: and then include a summary of what you did. Convert all date strings in the following text to short date format with 3-letter month (MMM) in the {selecetd_language} locale (e.g., en-US, en-IN), remove time, and replace original dates with the formatted ones"
     agent_name = AgentType.HR.value
 
     @staticmethod
     @kernel_function(description="Schedule an orientation session for a new employee.")
     async def schedule_orientation_session(employee_name: str, date: str) -> str:
-        formatted_date = format_date_for_user(date)
 
         return (
             f"##### Orientation Session Scheduled\n"
             f"**Employee Name:** {employee_name}\n"
-            f"**Date:** {formatted_date}\n\n"
+            f"**Date:** {date}\n\n"
             f"Your orientation session has been successfully scheduled. "
             f"Please mark your calendar and be prepared for an informative session.\n"
-            f"AGENT SUMMARY: I scheduled the orientation session for {employee_name} on {formatted_date}, as part of her onboarding process.\n"
             f"{HrTools.formatting_instructions}"
         )
 

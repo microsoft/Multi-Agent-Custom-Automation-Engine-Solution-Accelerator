@@ -52,11 +52,3 @@ def test_get_bool_config():
         assert GetBoolConfig("FEATURE_ENABLED") is True
     with patch.dict("os.environ", {"FEATURE_ENABLED": "0"}):
         assert GetBoolConfig("FEATURE_ENABLED") is False
-
-
-@patch("config.DefaultAzureCredential")
-def test_get_azure_credentials_with_env_vars(mock_default_cred):
-    """Test Config.GetAzureCredentials with explicit credentials."""
-    with patch.dict(os.environ, MOCK_ENV_VARS):
-        creds = Config.GetAzureCredentials()
-        assert creds is not None

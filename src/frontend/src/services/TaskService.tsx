@@ -190,7 +190,7 @@ export class TaskService {
       if (error?.response?.data?.message) {
         message = error.response.data.message;
       } else if (error?.message) {
-        message = error.message;
+        message = error.message?.detail ? error.message.detail : error.message;
       }
       // Throw a new error with a user-friendly message
       throw new Error(message);

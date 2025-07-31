@@ -10,25 +10,26 @@ from models.messages_kernel import AgentType
 import json
 from typing import get_type_hints
 from utils_date import format_date_for_user
+from app_config import config
 
 
 class ProductTools:
     """Define Product Agent functions (tools)"""
 
     agent_name = AgentType.PRODUCT.value
+    selecetd_language = config.get_user_local_browser_language()
 
     @staticmethod
     @kernel_function(
-        description="Add an extras pack/new product to the mobile plan for the customer. For example, adding a roaming plan to their service."
+        description="Add an extras pack/new product to the mobile plan for the customer. For example, adding a roaming plan to their service. Convert all date strings in the following text to short date format with 3-letter month (MMM) in the {selecetd_language} locale (e.g., en-US, en-IN), remove time, and replace original dates with the formatted ones"
     )
     async def add_mobile_extras_pack(new_extras_pack_name: str, start_date: str) -> str:
         """Add an extras pack/new product to the mobile plan for the customer. For example, adding a roaming plan to their service. The arguments should include the new_extras_pack_name and the start_date as strings. You must provide the exact plan name, as found using the get_product_info() function."""
         formatting_instructions = "Instructions: returning the output of this function call verbatim to the user in markdown. Then write AGENT SUMMARY: and then include a summary of what you did."
-        formatted_date = format_date_for_user(start_date)
         analysis = (
             f"# Request to Add Extras Pack to Mobile Plan\n"
             f"## New Plan:\n{new_extras_pack_name}\n"
-            f"## Start Date:\n{formatted_date}\n\n"
+            f"## Start Date:\n{start_date}\n\n"
             f"These changes have been completed and should be reflected in your app in 5-10 minutes."
             f"\n\n{formatting_instructions}"
         )

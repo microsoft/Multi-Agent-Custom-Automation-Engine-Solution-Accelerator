@@ -10,7 +10,7 @@ import numpy as np
 
 from azure.cosmos.partition_key import PartitionKey
 from azure.cosmos.aio import CosmosClient
-from azure.identity import DefaultAzureCredential
+from helpers.azure_credential_utils import get_azure_credential
 from semantic_kernel.memory.memory_record import MemoryRecord
 from semantic_kernel.memory.memory_store_base import MemoryStoreBase
 from semantic_kernel.contents import ChatMessageContent, ChatHistory, AuthorRole
@@ -73,7 +73,7 @@ class CosmosMemoryContext(MemoryStoreBase):
             if not self._database:
                 # Create Cosmos client
                 cosmos_client = CosmosClient(
-                    self._cosmos_endpoint, credential=DefaultAzureCredential()
+                    self._cosmos_endpoint, credential=get_azure_credential()
                 )
                 self._database = cosmos_client.get_database_client(
                     self._cosmos_database

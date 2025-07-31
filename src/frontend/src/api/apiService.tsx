@@ -21,7 +21,8 @@ const API_ENDPOINTS = {
     APPROVE_STEPS: '/approve_step_or_steps',
     HUMAN_CLARIFICATION: '/human_clarification_on_plan',
     AGENT_MESSAGES: '/agent_messages',
-    MESSAGES: '/messages'
+    MESSAGES: '/messages',
+    USER_BROWSER_LANGUAGE: '/user_browser_language'
 };
 
 // Simple cache implementation
@@ -499,6 +500,18 @@ export class APIService {
         ).length;
 
         return Math.round((completedSteps / plan.steps.length) * 100);
+    }
+
+    /**
+     * Send the user's browser language to the backend
+     * @returns Promise with response object
+     */
+    async sendUserBrowserLanguage(): Promise<{ status: string }> {
+        const language = navigator.language || navigator.languages[0] || 'en';
+        const response = await apiClient.post(API_ENDPOINTS.USER_BROWSER_LANGUAGE, {
+            language
+        });
+        return response;
     }
 }
 

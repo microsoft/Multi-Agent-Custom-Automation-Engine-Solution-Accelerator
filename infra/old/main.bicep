@@ -680,6 +680,7 @@ module aiFoundryStorageAccount 'br/public:avm/res/storage/storage-account:0.18.2
       {
         principalId: userAssignedIdentity.outputs.principalId
         roleDefinitionIdOrName: 'Storage Blob Data Contributor'
+        principalType: 'ServicePrincipal'
       }
     ]
   }
@@ -760,6 +761,7 @@ module aiFoundryAiProject 'br/public:avm/res/machine-learning-services/workspace
         principalId: containerApp.outputs.?systemAssignedMIPrincipalId!
         // Assigning the role with the role name instead of the role ID freezes the deployment at this point
         roleDefinitionIdOrName: '64702f94-c441-49e6-a78b-ef80e0188fee' //'Azure AI Developer'
+        principalType: 'ServicePrincipal'
       }
     ]
   }
