@@ -74,7 +74,7 @@ frontend_url = Config.FRONTEND_SITE_NAME
 # Add this near the top of your app.py, after initializing the app
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[frontend_url],
+    allow_origins=[frontend_url],  # Allow all origins for development; restrict in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -269,7 +269,7 @@ async def input_task_endpoint(input_task: InputTask, request: Request):
         if "Rate limit is exceeded" in error_msg:
             match = re.search(r"Rate limit is exceeded\. Try again in (\d+) seconds?\.", error_msg)
             if match:
-                error_msg = f"Rate limit is exceeded. Try again in {match.group(1)} seconds."
+                error_msg = "Application temporarily unavailable due to quota limits. Please try again later."
 
         track_event_if_configured(
             "InputTaskError",
@@ -279,7 +279,7 @@ async def input_task_endpoint(input_task: InputTask, request: Request):
                 "error": str(e),
             },
         )
-        raise HTTPException(status_code=400, detail=f"Error creating plan: {error_msg}") from e
+        raise HTTPException(status_code=400, detail=f"{error_msg}") from e
 
 
 @app.post("/api/human_feedback")
