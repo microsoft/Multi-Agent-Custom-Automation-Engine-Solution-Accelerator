@@ -1,0 +1,7 @@
+pyodbc
+sqlalchemy
+pandas
+azure-storage-blob
+azure-search-documents
+langchain
+openai
