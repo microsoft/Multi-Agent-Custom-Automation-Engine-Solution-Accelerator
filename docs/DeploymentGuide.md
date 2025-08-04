@@ -244,7 +244,8 @@ There are several ways to deploy the solution. You can deploy to run in Azure in
 
 When Deployment is complete, follow steps in [Set Up Authentication in Azure App Service](../docs/azure_app_service_auth_setup.md) to add app authentication to your web app running on Azure App Service
 
-If you case any other issue you can [throubleshoot](../docs/Troubleshoot.md) it
+### 🛠️ Troubleshooting
+ If you encounter any issues during the deployment process, please refer  [throubleshoot](../docs/Troubleshoot.md) document for detailed steps and solutions.
 
 # Local setup
 
