@@ -10,12 +10,14 @@ Before deploying the resources, you may need to enable the **Bring Your Own Publ
  
    ```bash
    az feature register --namespace Microsoft.Network --name AllowBringYourOwnPublicIpAddress
+   ```
  
 2. **Wait for the registration to complete.**
     You can check the status using:
  
     ```bash
-    az feature show --namespace Microsoft.Network --name AllowBringYourOwnPublicIpAddress --query properties.state
+    az feature show --namespace Microsoft.Network --name AllowBringYourOwnPublicIpAddress --query properties.state 
+    ```
  
 3. **The output should show:**
     "Registered"
@@ -24,6 +26,7 @@ Before deploying the resources, you may need to enable the **Bring Your Own Publ
  
     ```bash
     az provider register --namespace Microsoft.Network
+    ```
  
     💡 Note: Feature registration may take several minutes to complete. This needs to be done only once per Azure subscription.
 
@@ -33,11 +36,15 @@ Before starting the deployment, ensure that the target resource group exists in 
 
 ### Steps
  
-1. Go to [Azure Portal](https://portal.azure.com/#home).
+1. Go to [Azure Portal](https:/portal.azure.com/#home).
 
 2. Click on the **"Resource groups"** option available on the Azure portal home page.
-![alt text](../docs//images/AzureHomePage.png)
+![alt text](../docs/images/AzureHomePage.png)
+
 
 3. In the Resource Groups search bar, search for the resource group you intend to target for deployment. If it exists, you can proceed with using it.
-    ![alt text](../docs/images/resourcegroup1.png)
+![alt text](../docs/images/resourcegroup1.png)
+
+    💡 Note: If you encounter any other issues, please feel free to reach out to us. Thank you!
+     
 
