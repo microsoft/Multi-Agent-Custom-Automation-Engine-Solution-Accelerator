@@ -244,6 +244,8 @@ There are several ways to deploy the solution. You can deploy to run in Azure in
 
 When Deployment is complete, follow steps in [Set Up Authentication in Azure App Service](../docs/azure_app_service_auth_setup.md) to add app authentication to your web app running on Azure App Service
 
+If you case any other issue you can [throubleshoot](../docs/Troubleshoot.md) it
+
 # Local setup
 
 > **Note for macOS Developers**: If you are using macOS on Apple Silicon (ARM64) the DevContainer will **not** work. This is due to a limitation with the Azure Functions Core Tools (see [here](https://github.com/Azure/azure-functions-core-tools/issues/3112)).
