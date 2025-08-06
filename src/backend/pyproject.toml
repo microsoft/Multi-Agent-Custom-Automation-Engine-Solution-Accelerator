@@ -8,6 +8,7 @@ dependencies = [
     "azure-ai-evaluation>=1.5.0",
     "azure-ai-inference>=1.0.0b9",
     "azure-ai-projects>=1.0.0b9",
+    "azure-ai-agents>=1.2.0b1",
     "azure-cosmos>=4.9.0",
     "azure-identity>=1.21.0",
     "azure-monitor-events-extension>=0.1.0",
