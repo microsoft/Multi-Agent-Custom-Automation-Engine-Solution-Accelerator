@@ -37,4 +37,7 @@ export const quickTasks: QuickTask[] = [
 export interface HomeInputProps {
     onInputSubmit: (input: string) => void;
     onQuickTaskSelect: (taskDescription: string) => void;
+    selectedTeam?: TeamConfig | null;
 }
+
+import { TeamConfig } from './Team';

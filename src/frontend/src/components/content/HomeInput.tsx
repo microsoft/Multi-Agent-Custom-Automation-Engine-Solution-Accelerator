@@ -12,6 +12,7 @@ import "../../styles/prism-material-oceanic.css";
 import "./../../styles/HomeInput.css";
 
 import { HomeInputProps, quickTasks, QuickTask } from "../../models/homeInput";
+import { TeamConfig } from "../../models/Team";
 import { TaskService } from "../../services/TaskService";
 import { NewTaskService } from "../../services/NewTaskService";
 import { RAIErrorCard, RAIErrorData } from "../errors";
@@ -24,6 +25,7 @@ import { Send } from "@/coral/imports/bundleicons";
 const HomeInput: React.FC<HomeInputProps> = ({
     onInputSubmit,
     onQuickTaskSelect,
+    selectedTeam,
 }) => {
     const [submitting, setSubmitting] = useState(false);
     const [input, setInput] = useState("");
@@ -71,7 +73,13 @@ const HomeInput: React.FC<HomeInputProps> = ({
                 if (response.plan_id && response.plan_id !== null) {
                     showToast("Plan created!", "success");
                     dismissToast(id);
-                    navigate(`/plan/${response.plan_id}/create`);
+                    
+                    // Navigate with team ID if a team is selected
+                    const navPath = selectedTeam 
+                        ? `/plan/${response.plan_id}/create/${selectedTeam.team_id}`
+                        : `/plan/${response.plan_id}/create`;
+                    console.log('HomeInput: Navigating to:', navPath, 'with team:', selectedTeam?.name);
+                    navigate(navPath);
                 } else {
                     showToast("Failed to create plan", "error");
                     dismissToast(id);
@@ -129,6 +137,29 @@ const HomeInput: React.FC<HomeInputProps> = ({
         }
     }, [input]);
 
+    // Convert team starting_tasks to QuickTask format or use default
+    const tasksToDisplay: QuickTask[] = selectedTeam ? 
+        selectedTeam.starting_tasks.map((task, index) => {
+            // Handle both string tasks and StartingTask objects
+            if (typeof task === 'string') {
+                return {
+                    id: `team-task-${index}`,
+                    title: task,
+                    description: task,
+                    icon: quickTasks[index % quickTasks.length]?.icon || quickTasks[0].icon
+                };
+            } else {
+                // Handle StartingTask objects
+                const startingTask = task as any; // Type assertion for now
+                return {
+                    id: startingTask.id || `team-task-${index}`,
+                    title: startingTask.name || startingTask.prompt || 'Task',
+                    description: startingTask.prompt || startingTask.name || 'Task description',
+                    icon: startingTask.logo || quickTasks[index % quickTasks.length]?.icon || quickTasks[0].icon
+                };
+            }
+        }) : quickTasks;
+
     return (
         <div className="home-input-container">
             <div className="home-input-content">
@@ -176,7 +207,7 @@ const HomeInput: React.FC<HomeInputProps> = ({
                         </div>
 
                         <div className="home-input-quick-tasks">
-                            {quickTasks.map((task) => (
+                            {tasksToDisplay.map((task) => (
                                 <PromptCard
                                     key={task.id}
                                     title={task.title}

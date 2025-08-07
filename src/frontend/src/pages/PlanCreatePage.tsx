@@ -24,13 +24,15 @@ import { TaskListSquareLtr } from "@/coral/imports/bundleicons";
 import LoadingMessage, { loadingMessages } from "@/coral/components/LoadingMessage";
 import { RAIErrorCard, RAIErrorData } from "../components/errors";
 import { apiClient } from "../api/apiClient";
+import { TeamConfig } from "../models/Team";
+import { TeamService } from "../services/TeamService";
 
 /**
  * Page component for creating and viewing a plan being generated
- * Accessible via the route /plan/{plan_id}/create
+ * Accessible via the route /plan/{plan_id}/create/{team_id?}
  */
 const PlanCreatePage: React.FC = () => {
-    const { planId } = useParams<{ planId: string }>();
+    const { planId, teamId } = useParams<{ planId: string; teamId?: string }>();
     const navigate = useNavigate();
     const { showToast, dismissToast } = useInlineToaster();
 
@@ -46,6 +48,7 @@ const PlanCreatePage: React.FC = () => {
     const [reloadLeftList, setReloadLeftList] = useState(true);
     const [raiError, setRAIError] = useState<RAIErrorData | null>(null);
     const [planGenerated, setPlanGenerated] = useState<boolean>(false);
+    const [selectedTeam, setSelectedTeam] = useState<TeamConfig | null>(null);
 
     const [loadingMessage, setLoadingMessage] = useState(loadingMessages[0]);
 
@@ -59,6 +62,28 @@ const PlanCreatePage: React.FC = () => {
         }, 2000);
         return () => clearInterval(interval);
     }, [loading]);
+
+    // Load team data if teamId is provided
+    useEffect(() => {
+        const loadTeamData = async () => {
+            if (teamId) {
+                console.log('Loading team data for ID:', teamId);
+                try {
+                    const team = await TeamService.getTeamById(teamId);
+                    if (team) {
+                        setSelectedTeam(team);
+                        console.log('Team loaded for plan creation:', team.name);
+                    } else {
+                        console.warn('Team not found for ID:', teamId);
+                    }
+                } catch (error) {
+                    console.error('Error loading team data:', error);
+                }
+            }
+        };
+        
+        loadTeamData();
+    }, [teamId]);
 
     useEffect(() => {
         const currentPlan = allPlans.find(
@@ -247,7 +272,12 @@ const PlanCreatePage: React.FC = () => {
     return (
         <CoralShellColumn>
             <CoralShellRow>
-                <PlanPanelLeft onNewTaskButton={handleNewTaskButton} reloadTasks={reloadLeftList} restReload={()=>setReloadLeftList(false)}/>
+                <PlanPanelLeft 
+                    onNewTaskButton={handleNewTaskButton} 
+                    reloadTasks={reloadLeftList} 
+                    restReload={()=>setReloadLeftList(false)}
+                    selectedTeam={selectedTeam}
+                />
 
                 <Content>
                     {/* 🐙 Only replaces content body, not page shell */}
