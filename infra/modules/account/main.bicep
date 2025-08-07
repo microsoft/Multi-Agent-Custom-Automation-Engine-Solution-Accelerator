@@ -255,7 +255,7 @@ resource cognitiveServiceExisting 'Microsoft.CognitiveServices/accounts@2025-04-
   scope: resourceGroup(existingCognitiveServiceDetails[2], existingCognitiveServiceDetails[4])
 }
 
-module cognigive_service_dependencies 'modules/dependencies.bicep' = if(!useExistingService) {
+module cognitiveServiceDependencies 'modules/dependencies.bicep' = if(!useExistingService) {
   params: {
     projectName: projectName
     projectDescription: projectDescription
@@ -272,12 +272,12 @@ module cognigive_service_dependencies 'modules/dependencies.bicep' = if(!useExis
   }
 }
 
-module existing_cognigive_service_dependencies 'modules/dependencies.bicep' = if(useExistingService) {
+module existingCognitiveServiceDependencies 'modules/dependencies.bicep' = if(useExistingService) {
   params: {
     name:  cognitiveServiceExisting.name 
     projectName: projectName
     projectDescription: projectDescription
-    azureExistingAIProjectResourceId: existingFoundryProjectResourceId
+    azureExistingAiProjectResourceId: existingFoundryProjectResourceId
     location: location
     deployments: deployments
     diagnosticSettings: diagnosticSettings
@@ -319,14 +319,14 @@ output location string = useExistingService ? cognitiveServiceExisting.location 
  
 import { secretsOutputType } from 'br/public:avm/utl/types/avm-common-types:0.5.1'
 @description('A hashtable of references to the secrets exported to the provided Key Vault. The key of each reference is each secret\'s name.')
-output exportedSecrets secretsOutputType = useExistingService ? existing_cognigive_service_dependencies.outputs.exportedSecrets : cognigive_service_dependencies.outputs.exportedSecrets
+output exportedSecrets secretsOutputType = useExistingService ? existingCognitiveServiceDependencies.outputs.exportedSecrets : cognitiveServiceDependencies.outputs.exportedSecrets
  
 @description('The private endpoints of the congitive services account.')
-output privateEndpoints privateEndpointOutputType[] = useExistingService ? existing_cognigive_service_dependencies.outputs.privateEndpoints : cognigive_service_dependencies.outputs.privateEndpoints
+output privateEndpoints privateEndpointOutputType[] = useExistingService ? existingCognitiveServiceDependencies.outputs.privateEndpoints : cognitiveServiceDependencies.outputs.privateEndpoints
  
 import { aiProjectOutputType } from './modules/project.bicep'
 @description('The AI project information for the cognitive services account.')
-output aiProjectInfo aiProjectOutputType = useExistingService ? existing_cognigive_service_dependencies.outputs.aiProjectInfo : cognigive_service_dependencies.outputs.aiProjectInfo
+output aiProjectInfo aiProjectOutputType = useExistingService ? existingCognitiveServiceDependencies.outputs.aiProjectInfo : cognitiveServiceDependencies.outputs.aiProjectInfo
 
 // ================ //
 // Definitions      //

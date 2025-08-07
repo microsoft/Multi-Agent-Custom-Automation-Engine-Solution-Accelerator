@@ -14,11 +14,11 @@ param aiServicesName string
 param tags object = {}
 
 @description('Optional. Use this parameter to use an existing AI project resource ID from different resource group')
-param azureExistingAIProjectResourceId string = ''
+param azureExistingAiProjectResourceId string = ''
 
 // // Extract components from existing AI Project Resource ID if provided
-var useExistingProject = !empty(azureExistingAIProjectResourceId)
-var existingProjName = useExistingProject ? last(split(azureExistingAIProjectResourceId, '/')) : ''
+var useExistingProject = !empty(azureExistingAiProjectResourceId)
+var existingProjName = useExistingProject ? last(split(azureExistingAiProjectResourceId, '/')) : ''
 var existingProjEndpoint = useExistingProject ? format('https://{0}.services.ai.azure.com/api/projects/{1}', aiServicesName, existingProjName) : ''
 // Reference to cognitive service in current resource group for new projects
 resource cogServiceReference 'Microsoft.CognitiveServices/accounts@2024-10-01' existing = {
@@ -43,7 +43,7 @@ resource aiProject 'Microsoft.CognitiveServices/accounts/projects@2025-04-01-pre
 @description('AI Project metadata including name, resource ID, and API endpoint.')
 output aiProjectInfo aiProjectOutputType = {
   name: useExistingProject ? existingProjName : aiProject.name
-  resourceId: useExistingProject ? azureExistingAIProjectResourceId : aiProject.id
+  resourceId: useExistingProject ? azureExistingAiProjectResourceId : aiProject.id
   apiEndpoint: useExistingProject ? existingProjEndpoint : aiProject.properties.endpoints['AI Foundry API']
 }
 

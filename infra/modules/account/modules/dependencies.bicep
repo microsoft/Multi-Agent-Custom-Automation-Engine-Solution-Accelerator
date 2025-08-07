@@ -58,7 +58,7 @@ param projectName string
 param projectDescription string
 
 @description('Optional: Provide the existing project resource id in case if it needs to be reused')
-param azureExistingAIProjectResourceId string = ''
+param azureExistingAiProjectResourceId string = ''
 
 var builtInRoleNames = {
   'Cognitive Services Contributor': subscriptionResourceId(
@@ -192,7 +192,7 @@ resource cognitiveService 'Microsoft.CognitiveServices/accounts@2025-04-01-previ
 }
 
 @batchSize(1)
-resource cognitiveService_deployments 'Microsoft.CognitiveServices/accounts/deployments@2025-04-01-preview' = [
+resource cognitiveServiceDeployments 'Microsoft.CognitiveServices/accounts/deployments@2025-04-01-preview' = [
   for (deployment, index) in (deployments ?? []): {
     parent: cognitiveService
     name: deployment.?name ?? '${name}-deployments'
@@ -211,7 +211,7 @@ resource cognitiveService_deployments 'Microsoft.CognitiveServices/accounts/depl
   }
 ]
 
-resource cognitiveService_lock 'Microsoft.Authorization/locks@2020-05-01' = if (!empty(lock ?? {}) && lock.?kind != 'None') {
+resource cognitiveServiceLock 'Microsoft.Authorization/locks@2020-05-01' = if (!empty(lock ?? {}) && lock.?kind != 'None') {
   name: lock.?name ?? 'lock-${name}'
   properties: {
     level: lock.?kind ?? ''
@@ -222,7 +222,7 @@ resource cognitiveService_lock 'Microsoft.Authorization/locks@2020-05-01' = if (
   scope: cognitiveService
 }
 
-resource cognitiveService_diagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = [
+resource cognitiveServiceDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = [
   for (diagnosticSetting, index) in (diagnosticSettings ?? []): {
     name: diagnosticSetting.?name ?? '${name}-diagnosticSettings'
     properties: {
@@ -251,7 +251,7 @@ resource cognitiveService_diagnosticSettings 'Microsoft.Insights/diagnosticSetti
   }
 ]
 
-module cognitiveService_privateEndpoints 'br/public:avm/res/network/private-endpoint:0.11.0' = [
+module cognitiveServicePrivateEndpoints 'br/public:avm/res/network/private-endpoint:0.11.0' = [
   for (privateEndpoint, index) in (privateEndpoints ?? []): {
     name: '${uniqueString(deployment().name, location)}-cognitiveService-PrivateEndpoint-${index}'
     scope: resourceGroup(
@@ -306,7 +306,7 @@ module cognitiveService_privateEndpoints 'br/public:avm/res/network/private-endp
   }
 ]
 
-resource cognitiveService_roleAssignments 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
+resource cognitiveServiceRoleAssignments 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
   for (roleAssignment, index) in (formattedRoleAssignments ?? []): {
     name: roleAssignment.?name ?? guid(cognitiveService.id, roleAssignment.principalId, roleAssignment.roleDefinitionId)
     properties: {
@@ -352,7 +352,7 @@ module secretsExport './keyVaultExport.bicep' = if (secretsExportConfiguration !
   }
 }
 
-module aiProject 'project.bicep' = if(!empty(projectName) || !empty(azureExistingAIProjectResourceId)) {
+module aiProject 'project.bicep' = if(!empty(projectName) || !empty(azureExistingAiProjectResourceId)) {
   name: take('${name}-ai-project-${projectName}-deployment', 64)
   params: {
     name: projectName
@@ -360,7 +360,7 @@ module aiProject 'project.bicep' = if(!empty(projectName) || !empty(azureExistin
     aiServicesName: cognitiveService.name
     location: location
     tags: tags
-    azureExistingAIProjectResourceId: azureExistingAIProjectResourceId
+    azureExistingAiProjectResourceId: azureExistingAiProjectResourceId
   }
 }
 
@@ -373,11 +373,11 @@ output exportedSecrets secretsOutputType = (secretsExportConfiguration != null)
 @description('The private endpoints of the congitive services account.')
 output privateEndpoints privateEndpointOutputType[] = [
   for (pe, index) in (privateEndpoints ?? []): {
-    name: cognitiveService_privateEndpoints[index].outputs.name
-    resourceId: cognitiveService_privateEndpoints[index].outputs.resourceId
-    groupId: cognitiveService_privateEndpoints[index].outputs.?groupId!
-    customDnsConfigs: cognitiveService_privateEndpoints[index].outputs.customDnsConfigs
-    networkInterfaceResourceIds: cognitiveService_privateEndpoints[index].outputs.networkInterfaceResourceIds
+    name: cognitiveServicePrivateEndpoints[index].outputs.name
+    resourceId: cognitiveServicePrivateEndpoints[index].outputs.resourceId
+    groupId: cognitiveServicePrivateEndpoints[index].outputs.?groupId!
+    customDnsConfigs: cognitiveServicePrivateEndpoints[index].outputs.customDnsConfigs
+    networkInterfaceResourceIds: cognitiveServicePrivateEndpoints[index].outputs.networkInterfaceResourceIds
   }
 ]
 
