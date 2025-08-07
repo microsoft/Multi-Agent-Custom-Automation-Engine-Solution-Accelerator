@@ -54,10 +54,7 @@ param imageTag string = 'latest'
 param solutionSuffix string = 'macae-${padLeft(take(toLower(uniqueString(subscription().id, solutionName, resourceGroup().location, resourceGroup().name)), 12), 12, '0')}'
 
 @description('Optional. The tags to apply to all deployed Azure resources.')
-param tags object = {
-  app: solutionSuffix
-  location: solutionLocation
-}
+param tags resourceInput<'Microsoft.Resources/resourceGroups@2025-04-01'>.tags = {}
 
 @description('Optional. The configuration to apply for the Multi-Agent Custom Automation Engine Log Analytics Workspace resource.')
 param logAnalyticsWorkspaceConfiguration logAnalyticsWorkspaceConfigurationType = {
@@ -165,6 +162,7 @@ param aiFoundryAiServicesConfiguration aiServicesConfigurationType = {
   deployments: null //Default value set on module configuration
   subnetResourceId: null //Default value set on module configuration
   modelCapacity: gptModelCapacity
+  tags: tags
 }
 
 @description('Optional. The configuration to apply for the AI Foundry AI Project resource.')

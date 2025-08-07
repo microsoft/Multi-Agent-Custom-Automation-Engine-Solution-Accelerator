@@ -26,8 +26,8 @@ param sku string = 'S0'
 @description('Optional. Location for all Resources.')
 param location string = resourceGroup().location
 
-@description('Optional. Tags of the resource.')
-param tags object?
+@description('Optional. Tags to be applied to the resources.')
+param tags object = {}
 
 @description('Optional. Array of deployments about cognitive service accounts to create.')
 param deployments deploymentType[]?

@@ -7,8 +7,8 @@ param location string
 @description('Required. Resource ID of the Log Analytics Workspace for diagnostic settings')
 param logAnalyticsResourceId string
 
-@description('Required. tags for the container app environment')
-param tags object
+@description('Optional. Tags to be applied to the resources.')
+param tags object = {}
 
 @description('Required. Public network access setting for the container app environment')
 param publicNetworkAccess string

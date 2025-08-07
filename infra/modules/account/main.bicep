@@ -96,8 +96,8 @@ import { roleAssignmentType } from 'br/public:avm/utl/types/avm-common-types:0.5
 @description('Optional. Array of role assignments to create.')
 param roleAssignments roleAssignmentType[]?
 
-@description('Optional. Tags of the resource.')
-param tags object?
+@description('Optional. Tags to be applied to the resources.')
+param tags object = {}
 
 @description('Optional. List of allowed FQDN.')
 param allowedFqdnList array?
