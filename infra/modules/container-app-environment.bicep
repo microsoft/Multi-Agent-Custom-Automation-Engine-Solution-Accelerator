@@ -1,13 +1,31 @@
+@description('Required. Name of the container app environment')
 param name string
+
+@description('Required. Location for the container app environment')
 param location string
+
+@description('Required. Resource ID of the Log Analytics Workspace for diagnostic settings')
 param logAnalyticsResourceId string
+
+@description('Required. tags for the container app environment')
 param tags object
+
+@description('Required. Public network access setting for the container app environment')
 param publicNetworkAccess string
+
 //param vnetConfiguration object
+@description('Required. Flag to enable zone redundancy for the container app environment')
 param zoneRedundant bool
+
 //param aspireDashboardEnabled bool
+
+@description('Required. Flag to enable telemetry for the container app environment')
 param enableTelemetry bool
+
+@description('Required. Subnet resource ID for the container app environment')
 param subnetResourceId string
+
+@description('Required. Application Insights connection string for the container app environment')
 param applicationInsightsConnectionString string
 
 var logAnalyticsSubscription = split(logAnalyticsResourceId, '/')[2]
@@ -88,6 +106,8 @@ module containerAppEnvironment 'br/public:avm/res/app/managed-environment:0.11.1
 // }
 
 //output resourceId string = containerAppEnvironment.id
+@description('Resource ID of the container app environment')
 output resourceId string = containerAppEnvironment.outputs.resourceId
 //output location string = containerAppEnvironment.location
+@description('Location of the container app environment')
 output location string = containerAppEnvironment.outputs.location

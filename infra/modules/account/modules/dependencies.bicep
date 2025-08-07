@@ -382,6 +382,7 @@ output privateEndpoints privateEndpointOutputType[] = [
 ]
 
 import { aiProjectOutputType } from 'project.bicep'
+@description('The AI project information if created.')
 output aiProjectInfo aiProjectOutputType = aiProject.outputs.aiProjectInfo
 
 // ================ //

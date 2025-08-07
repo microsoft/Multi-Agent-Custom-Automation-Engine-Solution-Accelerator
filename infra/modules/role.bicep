@@ -1,10 +1,10 @@
-@description('The name of the role assignment resource. Typically generated using `guid()` for uniqueness.')
+@description('Required. The name of the role assignment resource. Typically generated using `guid()` for uniqueness.')
 param name string
 
-@description('The object ID of the principal (user, group, or service principal) to whom the role will be assigned.')
+@description('Required. The object ID of the principal (user, group, or service principal) to whom the role will be assigned.')
 param principalId string
 
-@description('The name of the existing Azure Cognitive Services account.')
+@description('Required. The name of the existing Azure Cognitive Services account.')
 param aiServiceName string
 
 resource cognitiveServiceExisting 'Microsoft.CognitiveServices/accounts@2025-04-01-preview' existing =  {

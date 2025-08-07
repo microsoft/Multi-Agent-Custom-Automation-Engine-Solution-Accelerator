@@ -10,6 +10,7 @@ param projectName string
 @description('Optional: Description  for the project which needs to be created.')
 param projectDescription string
 
+@description('Optional. Resource ID of the existing AI Foundry project to use.')
 param existingFoundryProjectResourceId string = ''
 
 @description('Required. Kind of the Cognitive Services account. Use \'Get-AzCognitiveServicesAccountSku\' to determine a valid combinations of \'kind\' and \'SKU\' for your Azure region.')
@@ -324,6 +325,7 @@ output exportedSecrets secretsOutputType = useExistingService ? existing_cognigi
 output privateEndpoints privateEndpointOutputType[] = useExistingService ? existing_cognigive_service_dependencies.outputs.privateEndpoints : cognigive_service_dependencies.outputs.privateEndpoints
  
 import { aiProjectOutputType } from './modules/project.bicep'
+@description('The AI project information for the cognitive services account.')
 output aiProjectInfo aiProjectOutputType = useExistingService ? existing_cognigive_service_dependencies.outputs.aiProjectInfo : cognigive_service_dependencies.outputs.aiProjectInfo
 
 // ================ //
