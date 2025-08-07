@@ -210,6 +210,9 @@ Once you've opened the project in [Codespaces](#github-codespaces), [Dev Contain
 
 7. If you are done trying out the application, you can delete the resources by running `azd down`.
 
+### 🛠️ Troubleshooting
+ If you encounter any issues during the deployment process, please refer  [troubleshoot](../docs/Troubleshoot.md) document for detailed steps and solutions.
+
 # Local setup
 
 > **Note for macOS Developers**: If you are using macOS on Apple Silicon (ARM64) the DevContainer will **not** work. This is due to a limitation with the Azure Functions Core Tools (see [here](https://github.com/Azure/azure-functions-core-tools/issues/3112)).
