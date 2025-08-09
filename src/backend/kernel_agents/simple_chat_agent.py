@@ -1,3 +1,4 @@
+
 from typing import List, Optional
 
 from context.cosmos_memory_kernel import CosmosMemoryContext
@@ -74,4 +75,5 @@ class SimpleChatAgent(BaseAgent):
         )
 
         return response_content
+
 
