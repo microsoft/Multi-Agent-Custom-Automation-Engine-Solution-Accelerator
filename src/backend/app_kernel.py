@@ -20,6 +20,7 @@ from event_utils import track_event_if_configured
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from kernel_agents.agent_factory import AgentFactory
+from pydantic import BaseModel
 
 # Local imports
 from middleware.health_check import HealthCheckMiddleware
@@ -166,6 +167,55 @@ async def user_browser_language_endpoint(
     logging.info(f"Received browser language '{user_language}' for user ")
 
     return {"status": "Language received successfully"}
+
+
+class ChatRequest(BaseModel):
+    """Request model for the simple chat endpoint."""
+
+    session_id: str
+    user_message: str
+
+
+@app.post("/api/chat")
+async def chat_endpoint(chat_request: ChatRequest, request: Request):
+    """Handle a simple chat message from the user."""
+
+    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    user_id = authenticated_user["user_principal_id"]
+
+    if not user_id:
+        track_event_if_configured(
+            "UserIdNotFound", {"status_code": 400, "detail": "no user"}
+        )
+        raise HTTPException(status_code=400, detail="no user")
+
+    kernel, memory_store = await initialize_runtime_and_context(
+        chat_request.session_id, user_id
+    )
+
+    client = None
+    try:
+        client = config.get_ai_project_client()
+    except Exception as client_exc:  # pylint: disable=broad-except
+        logging.error(f"Error creating AIProjectClient: {client_exc}")
+
+    simple_chat_agent = await AgentFactory.create_agent(
+        agent_type=AgentType.GENERIC,
+        session_id=chat_request.session_id,
+        user_id=user_id,
+        memory_store=memory_store,
+        client=client,
+    )
+
+    reply = await simple_chat_agent.handle_user_message(chat_request.user_message)
+
+    if client:
+        try:
+            client.close()
+        except Exception as e:  # pylint: disable=broad-except
+            logging.error(f"Error sending to AIProjectClient: {e}")
+
+    return {"reply": reply}
 
 
 @app.post("/api/input_task")

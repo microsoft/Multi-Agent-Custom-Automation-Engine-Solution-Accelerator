@@ -48,6 +48,7 @@ class AgentType(str, Enum):
     TECH_SUPPORT = "Tech_Support_Agent"
     GROUP_CHAT_MANAGER = "Group_Chat_Manager"
     PLANNER = "Planner_Agent"
+    SIMPLE_CHAT = "Simple_Chat_Agent"
 
     # Add other agents as needed
 

@@ -28,6 +28,7 @@ class BaseAgent(AzureAIAgent):
         system_message: Optional[str] = None,
         client=None,
         definition=None,
+        summary_after_n_turns: int = 20,
     ):
         """Initialize the base agent.
 
@@ -68,6 +69,7 @@ class BaseAgent(AzureAIAgent):
         self._tools = tools
         self._system_message = system_message
         self._chat_history = [{"role": "system", "content": self._system_message}]
+        self._summary_after_n_turns: int = summary_after_n_turns
         # self._agent = None  # Will be initialized in async_init
 
         # Required properties for AgentGroupChat compatibility
@@ -85,6 +87,44 @@ class BaseAgent(AzureAIAgent):
     def default_system_message(agent_name=None) -> str:
         name = agent_name
         return f"You are an AI assistant named {name}. Help the user by providing accurate and helpful information."
+
+    async def _add_message_to_history(self, role: str, content: str) -> None:
+        """Append a message to chat history and summarize if needed."""
+        self._chat_history.append({"role": role, "content": content})
+        await self._summarize_chat_history_if_needed()
+
+    async def _extend_chat_history(self, messages: List[Mapping[str, str]]) -> None:
+        """Extend chat history with multiple messages and summarize if needed."""
+        self._chat_history.extend(messages)
+        await self._summarize_chat_history_if_needed()
+
+    def _build_summary(self, messages: List[Mapping[str, str]]) -> str:
+        """Create a simple summary from a list of messages."""
+        return " \n".join(m["content"] for m in messages)
+
+    async def _summarize_chat_history_if_needed(self) -> None:
+        """Summarize chat history after N turns and replace older entries."""
+        if len(self._chat_history) - 1 <= self._summary_after_n_turns:
+            return
+
+        # Messages to summarize exclude the system prompt and the most recent N messages
+        messages_to_summarize = self._chat_history[1:-self._summary_after_n_turns]
+        summary_text = self._build_summary(messages_to_summarize)
+
+        await self._memory_store.add_item(
+            AgentMessage(
+                session_id=self._session_id,
+                user_id=self._user_id,
+                plan_id="summary",
+                content=summary_text,
+                source=self._agent_name,
+            )
+        )
+
+        self._chat_history = (
+            [self._chat_history[0], {"role": "system", "content": summary_text}]
+            + self._chat_history[-self._summary_after_n_turns :]
+        )
 
     async def handle_action_request(self, action_request: ActionRequest) -> str:
         """Handle an action request from another agent or the system.
@@ -112,7 +152,7 @@ class BaseAgent(AzureAIAgent):
 
         # Add messages to chat history for context
         # This gives the agent visibility of the conversation history
-        self._chat_history.extend(
+        await self._extend_chat_history(
             [
                 {"role": "assistant", "content": action_request.action},
                 {

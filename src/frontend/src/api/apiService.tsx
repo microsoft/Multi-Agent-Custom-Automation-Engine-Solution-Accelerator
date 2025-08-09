@@ -22,7 +22,8 @@ const API_ENDPOINTS = {
     HUMAN_CLARIFICATION: '/human_clarification_on_plan',
     AGENT_MESSAGES: '/agent_messages',
     MESSAGES: '/messages',
-    USER_BROWSER_LANGUAGE: '/user_browser_language'
+    USER_BROWSER_LANGUAGE: '/user_browser_language',
+    CHAT: '/chat'
 };
 
 // Simple cache implementation
@@ -430,6 +431,23 @@ export class APIService {
         }
 
         return fetcher();
+    }
+
+    /**
+     * Send a chat message and receive a response from the backend
+     * @param sessionId Session ID for the conversation
+     * @param message User input message
+     * @returns Promise with backend response
+     */
+    async sendChatMessage(
+        sessionId: string,
+        message: string
+    ): Promise<{ session_id: string; reply: string }> {
+        const payload = {
+            session_id: sessionId,
+            message
+        };
+        return apiClient.post(API_ENDPOINTS.CHAT, payload);
     }
 
     // Utility methods
