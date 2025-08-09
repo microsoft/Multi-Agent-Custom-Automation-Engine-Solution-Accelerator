@@ -2,9 +2,6 @@ import PanelLeft from "@/coral/components/Panels/PanelLeft";
 import PanelLeftToolbar from "@/coral/components/Panels/PanelLeftToolbar";
 import {
   Body1Strong,
-  Button,
-  Subtitle1,
-  Subtitle2,
   Toast,
   ToastBody,
   ToastTitle,
@@ -12,8 +9,8 @@ import {
   useToastController,
 } from "@fluentui/react-components";
 import {
-  Add20Regular,
   ChatAdd20Regular,
+  Chat20Regular,
   ErrorCircle20Regular,
 } from "@fluentui/react-icons";
 import TaskList from "./TaskList";
@@ -140,6 +137,25 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({ reloadTasks,restReload }) 
             <ChatAdd20Regular />
           </div>
           <Body1Strong>New task</Body1Strong>
+        </div>
+
+        <br />
+        <div
+          className="tab tab-chat"
+          onClick={() => navigate("/chat")}
+          tabIndex={0}
+          role="button"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              navigate("/chat");
+            }
+          }}
+        >
+          <div className="tab tab-chat-icon">
+            <Chat20Regular />
+          </div>
+          <Body1Strong>Chat</Body1Strong>
         </div>
 
         <br />
