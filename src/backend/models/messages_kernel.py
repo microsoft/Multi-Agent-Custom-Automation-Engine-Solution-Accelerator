@@ -264,6 +264,10 @@ class InputTask(KernelBaseModel):
     description: str  # Initial goal
 
 
+class UserLanguage(KernelBaseModel):
+    language: str
+
+
 class ApprovalRequest(KernelBaseModel):
     """Message sent to HumanAgent to request approval for a step."""
 

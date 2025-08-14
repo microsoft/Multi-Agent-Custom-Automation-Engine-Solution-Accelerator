@@ -32,23 +32,29 @@ This will allow the scripts to run for the current session without permanently c
 
 The [`infra`](../infra) folder of the Multi Agent Solution Accelerator contains the [`main.bicep`](../infra/main.bicep) Bicep script, which defines all Azure infrastructure components for this solution.
 
-By default, the `azd up` command uses the [`main.bicepparam`](../infra/main.bicepparam) file to deploy the solution. This file is pre-configured for a **sandbox environment** — ideal for development and proof-of-concept scenarios, with minimal security and cost controls for rapid iteration.
+When running `azd up`, you’ll now be prompted to choose between a **WAF-aligned configuration** and a **sandbox configuration** using a simple selection:
 
-For **production deployments**, the repository also provides [`main.waf-aligned.bicepparam`](../infra/main.waf-aligned.bicepparam), which applies a [Well-Architected Framework (WAF) aligned](https://learn.microsoft.com/en-us/azure/well-architected/) configuration. This option enables additional Azure best practices for reliability, security, cost optimization, operational excellence, and performance efficiency, such as:
+- A **sandbox environment** — ideal for development and proof-of-concept scenarios, with minimal security and cost controls for rapid iteration.
 
-- Enhanced network security (e.g., Network protection with private endpoints)
-- Stricter access controls and managed identities
-- Logging, monitoring, and diagnostics enabled by default
-- Resource tagging and cost management recommendations
+- A **production deployments environment**, which applies a [Well-Architected Framework (WAF) aligned](https://learn.microsoft.com/en-us/azure/well-architected/) configuration. This option enables additional Azure best practices for reliability, security, cost optimization, operational excellence, and performance efficiency, such as:
+  - Enhanced network security (e.g., Network protection with private endpoints)
+  - Stricter access controls and managed identities
+  - Logging, monitoring, and diagnostics enabled by default
+  - Resource tagging and cost management recommendations
 
 **How to choose your deployment configuration:**
-- Use the default [`main.bicepparam`](../infra/main.bicepparam) for a sandbox/dev environment.
-- For a WAF-aligned, production-ready deployment, copy the contents of [`main.waf-aligned.bicepparam`](../infra/main.waf-aligned.bicepparam) into `main.bicepparam` before running `azd up`.
+
+When prompted during `azd up`:
+
+![useWAFAlignedArchitecture](images/macae_waf_prompt.png)
+
+- Select **`true`** to deploy a **WAF-aligned, production-ready environment**  
+- Select **`false`** to deploy a **lightweight sandbox/dev environment**
 
 > [!TIP]
 > Always review and adjust parameter values (such as region, capacity, security settings and log analytics workspace configuration) to match your organization’s requirements before deploying. For production, ensure you have sufficient quota and follow the principle of least privilege for all identities and role assignments.
 
-> To reuse an existing Log Analytics workspace, update the existingWorkspaceResourceId field under the logAnalyticsWorkspaceConfiguration parameter in the bicepparam file with the resource ID of your existing workspace.
+> To reuse an existing Log Analytics workspace, update the existingWorkspaceResourceId field under the logAnalyticsWorkspaceConfiguration parameter in the .bicep file with the resource ID of your existing workspace.
 For example: 
 ```
 param logAnalyticsWorkspaceConfiguration = {
@@ -111,7 +117,7 @@ If you're not using one of the above options for opening the project, then you'l
 1. Make sure the following tools are installed:
 
    - [PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell?view=powershell-7.5) <small>(v7.0+)</small> - available for Windows, macOS, and Linux.
-   - [Azure Developer CLI (azd)](https://aka.ms/install-azd)
+   - [Azure Developer CLI (azd)](https://aka.ms/install-azd) <small>(v1.15.0+)</small> - version
    - [Python 3.9+](https://www.python.org/downloads/)
    - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
    - [Git](https://git-scm.com/downloads)
@@ -144,9 +150,11 @@ When you start the deployment, most parameters will have **default values**, but
 | **Model Deployment Type**      | Defines the deployment type for the AI model (e.g., Standard, GlobalStandard).      | GlobalStandard    |
 | **GPT Model Name**             | Specifies the name of the GPT model to be deployed.                                 | gpt-4o            |
 | **GPT Model Version**          | Version of the GPT model to be used for deployment.                                 | 2024-08-06        |
+| **GPT Model Capacity**          | Sets the GPT model capacity.                                 | 150        |
 | **Image Tag**                  | Docker image tag used for container deployments.                                    | latest            |
 | **Enable Telemetry**           | Enables telemetry for monitoring and diagnostics.                                    | true              |
-
+| **Existing Log Analytics Workspace**        | To reuse an existing Log Analytics Workspace ID instead of creating a new one.              | *(none)*          |
+| **Existing Azure AI Foundry Project**        | To reuse an existing Azure AI Foundry Project ID instead of creating a new one.              | *(none)*          |
 
 </details>
 
@@ -158,6 +166,22 @@ By default, the **GPT model capacity** in deployment is set to **140k tokens**.
 To adjust quota settings, follow these [steps](./AzureGPTQuotaSettings.md).
 
 **⚠️ Warning:** Insufficient quota can cause deployment errors. Please ensure you have the recommended capacity or request additional capacity before deploying this solution.
+
+</details>
+
+<details>
+
+  <summary><b>Reusing an Existing Log Analytics Workspace</b></summary>
+
+  Guide to get your [Existing Workspace ID](/docs/re-use-log-analytics.md)
+
+</details>
+
+<details>
+
+  <summary><b>Reusing an Existing Azure AI Foundry Project</b></summary>
+
+  Guide to get your [Existing Project ID](/docs/re-use-foundry-project.md)
 
 </details>
 
@@ -191,43 +215,9 @@ Once you've opened the project in [Codespaces](#github-codespaces), [Dev Contain
 
 5. Once the deployment has completed successfully, open the [Azure Portal](https://portal.azure.com/), go to the deployed resource group, find the App Service, and get the app URL from `Default domain`.
 
-6. If you are done trying out the application, you can delete the resources by running `azd down`.
+6. When Deployment is complete, follow steps in [Set Up Authentication in Azure App Service](../docs/azure_app_service_auth_setup.md) to add app authentication to your web app running on Azure App Service
 
-### Publishing Local Build Container to Azure Container Registry
-
-If you need to rebuild the source code and push the updated container to the deployed Azure Container Registry, follow these steps:
-
-1. Set the environment variable `USE_LOCAL_BUILD` to `True`:
-
-   - **Linux/macOS**:
-
-     ```bash
-     export USE_LOCAL_BUILD=True
-     ```
-
-   - **Windows (PowerShell)**:
-     ```powershell
-     $env:USE_LOCAL_BUILD = $true
-     ```
-
-2. Run the `az login` command
-
-   ```bash
-   az login
-   ```
-
-3. Run the `azd up` command again to rebuild and push the updated container:
-   ```bash
-   azd up
-   ```
-
-This will rebuild the source code, package it into a container, and push it to the Azure Container Registry associated with your deployment.
-
-This guide provides step-by-step instructions for deploying your application using Azure Container Registry (ACR) and Azure Container Apps.
-
-There are several ways to deploy the solution. You can deploy to run in Azure in one click, or manually, or you can deploy locally.
-
-When Deployment is complete, follow steps in [Set Up Authentication in Azure App Service](../docs/azure_app_service_auth_setup.md) to add app authentication to your web app running on Azure App Service
+7. If you are done trying out the application, you can delete the resources by running `azd down`.
 
 # Local setup
 

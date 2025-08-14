@@ -6,6 +6,7 @@ import reportWebVitals from './reportWebVitals';
 import { FluentProvider, teamsLightTheme, teamsDarkTheme } from "@fluentui/react-components";
 import { setEnvData, setApiUrl, config as defaultConfig, toBoolean, getUserInfo, setUserInfoGlobal } from './api/config';
 import { UserInfo } from './models';
+import { apiService } from './api';
 const root = ReactDOM.createRoot(document.getElementById("root") as HTMLElement);
 
 const AppWrapper = () => {
@@ -22,7 +23,6 @@ const AppWrapper = () => {
       window.appConfig = config;
       setEnvData(config);
       setApiUrl(config.API_URL);
-
       try {
         const response = await fetch('/config');
         let config = defaultConfig;
@@ -38,7 +38,7 @@ const AppWrapper = () => {
         let defaultUserInfo = config.ENABLE_AUTH ? await getUserInfo() : ({} as UserInfo);
         window.userInfo = defaultUserInfo;
         setUserInfoGlobal(defaultUserInfo);
-
+        const browserLanguage = await apiService.sendUserBrowserLanguage();
       } catch (error) {
         console.info("frontend config did not load from python", error);
       } finally {
@@ -46,7 +46,7 @@ const AppWrapper = () => {
         setIsUserInfoLoaded(true);
       }
     };
-
+    
     initConfig(); // Call the async function inside useEffect
   }, []);
   // Effect to listen for changes in the user's preferred color scheme

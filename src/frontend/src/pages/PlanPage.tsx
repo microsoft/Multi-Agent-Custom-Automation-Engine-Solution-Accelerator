@@ -34,6 +34,7 @@ const PlanPage: React.FC = () => {
 
     const [input, setInput] = useState("");
     const [planData, setPlanData] = useState<ProcessedPlanData | any>(null);
+    const [allPlans, setAllPlans] = useState<ProcessedPlanData[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [submittingChatDisableInput, setSubmitting] = useState<boolean>(false);
     const [error, setError] = useState<Error | null>(null);
@@ -55,6 +56,14 @@ const PlanPage: React.FC = () => {
         return () => clearInterval(interval);
     }, [loading]);
 
+
+    useEffect(() => {
+        const currentPlan = allPlans.find(
+            (plan) => plan.plan.id === planId
+        );
+        setPlanData(currentPlan || null);
+    }, [allPlans,planId]);
+
     const loadPlanData = useCallback(
         async (navigate: boolean = true) => {
             if (!planId) return;
@@ -69,9 +78,16 @@ const PlanPage: React.FC = () => {
                 }
 
                 setError(null);
-                const data = await PlanDataService.fetchPlanData(planId);
-                console.log("Fetched plan data:", data);
-                setPlanData(data);
+                const data = await PlanDataService.fetchPlanData(planId,navigate);
+                let plans = [...allPlans];
+                const existingIndex = plans.findIndex(p => p.plan.id === data.plan.id);
+                if (existingIndex !== -1) {
+                    plans[existingIndex] = data;
+                } else {
+                    plans.push(data);
+                }
+                setAllPlans(plans);
+                //setPlanData(data);
             } catch (err) {
                 console.log("Failed to load plan data:", err);
                 setError(
@@ -87,7 +103,6 @@ const PlanPage: React.FC = () => {
     const handleOnchatSubmit = useCallback(
         async (chatInput: string) => {
 
-            console.log("handleOnchatSubmit called with input:", chatInput);
             if (!chatInput.trim()) {
                 showToast("Please enter a clarification", "error");
                 return;
@@ -109,7 +124,6 @@ const PlanPage: React.FC = () => {
             } catch (error) {
                 dismissToast(id);
                 showToast("Failed to submit clarification", "error");
-                console.log("Failed to submit clarification:", error);
             } finally {
                 setInput("");
                 setSubmitting(false);
@@ -131,11 +145,10 @@ const PlanPage: React.FC = () => {
                 if (approveRejectDetails && Object.keys(approveRejectDetails).length > 0) {
                     await loadPlanData(false);
                 }
-                setReloadLeftList(total === completed);
+                setReloadLeftList(true);
             } catch (error) {
                 dismissToast(id);
                 showToast(`Failed to ${approve ? "approve" : "reject"} step`, "error");
-                console.log(`Failed to ${approve ? "approve" : "reject"} step:`, error);
             } finally {
                 setProcessingSubtaskId(null);
                 setSubmitting(false);
@@ -146,7 +159,7 @@ const PlanPage: React.FC = () => {
 
 
     useEffect(() => {
-        loadPlanData();
+        loadPlanData(true);
     }, [loadPlanData]);
 
     const handleNewTaskButton = () => {
@@ -164,7 +177,7 @@ const PlanPage: React.FC = () => {
     return (
         <CoralShellColumn>
             <CoralShellRow>
-                <PlanPanelLeft onNewTaskButton={handleNewTaskButton} />
+                <PlanPanelLeft onNewTaskButton={handleNewTaskButton} reloadTasks={reloadLeftList} restReload={()=>setReloadLeftList(false)}/>
 
                 <Content>
                     {/* 🐙 Only replaces content body, not page shell */}

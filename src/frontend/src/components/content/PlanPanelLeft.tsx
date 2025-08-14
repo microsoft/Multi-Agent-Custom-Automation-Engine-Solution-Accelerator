@@ -29,7 +29,7 @@ import PanelFooter from "@/coral/components/Panels/PanelFooter";
 import PanelUserCard from "../../coral/components/Panels/UserCard";
 import { getUserInfoGlobal } from "@/api/config";
 
-const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({ reloadTasks }) => {
+const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({ reloadTasks,restReload }) => {
   const { dispatchToast } = useToastController("toast");
   const navigate = useNavigate();
   const { planId } = useParams<{ planId: string }>();
@@ -42,7 +42,7 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({ reloadTasks }) => {
   const [userInfo, setUserInfo] = useState<UserInfo | null>(
     getUserInfoGlobal()
   );
-  // Fetch plans
+
   const loadPlansData = useCallback(async (forceRefresh = false) => {
     try {
       setPlansLoading(true);
@@ -58,6 +58,15 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({ reloadTasks }) => {
       setPlansLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (reloadTasks) {
+      loadPlansData();
+      restReload?.();
+    }
+  }, [reloadTasks, loadPlansData, restReload]);
+  // Fetch plans
+  
 
   useEffect(() => {
     loadPlansData();

@@ -45,11 +45,8 @@ const fetchWithAuth = async (url: string, method: string = "GET", body: BodyInit
     try {
         const apiUrl = getApiUrl();
         const finalUrl = `${apiUrl}${url}`;
-        console.log('Final URL:', finalUrl);
-        console.log('Request Options:', options);
         // Log the request details
         const response = await fetch(finalUrl, options);
-        console.log('response', response);
 
         if (!response.ok) {
             const errorText = await response.text();
@@ -58,8 +55,6 @@ const fetchWithAuth = async (url: string, method: string = "GET", body: BodyInit
 
         const isJson = response.headers.get('content-type')?.includes('application/json');
         const responseData = isJson ? await response.json() : null;
-
-        console.log('Response JSON:', responseData);
         return responseData;
     } catch (error) {
         console.info('API Error:', (error as Error).message);
@@ -87,7 +82,6 @@ const fetchWithoutAuth = async (url: string, method: string = "POST", body: Body
             const errorText = await response.text();
             throw new Error(errorText || 'Login failed');
         }
-        console.log('response', response);
         const isJson = response.headers.get('content-type')?.includes('application/json');
         return isJson ? await response.json() : null;
     } catch (error) {

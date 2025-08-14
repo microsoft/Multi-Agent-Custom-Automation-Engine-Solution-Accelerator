@@ -19,6 +19,7 @@ import "../../styles/Chat.css";
 import "../../styles/prism-material-oceanic.css";
 import { TaskService } from "@/services/TaskService";
 import InlineToaster from "../toast/InlineToaster";
+import ContentNotFound from "../NotFound/ContentNotFound";
 
 const PlanChat: React.FC<PlanChatProps> = ({
   planData,
@@ -62,8 +63,6 @@ const PlanChat: React.FC<PlanChatProps> = ({
     }
   }, [input]); // or [inputValue, submittingChatDisableInput]
 
-
-
   const scrollToBottom = () => {
     messagesContainerRef.current?.scrollTo({
       top: messagesContainerRef.current.scrollHeight,
@@ -72,7 +71,10 @@ const PlanChat: React.FC<PlanChatProps> = ({
     setShowScrollButton(false);
   };
 
-  if (!planData) return <Spinner size="large" />;
+  if (!planData)
+    return (
+      <ContentNotFound subtitle="The requested page could not be found." />
+    );
   return (
     <div className="chat-container">
       <div className="messages" ref={messagesContainerRef}>
@@ -126,10 +128,13 @@ const PlanChat: React.FC<PlanChatProps> = ({
                               style={{ height: 28, width: 28 }}
                               icon={<Copy />}
                             />
-
                           </div>
 
-                          <Tag icon={<DiamondRegular />} appearance="filled" size="extra-small">
+                          <Tag
+                            icon={<DiamondRegular />}
+                            appearance="filled"
+                            size="extra-small"
+                          >
                             Sample data for demonstration purposes only.
                           </Tag>
                         </div>
@@ -151,13 +156,12 @@ const PlanChat: React.FC<PlanChatProps> = ({
           style={{
             bottom: inputHeight,
             position: "absolute", // ensure this or your class handles it
-            right: 16,            // optional, for right alignment
+            right: 16, // optional, for right alignment
             zIndex: 5,
           }}
         >
           Back to bottom
         </Tag>
-
       )}
       <InlineToaster />
       <div ref={inputContainerRef} className="plan-chat-input-container">
@@ -167,7 +171,7 @@ const PlanChat: React.FC<PlanChatProps> = ({
             onChange={setInput}
             onEnter={() => OnChatSubmit(input)}
             disabledChat={
-              planData.enableChat ? submittingChatDisableInput : true
+              planData?.enableChat ? submittingChatDisableInput : true
             }
             placeholder="Add more info to this task..."
           >
@@ -175,7 +179,9 @@ const PlanChat: React.FC<PlanChatProps> = ({
               appearance="transparent"
               onClick={() => OnChatSubmit(input)}
               icon={<Send />}
-              disabled={planData.enableChat ? submittingChatDisableInput : true}
+              disabled={
+                planData?.enableChat ? submittingChatDisableInput : true
+              }
             />
           </ChatInput>
         </div>

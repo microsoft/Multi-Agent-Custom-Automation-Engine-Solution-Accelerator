@@ -132,7 +132,7 @@ class BaseAgent(AzureAIAgent):
             #     thread=step.session_id
             # )  # AzureAIAgentThread(thread_id=step.session_id)
             async_generator = self.invoke(
-                messages=f"{str(self._chat_history)}\n\nPlease perform this action",
+                messages=f"{str(self._chat_history)}\n\nPlease perform this action : {step.action}",
                 thread=thread,
             )
 

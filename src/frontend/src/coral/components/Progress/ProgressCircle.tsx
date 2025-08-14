@@ -6,6 +6,7 @@ interface ProgressCircleProps {
   strokeWidth?: number;
   backgroundColor?: string;
   fillColor?: string;
+  borderColor?: string;
 }
 
 const ProgressCircle: React.FC<ProgressCircleProps> = ({
@@ -14,6 +15,7 @@ const ProgressCircle: React.FC<ProgressCircleProps> = ({
   strokeWidth = 8,
   backgroundColor = "var(--colorNeutralBackground6)",
   fillColor = "var(--colorPaletteSeafoamBorderActive)",
+  borderColor = "var(--colorNeutralStroke1)",
 }) => {
   const circleRef = useRef<SVGCircleElement>(null);
   const [hasMounted, setHasMounted] = useState(false);
@@ -53,6 +55,16 @@ const ProgressCircle: React.FC<ProgressCircleProps> = ({
           fill="none"
           stroke={backgroundColor}
           strokeWidth={strokeWidth}
+          style={{ stroke: backgroundColor, strokeWidth, strokeDasharray: "none", strokeDashoffset: 0, strokeLinecap: "round", filter: "none" }}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius+4}
+          fill="none"
+          stroke={borderColor}
+          strokeWidth={1}
+          style={{ pointerEvents: "none" }}
         />
         <circle
           ref={circleRef}
@@ -66,6 +78,15 @@ const ProgressCircle: React.FC<ProgressCircleProps> = ({
           strokeDashoffset={circumference}
           strokeLinecap="round"
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius-4}
+          fill="none"
+          stroke={borderColor}
+          strokeWidth={1}
+          style={{ pointerEvents: "none" }}
         />
       </svg>
 

@@ -10,7 +10,9 @@ from app_config import config
 from auth.auth_utils import get_authenticated_user_details
 
 # Azure monitoring
-# from azure.monitor.opentelemetry import configure_azure_monitor
+import re
+from dateutil import parser
+from azure.monitor.opentelemetry import configure_azure_monitor
 from config_kernel import Config
 from event_utils import track_event_if_configured
 
@@ -29,16 +31,18 @@ from models.messages_kernel import (
     InputTask,
     PlanWithSteps,
     Step,
+    UserLanguage
 )
 
 # Updated import for KernelArguments
 from utils_kernel import initialize_runtime_and_context, rai_success
 
+
 # Check if the Application Insights Instrumentation Key is set in the environment variables
 connection_string = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
 if connection_string:
     # Configure Application Insights if the Instrumentation Key is found
-    # configure_azure_monitor(connection_string=connection_string)
+    configure_azure_monitor(connection_string=connection_string)
     logging.info(
         "Application Insights configured with the provided Instrumentation Key"
     )
@@ -70,7 +74,7 @@ frontend_url = Config.FRONTEND_SITE_NAME
 # Add this near the top of your app.py, after initializing the app
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[frontend_url],
+    allow_origins=[frontend_url],  # Allow all origins for development; restrict in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -81,13 +85,96 @@ app.add_middleware(HealthCheckMiddleware, password="", checks={})
 logging.info("Added health check middleware")
 
 
+def format_dates_in_messages(messages, target_locale="en-US"):
+    """
+    Format dates in agent messages according to the specified locale.
+
+    Args:
+        messages: List of message objects or string content
+        target_locale: Target locale for date formatting (default: en-US)
+
+    Returns:
+        Formatted messages with dates converted to target locale format
+    """
+    # Define target format patterns per locale
+    locale_date_formats = {
+        "en-IN": "%d %b %Y",       # 30 Jul 2025
+        "en-US": "%b %d, %Y",      # Jul 30, 2025
+    }
+
+    output_format = locale_date_formats.get(target_locale, "%d %b %Y")
+    # Match both "Jul 30, 2025, 12:00:00 AM" and "30 Jul 2025"
+    date_pattern = r'(\d{1,2} [A-Za-z]{3,9} \d{4}|[A-Za-z]{3,9} \d{1,2}, \d{4}(, \d{1,2}:\d{2}:\d{2} ?[APap][Mm])?)'
+
+    def convert_date(match):
+        date_str = match.group(0)
+        try:
+            dt = parser.parse(date_str)
+            return dt.strftime(output_format)
+        except Exception:
+            return date_str  # Leave it unchanged if parsing fails
+
+    # Process messages
+    if isinstance(messages, list):
+        formatted_messages = []
+        for message in messages:
+            if hasattr(message, 'content') and message.content:
+                # Create a copy of the message with formatted content
+                formatted_message = message.model_copy() if hasattr(message, 'model_copy') else message
+                if hasattr(formatted_message, 'content'):
+                    formatted_message.content = re.sub(date_pattern, convert_date, formatted_message.content)
+                formatted_messages.append(formatted_message)
+            else:
+                formatted_messages.append(message)
+        return formatted_messages
+    elif isinstance(messages, str):
+        return re.sub(date_pattern, convert_date, messages)
+    else:
+        return messages
+
+
+@app.post("/api/user_browser_language")
+async def user_browser_language_endpoint(
+    user_language: UserLanguage,
+    request: Request
+):
+    """
+    Receive the user's browser language.
+
+    ---
+    tags:
+      - User
+    parameters:
+      - name: language
+        in: query
+        type: string
+        required: true
+        description: The user's browser language
+    responses:
+      200:
+        description: Language received successfully
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              description: Confirmation message
+    """
+    config.set_user_local_browser_language(user_language.language)
+
+    # Log the received language for the user
+    logging.info(f"Received browser language '{user_language}' for user ")
+
+    return {"status": "Language received successfully"}
+
+
 @app.post("/api/input_task")
 async def input_task_endpoint(input_task: InputTask, request: Request):
     """
     Receive the initial input task from the user.
     """
     # Fix 1: Properly await the async rai_success function
-    if not await rai_success(input_task.description):
+    if not await rai_success(input_task.description, True):
         print("RAI failed")
 
         track_event_if_configured(
@@ -177,6 +264,13 @@ async def input_task_endpoint(input_task: InputTask, request: Request):
         }
 
     except Exception as e:
+        # Extract clean error message for rate limit errors
+        error_msg = str(e)
+        if "Rate limit is exceeded" in error_msg:
+            match = re.search(r"Rate limit is exceeded\. Try again in (\d+) seconds?\.", error_msg)
+            if match:
+                error_msg = "Application temporarily unavailable due to quota limits. Please try again later."
+
         track_event_if_configured(
             "InputTaskError",
             {
@@ -185,7 +279,7 @@ async def input_task_endpoint(input_task: InputTask, request: Request):
                 "error": str(e),
             },
         )
-        raise HTTPException(status_code=400, detail=f"Error creating plan: {e}")
+        raise HTTPException(status_code=400, detail=f"{error_msg}") from e
 
 
 @app.post("/api/human_feedback")
@@ -351,6 +445,18 @@ async def human_clarification_endpoint(
       400:
         description: Missing or invalid user information
     """
+    if not await rai_success(human_clarification.human_clarification, False):
+        print("RAI failed")
+        track_event_if_configured(
+            "RAI failed",
+            {
+                "status": "Clarification is not received",
+                "description": human_clarification.human_clarification,
+                "session_id": human_clarification.session_id,
+            },
+        )
+        raise HTTPException(status_code=400, detail="Invalida Clarification")
+
     authenticated_user = get_authenticated_user_details(request_headers=request.headers)
     user_id = authenticated_user["user_principal_id"]
     if not user_id:
@@ -626,7 +732,11 @@ async def get_plans(
 
         plan_with_steps = PlanWithSteps(**plan.model_dump(), steps=steps)
         plan_with_steps.update_step_counts()
-        return [plan_with_steps, messages]
+
+        # Format dates in messages according to locale
+        formatted_messages = format_dates_in_messages(messages, config.get_user_local_browser_language())
+
+        return [plan_with_steps, formatted_messages]
 
     all_plans = await memory_store.get_all_plans()
     # Fetch steps for all plans concurrently

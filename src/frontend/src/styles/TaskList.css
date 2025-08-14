@@ -119,5 +119,16 @@
   gap: 12px;
 }
 
+.fui-AccordionPanel {
+  max-height: 280px !important;
+  overflow-y: auto !important;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
+.fui-AccordionPanel[aria-hidden="true"] {
+  max-height: 0;
+  overflow: hidden !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
 

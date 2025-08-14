@@ -147,3 +147,13 @@
 .strikethrough {
     text-decoration: line-through;
 }
+
+.goal-text {
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: normal !important;
+    max-width: 300px;
+}

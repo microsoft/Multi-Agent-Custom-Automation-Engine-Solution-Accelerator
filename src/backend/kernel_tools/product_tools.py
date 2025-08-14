@@ -9,16 +9,19 @@ from semantic_kernel.functions import kernel_function
 from models.messages_kernel import AgentType
 import json
 from typing import get_type_hints
+from utils_date import format_date_for_user
+from app_config import config
 
 
 class ProductTools:
     """Define Product Agent functions (tools)"""
 
     agent_name = AgentType.PRODUCT.value
+    selecetd_language = config.get_user_local_browser_language()
 
     @staticmethod
     @kernel_function(
-        description="Add an extras pack/new product to the mobile plan for the customer. For example, adding a roaming plan to their service."
+        description="Add an extras pack/new product to the mobile plan for the customer. For example, adding a roaming plan to their service. Convert all date strings in the following text to short date format with 3-letter month (MMM) in the {selecetd_language} locale (e.g., en-US, en-IN), remove time, and replace original dates with the formatted ones"
     )
     async def add_mobile_extras_pack(new_extras_pack_name: str, start_date: str) -> str:
         """Add an extras pack/new product to the mobile plan for the customer. For example, adding a roaming plan to their service. The arguments should include the new_extras_pack_name and the start_date as strings. You must provide the exact plan name, as found using the get_product_info() function."""
@@ -81,7 +84,8 @@ class ProductTools:
         now = datetime.now()
         start_of_month = datetime(now.year, now.month, 1)
         start_of_month_string = start_of_month.strftime("%Y-%m-%d")
-        return f"## Billing Date\nYour most recent billing date was **{start_of_month_string}**."
+        formatted_date = format_date_for_user(start_of_month_string)
+        return f"## Billing Date\nYour most recent billing date was **{formatted_date}**."
 
     @staticmethod
     @kernel_function(
@@ -130,7 +134,8 @@ class ProductTools:
     @kernel_function(description="Schedule a product launch event on a specific date.")
     async def schedule_product_launch(product_name: str, launch_date: str) -> str:
         """Schedule a product launch on a specific date."""
-        message = f"## Product Launch Scheduled\nProduct **'{product_name}'** launch scheduled on **{launch_date}**."
+        formatted_date = format_date_for_user(launch_date)
+        message = f"## Product Launch Scheduled\nProduct **'{product_name}'** launch scheduled on **{formatted_date}**."
 
         return message
 

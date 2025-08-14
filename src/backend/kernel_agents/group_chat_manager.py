@@ -5,6 +5,7 @@ from typing import Dict, List, Optional
 from context.cosmos_memory_kernel import CosmosMemoryContext
 from event_utils import track_event_if_configured
 from kernel_agents.agent_base import BaseAgent
+from utils_date import format_date_for_user
 from models.messages_kernel import (ActionRequest, AgentMessage, AgentType,
                                     HumanFeedback, HumanFeedbackStatus, InputTask,
                                     Plan, Step, StepStatus)
@@ -222,7 +223,9 @@ class GroupChatManager(BaseAgent):
             received_human_feedback_on_step = ""
 
         # Provide generic context to the model
-        general_information = f"Today's date is {datetime.now().date()}."
+        current_date = datetime.now().strftime("%Y-%m-%d")
+        formatted_date = format_date_for_user(current_date)
+        general_information = f"Today's date is {formatted_date}."
 
         # Get the general background information provided by the user in regards to the overall plan (not the steps) to add as context.
         plan = await self._memory_store.get_plan_by_session(

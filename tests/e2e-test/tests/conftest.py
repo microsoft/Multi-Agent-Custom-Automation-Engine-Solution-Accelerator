@@ -1,50 +1,52 @@
-from pathlib import Path
-import pytest
-from playwright.sync_api import sync_playwright
-from config.constants import *
-from slugify import slugify
-from pages.loginPage import LoginPage
-from dotenv import load_dotenv
-import os
-from py.xml import html # type: ignore
+"""Configuration and shared fixtures for pytest automation test suite."""
+
+import atexit
 import io
 import logging
+import os
+
+import pytest
 from bs4 import BeautifulSoup
-import atexit
+from playwright.sync_api import sync_playwright
+
+from config.constants import URL  # Explicit import instead of wildcard
+
+# Uncomment if login is to be used
+# from pages.loginPage import LoginPage
 
 
 @pytest.fixture(scope="session")
 def login_logout():
-    # perform login and browser close once in a session
+    """Perform login once per session and yield a Playwright page instance."""
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False, args=["--start-maximized"])
         context = browser.new_context(no_viewport=True)
         context.set_default_timeout(120000)
         page = context.new_page()
-        # Navigate to the login URL
         page.goto(URL)
-        # Wait for the login form to appear
-        page.wait_for_load_state('networkidle')
-        # login to web url with username and password
-        #login_page = LoginPage(page)
-        #load_dotenv()
-        #login_page.authenticate(os.getenv('user_name'),os.getenv('pass_word'))
-        yield page
+        page.wait_for_load_state("networkidle")
 
-        # perform close the browser
+        # Uncomment below to perform actual login
+        # login_page = LoginPage(page)
+        # load_dotenv()
+        # login_page.authenticate(os.getenv('user_name'), os.getenv('pass_word'))
+
+        yield page
         browser.close()
 
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_html_report_title(report):
+    """Customize HTML report title."""
     report.title = "Test Automation MACAE"
 
 
 log_streams = {}
 
+
 @pytest.hookimpl(tryfirst=True)
 def pytest_runtest_setup(item):
-    # Prepare StringIO for capturing logs
+    """Attach a log stream to each test for capturing stdout/stderr."""
     stream = io.StringIO()
     handler = logging.StreamHandler(stream)
     handler.setLevel(logging.INFO)
@@ -52,62 +54,61 @@ def pytest_runtest_setup(item):
     logger = logging.getLogger()
     logger.addHandler(handler)
 
-    # Save handler and stream
     log_streams[item.nodeid] = (handler, stream)
 
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
+    """Inject captured logs into HTML report for each test."""
     outcome = yield
     report = outcome.get_result()
 
     handler, stream = log_streams.get(item.nodeid, (None, None))
 
     if handler and stream:
-        # Make sure logs are flushed
         handler.flush()
         log_output = stream.getvalue()
-
-        # Only remove the handler, don't close the stream yet
         logger = logging.getLogger()
         logger.removeHandler(handler)
 
-        # Store the log output on the report object for HTML reporting
         report.description = f"<pre>{log_output.strip()}</pre>"
-
-        # Clean up references
         log_streams.pop(item.nodeid, None)
     else:
         report.description = ""
 
+
 def pytest_collection_modifyitems(items):
+    """Rename test node IDs in HTML report based on parametrized prompts."""
     for item in items:
-        if hasattr(item, 'callspec'):
+        if hasattr(item, "callspec"):
             prompt = item.callspec.params.get("prompt")
             if prompt:
-                item._nodeid = prompt  # This controls how the test name appears in the report
+                item._nodeid = prompt
+
 
 def rename_duration_column():
-    report_path = os.path.abspath("report.html")  # or your report filename
+    """Post-process HTML report to rename 'Duration' column to 'Execution Time'."""
+    report_path = os.path.abspath("report.html")
     if not os.path.exists(report_path):
         print("Report file not found, skipping column rename.")
         return
 
-    with open(report_path, 'r', encoding='utf-8') as f:
-        soup = BeautifulSoup(f, 'html.parser')
+    with open(report_path, "r", encoding="utf-8") as f:
+        soup = BeautifulSoup(f, "html.parser")
 
-    # Find and rename the header
-    headers = soup.select('table#results-table thead th')
+    headers = soup.select("table#results-table thead th")
     for th in headers:
-        if th.text.strip() == 'Duration':
-            th.string = 'Execution Time'
-            #print("Renamed 'Duration' to 'Execution Time'")
+        if th.text.strip() == "Duration":
+            th.string = "Execution Time"
             break
     else:
         print("'Duration' column not found in report.")
 
-    with open(report_path, 'w', encoding='utf-8') as f:
+    with open(report_path, "w", encoding="utf-8") as f:
         f.write(str(soup))
 
-# Register this function to run after everything is done
+
+# Register the report modification function to run after tests
+
 atexit.register(rename_duration_column)
+
