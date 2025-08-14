@@ -145,8 +145,8 @@ When you start the deployment, most parameters will have **default values**, but
 | **Setting**                    | **Description**                                                                      | **Default value** |
 | ------------------------------ | ------------------------------------------------------------------------------------ | ----------------- |
 | **Environment Name**           | Used as a prefix for all resource names to ensure uniqueness across environments.    | macae             |
-| **Azure Region**               | Location of the Azure resources. Controls where the infrastructure will be deployed. | swedencentral     |
-| **OpenAI Deployment Location** | Specifies the region for OpenAI resource deployment.                                 | swedencentral     |
+| **Azure Region**               | Location of the Azure resources. Controls where the infrastructure will be deployed. | <User selects during deployment>     |
+| **OpenAI Deployment Location** | Specifies the region for OpenAI resource deployment.                                 | <User selects during deployment>     |
 | **Model Deployment Type**      | Defines the deployment type for the AI model (e.g., Standard, GlobalStandard).      | GlobalStandard    |
 | **GPT Model Name**             | Specifies the name of the GPT model to be deployed.                                 | gpt-4o            |
 | **GPT Model Version**          | Version of the GPT model to be used for deployment.                                 | 2024-08-06        |
