@@ -144,14 +144,19 @@ jobs:
           azd config set defaults.subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
           echo "Setting environment variables..."
-          azd env set \
-            AZURE_RESOURCE_GROUP="${{ env.RESOURCE_GROUP_NAME }}" | \
-            AZURE_SUBSCRIPTION_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}" | \
-            AZURE_ENV_OPENAI_LOCATION="${{ env.AZURE_LOCATION }}" | \
-            AZURE_ENV_MODEL_CAPACITY="${{ env.GPT_MIN_CAPACITY }}" | \
-            AZURE_ENV_USE_WAF_ALIGNED_ARCHITECTURE=false | \
-            AZURE_ENV_IMAGETAG="${IMAGE_TAG}"
-
+          # azd env set \
+          #   AZURE_RESOURCE_GROUP="${{ env.RESOURCE_GROUP_NAME }}" | \
+          #   AZURE_SUBSCRIPTION_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}" | \
+          #   AZURE_ENV_OPENAI_LOCATION="${{ env.AZURE_LOCATION }}" | \
+          #   AZURE_ENV_MODEL_CAPACITY="${{ env.GPT_MIN_CAPACITY }}" | \
+          #   AZURE_ENV_USE_WAF_ALIGNED_ARCHITECTURE=false | \
+          #   AZURE_ENV_IMAGETAG="${IMAGE_TAG}"
+          azd env set AZURE_RESOURCE_GROUP="${{ env.RESOURCE_GROUP_NAME }}"
+          azd env set AZURE_SUBSCRIPTION_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          azd env set AZURE_ENV_OPENAI_LOCATION="${{ env.AZURE_LOCATION }}"
+          azd env set AZURE_ENV_MODEL_CAPACITY="${{ env.GPT_MIN_CAPACITY }}"
+          azd env set AZURE_ENV_USE_WAF_ALIGNED_ARCHITECTURE=false
+          azd env set AZURE_ENV_IMAGETAG="${IMAGE_TAG}"
           echo "Environment variables set successfully:"
           azd env get-values
 
