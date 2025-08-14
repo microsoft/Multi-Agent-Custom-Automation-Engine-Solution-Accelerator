@@ -1,4 +1,4 @@
-name: Validate Deployment
+name: Deploy-Test-Cleanup
 
 on:
   workflow_run:
@@ -14,20 +14,19 @@ on:
   workflow_dispatch: #Allow manual triggering
 env:
   GPT_MIN_CAPACITY: 150
-  BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+  BRANCH_NAME: ${{ github.event.workflow_run.head_branch || github.head_ref || github.ref_name }}
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     outputs:
       RESOURCE_GROUP_NAME: ${{ steps.check_create_rg.outputs.RESOURCE_GROUP_NAME }}
+      ENV_NAME: ${{ steps.generate_env_name.outputs.ENV_NAME }}
       WEBAPP_URL: ${{ steps.get_output.outputs.WEBAPP_URL }}
-      DEPLOYMENT_SUCCESS: ${{ steps.deployment_status.outputs.SUCCESS }}
       MACAE_URL_API: ${{ steps.get_backend_url.outputs.MACAE_URL_API }}
-      CONTAINER_APP: ${{steps.get_backend_url.outputs.CONTAINER_APP}}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Run Quota Check
         id: quota-check
@@ -36,7 +35,7 @@ jobs:
           export AZURE_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}
           export AZURE_CLIENT_SECRET=${{ secrets.AZURE_CLIENT_SECRET }}
           export AZURE_SUBSCRIPTION_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-          export GPT_MIN_CAPACITY="150"
+          export GPT_MIN_CAPACITY="${{ env.GPT_MIN_CAPACITY }}"
           export AZURE_REGIONS="${{ vars.AZURE_REGIONS }}"
 
           chmod +x infra/scripts/checkquota.sh
@@ -77,9 +76,15 @@ jobs:
           curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
           az --version  # Verify installation
 
+      - name: Setup Azure Developer CLI
+        run: |
+          curl -fsSL https://aka.ms/install-azd.sh | sudo bash
+          azd version           
+
       - name: Login to Azure
         run: |
           az login --service-principal -u ${{ secrets.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_TENANT_ID }}
+          azd auth login --client-id ${{ secrets.AZURE_CLIENT_ID }} --client-secret ${{ secrets.AZURE_CLIENT_SECRET }} --tenant-id ${{ secrets.AZURE_TENANT_ID }}
 
       - name: Install Bicep CLI
         run: az bicep install
@@ -103,46 +108,59 @@ jobs:
           fi
           echo "RESOURCE_GROUP_NAME=${{ env.RESOURCE_GROUP_NAME }}" >> $GITHUB_OUTPUT
 
-      - name: Generate Unique Solution Prefix
-        id: generate_solution_prefix
+      - name: Generate Unique Environment Name
+        id: generate_env_name
         run: |
           COMMON_PART="macae"
           TIMESTAMP=$(date +%s)
           UPDATED_TIMESTAMP=$(echo $TIMESTAMP | tail -c 6)
-          UNIQUE_SOLUTION_PREFIX="${COMMON_PART}${UPDATED_TIMESTAMP}"
-          echo "SOLUTION_PREFIX=${UNIQUE_SOLUTION_PREFIX}" >> $GITHUB_ENV
+          UNIQUE_ENV_NAME="${COMMON_PART}${UPDATED_TIMESTAMP}"
+          echo "ENV_NAME=${UNIQUE_ENV_NAME}" >> $GITHUB_ENV
+          echo "Generated Environment Name: ${UNIQUE_ENV_NAME}"
+          echo "ENV_NAME=${UNIQUE_ENV_NAME}" >> $GITHUB_OUTPUT
 
-      - name: Deploy Bicep Template
-        id: deploy
+      - name: Create Environment and set Variables
+        id: create_env
         run: |
+          set -e
+
+          echo "Creating environment..."
+          azd env new ${{ env.ENV_NAME }} --no-prompt
+          echo "Environment created: ${{ env.ENV_NAME }}"
+
+          # set image tag based on branch
           if [[ "${{ env.BRANCH_NAME }}" == "main" ]]; then
             IMAGE_TAG="latest"
           elif [[ "${{ env.BRANCH_NAME }}" == "dev" ]]; then
             IMAGE_TAG="dev"
-          elif [[ "${{ env.BRANCH_NAME }}" == "hotfix" ]]; then
-            IMAGE_TAG="hotfix"
+          elif [[ "${{ env.BRANCH_NAME }}" == "demo" ]]; then
+            IMAGE_TAG="demo"
           else
             IMAGE_TAG="latest"
           fi
+          echo "Using IMAGE_TAG: ${IMAGE_TAG}"
 
-          az deployment group create \
-            --resource-group ${{ env.RESOURCE_GROUP_NAME }} \
-            --template-file infra/main.bicep \
-            --parameters \
-              environmentName=${{ env.SOLUTION_PREFIX }} \
-              solutionLocation="${{ env.AZURE_LOCATION }}" \
-              modelDeploymentType="GlobalStandard" \
-              gptModelName="gpt-4o" \
-              gptModelVersion="2024-08-06" \
-              imageTag="${IMAGE_TAG}" \
-              useWafAlignedArchitecture=false \
-              aiDeploymentsLocation='${{ env.AZURE_LOCATION }}' \
-              gptModelCapacity=150 \
-              logAnalyticsWorkspaceConfiguration='{"dataRetentionInDays": 30, "existingWorkspaceResourceId": ""}' \
-              applicationInsightsConfiguration='{"retentionInDays": 30}' \
-              virtualNetworkConfiguration='{"enabled": false}' \
-              webServerFarmConfiguration='{"skuCapacity": 1, "skuName": "B2"}' \
-            --output json
+          echo "Setting default subscription..."
+          azd config set defaults.subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+          echo "Setting environment variables..."
+          azd env set \
+            AZURE_RESOURCE_GROUP="${{ env.RESOURCE_GROUP_NAME }}" | \
+            AZURE_SUBSCRIPTION_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}" | \
+            AZURE_ENV_OPENAI_LOCATION="${{ env.AZURE_LOCATION }}" | \
+            AZURE_ENV_MODEL_CAPACITY="${{ env.GPT_MIN_CAPACITY }}" | \
+            AZURE_ENV_USE_WAF_ALIGNED_ARCHITECTURE="false" | \
+            AZURE_ENV_IMAGETAG="${IMAGE_TAG}"
+
+          echo "Environment variables set successfully:"
+          azd env get-values
+
+      - name: Deploy using azd
+        id: deploy
+        run: |
+          set -e
+          azd up --no-prompt
+          echo "Deployment completed successfully."
 
       - name: Extract Web App and API App URLs
         id: get_output
@@ -170,25 +188,13 @@ jobs:
           echo "MACAE_URL_API=https://${MACAE_URL_API}" >> $GITHUB_OUTPUT
           echo "CONTAINER_APP=${CONTAINER_APP_NAME}" >> $GITHUB_OUTPUT
 
-      - name: Set Deployment Status
-        id: deployment_status
-        if: always()
-        run: |
-          if [ "${{ job.status }}" == "success" ]; then
-            echo "SUCCESS=true" >> $GITHUB_OUTPUT
-          else
-            echo "SUCCESS=false" >> $GITHUB_OUTPUT
-          fi
 
   e2e-test:
     needs: deploy
-    if: needs.deploy.outputs.DEPLOYMENT_SUCCESS == 'true'
     uses: ./.github/workflows/test-automation.yml
     with:
       MACAE_WEB_URL: ${{ needs.deploy.outputs.WEBAPP_URL }}
       MACAE_URL_API: ${{ needs.deploy.outputs.MACAE_URL_API }}
-      MACAE_RG: ${{ needs.deploy.outputs.RESOURCE_GROUP_NAME }}
-      MACAE_CONTAINER_APP: ${{ needs.deploy.outputs.CONTAINER_APP }}
     secrets: inherit
 
   cleanup-deployment:
@@ -197,134 +203,41 @@ jobs:
     runs-on: ubuntu-latest
     env:
       RESOURCE_GROUP_NAME: ${{ needs.deploy.outputs.RESOURCE_GROUP_NAME }}
+      ENV_NAME: ${{ needs.deploy.outputs.ENV_NAME }}
     steps:
-      - name: Setup Azure CLI
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Azure Developer CLI
         run: |
-          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-          az --version
+          curl -fsSL https://aka.ms/install-azd.sh | sudo bash
+          azd version
+
       - name: Login to Azure
         run: |
-          az login --service-principal -u ${{ secrets.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_TENANT_ID }}
-          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          azd auth login --client-id ${{ secrets.AZURE_CLIENT_ID }} --client-secret ${{ secrets.AZURE_CLIENT_SECRET }} --tenant-id ${{ secrets.AZURE_TENANT_ID }}
+          azd config set defaults.subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Extract AI Services and Key Vault Names
-        if: always()
+      - name: Select Environment
         run: |
-          echo "Fetching AI Services and Key Vault names before deletion..."
-
-          # Get Key Vault name
-          KEYVAULT_NAME=$(az resource list --resource-group "${{ env.RESOURCE_GROUP_NAME }}" --resource-type "Microsoft.KeyVault/vaults" --query "[].name" -o tsv)
-          echo "Detected Key Vault: $KEYVAULT_NAME"
-          echo "KEYVAULT_NAME=$KEYVAULT_NAME" >> $GITHUB_ENV
-          # Extract AI Services names
-          echo "Fetching AI Services..."
-          AI_SERVICES=$(az resource list --resource-group '${{ env.RESOURCE_GROUP_NAME }}' --resource-type "Microsoft.CognitiveServices/accounts" --query "[].name" -o tsv)
-          # Flatten newline-separated values to space-separated
-          AI_SERVICES=$(echo "$AI_SERVICES" | paste -sd ' ' -)
-          echo "Detected AI Services: $AI_SERVICES"
-          echo "AI_SERVICES=$AI_SERVICES" >> $GITHUB_ENV
-
-      - name: Get OpenAI Resource from Resource Group
-        id: get_openai_resource
-        run: |
-
-          set -e
-          echo "Fetching OpenAI resource from resource group ${{ env.RESOURCE_GROUP_NAME }}..."
-
-          # Run the az resource list command to get the OpenAI resource name
-          openai_resource_name=$(az resource list --resource-group ${{ env.RESOURCE_GROUP_NAME }} --resource-type "Microsoft.CognitiveServices/accounts" --query "[0].name" -o tsv)
-
-          if [ -z "$openai_resource_name" ]; then
-            echo "No OpenAI resource found in resource group ${{ env.RESOURCE_GROUP_NAME }}."
-            exit 0
+          # Try to select the environment if it exists, otherwise create a minimal environment for cleanup
+          azd env list
+          if azd env list | grep -q "${{ env.ENV_NAME }}"; then
+            echo "Environment ${{ env.ENV_NAME }} found, selecting it..."
+            azd env select ${{ env.ENV_NAME }}
           else
-            echo "OPENAI_RESOURCE_NAME=${openai_resource_name}" >> $GITHUB_ENV
-            echo "OpenAI resource name: ${openai_resource_name}"
+            echo "Environment ${{ env.ENV_NAME }} not found, creating minimal environment for cleanup..."
+            azd env new ${{ env.ENV_NAME }} --no-prompt
+            azd env set AZURE_RESOURCE_GROUP "${{ env.RESOURCE_GROUP_NAME }}"
+            azd env set AZURE_SUBSCRIPTION_ID "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
           fi
 
-      - name: Delete Bicep Deployment
-        if: always()
+      - name: Delete deployment using azd
         run: |
           set -e
-          echo "Checking if resource group exists..."
-          rg_exists=$(az group exists --name ${{ env.RESOURCE_GROUP_NAME }})
-          if [ "$rg_exists" = "true" ]; then
-            echo "Resource group exist. Cleaning..."
-            az group delete \
-                --name ${{ env.RESOURCE_GROUP_NAME }} \
-                --yes \
-                --no-wait
-            echo "Resource group deleted...  ${{ env.RESOURCE_GROUP_NAME }}"
-          else
-            echo "Resource group does not exists."
-          fi
-
-      - name: Wait for resource deletion to complete
-        run: |
-
-          # Add resources to the array
-          resources_to_check=("${{ env.OPENAI_RESOURCE_NAME }}")
-
-          echo "List of resources to check: ${resources_to_check[@]}"
-
-          # Maximum number of retries
-          max_retries=3
-
-          # Retry intervals in seconds (30, 60, 120)
-          retry_intervals=(30 60 120)
-
-          # Retry mechanism to check resources
-          retries=0
-          while true; do
-            resource_found=false
-
-            # Get the list of resources in YAML format again on each retry
-            resource_list=$(az resource list --resource-group ${{ env.RESOURCE_GROUP_NAME }} --output yaml)
-
-            # Iterate through the resources to check
-            for resource in "${resources_to_check[@]}"; do
-              echo "Checking resource: $resource"
-              if echo "$resource_list" | grep -q "name: $resource"; then
-                echo "Resource '$resource' exists in the resource group."
-                resource_found=true
-              else
-                echo "Resource '$resource' does not exist in the resource group."
-              fi
-            done
-
-            # If any resource exists, retry
-            if [ "$resource_found" = true ]; then
-              retries=$((retries + 1))
-              if [ "$retries" -gt "$max_retries" ]; then
-                echo "Maximum retry attempts reached. Exiting."
-                break
-              else
-                # Wait for the appropriate interval for the current retry
-                echo "Waiting for ${retry_intervals[$retries-1]} seconds before retrying..."
-                sleep ${retry_intervals[$retries-1]}
-              fi
-            else
-              echo "No resources found. Exiting."
-              break
-            fi
-          done
-
-      - name: Purging the Resources
-        if: always()
-        run: |
-
-          set -e
-          echo "Azure OpenAI: ${{ env.OPENAI_RESOURCE_NAME }}"
-
-          # Purge OpenAI Resource
-          echo "Purging the OpenAI Resource..."
-          if ! az resource delete --ids /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/providers/Microsoft.CognitiveServices/locations/eastus/resourceGroups/${{ env.RESOURCE_GROUP_NAME }}/deletedAccounts/${{ env.OPENAI_RESOURCE_NAME }} --verbose; then
-            echo "Failed to purge openai resource: ${{ env.OPENAI_RESOURCE_NAME }}"
-          else
-            echo "Purged the openai resource: ${{ env.OPENAI_RESOURCE_NAME }}"
-          fi
-
-          echo "Resource purging completed successfully"
+          echo "Deleting deployment..."
+          azd down --purge --force --no-prompt
+          echo "Deployment deleted successfully."
 
       - name: Send Notification on Failure
         if: failure()
@@ -343,8 +256,9 @@ jobs:
           curl -X POST "${{ secrets.LOGIC_APP_URL }}" \
             -H "Content-Type: application/json" \
             -d "$EMAIL_BODY" || echo "Failed to send notification"
+
       - name: Logout from Azure
         if: always()
         run: |
-          az logout
+          azd auth logout
           echo "Logged out from Azure."

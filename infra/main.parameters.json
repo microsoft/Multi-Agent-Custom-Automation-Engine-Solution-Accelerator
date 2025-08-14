@@ -54,6 +54,9 @@
       "backendExists": {
         "value": "${SERVICE_BACKEND_RESOURCE_EXISTS=false}"
       },
+      "useWafAlignedArchitecture": {
+        "value": "${AZURE_ENV_USE_WAF_ALIGNED_ARCHITECTURE}"
+      },
       "backendDefinition": {
         "value": {
           "settings": [

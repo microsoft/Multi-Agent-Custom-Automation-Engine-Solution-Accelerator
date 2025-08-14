@@ -12,12 +12,6 @@ on:
         required: false
         type: string
         description: "API URL for MACAE (overrides environment variable)"
-      MACAE_RG:
-        required: false
-        type: string
-      MACAE_CONTAINER_APP:
-        required: false
-        type: string
     secrets:
       EMAILNOTIFICATION_LOGICAPP_URL_TA:
         required: false
@@ -29,8 +23,6 @@ jobs:
     env:
       MACAE_WEB_URL: ${{ inputs.MACAE_WEB_URL }}
       MACAE_URL_API: ${{ inputs.MACAE_URL_API }}
-      MACAE_RG: ${{ inputs.MACAE_RG }}
-      MACAE_CONTAINER_APP: ${{ inputs.MACAE_CONTAINER_APP }}
       accelerator_name: "MACAE"
 
     steps:
@@ -47,13 +39,6 @@ jobs:
         with:
           creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
 
-      # - name: Start Container App
-      #   uses: azure/cli@v2
-      #   with:
-      #     azcliversion: "latest"
-      #     inlineScript: |
-      #       az rest -m post -u "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/${{ env.MACAE_RG }}/providers/Microsoft.App/containerApps/${{ env.MACAE_CONTAINER_APP }}/start?api-version=2025-01-01"
-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -69,12 +54,6 @@ jobs:
             exit 1
           elif [ -z "${{ env.MACAE_URL_API  }}" ]; then
             echo "ERROR: No API URL provided for testing"
-            exit 1
-          elif [ -z "${{ env.MACAE_RG }}" ]; then
-            echo "ERROR: Resource group name missing"
-            exit 1
-          elif [ -z "${{ env.MACAE_CONTAINER_APP }}" ]; then
-            echo "ERROR: Container app name missing"
             exit 1
           fi
 
@@ -178,12 +157,3 @@ jobs:
           curl -X POST "${{ secrets.EMAILNOTIFICATION_LOGICAPP_URL_TA }}" \
             -H "Content-Type: application/json" \
             -d "$EMAIL_BODY" || echo "Failed to send notification"
-
-      # - name: Stop Container App
-      #   if: always()
-      #   uses: azure/cli@v2
-      #   with:
-      #     azcliversion: "latest"
-      #     inlineScript: |
-      #       az rest -m post -u "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/${{ env.MACAE_RG }}/providers/Microsoft.App/containerApps/${{ env.MACAE_CONTAINER_APP }}/stop?api-version=2025-01-01"
-      #       az logout
