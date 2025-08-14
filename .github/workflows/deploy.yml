@@ -149,7 +149,7 @@ jobs:
             AZURE_SUBSCRIPTION_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}" | \
             AZURE_ENV_OPENAI_LOCATION="${{ env.AZURE_LOCATION }}" | \
             AZURE_ENV_MODEL_CAPACITY="${{ env.GPT_MIN_CAPACITY }}" | \
-            AZURE_ENV_USE_WAF_ALIGNED_ARCHITECTURE="false" | \
+            AZURE_ENV_USE_WAF_ALIGNED_ARCHITECTURE=false | \
             AZURE_ENV_IMAGETAG="${IMAGE_TAG}"
 
           echo "Environment variables set successfully:"
