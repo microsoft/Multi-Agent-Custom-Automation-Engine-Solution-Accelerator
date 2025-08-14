@@ -21,6 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       RESOURCE_GROUP_NAME: ${{ steps.check_create_rg.outputs.RESOURCE_GROUP_NAME }}
+      AZURE_LOCATION: ${{ steps.set_region.outputs.AZURE_LOCATION }}
       ENV_NAME: ${{ steps.generate_env_name.outputs.ENV_NAME }}
       WEBAPP_URL: ${{ steps.get_output.outputs.WEBAPP_URL }}
       MACAE_URL_API: ${{ steps.get_backend_url.outputs.MACAE_URL_API }}
@@ -67,9 +68,11 @@ jobs:
         run: exit 1
 
       - name: Set Deployment Region
+        id: set_region
         run: |
           echo "Selected Region: $VALID_REGION"
           echo "AZURE_LOCATION=$VALID_REGION" >> $GITHUB_ENV
+          echo "AZURE_LOCATION=$VALID_REGION" >> $GITHUB_OUTPUT
 
       - name: Setup Azure CLI
         run: |
@@ -144,13 +147,6 @@ jobs:
           azd config set defaults.subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
           echo "Setting environment variables..."
-          # azd env set \
-          #   AZURE_RESOURCE_GROUP="${{ env.RESOURCE_GROUP_NAME }}" | \
-          #   AZURE_SUBSCRIPTION_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}" | \
-          #   AZURE_ENV_OPENAI_LOCATION="${{ env.AZURE_LOCATION }}" | \
-          #   AZURE_ENV_MODEL_CAPACITY="${{ env.GPT_MIN_CAPACITY }}" | \
-          #   AZURE_ENV_USE_WAF_ALIGNED_ARCHITECTURE=false | \
-          #   AZURE_ENV_IMAGETAG="${IMAGE_TAG}"
           azd env set AZURE_RESOURCE_GROUP="${{ env.RESOURCE_GROUP_NAME }}"
           azd env set AZURE_SUBSCRIPTION_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
           azd env set AZURE_ENV_OPENAI_LOCATION="${{ env.AZURE_LOCATION }}"
@@ -208,6 +204,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       RESOURCE_GROUP_NAME: ${{ needs.deploy.outputs.RESOURCE_GROUP_NAME }}
+      AZURE_LOCATION: ${{ needs.deploy.outputs.AZURE_LOCATION }}
       ENV_NAME: ${{ needs.deploy.outputs.ENV_NAME }}
     steps:
       - name: Checkout Code
@@ -235,6 +232,8 @@ jobs:
             azd env new ${{ env.ENV_NAME }} --no-prompt
             azd env set AZURE_RESOURCE_GROUP "${{ env.RESOURCE_GROUP_NAME }}"
             azd env set AZURE_SUBSCRIPTION_ID "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+            azd env set AZURE_ENV_OPENAI_LOCATION="${{ env.AZURE_LOCATION }}"
+
           fi
 
       - name: Delete deployment using azd
