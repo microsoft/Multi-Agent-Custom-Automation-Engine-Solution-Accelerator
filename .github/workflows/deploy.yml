@@ -183,15 +183,13 @@ jobs:
           CONTAINER_APP_NAME=$(az containerapp list \
             --resource-group ${{ env.RESOURCE_GROUP_NAME }} \
             --query "[0].name" -o tsv)
-
           MACAE_URL_API=$(az containerapp show \
             --name "$CONTAINER_APP_NAME" \
             --resource-group ${{ env.RESOURCE_GROUP_NAME }} \
             --query "properties.configuration.ingress.fqdn" -o tsv)
-
           echo "MACAE_URL_API=https://${MACAE_URL_API}" >> $GITHUB_OUTPUT
           echo "CONTAINER_APP=${CONTAINER_APP_NAME}" >> $GITHUB_OUTPUT
-
+          
       - name: Logout from Azure
         run: |
           az logout
