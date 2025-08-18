@@ -22,6 +22,7 @@ import Octo from "../coral/imports/Octopus.png"; // 🐙 Animated PNG loader
 import PanelRightToggles from "@/coral/components/Header/PanelRightToggles";
 import { TaskListSquareLtr } from "@/coral/imports/bundleicons";
 import LoadingMessage, { loadingMessages } from "@/coral/components/LoadingMessage";
+import { RAIErrorCard, RAIErrorData } from "../components/errors";
 
 /**
  * Page component for displaying a specific plan
@@ -42,6 +43,7 @@ const PlanPage: React.FC = () => {
         null
     );
     const [reloadLeftList, setReloadLeftList] = useState(true);
+    const [raiError, setRAIError] = useState<RAIErrorData | null>(null);
 
     const [loadingMessage, setLoadingMessage] = useState(loadingMessages[0]);
 
@@ -108,6 +110,7 @@ const PlanPage: React.FC = () => {
                 return;
             }
             setInput("");
+            setRAIError(null); // Clear any previous RAI errors
             if (!planData?.plan) return;
             setSubmitting(true);
             let id = showToast("Submitting clarification", "progress");
@@ -121,9 +124,30 @@ const PlanPage: React.FC = () => {
                 dismissToast(id);
                 showToast("Clarification submitted successfully", "success");
                 await loadPlanData(false);
-            } catch (error) {
+            } catch (error: any) {
                 dismissToast(id);
-                showToast("Failed to submit clarification", "error");
+                
+                // Check if this is an RAI validation error
+                let errorDetail = null;
+                try {
+                    // Try to parse the error detail if it's a string
+                    if (typeof error?.response?.data?.detail === 'string') {
+                        errorDetail = JSON.parse(error.response.data.detail);
+                    } else {
+                        errorDetail = error?.response?.data?.detail;
+                    }
+                } catch (parseError) {
+                    // If parsing fails, use the original error
+                    errorDetail = error?.response?.data?.detail;
+                }
+
+                // Handle RAI validation errors with better UX
+                if (errorDetail?.error_type === 'RAI_VALIDATION_FAILED') {
+                    setRAIError(errorDetail);
+                } else {
+                    // Handle other errors with toast messages
+                    showToast("Failed to submit clarification", "error");
+                }
             } finally {
                 setInput("");
                 setSubmitting(false);
@@ -201,6 +225,20 @@ const PlanPage: React.FC = () => {
                                     />
                                 </PanelRightToggles>
                             </ContentToolbar>
+                            
+                            {/* Show RAI error if present */}
+                            {raiError && (
+                                <div style={{ padding: '16px 24px 0' }}>
+                                    <RAIErrorCard
+                                        error={raiError}
+                                        onRetry={() => {
+                                            setRAIError(null);
+                                        }}
+                                        onDismiss={() => setRAIError(null)}
+                                    />
+                                </div>
+                            )}
+                            
                             <PlanChat
                                 planData={planData}
                                 OnChatSubmit={handleOnchatSubmit}

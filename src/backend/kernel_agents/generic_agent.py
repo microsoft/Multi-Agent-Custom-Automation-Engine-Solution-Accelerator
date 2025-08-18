@@ -1,11 +1,12 @@
 import logging
 from typing import Dict, List, Optional
 
-from context.cosmos_memory_kernel import CosmosMemoryContext
 from kernel_agents.agent_base import BaseAgent
 from kernel_tools.generic_tools import GenericTools
-from models.messages_kernel import AgentType
+from common.models.messages_kernel import AgentType
 from semantic_kernel.functions import KernelFunction
+
+from common.database.database_base import DatabaseBase
 
 
 class GenericAgent(BaseAgent):
@@ -15,7 +16,7 @@ class GenericAgent(BaseAgent):
         self,
         session_id: str,
         user_id: str,
-        memory_store: CosmosMemoryContext,
+        memory_store: Optional[DatabaseBase] = None,
         tools: Optional[List[KernelFunction]] = None,
         system_message: Optional[str] = None,
         agent_name: str = AgentType.GENERIC.value,

@@ -3,7 +3,7 @@ from typing import Callable, get_type_hints
 import json
 
 from semantic_kernel.functions import kernel_function
-from models.messages_kernel import AgentType
+from common.models.messages_kernel import AgentType
 
 
 class TechSupportTools:

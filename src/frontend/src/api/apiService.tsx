@@ -15,6 +15,7 @@ import {
 // Constants for endpoints
 const API_ENDPOINTS = {
     INPUT_TASK: '/input_task',
+    CREATE_PLAN: '/v3/create_plan',
     PLANS: '/plans',
     STEPS: '/steps',
     HUMAN_FEEDBACK: '/human_feedback',
@@ -109,6 +110,15 @@ export class APIService {
     }
 
     /**
+     * Create a new plan with RAI validation
+     * @param inputTask The task description and optional session ID
+     * @returns Promise with the response containing plan ID and status
+     */
+    async createPlan(inputTask: InputTask): Promise<{ plan_id: string; status: string; session_id: string }> {
+        return apiClient.post(API_ENDPOINTS.CREATE_PLAN, inputTask);
+    }
+
+    /**
      * Get all plans, optionally filtered by session ID
      * @param sessionId Optional session ID to filter plans
      * @param useCache Whether to use cached data or force fresh fetch
@@ -117,7 +127,7 @@ export class APIService {
     async getPlans(sessionId?: string, useCache = true): Promise<PlanWithSteps[]> {
         const cacheKey = `plans_${sessionId || 'all'}`;
         const params = sessionId ? { session_id: sessionId } : {};
-
+        // TODO replace session for team_id 
         const fetcher = async () => {
             const data = await apiClient.get(API_ENDPOINTS.PLANS, { params });
             if (useCache) {

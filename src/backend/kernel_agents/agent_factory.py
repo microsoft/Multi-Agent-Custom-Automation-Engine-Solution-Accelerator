@@ -5,13 +5,15 @@ import logging
 from typing import Any, Dict, Optional, Type
 
 # Import the new AppConfig instance
-from app_config import config
-from azure.ai.agents.models import (ResponseFormatJsonSchema,
-                                    ResponseFormatJsonSchemaType)
-from context.cosmos_memory_kernel import CosmosMemoryContext
+from common.config.app_config import config
+from azure.ai.agents.models import (
+    ResponseFormatJsonSchema,
+    ResponseFormatJsonSchemaType,
+)
 from kernel_agents.agent_base import BaseAgent
 from kernel_agents.generic_agent import GenericAgent
 from kernel_agents.group_chat_manager import GroupChatManager
+
 # Import all specialized agent implementations
 from kernel_agents.hr_agent import HrAgent
 from kernel_agents.human_agent import HumanAgent
@@ -20,9 +22,13 @@ from kernel_agents.planner_agent import PlannerAgent  # Add PlannerAgent import
 from kernel_agents.procurement_agent import ProcurementAgent
 from kernel_agents.product_agent import ProductAgent
 from kernel_agents.tech_support_agent import TechSupportAgent
-from models.messages_kernel import AgentType, PlannerResponsePlan
+from common.models.messages_kernel import AgentType, PlannerResponsePlan
+
 # pylint:disable=E0611
 from semantic_kernel.agents.azure_ai.azure_ai_agent import AzureAIAgent
+
+from common.database.database_base import DatabaseBase
+from common.database.database_factory import DatabaseFactory
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +88,7 @@ class AgentFactory:
         session_id: str,
         user_id: str,
         temperature: float = 0.0,
-        memory_store: Optional[CosmosMemoryContext] = None,
+        memory_store: Optional[DatabaseBase] = None,
         system_message: Optional[str] = None,
         response_format: Optional[Any] = None,
         client: Optional[Any] = None,
@@ -133,7 +139,7 @@ class AgentFactory:
 
         # Create memory store
         if memory_store is None:
-            memory_store = CosmosMemoryContext(session_id, user_id)
+            memory_store = await DatabaseFactory.get_database(user_id=user_id)
 
         # Use default system message if none provided
         if system_message is None:
@@ -188,7 +194,7 @@ class AgentFactory:
         session_id: str,
         user_id: str,
         temperature: float = 0.0,
-        memory_store: Optional[CosmosMemoryContext] = None,
+        memory_store: Optional[DatabaseBase] = None,
         client: Optional[Any] = None,
     ) -> Dict[AgentType, BaseAgent]:
         """Create all agent types for a session in a specific order.

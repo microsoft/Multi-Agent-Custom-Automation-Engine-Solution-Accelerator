@@ -2,19 +2,17 @@
 import asyncio
 import logging
 import os
+
+# Azure monitoring
+import re
 import uuid
 from typing import Dict, List, Optional
 
 # Semantic Kernel imports
-from app_config import config
+from common.config.app_config import config
 from auth.auth_utils import get_authenticated_user_details
-
-# Azure monitoring
-import re
-from dateutil import parser
 from azure.monitor.opentelemetry import configure_azure_monitor
-from config_kernel import Config
-from event_utils import track_event_if_configured
+from common.utils.event_utils import track_event_if_configured
 
 # FastAPI imports
 from fastapi import FastAPI, HTTPException, Query, Request
@@ -23,23 +21,28 @@ from kernel_agents.agent_factory import AgentFactory
 
 # Local imports
 from middleware.health_check import HealthCheckMiddleware
-from models.messages_kernel import (
+from common.models.messages_kernel import (
     AgentMessage,
     AgentType,
     HumanClarification,
     HumanFeedback,
     InputTask,
+    Plan,
+    PlanStatus,
     PlanWithSteps,
     Step,
-    UserLanguage
+    UserLanguage,
 )
 
 # Updated import for KernelArguments
-from utils_kernel import initialize_runtime_and_context, rai_success
+from common.utils.utils_kernel import rai_success
 
+from common.database.database_factory import DatabaseFactory
+from common.utils.utils_date import format_dates_in_messages
+from v3.api.router import app_v3
 
 # Check if the Application Insights Instrumentation Key is set in the environment variables
-connection_string = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
+connection_string = config.APPLICATIONINSIGHTS_CONNECTION_STRING
 if connection_string:
     # Configure Application Insights if the Instrumentation Key is found
     configure_azure_monitor(connection_string=connection_string)
@@ -69,12 +72,14 @@ logging.getLogger("azure.monitor.opentelemetry.exporter.export._base").setLevel(
 # Initialize the FastAPI app
 app = FastAPI()
 
-frontend_url = Config.FRONTEND_SITE_NAME
+frontend_url = config.FRONTEND_SITE_NAME
 
 # Add this near the top of your app.py, after initializing the app
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[frontend_url],  # Allow all origins for development; restrict in production
+    allow_origins=[
+        frontend_url
+    ],  # Allow all origins for development; restrict in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -82,62 +87,13 @@ app.add_middleware(
 
 # Configure health check
 app.add_middleware(HealthCheckMiddleware, password="", checks={})
+# v3 endpoints
+app.include_router(app_v3)
 logging.info("Added health check middleware")
 
 
-def format_dates_in_messages(messages, target_locale="en-US"):
-    """
-    Format dates in agent messages according to the specified locale.
-
-    Args:
-        messages: List of message objects or string content
-        target_locale: Target locale for date formatting (default: en-US)
-
-    Returns:
-        Formatted messages with dates converted to target locale format
-    """
-    # Define target format patterns per locale
-    locale_date_formats = {
-        "en-IN": "%d %b %Y",       # 30 Jul 2025
-        "en-US": "%b %d, %Y",      # Jul 30, 2025
-    }
-
-    output_format = locale_date_formats.get(target_locale, "%d %b %Y")
-    # Match both "Jul 30, 2025, 12:00:00 AM" and "30 Jul 2025"
-    date_pattern = r'(\d{1,2} [A-Za-z]{3,9} \d{4}|[A-Za-z]{3,9} \d{1,2}, \d{4}(, \d{1,2}:\d{2}:\d{2} ?[APap][Mm])?)'
-
-    def convert_date(match):
-        date_str = match.group(0)
-        try:
-            dt = parser.parse(date_str)
-            return dt.strftime(output_format)
-        except Exception:
-            return date_str  # Leave it unchanged if parsing fails
-
-    # Process messages
-    if isinstance(messages, list):
-        formatted_messages = []
-        for message in messages:
-            if hasattr(message, 'content') and message.content:
-                # Create a copy of the message with formatted content
-                formatted_message = message.model_copy() if hasattr(message, 'model_copy') else message
-                if hasattr(formatted_message, 'content'):
-                    formatted_message.content = re.sub(date_pattern, convert_date, formatted_message.content)
-                formatted_messages.append(formatted_message)
-            else:
-                formatted_messages.append(message)
-        return formatted_messages
-    elif isinstance(messages, str):
-        return re.sub(date_pattern, convert_date, messages)
-    else:
-        return messages
-
-
 @app.post("/api/user_browser_language")
-async def user_browser_language_endpoint(
-    user_language: UserLanguage,
-    request: Request
-):
+async def user_browser_language_endpoint(user_language: UserLanguage, request: Request):
     """
     Receive the user's browser language.
 
@@ -180,14 +136,22 @@ async def input_task_endpoint(input_task: InputTask, request: Request):
         track_event_if_configured(
             "RAI failed",
             {
-                "status": "Plan not created",
+                "status": "Plan not created - RAI validation failed",
                 "description": input_task.description,
                 "session_id": input_task.session_id,
             },
         )
 
         return {
-            "status": "Plan not created",
+            "status": "RAI_VALIDATION_FAILED",
+            "message": "Content Safety Check Failed",
+            "detail": "Your request contains content that doesn't meet our safety guidelines. Please modify your request to ensure it's appropriate and try again.",
+            "suggestions": [
+                "Remove any potentially harmful, inappropriate, or unsafe content",
+                "Use more professional and constructive language",
+                "Focus on legitimate business or educational objectives",
+                "Ensure your request complies with content policies",
+            ],
         }
     authenticated_user = get_authenticated_user_details(request_headers=request.headers)
     user_id = authenticated_user["user_principal_id"]
@@ -205,9 +169,7 @@ async def input_task_endpoint(input_task: InputTask, request: Request):
     try:
         # Create all agents instead of just the planner agent
         # This ensures other agents are created first and the planner has access to them
-        kernel, memory_store = await initialize_runtime_and_context(
-            input_task.session_id, user_id
-        )
+        memory_store = await DatabaseFactory.get_database(user_id=user_id)
         client = None
         try:
             client = config.get_ai_project_client()
@@ -267,7 +229,9 @@ async def input_task_endpoint(input_task: InputTask, request: Request):
         # Extract clean error message for rate limit errors
         error_msg = str(e)
         if "Rate limit is exceeded" in error_msg:
-            match = re.search(r"Rate limit is exceeded\. Try again in (\d+) seconds?\.", error_msg)
+            match = re.search(
+                r"Rate limit is exceeded\. Try again in (\d+) seconds?\.", error_msg
+            )
             if match:
                 error_msg = "Application temporarily unavailable due to quota limits. Please try again later."
 
@@ -279,7 +243,9 @@ async def input_task_endpoint(input_task: InputTask, request: Request):
                 "error": str(e),
             },
         )
-        raise HTTPException(status_code=400, detail=f"{error_msg}") from e
+        raise HTTPException(
+            status_code=400, detail=f"Error creating plan: {error_msg}"
+        ) from e
 
 
 @app.post("/api/human_feedback")
@@ -346,9 +312,7 @@ async def human_feedback_endpoint(human_feedback: HumanFeedback, request: Reques
         )
         raise HTTPException(status_code=400, detail="no user")
 
-    kernel, memory_store = await initialize_runtime_and_context(
-        human_feedback.session_id, user_id
-    )
+    memory_store = await DatabaseFactory.get_database(user_id=user_id)
 
     client = None
     try:
@@ -450,12 +414,26 @@ async def human_clarification_endpoint(
         track_event_if_configured(
             "RAI failed",
             {
-                "status": "Clarification is not received",
+                "status": "Clarification rejected - RAI validation failed",
                 "description": human_clarification.human_clarification,
                 "session_id": human_clarification.session_id,
             },
         )
-        raise HTTPException(status_code=400, detail="Invalida Clarification")
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error_type": "RAI_VALIDATION_FAILED",
+                "message": "Clarification Safety Check Failed",
+                "description": "Your clarification contains content that doesn't meet our safety guidelines. Please provide a more appropriate clarification.",
+                "suggestions": [
+                    "Use clear and professional language",
+                    "Avoid potentially harmful or inappropriate content",
+                    "Focus on providing constructive feedback or clarification",
+                    "Ensure your message complies with content policies",
+                ],
+                "user_action": "Please revise your clarification and try again",
+            },
+        )
 
     authenticated_user = get_authenticated_user_details(request_headers=request.headers)
     user_id = authenticated_user["user_principal_id"]
@@ -465,9 +443,7 @@ async def human_clarification_endpoint(
         )
         raise HTTPException(status_code=400, detail="no user")
 
-    kernel, memory_store = await initialize_runtime_and_context(
-        human_clarification.session_id, user_id
-    )
+    memory_store = await DatabaseFactory.get_database(user_id=user_id)
     client = None
     try:
         client = config.get_ai_project_client()
@@ -579,9 +555,7 @@ async def approve_step_endpoint(
         raise HTTPException(status_code=400, detail="no user")
 
     # Get the agents for this session
-    kernel, memory_store = await initialize_runtime_and_context(
-        human_feedback.session_id, user_id
-    )
+    memory_store = await DatabaseFactory.get_database(user_id=user_id)
     client = None
     try:
         client = config.get_ai_project_client()
@@ -697,10 +671,7 @@ async def get_plans(
         raise HTTPException(status_code=400, detail="no user")
 
     # Initialize memory context
-    kernel, memory_store = await initialize_runtime_and_context(
-        session_id or "", user_id
-    )
-
+    memory_store = await DatabaseFactory.get_database(user_id=user_id)
     if session_id:
         plan = await memory_store.get_plan_by_session(session_id=session_id)
         if not plan:
@@ -734,7 +705,9 @@ async def get_plans(
         plan_with_steps.update_step_counts()
 
         # Format dates in messages according to locale
-        formatted_messages = format_dates_in_messages(messages, config.get_user_local_browser_language())
+        formatted_messages = format_dates_in_messages(
+            messages, config.get_user_local_browser_language()
+        )
 
         return [plan_with_steps, formatted_messages]
 
@@ -813,7 +786,7 @@ async def get_steps_by_plan(plan_id: str, request: Request) -> List[Step]:
         raise HTTPException(status_code=400, detail="no user")
 
     # Initialize memory context
-    kernel, memory_store = await initialize_runtime_and_context("", user_id)
+    memory_store = await DatabaseFactory.get_database(user_id=user_id)
     steps = await memory_store.get_steps_for_plan(plan_id=plan_id)
     return steps
 
@@ -879,173 +852,9 @@ async def get_agent_messages(session_id: str, request: Request) -> List[AgentMes
         raise HTTPException(status_code=400, detail="no user")
 
     # Initialize memory context
-    kernel, memory_store = await initialize_runtime_and_context(
-        session_id or "", user_id
-    )
+    memory_store = await DatabaseFactory.get_database(user_id=user_id)
     agent_messages = await memory_store.get_data_by_type("agent_message")
     return agent_messages
-
-
-@app.get("/api/agent_messages_by_plan/{plan_id}", response_model=List[AgentMessage])
-async def get_agent_messages_by_plan(
-    plan_id: str, request: Request
-) -> List[AgentMessage]:
-    """
-    Retrieve agent messages for a specific session.
-
-    ---
-    tags:
-      - Agent Messages
-    parameters:
-      - name: session_id
-        in: path
-        type: string
-        required: true
-        in: path
-        type: string
-        required: true
-        description: The ID of the session to retrieve agent messages for
-    responses:
-      200:
-        description: List of agent messages associated with the specified session
-        schema:
-          type: array
-          items:
-            type: object
-            properties:
-              id:
-                type: string
-                description: Unique ID of the agent message
-              session_id:
-                type: string
-                description: Session ID associated with the message
-              plan_id:
-                type: string
-                description: Plan ID related to the agent message
-              content:
-                type: string
-                description: Content of the message
-              source:
-                type: string
-                description: Source of the message (e.g., agent type)
-              timestamp:
-                type: string
-                format: date-time
-                description: Timestamp of the message
-              step_id:
-                type: string
-                description: Optional step ID associated with the message
-      400:
-        description: Missing or invalid user information
-      404:
-        description: Agent messages not found
-    """
-    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
-    user_id = authenticated_user["user_principal_id"]
-    if not user_id:
-        track_event_if_configured(
-            "UserIdNotFound", {"status_code": 400, "detail": "no user"}
-        )
-        raise HTTPException(status_code=400, detail="no user")
-
-    # Initialize memory context
-    kernel, memory_store = await initialize_runtime_and_context("", user_id)
-    agent_messages = await memory_store.get_data_by_type_and_plan_id("agent_message")
-    return agent_messages
-
-
-@app.delete("/api/messages")
-async def delete_all_messages(request: Request) -> Dict[str, str]:
-    """
-    Delete all messages across sessions.
-
-    ---
-    tags:
-      - Messages
-    responses:
-      200:
-        description: Confirmation of deletion
-        schema:
-          type: object
-          properties:
-            status:
-              type: string
-              description: Status message indicating all messages were deleted
-      400:
-        description: Missing or invalid user information
-    """
-    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
-    user_id = authenticated_user["user_principal_id"]
-    if not user_id:
-        track_event_if_configured(
-            "UserIdNotFound", {"status_code": 400, "detail": "no user"}
-        )
-        raise HTTPException(status_code=400, detail="no user")
-
-    # Initialize memory context
-    kernel, memory_store = await initialize_runtime_and_context("", user_id)
-
-    await memory_store.delete_all_items("plan")
-    await memory_store.delete_all_items("session")
-    await memory_store.delete_all_items("step")
-    await memory_store.delete_all_items("agent_message")
-
-    # Clear the agent factory cache
-    AgentFactory.clear_cache()
-
-    return {"status": "All messages deleted"}
-
-
-@app.get("/api/messages")
-async def get_all_messages(request: Request):
-    """
-    Retrieve all messages across sessions.
-
-    ---
-    tags:
-      - Messages
-    responses:
-      200:
-        description: List of all messages across sessions
-        schema:
-          type: array
-          items:
-            type: object
-            properties:
-              id:
-                type: string
-                description: Unique ID of the message
-              data_type:
-                type: string
-                description: Type of the message (e.g., session, step, plan, agent_message)
-              session_id:
-                type: string
-                description: Session ID associated with the message
-              user_id:
-                type: string
-                description: User ID associated with the message
-              content:
-                type: string
-                description: Content of the message
-              timestamp:
-                type: string
-                format: date-time
-                description: Timestamp of the message
-      400:
-        description: Missing or invalid user information
-    """
-    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
-    user_id = authenticated_user["user_principal_id"]
-    if not user_id:
-        track_event_if_configured(
-            "UserIdNotFound", {"status_code": 400, "detail": "no user"}
-        )
-        raise HTTPException(status_code=400, detail="no user")
-
-    # Initialize memory context
-    kernel, memory_store = await initialize_runtime_and_context("", user_id)
-    message_list = await memory_store.get_all_items()
-    return message_list
 
 
 @app.get("/api/agent-tools")

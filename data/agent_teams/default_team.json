@@ -1,0 +1,92 @@
+{
+    "id": "10",
+    "team_id": "team-business-operations",
+    "name": "Business Operations Team",
+    "status": "visible",
+    "created": "2025-08-05T00:00:00.000Z",
+    "created_by": "Admin",
+    "agents": [
+        {
+            "input_key": "hr-agent-001",
+            "type": "HR",
+            "name": "HR Specialist",
+            "system_message": "You are an AI Agent. You have knowledge about HR (e.g., human resources), policies, procedures, and onboarding guidelines.",
+            "description": "Handles employee onboarding, HR policies, and human resources management tasks.",
+            "icon": "Person",
+            "index_name": ""
+        },
+        {
+            "input_key": "tech-support-001",
+            "type": "TechSupport",
+            "name": "Tech Support Specialist",
+            "system_message": "You are a Product agent. You have knowledge about product management, development, and compliance guidelines. When asked to call a function, you should summarize back what was done.",
+            "description": "Provides technical support for mobile plans, telecommunications, and IT services.",
+            "icon": "Phone",
+            "index_name": ""
+        },
+        {
+            "input_key": "procurement-001",
+            "type": "Procurement",
+            "name": "Procurement Specialist",
+            "system_message": "You are a Procurement agent. You specialize in purchasing, vendor management, supply chain operations, and inventory control. You help with creating purchase orders, managing vendors, tracking orders, and ensuring efficient procurement processes.",
+            "description": "Manages purchasing decisions, add-ons, and procurement processes.",
+            "icon": "ShoppingBag",
+            "index_name": ""
+        },
+        {
+            "input_key": "marketing-001",
+            "type": "Marketing",
+            "name": "Marketing Specialist",
+            "system_message": "You are a Marketing agent. You specialize in marketing strategy, campaign development, content creation, and market analysis. You help create effective marketing campaigns, analyze market data, and develop promotional content for products and services.",
+            "description": "Creates marketing content, press releases, and promotional materials.",
+            "icon": "DocumentEdit",
+            "index_name": ""
+        },
+        {
+            "input_key": "generic-001",
+            "type": "Generic",
+            "name": "General Assistant",
+            "system_message": "You are a Generic agent that can help with general questions and provide basic information. You can search for information and perform simple calculations.",
+            "description": "Provides general assistance and handles miscellaneous tasks that don't require specialized expertise.",
+            "icon": "Bot",
+            "index_name": ""
+        }
+    ],
+    "description": "Business Operations team handles employee onboarding, telecommunications support, procurement, and marketing tasks for comprehensive business operations management.",
+    "logo": "Building",
+    "plan": "Multi-agent business operations plan covering HR, tech support, procurement, and marketing activities",
+    "starting_tasks": [
+        {
+            "id": "onboard",
+            "name": "Onboard employee",
+            "prompt": "Onboard a new employee, Jessica Smith.",
+            "created": "2025-08-05T00:00:00.000Z",
+            "creator": "system",
+            "logo": "Person"
+        },
+        {
+            "id": "mobile",
+            "name": "Mobile plan query",
+            "prompt": "Ask about roaming plans prior to heading overseas.",
+            "created": "2025-08-05T00:00:00.000Z",
+            "creator": "system",
+            "logo": "Phone"
+        },
+        {
+            "id": "addon",
+            "name": "Buy add-on",
+            "prompt": "Enable roaming on mobile plan, starting next week.",
+            "created": "2025-08-05T00:00:00.000Z",
+            "creator": "system",
+            "logo": "ShoppingBag"
+        },
+        {
+            "id": "press",
+            "name": "Draft a press release",
+            "prompt": "Write a press release about our current products.",
+            "created": "2025-08-05T00:00:00.000Z",
+            "creator": "system",
+            "logo": "DocumentEdit"
+        }
+    ]
+}

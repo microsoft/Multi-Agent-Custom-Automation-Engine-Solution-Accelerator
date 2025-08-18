@@ -2,7 +2,7 @@ from unittest.mock import patch, Mock
 import base64
 import json
 
-from src.backend.auth.auth_utils import get_authenticated_user_details, get_tenantid
+from auth.auth_utils import get_authenticated_user_details, get_tenantid
 
 
 def test_get_authenticated_user_details_with_headers():
@@ -42,7 +42,7 @@ def test_get_tenantid_with_empty_b64():
     assert tenant_id == ""
 
 
-@patch("src.backend.auth.auth_utils.logging.getLogger", return_value=Mock())
+@patch("auth.auth_utils.logging.getLogger", return_value=Mock())
 def test_get_tenantid_with_invalid_b64(mock_logger):
     """Test get_tenantid with an invalid base64-encoded string."""
     invalid_b64 = "invalid-base64"

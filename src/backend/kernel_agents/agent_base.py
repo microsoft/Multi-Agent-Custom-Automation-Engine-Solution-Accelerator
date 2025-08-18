@@ -1,15 +1,22 @@
 import logging
 from abc import abstractmethod
-from typing import (Any, List, Mapping, Optional)
+from typing import Any, List, Mapping, Optional
 
 # Import the new AppConfig instance
-from app_config import config
-from context.cosmos_memory_kernel import CosmosMemoryContext
-from event_utils import track_event_if_configured
-from models.messages_kernel import (ActionRequest, ActionResponse,
-                                    AgentMessage, Step, StepStatus)
+from common.config.app_config import config
+
+from common.utils.event_utils import track_event_if_configured
+from common.models.messages_kernel import (
+    ActionRequest,
+    ActionResponse,
+    AgentMessage,
+    Step,
+    StepStatus,
+)
 from semantic_kernel.agents.azure_ai.azure_ai_agent import AzureAIAgent
 from semantic_kernel.functions import KernelFunction
+
+from common.database.database_base import DatabaseBase
 
 # Default formatting instructions used across agents
 DEFAULT_FORMATTING_INSTRUCTIONS = "Instructions: returning the output of this function call verbatim to the user in markdown. Then write AGENT SUMMARY: and then include a summary of what you did."
@@ -23,7 +30,7 @@ class BaseAgent(AzureAIAgent):
         agent_name: str,
         session_id: str,
         user_id: str,
-        memory_store: CosmosMemoryContext,
+        memory_store: Optional[DatabaseBase] = None,
         tools: Optional[List[KernelFunction]] = None,
         system_message: Optional[str] = None,
         client=None,

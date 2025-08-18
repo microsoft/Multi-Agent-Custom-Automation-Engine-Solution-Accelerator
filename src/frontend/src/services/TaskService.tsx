@@ -196,6 +196,41 @@ export class TaskService {
       throw new Error(message);
     }
   }
+
+  /**
+   * Create a new plan with RAI validation
+   * @param description Task description
+   * @param teamId Optional team ID to use for this plan
+   * @returns Promise with the response containing plan ID and status
+   */
+  static async createPlan(
+    description: string,
+    teamId?: string
+  ): Promise<{ plan_id: string; status: string; session_id: string }> {
+    const sessionId = this.generateSessionId();
+
+    const inputTask: InputTask = {
+      session_id: sessionId,
+      description: description,
+      team_id: teamId,
+    };
+
+    try {
+      return await apiService.createPlan(inputTask);
+    } catch (error: any) {
+      // You can customize this logic as needed
+      let message = "Failed to create plan.";
+      if (error?.response?.data?.detail) {
+        message = error.response.data.detail;
+      } else if (error?.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error?.message) {
+        message = error.message;
+      }
+      // Throw a new error with a user-friendly message
+      throw new Error(message);
+    }
+  }
 }
 
 export default TaskService;

@@ -6,11 +6,11 @@ from datetime import datetime
 from typing import Annotated, Callable, List
 
 from semantic_kernel.functions import kernel_function
-from models.messages_kernel import AgentType
+from common.models.messages_kernel import AgentType
 import json
 from typing import get_type_hints
-from utils_date import format_date_for_user
-from app_config import config
+from common.utils.utils_date import format_date_for_user
+from common.config.app_config import config
 
 
 class ProductTools:
@@ -85,7 +85,9 @@ class ProductTools:
         start_of_month = datetime(now.year, now.month, 1)
         start_of_month_string = start_of_month.strftime("%Y-%m-%d")
         formatted_date = format_date_for_user(start_of_month_string)
-        return f"## Billing Date\nYour most recent billing date was **{formatted_date}**."
+        return (
+            f"## Billing Date\nYour most recent billing date was **{formatted_date}**."
+        )
 
     @staticmethod
     @kernel_function(

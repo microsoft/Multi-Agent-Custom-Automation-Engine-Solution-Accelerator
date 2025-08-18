@@ -6,6 +6,8 @@ export interface InputTask {
     session_id?: string;
     /** The task description or goal */
     description: string;
+    /** MANDATORY team identifier to use for this plan */
+    team_id?: string;
 }
 
 /**

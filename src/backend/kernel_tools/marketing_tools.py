@@ -5,7 +5,7 @@ import json
 from typing import Callable, List, get_type_hints
 
 from semantic_kernel.functions import kernel_function
-from models.messages_kernel import AgentType
+from common.models.messages_kernel import AgentType
 
 
 class MarketingTools:

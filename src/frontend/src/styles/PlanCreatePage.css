@@ -1,0 +1,14 @@
+/* PlanCreatePage.css - Extends PlanPage.css styles */
+
+/* Any additional styles specific to plan creation page can go here */
+/* Currently inheriting all styles from PlanPage.css */
+
+/* Responsive design for mobile */
+@media (max-width: 768px) {
+    /* Mobile-specific overrides if needed */
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    /* Dark mode overrides if needed */
+}

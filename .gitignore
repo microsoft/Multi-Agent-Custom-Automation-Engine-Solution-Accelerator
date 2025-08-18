@@ -458,3 +458,5 @@ __pycache__/
 *.whl
 .azure
 .github/copilot-instructions.md
+# Ignore sample code folder
+data/sample_code/

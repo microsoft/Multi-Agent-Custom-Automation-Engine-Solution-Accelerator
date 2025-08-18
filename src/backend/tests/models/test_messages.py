@@ -1,7 +1,7 @@
 # File: test_message.py
 
 import uuid
-from src.backend.models.messages import (
+from models.messages import (
     DataType,
     BAgentType,
     StepStatus,

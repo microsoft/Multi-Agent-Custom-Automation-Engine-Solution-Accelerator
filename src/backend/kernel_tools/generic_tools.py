@@ -2,7 +2,7 @@ import inspect
 from typing import Callable
 
 from semantic_kernel.functions import kernel_function
-from models.messages_kernel import AgentType
+from common.models.messages_kernel import AgentType
 import json
 from typing import get_type_hints
 
