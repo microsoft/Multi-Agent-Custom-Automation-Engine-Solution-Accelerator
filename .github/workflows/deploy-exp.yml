@@ -1,4 +1,4 @@
-name: Deploy-Test-Cleanup (WAF)
+name: Deploy-Test-Cleanup (EXP)
 
 on:
   push:
@@ -14,7 +14,7 @@ on:
       - dev
       - demo
   schedule:
-    - cron: "10 11,23 * * *" # Runs at 11:10 AM and 11:10 PM GMT
+    - cron: "20 11,23 * * *" # Runs at 11:20 AM and 11:20 PM GMT
 
 env:
   GPT_MIN_CAPACITY: 150
@@ -163,8 +163,10 @@ jobs:
           azd env set AZURE_SUBSCRIPTION_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
           azd env set AZURE_ENV_OPENAI_LOCATION="${{ env.AZURE_LOCATION }}"
           azd env set AZURE_ENV_MODEL_CAPACITY="${{ env.GPT_MIN_CAPACITY }}"
-          azd env set AZURE_ENV_USE_WAF_ALIGNED_ARCHITECTURE=true
+          azd env set AZURE_ENV_USE_WAF_ALIGNED_ARCHITECTURE=false
           azd env set AZURE_ENV_IMAGETAG="${IMAGE_TAG}"
+          azd env set AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID="${{ secrets.EXP_LOG_WORKSPACE_RID }}"
+          azd env set AZURE_ENV_FOUNDRY_PROJECT_ID="${{ secrets.EXP_AIF_PROJ_RID }}"
           echo "Environment variables set successfully:"
           azd env get-values
 
@@ -211,7 +213,7 @@ jobs:
     with:
       MACAE_WEB_URL: ${{ needs.deploy.outputs.WEBAPP_URL }}
       MACAE_URL_API: ${{ needs.deploy.outputs.MACAE_URL_API }}
-      ACCELERATOR_NAME: "MACAE (WAF)"
+      ACCELERATOR_NAME: "MACAE (EXP)"
     secrets: inherit
 
   cleanup-deployment:
@@ -249,7 +251,7 @@ jobs:
             azd env set AZURE_RESOURCE_GROUP "${{ env.RESOURCE_GROUP_NAME }}"
             azd env set AZURE_SUBSCRIPTION_ID "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
             azd env set AZURE_ENV_OPENAI_LOCATION="${{ env.AZURE_LOCATION }}"
-            azd env set AZURE_ENV_USE_WAF_ALIGNED_ARCHITECTURE=true
+            azd env set AZURE_ENV_USE_WAF_ALIGNED_ARCHITECTURE=false
 
           fi
 
@@ -268,7 +270,7 @@ jobs:
           # Construct the email body
           EMAIL_BODY=$(cat <<EOF
           {
-            "body": "<p>Dear Team,</p><p>We would like to inform you that the Multi-Agent-Custom-Automation-Engine-Solution-Accelerator (WAF) Automation process has encountered an issue and has failed to complete successfully.</p><p><strong>Build URL:</strong> ${RUN_URL}<br> ${OUTPUT}</p><p>Please investigate the matter at your earliest convenience.</p><p>Best regards,<br>Your Automation Team</p>"
+            "body": "<p>Dear Team,</p><p>We would like to inform you that the Multi-Agent-Custom-Automation-Engine-Solution-Accelerator (EXP) Automation process has encountered an issue and has failed to complete successfully.</p><p><strong>Build URL:</strong> ${RUN_URL}<br> ${OUTPUT}</p><p>Please investigate the matter at your earliest convenience.</p><p>Best regards,<br>Your Automation Team</p>"
           }
           EOF
           )

@@ -1,2 +1,2 @@
-url = 'web app url'
-api_url = 'api_url_for_response_status'
+MACAE_WEB_URL = 'web app url'
+MACAE_URL_API = 'api_url_for_response_status'

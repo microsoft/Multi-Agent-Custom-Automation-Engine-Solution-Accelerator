@@ -5,13 +5,18 @@ on:
   workflow_call:
     inputs:
       MACAE_WEB_URL:
-        required: false
+        required: true
         type: string
-        description: "Web URL for MACAE (overrides environment variable)"
+        description: "Web URL for MACAE"
       MACAE_URL_API:
+        required: true
+        type: string
+        description: "API URL for MACAE"
+      ACCELERATOR_NAME:
         required: false
         type: string
-        description: "API URL for MACAE (overrides environment variable)"
+        description: "Name of the accelerator"
+        default: "MACAE"
     secrets:
       EMAILNOTIFICATION_LOGICAPP_URL_TA:
         required: false
@@ -23,7 +28,7 @@ jobs:
     env:
       MACAE_WEB_URL: ${{ inputs.MACAE_WEB_URL }}
       MACAE_URL_API: ${{ inputs.MACAE_URL_API }}
-      accelerator_name: "MACAE"
+      accelerator_name: ${{ inputs.ACCELERATOR_NAME }}
 
     steps:
       - name: Checkout repository
