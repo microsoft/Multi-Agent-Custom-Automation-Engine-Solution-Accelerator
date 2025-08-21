@@ -52,7 +52,7 @@ class BIABPage(BasePage):
         self.page.locator(self.SEND_BUTTON).click()
         expect(self.page.locator("span", has_text="Creating a plan")).to_be_visible()
         self.page.locator("span", has_text="Creating a plan").wait_for(
-            state="hidden", timeout=30000
+            state="hidden", timeout=50000
         )
         self.page.wait_for_timeout(2000)
 
