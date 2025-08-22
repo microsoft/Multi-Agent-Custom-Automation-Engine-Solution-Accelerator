@@ -20,6 +20,11 @@ param existingLogAnalyticsWorkspaceId string = ''
 
 param azureopenaiVersion string = '2025-01-01-preview'
 
+// ADD AFTER LINE 22 - Get the current deployer's information
+var deployerInfo = deployer()
+var deployingUserPrincipalId = deployerInfo.objectId
+var enableUserRoleAssignment = !empty(deployingUserPrincipalId)
+
 // Restricting deployment to only supported Azure OpenAI regions validated with GPT-4o model
 @metadata({
   azd : {
@@ -812,6 +817,37 @@ module cogServiceRoleAssignmentsExisting './modules/role.bicep' = if(useExisting
   scope: resourceGroup( split(existingFoundryProjectResourceId, '/')[2], split(existingFoundryProjectResourceId, '/')[4])
 }
 
+// ADD AFTER LINE 700 - User Role Assignment for Azure OpenAI
+// User Role Assignment for Azure OpenAI - New Resources
+module userOpenAiRoleAssignment './modules/role.bicep' = if (enableUserRoleAssignment && aiFoundryAIservicesEnabled && !useExistingResourceId) {
+  name: take('user-openai-${uniqueString(deployingUserPrincipalId, aiFoundryAiServicesResourceName)}', 64)
+  params: {
+    name: 'user-openai-${uniqueString(deployingUserPrincipalId, aiFoundryAiServicesResourceName)}'
+    principalId: deployingUserPrincipalId
+    aiServiceName: aiFoundryAiServices.outputs.name
+    principalType: 'User'
+  }
+  scope: resourceGroup(subscription().subscriptionId, resourceGroup().name)
+  dependsOn: [
+    aiFoundryAiServices
+  ]
+}
+
+// User Role Assignment for Azure OpenAI - Existing Resources
+module userOpenAiRoleAssignmentExisting './modules/role.bicep' = if (enableUserRoleAssignment && aiFoundryAIservicesEnabled && useExistingResourceId) {
+  name: take('user-openai-existing-${uniqueString(deployingUserPrincipalId, aiFoundryAiServicesResourceName)}', 64)
+  params: {
+    name: 'user-openai-existing-${uniqueString(deployingUserPrincipalId, aiFoundryAiServicesResourceName)}'
+    principalId: deployingUserPrincipalId
+    aiServiceName: aiFoundryAiServices.outputs.name
+    principalType: 'User'
+  }
+  scope: resourceGroup(split(existingFoundryProjectResourceId, '/')[2], split(existingFoundryProjectResourceId, '/')[4])
+  dependsOn: [
+    aiFoundryAiServices
+  ]
+}
+
 // ========== Cosmos DB ========== //
 // WAF best practices for Cosmos DB: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/cosmos-db
 module privateDnsZonesCosmosDb 'br/public:avm/res/network/private-dns-zone:0.7.0' = if (virtualNetworkEnabled) {
@@ -886,9 +922,11 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.12.0' = if (co
     capabilitiesToAdd: [
       'EnableServerless'
     ]
-    sqlRoleAssignmentsPrincipalIds: [
-      containerApp.outputs.?systemAssignedMIPrincipalId
-    ]
+    // REPLACE LINE 773
+    sqlRoleAssignmentsPrincipalIds: concat(
+      [containerApp.outputs.?systemAssignedMIPrincipalId],
+      enableUserRoleAssignment ? [deployingUserPrincipalId] : []
+    )
     sqlRoleDefinitions: [
       {
         // Replace this with built-in role definition Cosmos DB Built-in Data Contributor: https://docs.azure.cn/en-us/cosmos-db/nosql/security/reference-data-plane-roles#cosmos-db-built-in-data-contributor
@@ -1739,3 +1777,7 @@ output AZURE_AI_MODEL_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDeploymen
 output AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDeployment.name
 output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiServices.outputs.aiProjectInfo.apiEndpoint
 output APP_ENV string = 'Prod'
+
+// ADD AFTER LINE 941
+output deployerInfo object = deployerInfo
+output userRoleAssignmentStatus string = enableUserRoleAssignment ? 'User ${deployingUserPrincipalId} (${deployerInfo.?userPrincipalName ?? 'N/A'}) has been granted access to Cosmos DB and Azure OpenAI' : 'No user role assignment configured.'
