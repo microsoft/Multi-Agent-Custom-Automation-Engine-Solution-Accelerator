@@ -43,6 +43,7 @@ import {
 } from '@fluentui/react-icons';
 import { TeamConfig } from '../../models/Team';
 import { TeamService } from '../../services/TeamService';
+import styles from './TeamSelector.module.css';
 
 // Icon mapping function to convert string icons to FluentUI icons
 const getIconFromString = (iconString: string): React.ReactNode => {
@@ -276,15 +277,13 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.stopPropagation();
-    event.currentTarget.style.borderColor = '#6264a7';
-    event.currentTarget.style.backgroundColor = '#f0f0ff';
+    event.currentTarget.classList.add(styles.dropZoneHover);
   };
 
   const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.stopPropagation();
-    event.currentTarget.style.borderColor = '#d1d5db';
-    event.currentTarget.style.backgroundColor = '#f9fafb';
+    event.currentTarget.classList.remove(styles.dropZoneHover);
   };
 
   const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
@@ -292,8 +291,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
     event.stopPropagation();
     
     // Reset visual state
-    event.currentTarget.style.borderColor = '#d1d5db';
-    event.currentTarget.style.backgroundColor = '#f9fafb';
+    event.currentTarget.classList.remove(styles.dropZoneHover);
 
     const files = event.dataTransfer.files;
     if (files.length === 0) return;
@@ -370,21 +368,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
     return (
       <div 
         key={team.team_id} 
-        style={{ 
-          display: 'flex',
-          alignItems: 'center',
-          padding: '16px',
-          border: '1px solid #ddd',
-          borderRadius: '8px',
-          marginBottom: '12px',
-          justifyContent: 'space-between',
-          backgroundColor: isSelected ? '#f5f5ff' : '#fff',
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
-          boxSizing: 'border-box',
-          width: '100%',
-          overflow: 'hidden'
-        }}
+        className={`${styles.teamItem} ${isSelected ? styles.teamItemSelected : ''}`}
         onClick={() => setTempSelectedTeam(team)}
       >
         {/* Radio Button */}
@@ -394,48 +378,26 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
         />
 
         {/* Team Info */}
-        <div style={{ flex: 2, marginLeft: '16px' }}>
-          <div style={{ fontWeight: 600, color: '#323130' }}>
+        <div className={styles.teamInfo}>
+          <div className={styles.teamName}>
             {team.name}
           </div>
-          <div style={{ fontSize: '13px', color: '#666', marginTop: '4px' }}>
+          <div className={styles.teamDescription}>
             {team.description}
           </div>
         </div>
 
         {/* Tags */}
-        <div style={{ 
-          flex: 1, 
-          display: 'flex', 
-          gap: '6px', 
-          flexWrap: 'wrap', 
-          justifyContent: 'center',
-          minWidth: '0',
-          maxWidth: '180px',
-          overflow: 'hidden'
-        }}>
+        <div className={styles.teamBadges}>
           {team.agents.slice(0, 3).map((agent) => (
             <Badge
               key={agent.input_key}
+              className={styles.agentBadge}
               appearance="tint"
               size="small"
-              style={{
-                backgroundColor: '#e6f3ff',
-                color: '#0066cc',
-                border: '1px solid #b3d9ff',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '4px 8px',
-                minHeight: '24px'
-              }}
             >
               {agent.icon && (
-                <span style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  fontSize: '12px' 
-                }}>
+                <span className={styles.badgeIcon}>
                   {getIconFromString(agent.icon)}
                 </span>
               )}
@@ -444,15 +406,9 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
           ))}
           {team.agents.length > 3 && (
             <Badge
+              className={styles.agentBadge}
               appearance="tint"
               size="small"
-              style={{
-                backgroundColor: '#e6f3ff',
-                color: '#0066cc',
-                border: '1px solid #b3d9ff',
-                padding: '4px 8px',
-                minHeight: '24px'
-              }}
             >
               +{team.agents.length - 3}
             </Badge>
@@ -465,11 +421,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
           appearance="subtle"
           size="small"
           onClick={(e) => handleDeleteTeam(team, e)}
-          style={{ 
-            color: '#d13438',
-            marginLeft: '12px',
-            minWidth: '32px'
-          }}
+          className={styles.deleteButton}
         />
       </div>
     );
@@ -481,101 +433,41 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
         <DialogTrigger disableButtonEnhancement>
           <Button
             appearance="subtle"
+            className={styles.teamSelectorButton}
             size="medium"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              width: '100%',
-              height: 'auto',
-              minHeight: '44px',
-              padding: '12px 16px',
-              borderRadius: '6px',
-              border: 'none',
-              background: 'transparent',
-              color: '#323130',
-              textAlign: 'left',
-              fontSize: '14px'
-            }}
           >
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1 }}>
-              <Caption1 style={{ color: '#605e5c', fontSize: '11px', marginBottom: '2px' }}>
+            <div className={styles.teamSelectorContent}>
+              <Caption1 className={styles.currentTeamLabel}>
                 Current Team
               </Caption1>
-              <Body1 style={{ color: '#323130', fontWeight: 500, fontSize: '14px' }}>
+              <Body1 className={styles.currentTeamName}>
                 {selectedTeam ? selectedTeam.name : 'No team selected'}
               </Body1>
             </div>
-            <ChevronUpDown16Regular style={{ color: '#605e5c' }} />
+            <ChevronUpDown16Regular className={styles.chevronIcon} />
           </Button>
         </DialogTrigger>
-        <DialogSurface style={{ 
-          maxWidth: '800px', 
-          width: '90vw', 
-          minWidth: '500px',
-          borderRadius: '12px',
-          padding: '0',
-          backgroundColor: '#ffffff',
-          color: '#323130',
-          border: '1px solid #e1e1e1',
-          boxSizing: 'border-box',
-          overflow: 'hidden'
-        }}>
-          <DialogTitle style={{ 
-            padding: '24px 24px 16px 24px',
-            fontSize: '20px',
-            fontWeight: 600,
-            margin: '0',
-            color: '#323130',
-            width: '100%',
-            boxSizing: 'border-box'
-          }}>
+        <DialogSurface className={styles.dialogSurface}>
+          <DialogTitle className={styles.dialogTitle}>
             Select a Team
           </DialogTitle>
-          <DialogContent style={{ padding: '0', width: '100%', margin: '0', overflow: 'hidden' }}>
-            <DialogBody style={{ 
-              padding: '24px', 
-              backgroundColor: '#ffffff', 
-              width: '100%', 
-              margin: '0',
-              display: 'block',
-              overflow: 'hidden',
-              gap: 'unset',
-              maxHeight: 'unset',
-              gridTemplateRows: 'unset',
-              gridTemplateColumns: 'unset'
-            }}>
-              {/* Tab Navigation - Integrated with content */}
-              <div style={{ 
-                marginBottom: '20px',
-                width: '100%'
-              }}>
+          <DialogContent className={styles.dialogContent}>
+            <DialogBody className={styles.dialogBody}>
+              <div className={styles.tabContainer}>
                 <TabList
+                  className={styles.tabList}
                   selectedValue={activeTab}
                   onTabSelect={(event, data) => setActiveTab(data.value as string)}
-                  style={{ 
-                    width: '100%',
-                    backgroundColor: '#ffffff'
-                  }}
                 >
                   <Tab 
                     value="teams"
-                    style={{ 
-                      color: activeTab === 'teams' ? '#6264a7' : '#323130',
-                      fontWeight: activeTab === 'teams' ? 600 : 400,
-                      padding: '12px 16px',
-                      marginRight: '24px'
-                    }}
+                    className={`${styles.tab} ${activeTab === 'teams' ? styles.tabSelected : ''}`}
                   >
                     Teams
                   </Tab>
                   <Tab 
                     value="upload"
-                    style={{ 
-                      color: activeTab === 'upload' ? '#6264a7' : '#323130',
-                      fontWeight: activeTab === 'upload' ? 600 : 400,
-                      padding: '12px 16px'
-                    }}
+                    className={`${styles.tab} ${activeTab === 'upload' ? styles.tabSelected : ''}`}
                   >
                     Upload Team
                   </Tab>
@@ -583,88 +475,54 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
               </div>
 
               {/* Tab Content - Directly below tabs without separation */}
-              <div style={{ overflow: 'hidden', width: '100%' }}>
+              <div className={styles.tabContentContainer}>
                 {activeTab === 'teams' && (
-                <div style={{ 
-                  width: '100%'
-                }}>
+                <div className={styles.teamsTabContent}>
                   {error && (
-                    <div style={{ 
-                      color: '#d13438', 
-                      marginBottom: '16px',
-                      padding: '12px',
-                      backgroundColor: '#fdf2f2',
-                      border: '1px solid #f5c6cb',
-                      borderRadius: '4px'
-                    }}>
-                      <Text style={{ whiteSpace: 'pre-line', color: '#d13438' }}>{error}</Text>
+                    <div className={styles.errorMessage}>
+                      <Text className={styles.errorText}>{error}</Text>
                     </div>
                   )}
 
                   {/* Search Input */}
-                  <div style={{ marginBottom: '16px', width: '100%' }}>
+                  <div className={styles.searchContainer}>
                     <Input
+                      className={styles.searchInput}
                       placeholder="Search teams..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       contentBefore={<Search20Regular />}
-                      style={{ 
-                        width: '100%',
-                        backgroundColor: '#ffffff',
-                        border: '1px solid #e1e1e1',
-                        color: '#323130'
-                      }}
                     />
                   </div>
 
                   {/* Teams List */}
                   {loading ? (
-                    <div style={{ display: 'flex', justifyContent: 'center', padding: '32px', width: '100%' }}>
-                      <Spinner label="Loading teams..." style={{ color: '#ffffff' }} />
+                    <div className={styles.loadingContainer}>
+                      <Spinner label="Loading teams..." />
                     </div>
                   ) : filteredTeams.length > 0 ? (
-                    <div style={{ width: '100%' }}>
+                    <div className={styles.teamsContainer}>
                       <RadioGroup 
                         value={tempSelectedTeam?.team_id || ''}
-                        style={{ width: '100%' }}
+                        className={styles.radioGroup}
                       >
-                        <div style={{ 
-                          maxHeight: '400px', 
-                          overflowY: 'auto',
-                          overflowX: 'hidden',
-                          paddingRight: '8px',
-                          marginRight: '-8px',
-                          width: 'calc(100% + 8px)',
-                          boxSizing: 'border-box'
-                        }}>
+                        <div className={styles.teamsList}>
                           {filteredTeams.map((team) => renderTeamCard(team))}
                         </div>
                       </RadioGroup>
                     </div>
                   ) : searchQuery ? (
-                    <div style={{ 
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      padding: '32px 16px',
-                      textAlign: 'center'
-                    }}>
-                      <Text size={400} style={{ color: '#cccccc', marginBottom: '8px' }}>
+                    <div className={styles.noTeamsContainer}>
+                      <Text size={400} className={styles.noTeamsText}>
                         No teams found matching "{searchQuery}"
                       </Text>
                     </div>
                   ) : (
-                    <div style={{ 
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      padding: '32px 16px',
-                      textAlign: 'center'
-                    }}>
-                      <Text size={400} style={{ color: '#cccccc', marginBottom: '8px' }}>
+                    <div className={styles.noTeamsContainer}>
+                      <Text size={400} className={styles.noTeamsText}>
                         No teams available
                       </Text>
-                      <Text size={300} style={{ color: '#aaaaaa' }}>
+                      <Text size={300} className={styles.noTeamsSubtext}>
                         Upload a JSON team configuration to get started
                       </Text>
                     </div>
@@ -673,85 +531,37 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
               )}
 
               {activeTab === 'upload' && (
-                <div style={{ 
-                  width: '100%'
-                }}>
+                <div className={styles.uploadTabContent}>
                   {uploadMessage && (
-                    <div style={{ 
-                      color: '#107c10', 
-                      marginBottom: '16px',
-                      padding: '12px',
-                      backgroundColor: '#f3f9f3',
-                      border: '1px solid #c6e7c6',
-                      borderRadius: '4px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}>
+                    <div className={styles.uploadMessage}>
                       <Spinner size="extra-small" />
                       <Text>{uploadMessage}</Text>
                     </div>
                   )}
 
                   {error && (
-                    <div style={{ 
-                      color: '#d13438', 
-                      marginBottom: '16px',
-                      padding: '12px',
-                      backgroundColor: '#fdf2f2',
-                      border: '1px solid #f5c6cb',
-                      borderRadius: '4px'
-                    }}>
-                      <Text style={{ whiteSpace: 'pre-line', color: '#d13438' }}>{error}</Text>
+                    <div className={styles.errorMessage}>
+                      <Text className={styles.errorText}>{error}</Text>
                     </div>
                   )}
 
                   {/* Drag and Drop Zone */}
                   <div 
-                    style={{
-                      border: '2px dashed #d1d5db',
-                      borderRadius: '8px',
-                      padding: '40px 20px',
-                      textAlign: 'center',
-                      backgroundColor: '#f9fafb',
-                      marginBottom: '20px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
+                    className={styles.dropZone}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
                     onClick={() => document.getElementById('team-upload-input')?.click()}
                   >
-                    <div style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}>
-                      <div style={{
-                        width: '24px',
-                        height: '24px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#9ca3af'
-                      }}>
+                    <div className={styles.dropZoneContent}>
+                      {/* <div className={styles.uploadIcon}>
                         ↑
-                      </div>
-                      <Text style={{ 
-                        fontSize: '16px', 
-                        fontWeight: '500',
-                        color: '#374151',
-                        marginBottom: '4px'
-                      }}>
+                      </div> */}
+                      <Text className={styles.uploadTitle}>
                         Drag & drop your team JSON here
                       </Text>
-                      <Text style={{ 
-                        fontSize: '14px',
-                        color: '#6b7280'
-                      }}>
-                        or <span style={{ color: '#6264a7', textDecoration: 'underline', cursor: 'pointer' }}>click to browse</span>
+                      <Text className={styles.uploadSubtitle}>
+                        or <span className={styles.browseLink}>click to browse</span>
                       </Text>
                     </div>
                     
@@ -759,61 +569,43 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
                       type="file"
                       accept=".json"
                       onChange={handleFileUpload}
-                      style={{ display: 'none' }}
+                      className={styles.hiddenInput}
                       id="team-upload-input"
                       disabled={uploadLoading}
                     />
                   </div>
 
                   {/* Upload Requirements */}
-                  <div style={{
-                    padding: '16px',
-                    borderRadius: '8px'
-                  }}>
-                    <Text style={{ 
-                      fontSize: '14px', 
-                      fontWeight: '600', 
-                      color: '#323130',
-                      display: 'block',
-                      marginBottom: '12px'
-                    }}>
+                  <div className={styles.requirementsBox}>
+                    <Text className={styles.requirementsTitle}>
                       Upload Requirements
                     </Text>
-                    <ul style={{
-                      margin: '0',
-                      paddingLeft: '20px',
-                      listStyle: 'disc'
-                    }}>
-                      <li style={{ marginBottom: '8px' }}>
-                        <Text style={{ fontSize: '13px', color: '#605e5c' }}>
-                          JSON must include <strong style={{ color: '#323130' }}>name</strong>, <strong style={{ color: '#323130' }}>description</strong>, and <strong style={{ color: '#323130' }}>status</strong>
+                    <ul className={styles.requirementsList}>
+                      <li className={styles.requirementsItem}>
+                        <Text className={styles.requirementsText}>
+                          JSON must include <strong className={styles.requirementsStrong}>name</strong>, <strong className={styles.requirementsStrong}>description</strong>, and <strong className={styles.requirementsStrong}>status</strong>
                         </Text>
                       </li>
-                      <li style={{ marginBottom: '8px' }}>
-                        <Text style={{ fontSize: '13px', color: '#605e5c' }}>
-                          At least one agent with <strong style={{ color: '#323130' }}>name</strong>, <strong style={{ color: '#323130' }}>type</strong>, <strong style={{ color: '#323130' }}>input_key</strong>, and <strong style={{ color: '#323130' }}>deployment_name</strong>
+                      <li className={styles.requirementsItem}>
+                        <Text className={styles.requirementsText}>
+                          At least one agent with <strong className={styles.requirementsStrong}>name</strong>, <strong className={styles.requirementsStrong}>type</strong>, <strong className={styles.requirementsStrong}>input_key</strong>, and <strong className={styles.requirementsStrong}>deployment_name</strong>
                         </Text>
                       </li>
-                      <li style={{ marginBottom: '8px' }}>
-                        <Text style={{ fontSize: '13px', color: '#605e5c' }}>
-                          Maximum of <strong style={{ color: '#323130' }}>6 agents</strong> per team configuration
+                      <li className={styles.requirementsItem}>
+                        <Text className={styles.requirementsText}>
+                          Maximum of <strong className={styles.requirementsStrong}>6 agents</strong> per team configuration
                         </Text>
                       </li>
-                      <li style={{ marginBottom: '8px' }}>
-                        <Text style={{ fontSize: '13px', color: '#605e5c' }}>
-                          RAG agents additionally require <strong style={{ color: '#323130' }}>index_name</strong>
+                      <li className={styles.requirementsItem}>
+                        <Text className={styles.requirementsText}>
+                          RAG agents additionally require <strong className={styles.requirementsStrong}>index_name</strong>
                         </Text>
                       </li>
-                      <li style={{ marginBottom: '8px' }}>
-                        <Text style={{ fontSize: '13px', color: '#605e5c' }}>
-                          Starting tasks are optional, but if provided must include <strong style={{ color: '#323130' }}>name</strong> and <strong style={{ color: '#323130' }}>prompt</strong>
+                      <li className={styles.requirementsItem}>
+                        <Text className={styles.requirementsText}>
+                          Starting tasks are optional, but if provided must include <strong className={styles.requirementsStrong}>name</strong> and <strong className={styles.requirementsStrong}>prompt</strong>
                         </Text>
                       </li>
-                      {/* <li>
-                        <Text style={{ fontSize: '13px', color: '#605e5c' }}>
-                          Text fields cannot be empty
-                        </Text>
-                      </li> */}
                     </ul>
                   </div>
                 </div>
@@ -821,17 +613,11 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
               </div>
             </DialogBody>
           </DialogContent>
-          <DialogActions style={{ 
-            padding: '16px 24px',
-            backgroundColor: '#ffffff'
-          }}>
+          <DialogActions className={styles.dialogActions}>
             <Button 
               appearance="secondary" 
               onClick={handleCancel}
-              style={{ 
-                padding: '12px 24px',
-                marginRight: '12px'
-              }}
+              className={styles.cancelButton}
             >
               Cancel
             </Button>
@@ -839,9 +625,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
               appearance="primary" 
               onClick={handleContinue}
               disabled={!tempSelectedTeam}
-              style={{ 
-                padding: '12px 24px'
-              }}
+              className={styles.continueButton}
             >
               Continue
             </Button>
@@ -851,47 +635,22 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteConfirmOpen} onOpenChange={(event, data) => setDeleteConfirmOpen(data.open)}>
-        <DialogSurface style={{ 
-          maxWidth: '500px',
-          width: '90vw'
-        }}>
-          <DialogContent style={{ 
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'visible',
-            gap: '16px',
-            maxHeight: 'none'
-          }}>
-            <DialogBody style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '16px',
-              padding: '24px'
-            }}>
-              <DialogTitle style={{ margin: '0', padding: '0' }}>⚠️ Delete Team Configuration</DialogTitle>
+        <DialogSurface className={styles.deleteDialogSurface}>
+          <DialogContent className={styles.deleteDialogContent}>
+            <DialogBody className={styles.deleteDialogBody}>
+              <DialogTitle className={styles.deleteDialogTitle}>⚠️ Delete Team Configuration</DialogTitle>
               <div>
-                <Text style={{ display: 'block', marginBottom: '16px' }}>
+                <Text className={styles.deleteConfirmText}>
                   Are you sure you want to delete <strong>"{teamToDelete?.name}"</strong>?
                 </Text>
-                <div style={{ 
-                  padding: '16px', 
-                  backgroundColor: '#fff4e6', 
-                  border: '1px solid #ffb84d', 
-                  borderRadius: '6px'
-                }}>
-                  <Text style={{ color: '#d83b01' }}>
+                <div className={styles.warningBox}>
+                  <Text className={styles.warningText}>
                     This action cannot be undone and will remove the team for all users.
                   </Text>
                 </div>
               </div>
             </DialogBody>
-            <DialogActions style={{ 
-              display: 'flex',
-              flexDirection: 'row',
-              justifyContent: 'flex-end',
-              gap: '12px',
-              padding: '0 24px 24px 24px'
-            }}>
+            <DialogActions className={styles.deleteDialogActions}>
               <Button 
                 appearance="secondary" 
                 disabled={deleteLoading}
@@ -899,22 +658,14 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
                   setDeleteConfirmOpen(false);
                   setTeamToDelete(null);
                 }}
-                style={{ 
-                  padding: '8px 16px',
-                  minWidth: '80px'
-                }}
+                className={styles.cancelButton}
               >
                 Cancel
               </Button>
               <Button 
                 appearance="primary" 
                 disabled={deleteLoading}
-                style={{ 
-                  backgroundColor: '#d13438', 
-                  color: 'white',
-                  padding: '8px 16px',
-                  minWidth: '100px'
-                }}
+                className={styles.deleteConfirmButton}
                 onClick={confirmDeleteTeam}
               >
                 {deleteLoading ? 'Deleting...' : 'Delete Team'}
