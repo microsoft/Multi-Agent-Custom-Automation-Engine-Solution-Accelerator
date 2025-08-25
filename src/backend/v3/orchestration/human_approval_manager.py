@@ -163,7 +163,7 @@ class HumanApprovalMagenticManager(StandardMagenticManager):
                 step = MStep(agent=found_agent, action=line)
 
                 # add the step to the plan
-                return_plan.steps.append(step)
+                return_plan.steps.append(step) # pylint: disable=E1101
 
         return return_plan
 

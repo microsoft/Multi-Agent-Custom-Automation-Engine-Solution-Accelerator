@@ -43,7 +43,7 @@ class MPlan(BaseModel):
     user_request: Optional[str] = None
     team: List[str] = []
     facts: Optional[str] = None
-    steps: List[MStep] = Field(default_factory=list)
+    steps: List[MStep] = Field(list)
 
 # class MPlan(BaseModel):
 #     """model of a plan"""

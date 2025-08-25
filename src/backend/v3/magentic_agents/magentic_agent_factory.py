@@ -2,9 +2,11 @@
 
 from v3.magentic_agents.coder import create_foundry_agent as create_coder
 from v3.magentic_agents.proxy_agent import create_proxy_agent
-from v3.magentic_agents.reasoner import create_custom_agent as create_reasoner
 from v3.magentic_agents.researcher import \
     create_foundry_agent as create_researcher
+
+from src.backend.v3.magentic_agents.reasoner_old import \
+    create_custom_agent as create_reasoner
 
 _agent_list = []
 

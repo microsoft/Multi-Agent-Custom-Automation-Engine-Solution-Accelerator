@@ -27,6 +27,8 @@ dependencies = [
     "pytest-cov==5.0.0",
     "python-dotenv>=1.1.0",
     "python-multipart>=0.0.20",
-    "semantic-kernel>=1.32.2",
+    "semantic-kernel[azure]>=1.32.2",
     "uvicorn>=0.34.2",
+    "pylint-pydantic>=0.3.5",
+    "pexpect>=4.9.0",
 ]

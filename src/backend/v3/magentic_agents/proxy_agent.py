@@ -2,15 +2,20 @@
 
 import asyncio
 import uuid
-from typing import AsyncIterator
-from semantic_kernel.contents import ChatMessageContent, AuthorRole
-from semantic_kernel.agents.agent import Agent
-from semantic_kernel.agents import AgentThread, AgentResponseItem #pylint: disable=no-name-in-module
-from semantic_kernel.contents.chat_history import ChatHistory
-from typing_extensions import override
 from collections.abc import AsyncIterable
-from semantic_kernel.exceptions.agent_exceptions import AgentThreadOperationException
-from semantic_kernel.contents.history_reducer.chat_history_reducer import ChatHistoryReducer
+from typing import AsyncIterator
+
+from semantic_kernel.agents import (  # pylint: disable=no-name-in-module
+    AgentResponseItem, AgentThread)
+from semantic_kernel.agents.agent import Agent
+from semantic_kernel.contents import AuthorRole, ChatMessageContent
+from semantic_kernel.contents.chat_history import ChatHistory
+from semantic_kernel.contents.history_reducer.chat_history_reducer import \
+    ChatHistoryReducer
+from semantic_kernel.exceptions.agent_exceptions import \
+    AgentThreadOperationException
+from typing_extensions import override
+
 
 class DummyAgentThread(AgentThread):
     """Dummy thread implementation for proxy agent."""
@@ -184,9 +189,7 @@ async def test_proxy_agent():
     
     agent = ProxyAgent()
     test_messages = [
-        "What's the budget for this project?",
-        "Which department should handle this task?",
-        "What's the timeline for completion?"
+        "More information needed.  What is the name of the employee?"
     ]
     
     for message in test_messages:
