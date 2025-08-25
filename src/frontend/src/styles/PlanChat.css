@@ -28,7 +28,7 @@
 }
 
 
-/* NEW */
+
 
 .plan-chat-header {
   display: flex;
@@ -50,6 +50,50 @@
   justify-content: center;
   padding: 8px 16px;
   margin-bottom: 8px;
+}
+
+/* Plan Approval Section */
+.approval-section {
+  background: linear-gradient(135deg, #f3f9ff 0%, #e3f2fd 100%);
+  border: 2px solid #0078d4;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 16px;
+  box-shadow: 0 4px 12px rgba(0, 120, 212, 0.15);
+  transition: all 0.3s ease;
+}
+
+.approval-section:hover {
+  box-shadow: 0 6px 16px rgba(0, 120, 212, 0.2);
+}
+
+.approval-buttons {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.approval-button-approve {
+  background: linear-gradient(135deg, #107c10 0%, #16c60c 100%);
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.approval-button-approve:hover {
+  background: linear-gradient(135deg, #0e6e0e 0%, #13a80a 100%);
+  transform: translateY(-1px);
+}
+
+.approval-button-reject {
+  background: linear-gradient(135deg, #d13438 0%, #e81123 100%);
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.approval-button-reject:hover {
+  background: linear-gradient(135deg, #b52d32 0%, #c50e1f 100%);
+  transform: translateY(-1px);
 }
 
 /* Streaming message animations */

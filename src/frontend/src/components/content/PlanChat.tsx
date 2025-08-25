@@ -4,7 +4,7 @@ import ChatInput from "@/coral/modules/ChatInput";
 import remarkGfm from "remark-gfm";
 import rehypePrism from "rehype-prism";
 import { AgentType, ChatMessage, PlanChatProps, role } from "@/models";
-import { StreamingPlanUpdate } from "@/services/WebSocketService";
+import { StreamingPlanUpdate, webSocketService } from "@/services/WebSocketService";
 import {
   Body1,
   Button,
@@ -12,7 +12,7 @@ import {
   Tag,
   ToolbarDivider,
 } from "@fluentui/react-components";
-import { DiamondRegular, HeartRegular } from "@fluentui/react-icons";
+import { DiamondRegular, HeartRegular, CheckmarkRegular, DismissRegular } from "@fluentui/react-icons";
 import { useEffect, useRef, useState } from "react";
 
 // Type guard to check if a message has streaming properties
@@ -40,6 +40,11 @@ const PlanChat: React.FC<PlanChatProps> = ({
   const messages = planData?.messages || [];
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [inputHeight, setInputHeight] = useState(0);
+  
+  // WebSocket states for plan approval
+  const [approvalWs, setApprovalWs] = useState<WebSocket | null>(null);
+  const [pendingApproval, setPendingApproval] = useState<any>(null);
+  const [approvalStatus, setApprovalStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null);
 
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputContainerRef = useRef<HTMLDivElement>(null);
@@ -48,6 +53,78 @@ const PlanChat: React.FC<PlanChatProps> = ({
   console.log('PlanChat - planData:', planData);
   console.log('PlanChat - messages:', messages);
   console.log('PlanChat - messages.length:', messages.length);
+
+  // WebSocket connection for plan approval
+  useEffect(() => {
+    if (planData?.plan?.id) {
+      connectToApprovalWebSocket(planData.plan.id);
+    }
+    
+    return () => {
+      if (approvalWs) {
+        approvalWs.close();
+      }
+    };
+  }, [planData?.plan?.id]);
+
+  const connectToApprovalWebSocket = async (planId: string) => {
+    try {
+      console.log('Connecting to approval WebSocket for plan:', planId);
+      
+      const ws = await webSocketService.createApprovalWebSocket(planId);
+      
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          console.log('Approval WebSocket message received:', message);
+          
+          if (message.type === 'plan_ready') {
+            setPendingApproval(message.plan);
+            setApprovalStatus('pending');
+          } else if (message.type === 'ack') {
+            console.log('Approval acknowledged:', message.message);
+            setApprovalStatus(message.message === 'approved' ? 'approved' : 'rejected');
+            // Clear pending approval after a delay
+            setTimeout(() => {
+              setPendingApproval(null);
+              setApprovalStatus(null);
+            }, 3000);
+          }
+        } catch (error) {
+          console.error('Error parsing approval WebSocket message:', error);
+        }
+      };
+      
+      ws.onclose = () => {
+        console.log('Approval WebSocket disconnected');
+        setApprovalWs(null);
+      };
+      
+      ws.onerror = (error) => {
+        console.error('Approval WebSocket error:', error);
+        setApprovalWs(null);
+      };
+      
+      setApprovalWs(ws);
+      
+    } catch (error) {
+      console.error('Failed to connect to approval WebSocket:', error);
+    }
+  };
+
+  const handleApprove = () => {
+    if (approvalWs && approvalWs.readyState === WebSocket.OPEN) {
+      approvalWs.send(JSON.stringify({ type: 'approve' }));
+      console.log('Approval sent');
+    }
+  };
+
+  const handleReject = () => {
+    if (approvalWs && approvalWs.readyState === WebSocket.OPEN) {
+      approvalWs.send(JSON.stringify({ type: 'reject' }));
+      console.log('Rejection sent');
+    }
+  };
 
   // Scroll to Bottom useEffect
 
@@ -119,6 +196,67 @@ const PlanChat: React.FC<PlanChatProps> = ({
 
   return (
     <div className="chat-container">
+      {/* Plan Approval Section */}
+      {pendingApproval && (
+        <div className="approval-section">
+          <div style={{ marginBottom: '12px' }}>
+            <Body1><strong>Plan Ready for Review</strong></Body1>
+            <Body1>Please review and approve or reject the proposed plan.</Body1>
+          </div>
+          
+          {approvalStatus === 'pending' && (
+            <div className="approval-buttons">
+              <Button 
+                appearance="primary" 
+                icon={<CheckmarkRegular />}
+                onClick={handleApprove}
+                className="approval-button-approve"
+              >
+                Approve Plan
+              </Button>
+              <Button 
+                appearance="outline" 
+                icon={<DismissRegular />}
+                onClick={handleReject}
+                className="approval-button-reject"
+              >
+                Reject Plan
+              </Button>
+              <Tag
+                appearance="filled"
+                color="brand"
+                size="small"
+                icon={<Spinner size="extra-tiny" />}
+              >
+                Awaiting Decision
+              </Tag>
+            </div>
+          )}
+          
+          {approvalStatus === 'approved' && (
+            <Tag
+              appearance="filled"
+              color="success"
+              size="small"
+              icon={<CheckmarkRegular />}
+            >
+              Plan Approved
+            </Tag>
+          )}
+          
+          {approvalStatus === 'rejected' && (
+            <Tag
+              appearance="filled"
+              color="danger"
+              size="small"
+              icon={<DismissRegular />}
+            >
+              Plan Rejected
+            </Tag>
+          )}
+        </div>
+      )}
+      
       <div className="messages" ref={messagesContainerRef}>
         {/* WebSocket Connection Status */}
         {wsConnected && (
@@ -130,6 +268,20 @@ const PlanChat: React.FC<PlanChatProps> = ({
               icon={<DiamondRegular />}
             >
               Real-time updates active
+            </Tag>
+          </div>
+        )}
+        
+        {/* Approval WebSocket Status */}
+        {approvalWs && (
+          <div className="connection-status">
+            <Tag
+              appearance="filled"
+              color="informative"
+              size="extra-small"
+              icon={<DiamondRegular />}
+            >
+              Plan approval ready
             </Tag>
           </div>
         )}
