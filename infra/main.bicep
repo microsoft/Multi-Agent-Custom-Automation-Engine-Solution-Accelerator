@@ -752,7 +752,7 @@ module aiFoundryAiServices 'modules/account/main.bicep' = if (aiFoundryAIservice
     publicNetworkAccess: virtualNetworkEnabled ? 'Disabled' : 'Enabled'
     networkAcls: {
       bypass: 'AzureServices'
-      defaultAction: (virtualNetworkEnabled) ? 'Deny' : 'Allow' 
+      defaultAction: (virtualNetworkEnabled) ? 'Deny' : 'Allow'
     }
     privateEndpoints: virtualNetworkEnabled && !useExistingFoundryProject
       ? ([
@@ -768,7 +768,7 @@ module aiFoundryAiServices 'modules/account/main.bicep' = if (aiFoundryAIservice
             }
           }
         ])
-      : [] 
+      : []
     deployments: aiFoundryAiServicesConfiguration.?deployments ?? [
       {
         name: aiFoundryAiServicesModelDeployment.name
@@ -1039,6 +1039,120 @@ module containerApp 'br/public:avm/res/app/container-app:0.14.2' = if (container
           {
             name: 'APP_ENV'
             value: 'Prod'
+          }
+        ]
+      }
+    ]
+  }
+}
+
+var containerAppV3ResourceName = 'ca-v3-${solutionPrefix}'
+module containerAppV3 'br/public:avm/res/app/container-app:0.18.1' = {
+  name: take('avm.res.app.container-app.${containerAppV3ResourceName}', 64)
+  params: {
+    name: containerAppV3ResourceName
+    tags: tags
+    location: solutionLocation
+    enableTelemetry: enableTelemetry
+    environmentResourceId: containerAppEnvironment!.outputs.resourceId
+    managedIdentities: { 
+      systemAssigned: true
+      userAssignedResourceIds: [userAssignedIdentity!.outputs.resourceId] 
+    }
+    ingressTargetPort: 8000
+    ingressExternal: true
+    activeRevisionsMode: 'Single'
+    corsPolicy: {
+      allowedOrigins: [
+        'https://${webSiteName}.azurewebsites.net'
+        'http://${webSiteName}.azurewebsites.net'
+      ]
+    }
+    // WAF aligned configuration for Scalability
+    scaleSettings: {
+      maxReplicas: containerAppConfiguration.?maxReplicas ?? 1
+      minReplicas: containerAppConfiguration.?minReplicas ?? 1
+      rules: [
+        {
+          name: 'http-scaler'
+          http: {
+            metadata: {
+              concurrentRequests: '100'
+            }
+          }
+        }
+      ]
+    }
+    containers: [
+      {
+        name: 'backend'
+        image: 'macaer.azurecr.io/macaebackend:macaev3'
+        //TODO: configure probes for container app
+        // probes: [
+        //   {
+        //     httpGet: {
+        //       httpHeaders: [
+        //         {
+        //           name: 'Custom-Header'
+        //           value: 'Awesome'
+        //         }
+        //       ]
+        //       path: '/health'
+        //       port: 8080
+        //     }
+        //     initialDelaySeconds: 3
+        //     periodSeconds: 3
+        //     type: 'Liveness'
+        //   }
+        // ]
+        resources: {
+          cpu: '2.0'
+          memory: '4.0Gi'
+        }
+        env: [
+          {
+            name: 'MCP_HOST'
+            value: '0.0.0.0'
+          }
+          {
+            name: 'MCP_PORT'
+            value: '9000'
+          }
+          {
+            name: 'MCP_DEBUG'
+            value: 'false'
+          }
+          {
+            name: 'MCP_SERVER_NAME'
+            value: 'MACAE MCP Server'
+          }
+          {
+            name: 'MCP_ENABLE_AUTH'
+            value: 'true'
+          }
+          {
+            name: 'AZURE_TENANT_ID'
+            value: tenant().tenantId
+          }
+          {
+            name: 'AZURE_CLIENT_ID'
+            value: userAssignedIdentity!.outputs.clientId
+          }
+          {
+            name: 'AZURE_JWKS_URI'
+            value: 'https://login.microsoftonline.com/${tenant().tenantId}/discovery/v2.0/keys'
+          }
+          {
+            name: 'AZURE_ISSUER'
+            value: 'https://sts.windows.net/${tenant().tenantId}/'
+          }
+          {
+            name: 'AZURE_AUDIENCE'
+            value: 'api://${userAssignedIdentity!.outputs.clientId}'
+          }
+          {
+            name: 'DATASET_PATH'
+            value: './datasets'
           }
         ]
       }
@@ -1720,7 +1834,6 @@ type webSiteConfigurationType = {
   @description('Optional. The tag of the container image to be used by the Web Site.')
   containerImageTag: string?
 }
-
 
 output COSMOSDB_ENDPOINT string = 'https://${cosmosDbResourceName}.documents.azure.com:443/'
 output COSMOSDB_DATABASE string = cosmosDbDatabaseName
