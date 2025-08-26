@@ -23,7 +23,6 @@ param azureopenaiVersion string = '2025-01-01-preview'
 //Get the current deployer's information
 var deployerInfo = deployer()
 var deployingUserPrincipalId = deployerInfo.objectId
-var enableUserRoleAssignment = !empty(deployingUserPrincipalId)
 
 // Restricting deployment to only supported Azure OpenAI regions validated with GPT-4o model
 @metadata({
@@ -818,7 +817,7 @@ module cogServiceRoleAssignmentsExisting './modules/role.bicep' = if(useExisting
 }
 
 // User Role Assignment for Azure OpenAI - New Resources
-module userOpenAiRoleAssignment './modules/role.bicep' = if (enableUserRoleAssignment && aiFoundryAIservicesEnabled && !useExistingResourceId) {
+module userOpenAiRoleAssignment './modules/role.bicep' = if (aiFoundryAIservicesEnabled && !useExistingResourceId) {
   name: take('user-openai-${uniqueString(deployingUserPrincipalId, aiFoundryAiServicesResourceName)}', 64)
   params: {
     name: 'user-openai-${uniqueString(deployingUserPrincipalId, aiFoundryAiServicesResourceName)}'
@@ -833,7 +832,7 @@ module userOpenAiRoleAssignment './modules/role.bicep' = if (enableUserRoleAssig
 }
 
 // User Role Assignment for Azure OpenAI - Existing Resources
-module userOpenAiRoleAssignmentExisting './modules/role.bicep' = if (enableUserRoleAssignment && aiFoundryAIservicesEnabled && useExistingResourceId) {
+module userOpenAiRoleAssignmentExisting './modules/role.bicep' = if (aiFoundryAIservicesEnabled && useExistingResourceId) {
   name: take('user-openai-existing-${uniqueString(deployingUserPrincipalId, aiFoundryAiServicesResourceName)}', 64)
   params: {
     name: 'user-openai-existing-${uniqueString(deployingUserPrincipalId, aiFoundryAiServicesResourceName)}'
@@ -924,7 +923,7 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.12.0' = if (co
     
     sqlRoleAssignmentsPrincipalIds: concat(
       [containerApp.outputs.?systemAssignedMIPrincipalId],
-      enableUserRoleAssignment ? [deployingUserPrincipalId] : []
+      [deployingUserPrincipalId]
     )
     sqlRoleDefinitions: [
       {
@@ -1776,6 +1775,3 @@ output AZURE_AI_MODEL_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDeploymen
 output AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDeployment.name
 output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiServices.outputs.aiProjectInfo.apiEndpoint
 output APP_ENV string = 'Prod'
-
-output deployerInfo object = deployerInfo
-output userRoleAssignmentStatus string = enableUserRoleAssignment ? 'User ${deployingUserPrincipalId} (${deployerInfo.?userPrincipalName ?? 'N/A'}) has been granted access to Cosmos DB and Azure OpenAI' : 'No user role assignment configured.'

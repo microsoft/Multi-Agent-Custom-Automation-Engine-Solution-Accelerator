@@ -5,8 +5,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.36.177.2456",
-      "templateHash": "13921386221810214912"
+      "version": "0.37.4.10188",
+      "templateHash": "4538882606243490469"
     },
     "name": "Multi-Agent Custom Automation Engine",
     "description": "This module contains the resources required to deploy the Multi-Agent Custom Automation Engine solution accelerator for both Sandbox environments and WAF aligned environments."
@@ -2129,7 +2129,6 @@
   "variables": {
     "deployerInfo": "[deployer()]",
     "deployingUserPrincipalId": "[variables('deployerInfo').objectId]",
-    "enableUserRoleAssignment": "[not(empty(variables('deployingUserPrincipalId')))]",
     "logAnalyticsWorkspaceEnabled": "[coalesce(tryGet(parameters('logAnalyticsWorkspaceConfiguration'), 'enabled'), true())]",
     "logAnalyticsWorkspaceResourceName": "[coalesce(tryGet(parameters('logAnalyticsWorkspaceConfiguration'), 'name'), format('log-{0}', parameters('solutionPrefix')))]",
     "existingWorkspaceResourceId": "[coalesce(tryGet(parameters('logAnalyticsWorkspaceConfiguration'), 'existingWorkspaceResourceId'), '')]",
@@ -21014,8 +21013,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.36.177.2456",
-              "templateHash": "13834495711247855962"
+              "version": "0.37.4.10188",
+              "templateHash": "1902495734992871360"
             },
             "name": "Cognitive Services",
             "description": "This module deploys a Cognitive Service."
@@ -22264,8 +22263,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.36.177.2456",
-                      "templateHash": "11270933172961789567"
+                      "version": "0.37.4.10188",
+                      "templateHash": "9510507771164523365"
                     }
                   },
                   "definitions": {
@@ -24073,8 +24072,8 @@
                           "metadata": {
                             "_generator": {
                               "name": "bicep",
-                              "version": "0.36.177.2456",
-                              "templateHash": "9150529619101779014"
+                              "version": "0.37.4.10188",
+                              "templateHash": "2491273843075489892"
                             }
                           },
                           "definitions": {
@@ -24227,8 +24226,8 @@
                           "metadata": {
                             "_generator": {
                               "name": "bicep",
-                              "version": "0.36.177.2456",
-                              "templateHash": "18131656256983910282"
+                              "version": "0.37.4.10188",
+                              "templateHash": "13991828250771551903"
                             }
                           },
                           "definitions": {
@@ -24445,8 +24444,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.36.177.2456",
-                      "templateHash": "11270933172961789567"
+                      "version": "0.37.4.10188",
+                      "templateHash": "9510507771164523365"
                     }
                   },
                   "definitions": {
@@ -26254,8 +26253,8 @@
                           "metadata": {
                             "_generator": {
                               "name": "bicep",
-                              "version": "0.36.177.2456",
-                              "templateHash": "9150529619101779014"
+                              "version": "0.37.4.10188",
+                              "templateHash": "2491273843075489892"
                             }
                           },
                           "definitions": {
@@ -26408,8 +26407,8 @@
                           "metadata": {
                             "_generator": {
                               "name": "bicep",
-                              "version": "0.36.177.2456",
-                              "templateHash": "18131656256983910282"
+                              "version": "0.37.4.10188",
+                              "templateHash": "13991828250771551903"
                             }
                           },
                           "definitions": {
@@ -26680,8 +26679,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.36.177.2456",
-              "templateHash": "4773661831619894722"
+              "version": "0.37.4.10188",
+              "templateHash": "3261324722163967354"
             }
           },
           "parameters": {
@@ -26786,8 +26785,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.36.177.2456",
-              "templateHash": "4773661831619894722"
+              "version": "0.37.4.10188",
+              "templateHash": "3261324722163967354"
             }
           },
           "parameters": {
@@ -26864,7 +26863,7 @@
       ]
     },
     "userOpenAiRoleAssignment": {
-      "condition": "[and(and(variables('enableUserRoleAssignment'), variables('aiFoundryAIservicesEnabled')), not(variables('useExistingResourceId')))]",
+      "condition": "[and(variables('aiFoundryAIservicesEnabled'), not(variables('useExistingResourceId')))]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "[take(format('user-openai-{0}', uniqueString(variables('deployingUserPrincipalId'), variables('aiFoundryAiServicesResourceName'))), 64)]",
@@ -26895,8 +26894,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.36.177.2456",
-              "templateHash": "4773661831619894722"
+              "version": "0.37.4.10188",
+              "templateHash": "3261324722163967354"
             }
           },
           "parameters": {
@@ -26972,7 +26971,7 @@
       ]
     },
     "userOpenAiRoleAssignmentExisting": {
-      "condition": "[and(and(variables('enableUserRoleAssignment'), variables('aiFoundryAIservicesEnabled')), variables('useExistingResourceId'))]",
+      "condition": "[and(variables('aiFoundryAIservicesEnabled'), variables('useExistingResourceId'))]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "[take(format('user-openai-existing-{0}', uniqueString(variables('deployingUserPrincipalId'), variables('aiFoundryAiServicesResourceName'))), 64)]",
@@ -27003,8 +27002,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.36.177.2456",
-              "templateHash": "4773661831619894722"
+              "version": "0.37.4.10188",
+              "templateHash": "3261324722163967354"
             }
           },
           "parameters": {
@@ -30190,7 +30189,7 @@
             ]
           },
           "sqlRoleAssignmentsPrincipalIds": {
-            "value": "[concat(createArray(tryGet(tryGet(reference('containerApp').outputs, 'systemAssignedMIPrincipalId'), 'value')), if(variables('enableUserRoleAssignment'), createArray(variables('deployingUserPrincipalId')), createArray()))]"
+            "value": "[concat(createArray(tryGet(tryGet(reference('containerApp').outputs, 'systemAssignedMIPrincipalId'), 'value')), createArray(variables('deployingUserPrincipalId')))]"
           },
           "sqlRoleDefinitions": {
             "value": [
@@ -34117,8 +34116,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.36.177.2456",
-              "templateHash": "13903155529874160708"
+              "version": "0.37.4.10188",
+              "templateHash": "12060379214971977883"
             }
           },
           "parameters": {
@@ -42605,14 +42604,6 @@
     "APP_ENV": {
       "type": "string",
       "value": "Prod"
-    },
-    "deployerInfo": {
-      "type": "object",
-      "value": "[variables('deployerInfo')]"
-    },
-    "userRoleAssignmentStatus": {
-      "type": "string",
-      "value": "[if(variables('enableUserRoleAssignment'), format('User {0} ({1}) has been granted access to Cosmos DB and Azure OpenAI', variables('deployingUserPrincipalId'), coalesce(tryGet(variables('deployerInfo'), 'userPrincipalName'), 'N/A')), 'No user role assignment configured.')]"
     }
   }
 }
