@@ -29,15 +29,66 @@ class WebSocketService {
     private planSubscriptions: Set<string> = new Set();
 
     /**
-     * Connect to WebSocket server
+     * Get WebSocket URL with dynamic configuration
      */
-    connect(): Promise<void> {
+    private getWebSocketUrl(path: string = '/ws/streaming'): string {
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        
+        // Priority: Environment variable > Current host > Localhost fallback
+        let wsHost = '';
+        
+        if (process.env.REACT_APP_WS_HOST) {
+            wsHost = process.env.REACT_APP_WS_HOST;
+        } else if (process.env.REACT_APP_API_BASE_URL) {
+            // Extract host from API base URL
+            try {
+                const url = new URL(process.env.REACT_APP_API_BASE_URL);
+                wsHost = url.host;
+            } catch {
+                wsHost = window.location.host || '127.0.0.1:8000';
+            }
+        } else {
+            wsHost = window.location.host || '127.0.0.1:8000';
+        }
+        
+        return `${wsProtocol}//${wsHost}${path}`;
+    }
+
+    /**
+     * Create a standalone WebSocket connection for plan approval
+     */
+    createApprovalWebSocket(planId: string): Promise<WebSocket> {
         return new Promise((resolve, reject) => {
             try {
-                // Get WebSocket URL from environment or default to localhost
-                const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                const wsHost = process.env.REACT_APP_WS_HOST || '127.0.0.1:8000';
-                const wsUrl = `${wsProtocol}//${wsHost}/ws/streaming`;
+                const wsUrl = this.getWebSocketUrl(`/api/v3/ws/${planId}`);
+                console.log('Creating approval WebSocket:', wsUrl);
+                
+                const ws = new WebSocket(wsUrl);
+                
+                ws.onopen = () => {
+                    console.log('Approval WebSocket connected for plan:', planId);
+                    resolve(ws);
+                };
+                
+                ws.onerror = (error) => {
+                    console.error('Approval WebSocket error:', error);
+                    reject(error);
+                };
+                
+            } catch (error) {
+                reject(error);
+            }
+        });
+    }
+
+    /**
+     * Connect to WebSocket server
+     */
+    connect(customPath?: string): Promise<void> {
+        return new Promise((resolve, reject) => {
+            try {
+                // Get WebSocket URL from environment or default
+                const wsUrl = this.getWebSocketUrl(customPath || '/ws/streaming');
 
                 console.log('Connecting to WebSocket:', wsUrl);
                 
@@ -237,6 +288,20 @@ class WebSocketService {
         } else {
             console.warn('WebSocket is not connected. Cannot send message:', message);
         }
+    }
+
+    /**
+     * Get current WebSocket URL configuration
+     */
+    getCurrentWebSocketUrl(): string {
+        return this.getWebSocketUrl('/ws/streaming');
+    }
+
+    /**
+     * Get approval WebSocket URL for a specific plan
+     */
+    getApprovalWebSocketUrl(planId: string): string {
+        return this.getWebSocketUrl(`/api/v3/ws/${planId}`);
     }
 }
 
