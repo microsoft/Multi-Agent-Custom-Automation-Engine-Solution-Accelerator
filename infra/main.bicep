@@ -1082,6 +1082,103 @@ module containerApp 'br/public:avm/res/app/container-app:0.14.2' = if (container
   }
 }
 
+var containerAppMcpResourceName = 'ca-mcp-${solutionPrefix}'
+module containerAppMcp 'br/public:avm/res/app/container-app:0.18.1' = if (containerAppEnabled) {
+  name: take('avm.res.app.container-app.${containerAppMcpResourceName}', 64)
+  params: {
+    name: containerAppMcpResourceName
+    tags: containerAppConfiguration.?tags ?? tags
+    location: containerAppConfiguration.?location ?? solutionLocation
+    enableTelemetry: enableTelemetry
+    environmentResourceId: containerAppConfiguration.?environmentResourceId ?? containerAppEnvironment.outputs.resourceId
+    managedIdentities: { 
+      systemAssigned: true
+      userAssignedResourceIds: [userAssignedIdentity!.outputs.resourceId] 
+    }
+    ingressTargetPort: containerAppConfiguration.?ingressTargetPort ?? 8000
+    ingressExternal: true
+    activeRevisionsMode: 'Single'
+    corsPolicy: {
+      allowedOrigins: [
+        'https://${webSiteName}.azurewebsites.net'
+        'http://${webSiteName}.azurewebsites.net'
+      ]
+    }
+    // WAF aligned configuration for Scalability
+    scaleSettings: {
+      maxReplicas: containerAppConfiguration.?maxReplicas ?? 1
+      minReplicas: containerAppConfiguration.?minReplicas ?? 1
+      rules: [
+        {
+          name: 'http-scaler'
+          http: {
+            metadata: {
+              concurrentRequests: containerAppConfiguration.?concurrentRequests ?? '100'
+            }
+          }
+        }
+      ]
+    }
+    containers: [
+      {
+        name: 'mcp'
+        image: 'macaemcpacrdk.azurecr.io/macae-mac-app:t7' //'${containerAppConfiguration.?containerImageRegistryDomain ?? 'biabcontainerreg.azurecr.io'}/${containerAppConfiguration.?containerImageName ?? 'macaebackend'}:${containerAppConfiguration.?containerImageTag ?? 'latest'}'
+        resources: {
+          //TODO: Make cpu and memory parameterized
+          cpu: containerAppConfiguration.?containerCpu ?? '2.0'
+          memory: containerAppConfiguration.?containerMemory ?? '4.0Gi'
+        }
+        env: [
+          {
+            name: 'MCP_HOST'
+            value: '0.0.0.0'
+          }
+          {
+            name: 'MCP_PORT'
+            value: '9000'
+          }
+          {
+            name: 'MCP_DEBUG'
+            value: 'false'
+          }
+          {
+            name: 'MCP_SERVER_NAME'
+            value: 'MACAE MCP Server'
+          }
+          {
+            name: 'MCP_ENABLE_AUTH'
+            value: 'true'
+          }
+          {
+            name: 'AZURE_TENANT_ID'
+            value: tenant().tenantId
+          }
+          {
+            name: 'AZURE_CLIENT_ID'
+            value: userAssignedIdentity!.outputs.clientId
+          }
+          {
+            name: 'AZURE_JWKS_URI'
+            value: 'https://login.microsoftonline.com/${tenant().tenantId}/discovery/v2.0/keys'
+          }
+          {
+            name: 'AZURE_ISSUER'
+            value: 'https://sts.windows.net/${tenant().tenantId}/'
+          }
+          {
+            name: 'AZURE_AUDIENCE'
+            value: 'api://${userAssignedIdentity!.outputs.clientId}'
+          }
+          {
+            name: 'DATASET_PATH'
+            value: './datasets'
+          }
+        ]
+      }
+    ]
+  }
+}
+
 var webServerFarmEnabled = webServerFarmConfiguration.?enabled ?? true
 var webServerFarmResourceName = webServerFarmConfiguration.?name ?? 'asp-${solutionPrefix}'
 

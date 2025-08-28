@@ -1,21 +1,32 @@
-FROM python:3.11-slim
-
-# Set working directory
+FROM mcr.microsoft.com/devcontainers/python:3.11-bullseye AS base
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
+FROM base AS builder
 
-# Copy requirements first for better caching
-COPY requirements.txt .
+# Copy uv binaries from astral-sh image
+COPY --from=ghcr.io/astral-sh/uv:0.6.3 /uv /uvx /bin/
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-####
-# Copy the application
-COPY . .
+# Copy lock and project files first for caching
+COPY uv.lock pyproject.toml /app/
+
+# Install dependencies (frozen, no dev) using uv
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-install-project --no-dev
+
+# Copy application code and install project dependencies
+COPY . /app
+RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-dev
+
+# Final stage
+FROM base
+
+WORKDIR /app
+COPY --from=builder /app /app
+COPY --from=builder /bin/uv /bin/uv
+
+# Set PATH to use venv created by uv
+ENV PATH="/app/.venv/bin:$PATH"
 
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash app && chown -R app:app /app
@@ -28,5 +39,5 @@ EXPOSE 9000
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:9000/health || exit 1
 
-# Default command
-CMD ["python", "mcp_server.py"]
+# Run your main script
+CMD ["uv", "run", "python", "mcp_server.py", "--transport", "http", "--host", "0.0.0.0", "--port", "9000"]
