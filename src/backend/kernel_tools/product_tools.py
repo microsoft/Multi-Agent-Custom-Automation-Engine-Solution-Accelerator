@@ -2,7 +2,6 @@
 
 import inspect
 import time
-from datetime import datetime
 from typing import Annotated, Callable, List
 
 from semantic_kernel.functions import kernel_function
@@ -75,17 +74,17 @@ class ProductTools:
         """
         return f"Here is information to relay back to the user. Repeat back all the relevant sections that the user asked for: {product_info}."
 
-    @staticmethod
-    @kernel_function(
-        description="Retrieve the customer's recurring billing date information."
-    )
-    async def get_billing_date() -> str:
-        """Get information about the recurring billing date."""
-        now = datetime.now()
-        start_of_month = datetime(now.year, now.month, 1)
-        start_of_month_string = start_of_month.strftime("%Y-%m-%d")
-        formatted_date = format_date_for_user(start_of_month_string)
-        return f"## Billing Date\nYour most recent billing date was **{formatted_date}**."
+    # @staticmethod
+    # @kernel_function(
+    #     description="Retrieve the customer's recurring billing date information."
+    # )
+    # async def get_billing_date() -> str:
+    #     """Get information about the recurring billing date."""
+    #     now = datetime.now()
+    #     start_of_month = datetime(now.year, now.month, 1)
+    #     start_of_month_string = start_of_month.strftime("%Y-%m-%d")
+    #     formatted_date = format_date_for_user(start_of_month_string)
+    #     return f"## Billing Date\nYour most recent billing date was **{formatted_date}**."
 
     @staticmethod
     @kernel_function(
@@ -120,15 +119,15 @@ class ProductTools:
 
         return message
 
-    @staticmethod
-    @kernel_function(
-        description="Update the price of a specified product in the system."
-    )
-    async def update_product_price(product_name: str, price: float) -> str:
-        """Update the price of a specific product."""
-        message = f"## Price Update\nPrice for **'{product_name}'** updated to **${price:.2f}**."
+    # @staticmethod
+    # @kernel_function(
+    #     description="Update the price of a specified product in the system."
+    # )
+    # async def update_product_price(product_name: str, price: float) -> str:
+    #     """Update the price of a specific product."""
+    #     message = f"## Price Update\nPrice for **'{product_name}'** updated to **${price:.2f}**."
 
-        return message
+    #     return message
 
     @staticmethod
     @kernel_function(description="Schedule a product launch event on a specific date.")
@@ -139,23 +138,23 @@ class ProductTools:
 
         return message
 
-    @staticmethod
-    @kernel_function(
-        description="Analyze sales data for a product over a specified time period."
-    )
-    async def analyze_sales_data(product_name: str, time_period: str) -> str:
-        """Analyze sales data for a product over a given time period."""
-        analysis = f"## Sales Data Analysis\nSales data for **'{product_name}'** over **{time_period}** analyzed."
+    # @staticmethod
+    # @kernel_function(
+    #     description="Analyze sales data for a product over a specified time period."
+    # )
+    # async def analyze_sales_data(product_name: str, time_period: str) -> str:
+    #     """Analyze sales data for a product over a given time period."""
+    #     analysis = f"## Sales Data Analysis\nSales data for **'{product_name}'** over **{time_period}** analyzed."
 
-        return analysis
+    #     return analysis
 
-    @staticmethod
-    @kernel_function(description="Retrieve customer feedback for a specified product.")
-    async def get_customer_feedback(product_name: str) -> str:
-        """Retrieve customer feedback for a specific product."""
-        feedback = f"## Customer Feedback\nCustomer feedback for **'{product_name}'** retrieved."
+    # @staticmethod
+    # @kernel_function(description="Retrieve customer feedback for a specified product.")
+    # async def get_customer_feedback(product_name: str) -> str:
+    #     """Retrieve customer feedback for a specific product."""
+    #     feedback = f"## Customer Feedback\nCustomer feedback for **'{product_name}'** retrieved."
 
-        return feedback
+    #     return feedback
 
     @staticmethod
     @kernel_function(
@@ -183,17 +182,17 @@ class ProductTools:
 
         return message
 
-    @staticmethod
-    @kernel_function(
-        description="Review and assess the quality of a specified product."
-    )
-    async def review_product_quality(product_name: str) -> str:
-        """Review the quality of a specific product."""
-        review = (
-            f"## Quality Review\nQuality review for **'{product_name}'** completed."
-        )
+    # @staticmethod
+    # @kernel_function(
+    #     description="Review and assess the quality of a specified product."
+    # )
+    # async def review_product_quality(product_name: str) -> str:
+    #     """Review the quality of a specific product."""
+    #     review = (
+    #         f"## Quality Review\nQuality review for **'{product_name}'** completed."
+    #     )
 
-        return review
+    #     return review
 
     @staticmethod
     @kernel_function(
@@ -205,17 +204,17 @@ class ProductTools:
 
         return message
 
-    @staticmethod
-    @kernel_function(
-        description="Provide product recommendations based on customer preferences."
-    )
-    async def provide_product_recommendations(
-        customer_preferences: Annotated[str, "Customer preferences or requirements"],
-    ) -> str:
-        """Provide product recommendations based on customer preferences."""
-        recommendations = f"## Product Recommendations\nProduct recommendations based on preferences **'{customer_preferences}'** provided."
+    # @staticmethod
+    # @kernel_function(
+    #     description="Provide product recommendations based on customer preferences."
+    # )
+    # async def provide_product_recommendations(
+    #     customer_preferences: Annotated[str, "Customer preferences or requirements"],
+    # ) -> str:
+    #     """Provide product recommendations based on customer preferences."""
+    #     recommendations = f"## Product Recommendations\nProduct recommendations based on preferences **'{customer_preferences}'** provided."
 
-        return recommendations
+    #     return recommendations
 
     @staticmethod
     @kernel_function(description="Generate a detailed report for a specified product.")
@@ -225,35 +224,35 @@ class ProductTools:
 
         return report
 
-    @staticmethod
-    @kernel_function(
-        description="Manage supply chain activities for a specified product with a particular supplier."
-    )
-    async def manage_supply_chain(product_name: str, supplier_name: str) -> str:
-        """Manage supply chain activities for a specific product."""
-        message = f"## Supply Chain Management\nSupply chain for **'{product_name}'** managed with supplier **'{supplier_name}'**."
+    # @staticmethod
+    # @kernel_function(
+    #     description="Manage supply chain activities for a specified product with a particular supplier."
+    # )
+    # async def manage_supply_chain(product_name: str, supplier_name: str) -> str:
+    #     """Manage supply chain activities for a specific product."""
+    #     message = f"## Supply Chain Management\nSupply chain for **'{product_name}'** managed with supplier **'{supplier_name}'**."
 
-        return message
+    #     return message
 
-    @staticmethod
-    @kernel_function(
-        description="Track the shipment status of a specified product using a tracking number."
-    )
-    async def track_product_shipment(product_name: str, tracking_number: str) -> str:
-        """Track the shipment of a specific product."""
-        status = f"## Shipment Tracking\nShipment for **'{product_name}'** with tracking number **'{tracking_number}'** tracked."
+    # @staticmethod
+    # @kernel_function(
+    #     description="Track the shipment status of a specified product using a tracking number."
+    # )
+    # async def track_product_shipment(product_name: str, tracking_number: str) -> str:
+    #     """Track the shipment of a specific product."""
+    #     status = f"## Shipment Tracking\nShipment for **'{product_name}'** with tracking number **'{tracking_number}'** tracked."
 
-        return status
+    #     return status
 
-    @staticmethod
-    @kernel_function(
-        description="Set the reorder threshold level for a specified product."
-    )
-    async def set_reorder_level(product_name: str, reorder_level: int) -> str:
-        """Set the reorder level for a specific product."""
-        message = f"## Reorder Level Set\nReorder level for **'{product_name}'** set to **{reorder_level}** units."
+    # @staticmethod
+    # @kernel_function(
+    #     description="Set the reorder threshold level for a specified product."
+    # )
+    # async def set_reorder_level(product_name: str, reorder_level: int) -> str:
+    #     """Set the reorder level for a specific product."""
+    #     message = f"## Reorder Level Set\nReorder level for **'{product_name}'** set to **{reorder_level}** units."
 
-        return message
+    #     return message
 
     @staticmethod
     @kernel_function(
@@ -288,67 +287,67 @@ class ProductTools:
 
         return message
 
-    @staticmethod
-    @kernel_function(
-        description="Update the description information for a specified product."
-    )
-    async def update_product_description(product_name: str, description: str) -> str:
-        """Update the description of a specific product."""
-        message = f"## Product Description Updated\nDescription for **'{product_name}'** updated to:\n\n{description}"
+    # @staticmethod
+    # @kernel_function(
+    #     description="Update the description information for a specified product."
+    # )
+    # async def update_product_description(product_name: str, description: str) -> str:
+    #     """Update the description of a specific product."""
+    #     message = f"## Product Description Updated\nDescription for **'{product_name}'** updated to:\n\n{description}"
 
-        return message
+    #     return message
 
-    @staticmethod
-    @kernel_function(description="Set a percentage discount for a specified product.")
-    async def set_product_discount(
-        product_name: str, discount_percentage: float
-    ) -> str:
-        """Set a discount for a specific product."""
-        message = f"## Discount Set\nDiscount for **'{product_name}'** set to **{discount_percentage}%**."
+    # @staticmethod
+    # @kernel_function(description="Set a percentage discount for a specified product.")
+    # async def set_product_discount(
+    #     product_name: str, discount_percentage: float
+    # ) -> str:
+    #     """Set a discount for a specific product."""
+    #     message = f"## Discount Set\nDiscount for **'{product_name}'** set to **{discount_percentage}%**."
 
-        return message
+    #     return message
 
-    @staticmethod
-    @kernel_function(
-        description="Process and manage product returns with detailed reason tracking."
-    )
-    async def manage_product_returns(product_name: str, return_reason: str) -> str:
-        """Manage returns for a specific product."""
-        message = f"## Product Return Managed\nReturn for **'{product_name}'** managed due to:\n\n{return_reason}"
+    # @staticmethod
+    # @kernel_function(
+    #     description="Process and manage product returns with detailed reason tracking."
+    # )
+    # async def manage_product_returns(product_name: str, return_reason: str) -> str:
+    #     """Manage returns for a specific product."""
+    #     message = f"## Product Return Managed\nReturn for **'{product_name}'** managed due to:\n\n{return_reason}"
 
-        return message
+    #     return message
 
-    @staticmethod
-    @kernel_function(description="Conduct a customer survey about a specified product.")
-    async def conduct_product_survey(product_name: str, survey_details: str) -> str:
-        """Conduct a survey for a specific product."""
-        message = f"## Product Survey Conducted\nSurvey for **'{product_name}'** conducted with details:\n\n{survey_details}"
+    # @staticmethod
+    # @kernel_function(description="Conduct a customer survey about a specified product.")
+    # async def conduct_product_survey(product_name: str, survey_details: str) -> str:
+    #     """Conduct a survey for a specific product."""
+    #     message = f"## Product Survey Conducted\nSurvey for **'{product_name}'** conducted with details:\n\n{survey_details}"
 
-        return message
+    #     return message
 
-    @staticmethod
-    @kernel_function(
-        description="Handle and process customer complaints about a specified product."
-    )
-    async def handle_product_complaints(
-        product_name: str, complaint_details: str
-    ) -> str:
-        """Handle complaints for a specific product."""
-        message = f"## Product Complaint Handled\nComplaint for **'{product_name}'** handled with details:\n\n{complaint_details}"
+    # @staticmethod
+    # @kernel_function(
+    #     description="Handle and process customer complaints about a specified product."
+    # )
+    # async def handle_product_complaints(
+    #     product_name: str, complaint_details: str
+    # ) -> str:
+    #     """Handle complaints for a specific product."""
+    #     message = f"## Product Complaint Handled\nComplaint for **'{product_name}'** handled with details:\n\n{complaint_details}"
 
-        return message
+    #     return message
 
-    @staticmethod
-    @kernel_function(
-        description="Update the technical specifications for a specified product."
-    )
-    async def update_product_specifications(
-        product_name: str, specifications: str
-    ) -> str:
-        """Update the specifications for a specific product."""
-        message = f"## Product Specifications Updated\nSpecifications for **'{product_name}'** updated to:\n\n{specifications}"
+    # @staticmethod
+    # @kernel_function(
+    #     description="Update the technical specifications for a specified product."
+    # )
+    # async def update_product_specifications(
+    #     product_name: str, specifications: str
+    # ) -> str:
+    #     """Update the specifications for a specific product."""
+    #     message = f"## Product Specifications Updated\nSpecifications for **'{product_name}'** updated to:\n\n{specifications}"
 
-        return message
+    #     return message
 
     @staticmethod
     @kernel_function(
@@ -372,14 +371,14 @@ class ProductTools:
 
         return message
 
-    @staticmethod
-    @kernel_function(description="Set the availability status of a specified product.")
-    async def set_product_availability(product_name: str, availability: bool) -> str:
-        """Set the availability status of a specific product."""
-        status = "available" if availability else "unavailable"
-        message = f"## Product Availability Set\nProduct **'{product_name}'** is now **{status}**."
+    # @staticmethod
+    # @kernel_function(description="Set the availability status of a specified product.")
+    # async def set_product_availability(product_name: str, availability: bool) -> str:
+    #     """Set the availability status of a specific product."""
+    #     status = "available" if availability else "unavailable"
+    #     message = f"## Product Availability Set\nProduct **'{product_name}'** is now **{status}**."
 
-        return message
+    #     return message
 
     @staticmethod
     @kernel_function(
@@ -393,18 +392,18 @@ class ProductTools:
 
         return message
 
-    @staticmethod
-    @kernel_function(
-        description="Calculate the profit margin for a specified product using cost and selling prices."
-    )
-    async def calculate_product_margin(
-        product_name: str, cost_price: float, selling_price: float
-    ) -> str:
-        """Calculate the profit margin for a specific product."""
-        margin = ((selling_price - cost_price) / selling_price) * 100
-        message = f"## Profit Margin Calculated\nProfit margin for **'{product_name}'** calculated at **{margin:.2f}%**."
+    # @staticmethod
+    # @kernel_function(
+    #     description="Calculate the profit margin for a specified product using cost and selling prices."
+    # )
+    # async def calculate_product_margin(
+    #     product_name: str, cost_price: float, selling_price: float
+    # ) -> str:
+    #     """Calculate the profit margin for a specific product."""
+    #     margin = ((selling_price - cost_price) / selling_price) * 100
+    #     message = f"## Profit Margin Calculated\nProfit margin for **'{product_name}'** calculated at **{margin:.2f}%**."
 
-        return message
+    #     return message
 
     @staticmethod
     @kernel_function(
@@ -416,38 +415,38 @@ class ProductTools:
 
         return message
 
-    @staticmethod
-    @kernel_function(
-        description="Create and manage product bundles with multiple products."
-    )
-    async def manage_product_bundles(bundle_name: str, product_list: List[str]) -> str:
-        """Manage product bundles."""
-        products = ", ".join(product_list)
-        message = f"## Product Bundle Managed\nProduct bundle **'{bundle_name}'** managed with products:\n\n{products}"
+    # @staticmethod
+    # @kernel_function(
+    #     description="Create and manage product bundles with multiple products."
+    # )
+    # async def manage_product_bundles(bundle_name: str, product_list: List[str]) -> str:
+    #     """Manage product bundles."""
+    #     products = ", ".join(product_list)
+    #     message = f"## Product Bundle Managed\nProduct bundle **'{bundle_name}'** managed with products:\n\n{products}"
 
-        return message
+    #     return message
 
-    @staticmethod
-    @kernel_function(
-        description="Optimize the product page for better user experience and performance."
-    )
-    async def optimize_product_page(
-        product_name: str, optimization_details: str
-    ) -> str:
-        """Optimize the product page for better performance."""
-        message = f"## Product Page Optimized\nProduct page for **'{product_name}'** optimized with details:\n\n{optimization_details}"
+    # @staticmethod
+    # @kernel_function(
+    #     description="Optimize the product page for better user experience and performance."
+    # )
+    # async def optimize_product_page(
+    #     product_name: str, optimization_details: str
+    # ) -> str:
+    #     """Optimize the product page for better performance."""
+    #     message = f"## Product Page Optimized\nProduct page for **'{product_name}'** optimized with details:\n\n{optimization_details}"
 
-        return message
+    #     return message
 
-    @staticmethod
-    @kernel_function(
-        description="Monitor and track performance metrics for a specified product."
-    )
-    async def monitor_product_performance(product_name: str) -> str:
-        """Monitor the performance of a specific product."""
-        message = f"## Product Performance Monitored\nPerformance for **'{product_name}'** monitored."
+    # @staticmethod
+    # @kernel_function(
+    #     description="Monitor and track performance metrics for a specified product."
+    # )
+    # async def monitor_product_performance(product_name: str) -> str:
+    #     """Monitor the performance of a specific product."""
+    #     message = f"## Product Performance Monitored\nPerformance for **'{product_name}'** monitored."
 
-        return message
+    #     return message
 
     @staticmethod
     @kernel_function(
@@ -469,47 +468,47 @@ class ProductTools:
 
         return message
 
-    @staticmethod
-    @kernel_function(
-        description="Update the labeling information for a specified product."
-    )
-    async def update_product_labels(product_name: str, label_details: str) -> str:
-        """Update labels for a specific product."""
-        message = f"## Product Labels Updated\nLabels for **'{product_name}'** updated with details:\n\n{label_details}"
+    # @staticmethod
+    # @kernel_function(
+    #     description="Update the labeling information for a specified product."
+    # )
+    # async def update_product_labels(product_name: str, label_details: str) -> str:
+    #     """Update labels for a specific product."""
+    #     message = f"## Product Labels Updated\nLabels for **'{product_name}'** updated with details:\n\n{label_details}"
 
-        return message
+    #     return message
 
-    @staticmethod
-    @kernel_function(
-        description="Manage warranty terms and conditions for a specified product."
-    )
-    async def manage_product_warranty(product_name: str, warranty_details: str) -> str:
-        """Manage the warranty for a specific product."""
-        message = f"## Product Warranty Managed\nWarranty for **'{product_name}'** managed with details:\n\n{warranty_details}"
+    # @staticmethod
+    # @kernel_function(
+    #     description="Manage warranty terms and conditions for a specified product."
+    # )
+    # async def manage_product_warranty(product_name: str, warranty_details: str) -> str:
+    #     """Manage the warranty for a specific product."""
+    #     message = f"## Product Warranty Managed\nWarranty for **'{product_name}'** managed with details:\n\n{warranty_details}"
 
-        return message
+    #     return message
 
-    @staticmethod
-    @kernel_function(
-        description="Forecast future demand for a specified product over a time period."
-    )
-    async def forecast_product_demand(product_name: str, forecast_period: str) -> str:
-        """Forecast demand for a specific product."""
-        message = f"## Demand Forecast\nDemand for **'{product_name}'** forecasted for **{forecast_period}**."
+    # @staticmethod
+    # @kernel_function(
+    #     description="Forecast future demand for a specified product over a time period."
+    # )
+    # async def forecast_product_demand(product_name: str, forecast_period: str) -> str:
+    #     """Forecast demand for a specific product."""
+    #     message = f"## Demand Forecast\nDemand for **'{product_name}'** forecasted for **{forecast_period}**."
 
-        return message
+    #     return message
 
-    @staticmethod
-    @kernel_function(
-        description="Handle licensing agreements and requirements for a specified product."
-    )
-    async def handle_product_licensing(
-        product_name: str, licensing_details: str
-    ) -> str:
-        """Handle licensing for a specific product."""
-        message = f"## Product Licensing Handled\nLicensing for **'{product_name}'** handled with details:\n\n{licensing_details}"
+    # @staticmethod
+    # @kernel_function(
+    #     description="Handle licensing agreements and requirements for a specified product."
+    # )
+    # async def handle_product_licensing(
+    #     product_name: str, licensing_details: str
+    # ) -> str:
+    #     """Handle licensing for a specific product."""
+    #     message = f"## Product Licensing Handled\nLicensing for **'{product_name}'** handled with details:\n\n{licensing_details}"
 
-        return message
+    #     return message
 
     @staticmethod
     @kernel_function(
@@ -693,7 +692,7 @@ class ProductTools:
                 tools_list.append(tool_entry)
 
         # Return the JSON string representation
-        return json.dumps(tools_list, ensure_ascii=False, indent=2)
+        return json.dumps(tools_list, ensure_ascii=False)
 
     # This function does NOT have the kernel_function annotation
     # because it's meant for introspection rather than being exposed as a tool

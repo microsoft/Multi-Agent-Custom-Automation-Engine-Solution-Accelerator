@@ -378,7 +378,7 @@ class TechSupportTools:
                 tools_list.append(tool_entry)
 
         # Return the JSON string representation
-        return json.dumps(tools_list, ensure_ascii=False, indent=2)
+        return json.dumps(tools_list, ensure_ascii=False)
 
     # This function does NOT have the kernel_function annotation
     # because it's meant for introspection rather than being exposed as a tool

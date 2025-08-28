@@ -119,45 +119,45 @@ class HrTools:
             f"{HrTools.formatting_instructions}"
         )
 
-    @staticmethod
-    @kernel_function(description="Process a leave request for an employee.")
-    async def process_leave_request(
-        employee_name: str, leave_type: str, start_date: str, end_date: str
-    ) -> str:
-        return (
-            f"##### Leave Request Processed\n"
-            f"**Employee Name:** {employee_name}\n"
-            f"**Leave Type:** {leave_type}\n"
-            f"**Start Date:** {start_date}\n"
-            f"**End Date:** {end_date}\n\n"
-            f"Your leave request has been processed. "
-            f"Please ensure you have completed any necessary handover tasks before your leave.\n"
-            f"{HrTools.formatting_instructions}"
-        )
+    # @staticmethod
+    # @kernel_function(description="Process a leave request for an employee.")
+    # async def process_leave_request(
+    #     employee_name: str, leave_type: str, start_date: str, end_date: str
+    # ) -> str:
+    #     return (
+    #         f"##### Leave Request Processed\n"
+    #         f"**Employee Name:** {employee_name}\n"
+    #         f"**Leave Type:** {leave_type}\n"
+    #         f"**Start Date:** {start_date}\n"
+    #         f"**End Date:** {end_date}\n\n"
+    #         f"Your leave request has been processed. "
+    #         f"Please ensure you have completed any necessary handover tasks before your leave.\n"
+    #         f"{HrTools.formatting_instructions}"
+    #     )
 
-    @staticmethod
-    @kernel_function(description="Update company policies.")
-    async def update_policies(policy_name: str, policy_content: str) -> str:
-        return (
-            f"##### Policy Updated\n"
-            f"**Policy Name:** {policy_name}\n\n"
-            f"The policy has been updated with the following content:\n\n"
-            f"{policy_content}\n"
-            f"{HrTools.formatting_instructions}"
-        )
+    # @staticmethod
+    # @kernel_function(description="Update company policies.")
+    # async def update_policies(policy_name: str, policy_content: str) -> str:
+    #     return (
+    #         f"##### Policy Updated\n"
+    #         f"**Policy Name:** {policy_name}\n\n"
+    #         f"The policy has been updated with the following content:\n\n"
+    #         f"{policy_content}\n"
+    #         f"{HrTools.formatting_instructions}"
+    #     )
 
-    @staticmethod
-    @kernel_function(
-        description="Conduct an exit interview for an employee leaving the company."
-    )
-    async def conduct_exit_interview(employee_name: str) -> str:
-        return (
-            f"##### Exit Interview Conducted\n"
-            f"**Employee Name:** {employee_name}\n\n"
-            f"The exit interview has been conducted. "
-            f"Thank you for your feedback and contributions to the company.\n"
-            f"{HrTools.formatting_instructions}"
-        )
+    # @staticmethod
+    # @kernel_function(
+    #     description="Conduct an exit interview for an employee leaving the company."
+    # )
+    # async def conduct_exit_interview(employee_name: str) -> str:
+    #     return (
+    #         f"##### Exit Interview Conducted\n"
+    #         f"**Employee Name:** {employee_name}\n\n"
+    #         f"The exit interview has been conducted. "
+    #         f"Thank you for your feedback and contributions to the company.\n"
+    #         f"{HrTools.formatting_instructions}"
+    #     )
 
     @staticmethod
     @kernel_function(description="Verify employment status for an employee.")
@@ -169,39 +169,39 @@ class HrTools:
             f"{HrTools.formatting_instructions}"
         )
 
-    @staticmethod
-    @kernel_function(description="Schedule a performance review for an employee.")
-    async def schedule_performance_review(employee_name: str, date: str) -> str:
-        return (
-            f"##### Performance Review Scheduled\n"
-            f"**Employee Name:** {employee_name}\n"
-            f"**Date:** {date}\n\n"
-            f"Your performance review has been scheduled. "
-            f"Please prepare any necessary documents and be ready for the review.\n"
-            f"{HrTools.formatting_instructions}"
-        )
+    # @staticmethod
+    # @kernel_function(description="Schedule a performance review for an employee.")
+    # async def schedule_performance_review(employee_name: str, date: str) -> str:
+    #     return (
+    #         f"##### Performance Review Scheduled\n"
+    #         f"**Employee Name:** {employee_name}\n"
+    #         f"**Date:** {date}\n\n"
+    #         f"Your performance review has been scheduled. "
+    #         f"Please prepare any necessary documents and be ready for the review.\n"
+    #         f"{HrTools.formatting_instructions}"
+    #     )
 
-    @staticmethod
-    @kernel_function(description="Approve an expense claim for an employee.")
-    async def approve_expense_claim(employee_name: str, claim_amount: float) -> str:
-        return (
-            f"##### Expense Claim Approved\n"
-            f"**Employee Name:** {employee_name}\n"
-            f"**Claim Amount:** ${claim_amount:.2f}\n\n"
-            f"Your expense claim has been approved. "
-            f"The amount will be reimbursed in your next payroll.\n"
-            f"{HrTools.formatting_instructions}"
-        )
+    # @staticmethod
+    # @kernel_function(description="Approve an expense claim for an employee.")
+    # async def approve_expense_claim(employee_name: str, claim_amount: float) -> str:
+    #     return (
+    #         f"##### Expense Claim Approved\n"
+    #         f"**Employee Name:** {employee_name}\n"
+    #         f"**Claim Amount:** ${claim_amount:.2f}\n\n"
+    #         f"Your expense claim has been approved. "
+    #         f"The amount will be reimbursed in your next payroll.\n"
+    #         f"{HrTools.formatting_instructions}"
+    #     )
 
-    @staticmethod
-    @kernel_function(description="Send a company-wide announcement.")
-    async def send_company_announcement(subject: str, content: str) -> str:
-        return (
-            f"##### Company Announcement\n"
-            f"**Subject:** {subject}\n\n"
-            f"{content}\n"
-            f"{HrTools.formatting_instructions}"
-        )
+    # @staticmethod
+    # @kernel_function(description="Send a company-wide announcement.")
+    # async def send_company_announcement(subject: str, content: str) -> str:
+    #     return (
+    #         f"##### Company Announcement\n"
+    #         f"**Subject:** {subject}\n\n"
+    #         f"{content}\n"
+    #         f"{HrTools.formatting_instructions}"
+    #     )
 
     @staticmethod
     @kernel_function(description="Retrieve the employee directory.")
@@ -252,39 +252,39 @@ class HrTools:
             f"{HrTools.formatting_instructions}"
         )
 
-    @staticmethod
-    @kernel_function(description="Manage an employee transfer between departments.")
-    async def manage_employee_transfer(employee_name: str, new_department: str) -> str:
-        return (
-            f"##### Employee Transfer\n"
-            f"**Employee Name:** {employee_name}\n"
-            f"**New Department:** {new_department}\n\n"
-            f"The transfer has been successfully processed. "
-            f"{employee_name} is now part of the {new_department} department.\n"
-            f"{HrTools.formatting_instructions}"
-        )
+    # @staticmethod
+    # @kernel_function(description="Manage an employee transfer between departments.")
+    # async def manage_employee_transfer(employee_name: str, new_department: str) -> str:
+    #     return (
+    #         f"##### Employee Transfer\n"
+    #         f"**Employee Name:** {employee_name}\n"
+    #         f"**New Department:** {new_department}\n\n"
+    #         f"The transfer has been successfully processed. "
+    #         f"{employee_name} is now part of the {new_department} department.\n"
+    #         f"{HrTools.formatting_instructions}"
+    #     )
 
-    @staticmethod
-    @kernel_function(description="Track attendance for an employee.")
-    async def track_employee_attendance(employee_name: str) -> str:
-        return (
-            f"##### Attendance Tracked\n"
-            f"**Employee Name:** {employee_name}\n\n"
-            f"The attendance for {employee_name} has been successfully tracked.\n"
-            f"{HrTools.formatting_instructions}"
-        )
+    # @staticmethod
+    # @kernel_function(description="Track attendance for an employee.")
+    # async def track_employee_attendance(employee_name: str) -> str:
+    #     return (
+    #         f"##### Attendance Tracked\n"
+    #         f"**Employee Name:** {employee_name}\n\n"
+    #         f"The attendance for {employee_name} has been successfully tracked.\n"
+    #         f"{HrTools.formatting_instructions}"
+    #     )
 
-    @staticmethod
-    @kernel_function(description="Organize a health and wellness program.")
-    async def organize_wellness_program(program_name: str, date: str) -> str:
-        return (
-            f"##### Health and Wellness Program Organized\n"
-            f"**Program Name:** {program_name}\n"
-            f"**Date:** {date}\n\n"
-            f"The health and wellness program has been successfully organized. "
-            f"Please join us on {date} for an informative and engaging session.\n"
-            f"{HrTools.formatting_instructions}"
-        )
+    # @staticmethod
+    # @kernel_function(description="Organize a health and wellness program.")
+    # async def organize_wellness_program(program_name: str, date: str) -> str:
+    #     return (
+    #         f"##### Health and Wellness Program Organized\n"
+    #         f"**Program Name:** {program_name}\n"
+    #         f"**Date:** {date}\n\n"
+    #         f"The health and wellness program has been successfully organized. "
+    #         f"Please join us on {date} for an informative and engaging session.\n"
+    #         f"{HrTools.formatting_instructions}"
+    #     )
 
     @staticmethod
     @kernel_function(
@@ -299,73 +299,73 @@ class HrTools:
             f"{HrTools.formatting_instructions}"
         )
 
-    @staticmethod
-    @kernel_function(description="Manage the retirement plan for an employee.")
-    async def manage_retirement_plan(employee_name: str) -> str:
-        return (
-            f"##### Retirement Plan Managed\n"
-            f"**Employee Name:** {employee_name}\n\n"
-            f"The retirement plan for {employee_name} has been successfully managed.\n"
-            f"{HrTools.formatting_instructions}"
-        )
+    # @staticmethod
+    # @kernel_function(description="Manage the retirement plan for an employee.")
+    # async def manage_retirement_plan(employee_name: str) -> str:
+    #     return (
+    #         f"##### Retirement Plan Managed\n"
+    #         f"**Employee Name:** {employee_name}\n\n"
+    #         f"The retirement plan for {employee_name} has been successfully managed.\n"
+    #         f"{HrTools.formatting_instructions}"
+    #     )
 
-    @staticmethod
-    @kernel_function(description="Handle an overtime request for an employee.")
-    async def handle_overtime_request(employee_name: str, hours: float) -> str:
-        return (
-            f"##### Overtime Request Handled\n"
-            f"**Employee Name:** {employee_name}\n"
-            f"**Hours:** {hours}\n\n"
-            f"The overtime request for {employee_name} has been successfully handled.\n"
-            f"{HrTools.formatting_instructions}"
-        )
+    # @staticmethod
+    # @kernel_function(description="Handle an overtime request for an employee.")
+    # async def handle_overtime_request(employee_name: str, hours: float) -> str:
+    #     return (
+    #         f"##### Overtime Request Handled\n"
+    #         f"**Employee Name:** {employee_name}\n"
+    #         f"**Hours:** {hours}\n\n"
+    #         f"The overtime request for {employee_name} has been successfully handled.\n"
+    #         f"{HrTools.formatting_instructions}"
+    #     )
 
-    @staticmethod
-    @kernel_function(description="Issue a bonus to an employee.")
-    async def issue_bonus(employee_name: str, amount: float) -> str:
-        return (
-            f"##### Bonus Issued\n"
-            f"**Employee Name:** {employee_name}\n"
-            f"**Amount:** ${amount:.2f}\n\n"
-            f"A bonus of ${amount:.2f} has been issued to {employee_name}.\n"
-            f"{HrTools.formatting_instructions}"
-        )
+    # @staticmethod
+    # @kernel_function(description="Issue a bonus to an employee.")
+    # async def issue_bonus(employee_name: str, amount: float) -> str:
+    #     return (
+    #         f"##### Bonus Issued\n"
+    #         f"**Employee Name:** {employee_name}\n"
+    #         f"**Amount:** ${amount:.2f}\n\n"
+    #         f"A bonus of ${amount:.2f} has been issued to {employee_name}.\n"
+    #         f"{HrTools.formatting_instructions}"
+    #     )
 
-    @staticmethod
-    @kernel_function(description="Schedule a wellness check for an employee.")
-    async def schedule_wellness_check(employee_name: str, date: str) -> str:
-        return (
-            f"##### Wellness Check Scheduled\n"
-            f"**Employee Name:** {employee_name}\n"
-            f"**Date:** {date}\n\n"
-            f"A wellness check has been scheduled for {employee_name} on {date}.\n"
-            f"{HrTools.formatting_instructions}"
-        )
+    # @staticmethod
+    # @kernel_function(description="Schedule a wellness check for an employee.")
+    # async def schedule_wellness_check(employee_name: str, date: str) -> str:
+    #     return (
+    #         f"##### Wellness Check Scheduled\n"
+    #         f"**Employee Name:** {employee_name}\n"
+    #         f"**Date:** {date}\n\n"
+    #         f"A wellness check has been scheduled for {employee_name} on {date}.\n"
+    #         f"{HrTools.formatting_instructions}"
+    #     )
 
-    @staticmethod
-    @kernel_function(description="Handle a suggestion made by an employee.")
-    async def handle_employee_suggestion(employee_name: str, suggestion: str) -> str:
-        return (
-            f"##### Employee Suggestion Handled\n"
-            f"**Employee Name:** {employee_name}\n"
-            f"**Suggestion:** {suggestion}\n\n"
-            f"The suggestion from {employee_name} has been successfully handled.\n"
-            f"{HrTools.formatting_instructions}"
-        )
+    # @staticmethod
+    # @kernel_function(description="Handle a suggestion made by an employee.")
+    # async def handle_employee_suggestion(employee_name: str, suggestion: str) -> str:
+    #     return (
+    #         f"##### Employee Suggestion Handled\n"
+    #         f"**Employee Name:** {employee_name}\n"
+    #         f"**Suggestion:** {suggestion}\n\n"
+    #         f"The suggestion from {employee_name} has been successfully handled.\n"
+    #         f"{HrTools.formatting_instructions}"
+    #     )
 
-    @staticmethod
-    @kernel_function(description="Update privileges for an employee.")
-    async def update_employee_privileges(
-        employee_name: str, privilege: str, status: str
-    ) -> str:
-        return (
-            f"##### Employee Privileges Updated\n"
-            f"**Employee Name:** {employee_name}\n"
-            f"**Privilege:** {privilege}\n"
-            f"**Status:** {status}\n\n"
-            f"The privileges for {employee_name} have been successfully updated.\n"
-            f"{HrTools.formatting_instructions}"
-        )
+    # @staticmethod
+    # @kernel_function(description="Update privileges for an employee.")
+    # async def update_employee_privileges(
+    #     employee_name: str, privilege: str, status: str
+    # ) -> str:
+    #     return (
+    #         f"##### Employee Privileges Updated\n"
+    #         f"**Employee Name:** {employee_name}\n"
+    #         f"**Privilege:** {privilege}\n"
+    #         f"**Status:** {status}\n\n"
+    #         f"The privileges for {employee_name} have been successfully updated.\n"
+    #         f"{HrTools.formatting_instructions}"
+    #     )
 
     @staticmethod
     @kernel_function(description="Send a welcome email to an address.")
@@ -485,4 +485,4 @@ class HrTools:
                 tools_list.append(tool_entry)
 
         # Return the JSON string representation
-        return json.dumps(tools_list, ensure_ascii=False, indent=2)
+        return json.dumps(tools_list, ensure_ascii=False)

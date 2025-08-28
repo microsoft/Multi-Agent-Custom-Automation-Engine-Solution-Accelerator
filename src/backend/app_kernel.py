@@ -202,69 +202,55 @@ async def input_task_endpoint(input_task: InputTask, request: Request):
     if not input_task.session_id:
         input_task.session_id = str(uuid.uuid4())
 
+    # Wrap initialization and agent creation in its own try block for setup errors
     try:
-        # Create all agents instead of just the planner agent
-        # This ensures other agents are created first and the planner has access to them
         kernel, memory_store = await initialize_runtime_and_context(
             input_task.session_id, user_id
         )
-        client = None
-        try:
-            client = config.get_ai_project_client()
-        except Exception as client_exc:
-            logging.error(f"Error creating AIProjectClient: {client_exc}")
-
+        client = config.get_ai_project_client()
         agents = await AgentFactory.create_all_agents(
             session_id=input_task.session_id,
             user_id=user_id,
             memory_store=memory_store,
             client=client,
         )
+    except Exception as setup_exc:
+        logging.error(f"Failed to initialize agents or context: {setup_exc}")
+        track_event_if_configured(
+            "InputTaskSetupError",
+            {"session_id": input_task.session_id, "error": str(setup_exc)},
+        )
+        raise HTTPException(
+            status_code=500, detail="Could not initialize services for your request."
+        ) from setup_exc
 
+    try:
         group_chat_manager = agents[AgentType.GROUP_CHAT_MANAGER.value]
-
-        # Convert input task to JSON for the kernel function, add user_id here
-
-        # Use the planner to handle the task
         await group_chat_manager.handle_input_task(input_task)
 
-        # Get plan from memory store
         plan = await memory_store.get_plan_by_session(input_task.session_id)
-
-        if not plan:  # If the plan is not found, raise an error
+        if not plan:
             track_event_if_configured(
                 "PlanNotFound",
-                {
-                    "status": "Plan not found",
-                    "session_id": input_task.session_id,
-                    "description": input_task.description,
-                },
+                {"status": "Plan not found", "session_id": input_task.session_id},
             )
             raise HTTPException(status_code=404, detail="Plan not found")
-        # Log custom event for successful input task processing
+
         track_event_if_configured(
             "InputTaskProcessed",
-            {
-                "status": f"Plan created with ID: {plan.id}",
-                "session_id": input_task.session_id,
-                "plan_id": plan.id,
-                "description": input_task.description,
-            },
+            {"status": f"Plan created with ID: {plan.id}", "session_id": input_task.session_id},
         )
-        if client:
-            try:
-                client.close()
-            except Exception as e:
-                logging.error(f"Error sending to AIProjectClient: {e}")
         return {
             "status": f"Plan created with ID: {plan.id}",
             "session_id": input_task.session_id,
             "plan_id": plan.id,
             "description": input_task.description,
         }
-
+    except HTTPException:
+        # Re-raise HTTPExceptions so they are not caught by the generic block
+        raise
     except Exception as e:
-        # Extract clean error message for rate limit errors
+        # This now specifically handles errors during task processing
         error_msg = str(e)
         if "Rate limit is exceeded" in error_msg:
             match = re.search(r"Rate limit is exceeded\. Try again in (\d+) seconds?\.", error_msg)
@@ -273,13 +259,16 @@ async def input_task_endpoint(input_task: InputTask, request: Request):
 
         track_event_if_configured(
             "InputTaskError",
-            {
-                "session_id": input_task.session_id,
-                "description": input_task.description,
-                "error": str(e),
-            },
+            {"session_id": input_task.session_id, "error": str(e)},
         )
-        raise HTTPException(status_code=400, detail=f"{error_msg}") from e
+        raise HTTPException(status_code=400, detail=f"Error processing plan: {error_msg}") from e
+    finally:
+        # Ensure the client is closed even if an error occurs
+        if 'client' in locals() and client:
+            try:
+                client.close()
+            except Exception as e:
+                logging.error(f"Error closing AIProjectClient: {e}")
 
 
 @app.post("/api/human_feedback")

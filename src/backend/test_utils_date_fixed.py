@@ -4,7 +4,19 @@ Quick test for the fixed utils_date.py functionality
 
 import os
 from datetime import datetime
-from utils_date import format_date_for_user
+
+# ---- Robust import for format_date_for_user ----
+# Tries: root-level shim -> src package path -> package-relative (when collected as src.backend.*)
+try:
+    # Works if a root-level utils_date.py shim exists or PYTHONPATH includes project root
+    from utils_date import format_date_for_user  # type: ignore
+except ModuleNotFoundError:
+    try:
+        # Works when running from project root with 'src' on the path
+        from src.backend.utils_date import format_date_for_user  # type: ignore
+    except ModuleNotFoundError:
+        # Works when this test is imported as 'src.backend.test_utils_date_fixed'
+        from .utils_date import format_date_for_user  # type: ignore
 
 
 def test_date_formatting():

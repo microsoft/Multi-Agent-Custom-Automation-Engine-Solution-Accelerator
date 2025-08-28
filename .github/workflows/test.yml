@@ -51,7 +51,7 @@ jobs:
       - name: Run tests with coverage
         if: env.skip_tests == 'false'
         run: |
-          pytest --cov=. --cov-report=term-missing --cov-report=xml
+          pytest --cov=. --cov-report=term-missing --cov-report=xml --ignore=tests/e2e-test/tests
           
       - name: Skip coverage report if no tests
         if: env.skip_tests == 'true'

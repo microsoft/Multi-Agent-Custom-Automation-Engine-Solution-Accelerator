@@ -219,6 +219,10 @@ Once you've opened the project in [Codespaces](#github-codespaces), [Dev Contain
 
 7. If you are done trying out the application, you can delete the resources by running `azd down`.
 
+
+### 🛠️ Troubleshooting
+ If you encounter any issues during the deployment process, please refer [troubleshooting](../docs/TroubleShootingSteps.md) document for detailed steps and solutions.
+
 # Local setup
 
 > **Note for macOS Developers**: If you are using macOS on Apple Silicon (ARM64) the DevContainer will **not** work. This is due to a limitation with the Azure Functions Core Tools (see [here](https://github.com/Azure/azure-functions-core-tools/issues/3112)).
@@ -233,7 +237,7 @@ The easiest way to run this accelerator is in a VS Code Dev Containers, which wi
 
 ## Detailed Development Container setup instructions
 
-The solution contains a [development container](https://code.visualstudio.com/docs/remote/containers) with all the required tooling to develop and deploy the accelerator. To deploy the Chat With Your Data accelerator using the provided development container you will also need:
+The solution contains a [development container](https://code.visualstudio.com/docs/remote/containers) with all the required tooling to develop and deploy the accelerator. To deploy the Multi-Agent solutions accelerator using the provided development container you will also need:
 
 - [Visual Studio Code](https://code.visualstudio.com)
 - [Remote containers extension for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
@@ -287,7 +291,7 @@ The files for the dev container are located in `/.devcontainer/` folder.
 
    - You can use the Bicep extension for VSCode (Right-click the `.bicep` file, then select "Show  deployment plan") or use the Azure CLI:
      ```bash
-     az deployment group create -g <resource-group-name> -f deploy/macae-dev.bicep --query 'properties.outputs'
+     az deployment group create -g <resource-group-name> -f infra/main.bicep --query 'properties.outputs'
      ```
    - **Note**: You will be prompted for a `principalId`, which is the ObjectID of your user in Entra ID. To find it, use the Azure Portal or run:
 
@@ -301,7 +305,7 @@ The files for the dev container are located in `/.devcontainer/` folder.
 
      **Role Assignments in Bicep Deployment:**
 
-     The **macae-dev.bicep** deployment includes the assignment of the appropriate roles to AOAI and Cosmos services. If you want to modify an existing implementation—for example, to use resources deployed as part of the simple deployment for local debugging—you will need to add your own credentials to access the Cosmos and AOAI services. You can add these permissions using the following commands:
+     The **main.bicep** deployment includes the assignment of the appropriate roles to AOAI and Cosmos services. If you want to modify an existing implementation—for example, to use resources deployed as part of the simple deployment for local debugging—you will need to add your own credentials to access the Cosmos and AOAI services. You can add these permissions using the following commands:
 
      ```bash
      az cosmosdb sql role assignment create --resource-group <solution-accelerator-rg> --account-name <cosmos-db-account-name> --role-definition-name "Cosmos DB Built-in Data Contributor" --principal-id <aad-user-object-id> --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.DocumentDB/databaseAccounts/<cosmos-db-account-name>
@@ -320,11 +324,21 @@ The files for the dev container are located in `/.devcontainer/` folder.
 
 5. **Create a `.env` file:**
 
-   - Navigate to the `src` folder and create a `.env` file based on the provided `.env.sample` file.
+   - Navigate to the `src\backend` folder and create a `.env` file based on the provided `.env.sample` file.
+   - Update the `.env` file with the required values from your Azure resource group in Azure Portal App Service environment variables.
+   - Alternatively, if resources were
+   provisioned using `azd provision` or `azd up`, a `.env` file is automatically generated in the `.azure/<env-name>/.env`
+   file. You can copy the contents of this file into your backend `.env` file.
+
+    _**Note**: To get your `<env-name>` run `azd env list` to see which env is default._
 
 6. **Fill in the `.env` file:**
 
    - Use the output from the deployment or check the Azure Portal under "Deployments" in the resource group.
+   - Make sure to set APP_ENV to "**dev**" in `.env` file.
+   - For local development, make sure to include below env variables in the `.env`
+     - `BACKEND_API_URL=http://localhost:8000`
+     - `FRONTEND_SITE_NAME=http://127.0.0.1:3000` .
 
 7. **(Optional) Set up a virtual environment:**
 
@@ -337,8 +351,19 @@ The files for the dev container are located in `/.devcontainer/` folder.
      ```bash
      pip install -r requirements.txt
      ```
+     
+9. **Build the frontend (important):**
 
-9. **Run the application:**
+    - Before running the frontend server, you must build the frontend to generate the necessary `build/assets` directory.
+
+      From the `src/frontend` directory, run:
+
+      ```bash
+      npm install
+      npm run build
+      ```
+
+10. **Run the application:**
 
 - From the src/backend directory:
 

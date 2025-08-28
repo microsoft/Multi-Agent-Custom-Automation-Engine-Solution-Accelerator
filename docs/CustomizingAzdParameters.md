@@ -9,8 +9,8 @@ By default this template will use the environment name as the prefix to prevent 
 | Name                            | Type   | Default Value     | Purpose                                                                                             |
 | ------------------------------- | ------ | ----------------- | --------------------------------------------------------------------------------------------------- |
 | `AZURE_ENV_NAME`                | string | `macae`           | Used as a prefix for all resource names to ensure uniqueness across environments.                   |
-| `AZURE_LOCATION`                | string | `swedencentral`   | Location of the Azure resources. Controls where the infrastructure will be deployed.                |
-| `AZURE_ENV_OPENAI_LOCATION`     | string | `swedencentral`   | Specifies the region for OpenAI resource deployment.                                                |
+| `AZURE_LOCATION`                | string | `<User selects during deployment>`   | Location of the Azure resources. Controls where the infrastructure will be deployed.                |
+| `AZURE_ENV_OPENAI_LOCATION`     | string | `<User selects during deployment>`   | Specifies the region for OpenAI resource deployment.                                                |
 | `AZURE_ENV_MODEL_DEPLOYMENT_TYPE` | string | `GlobalStandard` | Defines the deployment type for the AI model (e.g., Standard, GlobalStandard).                     |
 | `AZURE_ENV_MODEL_NAME`          | string | `gpt-4o`          | Specifies the name of the GPT model to be deployed.                                                |
 | `AZURE_ENV_FOUNDRY_PROJECT_ID`          | string | `<Existing Workspace Id>`          | Set this if you want to reuse an AI Foundry Project instead of creating a new one.                                                |                        

@@ -130,4 +130,4 @@ class GenericTools:
                 tools_list.append(tool_entry)
 
         # Return the JSON string representation
-        return json.dumps(tools_list, ensure_ascii=False, indent=2)
+        return json.dumps(tools_list, ensure_ascii=False)

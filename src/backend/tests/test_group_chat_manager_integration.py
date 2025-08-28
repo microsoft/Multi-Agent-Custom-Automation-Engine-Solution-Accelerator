@@ -18,7 +18,54 @@ from datetime import datetime
 # Add the parent directory to the path so we can import our modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# ---- Force a test stub for app_config BEFORE importing Config ----
+import types
+import os, sys
+
+# Evict any previously loaded app_config to avoid stale stubs
+sys.modules.pop("app_config", None)
+
+app_config_stub = types.ModuleType("app_config")
+app_config_stub.config = types.SimpleNamespace(
+    # Cosmos settings (non-emulator so setUp() passes)
+    COSMOSDB_ENDPOINT="https://mock-cosmos.documents.azure.com",
+    COSMOSDB_DATABASE="mock-database",
+    COSMOSDB_CONTAINER="mock-container",
+
+    # Azure OpenAI settings (dummies so imports don't crash)
+    AZURE_OPENAI_DEPLOYMENT_NAME="gpt-4o",
+    AZURE_OPENAI_API_VERSION="2024-11-20",
+    AZURE_OPENAI_ENDPOINT="https://example.openai.azure.com/",
+    AZURE_OPENAI_SCOPES=["https://cognitiveservices.azure.com/.default"],
+
+    # Azure AI Project (dummies)
+    AZURE_AI_SUBSCRIPTION_ID="00000000-0000-0000-0000-000000000000",
+    AZURE_AI_RESOURCE_GROUP="rg-ci",
+    AZURE_AI_PROJECT_NAME="proj-ci",
+    AZURE_AI_AGENT_ENDPOINT="https://agents.example.azure.com/",
+
+    # Misc used by some tools
+    FRONTEND_SITE_NAME="http://127.0.0.1:3000",
+
+    # Some modules expect this method on config
+    get_user_local_browser_language=lambda: os.environ.get("USER_LOCAL_BROWSER_LANGUAGE", "en-US"),
+)
+sys.modules["app_config"] = app_config_stub
+# ------------------------------------------------------------------
+
 from config_kernel import Config
+
+# ---- Ensure Config has a non-emulator Cosmos endpoint for these tests ----
+Config.COSMOSDB_ENDPOINT  = app_config_stub.config.COSMOSDB_ENDPOINT
+Config.COSMOSDB_DATABASE  = app_config_stub.config.COSMOSDB_DATABASE
+Config.COSMOSDB_CONTAINER = app_config_stub.config.COSMOSDB_CONTAINER
+
+# Also set env vars in case any code checks os.environ directly
+os.environ.setdefault("COSMOSDB_ENDPOINT",  app_config_stub.config.COSMOSDB_ENDPOINT)
+os.environ.setdefault("COSMOSDB_DATABASE",  app_config_stub.config.COSMOSDB_DATABASE)
+os.environ.setdefault("COSMOSDB_CONTAINER", app_config_stub.config.COSMOSDB_CONTAINER)
+# --------------------------------------------------------------------------
+
 from kernel_agents.group_chat_manager import GroupChatManager
 from kernel_agents.planner_agent import PlannerAgent
 from kernel_agents.human_agent import HumanAgent

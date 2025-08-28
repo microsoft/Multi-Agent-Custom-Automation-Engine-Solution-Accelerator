@@ -3,19 +3,50 @@
 This test file verifies that the agent system correctly loads environment 
 variables and can use functions from the JSON tool files.
 """
-import os
-import sys
-import unittest
-import asyncio
-import uuid
+import os, sys, unittest, asyncio, uuid
 from dotenv import load_dotenv
 
-# Add the parent directory to the path so we can import our modules
+# Make src/backend importable
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# --- begin: test-only stub to satisfy config_kernel import ---
+import types
+sys.modules.pop("app_config", None)
+app_config_stub = types.ModuleType("app_config")
+app_config_stub.config = types.SimpleNamespace(
+    AZURE_TENANT_ID="test-tenant",
+    AZURE_CLIENT_ID="test-client",
+    AZURE_CLIENT_SECRET="test-secret",
+    COSMOSDB_ENDPOINT="https://mock-cosmos.documents.azure.com",
+    COSMOSDB_DATABASE="mock-db",
+    COSMOSDB_CONTAINER="mock-container",
+    AZURE_OPENAI_DEPLOYMENT_NAME="gpt-4o",
+    AZURE_OPENAI_API_VERSION="2024-11-20",
+    AZURE_OPENAI_ENDPOINT="https://example.openai.azure.com/",
+    AZURE_OPENAI_SCOPES=["https://cognitiveservices.azure.com/.default"],
+    AZURE_AI_SUBSCRIPTION_ID="sub-id",
+    AZURE_AI_RESOURCE_GROUP="rg",
+    AZURE_AI_PROJECT_NAME="proj",
+    AZURE_AI_AGENT_ENDPOINT="https://agents.example.com/",
+    FRONTEND_SITE_NAME="http://127.0.0.1:3000",
+    get_user_local_browser_language=lambda: os.environ.get("USER_LOCAL_BROWSER_LANGUAGE","en-US"),
+)
+sys.modules["app_config"] = app_config_stub
+os.environ.setdefault("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o")
+os.environ.setdefault("AZURE_OPENAI_API_VERSION", "2024-11-20")
+os.environ.setdefault("AZURE_OPENAI_ENDPOINT", "https://example.openai.azure.com/")
+# --- end: test-only stub ---
+
+# --------- CRUCIAL: evict any prior stub of models.messages_kernel BEFORE imports ---------
+import importlib
+sys.modules.pop("models.messages_kernel", None)
+sys.modules.pop("models", None)
+importlib.invalidate_caches()
+from models.messages_kernel import AgentType  # load the real module now
+# -----------------------------------------------------------------------------------------
 
 from config_kernel import Config
 from kernel_agents.agent_factory import AgentFactory
-from models.messages_kernel import AgentType
 from utils_kernel import get_agents
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 
