@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+name: multi-agent-custom-automation-engine-solution-accelerator
+metadata:
+  template: multi-agent-custom-automation-engine-solution-accelerator@1.0
+requiredVersions:
+  azd: ">=1.15.0 !=1.17.1"
+
+services:
+  backend:
+    project: ./src/backend
+    language: py
+    host: containerapp
+    docker:
+      image: backend
+      remoteBuild: true
+  
+  mcp:
+    project: ./src/mcp_server
+    language: py
+    host: containerapp
+    docker:
+      image: mcp
+      remoteBuild: true
+
+  frontend:
+    project: ./src/frontend
+    language: py
+    host: appservice
+    dist: ./dist
+    hooks:
+      prepackage:
+        windows:
+          shell: pwsh
+          run: ../../infra/scripts/package_frontend.ps1
+          interactive: true
+          continueOnError: false
+        posix:
+          shell: sh
+          run: bash ../../infra/scripts/package_frontend.sh
+          interactive: true
+          continueOnError: false

@@ -31,4 +31,5 @@ dependencies = [
     "uvicorn>=0.34.2",
     "pylint-pydantic>=0.3.5",
     "pexpect>=4.9.0",
+    "fastmcp==2.11.3",
 ]
