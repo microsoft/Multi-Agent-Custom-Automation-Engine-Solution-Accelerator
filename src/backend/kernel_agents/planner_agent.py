@@ -568,6 +568,7 @@ class PlannerAgent(BaseAgent):
             These agents have access to the following functions:
             {{$tools_str}}
 
+            The first step of your plan should be to ask the user for any additional information required to progress the rest of steps planned.
 
             Only use the functions provided as part of your plan. If the task is not possible with the agents and tools provided, create a step with the agent of type Human and mark the overall status as completed.
 
