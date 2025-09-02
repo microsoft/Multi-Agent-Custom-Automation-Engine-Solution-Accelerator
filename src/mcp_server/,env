@@ -1,0 +1,16 @@
+# MCP Server Configuration
+
+# Server Settings
+MCP_HOST=0.0.0.0
+MCP_PORT=9000
+MCP_DEBUG=false
+MCP_SERVER_NAME=MACAE MCP Server
+
+# Authentication Settings
+MCP_ENABLE_AUTH=true
+AZURE_TENANT_ID=your-tenant-id-here
+AZURE_CLIENT_ID=your-client-id-here
+AZURE_JWKS_URI=https://login.microsoftonline.com/your-tenant-id/discovery/v2.0/keys
+AZURE_ISSUER=https://sts.windows.net/your-tenant-id/
+AZURE_AUDIENCE=api://your-client-id
+DATASET_PATH=./datasets

@@ -44,3 +44,49 @@ body, html, :root {
     --chartPointColor: var(--colorBrandBackground);
     --chartPointBorderColor: var(--colorBrandForeground1);
 }
+
+
+/* Delete dialog layout override */
+.fui-Dialog__content[data-testid="delete-dialog"] {
+  display: flex !important;
+  flex-direction: column !important;
+  grid-template-columns: none !important;
+  grid-template-rows: none !important;
+  grid-template: none !important;
+}
+
+.fui-Dialog__content[data-testid="delete-dialog"] .fui-DialogBody {
+  display: flex !important;
+  flex-direction: column !important;
+  grid-template-columns: none !important;
+  grid-template-rows: none !important;
+  grid-template: none !important;
+}
+
+/* Alternative approach - target all dialog content that contains delete buttons */
+/* .fui-Dialog__content:has(button[data-testid="delete-team-confirm"]) {
+  display: flex !important;
+  flex-direction: column !important;
+  grid-template-columns: none !important;
+  grid-template-rows: none !important;
+}
+
+.fui-Dialog__content:has(button[data-testid="delete-team-confirm"]) .fui-DialogBody {
+  display: flex !important;
+  flex-direction: column !important;
+  grid-template-columns: none !important;
+  grid-template-rows: none !important;
+} */
+
+/* Delete button red color override */
+.delete-team-button,
+.delete-team-button .fui-Button__icon {
+  color: #d13438 !important;
+  background-color: transparent !important;
+}
+
+.delete-team-button:hover,
+.delete-team-button:hover .fui-Button__icon {
+  background-color: #fdf2f2 !important;
+  color: #a4262c !important;
+}

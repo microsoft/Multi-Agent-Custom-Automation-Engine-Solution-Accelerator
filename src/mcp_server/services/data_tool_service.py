@@ -29,6 +29,11 @@ class DataToolService(MCPToolBase):
         self.dataset_path = dataset_path
         self.allowed_files = set(ALLOWED_FILES)
 
+    @property
+    def tool_count(self) -> int:
+        """Return the number of tools provided by this service."""
+        return 2
+    
     def _find_file(self, filename: str) -> str:
         """
         Searches recursively within the dataset_path for an exact filename match (case-sensitive).

@@ -41,6 +41,8 @@ import {
 import { TeamConfig } from '../../models/Team';
 import { TeamService } from '../../services/TeamService';
 
+import '../../index.css'
+
 // Icon mapping function to convert string icons to FluentUI icons
 const getIconFromString = (iconString: string): React.ReactNode => {
   const iconMap: Record<string, React.ReactNode> = {
@@ -514,7 +516,7 @@ const SettingsButton: React.FC<SettingsButtonProps> = ({
                 appearance="subtle"
                 size="small"
                 onClick={(e) => handleDeleteTeam(team, e)}
-                style={{ color: '#d13438' }}
+                className="delete-team-button"
               />
             </Tooltip>
           </div>
@@ -751,16 +753,8 @@ const SettingsButton: React.FC<SettingsButtonProps> = ({
     {/* Delete Confirmation Dialog */}
     <Dialog open={deleteConfirmOpen} onOpenChange={(event, data) => setDeleteConfirmOpen(data.open)}>
       <DialogSurface>
-        <DialogContent style={{ 
-          display: 'flex',
-          flexDirection: 'column',
-          width: '100%'
-        }}>
-          <DialogBody style={{ 
-            display: 'flex',
-            flexDirection: 'column',
-            width: '100%'
-          }}>
+        <DialogContent data-testid="delete-dialog">
+          <DialogBody>
             <DialogTitle>⚠️ Delete Team Configuration</DialogTitle>
             <div style={{ marginTop: '16px', marginBottom: '20px' }}>
               <Text style={{ display: 'block', marginBottom: '16px' }}>
@@ -802,6 +796,7 @@ const SettingsButton: React.FC<SettingsButtonProps> = ({
               disabled={deleteLoading}
               style={{ backgroundColor: '#d13438', color: 'white' }}
               onClick={confirmDeleteTeam}
+               data-testid="delete-team-confirm"
             >
               {deleteLoading ? 'Deleting...' : 'Delete for Everyone'}
             </Button>
