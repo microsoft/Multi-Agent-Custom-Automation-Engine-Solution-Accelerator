@@ -1,4 +1,4 @@
-import { getUserId } from '../api/config';
+import { headerBuilder } from '../api/config';
 
 export interface StreamMessage {
     type: 'plan_update' | 'step_update' | 'agent_message' | 'error' | 'connection_status' | 'plan_approval_request' | 'final_result';
@@ -19,7 +19,6 @@ export interface StreamingPlanUpdate {
     timestamp?: number;
 }
 
-// Add these new interfaces after StreamingPlanUpdate
 export interface PlanApprovalRequestData {
     plan_id: string;
     session_id: string;
@@ -47,24 +46,23 @@ class WebSocketService {
     private ws: WebSocket | null = null;
     private reconnectAttempts = 0;
     private maxReconnectAttempts = 5;
-    private reconnectDelay = 12000; // Changed from 1000ms to 12000ms (12 seconds)
+    private reconnectDelay = 12000;
     private listeners: Map<string, Set<(message: StreamMessage) => void>> = new Map();
     private planSubscriptions: Set<string> = new Set();
-    private reconnectTimer: NodeJS.Timeout | null = null; // Add timer tracking
-    private isConnecting = false; // Add connection state tracking
+    private reconnectTimer: NodeJS.Timeout | null = null;
+    private isConnecting = false;
 
     /**
      * Connect to WebSocket server
      */
     connect(): Promise<void> {
         return new Promise((resolve, reject) => {
-            // Prevent multiple simultaneous connection attempts
             if (this.isConnecting) {
                 console.log('Connection attempt already in progress');
+                resolve();
                 return;
             }
 
-            // Clear any existing reconnection timer
             if (this.reconnectTimer) {
                 clearTimeout(this.reconnectTimer);
                 this.reconnectTimer = null;
@@ -73,19 +71,27 @@ class WebSocketService {
             try {
                 this.isConnecting = true;
                 
-                // Get WebSocket URL from environment or default to localhost
                 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
                 const wsHost = process.env.REACT_APP_WS_HOST || '127.0.0.1:8000';
-                const processId = crypto.randomUUID(); // Generate unique process ID for this session
+                const processId = crypto.randomUUID();
 
-                // Build WebSocket URL with authentication headers as query parameters
-                const userId = getUserId(); // Import this from config
+                const authHeaders = headerBuilder();
+                const userId = authHeaders['x-ms-client-principal-id'];
+                
+                if (!userId) {
+                    console.error('No user ID available for WebSocket connection');
+                    this.isConnecting = false;
+                    reject(new Error('Authentication required for WebSocket connection'));
+                    return;
+                }
+
+                // Use query parameter for WebSocket authentication (as backend expects)
                 const wsUrl = `${wsProtocol}//${wsHost}/api/v3/socket/${processId}?user_id=${encodeURIComponent(userId)}`;
 
                 console.log('Connecting to WebSocket:', wsUrl);
                 
                 this.ws = new WebSocket(wsUrl);
-
+                
                 this.ws.onopen = () => {
                     console.log('WebSocket connected successfully');
                     this.reconnectAttempts = 0;
@@ -109,8 +115,7 @@ class WebSocketService {
                     this.isConnecting = false;
                     this.emit('connection_status', { connected: false });
                     
-                    // Only attempt reconnect if it wasn't a manual disconnect
-                    if (event.code !== 1000) { // 1000 = normal closure
+                    if (event.code !== 1000) {
                         this.attemptReconnect();
                     }
                 };
@@ -135,16 +140,15 @@ class WebSocketService {
     disconnect(): void {
         console.log('Manually disconnecting WebSocket');
         
-        // Clear any pending reconnection attempts
         if (this.reconnectTimer) {
             clearTimeout(this.reconnectTimer);
             this.reconnectTimer = null;
         }
         
-        this.reconnectAttempts = this.maxReconnectAttempts; // Prevent reconnection
+        this.reconnectAttempts = this.maxReconnectAttempts;
         
         if (this.ws) {
-            this.ws.close(1000, 'Manual disconnect'); // Use normal closure code
+            this.ws.close(1000, 'Manual disconnect');
             this.ws = null;
         }
         this.planSubscriptions.clear();
@@ -193,7 +197,6 @@ class WebSocketService {
         
         this.listeners.get(eventType)!.add(callback);
 
-        // Return unsubscribe function
         return () => {
             const eventListeners = this.listeners.get(eventType);
             if (eventListeners) {
@@ -246,17 +249,14 @@ class WebSocketService {
     private handleMessage(message: StreamMessage): void {
         console.log('WebSocket message received:', message);
 
-        // Emit to specific event listeners
         if (message.type) {
             this.emit(message.type, message.data);
         }
 
-        // Handle plan approval requests specifically
         if (message.type === 'plan_approval_request') {
             console.log('Plan approval request received via WebSocket:', message.data);
         }
 
-        // Emit to general message listeners
         this.emit('message', message);
     }
 
@@ -270,14 +270,12 @@ class WebSocketService {
             return;
         }
 
-        // Prevent multiple simultaneous reconnection attempts
         if (this.isConnecting || this.reconnectTimer) {
             console.log('Reconnection attempt already in progress');
             return;
         }
 
         this.reconnectAttempts++;
-        // Use exponential backoff: 12s, 24s, 48s, 96s, 192s
         const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
         
         console.log(`Scheduling reconnection attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delay/1000}s`);
@@ -289,15 +287,12 @@ class WebSocketService {
             this.connect()
                 .then(() => {
                     console.log('Reconnection successful - re-subscribing to plans');
-                    // Re-subscribe to all plans
                     this.planSubscriptions.forEach(planId => {
                         this.subscribeToPlan(planId);
                     });
                 })
                 .catch((error) => {
                     console.error('Reconnection failed:', error);
-                    // The connect() method will trigger another reconnection attempt
-                    // through the onclose handler if needed
                 });
         }, delay);
     }
@@ -344,6 +339,5 @@ class WebSocketService {
     }
 }
 
-// Export singleton instance
 export const webSocketService = new WebSocketService();
 export default webSocketService;

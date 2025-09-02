@@ -120,11 +120,12 @@ export function getUserId(): string {
  */
 export function headerBuilder(headers?: Record<string, string>): Record<string, string> {
     let userId = getUserId();
-    console.log('headerBuilder: Using user ID:', userId);
+    
+    // console.log('headerBuilder: Using user ID:', userId);
     let defaultHeaders = {
         "x-ms-client-principal-id": String(userId) || "",  // Custom header
     };
-    console.log('headerBuilder: Created headers:', defaultHeaders);
+    // console.log('headerBuilder: Created headers:', defaultHeaders);
     return {
         ...defaultHeaders,
         ...(headers ? headers : {})
