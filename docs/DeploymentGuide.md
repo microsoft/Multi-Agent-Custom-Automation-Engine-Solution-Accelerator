@@ -335,16 +335,23 @@ The files for the dev container are located in `/.devcontainer/` folder.
 
    - If you are using `venv`, create and activate your virtual environment for both the frontend and backend folders.
 
-8. **Install requirements - frontend:**
+8. **Install requirements - Backend:**
 
-   - In each of the frontend and backend folders -
-     Open a terminal in the `src` folder and run:
+   - To install the requirement for backend -
+     Open a terminal in the `src/backend` folder and run:
      ```bash
-     pip install -r requirements.txt
+     pip install uv
+     uv sync
      ```
      
 9. **Build the frontend (important):**
 
+    - To install the requirement for frontend -
+     Open a terminal in the `src/frontend` folder and run:
+     ```bash
+     pip install -r requirements.txt
+     ```
+     
     - Before running the frontend server, you must build the frontend to generate the necessary `build/assets` directory.
 
       From the `src/frontend` directory, run:
@@ -356,7 +363,7 @@ The files for the dev container are located in `/.devcontainer/` folder.
 
 10. **Run the application:**
 
-- From the src/backend directory:
+- From the src/backend directory activate the virtual environment created through step 8:
 
 ```bash
 python app_kernel.py
@@ -368,8 +375,21 @@ python app_kernel.py
  python frontend_server.py
 ```
 
-10. Open a browser and navigate to `http://localhost:3000`
-11. To see swagger API documentation, you can navigate to `http://localhost:8000/docs`
+11. Open a browser and navigate to `http://localhost:3000`
+12. To see swagger API documentation, you can navigate to `http://localhost:8000/docs`
+
+## Deploy Your local changes
+
+To Deploy your local changes rename the below files.
+
+   1. Rename `azure.yaml` to `azure_custom2.yaml` and `azure_custom.yaml` to `azure.yaml`.
+   2. Go to `infra` directory
+        - Remove `main.bicep` to `main_custom2.bicep` and `main_custom.bicep` to `main.bicep`.
+
+Continue with the [deploying steps](#deploying-with-azd).
+
+
+
 
 ## Debugging the solution locally
 
