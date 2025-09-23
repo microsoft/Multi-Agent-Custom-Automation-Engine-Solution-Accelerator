@@ -170,6 +170,7 @@ var allTags = union(
   },
   tags
 )
+@description('Tag, Created by user name')
 param createdBy string = contains(deployer(), 'userPrincipalName')? split(deployer().userPrincipalName, '@')[0]: deployer().objectId
  
 
