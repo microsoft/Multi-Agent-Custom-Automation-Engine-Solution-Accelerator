@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - CI-Pipeline-macae
   schedule:
     - cron: "0 11,23 * * *" # Runs at 11:00 AM and 11:00 PM GMT
 
