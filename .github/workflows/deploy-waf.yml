@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - CI-Pipeline-macae
   schedule:
     - cron: "0 11,23 * * *" # Runs at 11:00 AM and 11:00 PM GMT
 
@@ -105,6 +106,9 @@ jobs:
         id: deploy
         run: |
           set -e
+           # Generate current timestamp in desired format: YYYY-MM-DDTHH:MM:SS.SSSSSSSZ
+            current_date=$(date -u +"%Y-%m-%dT%H:%M:%S.%7NZ")
+          
           az deployment group create \
             --resource-group ${{ env.RESOURCE_GROUP_NAME }} \
             --template-file infra/main.bicep \
@@ -118,6 +122,7 @@ jobs:
               enablePrivateNetworking=true \
               enableScalability=true \
               createdBy="Pipeline" \
+              tags="{'SecurityControl':'Ignore','Purpose':'Deploying and Cleaning Up Resources for Validation','CreatedDate':'$current_date'}"
               
 
       - name: Send Notification on Failure

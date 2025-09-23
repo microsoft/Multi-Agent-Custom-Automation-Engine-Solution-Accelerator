@@ -178,7 +178,7 @@ resource resourceGroupTags 'Microsoft.Resources/tags@2021-04-01' = {
   properties: {
     tags: {
       ...allTags
-      TemplateName: 'MACAE'
+      TemplateName: enablePrivateNetworking ? 'MACAE - WAF' : 'MACAE'
       CreatedBy: createdBy
     }
   }
