@@ -170,8 +170,9 @@ var allTags = union(
   },
   tags
 )
-@description('Optional created by user name')
-param createdBy string = empty(deployer().userPrincipalName) ? '' : split(deployer().userPrincipalName, '@')[0] 
+@description('Tag, Created by user name')
+param createdBy string = contains(deployer(), 'userPrincipalName')? split(deployer().userPrincipalName, '@')[0]: deployer().objectId
+ 
 
 resource resourceGroupTags 'Microsoft.Resources/tags@2021-04-01' = {
   name: 'default'
@@ -179,6 +180,7 @@ resource resourceGroupTags 'Microsoft.Resources/tags@2021-04-01' = {
     tags: {
       ...allTags
       TemplateName: 'MACAE'
+      Type: enablePrivateNetworking ? 'WAF' : 'Non-WAF'
       CreatedBy: createdBy
     }
   }
