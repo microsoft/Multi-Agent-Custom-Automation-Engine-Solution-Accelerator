@@ -10,7 +10,7 @@ on:
       - dev
   schedule:
     - cron: "0 11,23 * * *" # Runs at 11:00 AM and 11:00 PM GMT
-  workflow_dispatch: #Allow manual triggering
+  workflow_dispatch: #Allow manual triggering.
 env:
   GPT_MIN_CAPACITY: 150
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
