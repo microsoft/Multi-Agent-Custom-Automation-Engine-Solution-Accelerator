@@ -1,9 +1,13 @@
+import io
 import os
 import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
+
+from src.backend.v3.api import router as v3_router
+from src.backend.v3.common.services.dataset_service import DatasetService
 
 # Mock Azure dependencies to prevent import errors
 sys.modules["azure.monitor"] = MagicMock()
@@ -82,6 +86,15 @@ def mock_dependencies(monkeypatch):
         lambda: [{"agent": "test_agent", "function": "test_function"}],
         raising=False,  # allow creating the attr if it doesn't exist
     )
+
+
+@pytest.fixture
+def temp_dataset_env(tmp_path, monkeypatch):
+    """Provide an isolated dataset directory for upload tests."""
+
+    monkeypatch.setattr(v3_router, "dataset_service", DatasetService(tmp_path))
+    monkeypatch.setattr(v3_router, "DATASET_MAX_SIZE_BYTES", 1024 * 1024)
+    return tmp_path
 
 
 def test_input_task_invalid_json():
@@ -226,6 +239,48 @@ def test_input_task_empty_description():
     response = client.post(INPUT_TASK_PATH, json=empty_task, headers=headers)
     assert response.status_code == 422
     assert "detail" in response.json()
+
+
+def test_dataset_upload_list_and_delete(temp_dataset_env):
+    """End-to-end dataset upload lifecycle."""
+
+    file_bytes = b"date,value\n2024-01-01,100\n2024-01-02,120\n"
+    upload_response = client.post(
+        "/api/v3/datasets/upload",
+        files={"file": ("forecast.csv", io.BytesIO(file_bytes), "text/csv")},
+    )
+
+    assert upload_response.status_code == 200
+    payload = upload_response.json()
+    dataset_id = payload["dataset"]["dataset_id"]
+
+    list_response = client.get("/api/v3/datasets")
+    assert list_response.status_code == 200
+    datasets = list_response.json().get("datasets", [])
+    assert any(item["dataset_id"] == dataset_id for item in datasets)
+
+    download_response = client.get(f"/api/v3/datasets/{dataset_id}/download")
+    assert download_response.status_code == 200
+    assert download_response.content == file_bytes
+
+    delete_response = client.delete(f"/api/v3/datasets/{dataset_id}")
+    assert delete_response.status_code == 200
+
+    list_after_delete = client.get("/api/v3/datasets")
+    remaining = list_after_delete.json().get("datasets", [])
+    assert all(item["dataset_id"] != dataset_id for item in remaining)
+
+
+def test_dataset_upload_invalid_extension(temp_dataset_env):
+    """Ensure unsupported file types are rejected."""
+
+    response = client.post(
+        "/api/v3/datasets/upload",
+        files={"file": ("notes.txt", io.BytesIO(b"sample"), "text/plain")},
+    )
+
+    assert response.status_code == 400
+    assert "Unsupported file type" in response.json().get("detail", "")
 
 
 if __name__ == "__main__":

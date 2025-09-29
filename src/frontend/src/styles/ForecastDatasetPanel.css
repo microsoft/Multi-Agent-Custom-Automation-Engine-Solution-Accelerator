@@ -1,0 +1,113 @@
+.forecast-dataset-panel {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.forecast-dataset-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.forecast-dataset-panel__caption {
+  color: var(--colorNeutralForeground3);
+}
+
+.forecast-dataset-panel__dropzone {
+  border: 1px dashed var(--colorNeutralStroke2);
+  border-radius: 8px;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  transition: border-color 0.2s ease;
+}
+
+.forecast-dataset-panel__dropzone--dragging {
+  border-color: var(--colorBrandStroke1);
+  background: var(--colorBrandBackground2);
+}
+
+.forecast-dataset-panel__instructions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--colorNeutralForeground2);
+}
+
+.forecast-dataset-panel__instructions svg {
+  width: 32px;
+  height: 32px;
+  color: var(--colorBrandForeground1);
+}
+
+.forecast-dataset-panel__uploading {
+  display: flex;
+  justify-content: center;
+}
+
+.forecast-dataset-panel__error {
+  color: var(--colorStatusDangerForeground1);
+}
+
+.forecast-dataset-panel__divider {
+  margin: 0;
+}
+
+.forecast-dataset-panel__list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.forecast-dataset-panel__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.forecast-dataset-panel__loading {
+  display: flex;
+  justify-content: center;
+}
+
+.forecast-dataset-panel__item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.forecast-dataset-panel__item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.forecast-dataset-panel__item-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.forecast-dataset-panel__preview {
+  overflow-x: auto;
+}
+
+.forecast-dataset-panel__preview table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.forecast-dataset-panel__preview th,
+.forecast-dataset-panel__preview td {
+  padding: 6px;
+  border: 1px solid var(--colorNeutralStroke2);
+  text-align: left;
+}

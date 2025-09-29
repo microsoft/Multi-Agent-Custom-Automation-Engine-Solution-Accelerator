@@ -1,6 +1,7 @@
 # app_config.py
 import logging
 import os
+from pathlib import Path
 from typing import Optional
 
 from azure.ai.projects.aio import AIProjectClient
@@ -89,6 +90,11 @@ class AppConfig:
         test_team_json = self._get_optional("TEST_TEAM_JSON")
 
         self.AGENT_TEAM_FILE = f"../../data/agent_teams/{test_team_json}.json"
+
+        default_upload_dir = Path(__file__).resolve().parents[4] / "data" / "uploads"
+        self.DATA_UPLOAD_PATH = Path(
+            self._get_optional("DATA_UPLOAD_PATH", str(default_upload_dir))
+        )
 
         # Cached clients and resources
         self._azure_credentials = None

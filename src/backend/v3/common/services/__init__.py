@@ -10,10 +10,12 @@ from .base_api_service import BaseAPIService
 from .mcp_service import MCPService
 from .foundry_service import FoundryService
 from .agents_service import AgentsService
+from .dataset_service import DatasetService
 
 __all__ = [
     "BaseAPIService",
     "MCPService",
     "FoundryService",
     "AgentsService",
+    "DatasetService",
 ]

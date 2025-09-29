@@ -3,6 +3,7 @@ import contextvars
 import json
 import logging
 import uuid
+from pathlib import Path
 from typing import Optional
 
 import v3.models.messages as messages
@@ -16,12 +17,15 @@ from common.utils.utils_date import format_dates_in_messages
 from common.utils.utils_kernel import rai_success, rai_validate_team_config
 from fastapi import (APIRouter, BackgroundTasks, File, HTTPException, Query,
                      Request, UploadFile, WebSocket, WebSocketDisconnect)
+from fastapi.responses import FileResponse
 from semantic_kernel.agents.runtime import InProcessRuntime
 from v3.common.services.plan_service import PlanService
 from v3.common.services.team_service import TeamService
+from v3.common.services.dataset_service import DatasetService
 from v3.config.settings import (connection_config, current_user_id,
                                 orchestration_config, team_config)
 from v3.orchestration.orchestration_manager import OrchestrationManager
+from common.utils.dataset_utils import ALLOWED_EXTENSIONS as DATASET_ALLOWED_EXTENSIONS
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -30,6 +34,9 @@ app_v3 = APIRouter(
     prefix="/api/v3",
     responses={404: {"description": "Not found"}},
 )
+
+DATASET_MAX_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB per upload
+dataset_service = DatasetService(config.DATA_UPLOAD_PATH)
 
 
 @app_v3.websocket("/socket/{process_id}")
@@ -810,6 +817,142 @@ async def upload_team_config(
     except Exception as e:
         logging.error(f"Unexpected error uploading team configuration: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error occurred")
+
+
+@app_v3.post("/datasets/upload")
+async def upload_dataset(request: Request, file: UploadFile = File(...)):
+    """Upload a CSV or Excel dataset for forecasting workflows."""
+
+    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    user_id = authenticated_user.get("user_principal_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Missing or invalid user information")
+
+    if not file or not file.filename:
+        raise HTTPException(status_code=400, detail="No dataset file provided")
+
+    extension = Path(file.filename).suffix.lower()
+    if extension not in DATASET_ALLOWED_EXTENSIONS:
+        allowed = ", ".join(sorted(DATASET_ALLOWED_EXTENSIONS))
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type '{extension}'. Allowed extensions: {allowed}",
+        )
+
+    contents = await file.read()
+    if not contents:
+        raise HTTPException(status_code=400, detail="Uploaded dataset is empty")
+
+    if len(contents) > DATASET_MAX_SIZE_BYTES:
+        max_size_mb = DATASET_MAX_SIZE_BYTES // (1024 * 1024)
+        raise HTTPException(
+            status_code=413,
+            detail=f"Dataset exceeds maximum allowed size of {max_size_mb} MB",
+        )
+
+    try:
+        metadata = dataset_service.save_dataset(
+            user_id=user_id,
+            filename=file.filename,
+            content=contents,
+            content_type=file.content_type or "application/octet-stream",
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Failed to store dataset upload: %s", exc)
+        raise HTTPException(status_code=500, detail="Failed to store dataset") from exc
+
+    track_event_if_configured(
+        "DatasetUploaded",
+        {
+            "status": "success",
+            "user_id": user_id,
+            "dataset_id": metadata.get("dataset_id"),
+            "filename": metadata.get("original_filename"),
+            "size_bytes": metadata.get("size_bytes"),
+        },
+    )
+
+    return {"status": "success", "dataset": metadata}
+
+
+@app_v3.get("/datasets")
+async def list_datasets(request: Request):
+    """Return metadata for the authenticated user's uploaded datasets."""
+
+    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    user_id = authenticated_user.get("user_principal_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Missing or invalid user information")
+
+    datasets = dataset_service.list_datasets(user_id)
+    return {"datasets": datasets}
+
+
+@app_v3.get("/datasets/{dataset_id}")
+async def get_dataset_metadata(dataset_id: str, request: Request):
+    """Fetch metadata for a specific dataset."""
+
+    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    user_id = authenticated_user.get("user_principal_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Missing or invalid user information")
+
+    metadata = dataset_service.get_dataset(user_id, dataset_id)
+    if not metadata:
+        raise HTTPException(status_code=404, detail="Dataset not found")
+
+    return metadata
+
+
+@app_v3.get("/datasets/{dataset_id}/download")
+async def download_dataset(dataset_id: str, request: Request):
+    """Stream the original dataset file back to the user."""
+
+    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    user_id = authenticated_user.get("user_principal_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Missing or invalid user information")
+
+    metadata = dataset_service.get_dataset(user_id, dataset_id)
+    if not metadata:
+        raise HTTPException(status_code=404, detail="Dataset not found")
+
+    file_path = dataset_service.dataset_file_path(user_id, dataset_id)
+    if not file_path:
+        raise HTTPException(status_code=404, detail="Stored dataset file missing")
+
+    return FileResponse(
+        path=file_path,
+        filename=metadata.get("original_filename", file_path.name),
+        media_type=metadata.get("content_type", "application/octet-stream"),
+    )
+
+
+@app_v3.delete("/datasets/{dataset_id}")
+async def delete_dataset(dataset_id: str, request: Request):
+    """Remove an uploaded dataset."""
+
+    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    user_id = authenticated_user.get("user_principal_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Missing or invalid user information")
+
+    success = dataset_service.delete_dataset(user_id, dataset_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Dataset not found")
+
+    track_event_if_configured(
+        "DatasetDeleted",
+        {
+            "status": "success",
+            "user_id": user_id,
+            "dataset_id": dataset_id,
+        },
+    )
+
+    return {"status": "success"}
 
 
 @app_v3.get("/team_configs")

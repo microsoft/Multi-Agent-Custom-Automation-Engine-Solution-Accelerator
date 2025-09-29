@@ -11,6 +11,7 @@ import HomeInput from '@/components/content/HomeInput';
 import { NewTaskService } from '../services/NewTaskService';
 import PlanPanelLeft from '@/components/content/PlanPanelLeft';
 import ContentToolbar from '@/coral/components/Content/ContentToolbar';
+import ForecastDatasetPanel from '@/components/content/ForecastDatasetPanel';
 import { TeamConfig } from '../models/Team';
 import { TeamService } from '../services/TeamService';
 import InlineToaster, { useInlineToaster } from "../components/toast/InlineToaster";
@@ -192,6 +193,7 @@ const HomePage: React.FC = () => {
                         <ContentToolbar
                             panelTitle={"Multi-Agent Planner"}
                         ></ContentToolbar>
+                        <ForecastDatasetPanel />
                         {!isLoadingTeam ? (
                             <HomeInput
                                 selectedTeam={selectedTeam}

@@ -23,6 +23,7 @@ dependencies = [
   "pydantic-settings==2.6.1",
   "python-multipart==0.0.17",
   "httpx==0.28.1",
+  "openpyxl>=3.1.5",
 ]
 
 [project.optional-dependencies]

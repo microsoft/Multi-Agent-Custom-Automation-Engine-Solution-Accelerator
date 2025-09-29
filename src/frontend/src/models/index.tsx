@@ -14,6 +14,7 @@ export * from './taskList';
 export * from './planPanelLeft';
 export * from './homeInput';
 export * from './auth';
+export * from './dataset';
 
 // Export taskDetails with explicit naming to avoid Agent conflict
 export type { SubTask, Human, PlanDetailsProps } from './taskDetails';

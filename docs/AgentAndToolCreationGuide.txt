@@ -1,0 +1,84 @@
+# Agent and Tool Creation Guide
+
+This guide walks through the end-to-end process for adding new agents and MCP tools to the Multi-Agent Custom Automation Engine (MACAE). Follow the stages in order so each change stays compatible with the backend orchestration, the MCP server, and the storage layer.
+
+## 1. Understand the Existing Architecture
+- **Backend orchestration (`src/backend/v3/`)** manages team selection, plan creation, and orchestrating agent execution. `TeamService` and `PlanService` coordinate persistence through `DatabaseFactory`.
+- **Team definitions (`data/agent_teams/*.json`)** describe the agents, tools, prompts, and starter tasks shipped with the product.
+- **MCP server (`src/mcp_server/`)** exposes callable tools. Each domain-specific service inherits from `MCPToolBase` (see `services/hr_service.py`, `services/tech_support_service.py`, etc.) and is registered in `mcp_server.py`.
+- **Front-end (`src/frontend/`)** consumes the API exposed by the backend to display available teams, plans, and live status updates.
+
+Before implementing anything new, skim `agents.md` at the repo root for a directory overview and read at least one existing service such as `src/mcp_server/services/hr_service.py` to align with established conventions.
+
+## 2. Plan the Feature
+1. **Define the goal**: Specify whether you are adding (A) a brand-new agent persona, (B) extra tools for an existing domain, or (C) an entirely new domain.
+2. **List dependencies**: Identify data sources, Azure resources, or third-party APIs the agent/tools need. Ensure credentials are stored in Azure Key Vault or environment variables referenced in `config/settings.py` (never hard-code secrets).
+3. **Decide on deployment targets**: Confirm required model deployments in Azure AI Foundry. `TeamService.validate_team_models` will block configurations that reference undeployed models.
+4. **Collect validation assets**: If the agent will use RAG or search, verify the target indexes exist; otherwise `TeamService.validate_team_search_indexes` will fail uploads.
+
+## 3. Create or Update Team Configurations
+1. **Copy an existing template** from `data/agent_teams/` and rename it (e.g., `finance.json`).
+2. **Populate metadata**:
+   - `id`, `team_id`: Use UUIDs or consistent numeric strings. `team_id` should stay unique across all teams.
+   - `name`, `description`, optional `logo` and `plan` outline.
+3. **Define each agent** within the `agents` array:
+   - `name`: Human-readable class name (avoid spaces if the name maps to MCP tooling).
+   - `deployment_name`: Matches a deployed Azure OpenAI / Azure AI Foundry model.
+   - `system_message`: Provide clear operating instructions. Keep it concise and directive.
+   - Flags such as `use_mcp`, `use_rag`, `use_bing`, `coding_tools` toggle capabilities.
+   - `index_name` / `index_endpoint` for search-backed agents.
+4. **Seed `starting_tasks`** with representative prompts so the UI can showcase the new team immediately.
+5. **Validate consistency**: Make sure any agent that sets `use_mcp=true` has corresponding tools registered in the MCP server (next section).
+6. **Register the configuration**:
+   - For local defaults, place the JSON in `data/agent_teams/` and update any seed scripts that load defaults.
+   - For runtime uploads, use the `/api/v3/upload_team_config` endpoint. The backend will perform RAI, model, and search index validation before persisting the team for the user.
+
+## 4. Add or Extend MCP Tools
+1. **Domain selection**:
+   - If your feature fits an existing domain (`Domain` enum in `src/mcp_server/core/factory.py`), reuse it.
+   - For a new domain, add the enum member and provide a matching service class so tagging stays consistent.
+2. **Create a service** under `src/mcp_server/services/`:
+   - Inherit from `MCPToolBase`.
+   - Call `super().__init__(Domain.XYZ)` in `__init__`.
+   - Implement `register_tools(self, mcp: FastMCP)` and define each tool with the `@mcp.tool(tags={self.domain.value})` decorator.
+   - Return structured responses using helpers like `format_success_response` / `format_error_response` from `utils.formatters` to maintain UI consistency.
+   - Update the `tool_count` property to match the number of registered functions.
+3. **Register the service** in `src/mcp_server/mcp_server.py` alongside existing registrations (e.g., `factory.register_service(FinanceService())`). If the service requires configuration, wire it through dependency injection or module-level constants rather than hard-coded values.
+4. **Handle shared utilities**: Place reusable helpers in `src/mcp_server/utils/` so multiple services can share them. Follow the naming patterns already present (e.g., `date_utils`, `formatters`).
+5. **Guard external calls**: Wrap all network or filesystem operations in `try/except` blocks and surface user-friendly error messages via `format_error_response`.
+6. **Update tests**:
+   - Add unit tests under `tests/mcp_server/` validating registration (`tool_count`, summary output, etc.).
+   - Where applicable, create integration tests that call your tool via the FastMCP client stub.
+
+## 5. Wire Agents to Tools
+- When an agent should call a new tool, make sure its `system_message` references the capability and the tool name matches the decorated function name in the MCP service.
+- If the agent relies on new context (datasets, prompts), store assets under `data/` or `docs/` as appropriate and update any loaders in `src/backend/` that read them.
+- Ensure the backend orchestration can route requests to the new agent. If you introduced a new team, verify `TeamService.get_team_configuration` can fetch it and that default team selection (see `init_team` in `src/backend/v3/api/router.py`) includes the new option where needed.
+
+## 6. Perform End-to-End Validation
+1. **Static checks**: Run `ruff`/`flake8` and `black` if those tools are part of the dev workflow (the repo ships `.flake8`).
+2. **Unit tests**: Execute `pytest` from the repo root or target the relevant module (e.g., `pytest tests/mcp_server -k finance`).
+3. **MCP smoke test**: Start the MCP server locally (`python src/mcp_server/mcp_server.py --transport http --port 9000`) and call your tool using the MCP client or curl against the HTTP endpoint.
+4. **Backend regression**: Hit `/api/v3/team_configs` and `/api/v3/init_team` to confirm the new team loads without validation failures. Inspect server logs for RAI or model errors.
+5. **UI verification**: Launch the front-end (see `src/frontend/README` for scripts) and switch to the new team; confirm starter tasks and tool invocations surface correctly.
+
+## 7. Deployment Checklist
+- Confirm Azure resources (AI models, Cognitive Search indexes, storage accounts) exist in the target environment. Update the relevant parameter files under `infra/` if new resources are required.
+- If the service interacts with secrets, add Key Vault references in the infrastructure templates and expose them through environment variables consumed by `config/settings.py` or the backend service configuration.
+- Update CI/CD pipelines (`.azdo/` or `.github/workflows/`) only if new assets must be built or deployed; follow existing templates to add jobs.
+
+## 8. Documentation and Handoff
+- Summarize the new agent/domain, required resources, and testing steps in your change log or PR description so operators know how to provision it.
+- Provide sample prompts and expected tool outputs to QA so they can validate behavior in staging.
+- If the feature is experimental, gate the team or tools behind a configuration flag or environment variable.
+
+## 9. Quick Reference Checklist
+- [ ] New team JSON created and validated (RAI, models, search indexes).
+- [ ] MCP service implemented, tool count matches registered functions.
+- [ ] Service registered in `mcp_server.py` and domain enum updated if necessary.
+- [ ] Automated tests added/updated and `pytest` passes locally.
+- [ ] Manual MCP and API smoke tests performed.
+- [ ] Deployment plan updated with any new infrastructure requirements.
+- [ ] Rollout notes delivered to operators and documentation consumers.
+
+Following this process keeps new agents and tools consistent with the MACAE architecture, avoids validation issues at runtime, and ensures downstream teams can operate the feature across environments.

@@ -75,6 +75,7 @@ class TestDomain:
         assert Domain.TECH_SUPPORT.value == "tech_support"
         assert Domain.RETAIL.value == "retail"
         assert Domain.GENERAL.value == "general"
+        assert Domain.FINANCE.value == "finance"
 
 
 class TestMCPToolBase:

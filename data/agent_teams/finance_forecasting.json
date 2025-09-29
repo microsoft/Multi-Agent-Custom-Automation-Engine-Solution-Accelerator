@@ -1,0 +1,82 @@
+{
+  "id": "4",
+  "team_id": "team-forecasting",
+  "name": "Financial Forecasting Team",
+  "status": "visible",
+  "created": "",
+  "created_by": "",
+  "agents": [
+    {
+      "input_key": "",
+      "type": "",
+      "name": "FinancialStrategistAgent",
+      "deployment_name": "gpt-4.1-mini",
+      "icon": "",
+      "system_message": "You analyze uploaded financial datasets to build forward-looking projections. Always begin by calling the MCP tool `list_finance_datasets` to understand available files, then ask the user to confirm the dataset identifier and key metrics of interest. Use `summarize_financial_dataset` to inspect numeric columns, and `generate_financial_forecast` to produce recommendations and projections. When presenting results, include assumptions, data quality notes, and actionable guidance.",
+      "description": "Strategist responsible for translating financial data into insights and forecasts.",
+      "use_rag": false,
+      "use_mcp": true,
+      "use_bing": false,
+      "use_reasoning": false,
+      "index_name": "",
+      "index_foundry_name": "",
+      "index_endpoint": "",
+      "coding_tools": false
+    },
+    {
+      "input_key": "",
+      "type": "",
+      "name": "DataPreparationAgent",
+      "deployment_name": "gpt-4.1-mini",
+      "icon": "",
+      "system_message": "You prepare uploaded datasets for forecasting. Use `list_finance_datasets` to locate files, `summarize_financial_dataset` to profile content, and `prepare_financial_dataset` when cleaning or transforming data. Provide clear summaries of any transformations so downstream analysts understand how the dataset changed.",
+      "description": "Analyst that profiles and cleans uploaded datasets before forecasting steps.",
+      "use_rag": false,
+      "use_mcp": true,
+      "use_bing": false,
+      "use_reasoning": false,
+      "index_name": "",
+      "index_foundry_name": "",
+      "index_endpoint": "",
+      "coding_tools": false
+    },
+    {
+      "input_key": "",
+      "type": "",
+      "name": "ProxyAgent",
+      "deployment_name": "",
+      "icon": "",
+      "system_message": "",
+      "description": "",
+      "use_rag": false,
+      "use_mcp": false,
+      "use_bing": false,
+      "use_reasoning": false,
+      "index_name": "",
+      "index_foundry_name": "",
+      "coding_tools": false
+    }
+  ],
+  "protected": false,
+  "description": "Team that assists with financial forecasting, scenario planning, and dataset preparation.",
+  "logo": "",
+  "plan": "",
+  "starting_tasks": [
+    {
+      "id": "forecast-task-1",
+      "name": "Forecast revenue for next quarter",
+      "prompt": "Use our latest sales dataset to project revenue for the next quarter and summarize assumptions.",
+      "created": "",
+      "creator": "",
+      "logo": ""
+    },
+    {
+      "id": "forecast-task-2",
+      "name": "Clean uploaded expense report",
+      "prompt": "Review the uploaded expense report dataset and prepare it for forecasting by removing invalid rows and noting anomalies.",
+      "created": "",
+      "creator": "",
+      "logo": ""
+    }
+  ]
+}
