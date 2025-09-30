@@ -50,7 +50,7 @@ except Exception as e:
 for idx, blob in enumerate(blob_list, start=1):
     #if blob.name.endswith(".csv"):
     title = blob.name.replace(".csv", "")
-    title = blob.name.replace(".json", "")
+    title = title.replace(".json", "")
     data = container_client.download_blob(blob.name).readall()
     
     try:
