@@ -155,7 +155,7 @@ else
     echo "Resource group provided: $resourceGroup"
     
     # Call deployment function
-    if ! get_values_from_deployment; then
+    if ! get_values_from_az_deployment; then
         echo "Failed to get values from deployment outputs."
         exit 1
     fi
