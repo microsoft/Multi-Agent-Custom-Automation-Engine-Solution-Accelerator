@@ -67,11 +67,11 @@ get_values_from_az_deployment() {
     fi
     
     # Extract specific outputs
-    storageAccount=$(echo "$deploymentOutputs" | sed -n 's/.*"azurE_STORAGE_ACCOUNT_NAME": {"type": "String", "value": "\([^"]*\)".*/\1/p')
-    blobContainer=$(echo "$deploymentOutputs" | sed -n 's/.*"azurE_STORAGE_CONTAINER_NAME": {"type": "String", "value": "\([^"]*\)".*/\1/p')
-    aiSearch=$(echo "$deploymentOutputs" | sed -n 's/.*"azurE_AI_SEARCH_NAME": {"type": "String", "value": "\([^"]*\)".*/\1/p')
-    aiSearchIndex=$(echo "$deploymentOutputs" | sed -n 's/.*"azurE_AI_SEARCH_INDEX_NAME": {"type": "String", "value": "\([^"]*\)".*/\1/p')
-    backendUrl=$(echo "$deploymentOutputs" | sed -n 's/.*"backenD_URL": {"type": "String", "value": "\([^"]*\)".*/\1/p')
+    storageAccount=$(echo "$deploymentOutputs" | grep -A 3 '"azurE_STORAGE_ACCOUNT_NAME"' | grep '"value"' | sed 's/.*"value": *"\([^"]*\)".*/\1/')
+    blobContainer=$(echo "$deploymentOutputs" | grep -A 3 '"azurE_STORAGE_CONTAINER_NAME"' | grep '"value"' | sed 's/.*"value": *"\([^"]*\)".*/\1/')
+    aiSearch=$(echo "$deploymentOutputs" | grep -A 3 '"azurE_AI_SEARCH_NAME"' | grep '"value"' | sed 's/.*"value": *"\([^"]*\)".*/\1/')
+    aiSearchIndex=$(echo "$deploymentOutputs" | grep -A 3 '"azurE_AI_SEARCH_INDEX_NAME"' | grep '"value"' | sed 's/.*"value": *"\([^"]*\)".*/\1/')
+    backendUrl=$(echo "$deploymentOutputs" | grep -A 3 '"backenD_URL"' | grep '"value"' | sed 's/.*"value": *"\([^"]*\)".*/\1/')
     
     # Validate that we extracted all required values
     if [ -z "$storageAccount" ] || [ -z "$blobContainer" ] || [ -z "$aiSearch" ] || [ -z "$aiSearchIndex" ] || [ -z "$backendUrl" ]; then
