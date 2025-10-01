@@ -1,5 +1,9 @@
 # AVM Post Deployment Guide
 
+> **📋 Note**: This guide is specifically for post-deployment steps after using the AVM template. For complete deployment from scratch, see the main [Deployment Guide](./DeploymentGuide.md).
+
+---
+
 This document provides guidance on post-deployment steps after deploying the Multi-Agent Custom Automation Engine Solution Accelerator from the [AVM (Azure Verified Modules) repository](https://github.com/Azure/bicep-registry-modules/tree/main/avm/ptn/sa/multi-agent-custom-automation-engine).
 
 ## Overview
@@ -118,7 +122,3 @@ Upon successful completion, you'll see a success message.
 ### Step 5: Set Up App Authentication (Optional)
 
 Follow the steps in [Set Up Authentication in Azure App Service](azure_app_service_auth_setup.md) to add app authentication to your web app running on Azure App Service.
-
----
-
-> **📋 Note**: This guide is specifically for post-deployment steps after using the AVM template. For complete deployment from scratch, see the main [Deployment Guide](./DeploymentGuide.md).
