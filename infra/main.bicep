@@ -986,10 +986,7 @@ var aiRelatedDnsZoneIndices = [
 // ===================================================
 @batchSize(5)
 module avmPrivateDnsZones 'br/public:avm/res/network/private-dns-zone:0.7.1' = [
-  for (zone, i) in privateDnsZones: if (enablePrivateNetworking && (!useExistingAiFoundryAiProject || !contains(
-    aiRelatedDnsZoneIndices,
-    i
-  ))) {
+  for (zone, i) in privateDnsZones: if (enablePrivateNetworking) {
     name: 'avm.res.network.private-dns-zone.${contains(zone, 'azurecontainerapps.io') ? 'containerappenv' : split(zone, '.')[1]}'
     params: {
       name: zone
@@ -1076,6 +1073,48 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
       }
     ]
   }
+}
+
+// ========== Private Endpoint for Existing AI Services ========== //
+var shouldCreatePrivateEndpoint = useExistingAiFoundryAiProject && enablePrivateNetworking
+module existingAiServicesPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.11.0' = if (shouldCreatePrivateEndpoint) {
+  name: take('module.private-endpoint.${existingAiFoundryAiServices.name}', 64)
+  params: {
+    name: 'pep-${existingAiFoundryAiServices.name}'
+    location: location
+    subnetResourceId: virtualNetwork!.outputs.subnetResourceIds[0]
+    customNetworkInterfaceName: 'nic-${existingAiFoundryAiServices.name}'
+    privateDnsZoneGroup: {
+      privateDnsZoneGroupConfigs: [
+        {
+          name: 'ai-services-dns-zone-cognitiveservices'
+          privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.cognitiveServices]!.outputs.resourceId
+        }
+        {
+          name: 'ai-services-dns-zone-openai'
+          privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.openAI]!.outputs.resourceId
+        }
+        {
+          name: 'ai-services-dns-zone-aiservices'
+          privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.aiServices]!.outputs.resourceId
+        }
+      ]
+    }
+    privateLinkServiceConnections: [
+      {
+        name: 'pep-${existingAiFoundryAiServices.name}'
+        properties: {
+          groupIds: ['account']
+          privateLinkServiceId: existingAiFoundryAiServices.id
+        }
+      }
+    ]
+    tags: tags
+  }
+  dependsOn: [
+    existingAiFoundryAiServices
+    avmPrivateDnsZones
+  ]
 }
 
 module aiFoundryAiServices 'br:mcr.microsoft.com/bicep/avm/res/cognitive-services/account:0.13.2' = if (!useExistingAiFoundryAiProject) {
