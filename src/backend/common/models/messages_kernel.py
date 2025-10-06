@@ -2,8 +2,8 @@ import uuid
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional
+from pydantic import BaseModel, Field
 
-from semantic_kernel.kernel_pydantic import Field, KernelBaseModel
 
 class DataType(str, Enum):
     """Enumeration of possible data types for documents in the database."""
@@ -74,7 +74,7 @@ class MessageRole(str, Enum):
     function = "function"
 
 
-class BaseDataModel(KernelBaseModel):
+class BaseDataModel(BaseModel):
     """Base data model with common fields."""
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -151,7 +151,7 @@ class TeamSelectionRequest(BaseDataModel):
     team_id: str
 
 
-class TeamAgent(KernelBaseModel):
+class TeamAgent(BaseModel):
     """Represents an agent within a team."""
 
     input_key: str
@@ -169,7 +169,7 @@ class TeamAgent(KernelBaseModel):
     coding_tools: bool = False
 
 
-class StartingTask(KernelBaseModel):
+class StartingTask(BaseModel):
     """Represents a starting task for a team."""
 
     id: str
@@ -243,7 +243,7 @@ class PlanWithSteps(Plan):
 
 
 # Message classes for communication between agents
-class InputTask(KernelBaseModel):
+class InputTask(BaseModel):
     """Message representing the initial input task from the user."""
 
     session_id: str
@@ -251,7 +251,7 @@ class InputTask(KernelBaseModel):
     # team_id: str
 
 
-class UserLanguage(KernelBaseModel):
+class UserLanguage(BaseModel):
     language: str
 
 

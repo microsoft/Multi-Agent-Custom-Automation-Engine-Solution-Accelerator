@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "agent-framework==1.0.0b6",
     "azure-ai-evaluation>=1.5.0",
     "azure-ai-inference>=1.0.0b9",
     "azure-ai-projects==1.0.0",
@@ -27,9 +28,8 @@ dependencies = [
     "pytest-cov==5.0.0",
     "python-dotenv>=1.1.0",
     "python-multipart>=0.0.20",
-    "semantic-kernel==1.35.3",
     "uvicorn>=0.34.2",
     "pylint-pydantic>=0.3.5",
     "pexpect>=4.9.0",
-    "mcp>=1.13.1"
+    "mcp>=1.13.1",
 ]
