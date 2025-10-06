@@ -7,7 +7,7 @@ from azure.ai.projects.aio import AIProjectClient
 from azure.cosmos import CosmosClient
 from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
 from dotenv import load_dotenv
-from semantic_kernel import Kernel
+from agent_framework import Kernel
 
 # Load environment variables from .env file
 load_dotenv()
