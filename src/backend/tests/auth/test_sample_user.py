@@ -1,4 +1,4 @@
-from auth.sample_user import sample_user  # Adjust path as necessary
+from src.backend.auth.sample_user import sample_user  # Adjust path as necessary
 
 
 def test_sample_user_keys():

@@ -5,25 +5,29 @@ Extends StandardMagenticManager to add approval gates before plan execution.
 
 import asyncio
 import logging
-import re
 from typing import Any, Optional
 
 import v3.models.messages as messages
 from semantic_kernel.agents.orchestration.magentic import (
-    MagenticContext, ProgressLedger, ProgressLedgerItem,
-    StandardMagenticManager)
+    MagenticContext,
+    ProgressLedger,
+    ProgressLedgerItem,
+    StandardMagenticManager,
+)
 from semantic_kernel.agents.orchestration.prompts._magentic_prompts import (
-    ORCHESTRATOR_FINAL_ANSWER_PROMPT, ORCHESTRATOR_TASK_LEDGER_PLAN_PROMPT,
-    ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT)
+    ORCHESTRATOR_FINAL_ANSWER_PROMPT,
+    ORCHESTRATOR_TASK_LEDGER_PLAN_PROMPT,
+    ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT,
+)
 from semantic_kernel.contents import ChatMessageContent
-from v3.config.settings import (connection_config, current_user_id,
-                                orchestration_config)
-from v3.models.models import MPlan, MStep
+from v3.config.settings import connection_config, orchestration_config
+from v3.models.models import MPlan
 from v3.orchestration.helper.plan_to_mplan_converter import \
     PlanToMPlanConverter
 
 # Using a module level logger to avoid pydantic issues around inherited fields
 logger = logging.getLogger(__name__)
+
 
 # Create a progress ledger that indicates the request is satisfied (task completed)
 class HumanApprovalMagenticManager(StandardMagenticManager):
@@ -35,21 +39,28 @@ class HumanApprovalMagenticManager(StandardMagenticManager):
     # Define Pydantic fields to avoid validation errors
     approval_enabled: bool = True
     magentic_plan: Optional[MPlan] = None
-    current_user_id: Optional[str] = None 
+    current_user_id: str
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, user_id: str, *args, **kwargs):
+        """
+        Initialize the HumanApprovalMagenticManager.
+        Args:
+            user_id: ID of the user to associate with this orchestration instance.
+            *args: Additional positional arguments for the parent StandardMagenticManager.
+            **kwargs: Additional keyword arguments for the parent StandardMagenticManager.
+        """
+
         # Remove any custom kwargs before passing to parent
 
         plan_append = """
 IMPORTANT: Never ask the user for information or clarification until all agents on the team have been asked first.
 
-EXAMPLE: If the user request involves product information, first ask all agents on the team to provide the information. 
+EXAMPLE: If the user request involves product information, first ask all agents on the team to provide the information.
 Do not ask the user unless all agents have been consulted and the information is still missing.
 
 Plan steps should always include a bullet point, followed by an agent name, followed by a description of the action
-to be taken. If a step involves multiple actions, separate them into distinct steps with an agent included in each step. If the step is taken by an agent that 
-is not part of the team, such as the MagenticManager, please always list the MagenticManager as the agent for that step. At any time, if more information is 
-needed from the user, use the ProxyAgent to request this information.
+to be taken. If a step involves multiple actions, separate them into distinct steps with an agent included in each step.
+If the step is taken by an agent that is not part of the team, such as the MagenticManager, please always list the MagenticManager as the agent for that step. At any time, if more information is needed from the user, use the ProxyAgent to request this information.
 
 Here is an example of a well-structured plan:
 - **EnhancedResearchAgent** to gather authoritative data on the latest industry trends and best practices in employee onboarding
@@ -66,9 +77,15 @@ Here is an example of a well-structured plan:
 """
 
         # kwargs["task_ledger_facts_prompt"] = ORCHESTRATOR_TASK_LEDGER_FACTS_PROMPT + facts_append
-        kwargs['task_ledger_plan_prompt'] = ORCHESTRATOR_TASK_LEDGER_PLAN_PROMPT + plan_append
-        kwargs['task_ledger_plan_update_prompt'] = ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT + plan_append
-        kwargs['final_answer_prompt'] = ORCHESTRATOR_FINAL_ANSWER_PROMPT + final_append
+        kwargs["task_ledger_plan_prompt"] = (
+            ORCHESTRATOR_TASK_LEDGER_PLAN_PROMPT + plan_append
+        )
+        kwargs["task_ledger_plan_update_prompt"] = (
+            ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT + plan_append
+        )
+        kwargs["final_answer_prompt"] = ORCHESTRATOR_FINAL_ANSWER_PROMPT + final_append
+
+        kwargs['current_user_id'] = user_id
 
         super().__init__(*args, **kwargs)
 
@@ -78,7 +95,7 @@ Here is an example of a well-structured plan:
         """
         # Extract task text from the context
         task_text = magentic_context.task
-        if hasattr(task_text, 'content'):
+        if hasattr(task_text, "content"):
             task_text = task_text.content
         elif not isinstance(task_text, str):
             task_text = str(task_text)
@@ -90,33 +107,37 @@ Here is an example of a well-structured plan:
         # First, let the parent create the actual plan
         logger.info(" Creating execution plan...")
         plan = await super().plan(magentic_context)
-        logger.info(" Plan created: %s",plan)
+        logger.info(" Plan created: %s", plan)
 
-        self.magentic_plan = self.plan_to_obj( magentic_context, self.task_ledger)
+        self.magentic_plan = self.plan_to_obj(magentic_context, self.task_ledger)
 
-        self.magentic_plan.user_id = current_user_id.get()
+        self.magentic_plan.user_id = self.current_user_id
 
         # Request approval from the user before executing the plan
         approval_message = messages.PlanApprovalRequest(
             plan=self.magentic_plan,
             status="PENDING_APPROVAL",
-            context={
-                "task": task_text,
-                "participant_descriptions": magentic_context.participant_descriptions
-            } if hasattr(magentic_context, 'participant_descriptions') else {}
+            context=(
+                {
+                    "task": task_text,
+                    "participant_descriptions": magentic_context.participant_descriptions,
+                }
+                if hasattr(magentic_context, "participant_descriptions")
+                else {}
+            ),
         )
         try:
-            orchestration_config.plans[self.magentic_plan.id] = self.magentic_plan 
+            orchestration_config.plans[self.magentic_plan.id] = self.magentic_plan
         except Exception as e:
             logger.error("Error processing plan approval: %s", e)
-
 
         # Send the approval request to the user's WebSocket
         # The user_id will be automatically retrieved from context
         await connection_config.send_status_update_async(
             message=approval_message,
-            user_id=current_user_id.get(),
-            message_type=messages.WebsocketMessageType.PLAN_APPROVAL_REQUEST)
+            user_id=self.current_user_id,
+            message_type=messages.WebsocketMessageType.PLAN_APPROVAL_REQUEST,
+        )
 
         # Wait for user approval
         approval_response = await self._wait_for_user_approval(approval_message.plan.id)
@@ -126,15 +147,19 @@ Here is an example of a well-structured plan:
             return plan
         else:
             logger.debug("Plan execution cancelled by user")
-            await connection_config.send_status_update_async({
-                "type": messages.WebsocketMessageType.PLAN_APPROVAL_RESPONSE, 
-                "data": approval_response
-            }, user_id=current_user_id.get(), message_type=messages.WebsocketMessageType.PLAN_APPROVAL_RESPONSE)
-            raise Exception("Plan execution cancelled by user") 
+            await connection_config.send_status_update_async(
+                {
+                    "type": messages.WebsocketMessageType.PLAN_APPROVAL_RESPONSE,
+                    "data": approval_response,
+                },
+                user_id=self.current_user_id,
+                message_type=messages.WebsocketMessageType.PLAN_APPROVAL_RESPONSE,
+            )
+            raise Exception("Plan execution cancelled by user")
 
-    async def replan(self,magentic_context: MagenticContext) -> Any:
-        """ 
-        Override to add websocket messages for replanning events. 
+    async def replan(self, magentic_context: MagenticContext) -> Any:
+        """
+        Override to add websocket messages for replanning events.
         """
 
         logger.info("\nHuman-in-the-Loop Magentic Manager replanned:")
@@ -142,33 +167,45 @@ Here is an example of a well-structured plan:
         logger.info("Replanned: %s", replan)
         return replan
 
-    async def create_progress_ledger(self, magentic_context: MagenticContext) -> ProgressLedger:
-        """ Check for max rounds exceeded and send final message if so. """
+    async def create_progress_ledger(
+        self, magentic_context: MagenticContext
+    ) -> ProgressLedger:
+        """Check for max rounds exceeded and send final message if so."""
         if magentic_context.round_count >= orchestration_config.max_rounds:
             # Send final message to user
             final_message = messages.FinalResultMessage(
                 content="Process terminated: Maximum rounds exceeded",
                 status="terminated",
-                summary=f"Stopped after {magentic_context.round_count} rounds (max: {orchestration_config.max_rounds})"
+                summary=f"Stopped after {magentic_context.round_count} rounds (max: {orchestration_config.max_rounds})",
             )
 
             await connection_config.send_status_update_async(
-                message= final_message,
-                user_id=current_user_id.get(),
-                message_type=messages.WebsocketMessageType.FINAL_RESULT_MESSAGE)
+                message=final_message,
+                user_id=self.current_user_id,
+                message_type=messages.WebsocketMessageType.FINAL_RESULT_MESSAGE,
+            )
 
             return ProgressLedger(
-                is_request_satisfied=ProgressLedgerItem(reason="Maximum rounds exceeded", answer=True),
+                is_request_satisfied=ProgressLedgerItem(
+                    reason="Maximum rounds exceeded", answer=True
+                ),
                 is_in_loop=ProgressLedgerItem(reason="Terminating", answer=False),
-                is_progress_being_made=ProgressLedgerItem(reason="Terminating", answer=False),
+                is_progress_being_made=ProgressLedgerItem(
+                    reason="Terminating", answer=False
+                ),
                 next_speaker=ProgressLedgerItem(reason="Task complete", answer=""),
-                instruction_or_question=ProgressLedgerItem(reason="Task complete", answer="Process terminated due to maximum rounds exceeded")
+                instruction_or_question=ProgressLedgerItem(
+                    reason="Task complete",
+                    answer="Process terminated due to maximum rounds exceeded",
+                ),
             )
 
         return await super().create_progress_ledger(magentic_context)
 
     # plan_id will not be optional in future
-    async def _wait_for_user_approval(self, m_plan_id: Optional[str] = None) -> Optional[messages.PlanApprovalResponse]: 
+    async def _wait_for_user_approval(
+        self, m_plan_id: Optional[str] = None
+    ) -> Optional[messages.PlanApprovalResponse]:
         """Wait for user approval response."""
 
         # To do: implement timeout and error handling
@@ -176,21 +213,29 @@ Here is an example of a well-structured plan:
             orchestration_config.approvals[m_plan_id] = None
         while orchestration_config.approvals[m_plan_id] is None:
             await asyncio.sleep(0.2)
-        return messages.PlanApprovalResponse(approved=orchestration_config.approvals[m_plan_id], m_plan_id=m_plan_id)
+        return messages.PlanApprovalResponse(
+            approved=orchestration_config.approvals[m_plan_id], m_plan_id=m_plan_id
+        )
 
-    async def prepare_final_answer(self, magentic_context: MagenticContext) -> ChatMessageContent:
+    async def prepare_final_answer(
+        self, magentic_context: MagenticContext
+    ) -> ChatMessageContent:
         """
         Override to ensure final answer is prepared after all steps are executed.
         """
         logger.info("\n Magentic Manager - Preparing final answer...")
 
         return await super().prepare_final_answer(magentic_context)
-    
 
     def plan_to_obj(self, magentic_context, ledger) -> MPlan:
-        """ Convert the generated plan from the ledger into a structured MPlan object. """
+        """Convert the generated plan from the ledger into a structured MPlan object."""
 
-        return_plan: MPlan = PlanToMPlanConverter.convert(plan_text=ledger.plan.content,facts=ledger.facts.content, team=list(magentic_context.participant_descriptions.keys()), task=magentic_context.task)
+        return_plan: MPlan = PlanToMPlanConverter.convert(
+            plan_text=ledger.plan.content,
+            facts=ledger.facts.content,
+            team=list(magentic_context.participant_descriptions.keys()),
+            task=magentic_context.task,
+        )
 
         # # get the request text from the ledger
         # if hasattr(magentic_context, 'task'):

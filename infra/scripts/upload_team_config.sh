@@ -3,6 +3,7 @@
 # Variables
 backendUrl=$1
 directoryPath=$2
+azSubscriptionId=$3
 
 # get parameters from azd env, if not provided as arguments
 if [ -z "$directoryPath" ]; then
@@ -13,7 +14,9 @@ if [ -z "$backendUrl" ]; then
     backendUrl=$(azd env get-value BACKEND_URL)
 fi
 
-azSubscriptionId=$(azd env get-value AZURE_SUBSCRIPTION_ID)
+if [ -z "$azSubscriptionId" ]; then
+    azSubscriptionId=$(azd env get-value AZURE_SUBSCRIPTION_ID)
+fi
 
 if [ -z "$backendUrl" ] || [ -z "$directoryPath" ]; then
     echo "Error: Missing required arguments."

@@ -5,7 +5,8 @@ param(
     [string]$BlobContainer,
     [string]$AiSearch,
     [string]$AiSearchIndex,
-    [string]$ResourceGroup
+    [string]$ResourceGroup,
+    [string]$AzSubscriptionId
 )
 
 # Get parameters from azd env, if not provided
@@ -29,7 +30,9 @@ if (-not $ResourceGroup) {
     $ResourceGroup = $(azd env get-value AZURE_RESOURCE_GROUP)
 }
 
-$AzSubscriptionId = $(azd env get-value AZURE_SUBSCRIPTION_ID)
+if (-not $AzSubscriptionId) {
+    $AzSubscriptionId = $(azd env get-value AZURE_SUBSCRIPTION_ID)
+}
 
 # Check if all required arguments are provided
 if (-not $StorageAccount -or -not $BlobContainer -or -not $AiSearch) {

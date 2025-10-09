@@ -1,6 +1,4 @@
-import json
 import logging
-import os
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
@@ -10,7 +8,6 @@ from azure.core.exceptions import (
     HttpResponseError,
     ResourceNotFoundError,
 )
-
 from azure.search.documents.indexes import SearchIndexClient
 from common.config.app_config import config
 from common.database.database_base import DatabaseBase
@@ -243,7 +240,9 @@ class TeamService:
             self.logger.error("Error deleting current team: %s", str(e))
             return False
 
-    async def handle_team_selection(self, user_id: str, team_id: str) -> UserCurrentTeam:
+    async def handle_team_selection(
+        self, user_id: str, team_id: str
+    ) -> UserCurrentTeam:
         """
         Set a default team for a user.
 
@@ -317,7 +316,7 @@ class TeamService:
         """
         models = set()
 
-         # Skip proxy agents - they don't need deployment models
+        # Skip proxy agents - they don't need deployment models
         if agent.get("name", "").lower() == "proxyagent":
             return models
 

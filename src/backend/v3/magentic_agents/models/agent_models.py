@@ -1,6 +1,5 @@
 """Models for agent configurations."""
 
-import os
 from dataclasses import dataclass
 
 from common.config.app_config import config
@@ -9,6 +8,7 @@ from common.config.app_config import config
 @dataclass(slots=True)
 class MCPConfig:
     """Configuration for connecting to an MCP server."""
+
     url: str = ""
     name: str = "MCP"
     description: str = ""
@@ -26,7 +26,7 @@ class MCPConfig:
         # Raise exception if any required environment variable is missing
         if not all([url, name, description, tenant_id, client_id]):
             raise ValueError(f"{cls.__name__} Missing required environment variables")
-            
+
         return cls(
             url=url,
             name=name,
@@ -34,6 +34,7 @@ class MCPConfig:
             tenant_id=tenant_id,
             client_id=client_id,
         )
+
 
 # @dataclass(slots=True)
 # class BingConfig:
@@ -52,9 +53,11 @@ class MCPConfig:
 #             connection_name=connection_name,
 #         )
 
+
 @dataclass(slots=True)
 class SearchConfig:
     """Configuration for connecting to Azure AI Search."""
+
     connection_name: str | None = None
     endpoint: str | None = None
     index_name: str | None = None
@@ -69,8 +72,10 @@ class SearchConfig:
 
         # Raise exception if any required environment variable is missing
         if not all([connection_name, index_name, endpoint]):
-            raise ValueError(f"{cls.__name__} Missing required Azure Search environment variables")
-            
+            raise ValueError(
+                f"{cls.__name__} Missing required Azure Search environment variables"
+            )
+
         return cls(
             connection_name=connection_name,
             index_name=index_name,

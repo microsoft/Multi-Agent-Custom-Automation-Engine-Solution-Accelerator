@@ -1,4 +1,4 @@
-""" Utility functions for Semantic Kernel integration and agent management."""
+"""Utility functions for Semantic Kernel integration and agent management."""
 
 import logging
 from typing import Any, Dict
@@ -7,15 +7,18 @@ from typing import Any, Dict
 from semantic_kernel.agents.azure_ai.azure_ai_agent import AzureAIAgent
 from v3.magentic_agents.foundry_agent import FoundryAgentTemplate
 
+from v3.config.agent_registry import agent_registry
+
 logging.basicConfig(level=logging.INFO)
 
 # Cache for agent instances by session
 agent_instances: Dict[str, Dict[str, Any]] = {}
 azure_agent_instances: Dict[str, Dict[str, AzureAIAgent]] = {}
 
+
 async def create_RAI_agent() -> FoundryAgentTemplate:
     """Create and initialize a FoundryAgentTemplate for RAI checks."""
-    
+
     agent_name = "RAIAgent"
     agent_description = "A comprehensive research assistant for integration testing"
     agent_instructions = (
@@ -40,25 +43,32 @@ async def create_RAI_agent() -> FoundryAgentTemplate:
         model_deployment_name=model_deployment_name,
         enable_code_interpreter=False,
         mcp_config=None,
-        #bing_config=None,
-        search_config=None
+        # bing_config=None,
+        search_config=None,
     )
 
     await agent.open()
+
+    try:
+        agent_registry.register_agent(agent)
+
+    except Exception as registry_error:
+        logging.warning(f"Failed to register agent '{agent.agent_name}' with registry: {registry_error}")
     return agent
+
 
 async def _get_agent_response(agent: FoundryAgentTemplate, query: str) -> str:
     """Helper method to get complete response from agent."""
     response_parts = []
     async for message in agent.invoke(query):
-        if hasattr(message, 'content'):
+        if hasattr(message, "content"):
             # Handle different content types properly
             content = message.content
-            if hasattr(content, 'text'):
+            if hasattr(content, "text"):
                 response_parts.append(str(content.text))
             elif isinstance(content, list):
                 for item in content:
-                    if hasattr(item, 'text'):
+                    if hasattr(item, "text"):
                         response_parts.append(str(item.text))
                     else:
                         response_parts.append(str(item))
@@ -66,7 +76,8 @@ async def _get_agent_response(agent: FoundryAgentTemplate, query: str) -> str:
                 response_parts.append(str(content))
         else:
             response_parts.append(str(message))
-    return ''.join(response_parts)
+    return "".join(response_parts)
+
 
 async def rai_success(description: str) -> bool:
     """
@@ -83,15 +94,13 @@ async def rai_success(description: str) -> bool:
         if not rai_agent:
             print("Failed to create RAI agent")
             return False
-        
+
         rai_agent_response = await _get_agent_response(rai_agent, description)
 
         # AI returns "TRUE" if content violates rules (should be blocked)
         # AI returns "FALSE" if content is safe (should be allowed)
         if str(rai_agent_response).upper() == "TRUE":
-            logging.warning(
-                "RAI check failed for content: %s...", description[:50]
-            )
+            logging.warning("RAI check failed for content: %s...", description[:50])
             return False  # Content should be blocked
         elif str(rai_agent_response).upper() == "FALSE":
             logging.info("RAI check passed")
@@ -104,7 +113,7 @@ async def rai_success(description: str) -> bool:
         logging.warning("RAI check returned unexpected status, defaulting to block")
         return False
 
-    except Exception as e: # pylint: disable=broad-except
+    except Exception as e:  # pylint: disable=broad-except
         logging.error("Error in RAI check: %s", str(e))
         # Default to blocking the operation if RAI check fails for safety
         return False
@@ -174,6 +183,6 @@ async def rai_validate_team_config(team_config_json: dict) -> tuple[bool, str]:
 
         return True, ""
 
-    except Exception as e: # pylint: disable=broad-except
+    except Exception as e:  # pylint: disable=broad-except
         logging.error("Error validating team configuration with RAI: %s", str(e))
         return False, "Unable to validate team configuration content. Please try again."

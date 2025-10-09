@@ -1,23 +1,50 @@
 # app_kernel.py
-import asyncio
 import logging
-import os
-# Azure monitoring
-import re
-import uuid
-from typing import Dict, List, Optional
+
+from contextlib import asynccontextmanager
+
 
 from azure.monitor.opentelemetry import configure_azure_monitor
 from common.config.app_config import config
 from common.models.messages_kernel import UserLanguage
+
 # FastAPI imports
-from fastapi import FastAPI, Query, Request
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+
 # Local imports
 from middleware.health_check import HealthCheckMiddleware
 from v3.api.router import app_v3
+
+# Azure monitoring
+
 # Semantic Kernel imports
-from v3.orchestration.orchestration_manager import OrchestrationManager
+from v3.config.agent_registry import agent_registry
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage FastAPI application lifecycle - startup and shutdown."""
+    logger = logging.getLogger(__name__)
+
+    # Startup
+    logger.info("🚀 Starting MACAE application...")
+    yield
+
+    # Shutdown
+    logger.info("🛑 Shutting down MACAE application...")
+    try:
+        # Clean up all agents from Azure AI Foundry when container stops
+        await agent_registry.cleanup_all_agents()
+        logger.info("✅ Agent cleanup completed successfully")
+
+    except ImportError as ie:
+        logger.error(f"❌ Could not import agent_registry: {ie}")
+    except Exception as e:
+        logger.error(f"❌ Error during shutdown cleanup: {e}")
+
+    logger.info("👋 MACAE application shutdown complete")
+
 
 # Check if the Application Insights Instrumentation Key is set in the environment variables
 connection_string = config.APPLICATIONINSIGHTS_CONNECTION_STRING
@@ -48,7 +75,7 @@ logging.getLogger("azure.monitor.opentelemetry.exporter.export._base").setLevel(
 )
 
 # Initialize the FastAPI app
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 frontend_url = config.FRONTEND_SITE_NAME
 
@@ -104,4 +131,11 @@ async def user_browser_language_endpoint(user_language: UserLanguage, request: R
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("app_kernel:app", host="127.0.0.1", port=8000, reload=True, log_level="info", access_log=False)
+    uvicorn.run(
+        "app_kernel:app",
+        host="127.0.0.1",
+        port=8000,
+        reload=True,
+        log_level="info",
+        access_log=False,
+    )

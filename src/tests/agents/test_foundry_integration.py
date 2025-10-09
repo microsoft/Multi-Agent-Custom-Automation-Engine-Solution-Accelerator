@@ -14,8 +14,8 @@ backend_path = Path(__file__).parent.parent.parent / "backend"
 sys.path.insert(0, str(backend_path))
 
 # Now import from the v3 package
-from v3.magentic_agents.foundry_agent import FoundryAgentTemplate
-from v3.magentic_agents.models.agent_models import (BingConfig, MCPConfig,
+from src.backend.v3.magentic_agents.foundry_agent import FoundryAgentTemplate
+from src.backend.v3.magentic_agents.models.agent_models import (BingConfig, MCPConfig,
                                                     SearchConfig)
 
 

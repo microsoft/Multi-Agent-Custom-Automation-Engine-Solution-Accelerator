@@ -235,6 +235,7 @@ resource resourceGroupTags 'Microsoft.Resources/tags@2021-04-01' = {
       TemplateName: 'MACAE'
       Type: enablePrivateNetworking ? 'WAF' : 'Non-WAF'
       CreatedBy: createdBy
+      DeploymentName: deployment().name
     }
   }
 }
