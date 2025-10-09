@@ -1,5 +1,5 @@
 # Copyright (c) Microsoft. All rights reserved.
-""" Proxy agent that prompts for human clarification."""
+"""Proxy agent that prompts for human clarification."""
 
 import asyncio
 import logging
@@ -9,39 +9,45 @@ from typing import AsyncIterator, Optional
 
 from pydantic import Field
 from semantic_kernel.agents import (  # pylint: disable=no-name-in-module
-    AgentResponseItem, AgentThread)
+    AgentResponseItem,
+    AgentThread,
+)
 from semantic_kernel.agents.agent import Agent
-from semantic_kernel.contents import (AuthorRole, ChatMessageContent,
-                                      StreamingChatMessageContent)
+from semantic_kernel.contents import (
+    AuthorRole,
+    ChatMessageContent,
+    StreamingChatMessageContent,
+)
 from semantic_kernel.contents.chat_history import ChatHistory
-from semantic_kernel.contents.history_reducer.chat_history_reducer import \
-    ChatHistoryReducer
-from semantic_kernel.exceptions.agent_exceptions import \
-    AgentThreadOperationException
+from semantic_kernel.contents.history_reducer.chat_history_reducer import (
+    ChatHistoryReducer,
+)
+from semantic_kernel.exceptions.agent_exceptions import AgentThreadOperationException
 from typing_extensions import override
 from v3.callbacks.response_handlers import (agent_response_callback,
                                             streaming_agent_response_callback)
-from v3.config.settings import (connection_config, current_user_id,
-                                orchestration_config)
+from v3.config.settings import connection_config, orchestration_config
 from v3.models.messages import (UserClarificationRequest,
                                 UserClarificationResponse, WebsocketMessageType)
 
 
 class DummyAgentThread(AgentThread):
     """Dummy thread implementation for proxy agent."""
-    
-    def __init__(self, chat_history: ChatHistory | None = None, thread_id: str | None = None):
+
+    def __init__(
+        self, chat_history: ChatHistory | None = None, thread_id: str | None = None
+    ):
         super().__init__()
         self._chat_history = chat_history if chat_history is not None else ChatHistory()
         self._id: str = thread_id or f"thread_{uuid.uuid4().hex}"
         self._is_deleted = False
         self.logger = logging.getLogger(__name__)
-        
+
     @override
     async def _create(self) -> str:
         """Starts the thread and returns its ID."""
         return self._id
-        
+
     @override
     async def _delete(self) -> None:
         """Ends the current thread."""
@@ -67,7 +73,9 @@ class DummyAgentThread(AgentThread):
             An async iterable of ChatMessageContent.
         """
         if self._is_deleted:
-            raise AgentThreadOperationException("Cannot retrieve chat history, since the thread has been deleted.")
+            raise AgentThreadOperationException(
+                "Cannot retrieve chat history, since the thread has been deleted."
+            )
         if self._id is None:
             await self.create()
         for message in self._chat_history.messages:
@@ -76,7 +84,9 @@ class DummyAgentThread(AgentThread):
     async def reduce(self) -> ChatHistory | None:
         """Reduce the chat history to a smaller size."""
         if self._id is None:
-            raise AgentThreadOperationException("Cannot reduce chat history, since the thread is not currently active.")
+            raise AgentThreadOperationException(
+                "Cannot reduce chat history, since the thread is not currently active."
+            )
         if not isinstance(self._chat_history, ChatHistoryReducer):
             return None
         return await self._chat_history.reduce()
@@ -84,42 +94,47 @@ class DummyAgentThread(AgentThread):
 
 class ProxyAgentResponseItem:
     """Response item wrapper for proxy agent responses."""
-    
+
     def __init__(self, message: ChatMessageContent, thread: AgentThread):
         self.message = message
         self.thread = thread
         self.logger = logging.getLogger(__name__)
 
+
 class ProxyAgent(Agent):
     """Simple proxy agent that prompts for human clarification."""
 
     # Declare as Pydantic field
-    user_id: Optional[str] = Field(default=None, description="User ID for WebSocket messaging")
-    
-    def __init__(self, user_id: str = None, **kwargs):
-        # Get user_id from parameter or context, fallback to empty string
-        effective_user_id = user_id or current_user_id.get() or ""
+    user_id: str = Field(
+        default=None, description="User ID for WebSocket messaging"
+    )
+
+    def __init__(self, user_id: str, **kwargs):
+        # Get user_id from parameter, fallback to empty string
+        effective_user_id = user_id or ""
         super().__init__(
             name="ProxyAgent",
             description="Call this agent when you need to clarify requests by asking the human user for more information. Ask it for more details about any unclear requirements, missing information, or if you need the user to elaborate on any aspect of the task.",
             user_id=effective_user_id,
-            **kwargs
+            **kwargs,
         )
         self.instructions = ""
 
-    def _create_message_content(self, content: str, thread_id: str = None) -> ChatMessageContent:
+    def _create_message_content(
+        self, content: str, thread_id: str = None
+    ) -> ChatMessageContent:
         """Create a ChatMessageContent with proper metadata."""
         return ChatMessageContent(
             role=AuthorRole.ASSISTANT,
             content=content,
             name=self.name,
-            metadata={"thread_id": thread_id} if thread_id else {}
+            metadata={"thread_id": thread_id} if thread_id else {},
         )
 
     async def _trigger_response_callbacks(self, message_content: ChatMessageContent):
         """Manually trigger the same response callbacks used by other agents."""
-                # Get current user_id dynamically instead of using stored value
-        current_user = current_user_id.get() or self.user_id or ""
+        # Get current user_id dynamically instead of using stored value
+        current_user = self.user_id or ""
 
         # Trigger the standard agent response callback
         agent_response_callback(message_content, current_user)
@@ -127,16 +142,17 @@ class ProxyAgent(Agent):
     async def _trigger_streaming_callbacks(self, content: str, is_final: bool = False):
         """Manually trigger streaming callbacks for real-time updates."""
         # Get current user_id dynamically instead of using stored value
-        current_user = current_user_id.get() or self.user_id or ""
+        current_user = self.user_id or ""
         streaming_message = StreamingChatMessageContent(
-            role=AuthorRole.ASSISTANT,
-            content=content,
-            name=self.name,
-            choice_index=0
+            role=AuthorRole.ASSISTANT, content=content, name=self.name, choice_index=0
         )
-        await streaming_agent_response_callback(streaming_message, is_final, current_user)
-    
-    async def invoke(self, message: str,*, thread: AgentThread | None = None,**kwargs) -> AsyncIterator[ChatMessageContent]:
+        await streaming_agent_response_callback(
+            streaming_message, is_final, current_user
+        )
+
+    async def invoke(
+        self, message: str, *, thread: AgentThread | None = None, **kwargs
+    ) -> AsyncIterator[ChatMessageContent]:
         """Ask human user for clarification about the message."""
 
         thread = await self._ensure_thread_exists_with_messages(
@@ -151,31 +167,36 @@ class ProxyAgent(Agent):
 
         clarification_message = UserClarificationRequest(
             question=clarification_request,
-            request_id=str(uuid.uuid4())  # Unique ID for the request
+            request_id=str(uuid.uuid4()),  # Unique ID for the request
         )
 
         # Send the approval request to the user's WebSocket
-        await connection_config.send_status_update_async({
-            "type": WebsocketMessageType.USER_CLARIFICATION_REQUEST,
-            "data": clarification_message
-        }, user_id=current_user_id.get(), message_type=WebsocketMessageType.USER_CLARIFICATION_REQUEST)
+        await connection_config.send_status_update_async(
+            {
+                "type": WebsocketMessageType.USER_CLARIFICATION_REQUEST,
+                "data": clarification_message,
+            },
+            user_id=self.user_id,
+            message_type=WebsocketMessageType.USER_CLARIFICATION_REQUEST,
+        )
 
         # Get human input
-        human_response = await self._wait_for_user_clarification(clarification_message.request_id)
-        
+        human_response = await self._wait_for_user_clarification(
+            clarification_message.request_id
+        )
+
         if not human_response:
             human_response = "No additional clarification provided."
-        
+
         response = f"Human clarification: {human_response}"
 
         chat_message = self._create_message_content(response, thread.id)
-        
-        yield AgentResponseItem(
-            message=chat_message,
-            thread=thread
-        )
-    
-    async def invoke_stream(self, messages, thread=None, **kwargs) -> AsyncIterator[ProxyAgentResponseItem]:
+
+        yield AgentResponseItem(message=chat_message, thread=thread)
+
+    async def invoke_stream(
+        self, messages, thread=None, **kwargs
+    ) -> AsyncIterator[ProxyAgentResponseItem]:
         """Stream version - handles thread management for orchestration."""
 
         thread = await self._ensure_thread_exists_with_messages(
@@ -187,7 +208,11 @@ class ProxyAgent(Agent):
 
         # Extract message content
         if isinstance(messages, list) and messages:
-            message = messages[-1].content if hasattr(messages[-1], 'content') else str(messages[-1])
+            message = (
+                messages[-1].content
+                if hasattr(messages[-1], "content")
+                else str(messages[-1])
+            )
         elif isinstance(messages, str):
             message = messages
         else:
@@ -198,55 +223,64 @@ class ProxyAgent(Agent):
 
         clarification_message = UserClarificationRequest(
             question=clarification_request,
-            request_id=str(uuid.uuid4())  # Unique ID for the request
+            request_id=str(uuid.uuid4()),  # Unique ID for the request
         )
 
         # Send the approval request to the user's WebSocket
         # The user_id will be automatically retrieved from context
-        await connection_config.send_status_update_async({
-            "type": WebsocketMessageType.USER_CLARIFICATION_REQUEST, 
-            "data": clarification_message
-        }, user_id=current_user_id.get(), message_type=WebsocketMessageType.USER_CLARIFICATION_REQUEST)
+        await connection_config.send_status_update_async(
+            {
+                "type": WebsocketMessageType.USER_CLARIFICATION_REQUEST,
+                "data": clarification_message,
+            },
+            user_id=self.user_id,
+            message_type=WebsocketMessageType.USER_CLARIFICATION_REQUEST,
+        )
 
         # Get human input - replace with websocket call when available
-        human_response = await self._wait_for_user_clarification(clarification_message.request_id)
-        
+        human_response = await self._wait_for_user_clarification(
+            clarification_message.request_id
+        )
+
         if not human_response:
             human_response = "No additional clarification provided."
-        
+
         response = f"Human clarification: {human_response}"
 
         chat_message = self._create_message_content(response, thread.id)
-        
-        yield AgentResponseItem(
-            message=chat_message,
-            thread=thread
-        )
 
-    async def _wait_for_user_clarification(self, request_id:str) -> Optional[UserClarificationResponse]: 
+        yield AgentResponseItem(message=chat_message, thread=thread)
+
+    async def _wait_for_user_clarification(
+        self, request_id: str
+    ) -> Optional[UserClarificationResponse]:
         """Wait for user clarification response."""
         # To do: implement timeout and error handling
         if request_id not in orchestration_config.clarifications:
             orchestration_config.clarifications[request_id] = None
         while orchestration_config.clarifications[request_id] is None:
             await asyncio.sleep(0.2)
-        return UserClarificationResponse(request_id=request_id,answer=orchestration_config.clarifications[request_id])
-    
+        return UserClarificationResponse(
+            request_id=request_id,
+            answer=orchestration_config.clarifications[request_id],
+        )
+
     async def get_response(self, chat_history, **kwargs):
         """Get response from the agent - required by Agent base class."""
         # Extract the latest user message
-        latest_message = chat_history.messages[-1].content if chat_history.messages else ""
-        
+        latest_message = (
+            chat_history.messages[-1].content if chat_history.messages else ""
+        )
+
         # Use our invoke method to get the response
         async for response in self.invoke(latest_message, **kwargs):
             return response
-        
+
         # Fallback if no response generated
         return ChatMessageContent(
-            role=AuthorRole.ASSISTANT,
-            content="No clarification provided."
+            role=AuthorRole.ASSISTANT, content="No clarification provided."
         )
-    
+
 
 async def create_proxy_agent(user_id: str = None):
     """Factory function for human proxy agent."""

@@ -9,11 +9,11 @@ implementation that wires these descriptors into Semantic Kernel / Foundry
 agent instances.
 """
 
-from typing import Any, Dict, List, Union
 import logging
+from typing import Any, Dict, List, Union
 
+from common.models.messages_kernel import TeamAgent, TeamConfiguration
 from v3.common.services.team_service import TeamService
-from common.models.messages_kernel import TeamConfiguration, TeamAgent
 
 
 class AgentsService:

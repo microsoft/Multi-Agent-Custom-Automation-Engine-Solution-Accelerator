@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Literal, Optional
 
 from semantic_kernel.kernel_pydantic import Field, KernelBaseModel
 
+
 class DataType(str, Enum):
     """Enumeration of possible data types for documents in the database."""
 
@@ -87,14 +88,15 @@ class BaseDataModel(KernelBaseModel):
 class AgentMessage(BaseDataModel):
     """Base class for messages sent between agents."""
 
-    data_type: Literal[DataType.agent_message] = Field(DataType.agent_message, Literal=True)
+    data_type: Literal[DataType.agent_message] = Field(
+        DataType.agent_message, Literal=True
+    )
     plan_id: str
     content: str
     source: str
     step_id: Optional[str] = None
 
 
-    
 class Session(BaseDataModel):
     """Represents a user session."""
 
@@ -107,7 +109,9 @@ class Session(BaseDataModel):
 class UserCurrentTeam(BaseDataModel):
     """Represents the current team of a user."""
 
-    data_type: Literal[DataType.user_current_team] = Field(DataType.user_current_team, Literal=True)
+    data_type: Literal[DataType.user_current_team] = Field(
+        DataType.user_current_team, Literal=True
+    )
     user_id: str
     team_id: str
 
@@ -235,11 +239,9 @@ class PlanWithSteps(Plan):
         self.completed = status_counts[StepStatus.completed]
         self.failed = status_counts[StepStatus.failed]
 
-
         if self.total_steps > 0 and (self.completed + self.failed) == self.total_steps:
             self.overall_status = PlanStatus.completed
         # Mark the plan as complete if the sum of completed and failed steps equals the total number of steps
-
 
 
 # Message classes for communication between agents
@@ -260,16 +262,17 @@ class AgentMessageType(str, Enum):
     AI_AGENT = "AI_Agent",
 
 
-class AgentMessageData (BaseDataModel):
+class AgentMessageData(BaseDataModel):
 
-    data_type: Literal[DataType.m_plan_message] = Field(DataType.m_plan_message, Literal=True)
+    data_type: Literal[DataType.m_plan_message] = Field(
+        DataType.m_plan_message, Literal=True
+    )
     plan_id: str
     user_id: str
     agent: str
     m_plan_id: Optional[str] = None
-    agent_type: AgentMessageType = AgentMessageType.AI_AGENT 
+    agent_type: AgentMessageType = AgentMessageType.AI_AGENT
     content: str
     raw_data: str
-    steps: List[Any] = Field(default_factory=list)       
-    next_steps: List[Any] = Field(default_factory=list)  
-    
+    steps: List[Any] = Field(default_factory=list)
+    next_steps: List[Any] = Field(default_factory=list)

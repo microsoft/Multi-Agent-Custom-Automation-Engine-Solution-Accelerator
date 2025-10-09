@@ -200,8 +200,7 @@
 .tab {
   color: var(--colorNeutralForeground2) !important;
   font-weight: 400 !important;
-  padding: 8px 0 !important;
-  margin: 0 !important;
+  margin: -10px !important;
   /* border: none !important; */
   /* border-bottom: 2px solid transparent !important; */
   background: transparent !important;

@@ -33,9 +33,9 @@ class PlanToMPlanConverter:
 
     """
 
-    BULLET_RE = re.compile(r'^(?P<indent>\s*)[-•*]\s+(?P<body>.+)$')
-    BOLD_AGENT_RE = re.compile(r'\*\*([A-Za-z0-9_]+)\*\*')
-    STRIP_BULLET_MARKER_RE = re.compile(r'^[-•*]\s+')
+    BULLET_RE = re.compile(r"^(?P<indent>\s*)[-•*]\s+(?P<body>.+)$")
+    BOLD_AGENT_RE = re.compile(r"\*\*([A-Za-z0-9_]+)\*\*")
+    STRIP_BULLET_MARKER_RE = re.compile(r"^[-•*]\s+")
 
     def __init__(
         self,
@@ -150,7 +150,7 @@ class PlanToMPlanConverter:
             candidate = m.group(1)
             canonical = self._team_lookup.get(candidate.lower())
             if canonical:  # valid agent
-                cleaned = text[:m.start()] + text[m.end():]
+                cleaned = text[: m.start()] + text[m.end() :]
                 return canonical, cleaned.strip()
         return None, text
 
@@ -169,7 +169,7 @@ class PlanToMPlanConverter:
         if self.trim_actions:
             action = action.strip()
         if self.collapse_internal_whitespace:
-            action = re.sub(r'\s+', ' ', action)
+            action = re.sub(r"\s+", " ", action)
         return action
 
     # --------------- Convenience (static) --------------- #

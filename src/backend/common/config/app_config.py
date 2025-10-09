@@ -76,15 +76,23 @@ class AppConfig:
         # Optional MCP server endpoint (for local MCP server or remote)
         # Example: http://127.0.0.1:8000/mcp
         self.MCP_SERVER_ENDPOINT = self._get_optional("MCP_SERVER_ENDPOINT")
-        self.MCP_SERVER_NAME = self._get_optional("MCP_SERVER_NAME", "MCPGreetingServer")
-        self.MCP_SERVER_DESCRIPTION = self._get_optional("MCP_SERVER_DESCRIPTION", "MCP server with greeting and planning tools")
+        self.MCP_SERVER_NAME = self._get_optional(
+            "MCP_SERVER_NAME", "MCPGreetingServer"
+        )
+        self.MCP_SERVER_DESCRIPTION = self._get_optional(
+            "MCP_SERVER_DESCRIPTION", "MCP server with greeting and planning tools"
+        )
         self.TENANT_ID = self._get_optional("AZURE_TENANT_ID")
         self.CLIENT_ID = self._get_optional("AZURE_CLIENT_ID")
-        self.AZURE_AI_SEARCH_CONNECTION_NAME = self._get_optional("AZURE_AI_SEARCH_CONNECTION_NAME")
-        self.AZURE_AI_SEARCH_INDEX_NAME = self._get_optional("AZURE_AI_SEARCH_INDEX_NAME")
+        self.AZURE_AI_SEARCH_CONNECTION_NAME = self._get_optional(
+            "AZURE_AI_SEARCH_CONNECTION_NAME"
+        )
+        self.AZURE_AI_SEARCH_INDEX_NAME = self._get_optional(
+            "AZURE_AI_SEARCH_INDEX_NAME"
+        )
         self.AZURE_AI_SEARCH_ENDPOINT = self._get_optional("AZURE_AI_SEARCH_ENDPOINT")
         self.AZURE_AI_SEARCH_API_KEY = self._get_optional("AZURE_AI_SEARCH_API_KEY")
-        # self.BING_CONNECTION_NAME = self._get_optional("BING_CONNECTION_NAME")  
+        # self.BING_CONNECTION_NAME = self._get_optional("BING_CONNECTION_NAME")
 
         test_team_json = self._get_optional("TEST_TEAM_JSON")
 
@@ -117,7 +125,7 @@ class AppConfig:
             )  # CodeQL [SM05139] Okay use of DefaultAzureCredential as it is only used in development
         else:
             return ManagedIdentityCredential(client_id=client_id)
-        
+
     def get_azure_credentials(self):
         """Retrieve Azure credentials, either from environment variables or managed identity."""
         if self._azure_credentials is None:
@@ -192,7 +200,8 @@ class AppConfig:
         try:
             if self._cosmos_client is None:
                 self._cosmos_client = CosmosClient(
-                    self.COSMOSDB_ENDPOINT, credential=self.get_azure_credential(self.AZURE_CLIENT_ID)
+                    self.COSMOSDB_ENDPOINT,
+                    credential=self.get_azure_credential(self.AZURE_CLIENT_ID),
                 )
 
             if self._cosmos_database is None:
