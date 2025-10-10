@@ -190,3 +190,5 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({
 
 export default ForecastChart;
 
+
+

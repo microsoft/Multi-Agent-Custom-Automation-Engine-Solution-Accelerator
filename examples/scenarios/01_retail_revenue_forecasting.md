@@ -498,3 +498,5 @@ The Analytics Dashboard (`/analytics`) displays:
 
 **Ready for the next scenario?** Continue to [Customer Churn Prevention →](02_customer_churn_prevention.md)
 
+
+

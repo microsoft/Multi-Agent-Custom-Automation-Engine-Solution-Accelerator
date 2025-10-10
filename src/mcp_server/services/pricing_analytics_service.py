@@ -287,3 +287,5 @@ class PricingAnalyticsService(MCPToolBase):
 
         LOGGER.info(f"Registered {self.tool_count} pricing analytics tools")
 
+
+

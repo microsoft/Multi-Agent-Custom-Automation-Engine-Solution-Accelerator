@@ -420,3 +420,4 @@ class OperationsAnalyticsService(MCPToolBase):
 
         LOGGER.info(f"Registered {self.tool_count} operations analytics tools")
 
+

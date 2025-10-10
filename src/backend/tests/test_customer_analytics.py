@@ -552,3 +552,4 @@ class TestCustomerAnalyticsIntegration:
             for segment in segments["segments"]:
                 assert "strategy" in segment
 
+
