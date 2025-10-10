@@ -467,32 +467,32 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "azure-ai-agents", specifier = "==1.2.0b2" },
-    { name = "azure-ai-evaluation", specifier = ">=1.5.0" },
-    { name = "azure-ai-inference", specifier = ">=1.0.0b9" },
+    { name = "azure-ai-evaluation", specifier = "==1.11.0" },
+    { name = "azure-ai-inference", specifier = "==1.0.0b9" },
     { name = "azure-ai-projects", specifier = "==1.0.0" },
-    { name = "azure-cosmos", specifier = ">=4.9.0" },
-    { name = "azure-identity", specifier = ">=1.21.0" },
-    { name = "azure-monitor-events-extension", specifier = ">=0.1.0" },
-    { name = "azure-monitor-opentelemetry", specifier = ">=1.6.8" },
-    { name = "azure-search-documents", specifier = ">=11.5.2" },
-    { name = "fastapi", specifier = ">=0.115.12" },
-    { name = "mcp", specifier = ">=1.13.1" },
-    { name = "openai", specifier = ">=1.75.0" },
-    { name = "opentelemetry-api", specifier = ">=1.31.1" },
-    { name = "opentelemetry-exporter-otlp-proto-grpc", specifier = ">=1.31.1" },
-    { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.31.1" },
-    { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.52b1" },
-    { name = "opentelemetry-instrumentation-openai", specifier = ">=0.39.2" },
-    { name = "opentelemetry-sdk", specifier = ">=1.31.1" },
-    { name = "pexpect", specifier = ">=4.9.0" },
-    { name = "pylint-pydantic", specifier = ">=0.3.5" },
-    { name = "pytest", specifier = ">=8.2,<9" },
+    { name = "azure-cosmos", specifier = "==4.9.0" },
+    { name = "azure-identity", specifier = "==1.24.0" },
+    { name = "azure-monitor-events-extension", specifier = "==0.1.0" },
+    { name = "azure-monitor-opentelemetry", specifier = "==1.7.0" },
+    { name = "azure-search-documents", specifier = "==11.5.3" },
+    { name = "fastapi", specifier = "==0.116.1" },
+    { name = "mcp", specifier = "==1.13.0" },
+    { name = "openai", specifier = "==1.105.0" },
+    { name = "opentelemetry-api", specifier = "==1.36.0" },
+    { name = "opentelemetry-exporter-otlp-proto-grpc", specifier = "==1.36.0" },
+    { name = "opentelemetry-exporter-otlp-proto-http", specifier = "==1.36.0" },
+    { name = "opentelemetry-instrumentation-fastapi", specifier = "==0.57b0" },
+    { name = "opentelemetry-instrumentation-openai", specifier = "==0.46.2" },
+    { name = "opentelemetry-sdk", specifier = "==1.36.0" },
+    { name = "pexpect", specifier = "==4.9.0" },
+    { name = "pylint-pydantic", specifier = "==0.3.5" },
+    { name = "pytest", specifier = "==8.4.1" },
     { name = "pytest-asyncio", specifier = "==0.24.0" },
     { name = "pytest-cov", specifier = "==5.0.0" },
-    { name = "python-dotenv", specifier = ">=1.1.0" },
-    { name = "python-multipart", specifier = ">=0.0.20" },
+    { name = "python-dotenv", specifier = "==1.1.1" },
+    { name = "python-multipart", specifier = "==0.0.20" },
     { name = "semantic-kernel", specifier = "==1.35.3" },
-    { name = "uvicorn", specifier = ">=0.34.2" },
+    { name = "uvicorn", specifier = "==0.35.0" },
 ]
 
 [[package]]
@@ -1314,7 +1314,7 @@ wheels = [
 
 [[package]]
 name = "mcp"
-version = "1.13.1"
+version = "1.13.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -1329,9 +1329,9 @@ dependencies = [
     { name = "starlette" },
     { name = "uvicorn", marker = "sys_platform != 'emscripten'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/66/3c/82c400c2d50afdac4fbefb5b4031fd327e2ad1f23ccef8eee13c5909aa48/mcp-1.13.1.tar.gz", hash = "sha256:165306a8fd7991dc80334edd2de07798175a56461043b7ae907b279794a834c5", size = 438198, upload-time = "2025-08-22T09:22:16.061Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d3/a8/564c094de5d6199f727f5d9f5672dbec3b00dfafd0f67bf52d995eaa5951/mcp-1.13.0.tar.gz", hash = "sha256:70452f56f74662a94eb72ac5feb93997b35995e389b3a3a574e078bed2aa9ab3", size = 434709, upload-time = "2025-08-14T15:03:58.58Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/19/3f/d085c7f49ade6d273b185d61ec9405e672b6433f710ea64a90135a8dd445/mcp-1.13.1-py3-none-any.whl", hash = "sha256:c314e7c8bd477a23ba3ef472ee5a32880316c42d03e06dcfa31a1cc7a73b65df", size = 161494, upload-time = "2025-08-22T09:22:14.705Z" },
+    { url = "https://files.pythonhosted.org/packages/8b/6b/46b8bcefc2ee9e2d2e8d2bd25f1c2512f5a879fac4619d716b194d6e7ccc/mcp-1.13.0-py3-none-any.whl", hash = "sha256:8b1a002ebe6e17e894ec74d1943cc09aa9d23cb931bf58d49ab2e9fa6bb17e4b", size = 160226, upload-time = "2025-08-14T15:03:56.641Z" },
 ]
 
 [[package]]
