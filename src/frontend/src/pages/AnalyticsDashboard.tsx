@@ -18,6 +18,7 @@ import {
 } from '@fluentui/react-icons';
 import { ForecastChart } from '../components/content/ForecastChart';
 import { useNavigate } from 'react-router-dom';
+import { AnalyticsService } from '../services/AnalyticsService';
 
 import '../styles/AnalyticsDashboard.css';
 
@@ -37,55 +38,101 @@ export const AnalyticsDashboard: React.FC = () => {
   const [kpis, setKpis] = useState<KPICard[]>([]);
 
   useEffect(() => {
-    // Simulate loading KPI data
+    // Load KPI data from backend API with fallback to mock data
     const loadKPIs = async () => {
       try {
         setLoading(true);
         
-        // Simulate API call delay
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        
-        // Mock KPI data
-        const data: KPICard[] = [
-          {
-            title: 'Revenue Forecast',
-            value: '$1.2M',
-            change: 8.5,
-            changeLabel: 'vs last month',
-            icon: <Money20Regular />,
-            color: '#107c10',
-            route: '/plan',
-          },
-          {
-            title: 'Customer Retention',
-            value: '92.3%',
-            change: 2.1,
-            changeLabel: 'vs last quarter',
-            icon: <People20Regular />,
-            color: '#0078d4',
-            route: '/plan',
-          },
-          {
-            title: 'Avg Order Value',
-            value: '$142',
-            change: -3.2,
-            changeLabel: 'vs last week',
-            icon: <ShoppingBag20Regular />,
-            color: '#d83b01',
-            route: '/plan',
-          },
-          {
-            title: 'Forecast Accuracy',
-            value: '94.8%',
-            change: 1.5,
-            changeLabel: 'MAPE improvement',
-            icon: <ChartMultiple20Regular />,
-            color: '#5c2d91',
-            route: '/plan',
-          },
-        ];
-        
-        setKpis(data);
+        // Try to fetch from backend API
+        try {
+          const kpiData = await AnalyticsService.getKPIs();
+          
+          // Transform API response to KPI cards
+          const data: KPICard[] = [
+            {
+              title: 'Revenue Forecast',
+              value: kpiData.revenue_forecast.value,
+              change: kpiData.revenue_forecast.change,
+              changeLabel: kpiData.revenue_forecast.change_label,
+              icon: <Money20Regular />,
+              color: '#107c10',
+              route: '/plan',
+            },
+            {
+              title: 'Customer Retention',
+              value: kpiData.customer_retention.value,
+              change: kpiData.customer_retention.change,
+              changeLabel: kpiData.customer_retention.change_label,
+              icon: <People20Regular />,
+              color: '#0078d4',
+              route: '/plan',
+            },
+            {
+              title: 'Avg Order Value',
+              value: kpiData.avg_order_value.value,
+              change: kpiData.avg_order_value.change,
+              changeLabel: kpiData.avg_order_value.change_label,
+              icon: <ShoppingBag20Regular />,
+              color: '#d83b01',
+              route: '/plan',
+            },
+            {
+              title: 'Forecast Accuracy',
+              value: kpiData.forecast_accuracy.value,
+              change: kpiData.forecast_accuracy.change,
+              changeLabel: kpiData.forecast_accuracy.change_label,
+              icon: <ChartMultiple20Regular />,
+              color: '#5c2d91',
+              route: '/plan',
+            },
+          ];
+          
+          setKpis(data);
+        } catch (apiError) {
+          console.warn('Backend API not available, using mock data', apiError);
+          
+          // Fallback to mock KPI data
+          const mockData: KPICard[] = [
+            {
+              title: 'Revenue Forecast',
+              value: '$1.2M',
+              change: 8.5,
+              changeLabel: 'vs last month',
+              icon: <Money20Regular />,
+              color: '#107c10',
+              route: '/plan',
+            },
+            {
+              title: 'Customer Retention',
+              value: '92.3%',
+              change: 2.1,
+              changeLabel: 'vs last quarter',
+              icon: <People20Regular />,
+              color: '#0078d4',
+              route: '/plan',
+            },
+            {
+              title: 'Avg Order Value',
+              value: '$142',
+              change: -3.2,
+              changeLabel: 'vs last week',
+              icon: <ShoppingBag20Regular />,
+              color: '#d83b01',
+              route: '/plan',
+            },
+            {
+              title: 'Forecast Accuracy',
+              value: '94.8%',
+              change: 1.5,
+              changeLabel: 'MAPE improvement',
+              icon: <ChartMultiple20Regular />,
+              color: '#5c2d91',
+              route: '/plan',
+            },
+          ];
+          
+          setKpis(mockData);
+        }
       } catch (error) {
         console.error('Failed to load KPIs', error);
       } finally {
