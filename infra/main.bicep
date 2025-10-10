@@ -973,11 +973,11 @@ var dnsZoneIndex = {
 }
 
 // List of DNS zone indices that correspond to AI-related services.
-var aiRelatedDnsZoneIndices = [
-  dnsZoneIndex.cognitiveServices
-  dnsZoneIndex.openAI
-  dnsZoneIndex.aiServices
-]
+// var aiRelatedDnsZoneIndices = [
+//   dnsZoneIndex.cognitiveServices
+//   dnsZoneIndex.openAI
+//   dnsZoneIndex.aiServices
+// ]
 
 // ===================================================
 // DEPLOY PRIVATE DNS ZONES
