@@ -1,66 +1,91 @@
 {
-  "team_name": "Retail Operations Team",
-  "description": "Specialized team for delivery performance analysis, warehouse incident management, and inventory optimization to ensure efficient retail operations.",
+  "id": "6",
+  "team_id": "team-retail-operations",
+  "name": "Retail Operations Team",
+  "status": "visible",
+  "created": "",
+  "created_by": "Sprint 3 Enhancement",
   "agents": [
     {
+      "input_key": "",
+      "type": "",
       "name": "OperationsStrategistAgent",
-      "role": "Operations Strategy Lead",
-      "system_message": "You are an Operations Strategist focused on analyzing delivery performance, warehouse incidents, and operational efficiency. Use operations analytics MCP tools to forecast delivery metrics, analyze incident impact, and optimize inventory levels. Provide data-driven recommendations to improve operational KPIs and customer satisfaction.",
-      "model": "gpt-4",
+      "deployment_name": "gpt-4.1-mini",
+      "icon": "",
+      "system_message": "You are an Operations Strategist focused on analyzing delivery performance, warehouse incidents, and operational efficiency. Use operations analytics MCP tools to forecast delivery metrics, analyze incident impact, and optimize inventory levels. Provide data-driven recommendations to improve operational KPIs and customer satisfaction. Available tools: forecast_delivery_performance, analyze_warehouse_incidents, get_operations_summary, list_finance_datasets, summarize_financial_dataset.",
       "description": "Analyzes delivery performance trends, forecasts operational metrics, and identifies improvement opportunities using advanced analytics.",
-      "available_tools": [
-        "forecast_delivery_performance",
-        "analyze_warehouse_incidents",
-        "get_operations_summary",
-        "list_finance_datasets",
-        "summarize_financial_dataset"
-      ]
+      "use_rag": false,
+      "use_mcp": true,
+      "use_bing": false,
+      "use_reasoning": false,
+      "index_name": "",
+      "index_foundry_name": "",
+      "index_endpoint": "",
+      "coding_tools": false
     },
     {
+      "input_key": "",
+      "type": "",
       "name": "SupplyChainAnalystAgent",
-      "role": "Supply Chain & Inventory Specialist",
-      "system_message": "You are a Supply Chain Analyst specializing in inventory optimization and supply chain risk management. Monitor warehouse incidents, optimize stock levels using data-driven forecasting, and ensure supply chain continuity. Focus on balancing service levels with inventory costs.",
-      "model": "gpt-4",
+      "deployment_name": "gpt-4.1-mini",
+      "icon": "",
+      "system_message": "You are a Supply Chain Analyst specializing in inventory optimization and supply chain risk management. Monitor warehouse incidents, optimize stock levels using data-driven forecasting, and ensure supply chain continuity. Focus on balancing service levels with inventory costs. Available tools: optimize_inventory, analyze_warehouse_incidents, forecast_delivery_performance, summarize_financial_dataset.",
       "description": "Optimizes inventory levels, monitors supply chain KPIs, and identifies bottlenecks to improve operational efficiency.",
-      "available_tools": [
-        "optimize_inventory",
-        "analyze_warehouse_incidents",
-        "forecast_delivery_performance",
-        "summarize_financial_dataset"
-      ]
-    }
-  ],
-  "starting_tasks": [
-    "Analyze the current delivery performance metrics and forecast trends for the next 3 months. Identify any performance degradation periods and their root causes.",
-    "Review warehouse incident reports to assess operational risk levels. Provide mitigation recommendations for the most severe incidents.",
-    "Optimize inventory levels for all product categories based on historical purchase patterns. Recommend stock levels and reorder points for 95% service level."
-  ],
-  "collaboration_pattern": "sequential",
-  "success_metrics": [
-    "On-time delivery rate > 95%",
-    "Average delivery time < 4 days",
-    "Customer complaints < 15 per month",
-    "Warehouse incident impact minimized",
-    "Inventory service level maintained at 95%+"
-  ],
-  "use_cases": [
-    {
-      "name": "Delivery Performance Recovery",
-      "scenario": "Analyze June-July delivery degradation and warehouse incidents (logistics strike, flooding). Forecast recovery timeline and recommend preventive measures.",
-      "datasets": ["delivery_performance_metrics.csv", "warehouse_incident_reports.csv"],
-      "expected_outcome": "Recovery forecast with SARIMA, incident mitigation plan, backup logistics partner recommendations"
+      "use_rag": false,
+      "use_mcp": true,
+      "use_bing": false,
+      "use_reasoning": false,
+      "index_name": "",
+      "index_foundry_name": "",
+      "index_endpoint": "",
+      "coding_tools": false
     },
     {
-      "name": "Inventory Optimization",
-      "scenario": "Optimize stock levels across all product categories to balance service levels with inventory costs.",
-      "datasets": ["purchase_history.csv", "product_return_rates.csv"],
-      "expected_outcome": "Category-specific stock levels, reorder points, and safety stock recommendations"
+      "input_key": "",
+      "type": "",
+      "name": "ProxyAgent",
+      "deployment_name": "",
+      "icon": "",
+      "system_message": "",
+      "description": "",
+      "use_rag": false,
+      "use_mcp": false,
+      "use_bing": false,
+      "use_reasoning": false,
+      "index_name": "",
+      "index_foundry_name": "",
+      "index_endpoint": "",
+      "coding_tools": false
     }
   ],
-  "created_by": "Sprint 3 Enhancement",
-  "version": "1.0",
-  "tags": ["operations", "delivery", "inventory", "warehouse", "retail"]
+  "protected": false,
+  "description": "Specialized team for delivery performance analysis, warehouse incident management, and inventory optimization to ensure efficient retail operations. Success metrics: On-time delivery rate > 95%, Average delivery time < 4 days, Customer complaints < 15/month, Warehouse incidents minimized, Inventory service level 95%+.",
+  "logo": "",
+  "plan": "",
+  "starting_tasks": [
+    {
+      "id": "retail-ops-task-1",
+      "name": "Delivery Performance Analysis",
+      "prompt": "Analyze the current delivery performance metrics and forecast trends for the next 3 months. Identify any performance degradation periods and their root causes.",
+      "created": "",
+      "creator": "",
+      "logo": ""
+    },
+    {
+      "id": "retail-ops-task-2",
+      "name": "Warehouse Incident Assessment",
+      "prompt": "Review warehouse incident reports to assess operational risk levels. Provide mitigation recommendations for the most severe incidents.",
+      "created": "",
+      "creator": "",
+      "logo": ""
+    },
+    {
+      "id": "retail-ops-task-3",
+      "name": "Inventory Optimization",
+      "prompt": "Optimize inventory levels for all product categories based on historical purchase patterns. Recommend stock levels and reorder points for 95% service level.",
+      "created": "",
+      "creator": "",
+      "logo": ""
+    }
+  ]
 }
-
-
-

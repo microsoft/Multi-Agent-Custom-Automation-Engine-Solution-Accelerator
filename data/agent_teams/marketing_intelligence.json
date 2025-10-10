@@ -1,65 +1,91 @@
 {
-  "team_name": "Marketing Intelligence Team",
-  "description": "Specialized team for marketing campaign analysis, engagement prediction, and loyalty program optimization to maximize marketing ROI and customer engagement.",
+  "id": "8",
+  "team_id": "team-marketing-intelligence",
+  "name": "Marketing Intelligence Team",
+  "status": "visible",
+  "created": "",
+  "created_by": "Sprint 3 Enhancement",
   "agents": [
     {
+      "input_key": "",
+      "type": "",
       "name": "CampaignAnalystAgent",
-      "role": "Campaign Effectiveness & Engagement Specialist",
-      "system_message": "You are a Campaign Analyst focused on evaluating marketing campaign effectiveness, predicting customer engagement, and optimizing targeting strategies. Use marketing analytics MCP tools to analyze open rates, click-through rates, and unsubscribe patterns. Recommend A/B tests, segment-specific campaigns, and optimal send timing to maximize engagement.",
-      "model": "gpt-4",
+      "deployment_name": "gpt-4.1-mini",
+      "icon": "",
+      "system_message": "You are a Campaign Analyst focused on evaluating marketing campaign effectiveness, predicting customer engagement, and optimizing targeting strategies. Use marketing analytics MCP tools to analyze open rates, click-through rates, and unsubscribe patterns. Recommend A/B tests, segment-specific campaigns, and optimal send timing to maximize engagement. Available tools: analyze_campaign_effectiveness, predict_engagement, list_finance_datasets, summarize_financial_dataset.",
       "description": "Evaluates campaign performance, predicts engagement by customer segment, and optimizes email marketing strategies.",
-      "available_tools": [
-        "analyze_campaign_effectiveness",
-        "predict_engagement",
-        "list_finance_datasets",
-        "summarize_financial_dataset"
-      ]
+      "use_rag": false,
+      "use_mcp": true,
+      "use_bing": false,
+      "use_reasoning": false,
+      "index_name": "",
+      "index_foundry_name": "",
+      "index_endpoint": "",
+      "coding_tools": false
     },
     {
+      "input_key": "",
+      "type": "",
       "name": "LoyaltyOptimizationAgent",
-      "role": "Loyalty Program & Member Engagement Manager",
-      "system_message": "You are a Loyalty Program Specialist focused on analyzing loyalty program usage, identifying underutilized benefits, and boosting member engagement. Monitor points redemption patterns, flag expiring points, and recommend strategies to increase perceived program value. Help members maximize their benefits while driving repeat purchases.",
-      "model": "gpt-4",
+      "deployment_name": "gpt-4.1-mini",
+      "icon": "",
+      "system_message": "You are a Loyalty Program Specialist focused on analyzing loyalty program usage, identifying underutilized benefits, and boosting member engagement. Monitor points redemption patterns, flag expiring points, and recommend strategies to increase perceived program value. Help members maximize their benefits while driving repeat purchases. Available tools: optimize_loyalty_program, segment_customers, list_finance_datasets, summarize_financial_dataset.",
       "description": "Optimizes loyalty program structure, identifies underutilized benefits, and creates engagement strategies to increase program value.",
-      "available_tools": [
-        "optimize_loyalty_program",
-        "segment_customers",
-        "list_finance_datasets",
-        "summarize_financial_dataset"
-      ]
-    }
-  ],
-  "starting_tasks": [
-    "Analyze all email marketing campaigns to identify best and worst performers. Recommend specific improvements for campaigns with 0% open rate.",
-    "Optimize the loyalty program by analyzing points usage and benefits utilization. Flag any expiring points and underutilized benefits with actionable recommendations.",
-    "Predict engagement probability for high-value customers (e.g., Emily Thompson) for upcoming campaign types. Recommend optimal send times and personalization strategies."
-  ],
-  "collaboration_pattern": "parallel",
-  "success_metrics": [
-    "Email open rate > 50%",
-    "Click-through rate > 20%",
-    "Unsubscribe rate < 2%",
-    "Loyalty redemption rate > 60%",
-    "Benefits utilization > 75%"
-  ],
-  "use_cases": [
-    {
-      "name": "Campaign Effectiveness Analysis",
-      "scenario": "Evaluate 5 email campaigns. 'Exclusive Member Offers' and 'Personal Styling Invite' had 0% open rate. Identify what worked for 'Summer Sale' (excellent engagement).",
-      "datasets": ["email_marketing_engagement.csv", "customer_profile.csv"],
-      "expected_outcome": "Campaign performance ranking, A/B test recommendations for zero-open campaigns, best practices from top performers, segment-specific targeting suggestions"
+      "use_rag": false,
+      "use_mcp": true,
+      "use_bing": false,
+      "use_reasoning": false,
+      "index_name": "",
+      "index_foundry_name": "",
+      "index_endpoint": "",
+      "coding_tools": false
     },
     {
-      "name": "Loyalty Program Revival",
-      "scenario": "Emily has 1,200 points expiring next month (100% of balance), 75% redemption rate. 'Personalized Styling Sessions' has 0% utilization across all members.",
-      "datasets": ["loyalty_program_overview.csv", "subscription_benefits_utilization.csv"],
-      "expected_outcome": "Urgent expiration reminder with redemption options, investigation plan for styling session barriers, recommendation to promote successful benefits (Free Shipping: 7 uses), overall program health assessment"
+      "input_key": "",
+      "type": "",
+      "name": "ProxyAgent",
+      "deployment_name": "",
+      "icon": "",
+      "system_message": "",
+      "description": "",
+      "use_rag": false,
+      "use_mcp": false,
+      "use_bing": false,
+      "use_reasoning": false,
+      "index_name": "",
+      "index_foundry_name": "",
+      "index_endpoint": "",
+      "coding_tools": false
     }
   ],
-  "created_by": "Sprint 3 Enhancement",
-  "version": "1.0",
-  "tags": ["marketing", "campaigns", "engagement", "loyalty", "email", "ROI"]
+  "protected": false,
+  "description": "Specialized team for marketing campaign analysis, engagement prediction, and loyalty program optimization to maximize marketing ROI and customer engagement. Success metrics: Email open rate > 50%, Click-through rate > 20%, Unsubscribe rate < 2%, Loyalty redemption rate > 60%, Benefits utilization > 75%.",
+  "logo": "",
+  "plan": "",
+  "starting_tasks": [
+    {
+      "id": "marketing-intel-task-1",
+      "name": "Campaign Effectiveness Analysis",
+      "prompt": "Analyze all email marketing campaigns to identify best and worst performers. Recommend specific improvements for campaigns with 0% open rate.",
+      "created": "",
+      "creator": "",
+      "logo": ""
+    },
+    {
+      "id": "marketing-intel-task-2",
+      "name": "Loyalty Program Optimization",
+      "prompt": "Optimize the loyalty program by analyzing points usage and benefits utilization. Flag any expiring points and underutilized benefits with actionable recommendations.",
+      "created": "",
+      "creator": "",
+      "logo": ""
+    },
+    {
+      "id": "marketing-intel-task-3",
+      "name": "Engagement Prediction",
+      "prompt": "Predict engagement probability for high-value customers for upcoming campaign types. Recommend optimal send times and personalization strategies.",
+      "created": "",
+      "creator": "",
+      "logo": ""
+    }
+  ]
 }
-
-
-
