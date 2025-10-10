@@ -9,6 +9,11 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+# Add backend to Python path for common.utils imports
+backend_path = Path(__file__).parent.parent / "backend"
+if str(backend_path) not in sys.path:
+    sys.path.insert(0, str(backend_path))
+
 from config.settings import config
 from core.factory import MCPToolFactory
 from fastmcp import FastMCP
