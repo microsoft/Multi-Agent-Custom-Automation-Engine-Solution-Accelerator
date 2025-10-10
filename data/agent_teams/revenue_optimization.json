@@ -1,0 +1,64 @@
+{
+  "team_name": "Revenue Optimization Team",
+  "description": "Specialized team for competitive pricing analysis, discount optimization, and revenue forecasting to maximize profitability while maintaining market competitiveness.",
+  "agents": [
+    {
+      "name": "PricingStrategistAgent",
+      "role": "Pricing Strategy & Competitive Analysis Lead",
+      "system_message": "You are a Pricing Strategist focused on competitive price analysis, optimal discount strategies, and revenue maximization. Use pricing analytics MCP tools to identify price gaps, optimize discount levels, and recommend pricing adjustments. Balance competitiveness with profitability, considering market positioning and customer price sensitivity.",
+      "model": "gpt-4",
+      "description": "Analyzes competitive pricing gaps, optimizes discount strategies, and recommends price adjustments to maximize revenue.",
+      "available_tools": [
+        "competitive_price_analysis",
+        "optimize_discount_strategy",
+        "list_finance_datasets",
+        "summarize_financial_dataset"
+      ]
+    },
+    {
+      "name": "RevenueForecasterAgent",
+      "role": "Revenue Forecasting & Growth Specialist",
+      "system_message": "You are a Revenue Forecaster specializing in category-level revenue projections and growth analysis. Use advanced forecasting methods (SARIMA, Prophet, auto-selection) to predict revenue trends, evaluate forecast accuracy, and identify growth opportunities. Provide confidence intervals and risk assessments for all projections.",
+      "model": "gpt-4",
+      "description": "Forecasts revenue by category/product/segment using advanced methods, evaluates forecast accuracy, and identifies growth drivers.",
+      "available_tools": [
+        "forecast_revenue_by_category",
+        "generate_financial_forecast",
+        "evaluate_forecast_models",
+        "list_finance_datasets",
+        "summarize_financial_dataset"
+      ]
+    }
+  ],
+  "starting_tasks": [
+    "Perform competitive price analysis across all product categories. Identify overpriced and underpriced categories with specific price adjustment recommendations.",
+    "Optimize discount strategy based on historical purchase patterns. Determine the most effective discount range and recommend how to reduce reliance on deep discounts.",
+    "Forecast revenue by category for the next 6 months with confidence intervals. Highlight categories with highest growth potential."
+  ],
+  "collaboration_pattern": "sequential",
+  "success_metrics": [
+    "Revenue growth > 8% year-over-year",
+    "Price competitiveness improved (avg gap < 5%)",
+    "Discount efficiency increased (higher AOV with lower discounts)",
+    "Forecast accuracy (MAPE) < 10%",
+    "Margin improvement > 2%"
+  ],
+  "use_cases": [
+    {
+      "name": "Competitive Pricing Optimization",
+      "scenario": "Analyze price gaps across categories. Dresses are overpriced (+20% vs competition) with 15% return rate. Simulate 10% price reduction impact.",
+      "datasets": ["competitor_pricing_analysis.csv", "product_table.csv", "purchase_history.csv"],
+      "expected_outcome": "Price gap analysis showing Dresses 20% above market, recommended price reduction to $105 (5% premium), forecasted 25% volume increase, net revenue +8% projection"
+    },
+    {
+      "name": "Discount Strategy ROI",
+      "scenario": "Optimize discount strategy to maximize revenue. Identify optimal discount range and reduce over-discounting.",
+      "datasets": ["purchase_history.csv"],
+      "expected_outcome": "Discount effectiveness analysis, optimal range identification (e.g., 'Small 1-10%' performs best), recommendation to cap discounts at 15-20%, projected margin improvement"
+    }
+  ],
+  "created_by": "Sprint 3 Enhancement",
+  "version": "1.0",
+  "tags": ["pricing", "revenue", "forecasting", "discounts", "competition", "optimization"]
+}
+

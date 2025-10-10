@@ -13,7 +13,7 @@ import {
   ArrowDownload20Regular,
   Delete20Regular,
   DocumentData20Regular,
-  Upload20Regular,
+  ArrowUpload20Regular,
 } from '@fluentui/react-icons';
 
 import { DatasetMetadata } from '@/models';
@@ -150,7 +150,7 @@ const ForecastDatasetPanel: React.FC = () => {
         <Tooltip content="Upload dataset" relationship="label">
           <Button
             appearance="secondary"
-            icon={<Upload20Regular />}
+            icon={<ArrowUpload20Regular />}
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
           >

@@ -1,0 +1,63 @@
+{
+  "team_name": "Customer Intelligence Team",
+  "description": "Specialized team for customer churn analysis, segmentation, CLV prediction, and sentiment tracking to maximize customer lifetime value and retention.",
+  "agents": [
+    {
+      "name": "ChurnPredictionAgent",
+      "role": "Customer Retention Specialist",
+      "system_message": "You are a Customer Retention Specialist focused on analyzing churn drivers, segmenting at-risk customers, and developing retention strategies. Use customer analytics MCP tools to identify churn patterns, predict customer lifetime value, and create targeted retention campaigns. Prioritize high-value customers and provide data-driven recommendations to reduce churn.",
+      "model": "gpt-4",
+      "description": "Identifies churn drivers, segments customers by value and risk, and creates personalized retention strategies.",
+      "available_tools": [
+        "analyze_customer_churn",
+        "segment_customers",
+        "predict_customer_lifetime_value",
+        "list_finance_datasets",
+        "summarize_financial_dataset"
+      ]
+    },
+    {
+      "name": "SentimentAnalystAgent",
+      "role": "Brand Sentiment & Reputation Manager",
+      "system_message": "You are a Brand Sentiment Analyst specializing in social media sentiment tracking, anomaly detection, and reputation forecasting. Monitor sentiment trends, detect negative sentiment spikes, and provide early warning of reputation risks. Recommend proactive strategies to maintain positive brand perception.",
+      "model": "gpt-4",
+      "description": "Monitors social sentiment trends, detects anomalies, forecasts reputation metrics, and recommends proactive brand management strategies.",
+      "available_tools": [
+        "analyze_sentiment_trends",
+        "list_finance_datasets",
+        "summarize_financial_dataset"
+      ]
+    }
+  ],
+  "starting_tasks": [
+    "Analyze current customer churn drivers and rank them by impact. Identify the top 3 actionable retention strategies.",
+    "Segment all customers using RFM analysis. Identify Champions, At Risk, and Needs Attention segments with specific characteristics and recommended actions.",
+    "Forecast social media sentiment for the next 3 months. Flag any risk periods and recommend proactive reputation management strategies."
+  ],
+  "collaboration_pattern": "parallel",
+  "success_metrics": [
+    "Churn rate reduced by 15%",
+    "High-value customer retention > 90%",
+    "Customer lifetime value increased by 20%",
+    "Sentiment score > 0.4 (positive)",
+    "Early detection of sentiment anomalies (within 1 period)"
+  ],
+  "use_cases": [
+    {
+      "name": "Emily Thompson Retention",
+      "scenario": "High-value customer (C1024, $4,800 total spend, $200/month avg) shows churn risk signals. Analyze CLV, identify retention opportunities from underutilized benefits.",
+      "datasets": ["customer_profile.csv", "purchase_history.csv", "subscription_benefits_utilization.csv", "customer_churn_analysis.csv"],
+      "expected_outcome": "CLV projection ($6,961 over 12 months), personalized retention offer (free styling session + discount on preferred categories), price lock recommendation"
+    },
+    {
+      "name": "Sentiment Crisis Management",
+      "scenario": "Detect June-July sentiment drop (from 0.480 to 0.321) and forecast recovery timeline.",
+      "datasets": ["social_media_sentiment_analysis.csv"],
+      "expected_outcome": "Anomaly detection with severity assessment, root cause investigation recommendations, sentiment recovery forecast, proactive PR campaign suggestions"
+    }
+  ],
+  "created_by": "Sprint 3 Enhancement",
+  "version": "1.0",
+  "tags": ["customer", "churn", "retention", "sentiment", "CLV", "segmentation"]
+}
+

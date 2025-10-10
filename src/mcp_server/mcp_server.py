@@ -18,6 +18,10 @@ from services.marketing_service import MarketingService
 from services.product_service import ProductService
 from services.tech_support_service import TechSupportService
 from services.finance_service import FinanceService
+from services.customer_analytics_service import CustomerAnalyticsService
+from services.operations_analytics_service import OperationsAnalyticsService
+from services.pricing_analytics_service import PricingAnalyticsService
+from services.marketing_analytics_service import MarketingAnalyticsService
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -32,6 +36,10 @@ factory.register_service(TechSupportService())
 factory.register_service(MarketingService())
 factory.register_service(ProductService())
 factory.register_service(FinanceService())
+factory.register_service(CustomerAnalyticsService())
+factory.register_service(OperationsAnalyticsService())
+factory.register_service(PricingAnalyticsService())
+factory.register_service(MarketingAnalyticsService())
 
 
 

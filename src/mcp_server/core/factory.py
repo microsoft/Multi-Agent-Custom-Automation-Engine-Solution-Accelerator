@@ -20,6 +20,10 @@ class Domain(Enum):
     GENERAL = "general"
     DATA = "data"
     FINANCE = "finance"
+    CUSTOMER = "customer"
+    OPERATIONS = "operations"
+    PRICING = "pricing"
+    MARKETING_ANALYTICS = "marketing_analytics"
 
 
 class MCPToolBase(ABC):
