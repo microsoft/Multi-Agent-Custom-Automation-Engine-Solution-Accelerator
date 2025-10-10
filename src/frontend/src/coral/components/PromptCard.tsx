@@ -37,14 +37,14 @@ const PromptCard: React.FC<PromptCardProps> = ({
         transition: "background-color 0.2s ease-in-out",
       }}
       // 🧠 Only apply hover if not disabled
-      onMouseOver={(e) => {
+      onMouseOver={(e: React.MouseEvent<HTMLDivElement>) => {
         if (!disabled) {
           e.currentTarget.style.backgroundColor =
             "var(--colorNeutralBackground3Hover)";
             e.currentTarget.style.border = "1px solid var(--colorNeutralStroke1)"; // subtle shadow on hover
         }
       }}
-      onMouseOut={(e) => {
+      onMouseOut={(e: React.MouseEvent<HTMLDivElement>) => {
         if (!disabled) {
           e.currentTarget.style.backgroundColor =
             "var(--colorNeutralBackground3)";

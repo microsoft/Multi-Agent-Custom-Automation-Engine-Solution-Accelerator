@@ -132,19 +132,36 @@ const PlanPage: React.FC = () => {
         // Persist / forward to backend (fire-and-forget with logging)
         const agentMessageResponse = PlanDataService.createAgentMessageResponse(agentMessageData, planData, is_final, streaming_message);
         console.log('📤 Persisting agent message:', agentMessageResponse);
-        void apiService.sendAgentMessage(agentMessageResponse)
+        const sendPromise = apiService.sendAgentMessage(agentMessageResponse)
             .then(saved => {
                 console.log('[agent_message][persisted]', {
                     agent: agentMessageData.agent,
                     type: agentMessageData.agent_type,
                     ts: agentMessageData.timestamp
                 });
+                
+                // If this is a final message, refresh the task list after successful persistence
+                if (is_final) {
+                    // Single refresh with a delay to ensure backend processing is complete
+                    setTimeout(() => {
+                        setReloadLeftList(true);
+                    }, 1000);
+                }
             })
             .catch(err => {
                 console.warn('[agent_message][persist-failed]', err);
+                // Even if persistence fails, still refresh the task list for final messages
+                // The local plan data has been updated, so the UI should reflect that
+                if (is_final) {
+                    setTimeout(() => {
+                        setReloadLeftList(true);
+                    }, 1000);
+                }
             });
 
-    }, []);
+        return sendPromise;
+
+    }, [setReloadLeftList]);
 
     const resetPlanVariables = useCallback(() => {
         setInput("");
@@ -335,12 +352,9 @@ const PlanPage: React.FC = () => {
                     setPlanData({ ...planData });
                 }
 
+                // Wait for the agent message to be processed and persisted
+                // The processAgentMessage function will handle refreshing the task list
                 processAgentMessage(agentMessageData, planData, is_final, streamingMessageBuffer);
-
-                setTimeout(() => {
-                    console.log('✅ Plan completed, refreshing left list');
-                    setReloadLeftList(true);
-                }, 1000);
 
             }
 
@@ -348,7 +362,7 @@ const PlanPage: React.FC = () => {
         });
 
         return () => unsubscribe();
-    }, [scrollToBottom, planData, processAgentMessage, streamingMessageBuffer, setSelectedTeam, setReloadLeftList]);
+    }, [scrollToBottom, planData, processAgentMessage, streamingMessageBuffer, setSelectedTeam]);
 
     //WebsocketMessageType.AGENT_MESSAGE
     useEffect(() => {
