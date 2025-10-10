@@ -2,7 +2,7 @@ name: Validate Deployment v3
 
 on:
   workflow_run:
-    workflows: ["Build Docker and Optional Push"]
+    workflows: ["Build Docker and Optional Push v3"]
     types:
       - completed
     branches:

@@ -9,6 +9,11 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+# Add backend to Python path for common.utils imports
+backend_path = Path(__file__).parent.parent / "backend"
+if str(backend_path) not in sys.path:
+    sys.path.insert(0, str(backend_path))
+
 from config.settings import config
 from core.factory import MCPToolFactory
 from fastmcp import FastMCP
@@ -18,6 +23,10 @@ from services.marketing_service import MarketingService
 from services.product_service import ProductService
 from services.tech_support_service import TechSupportService
 from services.finance_service import FinanceService
+from services.customer_analytics_service import CustomerAnalyticsService
+from services.operations_analytics_service import OperationsAnalyticsService
+from services.pricing_analytics_service import PricingAnalyticsService
+from services.marketing_analytics_service import MarketingAnalyticsService
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -32,6 +41,10 @@ factory.register_service(TechSupportService())
 factory.register_service(MarketingService())
 factory.register_service(ProductService())
 factory.register_service(FinanceService())
+factory.register_service(CustomerAnalyticsService())
+factory.register_service(OperationsAnalyticsService())
+factory.register_service(PricingAnalyticsService())
+factory.register_service(MarketingAnalyticsService())
 
 
 

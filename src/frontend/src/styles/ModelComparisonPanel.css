@@ -1,0 +1,48 @@
+.model-comparison {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.model-comparison__loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 4rem 2rem;
+}
+
+.model-comparison__summary {
+  padding: 1.5rem;
+  background: #ffffff;
+}
+
+.model-comparison__summary > *:not(:last-child) {
+  margin-bottom: 0.5rem;
+}
+
+.model-comparison__table {
+  padding: 1.5rem;
+  background: #ffffff;
+}
+
+.model-comparison__table table {
+  width: 100%;
+}
+
+.model-comparison__table th {
+  text-align: left;
+  padding: 0.75rem;
+  border-bottom: 2px solid var(--colorNeutralStroke1, #e1dfdd);
+}
+
+.model-comparison__table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--colorNeutralStroke2, #f3f2f1);
+}
+
+.model-comparison__table tr:hover {
+  background-color: var(--colorNeutralBackground1Hover, #f3f2f1);
+}
+
+
+

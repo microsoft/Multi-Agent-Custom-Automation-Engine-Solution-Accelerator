@@ -1,0 +1,38 @@
+.forecast-chart {
+  padding: 1.5rem;
+  background: #ffffff;
+}
+
+.forecast-chart__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.forecast-chart__controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.forecast-chart__loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 4rem 2rem;
+}
+
+.forecast-chart__summary {
+  display: flex;
+  gap: 2rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--colorNeutralStroke1, #e1dfdd);
+}
+
+.forecast-chart__summary > * {
+  color: var(--colorNeutralForeground2, #605e5c);
+}
+
+
+

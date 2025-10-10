@@ -57,6 +57,24 @@ The solution leverages Azure OpenAI Service, Azure Container Apps, Azure Cosmos 
   - **Efficient task automation** <br/>
   Streamlining the process of analyzing, planning, and executing complex tasks reduces time and effort required to complete organizational processes.
 
+  - **Advanced Analytics & Forecasting** <br/>
+  Comprehensive suite of MCP tools for financial forecasting (SARIMA, Prophet, Exponential Smoothing, Linear Regression), customer analytics, operations optimization, pricing strategies, and marketing ROI analysis.
+
+  - **Multi-Model Forecasting with Auto-Selection** <br/>
+  Automatically evaluate and select the best forecasting method based on data characteristics, with confidence intervals and detailed accuracy metrics (MAE, RMSE, MAPE).
+
+  - **Customer Intelligence** <br/>
+  Analyze customer churn drivers, perform RFM segmentation, predict lifetime value, and analyze sentiment trends to drive retention and growth strategies.
+
+  - **Operations Optimization** <br/>
+  Forecast delivery performance, optimize inventory levels, analyze warehouse incidents, and improve operational efficiency with data-driven insights.
+
+  - **Pricing & Revenue Intelligence** <br/>
+  Competitive pricing analysis, discount strategy optimization, and revenue forecasting by category to maximize profitability.
+
+  - **Marketing Analytics** <br/>
+  Measure campaign effectiveness, predict customer engagement, and optimize loyalty programs to improve marketing ROI.
+
 </details>
 
 <br /><br />
@@ -66,6 +84,8 @@ Quick deploy
 
 ### How to install or deploy
 Follow the quick deploy steps on the deployment guide to deploy this solution to your own Azure subscription.
+
+> **Note:** This solution accelerator requires **Azure Developer CLI (azd) version 1.18.0 or higher**. Please ensure you have the latest version installed before proceeding with deployment. [Download azd here](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/install-azd).
 
 [Click here to launch the deployment guide](./docs/DeploymentGuide.md)
 <br/><br/>
@@ -161,6 +181,79 @@ You may want to consider additional security measures, such as:
 
 * Enabling Microsoft Defender for Cloud to [secure your Azure resources](https://learn.microsoft.com/en-us/azure/defender-for-cloud/).
 * Protecting the Azure Container Apps instance with a [firewall](https://learn.microsoft.com/azure/container-apps/waf-app-gateway) and/or [Virtual Network](https://learn.microsoft.com/azure/container-apps/networking?tabs=workload-profiles-env%2Cazure-cli).
+
+<br/>
+
+### Analytics & Forecasting Platform
+
+This solution accelerator includes a comprehensive analytics and forecasting platform with 18 MCP tools across 5 specialized services:
+
+#### Available Analytics Services
+
+1. **Finance Forecasting Service** (5 tools)
+   - Multi-model revenue forecasting (SARIMA, Prophet, Exponential Smoothing, Linear Regression)
+   - Automatic best-method selection with confidence intervals
+   - Model accuracy evaluation and comparison
+
+2. **Customer Analytics Service** (4 tools)
+   - Customer churn analysis and prediction
+   - RFM segmentation for targeted marketing
+   - Customer lifetime value (CLV) prediction
+   - Sentiment trend analysis
+
+3. **Operations Analytics Service** (4 tools)
+   - Delivery performance forecasting
+   - Inventory optimization
+   - Warehouse incident analysis
+   - Operations health summary dashboard
+
+4. **Pricing Analytics Service** (3 tools)
+   - Competitive pricing analysis
+   - Discount strategy optimization
+   - Revenue forecasting by product category
+
+5. **Marketing Analytics Service** (3 tools)
+   - Campaign effectiveness measurement
+   - Customer engagement prediction
+   - Loyalty program optimization
+
+#### Agent Teams
+
+The platform includes 5 pre-configured agent teams optimized for different business scenarios:
+
+- **Finance Forecasting Team** - Revenue prediction and financial planning
+- **Customer Intelligence Team** - Churn prevention and retention strategies
+- **Retail Operations Team** - Supply chain and delivery optimization
+- **Revenue Optimization Team** - Pricing strategies and revenue growth
+- **Marketing Intelligence Team** - Campaign optimization and customer engagement
+
+#### Documentation & Resources
+
+For comprehensive guides and examples, see:
+
+- **[User Guide](./docs/USER_GUIDE.md)** - Complete guide for business users
+- **[Developer Guide](./docs/DEVELOPER_GUIDE.md)** - Technical documentation for developers
+- **[API Reference](./docs/API_REFERENCE.md)** - Detailed API documentation
+- **[Production Deployment](./docs/PRODUCTION_DEPLOYMENT.md)** - Deployment best practices
+- **[Performance Optimization](./docs/PERFORMANCE_OPTIMIZATION.md)** - Performance tuning guide
+
+#### Example Scenarios
+
+Explore real-world use cases with step-by-step walkthroughs:
+
+1. **[Retail Revenue Forecasting](./examples/scenarios/01_retail_revenue_forecasting.md)**
+2. **[Customer Churn Prevention](./examples/scenarios/02_customer_churn_prevention.md)**
+3. **[Operations Optimization](./examples/scenarios/03_operations_optimization.md)**
+4. **[Pricing & Marketing ROI](./examples/scenarios/04_pricing_marketing_roi.md)**
+
+#### Interactive Jupyter Notebooks
+
+Hands-on notebooks demonstrating analytics capabilities:
+
+- **[Revenue Forecasting](./examples/notebooks/01_revenue_forecasting.ipynb)** - Multi-model forecasting with visualizations
+- **[Customer Segmentation](./examples/notebooks/02_customer_segmentation.ipynb)** - RFM analysis and churn prediction
+- **[Operations Analytics](./examples/notebooks/03_operations_analytics.ipynb)** - Delivery performance and inventory optimization
+- **[Pricing & Marketing](./examples/notebooks/04_pricing_marketing.ipynb)** - Pricing strategies and campaign effectiveness
 
 <br/>
 

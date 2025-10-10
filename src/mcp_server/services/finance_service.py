@@ -16,6 +16,14 @@ from common.utils.dataset_utils import (
     summarize_numeric_series,
     extract_numeric_series,
 )
+from common.utils.advanced_forecasting import (
+    sarima_forecast,
+    exponential_smoothing_forecast,
+    prophet_forecast,
+    linear_forecast_with_confidence,
+    auto_select_forecast_method,
+    evaluate_forecast_accuracy,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -149,8 +157,21 @@ class FinanceService(MCPToolBase):
             dataset_id: str,
             target_column: str,
             periods: int = 3,
+            method: str = "auto",
+            confidence_level: float = 0.95,
         ) -> Dict[str, Any]:
-            """Create a simple forward forecast for the chosen numeric column."""
+            """Create a forward forecast for the chosen numeric column using advanced methods.
+            
+            Args:
+                dataset_id: Unique identifier for the dataset
+                target_column: Column name to forecast
+                periods: Number of future periods to forecast
+                method: Forecasting method - "auto", "linear", "sarima", "prophet", "exponential_smoothing"
+                confidence_level: Confidence level for prediction intervals (0-1)
+            
+            Returns:
+                Forecast with confidence bounds, historical summary, and method metadata
+            """
 
             metadata = self._find_metadata(dataset_id)
             if not metadata:
@@ -162,22 +183,132 @@ class FinanceService(MCPToolBase):
 
             try:
                 values, row_count = extract_numeric_series(dataset_path, target_column)
-                forecast = simple_linear_forecast(values, periods)
                 baseline = summarize_numeric_series(values)
+
+                # Select and run forecasting method
+                if method == "auto":
+                    forecast_result = auto_select_forecast_method(values, periods, confidence_level)
+                elif method == "linear":
+                    forecast_result = linear_forecast_with_confidence(values, periods, confidence_level)
+                elif method == "sarima":
+                    forecast_result = sarima_forecast(values, periods, confidence_level=confidence_level)
+                elif method == "prophet":
+                    forecast_result = prophet_forecast(values, periods, confidence_level=confidence_level)
+                elif method == "exponential_smoothing":
+                    forecast_result = exponential_smoothing_forecast(values, periods, confidence_level=confidence_level)
+                else:
+                    return {"error": f"Unknown forecasting method: {method}. Use 'auto', 'linear', 'sarima', 'prophet', or 'exponential_smoothing'."}
 
                 return {
                     "dataset_id": dataset_id,
                     "target_column": target_column,
                     "row_count": row_count,
                     "historical_summary": baseline,
-                    "forecast": forecast,
-                    "notes": "Forecast uses a simple linear trend projection across the historical series. Review seasonality or anomalies before relying on these figures.",
+                    "forecast": forecast_result.get("forecast", []),
+                    "lower_bound": forecast_result.get("lower_bound", []),
+                    "upper_bound": forecast_result.get("upper_bound", []),
+                    "confidence_level": confidence_level,
+                    "method_used": forecast_result.get("method", method),
+                    "method_metadata": {k: v for k, v in forecast_result.items() if k not in ["forecast", "lower_bound", "upper_bound", "method"]},
+                    "notes": f"Forecast generated using {forecast_result.get('method', method)} method. {forecast_result.get('selection_rationale', '')}",
+                }
+            except ValueError as exc:
+                return {"error": str(exc)}
+            except ImportError as exc:
+                return {"error": f"Required package not installed: {exc}. Install with pip."}
+            except Exception as exc:  # noqa: BLE001
+                LOGGER.exception("Failed to forecast dataset %s", dataset_id)
+                return {"error": f"Unable to generate forecast: {exc}"}
+
+        @mcp.tool(tags={self.domain.value})
+        def evaluate_forecast_models(
+            dataset_id: str,
+            target_column: str,
+            test_size: int = 3,
+        ) -> Dict[str, Any]:
+            """Evaluate multiple forecasting methods and rank by accuracy.
+            
+            Splits data into train/test, fits multiple models, and compares performance.
+            
+            Args:
+                dataset_id: Unique identifier for the dataset
+                target_column: Column name to evaluate
+                test_size: Number of periods to hold out for testing
+            
+            Returns:
+                Ranked list of methods with accuracy metrics (MAE, RMSE, MAPE)
+            """
+
+            metadata = self._find_metadata(dataset_id)
+            if not metadata:
+                return {"error": f"Dataset '{dataset_id}' was not found."}
+
+            dataset_path = self._dataset_file(metadata)
+            if not dataset_path:
+                return {"error": f"Dataset file for '{dataset_id}' is missing."}
+
+            try:
+                values, row_count = extract_numeric_series(dataset_path, target_column)
+                
+                if len(values) < test_size + 5:
+                    return {"error": f"Need at least {test_size + 5} data points for evaluation (have {len(values)})"}
+                
+                # Split into train/test
+                train_values = values[:-test_size]
+                test_values = values[-test_size:]
+                
+                # Test multiple methods
+                methods_to_test = ["linear", "exponential_smoothing", "sarima"]
+                results = []
+                
+                for method in methods_to_test:
+                    try:
+                        if method == "linear":
+                            forecast_result = linear_forecast_with_confidence(train_values, test_size)
+                        elif method == "exponential_smoothing":
+                            forecast_result = exponential_smoothing_forecast(train_values, test_size)
+                        elif method == "sarima":
+                            forecast_result = sarima_forecast(train_values, test_size)
+                        
+                        predicted = forecast_result.get("forecast", [])
+                        if len(predicted) != test_size:
+                            continue
+                        
+                        # Calculate accuracy metrics
+                        metrics = evaluate_forecast_accuracy(test_values, predicted)
+                        
+                        results.append({
+                            "method": method,
+                            "mae": metrics["mae"],
+                            "rmse": metrics["rmse"],
+                            "mape": metrics["mape"],
+                            "forecast": predicted,
+                        })
+                    except Exception as exc:
+                        LOGGER.warning("Method %s failed: %s", method, exc)
+                        continue
+                
+                if not results:
+                    return {"error": "All forecasting methods failed. Check data quality."}
+                
+                # Rank by RMSE (lower is better)
+                results.sort(key=lambda x: x["rmse"])
+                
+                return {
+                    "dataset_id": dataset_id,
+                    "target_column": target_column,
+                    "test_size": test_size,
+                    "train_size": len(train_values),
+                    "actual_test_values": test_values,
+                    "ranked_methods": results,
+                    "best_method": results[0]["method"],
+                    "recommendation": f"Use {results[0]['method']} method for this dataset (lowest RMSE: {results[0]['rmse']:.2f})",
                 }
             except ValueError as exc:
                 return {"error": str(exc)}
             except Exception as exc:  # noqa: BLE001
-                LOGGER.exception("Failed to forecast dataset %s", dataset_id)
-                return {"error": f"Unable to generate forecast: {exc}"}
+                LOGGER.exception("Failed to evaluate models for dataset %s", dataset_id)
+                return {"error": f"Unable to evaluate models: {exc}"}
 
         @mcp.tool(tags={self.domain.value})
         def prepare_financial_dataset(
@@ -225,4 +356,4 @@ class FinanceService(MCPToolBase):
 
     @property
     def tool_count(self) -> int:
-        return 4
+        return 5

@@ -1,0 +1,91 @@
+{
+  "id": "8",
+  "team_id": "team-marketing-intelligence",
+  "name": "Marketing Intelligence Team",
+  "status": "visible",
+  "created": "",
+  "created_by": "Sprint 3 Enhancement",
+  "agents": [
+    {
+      "input_key": "",
+      "type": "",
+      "name": "CampaignAnalystAgent",
+      "deployment_name": "gpt-4.1-mini",
+      "icon": "",
+      "system_message": "You are a Campaign Analyst focused on evaluating marketing campaign effectiveness, predicting customer engagement, and optimizing targeting strategies. Use marketing analytics MCP tools to analyze open rates, click-through rates, and unsubscribe patterns. Recommend A/B tests, segment-specific campaigns, and optimal send timing to maximize engagement. Available tools: analyze_campaign_effectiveness, predict_engagement, list_finance_datasets, summarize_financial_dataset.",
+      "description": "Evaluates campaign performance, predicts engagement by customer segment, and optimizes email marketing strategies.",
+      "use_rag": false,
+      "use_mcp": true,
+      "use_bing": false,
+      "use_reasoning": false,
+      "index_name": "",
+      "index_foundry_name": "",
+      "index_endpoint": "",
+      "coding_tools": false
+    },
+    {
+      "input_key": "",
+      "type": "",
+      "name": "LoyaltyOptimizationAgent",
+      "deployment_name": "gpt-4.1-mini",
+      "icon": "",
+      "system_message": "You are a Loyalty Program Specialist focused on analyzing loyalty program usage, identifying underutilized benefits, and boosting member engagement. Monitor points redemption patterns, flag expiring points, and recommend strategies to increase perceived program value. Help members maximize their benefits while driving repeat purchases. Available tools: optimize_loyalty_program, segment_customers, list_finance_datasets, summarize_financial_dataset.",
+      "description": "Optimizes loyalty program structure, identifies underutilized benefits, and creates engagement strategies to increase program value.",
+      "use_rag": false,
+      "use_mcp": true,
+      "use_bing": false,
+      "use_reasoning": false,
+      "index_name": "",
+      "index_foundry_name": "",
+      "index_endpoint": "",
+      "coding_tools": false
+    },
+    {
+      "input_key": "",
+      "type": "",
+      "name": "ProxyAgent",
+      "deployment_name": "",
+      "icon": "",
+      "system_message": "",
+      "description": "",
+      "use_rag": false,
+      "use_mcp": false,
+      "use_bing": false,
+      "use_reasoning": false,
+      "index_name": "",
+      "index_foundry_name": "",
+      "index_endpoint": "",
+      "coding_tools": false
+    }
+  ],
+  "protected": false,
+  "description": "Specialized team for marketing campaign analysis, engagement prediction, and loyalty program optimization to maximize marketing ROI and customer engagement. Success metrics: Email open rate > 50%, Click-through rate > 20%, Unsubscribe rate < 2%, Loyalty redemption rate > 60%, Benefits utilization > 75%.",
+  "logo": "",
+  "plan": "",
+  "starting_tasks": [
+    {
+      "id": "marketing-intel-task-1",
+      "name": "Campaign Effectiveness Analysis",
+      "prompt": "Analyze all email marketing campaigns to identify best and worst performers. Recommend specific improvements for campaigns with 0% open rate.",
+      "created": "",
+      "creator": "",
+      "logo": ""
+    },
+    {
+      "id": "marketing-intel-task-2",
+      "name": "Loyalty Program Optimization",
+      "prompt": "Optimize the loyalty program by analyzing points usage and benefits utilization. Flag any expiring points and underutilized benefits with actionable recommendations.",
+      "created": "",
+      "creator": "",
+      "logo": ""
+    },
+    {
+      "id": "marketing-intel-task-3",
+      "name": "Engagement Prediction",
+      "prompt": "Predict engagement probability for high-value customers for upcoming campaign types. Recommend optimal send times and personalization strategies.",
+      "created": "",
+      "creator": "",
+      "logo": ""
+    }
+  ]
+}

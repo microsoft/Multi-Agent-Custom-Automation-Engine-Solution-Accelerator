@@ -26,6 +26,7 @@ from v3.config.settings import (connection_config, current_user_id,
                                 orchestration_config, team_config)
 from v3.orchestration.orchestration_manager import OrchestrationManager
 from common.utils.dataset_utils import ALLOWED_EXTENSIONS as DATASET_ALLOWED_EXTENSIONS
+from v3.api.analytics_endpoints import router as analytics_router
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -1469,3 +1470,7 @@ async def get_plan_by_id(request: Request,  plan_id: Optional[str] = Query(None)
     except Exception as e:
         logging.error(f"Error retrieving plan: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error occurred")
+
+
+# Include analytics router
+app_v3.include_router(analytics_router)
