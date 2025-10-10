@@ -23,6 +23,9 @@
     "gptModelCapacity": {
       "value": "${AZURE_ENV_MODEL_CAPACITY}"
     },
+    "gpt4_1ModelCapacity": {
+      "value": "${AZURE_ENV_MODEL_4_1_CAPACITY}"
+    },
     "backendContainerImageTag": {
       "value": "${AZURE_ENV_IMAGE_TAG=latest_v3}"
     },

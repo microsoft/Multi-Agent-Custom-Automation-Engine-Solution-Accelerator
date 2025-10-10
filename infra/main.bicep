@@ -225,6 +225,7 @@ var allTags = union(
 )
 @description('Tag, Created by user name')
 param createdBy string = contains(deployer(), 'userPrincipalName')? split(deployer().userPrincipalName, '@')[0]: deployer().objectId
+var deployerPrincipalType = contains(deployer(), 'userPrincipalName')? 'User' : 'ServicePrincipal'
 
 resource resourceGroupTags 'Microsoft.Resources/tags@2021-04-01' = {
   name: 'default'
@@ -1262,12 +1263,12 @@ module aiFoundryAiServices 'br:mcr.microsoft.com/bicep/avm/res/cognitive-service
       {
         roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
         principalId: deployingUserPrincipalId
-        principalType: 'User'
+        principalType: deployerPrincipalType
       }
       {
         roleDefinitionIdOrName: '64702f94-c441-49e6-a78b-ef80e0188fee' // Azure AI Developer
         principalId: deployingUserPrincipalId
-        principalType: 'User'
+        principalType: deployerPrincipalType
       }
     ]
     // WAF aligned configuration for Monitoring
@@ -1856,7 +1857,7 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
       {
         principalId: deployingUserPrincipalId
         roleDefinitionIdOrName: 'Storage Blob Data Contributor'
-        principalType: 'User'
+        principalType: deployerPrincipalType
       }
     ]
 
@@ -1943,7 +1944,7 @@ module searchService 'br/public:avm/res/search/search-service:0.11.1' = {
       {
         principalId: deployingUserPrincipalId
         roleDefinitionIdOrName: 'Search Index Data Contributor'
-        principalType: 'User'
+        principalType: deployerPrincipalType
       }
       {
         principalId: aiFoundryAiProjectPrincipalId
