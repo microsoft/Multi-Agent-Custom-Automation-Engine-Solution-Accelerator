@@ -37,9 +37,10 @@ const Content: React.FC<ContentProps> = ({ children }) => {
                     flexDirection: "column",
                     flex: 1,
                     width:'100%',
-
+                    padding: '16px',
     
-                    overflow: "hidden", // prevent double scrollbars
+                    overflowY: "auto", // allow vertical scrolling when content exceeds viewport
+                    overflowX: "hidden", // prevent horizontal scrollbars
                     minHeight: 0, // allow child to shrink properly
                 }}
             >

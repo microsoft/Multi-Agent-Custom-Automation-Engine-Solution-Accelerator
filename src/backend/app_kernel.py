@@ -11,8 +11,10 @@ from azure.monitor.opentelemetry import configure_azure_monitor
 from common.config.app_config import config
 from common.models.messages_kernel import UserLanguage
 # FastAPI imports
-from fastapi import FastAPI, Query, Request
+from fastapi import FastAPI, Query, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 # Local imports
 from middleware.health_check import HealthCheckMiddleware
 from v3.api.router import app_v3
@@ -52,13 +54,14 @@ app = FastAPI()
 
 frontend_url = config.FRONTEND_SITE_NAME
 
-# Add this near the top of your app.py, after initializing the app
+# Add CORS middleware FIRST to ensure it handles all responses including errors
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allow all origins for development; restrict in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Configure health check
@@ -66,6 +69,38 @@ app.add_middleware(HealthCheckMiddleware, password="", checks={})
 # v3 endpoints
 app.include_router(app_v3)
 logging.info("Added health check middleware")
+
+
+# Custom exception handlers to ensure CORS headers are always present
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Handle HTTP exceptions and ensure CORS headers are present."""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+        },
+    )
+
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    """Handle all other exceptions and ensure CORS headers are present."""
+    logging.error(f"Unhandled exception: {str(exc)}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+        },
+    )
 
 
 @app.post("/api/user_browser_language")

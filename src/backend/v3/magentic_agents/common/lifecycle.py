@@ -76,17 +76,30 @@ class MCPEnabledBase:
     async def _enter_mcp_if_configured(self) -> None:
         if not self.mcp_cfg:
             return
-        #headers = self._build_mcp_headers()
-        plugin = MCPStreamableHttpPlugin(
-            name=self.mcp_cfg.name,
-            description=self.mcp_cfg.description,
-            url=self.mcp_cfg.url,
-            #headers=headers,
-        )
-        # Enter MCP async context via the stack to ensure correct LIFO cleanup
-        if self._stack is None:
-            self._stack = AsyncExitStack()
-        self.mcp_plugin = await self._stack.enter_async_context(plugin)
+        
+        import logging
+        logger = logging.getLogger("mcp_init")
+        
+        try:
+            logger.info(f"Initializing MCP plugin: name={self.mcp_cfg.name}, url={self.mcp_cfg.url}")
+            #headers = self._build_mcp_headers()
+            plugin = MCPStreamableHttpPlugin(
+                name=self.mcp_cfg.name,
+                description=self.mcp_cfg.description,
+                url=self.mcp_cfg.url,
+                #headers=headers,
+            )
+            # Enter MCP async context via the stack to ensure correct LIFO cleanup
+            if self._stack is None:
+                self._stack = AsyncExitStack()
+            self.mcp_plugin = await self._stack.enter_async_context(plugin)
+            logger.info(f"✅ MCP plugin initialized successfully: {self.mcp_cfg.name}")
+        except Exception as ex:
+            logger.error(f"❌ Failed to initialize MCP plugin: {ex}")
+            logger.error(f"   MCP URL: {self.mcp_cfg.url}")
+            logger.error(f"   Make sure MCP server is running on port 8001")
+            # Don't raise - allow agent to continue without MCP tools
+            self.mcp_plugin = None
 
 
 class AzureAgentBase(MCPEnabledBase):

@@ -1,6 +1,7 @@
 """Database factory for creating database instances."""
 
 import logging
+import os
 from typing import Optional
 
 from common.config.app_config import config
@@ -38,9 +39,18 @@ class DatabaseFactory:
 
         # Create new instance if forced or if singleton doesn't exist
         if force_new or DatabaseFactory._instance is None:
+            # Use Cosmos DB key if available, otherwise use managed identity
+            cosmos_key = os.getenv("COSMOS_DB_KEY")
+            if cosmos_key:
+                DatabaseFactory._logger.info("Using Cosmos DB key authentication")
+                credential = cosmos_key
+            else:
+                DatabaseFactory._logger.info("Using Azure credential authentication")
+                credential = config.get_azure_credentials()
+            
             cosmos_db_client = CosmosDBClient(
                 endpoint=config.COSMOSDB_ENDPOINT,
-                credential=config.get_azure_credentials(),
+                credential=credential,
                 database_name=config.COSMOSDB_DATABASE,
                 container_name=config.COSMOSDB_CONTAINER,
                 session_id="",

@@ -398,7 +398,7 @@ class TeamService:
             missing_models: List[str] = []
             for model in required_models:
                 # Temporary bypass for known deployed models
-                if model.lower() in ["gpt-4o", "o3", "gpt-4", "gpt-35-turbo"]:
+                if model.lower() in ["gpt-4o", "o3", "gpt-4", "gpt-35-turbo", "gpt-4.1-mini", "gpt-4.1", "o4-mini"]:
                     continue
                 if model not in available_models:
                     missing_models.append(model)

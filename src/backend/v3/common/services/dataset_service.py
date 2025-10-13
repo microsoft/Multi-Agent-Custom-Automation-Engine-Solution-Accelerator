@@ -164,13 +164,21 @@ class DatasetService:
 
     def delete_dataset(self, user_id: str, dataset_id: str) -> bool:
         """Remove a dataset directory and metadata."""
-
+        import logging
+        logger = logging.getLogger(__name__)
+        
         dataset_dir = self._dataset_directory(user_id, dataset_id)
         if not dataset_dir.exists():
+            logger.warning(f"Dataset directory does not exist: {dataset_dir}")
             return False
 
-        shutil.rmtree(dataset_dir)
-        return True
+        try:
+            shutil.rmtree(dataset_dir)
+            logger.info(f"Successfully removed dataset directory: {dataset_dir}")
+            return True
+        except Exception as e:
+            logger.error(f"Error removing dataset directory {dataset_dir}: {str(e)}")
+            raise
 
     def locate_dataset_path(self, dataset_id: str) -> Optional[Path]:
         """Search across all users for a dataset directory."""

@@ -88,7 +88,26 @@ class MagenticAgentFactory:
         
         # Only create configs for explicitly requested capabilities
         search_config = SearchConfig.from_env() if getattr(agent_obj, 'use_rag', False) else None
-        mcp_config = MCPConfig.from_env() if getattr(agent_obj, 'use_mcp', False) else None
+        
+        # Create MCP config with error handling
+        mcp_config = None
+        use_mcp_flag = getattr(agent_obj, 'use_mcp', False)
+        print(f"🔍 DEBUG: Agent '{agent_obj.name}' use_mcp={use_mcp_flag}")  # Force output
+        
+        if use_mcp_flag:
+            try:
+                print(f"🔍 DEBUG: Attempting to create MCP config...")  # Force output
+                mcp_config = MCPConfig.from_env()
+                self.logger.info(f"✅ MCP config created for agent '{agent_obj.name}': {mcp_config.url}")
+                print(f"✅ MCP config created: {mcp_config.url}")  # Force output
+            except Exception as ex:
+                self.logger.error(f"❌ Failed to create MCP config for agent '{agent_obj.name}': {ex}")
+                self.logger.error(f"   Agent will be created WITHOUT MCP tools")
+                print(f"❌ MCP config FAILED: {ex}")  # Force output
+                import traceback
+                traceback.print_exc()
+                mcp_config = None
+        
         # bing_config = BingConfig.from_env() if getattr(agent_obj, 'use_bing', False) else None
         
         self.logger.info(f"Creating agent '{agent_obj.name}' with model '{deployment_name}' "

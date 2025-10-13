@@ -20,12 +20,12 @@ class MCPConfig:
         url = config.MCP_SERVER_ENDPOINT
         name = config.MCP_SERVER_NAME
         description = config.MCP_SERVER_DESCRIPTION
-        tenant_id = config.AZURE_TENANT_ID
-        client_id = config.AZURE_CLIENT_ID
+        tenant_id = config.AZURE_TENANT_ID or ""
+        client_id = config.AZURE_CLIENT_ID or ""
 
-        # Raise exception if any required environment variable is missing
-        if not all([url, name, description, tenant_id, client_id]):
-            raise ValueError(f"{cls.__name__} Missing required environment variables")
+        # Only url, name, and description are required (tenant/client are for auth)
+        if not all([url, name, description]):
+            raise ValueError(f"{cls.__name__} Missing required environment variables: url={url}, name={name}, description={description}")
             
         return cls(
             url=url,

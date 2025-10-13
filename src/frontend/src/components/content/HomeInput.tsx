@@ -224,19 +224,17 @@ const HomeInput: React.FC<HomeInputProps> = ({
                                 </div>
 
                                 <div className="home-input-quick-tasks">
-                                    <div>
-                                        {tasksToDisplay.map((task) => (
-                                            <PromptCard
-                                                key={task.id}
-                                                title={task.title}
-                                                icon={task.icon}
-                                                description={task.description}
-                                                onClick={() => handleQuickTaskClick(task)}
-                                                disabled={submitting}
+                                    {tasksToDisplay.map((task) => (
+                                        <PromptCard
+                                            key={task.id}
+                                            title={task.title}
+                                            icon={task.icon}
+                                            description={task.description}
+                                            onClick={() => handleQuickTaskClick(task)}
+                                            disabled={submitting}
 
-                                            />
-                                        ))}
-                                    </div>
+                                        />
+                                    ))}
                                 </div>
                             </>
                         )}

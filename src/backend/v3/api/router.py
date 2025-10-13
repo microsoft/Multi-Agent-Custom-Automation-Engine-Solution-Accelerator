@@ -934,26 +934,36 @@ async def download_dataset(dataset_id: str, request: Request):
 @app_v3.delete("/datasets/{dataset_id}")
 async def delete_dataset(dataset_id: str, request: Request):
     """Remove an uploaded dataset."""
+    try:
+        authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+        user_id = authenticated_user.get("user_principal_id")
+        if not user_id:
+            logger.warning(f"Delete dataset attempt without user_id. Headers: {dict(request.headers)}")
+            raise HTTPException(status_code=401, detail="Missing or invalid user information")
 
-    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
-    user_id = authenticated_user.get("user_principal_id")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Missing or invalid user information")
+        logger.info(f"Deleting dataset {dataset_id} for user {user_id}")
+        success = dataset_service.delete_dataset(user_id, dataset_id)
+        if not success:
+            logger.warning(f"Dataset {dataset_id} not found for user {user_id}")
+            raise HTTPException(status_code=404, detail="Dataset not found")
 
-    success = dataset_service.delete_dataset(user_id, dataset_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Dataset not found")
+        track_event_if_configured(
+            "DatasetDeleted",
+            {
+                "status": "success",
+                "user_id": user_id,
+                "dataset_id": dataset_id,
+            },
+        )
 
-    track_event_if_configured(
-        "DatasetDeleted",
-        {
-            "status": "success",
-            "user_id": user_id,
-            "dataset_id": dataset_id,
-        },
-    )
-
-    return {"status": "success"}
+        logger.info(f"Successfully deleted dataset {dataset_id} for user {user_id}")
+        return {"status": "success"}
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting dataset {dataset_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @app_v3.get("/team_configs")

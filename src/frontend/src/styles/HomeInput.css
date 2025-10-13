@@ -3,16 +3,16 @@
 .home-input-container {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  width: 100%;
+  margin-top: 24px;
 }
 
 .home-input-content {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
-  padding: 24px;
+  padding: 0;
   position: relative;
 }
 
@@ -21,12 +21,12 @@
   flex-direction: column;
   width: 100%;
   max-width: 728px;
-  gap: 32px;
+  gap: 16px;
 }
 
 .home-input-title-wrapper {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .home-input-input-section {
@@ -78,6 +78,7 @@
 .home-input-quick-tasks-section {
   width: 100%;
   margin-top: 8px;
+  padding-bottom: 16px;
 }
 
 .home-input-quick-tasks-header {
@@ -88,9 +89,10 @@
 }
 
 .home-input-quick-tasks {
-  display: grid !important;
-  grid-template-columns: 1fr 1fr 1fr 1fr !important;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  width: 100%;
 }
 
 
@@ -98,17 +100,13 @@
 /* Responsive design for smaller screens */
 @media (max-width: 768px) {
   .home-input-quick-tasks {
-    flex-wrap: wrap !important;
-  }
-  
-  .home-input-quick-tasks .fui-Card {
-    flex: 1 1 calc(50% - 6px) !important; 
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   }
 }
 
 @media (max-width: 480px) {
-  .home-input-quick-tasks .fui-Card {
-    flex: 1 1 100% !important;
+  .home-input-quick-tasks {
+    grid-template-columns: 1fr;
   }
 }
 
