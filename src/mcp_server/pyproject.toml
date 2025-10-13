@@ -21,7 +21,7 @@ dependencies = [
   "azure-identity==1.19.0",
   "pydantic==2.11.7",
   "pydantic-settings==2.6.1",
-  "python-multipart==0.0.17",
+  "python-multipart==0.0.18",
   "httpx==0.28.1",
 ]
 
