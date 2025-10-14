@@ -670,64 +670,7 @@ module virtualNetwork 'modules/virtualNetwork.bicep' = if (enablePrivateNetworki
       }
     ]
 */
-// Jumpbox Virtual Machine
-var jumpboxVmName = take('vm-jumpbox-${solutionSuffix}', 15)
-module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.15.0' = if (enablePrivateNetworking) {
-  name: take('avm.res.compute.virtual-machine.${jumpboxVmName}', 64)
-  params: {
-    name: take(jumpboxVmName, 15) // Shorten VM name to 15 characters to avoid Azure limits
-    vmSize: 'Standard_DS2_v2'
-    location: location
-    adminUsername: virtualMachineAdminUsername
-    adminPassword: virtualMachineAdminPassword
-    tags: tags
-    zone: 0
-    imageReference: {
-      offer: 'WindowsServer'
-      publisher: 'MicrosoftWindowsServer'
-      sku: '2019-datacenter'
-      version: 'latest'
-    }
-    osType: 'Windows'
-    osDisk: {
-      name: 'osdisk-${jumpboxVmName}'
-      managedDisk: {
-        storageAccountType: 'Standard_LRS'
-      }
-    }
-    encryptionAtHost: false // Some Azure subscriptions do not support encryption at host
-    nicConfigurations: [
-      {
-        name: 'nic-${jumpboxVmName}'
-        ipConfigurations: [
-          {
-            name: 'ipconfig1'
-            subnetResourceId: virtualNetwork!.outputs.jumpboxSubnetResourceId
-          }
-        ]
-        diagnosticSettings: [
-          {
-            name: 'jumpboxDiagnostics'
-            workspaceResourceId: logAnalyticsWorkspaceResourceId
-            logCategoriesAndGroups: [
-              {
-                categoryGroup: 'allLogs'
-                enabled: true
-              }
-            ]
-            metricCategories: [
-              {
-                category: 'AllMetrics'
-                enabled: true
-              }
-            ]
-          }
-        ]
-      }
-    ]
-    enableTelemetry: enableTelemetry
-  }
-}
+
 var bastionResourceName = 'bas-${solutionSuffix}'
 // ========== Bastion host ========== //
 // WAF best practices for virtual networks: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/virtual-network

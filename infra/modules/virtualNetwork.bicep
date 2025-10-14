@@ -13,6 +13,113 @@ param addressPrefixes array
 @description('An array of subnets to be created within the virtual network. Each subnet can have its own configuration and associated Network Security Group (NSG).')
 param subnets subnetType[] = [
 
+
+  {
+   name:'backend'
+   addressPrefixes: ['10.0.0.0/27']
+   networkSecurityGroup: {
+     name: 'nsg-backend'
+     securityRules: [
+            {
+        name: 'deny-hop-outbound'
+        properties: {
+          access: 'Deny'
+          destinationAddressPrefix: '*'
+          destinationPortRanges: [
+            '22'
+            '3389'
+          ]
+          direction: 'Outbound'
+          priority: 200
+          protocol: 'Tcp'
+          sourceAddressPrefix: 'VirtualNetwork'
+          sourcePortRange: '*'
+        }
+      }
+     ]
+   }
+  }
+    {
+    name: 'containers'
+    addressPrefixes: ['10.0.2.0/23']
+    delegation: 'Microsoft.App/environments'
+    privateEndpointNetworkPolicies: 'Enabled'
+    privateLinkServiceNetworkPolicies: 'Enabled'
+    networkSecurityGroup: {
+      name: 'nsg-containers'
+      securityRules: [
+              {
+        name: 'deny-hop-outbound'
+        properties: {
+          access: 'Deny'
+          destinationAddressPrefix: '*'
+          destinationPortRanges: [
+            '22'
+            '3389'
+          ]
+          direction: 'Outbound'
+          priority: 200
+          protocol: 'Tcp'
+          sourceAddressPrefix: 'VirtualNetwork'
+          sourcePortRange: '*'
+        }
+      }
+      ]
+    }
+  }
+  {
+    name: 'webserverfarm'
+    addressPrefixes: ['10.0.4.0/27']
+    delegation: 'Microsoft.Web/serverfarms'
+    privateEndpointNetworkPolicies: 'Enabled'
+    privateLinkServiceNetworkPolicies: 'Enabled'
+    networkSecurityGroup: {
+      name: 'nsg-webserverfarm'
+      securityRules: [
+             {
+        name: 'deny-hop-outbound'
+        properties: {
+          access: 'Deny'
+          destinationAddressPrefix: '*'
+          destinationPortRanges: [
+            '22'
+            '3389'
+          ]
+          direction: 'Outbound'
+          priority: 200
+          protocol: 'Tcp'
+          sourceAddressPrefix: 'VirtualNetwork'
+          sourcePortRange: '*'
+        }
+      }
+      ]
+    }
+  }
+  {
+    name: 'administration'
+    addressPrefixes: ['10.0.0.32/27']
+    networkSecurityGroup: {
+      name: 'nsg-administration'
+      securityRules: [
+              {
+        name: 'deny-hop-outbound'
+        properties: {
+          access: 'Deny'
+          destinationAddressPrefix: '*'
+          destinationPortRanges: [
+            '22'
+            '3389'
+          ]
+          direction: 'Outbound'
+          priority: 200
+          protocol: 'Tcp'
+          sourceAddressPrefix: 'VirtualNetwork'
+          sourcePortRange: '*'
+        }
+      }
+      ]
+    }
+  }
   {
     name: 'AzureBastionSubnet' // Required name for Azure Bastion
     addressPrefixes: ['10.0.0.64/26']
@@ -95,116 +202,6 @@ param subnets subnetType[] = [
         }
       ]
     }
-  }
-  {
-   name:'backend'
-   addressPrefixes: ['10.0.0.0/27']
-   networkSecurityGroup: {
-     name: 'nsg-backend'
-     securityRules: [
-            {
-        name: 'deny-hop-outbound'
-        properties: {
-          access: 'Deny'
-          destinationAddressPrefix: '*'
-          destinationPortRanges: [
-            '22'
-            '3389'
-          ]
-          direction: 'Outbound'
-          priority: 200
-          protocol: 'Tcp'
-          sourceAddressPrefix: 'VirtualNetwork'
-          sourcePortRange: '*'
-        }
-      }
-     ]
-   }
-  }
-  {
-    name: 'administration'
-    addressPrefixes: ['10.0.0.32/27']
-    networkSecurityGroup: {
-      name: 'nsg-administration'
-      securityRules: [
-              {
-        name: 'deny-hop-outbound'
-        properties: {
-          access: 'Deny'
-          destinationAddressPrefix: '*'
-          destinationPortRanges: [
-            '22'
-            '3389'
-          ]
-          direction: 'Outbound'
-          priority: 200
-          protocol: 'Tcp'
-          sourceAddressPrefix: 'VirtualNetwork'
-          sourcePortRange: '*'
-        }
-      }
-      ]
-    }
-  }
-  {
-    name: 'containers'
-    addressPrefixes: ['10.0.2.0/23']
-    networkSecurityGroup: {
-      name: 'nsg-containers'
-      securityRules: [
-              {
-        name: 'deny-hop-outbound'
-        properties: {
-          access: 'Deny'
-          destinationAddressPrefix: '*'
-          destinationPortRanges: [
-            '22'
-            '3389'
-          ]
-          direction: 'Outbound'
-          priority: 200
-          protocol: 'Tcp'
-          sourceAddressPrefix: 'VirtualNetwork'
-          sourcePortRange: '*'
-        }
-      }
-      ]
-    }
-  }
-  {
-    name: 'webserverfarm'
-    addressPrefixes: ['10.0.4.0/27']
-    networkSecurityGroup: {
-      name: 'nsg-webserverfarm'
-      securityRules: [
-             {
-        name: 'deny-hop-outbound'
-        properties: {
-          access: 'Deny'
-          destinationAddressPrefix: '*'
-          destinationPortRanges: [
-            '22'
-            '3389'
-          ]
-          direction: 'Outbound'
-          priority: 200
-          protocol: 'Tcp'
-          sourceAddressPrefix: 'VirtualNetwork'
-          sourcePortRange: '*'
-        }
-      }
-      ]
-    }
-  }
-  {
-        name: 'deployment-scripts'
-        addressPrefixes: ['10.0.4.0/24']
-        networkSecurityGroup: {
-          name: 'nsg-deployment-scripts'
-          securityRules: []
-        }
-        delegation: 'Microsoft.ContainerInstance/containerGroups'
-        serviceEndpoints: ['Microsoft.Storage']
   }
 ]
 
@@ -332,13 +329,12 @@ output subnets subnetOutputType[] = [
 ]
 
 // Dynamic outputs for individual subnets for backward compatibility
-output bastionSubnetResourceId string = contains(map(subnets, subnet => subnet.name), 'AzureBastionSubnet') ? virtualNetwork.outputs.subnetResourceIds[indexOf(map(subnets, subnet => subnet.name), 'AzureBastionSubnet')] : ''
-output jumpboxSubnetResourceId string = contains(map(subnets, subnet => subnet.name), 'jumpbox') ? virtualNetwork.outputs.subnetResourceIds[indexOf(map(subnets, subnet => subnet.name), 'jumpbox')] : ''
-output deploymentScriptsSubnetResourceId string = contains(map(subnets, subnet => subnet.name), 'deployment-scripts') ? virtualNetwork.outputs.subnetResourceIds[indexOf(map(subnets, subnet => subnet.name), 'deployment-scripts')] : ''
 output backendSubnetResourceId string = contains(map(subnets, subnet => subnet.name), 'backend') ? virtualNetwork.outputs.subnetResourceIds[indexOf(map(subnets, subnet => subnet.name), 'backend')] : ''
-output containerSubnetResourceId string = contains(map(subnets, subnet => subnet.name), 'container') ? virtualNetwork.outputs.subnetResourceIds[indexOf(map(subnets, subnet => subnet.name), 'container')] : ''
+output containerSubnetResourceId string = contains(map(subnets, subnet => subnet.name), 'containers') ? virtualNetwork.outputs.subnetResourceIds[indexOf(map(subnets, subnet => subnet.name), 'containers')] : ''
 output administrationSubnetResourceId string = contains(map(subnets, subnet => subnet.name), 'administration') ? virtualNetwork.outputs.subnetResourceIds[indexOf(map(subnets, subnet => subnet.name), 'administration')] : ''
 output webserverfarmSubnetResourceId string = contains(map(subnets, subnet => subnet.name), 'webserverfarm') ? virtualNetwork.outputs.subnetResourceIds[indexOf(map(subnets, subnet => subnet.name), 'webserverfarm')] : ''
+output bastionSubnetResourceId string = contains(map(subnets, subnet => subnet.name), 'AzureBastionSubnet') ? virtualNetwork.outputs.subnetResourceIds[indexOf(map(subnets, subnet => subnet.name), 'AzureBastionSubnet')] : ''
+output jumpboxSubnetResourceId string = contains(map(subnets, subnet => subnet.name), 'jumpbox') ? virtualNetwork.outputs.subnetResourceIds[indexOf(map(subnets, subnet => subnet.name), 'jumpbox')] : ''
 
 @export()
 @description('Custom type definition for subnet resource information as output')
