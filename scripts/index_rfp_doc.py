@@ -16,10 +16,10 @@ from azure.search.documents.indexes.models import (
 )
 
 # --- CONFIGURATION ---
-search_service_endpoint = "https://macae-search.search.windows.net"
-admin_key = "prm3QaLrqYIBeKAOO9GlcvMTOc6WlvVewKyHoTjXxhAzSeBLxz7K"
+search_service_endpoint = ""
+admin_key = ""
 
-storage_connection_string = "DefaultEndpointsProtocol=https;AccountName=rfpstorage1010;AccountKey=zPdUD9vPl8MNzs1HfOS0xoFxEJh+HKTfvqQvGTLacf24CmP83TbHT/lU5zvyDuxbeJH8Ryck3C96+AStGXstYA==;EndpointSuffix=core.windows.net"
+storage_connection_string = ""
 blob_container_name = "rfp-documents"
 
 data_source_name = "clm-rfp-blob-datasource"

@@ -3,7 +3,7 @@ from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient, ContentSettings
 
 # --- Azure Blob Storage configuration ---
-storage_account_url = "https://rfpstorage1010.blob.core.windows.net/"
+storage_account_url = ""
 container_name = "rfp-documents"  # Your blob container name
 csv_folder = "../data/datasets/RFP_dataset"
 
