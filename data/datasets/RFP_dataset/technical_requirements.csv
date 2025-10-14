@@ -1,0 +1,2 @@
+id,section,text
+RFP-2025-CLM-002-sec4,Technical Requirements,"Cloud-based deployment, API integrations with SAP and Salesforce, secure data storage (AES-256), encryption in transit (TLS 1.2+), SOC 2 Type II compliance, GDPR/CCPA readiness."

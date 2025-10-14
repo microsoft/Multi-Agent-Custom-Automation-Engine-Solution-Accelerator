@@ -1,0 +1,83 @@
+{
+  "id": "1",
+  "team_id": "team-clm-1",
+  "name": "RFP Team",
+  "status": "visible",
+  "created": "",
+  "created_by": "",
+  "description": "A specialized multi-agent team that analyzes RFP and contract documents to summarize content, identify potential risks, check compliance gaps, and provide action plans for contract improvement.",
+  "logo": "",
+  "plan": "",
+  "agents": [
+    {
+      "input_key": "",
+      "type": "summary",
+      "name": "SummaryAgent",
+      "deployment_name": "gpt-4o-mini",
+      "icon": "",
+      "system_message": "You are an expert in summarizing large and complex RFP or contract documents. Your job is to generate concise, accurate, and structured summaries of each section of the dataset (Scope of Work, Functional Requirements, SLAs, Evaluation Criteria, etc.). Focus on clarity and factual representation.",
+      "description": "Summarizes RFP and contract documents into structured, easy-to-understand overviews.",
+      "use_rag": true,
+      "use_mcp": false,
+      "use_bing": false,
+      "use_reasoning": false,
+      "index_name": "clm-rfp-index",
+      "index_foundry_name": "",
+      "index_endpoint": "",
+      "coding_tools": false
+    },
+    {
+      "input_key": "",
+      "type": "risk",
+      "name": "RiskAgent",
+      "deployment_name": "gpt-4o-mini",
+      "icon": "",
+      "system_message": "You are a risk analysis specialist focused on identifying potential contractual, operational, and financial risks within RFP or contract documents. Evaluate clauses for ambiguity, unfair terms, delivery risks, compliance issues, and unrealistic KPIs. Provide detailed risk insights and mitigation recommendations.",
+      "description": "Analyzes the dataset for risks such as delivery, financial, operational, and compliance-related vulnerabilities.",
+      "use_rag": true,
+      "use_mcp": false,
+      "use_bing": false,
+      "use_reasoning": true,
+      "index_name": "clm-rfp-index",
+      "index_foundry_name": "",
+      "index_endpoint": "",
+      "coding_tools": false
+    },
+    {
+      "input_key": "",
+      "type": "compliance",
+      "name": "ComplianceAgent",
+      "deployment_name": "gpt-4o-mini",
+      "icon": "",
+      "system_message": "You are responsible for checking the RFP or contract against compliance frameworks, regulatory requirements, and internal policy standards. Detect missing clauses, inconsistencies, or non-compliant terms, and recommend necessary adjustments to align with compliance best practices.",
+      "description": "Checks for compliance gaps against regulations, policies, and standard contracting practices.",
+      "use_rag": true,
+      "use_mcp": false,
+      "use_bing": false,
+      "use_reasoning": true,
+      "index_name": "clm-rfp-index",
+      "index_foundry_name": "",
+      "index_endpoint": "",
+      "coding_tools": false
+    }
+  ],
+  "protected": false,
+  "starting_tasks": [
+    {
+      "id": "task-1",
+      "name": "RFP Evaluation Workflow",
+      "prompt": "Summarize all sections of the RFP dataset. Identify high-level risks, compliance gaps, and generate a final actionable summary plan.",
+      "created": "",
+      "creator": "",
+      "logo": ""
+    },
+    {
+      "id": "task-2",
+      "name": "Risk & Compliance Deep Dive",
+      "prompt": "Perform a detailed risk and compliance audit of the RFP dataset using the RiskAgent and ComplianceAgent outputs.",
+      "created": "",
+      "creator": "",
+      "logo": ""
+    }
+  ]
+}
