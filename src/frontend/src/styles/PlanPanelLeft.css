@@ -39,6 +39,25 @@ background: radial-gradient(circle, rgba(238, 174, 221, 1) 0%, rgba(117, 121, 23
 color: #2F2F4A; */
 }
 
+/* Panel Layout Styles */
+.panel-left-container {
+  flex-shrink: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+.team-selector-container {
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.panel-footer-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
 /* TASKLIST */
 
 .task-tab {

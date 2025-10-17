@@ -8,4 +8,5 @@ export interface PlanPanelLefProps {
     onTeamUpload?: () => Promise<void>;
     isHomePage: boolean;
     selectedTeam?: TeamConfig | null;
+    onNavigationWithAlert?: (navigationFn: () => void) => void;
 }

@@ -30,11 +30,13 @@ import TeamService from "@/services/TeamService";
 
 const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
   reloadTasks,
+  onNewTaskButton,
   restReload,
   onTeamSelect,
   onTeamUpload,
   isHomePage,
-  selectedTeam: parentSelectedTeam
+  selectedTeam: parentSelectedTeam,
+  onNavigationWithAlert
 }) => {
   const { dispatchToast } = useToastController("toast");
   const navigate = useNavigate();
@@ -58,17 +60,27 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
       console.log("Loading plans, forceRefresh:", forceRefresh);
       setPlansLoading(true);
       setPlansError(null);
-      const plansData = await apiService.getPlans(undefined, forceRefresh);
+      const plansData = await apiService.getPlans(undefined, !forceRefresh); // Invert forceRefresh for useCache
       setPlans(plansData);
+      
+      // Reset the reload flag after successful load
+      if (forceRefresh && restReload) {
+        restReload();
+      }
     } catch (error) {
       console.log("Failed to load plans:", error);
       setPlansError(
         error instanceof Error ? error : new Error("Failed to load plans")
       );
+      
+      // Reset the reload flag even on error to prevent infinite loops
+      if (forceRefresh && restReload) {
+        restReload();
+      }
     } finally {
       setPlansLoading(false);
     }
-  }, []);
+  }, [restReload]);
 
 
   // Fetch plans
@@ -83,7 +95,7 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
   useEffect(() => {
     console.log("Reload tasks changed:", reloadTasks);
     if (reloadTasks) {
-      loadPlansData();
+      loadPlansData(true); // Force refresh when reloadTasks is true
     }
   }, [loadPlansData, setUserInfo, reloadTasks]);
   useEffect(() => {
@@ -116,15 +128,35 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
 
   const handleTaskSelect = useCallback(
     (taskId: string) => {
-      const selectedPlan = plans?.find(
-        (plan: Plan) => plan.session_id === taskId
-      );
-      if (selectedPlan) {
-        navigate(`/plan/${selectedPlan.id}`);
+      const performNavigation = () => {
+        const selectedPlan = plans?.find(
+          (plan: Plan) => plan.session_id === taskId
+        );
+        if (selectedPlan) {
+          navigate(`/plan/${selectedPlan.id}`);
+        }
+      };
+
+      if (onNavigationWithAlert) {
+        onNavigationWithAlert(performNavigation);
+      } else {
+        performNavigation();
       }
     },
-    [plans, navigate]
+    [plans, navigate, onNavigationWithAlert]
   );
+
+  const handleLogoClick = useCallback(() => {
+    const performNavigation = () => {
+      navigate("/");
+    };
+
+    if (onNavigationWithAlert) {
+      onNavigationWithAlert(performNavigation);
+    } else {
+      performNavigation();
+    }
+  }, [navigate, onNavigationWithAlert]);
 
   const handleTeamSelect = useCallback(
     (team: TeamConfig | null) => {
@@ -163,10 +195,11 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
   );
 
   return (
-    <div style={{ flexShrink: 0, display: "flex", overflow: "hidden" }}>
+    <div className="panel-left-container">
       <PanelLeft panelWidth={280} panelResize={true}>
         <PanelLeftToolbar
-          linkTo="/"
+          linkTo={onNavigationWithAlert ? undefined : "/"}
+          onTitleClick={onNavigationWithAlert ? handleLogoClick : undefined}
           panelTitle="Contoso"
           panelIcon={<ContosoLogo />}
         >
@@ -175,7 +208,7 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
 
         {/* Team Selector right under the toolbar */}
 
-        <div style={{ marginTop: '8px', marginBottom: '8px' }}>
+        <div className="team-selector-container">
           {isHomePage && (
             <TeamSelector
               onTeamSelect={handleTeamSelect}
@@ -194,13 +227,13 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
         </div>
         <div
           className="tab tab-new-task"
-          onClick={() => navigate("/", { state: { focusInput: true } })}
+          onClick={onNewTaskButton}
           tabIndex={0} // ✅ allows tab focus
           role="button" // ✅ announces as button
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
-              navigate("/", { state: { focusInput: true } });
+              onNewTaskButton();
             }
           }}
         >
@@ -219,7 +252,7 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
         />
 
         <PanelFooter>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+          <div className="panel-footer-content">
             {/* User Card */}
             <PanelUserCard
               name={userInfo?.user_first_last_name || "Guest"}

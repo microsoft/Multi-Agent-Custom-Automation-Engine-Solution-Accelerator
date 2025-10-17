@@ -20,6 +20,8 @@ import LoadingMessage, { loadingMessages } from "../coral/components/LoadingMess
 import webSocketService from "../services/WebSocketService";
 import { APIService } from "../api/apiService";
 import { StreamMessage, StreamingPlanUpdate } from "../models";
+import { usePlanCancellationAlert } from "../hooks/usePlanCancellationAlert";
+import PlanCancellationDialog from "../components/common/PlanCancellationDialog";
 
 import "../styles/PlanPage.css"
 
@@ -59,7 +61,69 @@ const PlanPage: React.FC = () => {
     // Plan approval state - track when plan is approved
     const [planApproved, setPlanApproved] = useState<boolean>(false);
 
+    // Plan cancellation dialog state
+    const [showCancellationDialog, setShowCancellationDialog] = useState<boolean>(false);
+    const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
+    const [cancellingPlan, setCancellingPlan] = useState<boolean>(false);
+
     const [loadingMessage, setLoadingMessage] = useState<string>(loadingMessages[0]);
+
+    // Plan cancellation alert hook
+    const { isPlanActive, handleNavigationWithConfirmation } = usePlanCancellationAlert({
+        planData,
+        planApprovalRequest,
+        onNavigate: pendingNavigation || (() => {})
+    });
+
+    // Handle navigation with plan cancellation check
+    const handleNavigationWithAlert = useCallback((navigationFn: () => void) => {
+        if (!isPlanActive()) {
+            // Plan is not active, proceed with navigation
+            navigationFn();
+            return;
+        }
+
+        // Plan is active, show confirmation dialog
+        setPendingNavigation(() => navigationFn);
+        setShowCancellationDialog(true);
+    }, [isPlanActive]);
+
+    // Handle confirmation dialog response
+    const handleConfirmCancellation = useCallback(async () => {
+        setCancellingPlan(true);
+        
+        try {
+            if (planApprovalRequest?.id) {
+                await apiService.approvePlan({
+                    m_plan_id: planApprovalRequest.id,
+                    plan_id: planData?.plan?.id,
+                    approved: false,
+                    feedback: 'Plan cancelled by user navigation'
+                });
+            }
+
+            // Execute the pending navigation
+            if (pendingNavigation) {
+                pendingNavigation();
+            }
+        } catch (error) {
+            console.error('❌ Failed to cancel plan:', error);
+            showToast('Failed to cancel the plan properly, but navigation will continue.', 'error');
+            // Still proceed with navigation even if cancellation failed
+            if (pendingNavigation) {
+                pendingNavigation();
+            }
+        } finally {
+            setCancellingPlan(false);
+            setShowCancellationDialog(false);
+            setPendingNavigation(null);
+        }
+    }, [planApprovalRequest, planData, pendingNavigation, showToast]);
+
+    const handleCancelDialog = useCallback(() => {
+        setShowCancellationDialog(false);
+        setPendingNavigation(null);
+    }, []);
 
 
 
@@ -68,19 +132,36 @@ const PlanPage: React.FC = () => {
         // Persist / forward to backend (fire-and-forget with logging)
         const agentMessageResponse = PlanDataService.createAgentMessageResponse(agentMessageData, planData, is_final, streaming_message);
         console.log('📤 Persisting agent message:', agentMessageResponse);
-        void apiService.sendAgentMessage(agentMessageResponse)
+        const sendPromise = apiService.sendAgentMessage(agentMessageResponse)
             .then(saved => {
                 console.log('[agent_message][persisted]', {
                     agent: agentMessageData.agent,
                     type: agentMessageData.agent_type,
                     ts: agentMessageData.timestamp
                 });
+                
+                // If this is a final message, refresh the task list after successful persistence
+                if (is_final) {
+                    // Single refresh with a delay to ensure backend processing is complete
+                    setTimeout(() => {
+                        setReloadLeftList(true);
+                    }, 1000);
+                }
             })
             .catch(err => {
                 console.warn('[agent_message][persist-failed]', err);
+                // Even if persistence fails, still refresh the task list for final messages
+                // The local plan data has been updated, so the UI should reflect that
+                if (is_final) {
+                    setTimeout(() => {
+                        setReloadLeftList(true);
+                    }, 1000);
+                }
             });
 
-    }, []);
+        return sendPromise;
+
+    }, [setReloadLeftList]);
 
     const resetPlanVariables = useCallback(() => {
         setInput("");
@@ -271,12 +352,9 @@ const PlanPage: React.FC = () => {
                     setPlanData({ ...planData });
                 }
 
+                // Wait for the agent message to be processed and persisted
+                // The processAgentMessage function will handle refreshing the task list
                 processAgentMessage(agentMessageData, planData, is_final, streamingMessageBuffer);
-
-                setTimeout(() => {
-                    console.log('✅ Plan completed, refreshing left list');
-                    setReloadLeftList(true);
-                }, 1000);
 
             }
 
@@ -284,7 +362,7 @@ const PlanPage: React.FC = () => {
         });
 
         return () => unsubscribe();
-    }, [scrollToBottom, planData, processAgentMessage, streamingMessageBuffer, setSelectedTeam, setReloadLeftList]);
+    }, [scrollToBottom, planData, processAgentMessage, streamingMessageBuffer, setSelectedTeam]);
 
     //WebsocketMessageType.AGENT_MESSAGE
     useEffect(() => {
@@ -542,10 +620,12 @@ const PlanPage: React.FC = () => {
     );
 
 
-    // ✅ Handlers for PlanPanelLeft
+    // ✅ Handlers for PlanPanelLeft with plan cancellation protection
     const handleNewTaskButton = useCallback(() => {
-        navigate("/", { state: { focusInput: true } });
-    }, [navigate]);
+        handleNavigationWithAlert(() => {
+            navigate("/", { state: { focusInput: true } });
+        });
+    }, [navigate, handleNavigationWithAlert]);
 
 
     const resetReload = useCallback(() => {
@@ -582,13 +662,10 @@ const PlanPage: React.FC = () => {
                         onTeamUpload={async () => { }}
                         isHomePage={false}
                         selectedTeam={selectedTeam}
+                        onNavigationWithAlert={handleNavigationWithAlert}
                     />
                     <Content>
-                        <div style={{
-                            textAlign: "center",
-                            padding: "40px 20px",
-                            color: 'var(--colorNeutralForeground2)'
-                        }}>
+                        <div className="plan-error-message">
                             <Text size={500}>
                                 {"An error occurred while loading the plan"}
                             </Text>
@@ -611,18 +688,13 @@ const PlanPage: React.FC = () => {
                     onTeamUpload={async () => { }}
                     isHomePage={false}
                     selectedTeam={selectedTeam}
+                    onNavigationWithAlert={handleNavigationWithAlert}
                 />
 
                 <Content>
                     {loading || !planData ? (
                         <>
-                            <div style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "12px",
-                                justifyContent: "center",
-                                padding: "20px",
-                            }}>
+                            <div className="plan-loading-spinner">
                                 <Spinner size="medium" />
                                 <Text>Loading plan data...</Text>
                             </div>
@@ -674,6 +746,14 @@ const PlanPage: React.FC = () => {
                     planApprovalRequest={planApprovalRequest}
                 />
             </CoralShellRow>
+
+            {/* Plan Cancellation Confirmation Dialog */}
+            <PlanCancellationDialog
+                isOpen={showCancellationDialog}
+                onConfirm={handleConfirmCancellation}
+                onCancel={handleCancelDialog}
+                loading={cancellingPlan}
+            />
         </CoralShellColumn>
     );
 };

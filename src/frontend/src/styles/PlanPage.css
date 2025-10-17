@@ -53,6 +53,20 @@
   min-height: 200px;
 }
 
+.plan-loading-spinner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+  padding: 20px;
+}
+
+.plan-error-message {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--colorNeutralForeground2);
+}
+
 .loadingWrapper {
   height: 100%;
   display: flex;

@@ -14,23 +14,19 @@ MOCK_ENV_VARS = {
     "COSMOSDB_ENDPOINT": "https://mock-cosmosdb.documents.azure.com:443/",
     "COSMOSDB_DATABASE": "mock_database",
     "COSMOSDB_CONTAINER": "mock_container",
-
     # Azure OpenAI
     "AZURE_OPENAI_DEPLOYMENT_NAME": "mock-deployment",
     "AZURE_OPENAI_API_VERSION": "2024-11-20",
     "AZURE_OPENAI_ENDPOINT": "https://mock-openai-endpoint.azure.com/",
-
     # Optional auth (kept for completeness)
     "AZURE_TENANT_ID": "mock-tenant-id",
     "AZURE_CLIENT_ID": "mock-client-id",
     "AZURE_CLIENT_SECRET": "mock-client-secret",
-
     # Azure AI Project (required by current AppConfig)
     "AZURE_AI_SUBSCRIPTION_ID": "00000000-0000-0000-0000-000000000000",
     "AZURE_AI_RESOURCE_GROUP": "rg-test",
     "AZURE_AI_PROJECT_NAME": "proj-test",
     "AZURE_AI_AGENT_ENDPOINT": "https://agents.example.com/",
-
     # Misc
     "USER_LOCAL_BROWSER_LANGUAGE": "en-US",
 }
@@ -38,15 +34,16 @@ MOCK_ENV_VARS = {
 # Import the current config objects/functions under the mocked env
 with patch.dict(os.environ, MOCK_ENV_VARS, clear=False):
     # New codebase: config lives in app_config/config_kernel
-    from src.backend.app_config import config as app_config
-    from src.backend.config_kernel import Config
+    from src.backend.common.config.app_config import config as app_config
 
 # Provide thin wrappers so the old test names still work
 def GetRequiredConfig(name: str, default=None):
     return app_config._get_required(name, default)
 
+
 def GetOptionalConfig(name: str, default: str = ""):
     return app_config._get_optional(name, default)
+
 
 def GetBoolConfig(name: str) -> bool:
     return app_config._get_bool(name)
@@ -54,14 +51,20 @@ def GetBoolConfig(name: str) -> bool:
 
 # ---- Tests (unchanged semantics) ----
 
+
 @patch.dict(os.environ, MOCK_ENV_VARS, clear=False)
 def test_get_required_config():
     assert GetRequiredConfig("COSMOSDB_ENDPOINT") == MOCK_ENV_VARS["COSMOSDB_ENDPOINT"]
 
+
 @patch.dict(os.environ, MOCK_ENV_VARS, clear=False)
 def test_get_optional_config():
     assert GetOptionalConfig("NON_EXISTENT_VAR", "default_value") == "default_value"
-    assert GetOptionalConfig("COSMOSDB_DATABASE", "default_db") == MOCK_ENV_VARS["COSMOSDB_DATABASE"]
+    assert (
+        GetOptionalConfig("COSMOSDB_DATABASE", "default_db")
+        == MOCK_ENV_VARS["COSMOSDB_DATABASE"]
+    )
+
 
 @patch.dict(os.environ, MOCK_ENV_VARS, clear=False)
 def test_get_bool_config():

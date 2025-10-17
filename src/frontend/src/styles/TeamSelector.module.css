@@ -407,7 +407,23 @@
   background-color: var(--colorNeutralBackground3) !important;
   color: var(--colorNeutralForeground1) !important;
 }
+.moreButtonDisabled {
+  color: var(--colorNeutralForeground4) !important;
+  background-color: transparent !important;
+  cursor: not-allowed !important;
+  opacity: 0.6 !important;
+}
 
+.moreButtonDisabled:hover {
+  background-color: transparent !important;
+  color: var(--colorNeutralForeground4) !important;
+  opacity: 0.6 !important;
+}
+
+/* Ensure tooltips appear above other dialog content */
+:global(.fui-Tooltip) {
+  z-index: 9999 !important;
+}
 /* Team Selector Button */
 .teamSelectorButton {
   width: 100%;
