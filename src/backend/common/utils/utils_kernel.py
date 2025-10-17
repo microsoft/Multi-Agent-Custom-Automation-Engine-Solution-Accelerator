@@ -4,7 +4,7 @@ import logging
 from typing import Any, Dict
 
 # Import agent factory and the new AppConfig
-from agent_framework.azure import AzureAIAgentClient
+from semantic_kernel.agents.azure_ai.azure_ai_agent import AzureAIAgent
 from v3.magentic_agents.foundry_agent import FoundryAgentTemplate
 
 from v3.config.agent_registry import agent_registry
