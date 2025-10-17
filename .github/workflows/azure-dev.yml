@@ -1,8 +1,5 @@
 name: Azure Template Validation
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
@@ -37,6 +34,8 @@ jobs:
           AZURE_ENV_MODEL_CAPACITY: 1
           AZURE_ENV_MODEL_4_1_CAPACITY: 1
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AZURE_DEV_COLLECT_TELEMETRY: ${{ vars.AZURE_DEV_COLLECT_TELEMETRY }}
+
       # Step 3: Print the result of the validation 
       - name: print result
         run: cat ${{ steps.validation.outputs.resultFile }}

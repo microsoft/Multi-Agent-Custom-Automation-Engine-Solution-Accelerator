@@ -1,37 +1,24 @@
 """CosmosDB implementation of the database interface."""
 
-import json
-import logging
-import uuid
-
 import datetime
+import logging
 from typing import Any, Dict, List, Optional, Type
 
-from azure.cosmos import PartitionKey, exceptions
+import v3.models.messages as messages
 from azure.cosmos.aio import CosmosClient
 from azure.cosmos.aio._database import DatabaseProxy
-from azure.cosmos.exceptions import CosmosResourceExistsError
-import v3.models.messages as messages
 
-from common.models.messages_kernel import (
-    AgentMessage,
-    Plan,
-    Step,
-    TeamConfiguration,
-)
-from common.utils.utils_date import DateTimeEncoder
-
-from .database_base import DatabaseBase
 from ..models.messages_kernel import (
+    AgentMessage,
     AgentMessageData,
     BaseDataModel,
+    DataType,
     Plan,
     Step,
-    AgentMessage,
     TeamConfiguration,
-    DataType,
     UserCurrentTeam,
 )
+from .database_base import DatabaseBase
 
 
 class CosmosDBClient(DatabaseBase):
@@ -189,7 +176,6 @@ class CosmosDBClient(DatabaseBase):
             self.logger.error("Failed to delete item from CosmosDB: %s", str(e))
             raise
 
-
     # Plan Operations
     async def add_plan(self, plan: Plan) -> None:
         """Add a plan to CosmosDB."""
@@ -198,7 +184,6 @@ class CosmosDBClient(DatabaseBase):
     async def update_plan(self, plan: Plan) -> None:
         """Update a plan in CosmosDB."""
         await self.update_item(plan)
-
 
     async def get_plan_by_plan_id(self, plan_id: str) -> Optional[Plan]:
         """Retrieve a plan by plan_id."""
@@ -234,8 +219,9 @@ class CosmosDBClient(DatabaseBase):
         ]
         return await self.query_items(query, parameters, Plan)
 
-
-    async def get_all_plans_by_team_id_status(self, user_id: str,team_id: str, status: str) -> List[Plan]:
+    async def get_all_plans_by_team_id_status(
+        self, user_id: str, team_id: str, status: str
+    ) -> List[Plan]:
         """Retrieve all plans for a specific team."""
         query = "SELECT * FROM c WHERE c.team_id=@team_id AND c.data_type=@data_type and c.user_id=@user_id and c.overall_status=@status ORDER BY c._ts DESC"
         parameters = [
@@ -245,6 +231,7 @@ class CosmosDBClient(DatabaseBase):
             {"name": "@status", "value": status},
         ]
         return await self.query_items(query, parameters, Plan)
+
     # Step Operations
     async def add_step(self, step: Step) -> None:
         """Add a step to CosmosDB."""
@@ -414,8 +401,6 @@ class CosmosDBClient(DatabaseBase):
         teams = await self.query_items(query, parameters, UserCurrentTeam)
         return teams[0] if teams else None
 
-
-
     async def delete_current_team(self, user_id: str) -> bool:
         """Delete the current team for a user."""
         query = "SELECT c.id, c.session_id FROM c WHERE c.user_id=@user_id AND c.data_type=@data_type"
@@ -429,9 +414,13 @@ class CosmosDBClient(DatabaseBase):
         if items:
             async for doc in items:
                 try:
-                    await self.container.delete_item(doc["id"], partition_key=doc["session_id"])
+                    await self.container.delete_item(
+                        doc["id"], partition_key=doc["session_id"]
+                    )
                 except Exception as e:
-                    self.logger.warning("Failed deleting current team doc %s: %s", doc.get("id"), e)
+                    self.logger.warning(
+                        "Failed deleting current team doc %s: %s", doc.get("id"), e
+                    )
 
         return True
 
@@ -457,9 +446,13 @@ class CosmosDBClient(DatabaseBase):
         if items:
             async for doc in items:
                 try:
-                    await self.container.delete_item(doc["id"], partition_key=doc["session_id"])
+                    await self.container.delete_item(
+                        doc["id"], partition_key=doc["session_id"]
+                    )
                 except Exception as e:
-                    self.logger.warning("Failed deleting current team doc %s: %s", doc.get("id"), e)
+                    self.logger.warning(
+                        "Failed deleting current team doc %s: %s", doc.get("id"), e
+                    )
 
         return True
 
@@ -471,7 +464,6 @@ class CosmosDBClient(DatabaseBase):
         """Update a team configuration in the database."""
         await self.update_item(mplan)
 
-
     async def get_mplan(self, plan_id: str) -> Optional[messages.MPlan]:
         """Retrieve a mplan configuration by mplan_id."""
         query = "SELECT * FROM c WHERE c.plan_id=@plan_id AND c.data_type=@data_type"
@@ -481,7 +473,6 @@ class CosmosDBClient(DatabaseBase):
         ]
         results = await self.query_items(query, parameters, messages.MPlan)
         return results[0] if results else None
-    
 
     async def add_agent_message(self, message: AgentMessageData) -> None:
         """Add an agent message to the database."""

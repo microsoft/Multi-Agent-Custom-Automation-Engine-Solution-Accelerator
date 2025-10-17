@@ -2,7 +2,8 @@
 
 param(
     [string]$backendUrl,
-    [string]$DirectoryPath
+    [string]$DirectoryPath,
+    [string]$AzSubscriptionId
 )
 
 # Get parameters from azd env, if not provided
@@ -13,7 +14,9 @@ if (-not $DirectoryPath) {
     $DirectoryPath = "data/agent_teams"
 }
 
-$AzSubscriptionId = $(azd env get-value AZURE_SUBSCRIPTION_ID)
+if (-not $AzSubscriptionId) {
+    $AzSubscriptionId = $(azd env get-value AZURE_SUBSCRIPTION_ID)
+}
 
 # Check if all required arguments are provided
 if (-not $backendUrl -or -not $DirectoryPath) {

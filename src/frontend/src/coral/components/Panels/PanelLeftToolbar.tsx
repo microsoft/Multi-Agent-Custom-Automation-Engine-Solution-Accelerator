@@ -1,11 +1,13 @@
 import React, { ReactNode } from "react";
 import { Subtitle2 } from "@fluentui/react-components";
 import { Link } from "react-router-dom";
+import "../../../styles/Panel.css";
 
 interface PanelLeftToolbarProps {
   panelIcon?: ReactNode;
   panelTitle?: string | null;
   linkTo?: string;
+  onTitleClick?: () => void;
   children?: ReactNode;
 }
 
@@ -13,39 +15,18 @@ const PanelLeftToolbar: React.FC<PanelLeftToolbarProps> = ({
   panelIcon,
   panelTitle,
   linkTo,
+  onTitleClick,
   children,
 }) => {
   const TitleContent = (
-    <div
-      className="panelTitle"
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "6px",
-        flexShrink: 1,
-        overflow: "hidden",
-        minWidth: 0,
-      }}
-    >
+    <div className="panel-title">
       {panelIcon && (
-        <div
-          style={{
-            flexShrink: 0,
-            display: "flex",
-            alignItems: "center",
-          }}
-        >
+        <div className="panel-title-icon">
           {panelIcon}
         </div>
       )}
       {panelTitle && (
-        <Subtitle2
-          style={{
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
+        <Subtitle2 className="panel-title-text">
           {panelTitle}
         </Subtitle2>
       )}
@@ -53,45 +34,34 @@ const PanelLeftToolbar: React.FC<PanelLeftToolbarProps> = ({
   );
 
   return (
-    <div
-      className="panelToolbar"
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "8px",
-        padding: "16px",
-        boxSizing: "border-box",
-        height: "56px",
-      }}
-    >
+    <div className="panel-toolbar">
       {(panelIcon || panelTitle) &&
-        (linkTo ? (
+        (onTitleClick ? (
+          <div
+            onClick={onTitleClick}
+            className="panel-title-clickable clickable-element"
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onTitleClick();
+              }
+            }}
+          >
+            {TitleContent}
+          </div>
+        ) : linkTo ? (
           <Link
             to={linkTo}
-            style={{
-              textDecoration: "none",
-              color: "inherit",
-              display: "flex",
-              alignItems: "center",
-              minWidth: 0,
-              flexShrink: 1,
-            }}
+            className="panel-title-clickable"
           >
             {TitleContent}
           </Link>
         ) : (
           TitleContent
         ))}
-      <div
-        className="panelTools"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          flexGrow: 1,
-          justifyContent: "flex-end",
-          minWidth: 0,
-        }}
-      >
+      <div className="panel-tools">
         {children}
       </div>
     </div>

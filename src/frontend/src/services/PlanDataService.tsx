@@ -383,7 +383,7 @@ export class PlanDataService {
 
       const facts =
         body
-          .match(/facts="([^"]*(?:\\.[^"]*)*)"/)?.[1]
+          .match(/facts="((?:[^"\\]|\\.)*)"/)?.[1]
           ?.replace(/\\n/g, '\n')
           .replace(/\\"/g, '"') || '';
 
@@ -792,7 +792,7 @@ export class PlanDataService {
       if (!source) return null;
 
       // question=( "...") OR ('...')
-      const questionRegex = /question=(?:"((?:\\.|[^"])*)"|'((?:\\.|[^'])*)')/;
+      const questionRegex = /question=(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)')/;
       const qMatch = source.match(questionRegex);
       if (!qMatch) return null;
 

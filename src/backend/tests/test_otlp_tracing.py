@@ -1,7 +1,5 @@
-import sys
 import os
-from unittest.mock import patch, MagicMock
-from common.utils.otlp_tracing import (
+from src.backend.common.utils.otlp_tracing import (
     configure_oltp_tracing,
 )  # Import directly since it's in backend
 
@@ -9,9 +7,9 @@ from common.utils.otlp_tracing import (
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
-@patch("otlp_tracing.TracerProvider")
-@patch("otlp_tracing.OTLPSpanExporter")
-@patch("otlp_tracing.Resource")
+@patch("src.backend.common.utils.otlp_tracing.TracerProvider")
+@patch("src.backend.common.utils.otlp_tracing.OTLPSpanExporter")
+@patch("src.backend.common.utils.otlp_tracing.Resource")
 def test_configure_oltp_tracing(
     mock_resource,
     mock_otlp_exporter,
