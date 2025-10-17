@@ -15,7 +15,7 @@ from common.models.messages_kernel import (InputTask, Plan, PlanStatus,
 from common.utils.event_utils import track_event_if_configured
 from common.utils.utils_date import format_dates_in_messages
 from common.utils.utils_kernel import rai_success, rai_validate_team_config
-from fastapi import (APIRouter, BackgroundTasks, File, HTTPException, Query,
+from fastapi import (APIRouter, BackgroundTasks, File, Form, HTTPException, Query,
                      Request, UploadFile, WebSocket, WebSocketDisconnect)
 from fastapi.responses import FileResponse
 from semantic_kernel.agents.runtime import InProcessRuntime
@@ -245,6 +245,71 @@ async def process_request(
 
     if not input_task.session_id:
         input_task.session_id = str(uuid.uuid4())
+    
+    # Check for previous completed plan in this session and include its results as context
+    previous_context = ""
+    if input_task.session_id:
+        try:
+            previous_plan = await PlanService.get_latest_completed_plan(
+                input_task.session_id, user_id
+            )
+            if previous_plan:
+                # Extract comprehensive context from previous plan's agent messages
+                messages_list = previous_plan.get('agent_messages', [])
+                context_parts = []
+                
+                if messages_list:
+                    # 1. Get the final summary from Group_Chat_Manager (FULL, no truncation)
+                    for msg in reversed(messages_list):
+                        if (msg.get('agent') == 'Group_Chat_Manager' 
+                            and msg.get('content')):
+                            context_parts.append(f"FINAL RESULT:\n{msg.get('content', '')}")
+                            break
+                    
+                    # 2. Extract dataset_id specifically (critical for finance/data workflows)
+                    dataset_id_found = False
+                    for msg in messages_list:
+                        content = msg.get('content', '')
+                        if 'dataset_id:' in content.lower() or 'using dataset_id:' in content.lower():
+                            for line in content.split('\n'):
+                                if 'dataset_id' in line.lower() and not dataset_id_found:
+                                    context_parts.insert(0, f"🔑 DATASET: {line.strip()}")  # Put at top
+                                    dataset_id_found = True
+                                    break
+                            if dataset_id_found:
+                                break
+                    
+                    # 3. Extract methodology/assumptions (FULL, no truncation)
+                    for msg in messages_list:
+                        content = msg.get('content', '')
+                        agent = msg.get('agent', '')
+                        # Look for key sections
+                        if 'assumption' in content.lower() or 'methodology' in content.lower():
+                            # Include the full assumptions section
+                            context_parts.append(f"METHODOLOGY & ASSUMPTIONS (from {agent}):\n{content}")
+                            break
+                    
+                    if context_parts:
+                        previous_context = f"""
+
+{'='*70}
+PREVIOUS PLAN CONTEXT
+{'='*70}
+
+Previous Request: "{previous_plan.get('initial_goal', 'N/A')}"
+
+{chr(10).join(context_parts)}
+
+{'='*70}
+Use this complete context when answering the current request.
+{'='*70}
+"""
+        except Exception as e:
+            logger.warning(f"Could not retrieve previous plan context: {e}")
+    
+    # Enrich task description with previous context if available
+    if previous_context:
+        input_task.description = input_task.description + previous_context
     try:
         plan_id = str(uuid.uuid4())
         # Initialize memory store and service
@@ -889,6 +954,38 @@ async def list_datasets(request: Request):
 
     datasets = dataset_service.list_datasets(user_id)
     return {"datasets": datasets}
+
+
+@app_v3.post("/datasets/upload_in_chat")
+async def upload_dataset_in_chat(
+    request: Request, 
+    file: UploadFile = File(...),
+    plan_id: Optional[str] = Form(None)
+):
+    """
+    Upload dataset during an active chat session.
+    Notifies the active plan via WebSocket when upload completes.
+    """
+    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    user_id = authenticated_user.get("user_principal_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Missing or invalid user information")
+    
+    # Use existing upload logic
+    metadata = await dataset_service.upload_dataset(user_id, file)
+    
+    # Send WebSocket notification if plan_id provided
+    if plan_id:
+        await connection_config.send_status_update_async({
+            "type": "dataset_uploaded",
+            "data": {
+                "dataset_id": metadata["dataset_id"],
+                "original_filename": metadata["original_filename"],
+                "message": f"Dataset '{metadata['original_filename']}' uploaded successfully. Agents can now access it."
+            }
+        }, user_id=user_id, message_type="dataset_uploaded")
+    
+    return {"status": "success", "dataset": metadata}
 
 
 @app_v3.get("/datasets/{dataset_id}")

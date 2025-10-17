@@ -129,15 +129,84 @@ class FoundryAgentTemplate(AzureAgentBase):
             # Collect all tools
             tools, tool_resources = await self._collect_tools_and_resources()
 
+            # Log what we're about to create
+            self.logger.info(f"Creating agent in Foundry with model='{self.model_deployment_name}', name='{self.agent_name}'")
+            self.logger.info(f"Tools: {len(tools)}, Tool resources: {tool_resources}")
+            
             # Create agent definition with all tools
-            definition = await self.client.agents.create_agent(
-                model=self.model_deployment_name,
-                name=self.agent_name,
-                description=self.agent_description,
-                instructions=self.agent_instructions,
-                tools=tools,
-                tool_resources=tool_resources
-            )
+            try:
+                # Log the client details
+                self.logger.info(f"Client endpoint: {self.client._config.endpoint if hasattr(self.client, '_config') else 'unknown'}")
+                self.logger.info(f"Creating agent with parameters:")
+                self.logger.info(f"  - model: '{self.model_deployment_name}'")
+                self.logger.info(f"  - name: '{self.agent_name}'")
+                self.logger.info(f"  - description: '{self.agent_description[:50]}...'")
+                self.logger.info(f"  - tools count: {len(tools)}")
+                self.logger.info(f"  - tool_resources: {tool_resources}")
+                
+                definition = await self.client.agents.create_agent(
+                    model=self.model_deployment_name,
+                    name=self.agent_name,
+                    description=self.agent_description,
+                    instructions=self.agent_instructions,
+                    tools=tools,
+                    tool_resources=tool_resources
+                )
+                self.logger.info(f"✅ Agent '{self.agent_name}' created successfully in Foundry with ID: {definition.id}")
+            except Exception as ex:
+                self.logger.error(f"❌ Failed to create agent '{self.agent_name}' in Foundry")
+                self.logger.error(f"   Model: {self.model_deployment_name}")
+                self.logger.error(f"   Endpoint: {self.client._config.endpoint if hasattr(self.client, '_config') else 'unknown'}")
+                self.logger.error(f"   Error: {ex}")
+                self.logger.error(f"   Error type: {type(ex).__name__}")
+                
+                # Try to get more error details
+                if hasattr(ex, 'response'):
+                    self.logger.error(f"   Response status: {ex.response.status_code if hasattr(ex.response, 'status_code') else 'unknown'}")
+                    try:
+                        # Try to get response body text
+                        if hasattr(ex.response, 'text'):
+                            if callable(ex.response.text):
+                                import asyncio
+                                response_text = asyncio.create_task(ex.response.text()).result() if asyncio.iscoroutinefunction(ex.response.text) else ex.response.text()
+                            else:
+                                response_text = ex.response.text
+                            self.logger.error(f"   Response body: {response_text}")
+                        elif hasattr(ex.response, 'content'):
+                            self.logger.error(f"   Response content: {ex.response.content}")
+                    except Exception as resp_ex:
+                        self.logger.error(f"   Could not read response body: {resp_ex}")
+                if hasattr(ex, 'message'):
+                    self.logger.error(f"   Message: {ex.message}")
+                if hasattr(ex, 'error'):
+                    self.logger.error(f"   Error details: {ex.error}")
+                
+                # WORKAROUND: Try alternative model names
+                self.logger.info(f"🔄 Attempting workaround with alternative model names...")
+                definition = None
+                for alt_model in ["gpt-4", "gpt-4.1-mini", "o4-mini"]:
+                    try:
+                        self.logger.info(f"   Trying model: '{alt_model}'...")
+                        definition = await self.client.agents.create_agent(
+                            model=alt_model,
+                            name=self.agent_name,
+                            description=self.agent_description,
+                            instructions=self.agent_instructions,
+                            tools=tools,
+                            tool_resources=tool_resources
+                        )
+                        self.logger.info(f"✅ SUCCESS! Agent created with model '{alt_model}' instead of '{self.model_deployment_name}'")
+                        self.logger.info(f"   Agent ID: {definition.id}")
+                        break  # Exit loop and continue with plugin setup
+                    except Exception as alt_ex:
+                        self.logger.error(f"   ❌ Model '{alt_model}' also failed: {str(alt_ex)[:100]}")
+                        continue
+                
+                # If all alternatives failed, raise the original exception
+                if definition is None:
+                    self.logger.error(f"❌ All model alternatives failed. Azure AI Foundry Agents may not be configured.")
+                    self.logger.error(f"   Suggestion: Check Azure AI Foundry portal to see which models are connected.")
+                    raise
 
         # Add MCP plugins if available
         plugins = [self.mcp_plugin] if self.mcp_plugin else []

@@ -1,11 +1,11 @@
 {
-  "dataset_id": "b89604c5-7994-463e-ac00-39c79c33ca20",
+  "dataset_id": "84b8bea8-5353-49ae-b134-0651ebacdb8e",
   "user_id": "00000000-0000-0000-0000-000000000000",
   "original_filename": "sales_data_sample.csv",
   "stored_filename": "sales_data_sample.csv",
   "content_type": "text/csv",
   "size_bytes": 531491,
-  "uploaded_at": "2025-10-13T16:38:46.231617+00:00",
+  "uploaded_at": "2025-10-15T17:31:11.169821+00:00",
   "columns": [
     "ORDERNUMBER",
     "QUANTITYORDERED",

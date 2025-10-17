@@ -1,0 +1,40 @@
+/* Simple Plan Chat - Clarification UI */
+
+.simple-plan-chat {
+    padding: 32px;
+    background: var(--colorNeutralBackground1);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.simple-plan-chat__header {
+    margin-bottom: 16px;
+    color: var(--colorBrandForeground1);
+}
+
+.simple-plan-chat__question {
+    padding: 16px;
+    background: var(--colorNeutralBackground3);
+    border-radius: 6px;
+    margin-bottom: 20px;
+    border-left: 4px solid var(--colorBrandForeground1);
+}
+
+.simple-plan-chat__input-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.simple-plan-chat__textarea {
+    min-height: 100px;
+    width: 100%;
+}
+
+.simple-plan-chat__input-section button {
+    align-self: flex-end;
+    min-width: 120px;
+}
+
+
+

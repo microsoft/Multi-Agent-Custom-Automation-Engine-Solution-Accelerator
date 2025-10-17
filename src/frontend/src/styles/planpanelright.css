@@ -5,8 +5,9 @@
   padding: 20px;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: hidden; /* Prevent scrollbar on outer container */
   border-left: 1px solid var(--colorNeutralStroke1);
+  box-sizing: border-box; /* Include padding in height calculation */
   /* backgroundColor: var(--colorNeutralBackground1); */
 }
 
@@ -26,7 +27,10 @@
 .plan-section {
   margin-bottom: 24px;
   padding-bottom: 20px;
+  padding-right: 8px; /* Prevent scrollbar overlap */
   border-bottom: 1px solid var(--colorNeutralStroke1);
+  max-height: 60vh; /* Limit height to prevent overflow */
+  overflow-y: auto; /* Enable scrolling within section */
 }
 
 .plan-section__title {
@@ -85,6 +89,8 @@
 .agents-section {
   flex: 1;
   overflow: auto;
+  padding-right: 8px; /* Prevent scrollbar overlap */
+  min-height: 0; /* Allow flex item to shrink below content size */
 }
 
 .agents-section__title {
@@ -145,6 +151,8 @@
     /* Increase the height limit for better readability */
     max-height: 550px;
     overflow-y: auto;
+    /* Add padding to prevent scrollbar from overlapping text */
+    padding-right: 8px;
   }
 
   .plan-section__title {
@@ -189,6 +197,8 @@
     overflow-y: auto;
     /* Add some top spacing */
     padding-top: 4px;
+    /* Add padding to prevent scrollbar from overlapping text */
+    padding-right: 8px;
   }
 
   .agents-section__title {
@@ -227,6 +237,8 @@
     max-height: 350px;
     margin-bottom: 16px;
     padding-bottom: 12px;
+    /* Add padding to prevent scrollbar from overlapping text */
+    padding-right: 8px;
   }
 
   .plan-section__title {
@@ -249,6 +261,8 @@
 
   .agents-section {
     flex: 1.5;
+    /* Add padding to prevent scrollbar from overlapping text */
+    padding-right: 8px;
   }
 
   .agents-section__title {
@@ -269,4 +283,35 @@
   .agent-item__name {
     font-size: 13px;
   }
+}
+
+/* Custom scrollbar styling for better appearance */
+.plan-section::-webkit-scrollbar,
+.agents-section::-webkit-scrollbar {
+  width: 8px;
+}
+
+.plan-section::-webkit-scrollbar-track,
+.agents-section::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.plan-section::-webkit-scrollbar-thumb,
+.agents-section::-webkit-scrollbar-thumb {
+  background-color: var(--colorNeutralStroke2);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.plan-section::-webkit-scrollbar-thumb:hover,
+.agents-section::-webkit-scrollbar-thumb:hover {
+  background-color: var(--colorNeutralStroke1);
+}
+
+/* Firefox scrollbar styling */
+.plan-section,
+.agents-section {
+  scrollbar-width: thin;
+  scrollbar-color: var(--colorNeutralStroke2) transparent;
 }

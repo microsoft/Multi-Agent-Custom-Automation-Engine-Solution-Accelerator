@@ -8,6 +8,7 @@ from azure.identity.aio import DefaultAzureCredential
 from semantic_kernel.agents.azure_ai.azure_ai_agent import AzureAIAgent
 from semantic_kernel.connectors.mcp import MCPStreamableHttpPlugin
 from v3.magentic_agents.models.agent_models import MCPConfig
+from common.config.app_config import config
 
 
 class MCPEnabledBase:
@@ -122,8 +123,19 @@ class AzureAgentBase(MCPEnabledBase):
         # Azure async contexts
         self.creds = DefaultAzureCredential()
         await self._stack.enter_async_context(self.creds)
-        self.client = AzureAIAgent.create_client(credential=self.creds)
+        
+        # Use properly configured AI Project client from AppConfig
+        # AIProjectClient only needs endpoint and credential
+        import logging
+        logger = logging.getLogger("agent_client_init")
+        logger.info(f"Creating AIProjectClient with endpoint: {config.AZURE_AI_AGENT_ENDPOINT}")
+        
+        self.client = AIProjectClient(
+            endpoint=config.AZURE_AI_AGENT_ENDPOINT,
+            credential=self.creds
+        )
         await self._stack.enter_async_context(self.client)
+        logger.info(f"✅ AIProjectClient created and entered context")
 
         # MCP async context if requested
         await self._enter_mcp_if_configured()

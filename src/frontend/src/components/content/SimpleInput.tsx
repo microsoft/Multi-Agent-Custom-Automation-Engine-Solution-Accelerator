@@ -15,7 +15,6 @@ import "./../../styles/HomeInput.css";
 import { HomeInputProps, iconMap, QuickTask } from "../../models/homeInput";
 import { TaskService } from "../../services/TaskService";
 import { NewTaskService } from "../../services/NewTaskService";
-import { RAIErrorCard, RAIErrorData } from "../errors";
 
 import ChatInput from "@/coral/modules/ChatInput";
 import InlineToaster, { useInlineToaster } from "../toast/InlineToaster";
@@ -23,51 +22,40 @@ import PromptCard from "@/coral/components/PromptCard";
 import { Send } from "@/coral/imports/bundleicons";
 import { Clipboard20Regular } from "@fluentui/react-icons";
 
-// Icon mapping function to convert string icons to FluentUI icons
 const getIconFromString = (iconString: string | React.ReactNode): React.ReactNode => {
-    // If it's already a React node, return it
     if (typeof iconString !== 'string') {
         return iconString;
     }
-
     return iconMap[iconString] || iconMap['default'] || <Clipboard20Regular />;
 };
 
 const truncateDescription = (description: string, maxLength: number = 180): string => {
     if (!description) return '';
-
     if (description.length <= maxLength) {
         return description;
     }
 
-
     const truncated = description.substring(0, maxLength);
     const lastSpaceIndex = truncated.lastIndexOf(' ');
-
     const cutPoint = lastSpaceIndex > maxLength - 20 ? lastSpaceIndex : maxLength;
 
     return description.substring(0, cutPoint) + '...';
 };
 
-// Extended QuickTask interface to store both truncated and full descriptions
 interface ExtendedQuickTask extends QuickTask {
-    fullDescription: string; // Store the full, untruncated description
+    fullDescription: string;
 }
 
-const HomeInput: React.FC<HomeInputProps> = ({
+const SimpleInput: React.FC<HomeInputProps> = ({
     selectedTeam,
 }) => {
     const [submitting, setSubmitting] = useState<boolean>(false);
     const [input, setInput] = useState<string>("");
-    const [raiError, setRAIError] = useState<RAIErrorData | null>(null);
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const navigate = useNavigate();
-    const location = useLocation(); // ✅ location.state used to control focus
+    const location = useLocation();
     const { showToast, dismissToast } = useInlineToaster();
-    
-    // Detect if we're in advanced mode
-    const isAdvancedMode = location.pathname.startsWith('/advanced');
 
     useEffect(() => {
         if (location.state?.focusInput) {
@@ -77,7 +65,6 @@ const HomeInput: React.FC<HomeInputProps> = ({
 
     const resetTextarea = () => {
         setInput("");
-        setRAIError(null); // Clear any RAI errors
         if (textareaRef.current) {
             textareaRef.current.style.height = "auto";
             textareaRef.current.focus();
@@ -92,8 +79,7 @@ const HomeInput: React.FC<HomeInputProps> = ({
     const handleSubmit = async () => {
         if (input.trim()) {
             setSubmitting(true);
-            setRAIError(null); // Clear any previous RAI errors
-            let id = showToast("Creating a plan", "progress");
+            let id = showToast("Creating your plan...", "progress");
 
             try {
                 const response = await TaskService.createPlan(
@@ -108,14 +94,10 @@ const HomeInput: React.FC<HomeInputProps> = ({
                 }
 
                 if (response.plan_id && response.plan_id !== null) {
-                    showToast("Plan created!", "success");
+                    showToast("Plan ready for review!", "success");
                     dismissToast(id);
-
-                    // Navigate to the correct mode (advanced or simple)
-                    const planPath = isAdvancedMode 
-                        ? `/advanced/plan/${response.plan_id}` 
-                        : `/plan/${response.plan_id}`;
-                    navigate(planPath);
+                    // Navigate to simple plan page
+                    navigate(`/plan/${response.plan_id}`);
                 } else {
                     showToast("Failed to create plan", "error");
                     dismissToast(id);
@@ -124,14 +106,12 @@ const HomeInput: React.FC<HomeInputProps> = ({
                 console.log("Error creating plan:", error);
                 let errorMessage = "Unable to create plan. Please try again.";
                 dismissToast(id);
-                // Check if this is an RAI validation error
+                
                 try {
-                    // errorDetail = JSON.parse(error);
                     errorMessage = error?.message || errorMessage;
                 } catch (parseError) {
                     console.error("Error parsing error detail:", parseError);
                 }
-
 
                 showToast(errorMessage, "error");
             } finally {
@@ -143,7 +123,6 @@ const HomeInput: React.FC<HomeInputProps> = ({
 
     const handleQuickTaskClick = (task: ExtendedQuickTask) => {
         setInput(task.fullDescription);
-        setRAIError(null); // Clear any RAI errors when selecting a quick task
         if (textareaRef.current) {
             textareaRef.current.focus();
         }
@@ -156,27 +135,24 @@ const HomeInput: React.FC<HomeInputProps> = ({
         }
     }, [input]);
 
-    // Convert team starting_tasks to ExtendedQuickTask format
     const tasksToDisplay: ExtendedQuickTask[] = selectedTeam && selectedTeam.starting_tasks ?
         selectedTeam.starting_tasks.map((task, index) => {
-            // Handle both string tasks and StartingTask objects
             if (typeof task === 'string') {
                 return {
                     id: `team-task-${index}`,
                     title: task,
                     description: truncateDescription(task),
-                    fullDescription: task, // Store the full description
+                    fullDescription: task,
                     icon: getIconFromString("📋")
                 };
             } else {
-                // Handle StartingTask objects
-                const startingTask = task as any; // Type assertion for now
+                const startingTask = task as any;
                 const taskDescription = startingTask.prompt || startingTask.name || 'Task description';
                 return {
                     id: startingTask.id || `team-task-${index}`,
                     title: startingTask.name || startingTask.prompt || 'Task',
                     description: truncateDescription(taskDescription),
-                    fullDescription: taskDescription, // Store the full description
+                    fullDescription: taskDescription,
                     icon: getIconFromString(startingTask.logo || "📋")
                 };
             }
@@ -187,27 +163,13 @@ const HomeInput: React.FC<HomeInputProps> = ({
             <div className="home-input-content">
                 <div className="home-input-center-content">
                     <div className="home-input-title-wrapper">
-                        <Title2>How can I help?</Title2>
+                        <Title2>What can I help you with?</Title2>
                     </div>
 
-                    {/* Show RAI error if present */}
-                    {/* {raiError && (
-                        <RAIErrorCard
-                            error={raiError}
-                            onRetry={() => {
-                                setRAIError(null);
-                                if (textareaRef.current) {
-                                    textareaRef.current.focus();
-                                }
-                            }}
-                            onDismiss={() => setRAIError(null)}
-                        />
-                    )} */}
-
                     <ChatInput
-                        ref={textareaRef} // forwarding
+                        ref={textareaRef}
                         value={input}
-                        placeholder="Tell us what needs planning, building, or connecting—we'll handle the rest."
+                        placeholder="Describe what you need help with..."
                         onChange={setInput}
                         onEnter={handleSubmit}
                         disabledChat={submitting}
@@ -239,7 +201,6 @@ const HomeInput: React.FC<HomeInputProps> = ({
                                             description={task.description}
                                             onClick={() => handleQuickTaskClick(task)}
                                             disabled={submitting}
-
                                         />
                                     ))}
                                 </div>
@@ -251,7 +212,7 @@ const HomeInput: React.FC<HomeInputProps> = ({
                                 padding: '32px 16px',
                                 color: '#666'
                             }}>
-                                <Caption1>No starting tasks available for this team</Caption1>
+                                <Caption1>No quick tasks available</Caption1>
                             </div>
                         )}
                         {!selectedTeam && (
@@ -260,7 +221,7 @@ const HomeInput: React.FC<HomeInputProps> = ({
                                 padding: '32px 16px',
                                 color: '#666'
                             }}>
-                                <Caption1>Select a team to see available tasks</Caption1>
+                                <Caption1>Select a team to get started</Caption1>
                             </div>
                         )}
                     </div>
@@ -270,4 +231,7 @@ const HomeInput: React.FC<HomeInputProps> = ({
     );
 };
 
-export default HomeInput;
+export default SimpleInput;
+
+
+

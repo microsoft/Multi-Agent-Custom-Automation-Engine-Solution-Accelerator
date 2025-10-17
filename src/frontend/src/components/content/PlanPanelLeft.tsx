@@ -14,7 +14,7 @@ import {
 } from "@fluentui/react-icons";
 import TaskList from "./TaskList";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Plan, PlanPanelLefProps, Task, UserInfo } from "@/models";
 import { apiService } from "@/api";
 import { TaskService } from "@/services";
@@ -38,7 +38,11 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
 }) => {
   const { dispatchToast } = useToastController("toast");
   const navigate = useNavigate();
+  const location = useLocation();
   const { planId } = useParams<{ planId: string }>();
+  
+  // Detect if we're in advanced mode
+  const isAdvancedMode = location.pathname.startsWith('/advanced');
 
   const [inProgressTasks, setInProgressTasks] = useState<Task[]>([]);
   const [completedTasks, setCompletedTasks] = useState<Task[]>([]);
@@ -83,9 +87,15 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
   useEffect(() => {
     console.log("Reload tasks changed:", reloadTasks);
     if (reloadTasks) {
-      loadPlansData();
+      // Force refresh to get the latest data (pass false to bypass cache)
+      loadPlansData(false).then(() => {
+        // Reset the reload flag after loading
+        if (restReload) {
+          restReload();
+        }
+      });
     }
-  }, [loadPlansData, setUserInfo, reloadTasks]);
+  }, [loadPlansData, setUserInfo, reloadTasks, restReload]);
   useEffect(() => {
     if (plans) {
       const { inProgress, completed } =
@@ -110,20 +120,24 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
     }
   }, [plansError, dispatchToast]);
 
-  // Get the session_id that matches the current URL's planId
+  // Get the plan.id that matches the current URL's planId
   const selectedTaskId =
-    plans?.find((plan) => plan.id === planId)?.session_id ?? null;
+    plans?.find((plan) => plan.id === planId)?.id ?? null;
 
   const handleTaskSelect = useCallback(
     (taskId: string) => {
       const selectedPlan = plans?.find(
-        (plan: Plan) => plan.session_id === taskId
+        (plan: Plan) => plan.id === taskId // Changed from session_id to id
       );
       if (selectedPlan) {
-        navigate(`/plan/${selectedPlan.id}`);
+        // Navigate to the correct mode (advanced or simple)
+        const planPath = isAdvancedMode 
+          ? `/advanced/plan/${selectedPlan.id}` 
+          : `/plan/${selectedPlan.id}`;
+        navigate(planPath);
       }
     },
-    [plans, navigate]
+    [plans, navigate, isAdvancedMode]
   );
 
   const handleTeamSelect = useCallback(

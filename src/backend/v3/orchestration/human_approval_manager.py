@@ -41,6 +41,14 @@ class HumanApprovalMagenticManager(StandardMagenticManager):
         # Remove any custom kwargs before passing to parent
 
         plan_append = """
+DATASET DISCOVERY: Before asking the ProxyAgent to clarify dataset information, agents with MCP tools MUST:
+1. Call list_finance_datasets (or equivalent domain-specific list function)
+2. Attempt to match the user's request to available datasets
+3. Present the matched dataset with alternatives for user confirmation
+4. Only use ProxyAgent if NO datasets are found or the user's request cannot be matched
+
+This reduces unnecessary clarifications and improves user experience.
+
 IMPORTANT: Never ask the user for information or clarification until all agents on the team have been asked first.
 
 EXAMPLE: If the user request involves product information, first ask all agents on the team to provide the information. 

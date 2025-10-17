@@ -140,11 +140,15 @@ const EnhancedForecastDatasetPanel: React.FC = () => {
       }
       
       try {
+        console.log('Deleting dataset:', datasetId);
         await DatasetService.deleteDataset(datasetId);
+        console.log('Dataset deleted successfully, reloading list...');
         await loadDatasets();
+        console.log('Dataset list reloaded');
       } catch (err) {
         console.error('Failed to delete dataset', err);
-        setError('Failed to delete dataset');
+        const errorMessage = err instanceof Error ? err.message : 'Failed to delete dataset';
+        setError(errorMessage);
       }
     },
     [loadDatasets]

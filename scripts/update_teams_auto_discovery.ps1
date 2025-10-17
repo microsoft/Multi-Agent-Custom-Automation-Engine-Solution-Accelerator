@@ -89,3 +89,7 @@ if ($failCount -gt 0) {
 
 Write-Host "All teams updated successfully!" -ForegroundColor Green
 
+
+
+
+

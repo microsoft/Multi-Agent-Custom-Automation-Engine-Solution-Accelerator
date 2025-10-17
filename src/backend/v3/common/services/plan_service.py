@@ -258,3 +258,35 @@ class PlanService:
                 "Failed to handle human clarification -> agent message: %s", e
             )
             return False
+
+    @staticmethod
+    async def get_latest_completed_plan(session_id: str, user_id: str) -> Optional[Dict]:
+        """
+        Get the most recent completed plan for a session.
+        
+        Args:
+            session_id: The session ID to search for
+            user_id: The user ID for database access
+        
+        Returns:
+            The most recent completed plan dict or None if not found
+        """
+        try:
+            memory_store = await DatabaseFactory.get_database(user_id=user_id)
+            plans_container = memory_store.container_client_plans
+            
+            query = """
+                SELECT TOP 1 * FROM c 
+                WHERE c.session_id = @session_id 
+                AND c.overall_status = 'completed'
+                ORDER BY c.timestamp DESC
+            """
+            plans = list(plans_container.query_items(
+                query=query,
+                parameters=[{"name": "@session_id", "value": session_id}],
+                enable_cross_partition_query=True
+            ))
+            return plans[0] if plans else None
+        except Exception as e:
+            logger.error(f"Error fetching previous plan for session {session_id}: {e}")
+            return None

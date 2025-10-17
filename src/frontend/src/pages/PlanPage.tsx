@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Spinner, Text } from "@fluentui/react-components";
 import { PlanDataService } from "../services/PlanDataService";
 import { ProcessedPlanData, WebsocketMessageType, MPlanData, AgentMessageData, AgentMessageType, ParsedUserClarification, AgentType, PlanStatus, FinalMessage, TeamConfig } from "../models";
@@ -33,6 +33,7 @@ const apiService = new APIService();
 const PlanPage: React.FC = () => {
     const { planId } = useParams<{ planId: string }>();
     const navigate = useNavigate();
+    const location = useLocation();
     const { showToast, dismissToast } = useInlineToaster();
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const [input, setInput] = useState<string>("");
@@ -273,6 +274,9 @@ const PlanPage: React.FC = () => {
 
                 processAgentMessage(agentMessageData, planData, is_final, streamingMessageBuffer);
 
+                // Re-enable chat input so user can ask follow-up questions or create new plans based on results
+                setSubmittingChatDisableInput(false);
+
                 setTimeout(() => {
                     console.log('✅ Plan completed, refreshing left list');
                     setReloadLeftList(true);
@@ -304,6 +308,26 @@ const PlanPage: React.FC = () => {
 
         return () => unsubscribe();
     }, [scrollToBottom, planData, processAgentMessage]); //onPlanReceived, scrollToBottom
+
+    // WebSocket listener for dataset uploads
+    useEffect(() => {
+        const unsubscribe = webSocketService.on('dataset_uploaded', (message: any) => {
+            const agentMessageData = {
+                agent: AgentType.SYSTEM,
+                agent_type: AgentMessageType.SYSTEM,
+                timestamp: Date.now(),
+                steps: [],
+                next_steps: [],
+                content: message.data?.message || 'Dataset uploaded successfully',
+                raw_data: message.data
+            } as AgentMessageData;
+            
+            setAgentMessages(prev => [...prev, agentMessageData]);
+            setSubmittingChatDisableInput(false); // Re-enable chat after upload
+            scrollToBottom();
+        });
+        return () => unsubscribe();
+    }, [scrollToBottom]);
 
     // Loading message rotation effect
     useEffect(() => {
@@ -402,6 +426,9 @@ const PlanPage: React.FC = () => {
                 }
                 if (planResult?.plan?.overall_status !== PlanStatus.COMPLETED) {
                     setContinueWithWebsocketFlow(true);
+                } else {
+                    // Plan is completed - enable chat input for follow-up questions
+                    setSubmittingChatDisableInput(false);
                 }
                 if (planResult?.messages) {
                     setAgentMessages(planResult.messages);
@@ -487,13 +514,55 @@ const PlanPage: React.FC = () => {
     const handleOnchatSubmit = useCallback(
         async (chatInput: string) => {
             if (!chatInput.trim()) {
-                showToast("Please enter a clarification", "error");
+                showToast("Please enter a message", "error");
                 return;
             }
             setInput("");
 
             if (!planData?.plan) return;
             setSubmittingChatDisableInput(true);
+
+            // Check if plan is completed - if so, create new plan instead of clarification
+            if (planData.plan.overall_status === PlanStatus.COMPLETED || 
+                planData.plan.overall_status === 'completed') {
+                
+                let id = showToast("Creating new plan based on your question...", "progress");
+                
+                try {
+                    // Create a new plan with the same session_id to maintain context
+                    const response = await apiService.createPlan({
+                        description: chatInput,
+                        session_id: planData.plan.session_id,
+                        team_id: planData.team?.id || selectedTeam?.id
+                    });
+
+                    console.log("New plan created:", response);
+                    dismissToast(id);
+                    showToast("New plan created", "success");
+                    
+                    // Trigger plan list refresh to show both old and new plans
+                    setReloadLeftList(true);
+                    
+                    // Navigate to the new plan, preserving advanced/simple view mode
+                    if (response.plan_id) {
+                        // Check if we're in advanced mode (URL contains '/advanced/')
+                        const isAdvancedMode = location.pathname.includes('/advanced/');
+                        const newPlanPath = isAdvancedMode 
+                            ? `/advanced/plan/${response.plan_id}`
+                            : `/plan/${response.plan_id}`;
+                        navigate(newPlanPath);
+                    }
+                } catch (error: any) {
+                    dismissToast(id);
+                    setSubmittingChatDisableInput(false);
+                    showToast("Failed to create new plan", "error");
+                    console.error("Error creating new plan:", error);
+                }
+                
+                return; // Exit early
+            }
+
+            // Otherwise, submit as clarification (existing logic)
             let id = showToast("Submitting clarification", "progress");
 
             try {
@@ -538,13 +607,30 @@ const PlanPage: React.FC = () => {
 
             }
         },
-        [planData?.plan, showToast, dismissToast, loadPlanData]
+        [planData, clarificationMessage, planApprovalRequest, showToast, dismissToast, scrollToBottom, selectedTeam, navigate]
     );
 
+    // Dataset upload handler
+    const handleDatasetUpload = useCallback(async (file: File) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('plan_id', planData?.plan?.id || '');
+        
+        const id = showToast(`Uploading ${file.name}...`, "progress");
+        try {
+            const response = await apiService.uploadDatasetInChat(formData);
+            dismissToast(id);
+            showToast(`Dataset uploaded: ${response.dataset.original_filename}`, "success");
+        } catch (error) {
+            dismissToast(id);
+            showToast("Upload failed", "error");
+        }
+    }, [planData, showToast, dismissToast]);
 
     // ✅ Handlers for PlanPanelLeft
     const handleNewTaskButton = useCallback(() => {
-        navigate("/", { state: { focusInput: true } });
+        // Navigate back to advanced home page
+        navigate("/advanced", { state: { focusInput: true } });
     }, [navigate]);
 
 
@@ -657,6 +743,7 @@ const PlanPage: React.FC = () => {
                                 streamingMessageBuffer={streamingMessageBuffer}
                                 showBufferingText={showBufferingText}
                                 agentMessages={agentMessages}
+                                onDatasetUpload={handleDatasetUpload}
                                 showProcessingPlanSpinner={showProcessingPlanSpinner}
                                 showApprovalButtons={showApprovalButtons}
                                 processingApproval={processingApproval}

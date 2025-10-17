@@ -23,15 +23,24 @@ export class DatasetService {
   }
 
   static async getDatasets(): Promise<DatasetMetadata[]> {
+    // Add timestamp to prevent caching issues
     const response = (await apiClient.get(
       DATASET_LIST_ENDPOINT,
+      { params: { _t: Date.now() } }
     )) as DatasetListResponse;
 
     return response.datasets || [];
   }
 
   static async deleteDataset(datasetId: string): Promise<void> {
-    await apiClient.delete(`${DATASET_LIST_ENDPOINT}/${datasetId}`);
+    try {
+      const response = await apiClient.delete(`${DATASET_LIST_ENDPOINT}/${datasetId}`);
+      console.log('Delete dataset response:', response);
+      return;
+    } catch (error) {
+      console.error('Error in deleteDataset:', error);
+      throw error;
+    }
   }
 
   static getDownloadUrl(datasetId: string): string {

@@ -1,0 +1,50 @@
+/* Simple Plan Approval Component */
+
+.simple-plan-approval {
+    padding: 32px;
+    background: var(--colorNeutralBackground1);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.simple-plan-approval__header {
+    margin-bottom: 20px;
+    color: var(--colorBrandForeground1);
+}
+
+.simple-plan-approval__content {
+    margin-bottom: 24px;
+    padding: 16px;
+    background: var(--colorNeutralBackground3);
+    border-radius: 6px;
+}
+
+.simple-plan-approval__task-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.simple-plan-approval__task-list li {
+    padding: 12px 16px;
+    background: var(--colorNeutralBackground1);
+    border-radius: 4px;
+    border-left: 3px solid var(--colorBrandForeground1);
+}
+
+.simple-plan-approval__actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    align-items: center;
+}
+
+.simple-plan-approval__actions button {
+    min-width: 150px;
+}
+
+
+

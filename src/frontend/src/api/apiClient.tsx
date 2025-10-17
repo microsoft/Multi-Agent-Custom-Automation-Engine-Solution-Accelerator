@@ -44,20 +44,26 @@ const fetchWithAuth = async (url: string, method: string = "GET", body: BodyInit
 
     try {
         const apiUrl = getApiUrl();
+        if (!apiUrl) {
+            throw new Error('API URL is not configured');
+        }
         const finalUrl = `${apiUrl}${url}`;
-        // Log the request details
+        console.log(`${method} ${finalUrl}`);
+        
         const response = await fetch(finalUrl, options);
 
         if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(errorText || 'Something went wrong');
+            console.error(`HTTP ${response.status} ${response.statusText}:`, errorText);
+            throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
         }
 
         const isJson = response.headers.get('content-type')?.includes('application/json');
         const responseData = isJson ? await response.json() : null;
+        console.log(`${method} ${finalUrl} - Success:`, responseData);
         return responseData;
     } catch (error) {
-        console.info('API Error:', (error as Error).message);
+        console.error('API Error:', (error as Error).message);
         throw error;
     }
 };

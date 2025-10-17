@@ -165,6 +165,11 @@ class DatasetService:
     def delete_dataset(self, user_id: str, dataset_id: str) -> bool:
         """Remove a dataset directory and metadata."""
         import logging
+        import time
+        import platform
+        import stat
+        import os
+        
         logger = logging.getLogger(__name__)
         
         dataset_dir = self._dataset_directory(user_id, dataset_id)
@@ -172,13 +177,52 @@ class DatasetService:
             logger.warning(f"Dataset directory does not exist: {dataset_dir}")
             return False
 
-        try:
-            shutil.rmtree(dataset_dir)
-            logger.info(f"Successfully removed dataset directory: {dataset_dir}")
-            return True
-        except Exception as e:
-            logger.error(f"Error removing dataset directory {dataset_dir}: {str(e)}")
-            raise
+        # Windows-specific helper to handle read-only files and OneDrive locks
+        def handle_remove_readonly(func, path, exc_info):
+            """Error handler for Windows readonly files."""
+            if not os.access(path, os.W_OK):
+                # Try to add write permission
+                os.chmod(path, stat.S_IWRITE)
+                func(path)
+            else:
+                raise
+
+        is_windows = platform.system() == "Windows"
+        max_retries = 3 if is_windows else 1
+        retry_delay = 0.5  # seconds
+        
+        for attempt in range(max_retries):
+            try:
+                if is_windows:
+                    # Use onerror handler for Windows readonly/OneDrive files
+                    shutil.rmtree(dataset_dir, onerror=handle_remove_readonly)
+                else:
+                    shutil.rmtree(dataset_dir)
+                
+                logger.info(f"Successfully removed dataset directory: {dataset_dir}")
+                return True
+                
+            except PermissionError as e:
+                if attempt < max_retries - 1:
+                    logger.warning(
+                        f"Permission error deleting {dataset_dir} (attempt {attempt + 1}/{max_retries}). "
+                        f"Retrying in {retry_delay}s... (This may be due to OneDrive sync)"
+                    )
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                else:
+                    logger.error(
+                        f"Failed to delete dataset directory {dataset_dir} after {max_retries} attempts. "
+                        f"This may be due to OneDrive sync or file locks. Error: {str(e)}"
+                    )
+                    raise PermissionError(
+                        f"Unable to delete dataset. The file may be locked by OneDrive or another process. "
+                        f"Please try again in a moment, or manually delete: {dataset_dir}"
+                    )
+                    
+            except Exception as e:
+                logger.error(f"Error removing dataset directory {dataset_dir}: {str(e)}")
+                raise
 
     def locate_dataset_path(self, dataset_id: str) -> Optional[Path]:
         """Search across all users for a dataset directory."""

@@ -2,6 +2,8 @@ import ChatInput from "@/coral/modules/ChatInput";
 import { PlanChatProps } from "@/models";
 import { Button, Caption1 } from "@fluentui/react-components";
 import { Send } from "@/coral/imports/bundleicons";
+import { Attach20Regular } from "@fluentui/react-icons";
+import { useRef } from "react";
 
 interface SimplifiedPlanChatProps extends PlanChatProps {
     planData: any;
@@ -10,6 +12,7 @@ interface SimplifiedPlanChatProps extends PlanChatProps {
     submittingChatDisableInput: boolean;
     OnChatSubmit: (input: string) => void;
     waitingForPlan: boolean;
+    onDatasetUpload?: (file: File) => void;
 }
 
 const PlanChatBody: React.FC<SimplifiedPlanChatProps> = ({
@@ -18,8 +21,20 @@ const PlanChatBody: React.FC<SimplifiedPlanChatProps> = ({
     setInput,
     submittingChatDisableInput,
     OnChatSubmit,
-    waitingForPlan
+    waitingForPlan,
+    onDatasetUpload
 }) => {
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file && onDatasetUpload) {
+            onDatasetUpload(file);
+            // Reset input so same file can be uploaded again
+            event.target.value = '';
+        }
+    };
+
     return (
         <div
             style={{
@@ -36,6 +51,13 @@ const PlanChatBody: React.FC<SimplifiedPlanChatProps> = ({
                 zIndex: 10
             }}
         >
+            <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,.xlsx,.json"
+                style={{ display: 'none' }}
+                onChange={handleFileUpload}
+            />
             <ChatInput
                 value={input}
                 onChange={setInput}
@@ -51,6 +73,25 @@ const PlanChatBody: React.FC<SimplifiedPlanChatProps> = ({
                     boxSizing: 'border-box',
                 }}
             >
+                <Button
+                    appearance="subtle"
+                    icon={<Attach20Regular />}
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={submittingChatDisableInput}
+                    title="Upload dataset"
+                    style={{
+                        height: '32px',
+                        width: '32px',
+                        borderRadius: '4px',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        color: submittingChatDisableInput
+                            ? 'var(--colorNeutralForegroundDisabled)'
+                            : 'var(--colorBrandForeground1)',
+                        marginRight: '8px',
+                        flexShrink: 0,
+                    }}
+                />
                 <Button
                     appearance="subtle"
                     className="home-input-send-button"

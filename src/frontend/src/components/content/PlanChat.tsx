@@ -48,6 +48,7 @@ interface SimplifiedPlanChatProps extends PlanChatProps {
   handleApprovePlan: () => Promise<void>;
   handleRejectPlan: () => Promise<void>;
   processingApproval: boolean;
+  onDatasetUpload?: (file: File) => void;
 
 }
 
@@ -70,7 +71,8 @@ const PlanChat: React.FC<SimplifiedPlanChatProps> = ({
   showApprovalButtons,
   handleApprovePlan,
   handleRejectPlan,
-  processingApproval
+  processingApproval,
+  onDatasetUpload
 }) => {
   // States
 
@@ -126,6 +128,7 @@ const PlanChat: React.FC<SimplifiedPlanChatProps> = ({
         submittingChatDisableInput={submittingChatDisableInput}
         OnChatSubmit={OnChatSubmit}
         waitingForPlan={waitingForPlan}
+        onDatasetUpload={onDatasetUpload}
         loading={false} />
 
     </div>

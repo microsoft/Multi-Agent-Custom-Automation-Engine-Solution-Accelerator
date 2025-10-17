@@ -123,6 +123,8 @@
   max-height: 280px !important;
   overflow-y: auto !important;
   transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  padding-right: 8px !important; /* Prevent scrollbar from overlapping text */
+  box-sizing: border-box !important;
 }
 
 .fui-AccordionPanel[aria-hidden="true"] {
@@ -130,5 +132,36 @@
   overflow: hidden !important;
   padding-top: 0 !important;
   padding-bottom: 0 !important;
+}
+
+/* Custom scrollbar styling for task list */
+.fui-AccordionPanel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.fui-AccordionPanel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.fui-AccordionPanel::-webkit-scrollbar-thumb {
+  background-color: var(--colorNeutralStroke2);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.fui-AccordionPanel::-webkit-scrollbar-thumb:hover {
+  background-color: var(--colorNeutralStroke1);
+}
+
+/* Firefox scrollbar styling */
+.fui-AccordionPanel {
+  scrollbar-width: thin;
+  scrollbar-color: var(--colorNeutralStroke2) transparent;
+}
+
+/* Ensure task list container doesn't create extra scrollbars */
+.task-list-container {
+  overflow: visible;
 }
 

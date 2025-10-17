@@ -116,7 +116,7 @@ const PanelRight: React.FC<PanelRightProps> = ({
         className="panelContent"
         style={{
           flex: 1,
-          overflowY: "auto",
+          overflowY: "hidden", /* Remove scrollbar from container - only scroll within individual sections */
         }}
       >
         {content}

@@ -273,6 +273,15 @@ export class APIService {
         });
         return result;
     }
+
+    /**
+     * Upload dataset during an active chat session
+     * @param formData FormData containing file and plan_id
+     * @returns Promise with upload result
+     */
+    async uploadDatasetInChat(formData: FormData): Promise<any> {
+        return apiClient.upload('/v3/datasets/upload_in_chat', formData);
+    }
 }
 
 // Export a singleton instance

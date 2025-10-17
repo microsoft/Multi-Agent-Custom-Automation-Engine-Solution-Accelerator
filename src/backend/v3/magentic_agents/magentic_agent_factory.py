@@ -73,16 +73,12 @@ class MagenticAgentFactory:
             raise UnsupportedModelError(f"Model '{deployment_name}' not supported. Supported: {supported_models}")
         
         # Determine which template to use
-        use_reasoning = deployment_name.startswith('o')
+        # CHANGED: Use ReasoningAgentTemplate for ALL models to avoid Foundry Agents API dependency
+        # Original: use_reasoning = deployment_name.startswith('o')
+        use_reasoning = True
         
-        # Validate reasoning template constraints
-        if use_reasoning:
-            if getattr(agent_obj, 'use_bing', False) or getattr(agent_obj, 'coding_tools', False):
-                raise InvalidConfigurationError(
-                    f"ReasoningAgentTemplate cannot use Bing search or coding tools. "
-                    f"Agent '{agent_obj.name}' has use_bing={getattr(agent_obj, 'use_bing', False)}, "
-                    f"coding_tools={getattr(agent_obj, 'coding_tools', False)}"
-                )
+        # NOTE: ReasoningAgentTemplate provides dataset access via MCP plugins
+        # Code Interpreter functionality is handled by MCP tools, not Foundry's native code interpreter
         
 
         
@@ -114,6 +110,8 @@ class MagenticAgentFactory:
                         f"(Template: {'Reasoning' if use_reasoning else 'Foundry'})")
         
         # Create appropriate agent
+        # NOTE: use_reasoning is now always True (see line 78), so we always use ReasoningAgentTemplate
+        # The else block is kept for potential rollback but won't execute
         if use_reasoning:
             # Get reasoning specific configuration
             azure_openai_endpoint = config.AZURE_OPENAI_ENDPOINT

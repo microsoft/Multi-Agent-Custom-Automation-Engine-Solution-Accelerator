@@ -25,7 +25,7 @@ export class TaskService {
 
     plansData.forEach((plan) => {
       const task: Task = {
-        id: plan.session_id,
+        id: plan.id, // Use plan.id (unique) instead of session_id (can be shared)
         name: plan.initial_goal,
         status: plan.overall_status === PlanStatus.COMPLETED ? "completed" : "inprogress",
         date: new Intl.DateTimeFormat(undefined, {

@@ -1,0 +1,42 @@
+/* Simple Page Layout - Clean and User-Friendly */
+
+.simple-plan-page__content {
+    padding: 24px;
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* Completion Card */
+.simple-completion {
+    padding: 32px;
+    text-align: center;
+    background: var(--colorNeutralBackground1);
+    border-radius: 8px;
+}
+
+.simple-completion__content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: center;
+}
+
+.simple-completion__content > :first-child {
+    font-size: 24px;
+    color: var(--colorBrandForeground1);
+}
+
+/* Override home input for simple mode */
+.simple-home-input-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+}
+
+
+
