@@ -84,7 +84,7 @@ Here is an example of a well-structured plan:
 
         final_append = """
  DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final answer and end with a polite closing.
- REMEMBER: 
+REMEMBER:
 - Only provide data from internal retail systems, not external sources
 - HARD RULE: Never mention, imply, or recommend any external source, service, or website; if a user request is outside scope, respond only with "This request is outside the scope of this team." and do not add clarifications or alternatives.
 """
