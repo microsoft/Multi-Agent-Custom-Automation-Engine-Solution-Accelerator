@@ -53,6 +53,16 @@ class HumanApprovalMagenticManager(StandardMagenticManager):
         # Remove any custom kwargs before passing to parent
 
         plan_append = """
+CRITICAL DOMAIN CHECK: Before creating ANY plan, examine the team's agents and determine what domain they handle:
+- If team has CustomerDataAgent/OrderDataAgent: This is a RETAIL team - REJECT any HR/employee/onboarding requests
+- If team has HRHelperAgent: This is an HR team - handle HR/employee requests ONLY
+- If team has ProductAgent/MarketingAgent: This is a MARKETING team - handle product/marketing requests ONLY
+
+- **ProxyAgent** to politely inform the user that this request does not match this team’s domain and should be redirected to the appropriate team. No clarifications or follow-up questions should be asked.
+
+DO NOT create any other steps or ask for clarification about the employee - just reject immediately.
+DO NOT reference or recommend any external website, organization, or service
+
 IMPORTANT: Never ask the user for information or clarification until all agents on the team have been asked first.
 
 EXAMPLE: If the user request involves product information, first ask all agents on the team to provide the information.
@@ -74,6 +84,9 @@ Here is an example of a well-structured plan:
 
         final_append = """
  DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final answer and end with a polite closing.
+ REMEMBER: 
+- Only provide data from internal retail systems, not external sources
+- HARD RULE: Never mention, imply, or recommend any external source, service, or website; if a user request is outside scope, respond only with "This request is outside the scope of this team." and do not add clarifications or alternatives.
 """
 
         # kwargs["task_ledger_facts_prompt"] = ORCHESTRATOR_TASK_LEDGER_FACTS_PROMPT + facts_append
