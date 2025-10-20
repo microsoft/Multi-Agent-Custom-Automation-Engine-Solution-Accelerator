@@ -65,7 +65,7 @@
     "eslint-plugin-react": "^7.37.5",
     "jsdom": "^26.1.0",
     "typescript": "^5.8.3",
-    "vite": "^7.1.2",
+    "vite": "^7.1.11",
     "vitest": "^3.2.4"
   }
 }
