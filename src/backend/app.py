@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 
 from azure.monitor.opentelemetry import configure_azure_monitor
 from common.config.app_config import config
-from common.models.messages_kernel import UserLanguage
+from common.models.messages_af import UserLanguage
 
 # FastAPI imports
 from fastapi import FastAPI, Request
@@ -14,12 +14,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 # Local imports
 from middleware.health_check import HealthCheckMiddleware
-from v3.api.router import app_v3
+from af.api.router import app_v3
 
 # Azure monitoring
 
 # Semantic Kernel imports
-from v3.config.agent_registry import agent_registry
+from af.config.agent_registry import agent_registry
 
 
 @asynccontextmanager
