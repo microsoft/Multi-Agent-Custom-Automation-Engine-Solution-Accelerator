@@ -7,7 +7,6 @@ from typing import Any, Optional
 from azure.ai.projects.aio import AIProjectClient
 from azure.identity.aio import DefaultAzureCredential
 
-from agent_framework.azure import AzureAIAgentClient
 from agent_framework import HostedMCPTool
 
 from af.magentic_agents.models.agent_models import MCPConfig

@@ -4,7 +4,7 @@ import logging
 from typing import List, Optional
 
 from azure.ai.agents.models import Agent, AzureAISearchTool, CodeInterpreterToolDefinition
-from agent_framework.azure import AzureAIAgentClient
+from agent_framework_azure_ai import AzureAIAgentClient
 from agent_framework import ChatMessage, Role, ChatOptions, HostedMCPTool
 
 from af.magentic_agents.common.lifecycle import AzureAgentBase

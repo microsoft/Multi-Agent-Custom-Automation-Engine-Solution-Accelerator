@@ -3,8 +3,7 @@ import logging
 import uuid
 from dataclasses import dataclass
 from typing import AsyncIterator, List, Optional
-
-from agent_framework.azure import AzureAIAgentClient
+from agent_framework_azure_ai import AzureAIAgentClient
 from agent_framework import (
     ChatMessage,
     ChatOptions,
