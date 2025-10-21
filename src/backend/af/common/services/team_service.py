@@ -11,13 +11,13 @@ from azure.core.exceptions import (
 from azure.search.documents.indexes import SearchIndexClient
 from common.config.app_config import config
 from common.database.database_base import DatabaseBase
-from common.models.messages_kernel import (
+from common.models.messages_af import (
     StartingTask,
     TeamAgent,
     TeamConfiguration,
     UserCurrentTeam,
 )
-from v3.common.services.foundry_service import FoundryService
+from af.common.services.foundry_service import FoundryService
 
 
 class TeamService:

@@ -2,16 +2,16 @@ import json
 import logging
 from dataclasses import asdict
 
-import v3.models.messages as messages
+import af.models.messages as messages
 from common.database.database_factory import DatabaseFactory
-from common.models.messages_kernel import (
+from common.models.messages_af import (
     AgentMessageData,
     AgentMessageType,
     AgentType,
     PlanStatus,
 )
 from common.utils.event_utils import track_event_if_configured
-from v3.config.settings import orchestration_config
+from af.config.settings import orchestration_config
 
 logger = logging.getLogger(__name__)
 

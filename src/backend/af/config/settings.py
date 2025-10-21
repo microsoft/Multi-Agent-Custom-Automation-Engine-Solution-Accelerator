@@ -9,14 +9,14 @@ import logging
 from typing import Dict, Optional
 
 from common.config.app_config import config
-from common.models.messages_kernel import TeamConfiguration
+from common.models.messages_af import TeamConfiguration
 from fastapi import WebSocket
 from semantic_kernel.agents.orchestration.magentic import MagenticOrchestration
 from semantic_kernel.connectors.ai.open_ai import (
     AzureChatCompletion,
     OpenAIChatPromptExecutionSettings,
 )
-from v3.models.messages import MPlan, WebsocketMessageType
+from af.models.messages import MPlan, WebsocketMessageType
 
 logger = logging.getLogger(__name__)
 

@@ -7,14 +7,14 @@ from typing import Optional
 import af.models.messages as messages
 from auth.auth_utils import get_authenticated_user_details
 from common.database.database_factory import DatabaseFactory
-from common.models.messages_kernel import (
+from common.models.messages_af import (
     InputTask,
     Plan,
     PlanStatus,
     TeamSelectionRequest,
 )
 from common.utils.event_utils import track_event_if_configured
-from common.utils.utils_kernel import rai_success, rai_validate_team_config
+from common.utils.utils_af import rai_success, rai_validate_team_config
 from fastapi import (
     APIRouter,
     BackgroundTasks,

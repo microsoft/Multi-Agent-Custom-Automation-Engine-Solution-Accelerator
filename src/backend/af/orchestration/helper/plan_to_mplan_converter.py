@@ -2,7 +2,7 @@ import logging
 import re
 from typing import Iterable, List, Optional
 
-from v3.models.models import MPlan, MStep
+from af.models.models import MPlan, MStep
 
 logger = logging.getLogger(__name__)
 
