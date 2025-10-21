@@ -1,373 +1,253 @@
-# Copyright (c) Microsoft. All rights reserved.
-"""Proxy agent that prompts for human clarification."""
+"""
+ProxyAgentAF: Human clarification proxy implemented on agent_framework primitives.
+
+Responsibilities:
+- Request clarification from a human via websocket
+- Await response (with timeout + cancellation handling via orchestration_config)
+- Yield ChatResponseUpdate objects compatible with agent_framework streaming loops
+"""
+
+from __future__ import annotations
 
 import asyncio
 import logging
 import time
 import uuid
-from collections.abc import AsyncIterable
-from typing import AsyncIterator, Optional
+from dataclasses import dataclass, field
+from typing import AsyncIterator, List, Optional
 
-from pydantic import Field
-from semantic_kernel.agents import (  # pylint: disable=no-name-in-module
-    AgentResponseItem,
-    AgentThread,
+from agent_framework import (
+    ChatResponseUpdate,
+    Role,
+    TextContent,
+    UsageContent,
+    UsageDetails,
 )
-from semantic_kernel.agents.agent import Agent
-from semantic_kernel.contents import (
-    AuthorRole,
-    ChatMessageContent,
-    StreamingChatMessageContent,
+from af.config.settings import connection_config, orchestration_config
+from af.models.messages import (
+    UserClarificationRequest,
+    UserClarificationResponse,
+    TimeoutNotification,
+    WebsocketMessageType,
 )
-from semantic_kernel.contents.chat_history import ChatHistory
-from semantic_kernel.contents.history_reducer.chat_history_reducer import (
-    ChatHistoryReducer,
-)
-from semantic_kernel.exceptions.agent_exceptions import AgentThreadOperationException
-from typing_extensions import override
-from v3.callbacks.response_handlers import (agent_response_callback,
-                                            streaming_agent_response_callback)
-from v3.config.settings import connection_config, orchestration_config
-from v3.models.messages import (UserClarificationRequest,
-                                UserClarificationResponse, WebsocketMessageType)
 
-# Initialize logger for the module
 logger = logging.getLogger(__name__)
 
 
-class DummyAgentThread(AgentThread):
-    """Dummy thread implementation for proxy agent."""
+# ---------------------------------------------------------------------------
+# Internal conversation structure (minimal alternative to SK AgentThread)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ProxyConversation:
+    conversation_id: str = field(default_factory=lambda: f"proxy_{uuid.uuid4().hex}")
+    messages: List[str] = field(default_factory=list)
+
+    def add(self, content: str) -> None:
+        self.messages.append(content)
+
+
+# ---------------------------------------------------------------------------
+# Proxy Agent AF
+# ---------------------------------------------------------------------------
+
+class ProxyAgent:
+    """
+    A lightweight "agent" that mediates human clarification.
+    Not a model-backed agent; it orchestrates a request and emits a synthetic reply.
+    """
 
     def __init__(
-        self, chat_history: ChatHistory | None = None, thread_id: str | None = None
+        self,
+        user_id: Optional[str],
+        name: str = "ProxyAgent",
+        description: str = (
+            "Clarification agent. Ask this when instructions are unclear or additional "
+            "user details are required."
+        ),
+        timeout_seconds: Optional[int] = None,
     ):
-        super().__init__()
-        self._chat_history = chat_history if chat_history is not None else ChatHistory()
-        self._id: str = thread_id or f"thread_{uuid.uuid4().hex}"
-        self._is_deleted = False
-        self.logger = logging.getLogger(__name__)
+        self.user_id = user_id or ""
+        self.name = name
+        self.description = description
+        self._timeout = timeout_seconds or orchestration_config.default_timeout
+        self._conversation = ProxyConversation()
 
-    @override
-    async def _create(self) -> str:
-        """Starts the thread and returns its ID."""
-        return self._id
+    # ---------------------------
+    # Public invocation interfaces
+    # ---------------------------
 
-    @override
-    async def _delete(self) -> None:
-        """Ends the current thread."""
-        self._chat_history.clear()
-
-    @override
-    async def _on_new_message(self, new_message: str | ChatMessageContent) -> None:
-        """Called when a new message has been contributed to the chat."""
-        if isinstance(new_message, str):
-            new_message = ChatMessageContent(role=AuthorRole.USER, content=new_message)
-
-        if (
-            not new_message.metadata
-            or "thread_id" not in new_message.metadata
-            or new_message.metadata["thread_id"] != self._id
-        ):
-            self._chat_history.add_message(new_message)
-
-    async def get_messages(self) -> AsyncIterable[ChatMessageContent]:
-        """Retrieve the current chat history.
-
-        Returns:
-            An async iterable of ChatMessageContent.
+    async def invoke(self, message: str) -> AsyncIterator[ChatResponseUpdate]:
         """
-        if self._is_deleted:
-            raise AgentThreadOperationException(
-                "Cannot retrieve chat history, since the thread has been deleted."
-            )
-        if self._id is None:
-            await self.create()
-        for message in self._chat_history.messages:
-            yield message
+        One-shot style: waits for human clarification, then yields a single final response update.
+        """
+        async for update in self.invoke_stream(message):
+            # If caller expects only the final text, they can just collect the last update
+            continue
+        # When invoke_stream finishes, it already yielded final updates;
+        # this wrapper exists for parity with LLM agents returning enumerables.
+        return
 
-    async def reduce(self) -> ChatHistory | None:
-        """Reduce the chat history to a smaller size."""
-        if self._id is None:
-            raise AgentThreadOperationException(
-                "Cannot reduce chat history, since the thread is not currently active."
-            )
-        if not isinstance(self._chat_history, ChatHistoryReducer):
-            return None
-        return await self._chat_history.reduce()
+    async def invoke_stream(self, message: str) -> AsyncIterator[ChatResponseUpdate]:
+        """
+        Streaming version:
+        1. Sends clarification request via websocket (no yield yet).
+        2. Waits for human response / timeout.
+        3. Yields:
+           - A ChatResponseUpdate with the final clarified answer (as assistant text) if received.
+           - A usage marker (synthetic) for downstream consistency.
+        """
+        original_prompt = message or ""
+        self._conversation.add(original_prompt)
 
-
-class ProxyAgentResponseItem:
-    """Response item wrapper for proxy agent responses."""
-
-    def __init__(self, message: ChatMessageContent, thread: AgentThread):
-        self.message = message
-        self.thread = thread
-        self.logger = logging.getLogger(__name__)
-
-
-class ProxyAgent(Agent):
-    """Simple proxy agent that prompts for human clarification."""
-
-    # Declare as Pydantic field
-    user_id: str = Field(
-        default=None, description="User ID for WebSocket messaging"
-    )
-
-    def __init__(self, user_id: str, **kwargs):
-        # Get user_id from parameter, fallback to empty string
-        effective_user_id = user_id or ""
-        super().__init__(
-            name="ProxyAgent",
-            description="Call this agent when you need to clarify requests by asking the human user for more information. Ask it for more details about any unclear requirements, missing information, or if you need the user to elaborate on any aspect of the task.",
-            user_id=effective_user_id,
-            **kwargs,
-        )
-        self.instructions = ""
-
-    def _create_message_content(
-        self, content: str, thread_id: str = None
-    ) -> ChatMessageContent:
-        """Create a ChatMessageContent with proper metadata."""
-        return ChatMessageContent(
-            role=AuthorRole.ASSISTANT,
-            content=content,
-            name=self.name,
-            metadata={"thread_id": thread_id} if thread_id else {},
+        clarification_req_text = f"I need clarification about: {original_prompt}"
+        clarification_request = UserClarificationRequest(
+            question=clarification_req_text,
+            request_id=str(uuid.uuid4()),
         )
 
-    async def _trigger_response_callbacks(self, message_content: ChatMessageContent):
-        """Manually trigger the same response callbacks used by other agents."""
-        # Get current user_id dynamically instead of using stored value
-        current_user = self.user_id or ""
-
-        # Trigger the standard agent response callback
-        agent_response_callback(message_content, current_user)
-
-    async def _trigger_streaming_callbacks(self, content: str, is_final: bool = False):
-        """Manually trigger streaming callbacks for real-time updates."""
-        # Get current user_id dynamically instead of using stored value
-        current_user = self.user_id or ""
-        streaming_message = StreamingChatMessageContent(
-            role=AuthorRole.ASSISTANT, content=content, name=self.name, choice_index=0
-        )
-        await streaming_agent_response_callback(
-            streaming_message, is_final, current_user
-        )
-
-    async def invoke(
-        self, message: str, *, thread: AgentThread | None = None, **kwargs
-    ) -> AsyncIterator[ChatMessageContent]:
-        """Ask human user for clarification about the message."""
-
-        thread = await self._ensure_thread_exists_with_messages(
-            messages=message,
-            thread=thread,
-            construct_thread=lambda: DummyAgentThread(),
-            expected_type=DummyAgentThread,
-        )
-
-        # Send clarification request via streaming callbacks
-        clarification_request = f"I need clarification about: {message}"
-
-        clarification_message = UserClarificationRequest(
-            question=clarification_request,
-            request_id=str(uuid.uuid4()),  # Unique ID for the request
-        )
-
-        # Send the approval request to the user's WebSocket
+        # Dispatch websocket event requesting clarification
         await connection_config.send_status_update_async(
             {
                 "type": WebsocketMessageType.USER_CLARIFICATION_REQUEST,
-                "data": clarification_message,
+                "data": clarification_request,
             },
             user_id=self.user_id,
             message_type=WebsocketMessageType.USER_CLARIFICATION_REQUEST,
         )
 
-        # Get human input
-        human_response = await self._wait_for_user_clarification(
-            clarification_message.request_id
-        )
+        # Await human clarification
+        human_response = await self._wait_for_user_clarification(clarification_request.request_id)
 
-        # Handle silent timeout/cancellation
         if human_response is None:
-            # Process was terminated silently - don't yield any response
-            logger.debug("Clarification process terminated silently - ending invoke")
-            return
-
-        # Extract the answer from the response
-        answer = human_response.answer if human_response else "No additional clarification provided."
-
-        response = f"Human clarification: {answer}"
-
-        chat_message = self._create_message_content(response, thread.id)
-
-        yield AgentResponseItem(message=chat_message, thread=thread)
-
-    async def invoke_stream(
-        self, messages, thread=None, **kwargs
-    ) -> AsyncIterator[ProxyAgentResponseItem]:
-        """Stream version - handles thread management for orchestration."""
-
-        thread = await self._ensure_thread_exists_with_messages(
-            messages=messages,
-            thread=thread,
-            construct_thread=lambda: DummyAgentThread(),
-            expected_type=DummyAgentThread,
-        )
-
-        # Extract message content
-        if isinstance(messages, list) and messages:
-            message = (
-                messages[-1].content
-                if hasattr(messages[-1], "content")
-                else str(messages[-1])
+            # Timeout or cancellation already handled (timeout notification was sent).
+            logger.debug(
+                "ProxyAgentAF: No clarification response (timeout/cancel). Ending stream silently."
             )
-        elif isinstance(messages, str):
-            message = messages
-        else:
-            message = str(messages)
-
-        # Send clarification request via streaming callbacks
-        clarification_request = f"I need clarification about: {message}"
-
-        clarification_message = UserClarificationRequest(
-            question=clarification_request,
-            request_id=str(uuid.uuid4()),  # Unique ID for the request
-        )
-
-        # Send the approval request to the user's WebSocket
-        # The user_id will be automatically retrieved from context
-        await connection_config.send_status_update_async(
-            {
-                "type": WebsocketMessageType.USER_CLARIFICATION_REQUEST,
-                "data": clarification_message,
-            },
-            user_id=self.user_id,
-            message_type=WebsocketMessageType.USER_CLARIFICATION_REQUEST,
-        )
-
-        # Get human input - replace with websocket call when available
-        human_response = await self._wait_for_user_clarification(
-            clarification_message.request_id
-        )
-
-        # Handle silent timeout/cancellation
-        if human_response is None:
-            # Process was terminated silently - don't yield any response
-            logger.debug("Clarification process terminated silently - ending invoke_stream")
             return
 
-        # Extract the answer from the response
-        answer = human_response.answer if human_response else "No additional clarification provided."
+        answer_text = (
+            human_response.answer
+            if human_response.answer
+            else "No additional clarification provided."
+        )
+        synthetic_reply = f"Human clarification: {answer_text}"
+        self._conversation.add(synthetic_reply)
 
-        response = f"Human clarification: {answer}"
+        # Yield final assistant text chunk
+        yield self._make_text_update(synthetic_reply, is_final=False)
 
-        chat_message = self._create_message_content(response, thread.id)
+        # Yield a synthetic usage update so downstream consumers can treat this like a model run
+        yield self._make_usage_update(token_estimate=len(synthetic_reply.split()))
 
-        yield AgentResponseItem(message=chat_message, thread=thread)
+    # ---------------------------
+    # Internal helpers
+    # ---------------------------
 
     async def _wait_for_user_clarification(
         self, request_id: str
     ) -> Optional[UserClarificationResponse]:
         """
-        Wait for user clarification response using event-driven pattern with timeout handling.
-
-        Args:
-            request_id: The request ID to wait for clarification
-
-        Returns:
-            UserClarificationResponse: Clarification result with request ID and answer
-
-        Raises:
-            asyncio.TimeoutError: If timeout is exceeded (300 seconds default)
+        Wraps orchestration_config.wait_for_clarification with robust timeout & cleanup.
         """
-        # logger.info(f"Waiting for user clarification for request: {request_id}")
-
-        # Initialize clarification as pending using the new event-driven method
         orchestration_config.set_clarification_pending(request_id)
-
         try:
-            # Wait for clarification with timeout using the new event-driven method
             answer = await orchestration_config.wait_for_clarification(request_id)
-
-            # logger.info(f"Clarification received for request {request_id}: {answer}")
-            return UserClarificationResponse(
-                request_id=request_id,
-                answer=answer,
-            )
+            return UserClarificationResponse(request_id=request_id, answer=answer)
         except asyncio.TimeoutError:
-            # Enhanced timeout handling - notify user via WebSocket and cleanup
-            logger.debug(f"Clarification timeout for request {request_id} - notifying user and terminating process")
-
-            # Create timeout notification message
-            from v3.models.messages import TimeoutNotification, WebsocketMessageType
-            timeout_notification = TimeoutNotification(
-                timeout_type="clarification",
-                request_id=request_id,
-                message=f"User clarification request timed out after {orchestration_config.default_timeout} seconds. Please try again.",
-                timestamp=time.time(),
-                timeout_duration=orchestration_config.default_timeout
-            )
-
-            # Send timeout notification to user via WebSocket
-            try:
-                await connection_config.send_status_update_async(
-                    message=timeout_notification,
-                    user_id=self.user_id,
-                    message_type=WebsocketMessageType.TIMEOUT_NOTIFICATION,
-                )
-                logger.info(f"Timeout notification sent to user {self.user_id} for clarification {request_id}")
-            except Exception as e:
-                logger.error(f"Failed to send timeout notification: {e}")
-
-            # Clean up this specific request
-            orchestration_config.cleanup_clarification(request_id)
-
-            # Return None to indicate silent termination
-            # The timeout naturally stops this specific wait operation without affecting other tasks
+            await self._notify_timeout(request_id)
             return None
-
-        except KeyError as e:
-            # Silent error handling for invalid request IDs
-            logger.debug(f"Request ID not found: {e} - terminating process silently")
-            return None
-
         except asyncio.CancelledError:
-            # Handle task cancellation gracefully
-            logger.debug(f"Clarification request {request_id} was cancelled")
+            logger.debug("ProxyAgentAF: Clarification request %s cancelled", request_id)
             orchestration_config.cleanup_clarification(request_id)
             return None
-
-        except Exception as e:
-            # Silent error handling for unexpected errors
-            logger.debug(f"Unexpected error waiting for clarification: {e} - terminating process silently")
+        except KeyError:
+            logger.debug("ProxyAgentAF: Invalid clarification request id %s", request_id)
+            return None
+        except Exception as ex:  # noqa: BLE001
+            logger.debug("ProxyAgentAF: Unexpected error awaiting clarification: %s", ex)
             orchestration_config.cleanup_clarification(request_id)
             return None
         finally:
-            # Ensure cleanup happens for any incomplete requests
-            # This provides an additional safety net for resource cleanup
-            if (request_id in orchestration_config.clarifications and orchestration_config.clarifications[request_id] is None):
-                logger.debug(f"Final cleanup for pending clarification request {request_id}")
+            # Safety net cleanup if still pending with no value.
+            if (
+                request_id in orchestration_config.clarifications
+                and orchestration_config.clarifications[request_id] is None
+            ):
                 orchestration_config.cleanup_clarification(request_id)
 
-    async def get_response(self, chat_history, **kwargs):
-        """Get response from the agent - required by Agent base class."""
-        # Extract the latest user message
-        latest_message = (
-            chat_history.messages[-1].content if chat_history.messages else ""
+    async def _notify_timeout(self, request_id: str) -> None:
+        """Send a timeout notification to the client and clean up."""
+        notice = TimeoutNotification(
+            timeout_type="clarification",
+            request_id=request_id,
+            message=(
+                f"User clarification request timed out after "
+                f"{self._timeout} seconds. Please retry."
+            ),
+            timestamp=time.time(),
+            timeout_duration=self._timeout,
+        )
+        try:
+            await connection_config.send_status_update_async(
+                message=notice,
+                user_id=self.user_id,
+                message_type=WebsocketMessageType.TIMEOUT_NOTIFICATION,
+            )
+            logger.info(
+                "ProxyAgentAF: Timeout notification sent (request_id=%s user=%s)",
+                request_id,
+                self.user_id,
+            )
+        except Exception as ex:  # noqa: BLE001
+            logger.error("ProxyAgentAF: Failed to send timeout notification: %s", ex)
+        orchestration_config.cleanup_clarification(request_id)
+
+    def _make_text_update(
+        self,
+        text: str,
+        is_final: bool,
+    ) -> ChatResponseUpdate:
+        """
+        Build a ChatResponseUpdate containing assistant text. We treat each
+        emitted text as a 'delta'; downstream can concatenate if needed.
+        """
+        return ChatResponseUpdate(
+            role=Role.ASSISTANT,
+            text=text,
+            contents=[TextContent(text=text)],
+            conversation_id=self._conversation.conversation_id,
+            message_id=str(uuid.uuid4()),
+            response_id=str(uuid.uuid4()),
         )
 
-        # Use our invoke method to get the response
-        async for response in self.invoke(latest_message, **kwargs):
-            return response
-
-        # Fallback if no response generated
-        return ChatMessageContent(
-            role=AuthorRole.ASSISTANT, content="No clarification provided."
+    def _make_usage_update(self, token_estimate: int) -> ChatResponseUpdate:
+        """
+        Provide a synthetic usage update (assist in downstream finalization logic).
+        """
+        usage = UsageContent(
+            UsageDetails(
+                input_token_count=0,
+                output_token_count=token_estimate,
+                total_token_count=token_estimate,
+            )
+        )
+        return ChatResponseUpdate(
+            role=Role.ASSISTANT,
+            text="",
+            contents=[usage],
+            conversation_id=self._conversation.conversation_id,
+            message_id=str(uuid.uuid4()),
+            response_id=str(uuid.uuid4()),
         )
 
 
-async def create_proxy_agent(user_id: str = None):
-    """Factory function for human proxy agent."""
+# ---------------------------------------------------------------------------
+# Factory
+# ---------------------------------------------------------------------------
+
+async def create_proxy_agent(user_id: Optional[str] = None) -> ProxyAgent:
+    """
+    Factory for ProxyAgentAF (mirrors previous create_proxy_agent interface).
+    """
     return ProxyAgent(user_id=user_id)
