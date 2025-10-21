@@ -381,338 +381,20 @@ module userAssignedIdentity 'br/public:avm/res/managed-identity/user-assigned-id
     enableTelemetry: enableTelemetry
   }
 }
-
-// ========== Network Security Groups ========== //
-// WAF best practices for virtual networks: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/virtual-network
-// WAF recommendations for networking and connectivity: https://learn.microsoft.com/en-us/azure/well-architected/security/networking
-var networkSecurityGroupBackendResourceName = 'nsg-${solutionSuffix}-backend'
-module networkSecurityGroupBackend 'br/public:avm/res/network/network-security-group:0.5.1' = if (enablePrivateNetworking) {
-  name: take('avm.res.network.network-security-group.backend.${networkSecurityGroupBackendResourceName}', 64)
-  params: {
-    name: networkSecurityGroupBackendResourceName
-    location: location
-    tags: tags
-    enableTelemetry: enableTelemetry
-    diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : null
-    securityRules: [
-      {
-        name: 'deny-hop-outbound'
-        properties: {
-          access: 'Deny'
-          destinationAddressPrefix: '*'
-          destinationPortRanges: [
-            '22'
-            '3389'
-          ]
-          direction: 'Outbound'
-          priority: 200
-          protocol: 'Tcp'
-          sourceAddressPrefix: 'VirtualNetwork'
-          sourcePortRange: '*'
-        }
-      }
-    ]
-  }
-}
-
-var networkSecurityGroupBastionResourceName = 'nsg-${solutionSuffix}-bastion'
-module networkSecurityGroupBastion 'br/public:avm/res/network/network-security-group:0.5.1' = if (enablePrivateNetworking) {
-  name: take('avm.res.network.network-security-group.bastion${networkSecurityGroupBastionResourceName}', 64)
-  params: {
-    name: networkSecurityGroupBastionResourceName
-    location: location
-    tags: tags
-    enableTelemetry: enableTelemetry
-    diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : null
-    securityRules: [
-      {
-        name: 'AllowHttpsInBound'
-        properties: {
-          protocol: 'Tcp'
-          sourcePortRange: '*'
-          sourceAddressPrefix: 'Internet'
-          destinationPortRange: '443'
-          destinationAddressPrefix: '*'
-          access: 'Allow'
-          priority: 100
-          direction: 'Inbound'
-        }
-      }
-      {
-        name: 'AllowGatewayManagerInBound'
-        properties: {
-          protocol: 'Tcp'
-          sourcePortRange: '*'
-          sourceAddressPrefix: 'GatewayManager'
-          destinationPortRange: '443'
-          destinationAddressPrefix: '*'
-          access: 'Allow'
-          priority: 110
-          direction: 'Inbound'
-        }
-      }
-      {
-        name: 'AllowLoadBalancerInBound'
-        properties: {
-          protocol: 'Tcp'
-          sourcePortRange: '*'
-          sourceAddressPrefix: 'AzureLoadBalancer'
-          destinationPortRange: '443'
-          destinationAddressPrefix: '*'
-          access: 'Allow'
-          priority: 120
-          direction: 'Inbound'
-        }
-      }
-      {
-        name: 'AllowBastionHostCommunicationInBound'
-        properties: {
-          protocol: '*'
-          sourcePortRange: '*'
-          sourceAddressPrefix: 'VirtualNetwork'
-          destinationPortRanges: [
-            '8080'
-            '5701'
-          ]
-          destinationAddressPrefix: 'VirtualNetwork'
-          access: 'Allow'
-          priority: 130
-          direction: 'Inbound'
-        }
-      }
-      {
-        name: 'DenyAllInBound'
-        properties: {
-          protocol: '*'
-          sourcePortRange: '*'
-          sourceAddressPrefix: '*'
-          destinationPortRange: '*'
-          destinationAddressPrefix: '*'
-          access: 'Deny'
-          priority: 1000
-          direction: 'Inbound'
-        }
-      }
-      {
-        name: 'AllowSshRdpOutBound'
-        properties: {
-          protocol: 'Tcp'
-          sourcePortRange: '*'
-          sourceAddressPrefix: '*'
-          destinationPortRanges: [
-            '22'
-            '3389'
-          ]
-          destinationAddressPrefix: 'VirtualNetwork'
-          access: 'Allow'
-          priority: 100
-          direction: 'Outbound'
-        }
-      }
-      {
-        name: 'AllowAzureCloudCommunicationOutBound'
-        properties: {
-          protocol: 'Tcp'
-          sourcePortRange: '*'
-          sourceAddressPrefix: '*'
-          destinationPortRange: '443'
-          destinationAddressPrefix: 'AzureCloud'
-          access: 'Allow'
-          priority: 110
-          direction: 'Outbound'
-        }
-      }
-      {
-        name: 'AllowBastionHostCommunicationOutBound'
-        properties: {
-          protocol: '*'
-          sourcePortRange: '*'
-          sourceAddressPrefix: 'VirtualNetwork'
-          destinationPortRanges: [
-            '8080'
-            '5701'
-          ]
-          destinationAddressPrefix: 'VirtualNetwork'
-          access: 'Allow'
-          priority: 120
-          direction: 'Outbound'
-        }
-      }
-      {
-        name: 'AllowGetSessionInformationOutBound'
-        properties: {
-          protocol: '*'
-          sourcePortRange: '*'
-          sourceAddressPrefix: '*'
-          destinationAddressPrefix: 'Internet'
-          destinationPortRanges: [
-            '80'
-            '443'
-          ]
-          access: 'Allow'
-          priority: 130
-          direction: 'Outbound'
-        }
-      }
-      {
-        name: 'DenyAllOutBound'
-        properties: {
-          protocol: '*'
-          sourcePortRange: '*'
-          destinationPortRange: '*'
-          sourceAddressPrefix: '*'
-          destinationAddressPrefix: '*'
-          access: 'Deny'
-          priority: 1000
-          direction: 'Outbound'
-        }
-      }
-    ]
-  }
-}
-
-var networkSecurityGroupAdministrationResourceName = 'nsg-${solutionSuffix}-administration'
-module networkSecurityGroupAdministration 'br/public:avm/res/network/network-security-group:0.5.1' = if (enablePrivateNetworking) {
-  name: take('avm.res.network.network-security-group.administration.${networkSecurityGroupAdministrationResourceName}', 64)
-  params: {
-    name: networkSecurityGroupAdministrationResourceName
-    location: location
-    tags: tags
-    enableTelemetry: enableTelemetry
-    diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : null
-    securityRules: [
-      {
-        name: 'deny-hop-outbound'
-        properties: {
-          access: 'Deny'
-          destinationAddressPrefix: '*'
-          destinationPortRanges: [
-            '22'
-            '3389'
-          ]
-          direction: 'Outbound'
-          priority: 200
-          protocol: 'Tcp'
-          sourceAddressPrefix: 'VirtualNetwork'
-          sourcePortRange: '*'
-        }
-      }
-    ]
-  }
-}
-
-var networkSecurityGroupContainersResourceName = 'nsg-${solutionSuffix}-containers'
-module networkSecurityGroupContainers 'br/public:avm/res/network/network-security-group:0.5.1' = if (enablePrivateNetworking) {
-  name: take('avm.res.network.network-security-group.containers.${networkSecurityGroupContainersResourceName}', 64)
-  params: {
-    name: networkSecurityGroupContainersResourceName
-    location: location
-    tags: tags
-    enableTelemetry: enableTelemetry
-    diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : null
-    securityRules: [
-      {
-        name: 'deny-hop-outbound'
-        properties: {
-          access: 'Deny'
-          destinationAddressPrefix: '*'
-          destinationPortRanges: [
-            '22'
-            '3389'
-          ]
-          direction: 'Outbound'
-          priority: 200
-          protocol: 'Tcp'
-          sourceAddressPrefix: 'VirtualNetwork'
-          sourcePortRange: '*'
-        }
-      }
-    ]
-  }
-}
-
-var networkSecurityGroupWebsiteResourceName = 'nsg-${solutionSuffix}-website'
-module networkSecurityGroupWebsite 'br/public:avm/res/network/network-security-group:0.5.1' = if (enablePrivateNetworking) {
-  name: take('avm.res.network.network-security-group.website.${networkSecurityGroupWebsiteResourceName}', 64)
-  params: {
-    name: networkSecurityGroupWebsiteResourceName
-    location: location
-    tags: tags
-    enableTelemetry: enableTelemetry
-    diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : null
-    securityRules: [
-      {
-        name: 'deny-hop-outbound'
-        properties: {
-          access: 'Deny'
-          destinationAddressPrefix: '*'
-          destinationPortRanges: [
-            '22'
-            '3389'
-          ]
-          direction: 'Outbound'
-          priority: 200
-          protocol: 'Tcp'
-          sourceAddressPrefix: 'VirtualNetwork'
-          sourcePortRange: '*'
-        }
-      }
-    ]
-  }
-}
-
 // ========== Virtual Network ========== //
 // WAF best practices for virtual networks: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/virtual-network
 // WAF recommendations for networking and connectivity: https://learn.microsoft.com/en-us/azure/well-architected/security/networking
 var virtualNetworkResourceName = 'vnet-${solutionSuffix}'
-module virtualNetwork 'br/public:avm/res/network/virtual-network:0.7.0' = if (enablePrivateNetworking) {
-  name: take('avm.res.network.virtual-network.${virtualNetworkResourceName}', 64)
+module virtualNetwork 'modules/virtualNetwork.bicep' = if (enablePrivateNetworking) {
+  name: take('module.virtualNetwork.${solutionSuffix}', 64)
   params: {
-    name: virtualNetworkResourceName
+    name: 'vnet-${solutionSuffix}'
     location: location
     tags: tags
     enableTelemetry: enableTelemetry
     addressPrefixes: ['10.0.0.0/8']
-    subnets: [
-      {
-        name: 'backend'
-        addressPrefix: '10.0.0.0/27'
-        networkSecurityGroupResourceId: networkSecurityGroupBackend!.outputs.resourceId
-      }
-      {
-        name: 'administration'
-        addressPrefix: '10.0.0.32/27'
-        networkSecurityGroupResourceId: networkSecurityGroupAdministration!.outputs.resourceId
-        //natGatewayResourceId: natGateway.outputs.resourceId
-      }
-      {
-        // For Azure Bastion resources deployed on or after November 2, 2021, the minimum AzureBastionSubnet size is /26 or larger (/25, /24, etc.).
-        // https://learn.microsoft.com/en-us/azure/bastion/configuration-settings#subnet
-        name: 'AzureBastionSubnet' //This exact name is required for Azure Bastion
-        addressPrefix: '10.0.0.64/26'
-        networkSecurityGroupResourceId: networkSecurityGroupBastion!.outputs.resourceId
-      }
-      {
-        // If you use your own vnw, you need to provide a subnet that is dedicated exclusively to the Container App environment you deploy. This subnet isn't available to other services
-        // https://learn.microsoft.com/en-us/azure/container-apps/networking?tabs=workload-profiles-env%2Cazure-cli#custom-vnw-configuration
-        name: 'containers'
-        addressPrefix: '10.0.2.0/23' //subnet of size /23 is required for container app
-        delegation: 'Microsoft.App/environments'
-        networkSecurityGroupResourceId: networkSecurityGroupContainers!.outputs.resourceId
-        privateEndpointNetworkPolicies: 'Enabled'
-        privateLinkServiceNetworkPolicies: 'Enabled'
-      }
-      {
-        // If you use your own vnw, you need to provide a subnet that is dedicated exclusively to the App Environment you deploy. This subnet isn't available to other services
-        // https://learn.microsoft.com/en-us/azure/app-service/overview-vnet-integration#subnet-requirements
-        name: 'webserverfarm'
-        addressPrefix: '10.0.4.0/27' //When you're creating subnets in Azure portal as part of integrating with the virtual network, a minimum size of /27 is required
-        delegation: 'Microsoft.Web/serverfarms'
-        networkSecurityGroupResourceId: networkSecurityGroupWebsite!.outputs.resourceId
-        privateEndpointNetworkPolicies: 'Enabled'
-        privateLinkServiceNetworkPolicies: 'Enabled'
-      }
-    ]
+    logAnalyticsWorkspaceId: logAnalyticsWorkspaceResourceId
+    resourceSuffix: solutionSuffix
   }
 }
 
@@ -961,7 +643,7 @@ module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.17.0' = if (e
         ipConfigurations: [
           {
             name: '${virtualMachineResourceName}-nic01-ipconfig01'
-            subnetResourceId: virtualNetwork!.outputs.subnetResourceIds[1]
+            subnetResourceId: virtualNetwork!.outputs.administrationSubnetResourceId
             diagnosticSettings: enableMonitoring //WAF aligned configuration for Monitoring
               ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }]
               : null
@@ -1280,7 +962,7 @@ module aiFoundryAiServices 'br:mcr.microsoft.com/bicep/avm/res/cognitive-service
           {
             name: 'pep-${aiFoundryAiServicesResourceName}'
             customNetworkInterfaceName: 'nic-${aiFoundryAiServicesResourceName}'
-            subnetResourceId: virtualNetwork!.outputs.subnetResourceIds[0]
+            subnetResourceId: virtualNetwork!.outputs.backendSubnetResourceId
             privateDnsZoneGroup: {
               privateDnsZoneGroupConfigs: [
                 {
@@ -1393,7 +1075,7 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
               ]
             }
             service: 'Sql'
-            subnetResourceId: virtualNetwork!.outputs.subnetResourceIds[0]
+            subnetResourceId: virtualNetwork!.outputs.backendSubnetResourceId
           }
         ]
       : []
@@ -1438,7 +1120,7 @@ module containerAppEnvironment 'br/public:avm/res/app/managed-environment:0.11.2
     // WAF aligned configuration for Private Networking
     publicNetworkAccess: 'Enabled' // Always enabling the publicNetworkAccess for Container App Environment
     internal: false //  Must be false when publicNetworkAccess is'Enabled'
-    infrastructureSubnetResourceId: enablePrivateNetworking ? virtualNetwork.?outputs.?subnetResourceIds[3] : null
+    infrastructureSubnetResourceId: enablePrivateNetworking ? virtualNetwork.?outputs.?containerSubnetResourceId : null
     // WAF aligned configuration for Monitoring
     appLogsConfiguration: enableMonitoring
       ? {
@@ -1826,7 +1508,7 @@ module webSite 'modules/web-sites.bicep' = {
     // WAF aligned configuration for Private Networking
     vnetRouteAllEnabled: enablePrivateNetworking ? true : false
     vnetImagePullEnabled: enablePrivateNetworking ? true : false
-    virtualNetworkSubnetId: enablePrivateNetworking ? virtualNetwork!.outputs.subnetResourceIds[4] : null
+    virtualNetworkSubnetId: enablePrivateNetworking ? virtualNetwork!.outputs.webserverfarmSubnetResourceId : null
     publicNetworkAccess: 'Enabled' // Always enabling the public network access for Web App
     e2eEncryptionEnabled: true
   }
@@ -1884,7 +1566,7 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
                 }
               ]
             }
-            subnetResourceId: virtualNetwork!.outputs.subnetResourceIds[0]
+            subnetResourceId: virtualNetwork!.outputs.backendSubnetResourceId
             service: 'blob'
           }
         ]
@@ -2035,7 +1717,7 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.12.1' = {
               privateDnsZoneGroupConfigs: [{ privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.keyVault]!.outputs.resourceId }]
             }
             service: 'vault'
-            subnetResourceId: virtualNetwork!.outputs.subnetResourceIds[0]
+            subnetResourceId: virtualNetwork!.outputs.backendSubnetResourceId
           }
         ]
       : []
