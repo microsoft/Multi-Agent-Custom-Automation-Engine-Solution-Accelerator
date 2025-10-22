@@ -12,7 +12,7 @@ agent instances.
 import logging
 from typing import Any, Dict, List, Union
 
-from common.models.messages_kernel import TeamAgent, TeamConfiguration
+from common.models.messages_af import TeamAgent, TeamConfiguration
 from af.common.services.team_service import TeamService
 
 

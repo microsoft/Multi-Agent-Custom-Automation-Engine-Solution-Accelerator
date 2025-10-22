@@ -6,7 +6,7 @@ import uuid
 from typing import List, Optional, Callable, Awaitable
 
 from common.config.app_config import config
-from common.models.messages_kernel import TeamConfiguration
+from common.models.messages_af import TeamConfiguration
 
 # agent_framework imports
 from agent_framework import ChatMessage, Role, ChatOptions
@@ -184,7 +184,7 @@ class OrchestrationManager:
                                 cls.logger.error("Error closing agent: %s", e)
 
             # Build new participants via existing factory (still semantic-kernel path maybe; update separately if needed)
-            from v3.magentic_agents.magentic_agent_factory import MagenticAgentFactory  # local import to avoid circular
+            from af.magentic_agents.magentic_agent_factory import MagenticAgentFactory  # local import to avoid circular
 
             factory = MagenticAgentFactory()
             agents = await factory.get_agents(user_id=user_id, team_config_input=team_config)

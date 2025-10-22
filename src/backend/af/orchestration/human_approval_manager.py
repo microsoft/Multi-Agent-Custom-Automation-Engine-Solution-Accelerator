@@ -19,9 +19,9 @@ from agent_framework._workflows._magentic import (
     ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT,
 )
 
-from v3.config.settings import connection_config, orchestration_config
-from v3.models.models import MPlan
-from v3.orchestration.helper.plan_to_mplan_converter import PlanToMPlanConverter
+from af.config.settings import connection_config, orchestration_config
+from af.models.models import MPlan
+from af.orchestration.helper.plan_to_mplan_converter import PlanToMPlanConverter
 
 logger = logging.getLogger(__name__)
 

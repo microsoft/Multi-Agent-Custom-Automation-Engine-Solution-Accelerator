@@ -3,9 +3,9 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Type
 
-import v3.models.messages as messages
+import af.models.messages as messages
 
-from ..models.messages_kernel import (
+from ..models.messages_af import (
     AgentMessageData,
     BaseDataModel,
     Plan,

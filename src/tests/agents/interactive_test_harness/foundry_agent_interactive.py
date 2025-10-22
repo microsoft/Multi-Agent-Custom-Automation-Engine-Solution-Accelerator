@@ -8,10 +8,10 @@ from pathlib import Path
 backend_path = Path(__file__).parent.parent.parent / "backend"
 sys.path.insert(0, str(backend_path))
 
-from v3.magentic_agents.foundry_agent import FoundryAgentTemplate
-from v3.magentic_agents.models.agent_models import MCPConfig, SearchConfig
+from af.magentic_agents.foundry_agent import FoundryAgentTemplate
+from af.magentic_agents.models.agent_models import MCPConfig, SearchConfig
 
-# from v3.magentic_agents.models.agent_models import (BingConfig, MCPConfig,
+# from af.magentic_agents.models.agent_models import (BingConfig, MCPConfig,
 #                                                     SearchConfig)
 
 # Manual Test harness
