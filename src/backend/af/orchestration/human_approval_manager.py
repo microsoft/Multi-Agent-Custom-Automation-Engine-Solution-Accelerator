@@ -8,7 +8,7 @@ import logging
 from typing import Any, Optional
 
 import af.models.messages as messages
-from agent_framework import ChatMessage, Role
+from agent_framework import ChatMessage
 from agent_framework._workflows._magentic import (
     MagenticContext,
     MagenticProgressLedger as ProgressLedger,

@@ -1,8 +1,6 @@
 """
-Agent Framework model equivalents for former Semantic Kernel-backed data models.
+Agent Framework model equivalents for former agent framework -backed data models.
 
-This file replaces usage of KernelBaseModel from semantic_kernel with plain Pydantic BaseModel.
-All original model names are preserved to enable incremental migration.
 """
 
 import uuid

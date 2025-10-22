@@ -7,7 +7,7 @@ from types import SimpleNamespace
 from typing import List, Union
 
 from common.config.app_config import config
-from common.models.messages_kernel import TeamConfiguration
+from common.models.messages_af import TeamConfiguration
 from af.magentic_agents.foundry_agent import FoundryAgentTemplate
 from af.magentic_agents.models.agent_models import MCPConfig, SearchConfig
 

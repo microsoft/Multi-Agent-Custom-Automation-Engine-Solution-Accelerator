@@ -1,8 +1,6 @@
 """
 Agent Framework version of orchestration models.
 
-Removes dependency on semantic_kernel.kernel_pydantic.KernelBaseModel and
-uses standard Pydantic BaseModel + a lightweight dataclass for simple value objects.
 """
 
 from __future__ import annotations

@@ -1,4 +1,4 @@
-"""Utility functions for agent_framework-based integration and agent management (converted from Semantic Kernel)."""
+"""Utility functions for agent_framework-based integration and agent management (converted from agent framework )."""
 
 import logging
 from typing import Any, Dict
@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO)
 
 # Cache for agent instances by session (if you later need multi-session reuse)
 agent_instances: Dict[str, Dict[str, Any]] = {}
-# Removed azure_agent_instances (Semantic Kernel AzureAIAgent cache) since SK is deprecated.
+# Removed azure_agent_instances (agent framework  AzureAIAgent cache) since SK is deprecated.
 
 
 async def create_RAI_agent() -> FoundryAgentTemplate:

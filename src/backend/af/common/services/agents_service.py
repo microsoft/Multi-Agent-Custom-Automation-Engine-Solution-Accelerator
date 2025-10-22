@@ -5,7 +5,7 @@ Lightweight service that receives a TeamService instance and exposes helper
 methods to convert a TeamConfiguration into a list/array of agent descriptors.
 
 This is intentionally a simple skeleton — the user will later provide the
-implementation that wires these descriptors into Semantic Kernel / Foundry
+implementation that wires these descriptors into agent framework  / Foundry
 agent instances.
 """
 
@@ -26,7 +26,7 @@ class AgentsService:
       returns a list of agent descriptors. Descriptors are plain dicts that
       contain the fields required to later instantiate runtime agents.
 
-    The concrete instantiation logic (semantic kernel / foundry) is intentionally
+    The concrete instantiation logic (agent framework  / foundry) is intentionally
     left out and should be implemented by the user later (see
     `instantiate_agents` placeholder).
     """
@@ -109,7 +109,7 @@ class AgentsService:
     async def instantiate_agents(self, agent_descriptors: List[Dict[str, Any]]):
         """Placeholder for instantiating runtime agent objects from descriptors.
 
-        The real implementation should create Semantic Kernel / Foundry agents
+        The real implementation should create agent framework  / Foundry agents
         and attach them to each descriptor under the key `agent_obj` or return a
         list of instantiated agents.
 

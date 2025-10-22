@@ -33,7 +33,7 @@ class DummyContext:
 def _make_manager():
     """
     Create a HumanApprovalMagenticManager instance without calling its __init__
-    (avoids needing the full semantic kernel dependencies for this focused unit test).
+    (avoids needing the full agent framework  dependencies for this focused unit test).
     """
     return HumanApprovalMagenticManager.__new__(HumanApprovalMagenticManager)
 

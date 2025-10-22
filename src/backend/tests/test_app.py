@@ -78,7 +78,7 @@ def mock_dependencies(monkeypatch):
         lambda headers: {"user_principal_id": "mock-user-id"},
     )
     monkeypatch.setattr(
-        "src.backend.utils_kernel.retrieve_all_agent_tools",
+        "src.backend.utils_af.retrieve_all_agent_tools",
         lambda: [{"agent": "test_agent", "function": "test_function"}],
         raising=False,  # allow creating the attr if it doesn't exist
     )

@@ -7,7 +7,6 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
-# Use the agent-framework friendly models (previously from messages_kernel)
 from common.models.messages_af import AgentMessageType
 from af.models.models import MPlan, PlanStatus
 
@@ -137,10 +136,6 @@ class FinalResultMessage:
             data["summary"] = self.summary
         return data
 
-
-# ---------------------------------------------------------------------------
-# Pydantic model replacing the previous KernelBaseModel
-# ---------------------------------------------------------------------------
 
 class ApprovalRequest(BaseModel):
     """Message sent to HumanAgent to request approval for a step."""

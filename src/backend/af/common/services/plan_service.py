@@ -22,7 +22,7 @@ def build_agent_message_from_user_clarification(
     """
     Convert a UserClarificationResponse (human feedback) into an AgentMessageData.
     """
-    # NOTE: AgentMessageType enum currently defines values with trailing commas in messages_kernel.py.
+    # NOTE: AgentMessageType enum currently defines values with trailing commas in messages_af.py.
     # e.g. HUMAN_AGENT = "Human_Agent",  -> value becomes ('Human_Agent',)
     # Consider fixing that enum (remove trailing commas) so .value is a string.
     return AgentMessageData(
@@ -43,7 +43,7 @@ def build_agent_message_from_agent_message_response(
     user_id: str,
 ) -> AgentMessageData:
     """
-    Convert a messages.AgentMessageResponse into common.models.messages_kernel.AgentMessageData.
+    Convert a messages.AgentMessageResponse into common.models.messages_af.AgentMessageData.
     This is defensive: it tolerates missing fields and different timestamp formats.
     """
     # Robust timestamp parsing (accepts seconds or ms or missing)
