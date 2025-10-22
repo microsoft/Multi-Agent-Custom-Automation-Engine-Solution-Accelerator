@@ -55,13 +55,7 @@ class ReasoningAgentTemplate:
     agent_framework-based reasoning agent (replaces SK ChatCompletionAgent).
     Class name preserved for backward compatibility.
 
-    Differences vs original:
-      - No Semantic Kernel Kernel / ChatCompletionAgent.
-      - Streams agent_framework ChatResponseUpdate objects.
-      - Optional inline RAG (search results stuffed into instructions).
-      - Optional MCP tool exposure via HostedMCPTool.
 
-    If callers relied on SK's ChatMessageContent objects, add an adapter layer.
     """
 
     def __init__(

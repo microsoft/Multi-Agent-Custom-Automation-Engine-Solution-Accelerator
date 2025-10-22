@@ -1,13 +1,11 @@
 """
-Azure AI Search integration for reasoning agents (no Semantic Kernel dependency).
+Azure AI Search integration for reasoning agents (no agent framework  dependency).
 
 This module provides:
 - ReasoningSearch: lightweight wrapper around Azure Cognitive Search (Azure AI Search)
 - Async initialization and async search with executor offloading
-- Clean, SK-free interface for use with agent_framework-based agents
 
 Design goals:
-- No semantic_kernel imports
 - Fast to call from other async agent components
 - Graceful degradation if configuration is incomplete
 """
@@ -165,7 +163,7 @@ class ReasoningSearch:
         self._initialized = False
 
 
-# Factory (keeps old name, but no 'kernel' parameter needed anymore)
+# Factory (keeps old name, but no 'af' parameter needed anymore)
 async def create_reasoning_search(
     search_config: Optional[SearchConfig],
 ) -> ReasoningSearch:

@@ -18,7 +18,7 @@ from af.api.router import app_v3
 
 # Azure monitoring
 
-# Semantic Kernel imports
+
 from af.config.agent_registry import agent_registry
 
 
