@@ -5,16 +5,15 @@ import logging
 import uuid
 from typing import List, Optional, Callable, Awaitable
 
+# agent_framework imports
+from agent_framework.azure import AzureOpenAIChatClient
+from agent_framework import ChatMessage, ChatOptions
+from agent_framework._workflows import MagenticBuilder
+from agent_framework._workflows._magentic import AgentRunResponseUpdate  # type: ignore
+
+
 from common.config.app_config import config
 from common.models.messages_af import TeamConfiguration
-
-# agent_framework imports
-from agent_framework import ChatMessage, Role, ChatOptions
-from agent_framework.azure import AzureOpenAIChatClient
-from agent_framework._workflows import (
-    MagenticBuilder
-)
-from agent_framework._workflows._magentic import AgentRunResponseUpdate  # type: ignore
 
 # Existing (legacy) callbacks expecting SK content; we'll adapt to them.
 # If you've created af-native callbacks (e.g. response_handlers_af) import those instead.
@@ -40,7 +39,9 @@ class OrchestrationManager:
     # Internal callback adapters
     # ---------------------------
     @staticmethod
-    def _user_aware_agent_callback(user_id: str) -> Callable[[str, ChatMessage], Awaitable[None]]:
+    def _user_aware_agent_callback(
+        user_id: str,
+    ) -> Callable[[str, ChatMessage], Awaitable[None]]:
         """Adapts agent_framework final agent ChatMessage to legacy agent_response_callback signature."""
 
         async def _cb(agent_id: str, message: ChatMessage):
@@ -48,7 +49,9 @@ class OrchestrationManager:
             try:
                 agent_response_callback(message, user_id)  # existing callback is sync
             except Exception as e:  # noqa: BLE001
-                logging.getLogger(__name__).error("agent_response_callback error: %s", e)
+                logging.getLogger(__name__).error(
+                    "agent_response_callback error: %s", e
+                )
 
         return _cb
 
@@ -72,7 +75,9 @@ class OrchestrationManager:
             try:
                 await streaming_agent_response_callback(shim, is_final, user_id)
             except Exception as e:  # noqa: BLE001
-                logging.getLogger(__name__).error("streaming_agent_response_callback error: %s", e)
+                logging.getLogger(__name__).error(
+                    "streaming_agent_response_callback error: %s", e
+                )
 
         return _cb
 
@@ -146,14 +151,19 @@ class OrchestrationManager:
                         "_agent_response_callback",
                         cls._user_aware_agent_callback(user_id),
                     )
-                if getattr(orchestrator, "_streaming_agent_response_callback", None) is None:
+                if (
+                    getattr(orchestrator, "_streaming_agent_response_callback", None)
+                    is None
+                ):
                     setattr(
                         orchestrator,
                         "_streaming_agent_response_callback",
                         cls._user_aware_streaming_callback(user_id),
                     )
         except Exception as e:  # noqa: BLE001
-            cls.logger.warning("Could not attach callbacks to workflow orchestrator: %s", e)
+            cls.logger.warning(
+                "Could not attach callbacks to workflow orchestrator: %s", e
+            )
 
         return workflow
 
@@ -174,7 +184,10 @@ class OrchestrationManager:
             if current is not None and team_switched:
                 # Close prior agents (skip ProxyAgent if desired)
                 for agent in getattr(current, "_participants", {}).values():
-                    if getattr(agent, "agent_name", getattr(agent, "name", "")) != "ProxyAgent":
+                    if (
+                        getattr(agent, "agent_name", getattr(agent, "name", ""))
+                        != "ProxyAgent"
+                    ):
                         close_coro = getattr(agent, "close", None)
                         if callable(close_coro):
                             try:
@@ -183,10 +196,14 @@ class OrchestrationManager:
                                 cls.logger.error("Error closing agent: %s", e)
 
             # Build new participants via existing factory)
-            from af.magentic_agents.magentic_agent_factory import MagenticAgentFactory  # local import to avoid circular
+            from af.magentic_agents.magentic_agent_factory import (
+                MagenticAgentFactory,
+            )  # local import to avoid circular
 
             factory = MagenticAgentFactory()
-            agents = await factory.get_agents(user_id=user_id, team_config_input=team_config)
+            agents = await factory.get_agents(
+                user_id=user_id, team_config_input=team_config
+            )
             orchestration_config.orchestrations[user_id] = await cls.init_orchestration(
                 agents, user_id
             )
@@ -225,7 +242,9 @@ class OrchestrationManager:
 
         try:
             # Invoke orchestrator; API may be workflow.invoke(task=..., chat_options=...)
-            result_msg: ChatMessage = await workflow.invoke(task=task_text, chat_options=chat_options)
+            result_msg: ChatMessage = await workflow.invoke(
+                task=task_text, chat_options=chat_options
+            )
 
             final_text = result_msg.text if result_msg else ""
             self.logger.info("Final result:\n%s", final_text)

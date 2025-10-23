@@ -68,8 +68,12 @@ Here is an example of a well-structured plan:
 DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final answer and end with a polite closing.
 """
 
-        kwargs["task_ledger_plan_prompt"] = ORCHESTRATOR_TASK_LEDGER_PLAN_PROMPT + plan_append
-        kwargs["task_ledger_plan_update_prompt"] = ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT + plan_append
+        kwargs["task_ledger_plan_prompt"] = (
+            ORCHESTRATOR_TASK_LEDGER_PLAN_PROMPT + plan_append
+        )
+        kwargs["task_ledger_plan_update_prompt"] = (
+            ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT + plan_append
+        )
         kwargs["final_answer_prompt"] = ORCHESTRATOR_FINAL_ANSWER_PROMPT + final_append
         kwargs["current_user_id"] = user_id  # retained for downstream usage if needed
 
@@ -90,7 +94,10 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
 
         logger.info(" Creating execution plan...")
         plan_message = await super().plan(magentic_context)
-        logger.info(" Plan created (assistant message length=%d)", len(plan_message.text) if plan_message and plan_message.text else 0)
+        logger.info(
+            " Plan created (assistant message length=%d)",
+            len(plan_message.text) if plan_message and plan_message.text else 0,
+        )
 
         # Build structured MPlan from task ledger
         if self.task_ledger is None:
@@ -148,10 +155,15 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
         """
         logger.info("\nHuman-in-the-Loop Magentic Manager replanned:")
         replan_message = await super().replan(magentic_context=magentic_context)
-        logger.info("Replanned message length: %d", len(replan_message.text) if replan_message and replan_message.text else 0)
+        logger.info(
+            "Replanned message length: %d",
+            len(replan_message.text) if replan_message and replan_message.text else 0,
+        )
         return replan_message
 
-    async def create_progress_ledger(self, magentic_context: MagenticContext) -> ProgressLedger:
+    async def create_progress_ledger(
+        self, magentic_context: MagenticContext
+    ) -> ProgressLedger:
         """
         Check for max rounds exceeded and send final message if so, else defer to base.
         """
@@ -169,9 +181,13 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
             )
 
             return ProgressLedger(
-                is_request_satisfied=ProgressLedgerItem(reason="Maximum rounds exceeded", answer=True),
+                is_request_satisfied=ProgressLedgerItem(
+                    reason="Maximum rounds exceeded", answer=True
+                ),
                 is_in_loop=ProgressLedgerItem(reason="Terminating", answer=False),
-                is_progress_being_made=ProgressLedgerItem(reason="Terminating", answer=False),
+                is_progress_being_made=ProgressLedgerItem(
+                    reason="Terminating", answer=False
+                ),
                 next_speaker=ProgressLedgerItem(reason="Task complete", answer=""),
                 instruction_or_question=ProgressLedgerItem(
                     reason="Task complete",
@@ -202,7 +218,10 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
             return messages.PlanApprovalResponse(approved=approved, m_plan_id=m_plan_id)
 
         except asyncio.TimeoutError:
-            logger.debug("Approval timeout for plan %s - notifying user and terminating process", m_plan_id)
+            logger.debug(
+                "Approval timeout for plan %s - notifying user and terminating process",
+                m_plan_id,
+            )
 
             timeout_message = messages.TimeoutNotification(
                 timeout_type="approval",
@@ -218,7 +237,11 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
                     user_id=self.current_user_id,
                     message_type=messages.WebsocketMessageType.TIMEOUT_NOTIFICATION,
                 )
-                logger.info("Timeout notification sent to user %s for plan %s", self.current_user_id, m_plan_id)
+                logger.info(
+                    "Timeout notification sent to user %s for plan %s",
+                    self.current_user_id,
+                    m_plan_id,
+                )
             except Exception as e:  # noqa: BLE001
                 logger.error("Failed to send timeout notification: %s", e)
 
@@ -235,16 +258,24 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
             return None
 
         except Exception as e:  # noqa: BLE001
-            logger.debug("Unexpected error waiting for approval: %s - terminating process silently", e)
+            logger.debug(
+                "Unexpected error waiting for approval: %s - terminating process silently",
+                e,
+            )
             orchestration_config.cleanup_approval(m_plan_id)
             return None
 
         finally:
-            if m_plan_id in orchestration_config.approvals and orchestration_config.approvals[m_plan_id] is None:
+            if (
+                m_plan_id in orchestration_config.approvals
+                and orchestration_config.approvals[m_plan_id] is None
+            ):
                 logger.debug("Final cleanup for pending approval plan %s", m_plan_id)
                 orchestration_config.cleanup_approval(m_plan_id)
 
-    async def prepare_final_answer(self, magentic_context: MagenticContext) -> ChatMessage:
+    async def prepare_final_answer(
+        self, magentic_context: MagenticContext
+    ) -> ChatMessage:
         """
         Override to ensure final answer is prepared after all steps are executed.
         """
@@ -253,8 +284,14 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
 
     def plan_to_obj(self, magentic_context: MagenticContext, ledger) -> MPlan:
         """Convert the generated plan from the ledger into a structured MPlan object."""
-        if ledger is None or not hasattr(ledger, "plan") or not hasattr(ledger, "facts"):
-            raise ValueError("Invalid ledger structure; expected plan and facts attributes.")
+        if (
+            ledger is None
+            or not hasattr(ledger, "plan")
+            or not hasattr(ledger, "facts")
+        ):
+            raise ValueError(
+                "Invalid ledger structure; expected plan and facts attributes."
+            )
 
         task_text = getattr(magentic_context.task, "text", str(magentic_context.task))
 
