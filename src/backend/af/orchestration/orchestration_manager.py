@@ -24,7 +24,9 @@ from af.callbacks.response_handlers import (
 from af.config.settings import connection_config, orchestration_config
 from af.models.messages import WebsocketMessageType
 from af.orchestration.human_approval_manager import HumanApprovalMagenticManager
-
+from af.magentic_agents.magentic_agent_factory import (
+                MagenticAgentFactory,
+            ) 
 
 class OrchestrationManager:
     """Manager for handling orchestration logic using agent_framework Magentic workflow."""
@@ -194,11 +196,6 @@ class OrchestrationManager:
                                 await close_coro()
                             except Exception as e:  # noqa: BLE001
                                 cls.logger.error("Error closing agent: %s", e)
-
-            # Build new participants via existing factory)
-            from af.magentic_agents.magentic_agent_factory import (
-                MagenticAgentFactory,
-            )  # local import to avoid circular
 
             factory = MagenticAgentFactory()
             agents = await factory.get_agents(

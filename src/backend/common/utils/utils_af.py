@@ -9,11 +9,6 @@ from af.config.agent_registry import agent_registry
 
 logging.basicConfig(level=logging.INFO)
 
-# Cache for agent instances by session (if you later need multi-session reuse)
-agent_instances: Dict[str, Dict[str, Any]] = {}
-# Removed azure_agent_instances (agent framework  AzureAIAgent cache) since SK is deprecated.
-
-
 async def create_RAI_agent() -> FoundryAgentTemplate:
     """Create and initialize a FoundryAgentTemplate for Responsible AI (RAI) checks."""
     agent_name = "RAIAgent"
@@ -66,12 +61,12 @@ async def _get_agent_response(agent: FoundryAgentTemplate, query: str) -> str:
     """
     parts: list[str] = []
     try:
-        async for update in agent.invoke(query):
+        async for message in agent.invoke(query):
             # Prefer direct text
-            if hasattr(update, "text") and update.text:
-                parts.append(str(update.text))
+            if hasattr(message, "text") and message.text:
+                parts.append(str(message.text))
             # Fallback to contents (tool calls, chunks)
-            contents = getattr(update, "contents", None)
+            contents = getattr(message, "contents", None)
             if contents:
                 for item in contents:
                     txt = getattr(item, "text", None)
@@ -98,15 +93,13 @@ async def rai_success(description: str) -> bool:
         response_text = await _get_agent_response(agent, description)
         verdict = response_text.strip().upper()
 
-        if verdict == "TRUE":
+        if "TRUE" in verdict: # any true in the response 
             logging.warning("RAI check failed (blocked). Sample: %s...", description[:60])
             return False
-        if verdict == "FALSE":
+        else:
             logging.info("RAI check passed.")
             return True
 
-        logging.warning("Unexpected RAI response '%s' — defaulting to block.", verdict)
-        return False
     except Exception as e:  # noqa: BLE001
         logging.error("RAI check error: %s — blocking by default.", e)
         return False
