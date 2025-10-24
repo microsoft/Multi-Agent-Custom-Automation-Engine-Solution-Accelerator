@@ -75,7 +75,7 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
             ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT + plan_append
         )
         kwargs["final_answer_prompt"] = ORCHESTRATOR_FINAL_ANSWER_PROMPT + final_append
-        kwargs["current_user_id"] = user_id  # retained for downstream usage if needed
+        #kwargs["current_user_id"] = user_id  # retained for downstream usage if needed
 
         self.current_user_id = user_id
         super().__init__(*args, **kwargs)

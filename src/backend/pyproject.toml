@@ -5,7 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-     "agent-framework-core @ git+https://github.com/microsoft/agent-framework.git@main#subdirectory=python/packages/core",
+    "agent-framework-core @ git+https://github.com/microsoft/agent-framework.git@main#subdirectory=python/packages/core",
     "agent-framework-azure-ai @ git+https://github.com/microsoft/agent-framework.git@main#subdirectory=python/packages/azure-ai",
     "agent-framework-copilotstudio @ git+https://github.com/microsoft/agent-framework.git@main#subdirectory=python/packages/copilotstudio",
     "agent-framework-devui @ git+https://github.com/microsoft/agent-framework.git@main#subdirectory=python/packages/devui",
