@@ -7,7 +7,7 @@ from azure.ai.projects.aio import AIProjectClient
 from azure.cosmos import CosmosClient
 from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
 from dotenv import load_dotenv
-from semantic_kernel import Kernel
+
 
 # Load environment variables from .env file
 load_dotenv()
@@ -214,17 +214,6 @@ class AppConfig:
                 exc,
             )
             raise
-
-    def create_kernel(self):
-        """Creates a new Semantic Kernel instance.
-
-        Returns:
-            A new Semantic Kernel instance
-        """
-        # Create a new kernel instance without manually configuring OpenAI services
-        # The agents will be created using Azure AI Agent Project pattern instead
-        kernel = Kernel()
-        return kernel
 
     def get_ai_project_client(self):
         """Create and return an AIProjectClient for Azure AI Foundry using from_connection_string.
