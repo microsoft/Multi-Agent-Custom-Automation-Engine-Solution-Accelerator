@@ -7,6 +7,7 @@ from typing import List, Optional, Callable, Awaitable
 
 # agent_framework imports
 from agent_framework.azure import AzureOpenAIChatClient
+
 from agent_framework import ChatMessage, ChatOptions
 from agent_framework._workflows import MagenticBuilder
 from agent_framework._workflows._magentic import AgentRunResponseUpdate  # type: ignore
@@ -24,9 +25,7 @@ from af.callbacks.response_handlers import (
 from af.config.settings import connection_config, orchestration_config
 from af.models.messages import WebsocketMessageType
 from af.orchestration.human_approval_manager import HumanApprovalMagenticManager
-from af.magentic_agents.magentic_agent_factory import (
-                MagenticAgentFactory,
-            ) 
+from af.magentic_agents.magentic_agent_factory import MagenticAgentFactory
 
 class OrchestrationManager:
     """Manager for handling orchestration logic using agent_framework Magentic workflow."""
@@ -104,20 +103,30 @@ class OrchestrationManager:
             return token.token
 
         # Create Azure chat client (agent_framework style) - relying on environment or explicit kwargs.
-        chat_client = AzureOpenAIChatClient(
-            endpoint=config.AZURE_OPENAI_ENDPOINT,
-            model_deployment_name=config.AZURE_OPENAI_DEPLOYMENT_NAME,
-            azure_ad_token_provider=get_token,
-        )
-
+        try:
+            chat_client = AzureOpenAIChatClient(
+                endpoint=config.AZURE_OPENAI_ENDPOINT,
+                deployment_name=config.AZURE_OPENAI_DEPLOYMENT_NAME,
+                ad_token_provider=get_token,
+            )
+        except Exception as e:  # noqa: BLE001
+            logging.getLogger(__name__).error(
+                    "chat_client error: %s", e
+                )
+            raise
         # HumanApprovalMagenticManager needs the chat_client passed as 'chat_client' in its constructor signature (it subclasses StandardMagenticManager)
-        manager = HumanApprovalMagenticManager(
-            user_id=user_id,
-            chat_client=chat_client,
-            instructions=None,  # optionally supply orchestrator system instructions
-            max_round_count=orchestration_config.max_rounds,
-        )
-
+        try: 
+            manager = HumanApprovalMagenticManager(
+                user_id=user_id,
+                chat_client=chat_client,
+                instructions=None,  # optionally supply orchestrator system instructions
+                max_round_count=orchestration_config.max_rounds,
+            )
+        except Exception as e:  # noqa: BLE001
+            logging.getLogger(__name__).error(
+                    "manager error: %s", e
+                )
+            raise
         # Build participant map: use each agent's name as key
         participants = {}
         for ag in agents:
