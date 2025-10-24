@@ -3,10 +3,26 @@
 import logging
 from typing import List, Optional
 
-from azure.ai.agents.models import Agent, AzureAISearchTool, CodeInterpreterToolDefinition
-from agent_framework_azure_ai import AzureAIAgentClient
-from agent_framework import ChatMessage, Role, ChatOptions, HostedMCPTool
+from azure.ai.agents.models import (
+    Agent,
+    AzureAISearchTool,
+    CodeInterpreterToolDefinition,
+)
 
+from agent_framework import (
+    ChatMessage,
+    Role,
+    ChatOptions,
+    HostedMCPTool,
+    AggregateContextProvider,
+    ChatAgent,
+    ChatClientProtocol,
+    ChatMessageStoreProtocol,
+    ContextProvider,
+    Middleware,
+    ToolMode,
+    ToolProtocol,
+)
 from af.magentic_agents.common.lifecycle import AzureAgentBase
 from af.magentic_agents.models.agent_models import MCPConfig, SearchConfig
 from af.config.agent_registry import agent_registry
@@ -41,20 +57,33 @@ class FoundryAgentTemplate(AzureAgentBase):
         self.logger = logging.getLogger(__name__)
 
         if self.model_deployment_name in {"o3", "o4-mini"}:
-            raise ValueError("Foundry agents do not support reasoning models in this implementation.")
+            raise ValueError(
+                "Foundry agents do not support reasoning models in this implementation."
+            )
 
     # -------------------------
     # Tool construction helpers
     # -------------------------
     async def _make_azure_search_tool(self) -> Optional[AzureAISearchTool]:
         """Create Azure AI Search tool (RAG capability)."""
-        if not (self.client and self.search and self.search.connection_name and self.search.index_name):
-            self.logger.info("Azure AI Search tool not enabled (missing config or client).")
+        if not (
+            self.client
+            and self.search
+            and self.search.connection_name
+            and self.search.index_name
+        ):
+            self.logger.info(
+                "Azure AI Search tool not enabled (missing config or client)."
+            )
             return None
 
         try:
-            self._search_connection = await self.client.connections.get(name=self.search.connection_name)
-            self.logger.info("Found Azure AI Search connection: %s", self._search_connection.id)
+            self._search_connection = await self.client.connections.get(
+                name=self.search.connection_name
+            )
+            self.logger.info(
+                "Found Azure AI Search connection: %s", self._search_connection.id
+            )
 
             return AzureAISearchTool(
                 index_connection_id=self._search_connection.id,
@@ -102,44 +131,25 @@ class FoundryAgentTemplate(AzureAgentBase):
     # Agent lifecycle override
     # -------------------------
     async def _after_open(self) -> None:
-        """Create or reuse Azure AI agent definition and wrap with AzureAIAgentClient."""
-        definition = await self._get_azure_ai_agent_definition(self.agent_name)
-
-        if definition is not None:
-            if not await self._check_connection_compatibility(definition):
-                try:
-                    await self.client.agents.delete_agent(definition.id)
-                    self.logger.info(
-                        "Deleted incompatible existing agent '%s'; will recreate with new connection settings.",
-                        self.agent_name,
-                    )
-                except Exception as ex:
-                    self.logger.warning(
-                        "Failed deleting incompatible agent '%s': %s (will still recreate).",
-                        self.agent_name,
-                        ex,
-                    )
-                definition = None
-
-        if definition is None:
-            tools, tool_resources = await self._collect_tools_and_resources()
-            definition = await self.client.agents.create_agent(
-                model=self.model_deployment_name,
-                name=self.agent_name,
-                description=self.agent_description,
-                instructions=self.agent_instructions,
-                tools=tools,
-                tool_resources=tool_resources,
-            )
-            self.logger.info("Created new Azure AI agent definition '%s'", self.agent_name)
-
         # Instantiate persistent AzureAIAgentClient bound to existing agent_id
         try:
-            self._agent = AzureAIAgentClient(
-                project_client=self.client,
-                agent_id=str(definition.id),
-                agent_name=self.agent_name,
+            # AzureAIAgentClient(
+            #     project_client=self.client,
+            #     agent_id=str(definition.id),
+            #     agent_name=self.agent_name,
+            # )
+            tools, tool_resources = await self._collect_tools_and_resources()
+            self._agent = ChatAgent(
+                chat_client=self.client,
+                instructions=self.agent_description + " " + self.agent_instructions,
+                name=self.agent_name,
+                description=self.agent_description,
+                tools=tools if tools else None,
+                tool_choice="auto" if tools else "none",
+                allow_multiple_tool_calls=True,
+                temperature=0.7,
             )
+
         except Exception as ex:
             self.logger.error("Failed to initialize AzureAIAgentClient: %s", ex)
             raise
@@ -147,9 +157,13 @@ class FoundryAgentTemplate(AzureAgentBase):
         # Register agent globally
         try:
             agent_registry.register_agent(self)
-            self.logger.info("Registered agent '%s' in global registry.", self.agent_name)
+            self.logger.info(
+                "Registered agent '%s' in global registry.", self.agent_name
+            )
         except Exception as reg_ex:
-            self.logger.warning("Could not register agent '%s': %s", self.agent_name, reg_ex)
+            self.logger.warning(
+                "Could not register agent '%s': %s", self.agent_name, reg_ex
+            )
 
     # -------------------------
     # Definition compatibility
@@ -163,21 +177,29 @@ class FoundryAgentTemplate(AzureAgentBase):
 
             tool_resources = getattr(existing_definition, "tool_resources", None)
             if not tool_resources:
-                self.logger.info("Existing agent has no tool resources; incompatible with search requirement.")
+                self.logger.info(
+                    "Existing agent has no tool resources; incompatible with search requirement."
+                )
                 return False
 
             azure_search = tool_resources.get("azure_ai_search", {})
             indexes = azure_search.get("indexes", [])
             if not indexes:
-                self.logger.info("Existing agent has no Azure AI Search indexes; incompatible.")
+                self.logger.info(
+                    "Existing agent has no Azure AI Search indexes; incompatible."
+                )
                 return False
 
             existing_conn_id = indexes[0].get("index_connection_id")
             if not existing_conn_id:
-                self.logger.info("Existing agent missing index_connection_id; incompatible.")
+                self.logger.info(
+                    "Existing agent missing index_connection_id; incompatible."
+                )
                 return False
 
-            current_connection = await self.client.connections.get(name=self.search.connection_name)
+            current_connection = await self.client.connections.get(
+                name=self.search.connection_name
+            )
             same = existing_conn_id == current_connection.id
             if same:
                 self.logger.info("Search connection compatible: %s", existing_conn_id)
@@ -197,7 +219,9 @@ class FoundryAgentTemplate(AzureAgentBase):
         try:
             async for agent in self.client.agents.list_agents():
                 if agent.name == agent_name:
-                    self.logger.info("Found existing agent '%s' (id=%s).", agent_name, agent.id)
+                    self.logger.info(
+                        "Found existing agent '%s' (id=%s).", agent_name, agent.id
+                    )
                     return await self.client.agents.get_agent(agent.id)
             return None
         except Exception as e:
@@ -226,7 +250,12 @@ class FoundryAgentTemplate(AzureAgentBase):
                 getattr(run, "usage", None),
             )
         except Exception as ex:
-            self.logger.error("Failed fetching run details (thread=%s run=%s): %s", thread_id, run_id, ex)
+            self.logger.error(
+                "Failed fetching run details (thread=%s run=%s): %s",
+                thread_id,
+                run_id,
+                ex,
+            )
 
     # -------------------------
     # Invocation (streaming)
@@ -257,10 +286,10 @@ class FoundryAgentTemplate(AzureAgentBase):
             temperature=0.7,
         )
 
-        async for update in self._agent.get_streaming_response(
+        async for update in self._agent.run_stream(
             messages=messages,
-            chat_options=chat_options,
-            instructions=self.agent_instructions,
+           # chat_options=chat_options,
+           # instructions=self.agent_instructions,
         ):
             yield update
 

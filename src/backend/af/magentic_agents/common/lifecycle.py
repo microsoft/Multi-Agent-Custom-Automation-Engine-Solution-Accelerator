@@ -4,9 +4,23 @@ import os
 from contextlib import AsyncExitStack
 from typing import Any, Optional
 
-from azure.ai.projects.aio import AIProjectClient
+# from agent_framework.azure import AzureAIAgentClient
+from agent_framework_azure_ai import AzureAIAgentClient
 from azure.identity.aio import DefaultAzureCredential
-
+from agent_framework import (
+    ChatMessage,
+    Role,
+    ChatOptions,
+    HostedMCPTool,
+    AggregateContextProvider,
+    ChatAgent,
+    ChatClientProtocol,
+    ChatMessageStoreProtocol,
+    ContextProvider,
+    Middleware,
+    ToolMode,
+    ToolProtocol,
+)
 from agent_framework import HostedMCPTool
 
 from af.magentic_agents.models.agent_models import MCPConfig
@@ -24,7 +38,7 @@ class MCPEnabledBase:
         self._stack: AsyncExitStack | None = None
         self.mcp_cfg: MCPConfig | None = mcp
         self.mcp_tool: HostedMCPTool | None = None
-        self._agent: Any | None = None  # delegate target (e.g., AzureAIAgentClient)
+        self._agent: ChatAgent | None = None  
 
     async def open(self) -> "MCPEnabledBase":
         if self._stack is not None:
@@ -89,19 +103,22 @@ class MCPEnabledBase:
 
 class AzureAgentBase(MCPEnabledBase):
     """
-    Extends MCPEnabledBase with Azure credential + AIProjectClient contexts.
+    Extends MCPEnabledBase with Azure credential + AzureAIAgentClient contexts.
     Subclasses:
       - create or attach an Azure AI Agent definition
       - instantiate an AzureAIAgentClient and assign to self._agent
       - optionally register themselves via agent_registry
     """
 
-    def __init__(self, mcp: MCPConfig | None = None) -> None:
+    def __init__(self, mcp: MCPConfig | None = None, model_deployment_name: str | None = None) -> None:
         super().__init__(mcp=mcp)
         self.creds: Optional[DefaultAzureCredential] = None
-        self.client: Optional[AIProjectClient] = None
+        self.client: Optional[AzureAIAgentClient] = None
         self.project_endpoint: Optional[str] = None
-        self._created_ephemeral: bool = False  # reserved if you add ephemeral agent cleanup
+        self._created_ephemeral: bool = (
+            False  # reserved if you add ephemeral agent cleanup
+        )
+        self.model_deployment_name = model_deployment_name
 
     async def open(self) -> "AzureAgentBase":
         if self._stack is not None:
@@ -120,9 +137,10 @@ class AzureAgentBase(MCPEnabledBase):
         await self._stack.enter_async_context(self.creds)
 
         # Create AIProjectClient
-        self.client = AIProjectClient(
-            endpoint=self.project_endpoint,
-            credential=self.creds,
+        self.client = AzureAIAgentClient(
+            project_endpoint=self.project_endpoint,
+            model_deployment_name=self.model_deployment_name,
+            async_credential=self.creds,
         )
         await self._stack.enter_async_context(self.client)
 

@@ -3,6 +3,7 @@ import logging
 import uuid
 from dataclasses import dataclass
 from typing import AsyncIterator, List, Optional
+# from agent_framework.azure import AzureAIAgentClient
 from agent_framework_azure_ai import AzureAIAgentClient
 from agent_framework import (
     ChatMessage,
@@ -10,6 +11,14 @@ from agent_framework import (
     ChatResponseUpdate,
     HostedMCPTool,
     Role,
+    AggregateContextProvider,
+    ChatAgent,
+    ChatClientProtocol,
+    ChatMessageStoreProtocol,
+    ContextProvider,
+    Middleware,
+    ToolMode,
+    ToolProtocol,
 )
 from azure.identity.aio import DefaultAzureCredential
 from azure.ai.projects.aio import AIProjectClient
@@ -201,6 +210,7 @@ class ReasoningAgentTemplate:
                     name=self.mcp_config.name,
                     description=self.mcp_config.description,
                     server_label=self.mcp_config.name.replace(" ", "_"),
+                    url=self.mcp_config.url
                 )
             )
 

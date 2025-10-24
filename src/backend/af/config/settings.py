@@ -14,6 +14,7 @@ from fastapi import WebSocket
 
 # agent_framework substitutes
 from agent_framework.azure import AzureOpenAIChatClient
+#from agent_framework_azure_ai import AzureOpenAIChatClient
 from agent_framework import ChatOptions
 
 from af.models.messages import MPlan, WebsocketMessageType
