@@ -120,7 +120,6 @@ class MagenticAgentFactory:
                 model_deployment_name=deployment_name,
                 enable_code_interpreter=getattr(agent_obj, "coding_tools", False),
                 mcp_config=mcp_config,
-                # bing_config=bing_config,
                 search_config=search_config,
             )
 
