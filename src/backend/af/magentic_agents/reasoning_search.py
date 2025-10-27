@@ -1,5 +1,5 @@
 """
-Azure AI Search integration for reasoning agents (no agent framework  dependency).
+Azure AI Search integration for reasoning agents (framework-agnostic).
 
 This module provides:
 - ReasoningSearch: lightweight wrapper around Azure Cognitive Search (Azure AI Search)
@@ -8,11 +8,13 @@ This module provides:
 Design goals:
 - Fast to call from other async agent components
 - Graceful degradation if configuration is incomplete
+- Framework-agnostic (works with any agent framework)
 """
 
 from __future__ import annotations
 
 import asyncio
+import logging
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional
 
@@ -21,9 +23,15 @@ from azure.search.documents import SearchClient
 from af.magentic_agents.models.agent_models import SearchConfig
 
 
+logger = logging.getLogger(__name__)
+
+
 class ReasoningSearch:
     """
     Handles Azure AI Search (Cognitive Search) queries for retrieval / RAG augmentation.
+    
+    This class is framework-agnostic and can be used with any agent framework
+    including agent_framework, Semantic Kernel, LangChain, etc.
     """
 
     def __init__(
@@ -32,6 +40,12 @@ class ReasoningSearch:
         *,
         max_executor_workers: int = 4,
     ) -> None:
+        """Initialize ReasoningSearch.
+        
+        Args:
+            search_config: Azure AI Search configuration
+            max_executor_workers: Max threads for search executor pool
+        """
         self.search_config = search_config
         self.search_client: Optional[SearchClient] = None
         self._executor: Optional[ThreadPoolExecutor] = None
@@ -41,6 +55,7 @@ class ReasoningSearch:
     async def initialize(self) -> bool:
         """
         Initialize the search client. Safe to call multiple times.
+        
         Returns:
             bool: True if initialized, False if config missing or failed.
         """
@@ -54,6 +69,7 @@ class ReasoningSearch:
             or not self.search_config.api_key
         ):
             # Incomplete config => treat as disabled
+            logger.debug("Search config incomplete, search will be disabled")
             return False
 
         try:
@@ -68,9 +84,14 @@ class ReasoningSearch:
                 thread_name_prefix="reasoning_search",
             )
             self._initialized = True
+            logger.info(
+                "ReasoningSearch initialized with index '%s'",
+                self.search_config.index_name
+            )
             return True
-        except Exception:
+        except Exception as ex:
             # Swallow initialization errors (callers can check is_available)
+            logger.warning("ReasoningSearch initialization failed: %s", ex)
             self.search_client = None
             self._initialized = False
             return False
@@ -85,29 +106,41 @@ class ReasoningSearch:
 
         Args:
             query: Natural language or keyword query.
-            limit: Max number of documents.
+            limit: Max number of documents (1-50).
 
         Returns:
             List of strings (each a document content snippet). Empty if none or unavailable.
         """
         if not self.is_available():
+            logger.debug("Search not available, returning empty results")
+            return []
+
+        if not query.strip():
+            logger.debug("Empty query, returning empty results")
             return []
 
         limit = max(1, min(limit, 50))  # basic safety bounds
 
         loop = asyncio.get_running_loop()
         try:
-            return await loop.run_in_executor(
+            results = await loop.run_in_executor(
                 self._executor,
                 lambda: self._run_search_sync(query=query, limit=limit),
             )
-        except Exception:
+            logger.debug("Search returned %d documents for query", len(results))
+            return results
+        except Exception as ex:
+            logger.warning("Search execution failed: %s", ex)
             return []
 
-    async def search_raw(self, query: str, limit: int = 3):
+    async def search_raw(self, query: str, limit: int = 3) -> List:
         """
         Raw search returning native SDK result iterator (materialized to list).
         Provided for more advanced callers needing metadata.
+
+        Args:
+            query: Natural language or keyword query.
+            limit: Max number of documents (1-50).
 
         Returns:
             list of raw SDK result objects (dict-like).
@@ -115,42 +148,65 @@ class ReasoningSearch:
         if not self.is_available():
             return []
 
+        if not query.strip():
+            return []
+
         limit = max(1, min(limit, 50))
 
         loop = asyncio.get_running_loop()
         try:
             return await loop.run_in_executor(
-                self._executor, lambda: self._run_search_sync(query, limit, raw=True)
+                self._executor, 
+                lambda: self._run_search_sync(query, limit, raw=True)
             )
-        except Exception:
+        except Exception as ex:
+            logger.warning("Raw search execution failed: %s", ex)
             return []
 
-    def _run_search_sync(self, query: str, limit: int, raw: bool = False):
+    def _run_search_sync(self, query: str, limit: int, raw: bool = False) -> List:
         """
         Internal synchronous search (executed inside ThreadPoolExecutor).
+        
+        Args:
+            query: Search query
+            limit: Max results
+            raw: If True, return raw result objects; if False, extract 'content' field
+            
+        Returns:
+            List of content strings or raw result objects
         """
         if not self.search_client:
-            return [] if not raw else []
+            return []
 
-        results_iter = self.search_client.search(
-            search_text=query,
-            query_type="simple",
-            select=["content"],
-            top=limit,
-        )
+        try:
+            results_iter = self.search_client.search(
+                search_text=query,
+                query_type="simple",
+                select=["content"],
+                top=limit,
+            )
 
-        contents: List[str] = []
-        raw_items: List = []
-        for item in results_iter:
-            try:
-                if raw:
-                    raw_items.append(item)
-                else:
-                    contents.append(f"{item['content']}")
-            except Exception:
-                continue
+            contents: List[str] = []
+            raw_items: List = []
+            
+            for item in results_iter:
+                try:
+                    if raw:
+                        raw_items.append(item)
+                    else:
+                        # Extract content field
+                        content = item.get('content', '')
+                        if content:
+                            contents.append(str(content))
+                except (KeyError, TypeError) as ex:
+                    logger.debug("Error extracting content from result: %s", ex)
+                    continue
 
-        return raw_items if raw else contents
+            return raw_items if raw else contents
+            
+        except Exception as ex:
+            logger.warning("Search query execution failed: %s", ex)
+            return []
 
     async def close(self) -> None:
         """
@@ -161,9 +217,10 @@ class ReasoningSearch:
             self._executor = None
         self.search_client = None
         self._initialized = False
+        logger.debug("ReasoningSearch closed")
 
 
-# Factory (keeps old name, but no 'af' parameter needed anymore)
+# Factory
 async def create_reasoning_search(
     search_config: Optional[SearchConfig],
 ) -> ReasoningSearch:
@@ -175,6 +232,26 @@ async def create_reasoning_search(
 
     Returns:
         Initialized ReasoningSearch (is_available() indicates readiness).
+        
+    Example:
+        ```python
+        from af.magentic_agents.models.agent_models import SearchConfig
+        
+        search = await create_reasoning_search(
+            SearchConfig(
+                endpoint="https://my-search.search.windows.net",
+                index_name="documents",
+                api_key="...",
+            )
+        )
+        
+        if search.is_available():
+            docs = await search.search_documents("quantum entanglement", limit=5)
+            for doc in docs:
+                print(doc)
+        
+        await search.close()
+        ```
     """
     search = ReasoningSearch(search_config)
     await search.initialize()
