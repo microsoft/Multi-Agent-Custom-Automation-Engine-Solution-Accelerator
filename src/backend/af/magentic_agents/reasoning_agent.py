@@ -5,11 +5,17 @@ import os
 from typing import Optional
 
 from agent_framework import (
+    ChatAgent,
     ChatMessage,
     Role,
 )
 from agent_framework_azure_ai import AzureAIAgentClient
 from azure.identity.aio import DefaultAzureCredential
+
+
+#from agent_framework.azure import AzureOpenAIChatClient
+
+
 
 from af.magentic_agents.common.lifecycle import MCPEnabledBase
 from af.magentic_agents.models.agent_models import MCPConfig, SearchConfig
@@ -123,9 +129,20 @@ class ReasoningAgentTemplate(MCPEnabledBase):
                     len(self.mcp_tool.functions) if hasattr(self.mcp_tool, 'functions') else 0
                 )
 
-            # Store client reference (for compatibility with base class delegation)
-            self._agent = self._client
+            # Prepare tools for the agent
+            tools = self._prepare_tools()
 
+            # Create ChatAgent instance (similar to foundry_agent)
+            self._agent = ChatAgent(
+                chat_client=self._client,
+                instructions=self.base_instructions,
+                name=self.agent_name,
+                description=self.agent_description,
+                tools=tools if tools else None,
+                tool_choice="auto" if tools else "none",
+                temperature=1.0,  # Reasoning models use fixed temperature
+                model_id=self.model_deployment_name,
+            )
             # Register agent globally
             try:
                 agent_registry.register_agent(self)
