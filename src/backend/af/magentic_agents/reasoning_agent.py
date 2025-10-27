@@ -152,7 +152,7 @@ class ReasoningAgentTemplate(MCPEnabledBase):
             # Unregister from registry
             try:
                 agent_registry.unregister_agent(self)
-            except Exception:  # noqa: BLE001
+            except Exception:  
                 pass
 
         finally:

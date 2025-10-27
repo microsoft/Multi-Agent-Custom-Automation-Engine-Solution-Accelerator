@@ -121,7 +121,7 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
 
         try:
             orchestration_config.plans[self.magentic_plan.id] = self.magentic_plan
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:  
             logger.error("Error processing plan approval: %s", e)
 
         # Send approval request
@@ -242,13 +242,13 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
                     self.current_user_id,
                     m_plan_id,
                 )
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:  
                 logger.error("Failed to send timeout notification: %s", e)
 
             orchestration_config.cleanup_approval(m_plan_id)
             return None
 
-        except KeyError as e:  # noqa: BLE001
+        except KeyError as e:  
             logger.debug("Plan ID not found: %s - terminating process silently", e)
             return None
 
@@ -257,7 +257,7 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
             orchestration_config.cleanup_approval(m_plan_id)
             return None
 
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:  
             logger.debug(
                 "Unexpected error waiting for approval: %s - terminating process silently",
                 e,

@@ -164,7 +164,7 @@ class ProxyAgent:
         except KeyError:
             logger.debug("ProxyAgentAF: Invalid clarification request id %s", request_id)
             return None
-        except Exception as ex:  # noqa: BLE001
+        except Exception as ex:  
             logger.debug("ProxyAgentAF: Unexpected error awaiting clarification: %s", ex)
             orchestration_config.cleanup_clarification(request_id)
             return None
@@ -199,7 +199,7 @@ class ProxyAgent:
                 request_id,
                 self.user_id,
             )
-        except Exception as ex:  # noqa: BLE001
+        except Exception as ex:  
             logger.error("ProxyAgentAF: Failed to send timeout notification: %s", ex)
         orchestration_config.cleanup_clarification(request_id)
 
