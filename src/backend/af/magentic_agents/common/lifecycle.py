@@ -21,7 +21,7 @@ from agent_framework import (
     ToolMode,
     ToolProtocol,
 )
-from agent_framework import HostedMCPTool
+from agent_framework import MCPStreamableHTTPTool
 
 from af.magentic_agents.models.agent_models import MCPConfig
 from af.config.agent_registry import agent_registry
@@ -86,17 +86,18 @@ class MCPEnabledBase:
         """Subclasses must build self._agent here."""
         raise NotImplementedError
 
-    def _prepare_mcp_tool(self) -> None:
+    async def _prepare_mcp_tool(self) -> None:
         """Translate MCPConfig to a HostedMCPTool (agent_framework construct)."""
         if not self.mcp_cfg:
             return
         try:
-            self.mcp_tool = HostedMCPTool(
+            mcp_tool = MCPStreamableHTTPTool(
                 name=self.mcp_cfg.name,
                 description=self.mcp_cfg.description,
-                server_label=self.mcp_cfg.name.replace(" ", "_"),
-                url="",  # URL will be resolved via MCPConfig in HostedMCPTool
+                url=self.mcp_cfg.url
             )
+            await self._stack.enter_async_context(mcp_tool)
+            self.mcp_tool = mcp_tool  # Store for later use
         except Exception:  # noqa: BLE001
             self.mcp_tool = None
 
@@ -145,7 +146,7 @@ class AzureAgentBase(MCPEnabledBase):
         await self._stack.enter_async_context(self.client)
 
         # Prepare MCP
-        self._prepare_mcp_tool()
+        await self._prepare_mcp_tool()
 
         # Let subclass build agent client
         await self._after_open()
