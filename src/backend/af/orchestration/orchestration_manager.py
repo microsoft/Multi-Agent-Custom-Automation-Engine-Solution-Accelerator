@@ -107,8 +107,19 @@ class OrchestrationManager:
             name = getattr(ag, "agent_name", None) or getattr(ag, "name", None)
             if not name:
                 name = f"agent_{len(participants)+1}"
-            participants[name] = ag
-            cls.logger.debug("Added participant '%s'", name)
+            
+            # Extract the inner ChatAgent for wrapper templates
+            # FoundryAgentTemplate and ReasoningAgentTemplate wrap a ChatAgent in self._agent
+            # ProxyAgent directly extends BaseAgent and can be used as-is
+            if hasattr(ag, '_agent') and ag._agent is not None:
+                # This is a wrapper (FoundryAgentTemplate or ReasoningAgentTemplate)
+                # Use the inner ChatAgent which implements AgentProtocol
+                participants[name] = ag._agent
+                cls.logger.debug("Added participant '%s' (extracted inner agent)", name)
+            else:
+                # This is already an agent (like ProxyAgent extending BaseAgent)
+                participants[name] = ag
+                cls.logger.debug("Added participant '%s'", name)
 
         # Create unified event callback for Magentic workflow
         async def on_event(event) -> None:
