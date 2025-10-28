@@ -57,7 +57,6 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
 
   const loadPlansData = useCallback(async (forceRefresh = false) => {
     try {
-      console.log("Loading plans, forceRefresh:", forceRefresh);
       setPlansLoading(true);
       setPlansError(null);
       const plansData = await apiService.getPlans(undefined, !forceRefresh); // Invert forceRefresh for useCache
@@ -93,7 +92,6 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
 
 
   useEffect(() => {
-    console.log("Reload tasks changed:", reloadTasks);
     if (reloadTasks) {
       loadPlansData(true); // Force refresh when reloadTasks is true
     }
