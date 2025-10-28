@@ -131,7 +131,6 @@ class FoundryAgentTemplate(AzureAgentBase):
         async for update in self._agent.run_stream(messages=messages):
             yield update
 
-
 # -------------------------
 # Factory
 # -------------------------
