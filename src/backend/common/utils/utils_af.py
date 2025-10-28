@@ -4,8 +4,8 @@ import logging
 from typing import Any, Dict
 
 # Converted import path (agent_framework version of FoundryAgentTemplate)
-from af.magentic_agents.foundry_agent import FoundryAgentTemplate  # formerly v3.magentic_agents.foundry_agent
-from af.config.agent_registry import agent_registry
+from v4.magentic_agents.foundry_agent import FoundryAgentTemplate  # formerly v4.magentic_agents.foundry_agent
+from v4.config.agent_registry import agent_registry
 from common.config.app_config import config
 logging.basicConfig(level=logging.INFO)
 
@@ -41,7 +41,7 @@ async def create_RAI_agent() -> FoundryAgentTemplate:
 
     try:
         agent_registry.register_agent(agent)
-    except Exception as registry_error:  # noqa: BLE001
+    except Exception as registry_error:  
         logging.warning(
             "Failed to register agent '%s' with registry: %s",
             agent.agent_name,
@@ -72,7 +72,7 @@ async def _get_agent_response(agent: FoundryAgentTemplate, query: str) -> str:
                     if txt:
                         parts.append(str(txt))
         return "".join(parts) if parts else ""
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:  
         logging.error("Error streaming agent response: %s", e)
         return "TRUE"  # Default to blocking on error
 
@@ -99,7 +99,7 @@ async def rai_success(description: str) -> bool:
             logging.info("RAI check failed (blocked). Sample: %s...", description[:60])
             return False
 
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:  
         logging.error("RAI check error: %s — blocking by default.", e)
         return False
     finally:
@@ -107,7 +107,7 @@ async def rai_success(description: str) -> bool:
         if agent:
             try:
                 await agent.close()
-            except Exception:  # noqa: BLE001
+            except Exception:  
                 pass
 
 
@@ -160,6 +160,6 @@ async def rai_validate_team_config(team_config_json: dict) -> tuple[bool, str]:
             )
 
         return True, ""
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:  
         logging.error("Error validating team configuration content: %s", e)
         return False, "Unable to validate team configuration content. Please try again."

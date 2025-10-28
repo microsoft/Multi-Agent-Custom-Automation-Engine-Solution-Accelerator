@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-# Add the backend path to sys.path so we can import v3 modules
+# Add the backend path to sys.path so we can import v4 modules
 backend_path = Path(__file__).parent.parent.parent / "backend"
 sys.path.insert(0, str(backend_path))
 

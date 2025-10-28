@@ -1,4 +1,4 @@
-"""Service abstractions for v3.
+"""Service abstractions for v4.
 
 Exports:
 - BaseAPIService: minimal async HTTP wrapper using endpoints from AppConfig

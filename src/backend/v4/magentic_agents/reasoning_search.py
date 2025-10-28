@@ -20,7 +20,7 @@ from typing import List, Optional
 
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
-from af.magentic_agents.models.agent_models import SearchConfig
+from v4.magentic_agents.models.agent_models import SearchConfig
 
 
 logger = logging.getLogger(__name__)

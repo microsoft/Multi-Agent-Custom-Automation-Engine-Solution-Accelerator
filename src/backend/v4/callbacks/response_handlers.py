@@ -13,8 +13,8 @@ from agent_framework import ChatMessage
 
 from agent_framework._workflows._magentic import AgentRunResponseUpdate  # Streaming update type from workflows
 
-from af.config.settings import connection_config
-from af.models.messages import (
+from v4.config.settings import connection_config
+from v4.models.messages import (
     AgentMessage,
     AgentMessageStreaming,
     AgentToolCall,
@@ -95,7 +95,7 @@ def agent_response_callback(
             )
         )
         logger.info("%s message (agent=%s): %s", str(role).capitalize(), agent_name, text[:200])
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:  
         logger.error("agent_response_callback error sending WebSocket message: %s", e)
 
 
@@ -148,5 +148,5 @@ async def streaming_agent_response_callback(
                 message_type=WebsocketMessageType.AGENT_MESSAGE_STREAMING,
             )
             logger.debug("Streaming chunk (agent=%s final=%s len=%d)", agent_id, is_final, len(cleaned))
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:  
         logger.error("streaming_agent_response_callback error: %s", e)

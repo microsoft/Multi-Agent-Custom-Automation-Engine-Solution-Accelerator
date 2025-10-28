@@ -11,9 +11,9 @@ from agent_framework import (
     HostedVectorStoreContent,
     HostedCodeInterpreterTool,
 )
-from af.magentic_agents.common.lifecycle import AzureAgentBase
-from af.magentic_agents.models.agent_models import MCPConfig, SearchConfig
-from af.config.agent_registry import agent_registry
+from v4.magentic_agents.common.lifecycle import AzureAgentBase
+from v4.magentic_agents.models.agent_models import MCPConfig, SearchConfig
+from v4.config.agent_registry import agent_registry
 
 
 class FoundryAgentTemplate(AzureAgentBase):

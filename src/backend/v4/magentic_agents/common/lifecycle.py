@@ -23,8 +23,8 @@ from agent_framework import (
 )
 from agent_framework import MCPStreamableHTTPTool
 
-from af.magentic_agents.models.agent_models import MCPConfig
-from af.config.agent_registry import agent_registry
+from v4.magentic_agents.models.agent_models import MCPConfig
+from v4.config.agent_registry import agent_registry
 
 
 class MCPEnabledBase:
@@ -56,12 +56,12 @@ class MCPEnabledBase:
             if self._agent and hasattr(self._agent, "close"):
                 try:
                     await self._agent.close()  # AzureAIAgentClient has async close
-                except Exception:  # noqa: BLE001
+                except Exception:  
                     pass
             # Unregister from registry if present
             try:
                 agent_registry.unregister_agent(self)
-            except Exception:  # noqa: BLE001
+            except Exception:  
                 pass
             await self._stack.aclose()
         finally:
@@ -98,7 +98,7 @@ class MCPEnabledBase:
             )
             await self._stack.enter_async_context(mcp_tool)
             self.mcp_tool = mcp_tool  # Store for later use
-        except Exception:  # noqa: BLE001
+        except Exception:  
             self.mcp_tool = None
 
 
@@ -154,7 +154,7 @@ class AzureAgentBase(MCPEnabledBase):
         # Register agent (best effort)
         try:
             agent_registry.register_agent(self)
-        except Exception:  # noqa: BLE001
+        except Exception:  
             pass
 
         return self
@@ -178,25 +178,25 @@ class AzureAgentBase(MCPEnabledBase):
             if self._agent and hasattr(self._agent, "close"):
                 try:
                     await self._agent.close()
-                except Exception:  # noqa: BLE001
+                except Exception:  
                     pass
 
             # Unregister from registry
             try:
                 agent_registry.unregister_agent(self)
-            except Exception:  # noqa: BLE001
+            except Exception:  
                 pass
 
             # Close credential and project client
             if self.client:
                 try:
                     await self.client.close()
-                except Exception:  # noqa: BLE001
+                except Exception:  
                     pass
             if self.creds:
                 try:
                     await self.creds.close()
-                except Exception:  # noqa: BLE001
+                except Exception:  
                     pass
 
         finally:

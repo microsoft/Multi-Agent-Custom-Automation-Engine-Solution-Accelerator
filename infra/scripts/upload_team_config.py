@@ -20,7 +20,7 @@ files_to_process = [
     ("retail.json", "00000000-0000-0000-0000-000000000003"),
 ]
 
-upload_endpoint = backend_url.rstrip('/') + '/api/v3/upload_team_config'
+upload_endpoint = backend_url.rstrip('/') + '/api/v4/upload_team_config'
 
 # Process each JSON file in the directory
 uploaded_count = 0
