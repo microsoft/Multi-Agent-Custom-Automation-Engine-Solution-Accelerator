@@ -263,7 +263,19 @@ Once you've opened the project in [Codespaces](#github-codespaces), [Dev Contain
     infra\scripts\Process-Sample-Data.ps1
     ```
 
-7. To upload team configurations and index sample data in one step. Run the appropriate command for your shell from the project root:
+7. For RFP Use Case, Use this script to upload and index sample data
+
+     - **For Bash (Linux/macOS/WSL):**
+    ```bash
+    bash infra/scripts/process_rfp_data.sh
+    ```
+
+  - **For PowerShell (Windows):**
+    ```powershell
+    infra\scripts\Process-Rfp-Data.ps1
+    ```
+
+8. To upload team configurations and index sample data in one step. Run the appropriate command for your shell from the project root:
 
   - **For Bash (Linux/macOS/WSL):**
     ```bash
@@ -275,11 +287,11 @@ Once you've opened the project in [Codespaces](#github-codespaces), [Dev Contain
     infra\scripts\Team-Config-And-Data.ps1
     ```
 
-8. Once the deployment has completed successfully, open the [Azure Portal](https://portal.azure.com/), go to the deployed resource group, find the App Service, and get the app URL from `Default domain`.
+9. Once the deployment has completed successfully, open the [Azure Portal](https://portal.azure.com/), go to the deployed resource group, find the App Service, and get the app URL from `Default domain`.
 
-9. When Deployment is complete, follow steps in [Set Up Authentication in Azure App Service](../docs/azure_app_service_auth_setup.md) to add app authentication to your web app running on Azure App Service
+10. When Deployment is complete, follow steps in [Set Up Authentication in Azure App Service](../docs/azure_app_service_auth_setup.md) to add app authentication to your web app running on Azure App Service
 
-10. If you are done trying out the application, you can delete the resources by running `azd down`.
+11. If you are done trying out the application, you can delete the resources by running `azd down`.
 
 
 ### 🛠️ Troubleshooting
