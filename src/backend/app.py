@@ -14,12 +14,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 # Local imports
 from middleware.health_check import HealthCheckMiddleware
-from af.api.router import app_v3
+from v4.api.router import app_v4
 
 # Azure monitoring
 
 
-from af.config.agent_registry import agent_registry
+from v4.config.agent_registry import agent_registry
 
 
 @asynccontextmanager
@@ -90,8 +90,8 @@ app.add_middleware(
 
 # Configure health check
 app.add_middleware(HealthCheckMiddleware, password="", checks={})
-# v3 endpoints
-app.include_router(app_v3)
+# v4 endpoints
+app.include_router(app_v4)
 logging.info("Added health check middleware")
 
 

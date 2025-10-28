@@ -4,8 +4,8 @@ import logging
 from typing import Any, Dict
 
 # Converted import path (agent_framework version of FoundryAgentTemplate)
-from af.magentic_agents.foundry_agent import FoundryAgentTemplate  # formerly v3.magentic_agents.foundry_agent
-from af.config.agent_registry import agent_registry
+from v4.magentic_agents.foundry_agent import FoundryAgentTemplate  # formerly v4.magentic_agents.foundry_agent
+from v4.config.agent_registry import agent_registry
 from common.config.app_config import config
 logging.basicConfig(level=logging.INFO)
 

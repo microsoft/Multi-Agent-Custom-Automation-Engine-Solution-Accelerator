@@ -27,8 +27,8 @@ from agent_framework import (
     AgentThread,
 )
 
-from af.config.settings import connection_config, orchestration_config
-from af.models.messages import (
+from v4.config.settings import connection_config, orchestration_config
+from v4.models.messages import (
     UserClarificationRequest,
     UserClarificationResponse,
     TimeoutNotification,

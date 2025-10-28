@@ -17,14 +17,13 @@ var storageSkuName = 'Standard_LRS'
 var aiServicesName = '${abbrs.ai.aiServices}${solutionName}'
 var workspaceName = '${abbrs.managementGovernance.logAnalyticsWorkspace}${solutionName}hub'
 //var keyvaultName = '${abbrs.security.keyVault}${solutionName}'
-var location = solutionLocation 
+var location = solutionLocation
 var aiHubName = '${abbrs.ai.aiHub}${solutionName}'
 var aiHubFriendlyName = aiHubName
 var aiHubDescription = 'AI Hub for MACAE template'
 var aiProjectName = '${abbrs.ai.aiHubProject}${solutionName}'
 var aiProjectFriendlyName = aiProjectName
 var aiSearchName = '${abbrs.ai.aiSearch}${solutionName}'
-
 
 resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' existing = {
   name: keyVaultName
@@ -42,9 +41,7 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   }
 }
 
-
 var storageNameCleaned = replace(storageName, '-', '')
-
 
 resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   name: storageNameCleaned
@@ -84,7 +81,7 @@ resource storage 'Microsoft.Storage/storageAccounts@2022-09-01' = {
       }
     }
     isHnsEnabled: false
-    isNfsV3Enabled: false
+    isNfsv4Enabled: false
     keyPolicy: {
       keyExpirationPeriodInDays: 7
     }
@@ -185,7 +182,7 @@ resource azureOpenAIInferenceEndpoint 'Microsoft.KeyVault/vaults/secrets@2021-11
   parent: keyVault
   name: 'AZURE-OPENAI-INFERENCE-ENDPOINT'
   properties: {
-    value:''
+    value: ''
   }
 }
 
@@ -193,7 +190,7 @@ resource azureOpenAIInferenceKey 'Microsoft.KeyVault/vaults/secrets@2021-11-01-p
   parent: keyVault
   name: 'AZURE-OPENAI-INFERENCE-KEY'
   properties: {
-    value:''
+    value: ''
   }
 }
 
@@ -217,7 +214,7 @@ resource azureOpenAIApiVersionEntry 'Microsoft.KeyVault/vaults/secrets@2021-11-0
   parent: keyVault
   name: 'AZURE-OPENAI-PREVIEW-API-VERSION'
   properties: {
-    value: gptModelVersion  //'2024-02-15-preview'
+    value: gptModelVersion //'2024-02-15-preview'
   }
 }
 
@@ -225,7 +222,7 @@ resource azureOpenAIEndpointEntry 'Microsoft.KeyVault/vaults/secrets@2021-11-01-
   parent: keyVault
   name: 'AZURE-OPENAI-ENDPOINT'
   properties: {
-    value: aiServicesEndpoint//aiServices_m.properties.endpoint
+    value: aiServicesEndpoint //aiServices_m.properties.endpoint
   }
 }
 
@@ -304,7 +301,7 @@ resource azureLocatioEntry 'Microsoft.KeyVault/vaults/secrets@2021-11-01-preview
 output keyvaultName string = keyVaultName
 output keyvaultId string = keyVault.id
 
-output aiServicesName string = aiServicesName 
+output aiServicesName string = aiServicesName
 output aiSearchName string = aiSearchName
 output aiProjectName string = aiHubProject.name
 

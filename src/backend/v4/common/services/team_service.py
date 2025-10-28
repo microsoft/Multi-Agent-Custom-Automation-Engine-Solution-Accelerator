@@ -17,7 +17,7 @@ from common.models.messages_af import (
     TeamConfiguration,
     UserCurrentTeam,
 )
-from af.common.services.foundry_service import FoundryService
+from v4.common.services.foundry_service import FoundryService
 
 
 class TeamService:

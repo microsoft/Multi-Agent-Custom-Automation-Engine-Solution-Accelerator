@@ -13,8 +13,8 @@ from agent_framework import ChatMessage
 
 from agent_framework._workflows._magentic import AgentRunResponseUpdate  # Streaming update type from workflows
 
-from af.config.settings import connection_config
-from af.models.messages import (
+from v4.config.settings import connection_config
+from v4.models.messages import (
     AgentMessage,
     AgentMessageStreaming,
     AgentToolCall,

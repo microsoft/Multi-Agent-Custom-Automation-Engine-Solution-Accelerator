@@ -23,8 +23,8 @@ from agent_framework import (
 )
 from agent_framework import MCPStreamableHTTPTool
 
-from af.magentic_agents.models.agent_models import MCPConfig
-from af.config.agent_registry import agent_registry
+from v4.magentic_agents.models.agent_models import MCPConfig
+from v4.config.agent_registry import agent_registry
 
 
 class MCPEnabledBase:

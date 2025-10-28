@@ -4,7 +4,7 @@ import logging
 import uuid
 from typing import Optional
 
-import af.models.messages as messages
+import v4.models.messages as messages
 from auth.auth_utils import get_authenticated_user_details
 from common.database.database_factory import DatabaseFactory
 from common.models.messages_af import (
@@ -26,25 +26,25 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
-from af.common.services.plan_service import PlanService
-from af.common.services.team_service import TeamService
-from af.config.settings import (
+from v4.common.services.plan_service import PlanService
+from v4.common.services.team_service import TeamService
+from v4.config.settings import (
     connection_config,
     orchestration_config,
     team_config,
 )
-from af.orchestration.orchestration_manager import OrchestrationManager
+from v4.orchestration.orchestration_manager import OrchestrationManager
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-app_v3 = APIRouter(
-    prefix="/api/v3",
+app_v4 = APIRouter(
+    prefix="/api/v4",
     responses={404: {"description": "Not found"}},
 )
 
 
-@app_v3.websocket("/socket/{process_id}")
+@app_v4.websocket("/socket/{process_id}")
 async def start_comms(
     websocket: WebSocket, process_id: str, user_id: str = Query(None)
 ):
@@ -89,7 +89,7 @@ async def start_comms(
         await connection_config.close_connection(process_id=process_id)
 
 
-@app_v3.get("/init_team")
+@app_v4.get("/init_team")
 async def init_team(
     request: Request,
     team_switched: bool = Query(False),
@@ -165,7 +165,7 @@ async def init_team(
         ) from e
 
 
-@app_v3.post("/process_request")
+@app_v4.post("/process_request")
 async def process_request(
     background_tasks: BackgroundTasks, input_task: InputTask, request: Request
 ):
@@ -329,7 +329,7 @@ async def process_request(
         ) from e
 
 
-@app_v3.post("/plan_approval")
+@app_v4.post("/plan_approval")
 async def plan_approval(
     human_feedback: messages.PlanApprovalResponse, request: Request
 ):
@@ -440,7 +440,7 @@ async def plan_approval(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@app_v3.post("/user_clarification")
+@app_v4.post("/user_clarification")
 async def user_clarification(
     human_feedback: messages.UserClarificationResponse, request: Request
 ):
@@ -561,7 +561,7 @@ async def user_clarification(
             )
 
 
-@app_v3.post("/agent_message")
+@app_v4.post("/agent_message")
 async def agent_message_user(
     agent_message: messages.AgentMessageResponse, request: Request
 ):
@@ -642,7 +642,7 @@ async def agent_message_user(
     }
 
 
-@app_v3.post("/upload_team_config")
+@app_v4.post("/upload_team_config")
 async def upload_team_config(
     request: Request,
     file: UploadFile = File(...),
@@ -819,7 +819,7 @@ async def upload_team_config(
         raise HTTPException(status_code=500, detail="Internal server error occurred")
 
 
-@app_v3.get("/team_configs")
+@app_v4.get("/team_configs")
 async def get_team_configs(request: Request):
     """
     Retrieve all team configurations for the current user.
@@ -892,7 +892,7 @@ async def get_team_configs(request: Request):
         raise HTTPException(status_code=500, detail="Internal server error occurred")
 
 
-@app_v3.get("/team_configs/{team_id}")
+@app_v4.get("/team_configs/{team_id}")
 async def get_team_config_by_id(team_id: str, request: Request):
     """
     Retrieve a specific team configuration by ID.
@@ -974,7 +974,7 @@ async def get_team_config_by_id(team_id: str, request: Request):
         raise HTTPException(status_code=500, detail="Internal server error occurred")
 
 
-@app_v3.delete("/team_configs/{team_id}")
+@app_v4.delete("/team_configs/{team_id}")
 async def delete_team_config(team_id: str, request: Request):
     """
     Delete a team configuration by ID.
@@ -1052,7 +1052,7 @@ async def delete_team_config(team_id: str, request: Request):
         raise HTTPException(status_code=500, detail="Internal server error occurred")
 
 
-@app_v3.post("/select_team")
+@app_v4.post("/select_team")
 async def select_team(selection: TeamSelectionRequest, request: Request):
     """
     Select the current team for the user session.
@@ -1143,7 +1143,7 @@ async def select_team(selection: TeamSelectionRequest, request: Request):
 
 
 # Get plans is called in the initial side rendering of the frontend
-@app_v3.get("/plans")
+@app_v4.get("/plans")
 async def get_plans(request: Request):
     """
     Retrieve plans for the current user.
@@ -1228,7 +1228,7 @@ async def get_plans(request: Request):
 
 
 # Get plans is called in the initial side rendering of the frontend
-@app_v3.get("/plan")
+@app_v4.get("/plan")
 async def get_plan_by_id(
     request: Request,
     plan_id: Optional[str] = Query(None),

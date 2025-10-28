@@ -9,7 +9,7 @@ class MCPService(BaseAPIService):
     """Service for interacting with an MCP server.
 
     Base URL is taken from AppConfig.MCP_SERVER_ENDPOINT if present,
-    otherwise falls back to v3 MCP default in settings or localhost.
+    otherwise falls back to v4 MCP default in settings or localhost.
     """
 
     def __init__(self, base_url: str, *, token: Optional[str] = None, **kwargs):
@@ -20,7 +20,7 @@ class MCPService(BaseAPIService):
 
     @classmethod
     def from_app_config(cls, **kwargs) -> "MCPService":
-        # Prefer explicit MCP endpoint if defined; otherwise use the v3 settings default.
+        # Prefer explicit MCP endpoint if defined; otherwise use the v4 settings default.
         endpoint = config.MCP_SERVER_ENDPOINT
         if not endpoint:
             # fall back to typical local dev default

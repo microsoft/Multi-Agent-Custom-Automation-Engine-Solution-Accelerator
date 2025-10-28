@@ -8,13 +8,13 @@ from typing import List, Union
 
 from common.config.app_config import config
 from common.models.messages_af import TeamConfiguration
-from af.magentic_agents.foundry_agent import FoundryAgentTemplate
-from af.magentic_agents.models.agent_models import MCPConfig, SearchConfig
+from v4.magentic_agents.foundry_agent import FoundryAgentTemplate
+from v4.magentic_agents.models.agent_models import MCPConfig, SearchConfig
 
-# from v3.magentic_agents.models.agent_models import (BingConfig, MCPConfig,
+# from v4.magentic_agents.models.agent_models import (BingConfig, MCPConfig,
 #                                                     SearchConfig)
-from af.magentic_agents.proxy_agent import ProxyAgent
-from af.magentic_agents.reasoning_agent import ReasoningAgentTemplate
+from v4.magentic_agents.proxy_agent import ProxyAgent
+from v4.magentic_agents.reasoning_agent import ReasoningAgentTemplate
 
 
 class UnsupportedModelError(Exception):

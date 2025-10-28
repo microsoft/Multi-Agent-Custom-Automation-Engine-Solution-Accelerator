@@ -22,14 +22,14 @@ from common.config.app_config import config
 from common.models.messages_af import TeamConfiguration
 
 # Existing (legacy) callbacks
-from af.callbacks.response_handlers import (
+from v4.callbacks.response_handlers import (
     agent_response_callback,
     streaming_agent_response_callback,
 )
-from af.config.settings import connection_config, orchestration_config
-from af.models.messages import WebsocketMessageType
-from af.orchestration.human_approval_manager import HumanApprovalMagenticManager
-from af.magentic_agents.magentic_agent_factory import MagenticAgentFactory
+from v4.config.settings import connection_config, orchestration_config
+from v4.models.messages import WebsocketMessageType
+from v4.orchestration.human_approval_manager import HumanApprovalMagenticManager
+from v4.magentic_agents.magentic_agent_factory import MagenticAgentFactory
 
 
 class OrchestrationManager:

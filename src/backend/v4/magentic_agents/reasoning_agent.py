@@ -17,10 +17,10 @@ from azure.identity.aio import DefaultAzureCredential
 
 
 
-from af.magentic_agents.common.lifecycle import MCPEnabledBase
-from af.magentic_agents.models.agent_models import MCPConfig, SearchConfig
-from af.magentic_agents.reasoning_search import ReasoningSearch, create_reasoning_search
-from af.config.agent_registry import agent_registry
+from v4.magentic_agents.common.lifecycle import MCPEnabledBase
+from v4.magentic_agents.models.agent_models import MCPConfig, SearchConfig
+from v4.magentic_agents.reasoning_search import ReasoningSearch, create_reasoning_search
+from v4.config.agent_registry import agent_registry
 
 
 logger = logging.getLogger(__name__)
