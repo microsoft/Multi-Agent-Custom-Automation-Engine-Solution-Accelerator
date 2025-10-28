@@ -69,6 +69,19 @@ class ProxyAgent(BaseAgent):
     # AgentProtocol implementation
     # ---------------------------
 
+    def get_new_thread(self, **kwargs: Any) -> AgentThread:
+        """
+        Create a new thread for ProxyAgent conversations.
+        Required by AgentProtocol for workflow integration.
+        
+        Args:
+            **kwargs: Additional keyword arguments for thread creation
+            
+        Returns:
+            A new AgentThread instance
+        """
+        return AgentThread(**kwargs)
+
     async def run(
         self,
         messages: str | ChatMessage | list[str] | list[ChatMessage] | None = None,
@@ -141,6 +154,13 @@ class ProxyAgent(BaseAgent):
         # Normalize messages to string
         message_text = self._extract_message_text(messages)
         
+        logger.info(
+            "ProxyAgent: Requesting clarification (thread=%s, user=%s)",
+            "present" if thread else "None",
+            self.user_id
+        )
+        logger.debug("ProxyAgent: Message text: %s", message_text[:100])
+        
         clarification_req_text = f"I need clarification about: {message_text}"
         clarification_request = UserClarificationRequest(
             question=clarification_req_text,
@@ -174,33 +194,50 @@ class ProxyAgent(BaseAgent):
             if human_response.answer
             else "No additional clarification provided."
         )
-        synthetic_reply = f"Human clarification: {answer_text}"
+        
+        # Return just the user's answer directly - no prefix that might confuse orchestrator
+        synthetic_reply = answer_text
+        
+        logger.info("ProxyAgent: Received clarification: %s", synthetic_reply[:100])
 
-        # Yield final assistant text update
-        yield AgentRunResponseUpdate(
+        # Generate consistent IDs for this response
+        response_id = str(uuid.uuid4())
+        message_id = str(uuid.uuid4())
+
+        # Yield final assistant text update with explicit text content
+        text_update = AgentRunResponseUpdate(
             role=Role.ASSISTANT,
             contents=[TextContent(text=synthetic_reply)],
             author_name=self.name,
-            response_id=str(uuid.uuid4()),
-            message_id=str(uuid.uuid4()),
+            response_id=response_id,
+            message_id=message_id,
         )
+        
+        logger.debug("ProxyAgent: Yielding text update (text length=%d)", len(synthetic_reply))
+        yield text_update
 
         # Yield synthetic usage update for consistency
-        yield AgentRunResponseUpdate(
+        # Use same message_id to indicate this is part of the same message
+        usage_update = AgentRunResponseUpdate(
             role=Role.ASSISTANT,
             contents=[
                 UsageContent(
                     UsageDetails(
-                        input_token_count=0,
+                        input_token_count=len(message_text.split()),
                         output_token_count=len(synthetic_reply.split()),
-                        total_token_count=len(synthetic_reply.split()),
+                        total_token_count=len(message_text.split()) + len(synthetic_reply.split()),
                     )
                 )
             ],
             author_name=self.name,
-            response_id=str(uuid.uuid4()),
-            message_id=str(uuid.uuid4()),
+            response_id=response_id,
+            message_id=message_id,  # Same message_id groups with text content
         )
+        
+        logger.debug("ProxyAgent: Yielding usage update")
+        yield usage_update
+        
+        logger.info("ProxyAgent: Completed clarification response")
 
     # ---------------------------
     # Helper methods
@@ -215,6 +252,7 @@ class ProxyAgent(BaseAgent):
         if isinstance(messages, str):
             return messages
         if isinstance(messages, ChatMessage):
+            # Use the .text property which concatenates all TextContent items
             return messages.text or ""
         if isinstance(messages, list):
             if not messages:
@@ -222,6 +260,7 @@ class ProxyAgent(BaseAgent):
             if isinstance(messages[0], str):
                 return " ".join(messages)
             if isinstance(messages[0], ChatMessage):
+                # Use .text property for each message
                 return " ".join(msg.text or "" for msg in messages)
         return str(messages)
 
