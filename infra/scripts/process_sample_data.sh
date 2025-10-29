@@ -122,14 +122,33 @@ if [ -n "$resourceGroup" ]; then
 fi
 
 
-#Upload sample files to blob storage
-echo "Uploading sample files to blob storage..."
-az storage blob upload-batch --account-name "$storageAccount" --destination "$blobContainer" --source "data/datasets" --auth-mode login --pattern '*' --overwrite --output none
+#Upload sample CSV files to blob storage
+echo "Uploading CSV sample files to blob storage..."
+az storage blob upload-batch --account-name "$storageAccount" --destination "$blobContainer" --source "data/datasets" --auth-mode login --pattern '*.csv' --overwrite --output none
 if [ $? -ne 0 ]; then
-    echo "Error: Failed to upload files to blob storage."
+    echo "Error: Failed to upload CSV files to blob storage."
     exit 1
 fi
-echo "Files uploaded successfully to blob storage."
+echo "CSV files uploaded successfully to blob storage."
+
+#Upload PDF files from RFP_dataset to blob storage
+echo "Uploading PDF files from RFP_dataset to blob storage..."
+az storage blob upload-batch --account-name "$storageAccount" --destination "$blobContainer" --source "data/datasets/RFP_dataset" --auth-mode login --pattern '*.pdf' --overwrite --output none
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to upload PDF files to blob storage."
+    exit 1
+fi
+echo "PDF files uploaded successfully to blob storage."
+
+# Detect file types in the blob container
+echo "Detecting file types in blob container..."
+file_list=$(az storage blob list --account-name "$storageAccount" --container-name "$blobContainer" --query "[].name" -o tsv --auth-mode login)
+has_pdf=false
+has_csv=false
+while IFS= read -r file; do
+    [[ "$file" == *.pdf ]] && has_pdf=true
+    [[ "$file" == *.csv ]] && has_csv=true
+done <<< "$file_list"
 
 # Determine the correct Python command
 if command -v python && python --version &> /dev/null; then
@@ -165,11 +184,27 @@ echo "Installing requirements"
 pip install --quiet -r infra/scripts/requirements.txt
 echo "Requirements installed"
 
-echo "Running the python script to index data"
-$PYTHON_CMD infra/scripts/index_datasets.py "$storageAccount" "$blobContainer" "$aiSearch" "$aiSearchIndex"
-if [ $? -ne 0 ]; then
-    echo "Error: Indexing python script execution failed."
-    exit 1
+# Run the appropriate Python indexing script(s)
+if [ "$has_csv" = true ]; then
+    echo "Running the python script to index CSV data"
+    $PYTHON_CMD infra/scripts/index_datasets.py "$storageAccount" "$blobContainer" "$aiSearch" "$aiSearchIndex"
+    if [ $? -ne 0 ]; then
+        echo "Error: CSV indexing python script execution failed."
+        exit 1
+    fi
+fi
+
+if [ "$has_pdf" = true ]; then
+    echo "Running the python script to index PDF data"
+    $PYTHON_CMD infra/scripts/index_rfp_data.py "$storageAccount" "$blobContainer" "$aiSearch" "$aiSearchIndex"
+    if [ $? -ne 0 ]; then
+        echo "Error: PDF indexing python script execution failed."
+        exit 1
+    fi
+fi
+
+if [ "$has_csv" = false ] && [ "$has_pdf" = false ]; then
+    echo "No CSV or PDF files found to index."
 fi
 
 #disable public access for resources
