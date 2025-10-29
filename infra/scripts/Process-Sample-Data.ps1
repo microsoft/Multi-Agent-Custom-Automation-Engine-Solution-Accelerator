@@ -119,10 +119,11 @@ if ($ResourceGroup) {
 }
 
 # Upload CSV files
-Write-Host "Uploading CSV files to blob storage..."
+Write-Host "Uploading CSV and JSON files to blob storage..."
 az storage blob upload-batch --account-name $StorageAccount --destination $BlobContainer --source "data/datasets" --auth-mode login --pattern "*.csv" --overwrite --output none
-if ($LASTEXITCODE -ne 0) { Write-Host "Error: Failed to upload CSV files."; exit 1 }
-Write-Host "CSV files uploaded successfully."
+az storage blob upload-batch --account-name $StorageAccount --destination $BlobContainer --source "data/datasets" --auth-mode login --pattern "*.json" --overwrite --output none
+if ($LASTEXITCODE -ne 0) { Write-Host "Error: Failed to upload CSV and JSON files."; exit 1 }
+Write-Host "CSV and JSON files uploaded successfully."
 
 # Upload PDF files
 Write-Host "Uploading PDF files from RFP_dataset to blob storage..."
@@ -180,20 +181,28 @@ Write-Host "Installing requirements"
 pip install --quiet -r infra/scripts/requirements.txt
 Write-Host "Requirements installed"
 
+Write-Host "Running the python script to index data"
+$process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/index_datasets.py", $StorageAccount, $BlobContainer, $AiSearch, $AiSearchIndex -Wait -NoNewWindow -PassThru
+
+if ($process.ExitCode -ne 0) {
+    Write-Host "Error: Indexing python script execution failed."
+    exit 1
+}
+
 # Run indexing scripts
-if ($hasCsv) {
-    Write-Host "Running the python script to index CSV data"
-    & $pythonCmd "infra/scripts/index_datasets.py" $StorageAccount $BlobContainer $AiSearch $AiSearchIndex
-    if ($LASTEXITCODE -ne 0) { Write-Host "Error: CSV indexing script failed."; exit 1 }
-}
-if ($hasPdf) {
-    Write-Host "Running the python script to index PDF data"
-    & $pythonCmd "infra/scripts/index_rfp_data.py" $StorageAccount $BlobContainer $AiSearch $AiSearchIndex
-    if ($LASTEXITCODE -ne 0) { Write-Host "Error: PDF indexing script failed."; exit 1 }
-}
-if (-not $hasCsv -and -not $hasPdf) {
-    Write-Host "No CSV or PDF files found to index."
-}
+# if ($hasCsv) {
+#     Write-Host "Running the python script to index CSV data"
+#     & $pythonCmd "infra/scripts/index_datasets.py" $StorageAccount $BlobContainer $AiSearch $AiSearchIndex
+#     if ($LASTEXITCODE -ne 0) { Write-Host "Error: CSV indexing script failed."; exit 1 }
+# }
+# if ($hasPdf) {
+#     Write-Host "Running the python script to index PDF data"
+#     & $pythonCmd "infra/scripts/index_rfp_data.py" $StorageAccount $BlobContainer $AiSearch $AiSearchIndex
+#     if ($LASTEXITCODE -ne 0) { Write-Host "Error: PDF indexing script failed."; exit 1 }
+# }
+# if (-not $hasCsv -and -not $hasPdf) {
+#     Write-Host "No CSV or PDF files found to index."
+# }
 
 # Disable public access again
 if ($stIsPublicAccessDisabled) {
