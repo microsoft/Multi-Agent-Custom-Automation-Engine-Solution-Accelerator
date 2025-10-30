@@ -1,0 +1,26 @@
+movie_id,title,genre,year,director,rating,runtime_minutes,box_office_millions,imdb_score
+1,Inception,Sci-Fi/Thriller,2010,Christopher Nolan,PG-13,148,836.8,8.8
+2,The Dark Knight,Action/Crime,2008,Christopher Nolan,PG-13,152,1005.0,9.0
+3,Blade Runner 2049,Sci-Fi/Drama,2017,Denis Villeneuve,R,164,259.3,8.0
+4,Interstellar,Sci-Fi/Drama,2014,Christopher Nolan,PG-13,169,701.8,8.6
+5,The Matrix,Sci-Fi/Action,1999,The Wachowskis,R,136,467.2,8.7
+6,Pulp Fiction,Crime/Drama,1994,Quentin Tarantino,R,154,214.2,8.9
+7,The Godfather,Crime/Drama,1972,Francis Ford Coppola,R,175,287.0,9.2
+8,Shawshank Redemption,Drama,1994,Frank Darabont,R,142,16.0,9.3
+9,Goodfellas,Crime/Drama,1990,Martin Scorsese,R,146,46.8,8.7
+10,Fight Club,Drama/Thriller,1999,David Fincher,R,139,101.2,8.8
+11,Seven,Crime/Thriller,1995,David Fincher,R,127,327.3,8.6
+12,The Prestige,Mystery/Thriller,2006,Christopher Nolan,PG-13,130,109.7,8.5
+13,Memento,Mystery/Thriller,2000,Christopher Nolan,R,113,40.0,8.4
+14,Mad Max Fury Road,Action/Adventure,2015,George Miller,R,120,378.9,8.1
+15,John Wick,Action/Thriller,2014,Chad Stahelski,R,101,86.0,7.4
+16,The Avengers,Action/Adventure,2012,Joss Whedon,PG-13,143,1518.8,8.0
+17,Guardians of the Galaxy,Action/Comedy,2014,James Gunn,PG-13,121,773.3,8.0
+18,Spider-Man Into the Spider-Verse,Animation/Action,2018,Bob Persichetti,PG,117,384.3,8.4
+19,Parasite,Thriller/Drama,2019,Bong Joon-ho,R,132,258.8,8.5
+20,Get Out,Horror/Thriller,2017,Jordan Peele,R,104,255.4,7.7
+21,Once Upon a Time in Hollywood,Comedy/Drama,2019,Quentin Tarantino,R,161,374.3,7.6
+22,Knives Out,Mystery/Comedy,2019,Rian Johnson,PG-13,130,311.4,7.9
+23,Jojo Rabbit,Comedy/Drama,2019,Taika Waititi,PG-13,108,90.3,7.9
+24,1917,War/Drama,2019,Sam Mendes,R,119,384.9,8.2
+25,Ford v Ferrari,Biography/Drama,2019,James Mangold,PG-13,152,225.5,8.1

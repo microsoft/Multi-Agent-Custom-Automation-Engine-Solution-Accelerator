@@ -1,0 +1,106 @@
+{
+  "id": "4",
+  "team_id": "team-4",
+  "name": "Movie Recommendation Intelligence Team",
+  "status": "visible",
+  "created": "",
+  "created_by": "",
+  "agents": [
+    {
+      "input_key": "",
+      "type": "",
+      "name": "MovieDataAgent",
+      "deployment_name": "gpt-4.1-mini",
+      "icon": "",
+      "system_message": "You have access to comprehensive movie database through a secure index. Use this data to answer questions about movies, cast, crew, ratings, reviews, release dates, genres, box office performance, etc. You can provide detailed information about specific movies, search for movies by criteria, and access historical movie data.\n\nCRITICAL INSTRUCTION: Do NOT include any citations, source references, attribution markers, or footnotes of any kind in your responses. This includes but is not limited to: 【...】 style markers, [...] style references, (source: ...), numbered references like [1], or any other attribution symbols. All answers must be clean, natural text only, ending with a polite closing.",
+      "description": "An agent that has access to comprehensive movie database including movie details, cast, crew, ratings, reviews, genres, and box office data. Ask this agent for specific movie information.",
+      "use_rag": true,
+      "use_mcp": false,
+      "use_bing": false,
+      "use_reasoning": false,
+      "index_name": "macae-index",
+      "index_foundry_name": "",
+      "index_endpoint": "",
+      "coding_tools": false
+    },
+    {
+      "input_key": "",
+      "type": "",
+      "name": "UserPreferenceAgent",
+      "deployment_name": "gpt-4.1-mini",
+      "icon": "",
+      "system_message": "You have access to user viewing history, preferences, ratings, and behavioral data through a secure index. Use this data to understand user preferences, viewing patterns, genre preferences, favorite actors/directors, rating patterns, and watch history. Be mindful of privacy and compliance regulations when handling user data.\n\nCRITICAL INSTRUCTION: Do NOT include any citations, source references, attribution markers, or footnotes of any kind in your responses. This includes but is not limited to: 【...】 style markers, [...] style references, (source: ...), numbered references like [1], or any other attribution symbols. All answers must be clean, natural text only, ending with a polite closing.",
+      "description": "An agent that has access to user viewing history, preferences, ratings, and behavioral patterns. Ask this agent for user preference analysis and viewing behavior insights.",
+      "use_rag": true,
+      "use_mcp": false,
+      "use_bing": false,
+      "use_reasoning": false,
+      "index_name": "macae-index",
+      "index_foundry_name": "",
+      "index_endpoint": "",
+      "coding_tools": false
+    },
+    {
+      "input_key": "",
+      "type": "",
+      "name": "RecommendationEngineAgent",
+      "deployment_name": "o4-mini",
+      "icon": "",
+      "system_message": "You are an intelligent movie recommendation engine that analyzes user preferences and movie data to generate personalized movie recommendations. You do not have direct access to data sources, but you can reason based on information provided by other agents. Use advanced recommendation algorithms, collaborative filtering concepts, content-based filtering, and machine learning principles to generate highly personalized movie suggestions. Consider factors like genre preferences, viewing history, ratings, similar users, trending movies, and contextual factors (mood, time, occasion). Provide detailed explanations for your recommendations and offer diverse options including popular picks, hidden gems, and trending content.",
+      "description": "An intelligent recommendation engine that analyzes user preferences and movie data to generate personalized movie recommendations with detailed explanations.",
+      "use_rag": false,
+      "use_mcp": false,
+      "use_bing": false,
+      "use_reasoning": true,
+      "index_name": "",
+      "index_foundry_name": "",
+      "coding_tools": false
+    },
+    {
+      "input_key": "",
+      "type": "",
+      "name": "ProxyAgent",
+      "deployment_name": "",
+      "icon": "",
+      "system_message": "You are a helpful assistant that can execute tools, format responses, and interact with users. You help coordinate between different agents and handle user requests that require tool execution or special formatting.",
+      "description": "An agent that handles tool execution, formatting, and user interaction coordination for the movie recommendation system.",
+      "use_rag": false,
+      "use_mcp": false,
+      "use_bing": false,
+      "use_reasoning": false,
+      "index_name": "",
+      "index_foundry_name": "",
+      "coding_tools": false
+    }
+  ],
+  "protected": false,
+  "description": "Team specialized in providing intelligent, personalized movie recommendations based on user preferences and comprehensive movie database analysis.",
+  "logo": "",
+  "plan": "",
+  "starting_tasks": [
+    {
+      "id": "task-1",
+      "name": "Personal Movie Recommendations",
+      "prompt": "I'm looking for movie recommendations. I enjoy sci-fi and thriller genres, particularly movies with complex plots and strong character development. I recently enjoyed Inception, Blade Runner 2049, and The Dark Knight. Can you recommend some movies I might like?",
+      "created": "",
+      "creator": "",
+      "logo": ""
+    },
+    {
+      "id": "task-2", 
+      "name": "Weekend Movie Night",
+      "prompt": "I'm planning a movie night for this weekend with friends. We want something entertaining but not too heavy - maybe a comedy or action movie from the last 5 years. What would you recommend?",
+      "created": "",
+      "creator": "",
+      "logo": ""
+    },
+    {
+      "id": "task-3",
+      "name": "Movie Analysis Request", 
+      "prompt": "Can you analyze my viewing patterns and tell me what genres and types of movies I tend to prefer? Also, suggest some movies that might expand my taste to new genres I haven't explored much.",
+      "created": "",
+      "creator": "",
+      "logo": ""
+    }
+  ]
+}

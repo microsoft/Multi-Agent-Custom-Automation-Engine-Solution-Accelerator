@@ -1,0 +1,11 @@
+user_id,username,age,preferred_genres,favorite_directors,viewing_frequency,subscription_type
+1,movie_buff_2024,28,"Sci-Fi,Thriller,Drama","Christopher Nolan,Denis Villeneuve,David Fincher",15,Premium
+2,casual_viewer_87,35,"Comedy,Action,Adventure","James Gunn,Taika Waititi,Joss Whedon",8,Standard
+3,indie_lover_99,24,"Drama,Mystery,Horror","Jordan Peele,Rian Johnson,Bong Joon-ho",20,Premium
+4,action_fan_42,31,"Action,Adventure,Crime","George Miller,Chad Stahelski,Martin Scorsese",12,Standard
+5,classic_cinema_23,45,"Drama,Crime,Biography","Francis Ford Coppola,Frank Darabont,Sam Mendes",10,Premium
+6,family_watcher_56,38,"Animation,Comedy,Adventure","Pixar Directors,James Gunn,Jon Favreau",6,Family
+7,horror_enthusiast,22,"Horror,Thriller,Mystery","Jordan Peele,David Fincher,M. Night Shyamalan",18,Standard
+8,blockbuster_fan,29,"Action,Sci-Fi,Adventure","Marvel Directors,Christopher Nolan,George Lucas",14,Premium
+9,arthouse_viewer,33,"Drama,Foreign,Documentary","Bong Joon-ho,Denis Villeneuve,Chloé Zhao",25,Premium
+10,weekend_warrior,27,"Comedy,Action,Romance","Judd Apatow,Kevin Feige,Nancy Meyers",5,Standard
