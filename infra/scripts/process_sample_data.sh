@@ -123,13 +123,14 @@ fi
 
 
 #Upload sample CSV files to blob storage
-echo "Uploading CSV sample files to blob storage..."
+echo "Uploading CSV and JSON sample files to blob storage..."
 az storage blob upload-batch --account-name "$storageAccount" --destination "$blobContainer" --source "data/datasets" --auth-mode login --pattern '*.csv' --overwrite --output none
+az storage blob upload-batch --account-name "$storageAccount" --destination "$blobContainer" --source "data/datasets" --auth-mode login --pattern '*.json' --overwrite --output none
 if [ $? -ne 0 ]; then
-    echo "Error: Failed to upload CSV files to blob storage."
+    echo "Error: Failed to upload CSV and JSON files to blob storage."
     exit 1
 fi
-echo "CSV files uploaded successfully to blob storage."
+echo "CSV and JSON files uploaded successfully to blob storage."
 
 #Upload PDF files from RFP_dataset to blob storage
 echo "Uploading PDF files from RFP_dataset to blob storage..."
@@ -194,14 +195,14 @@ if [ "$has_csv" = true ]; then
     fi
 fi
 
-if [ "$has_pdf" = true ]; then
-    echo "Running the python script to index PDF data"
-    $PYTHON_CMD infra/scripts/index_rfp_data.py "$storageAccount" "$blobContainer" "$aiSearch" "$aiSearchIndex"
-    if [ $? -ne 0 ]; then
-        echo "Error: PDF indexing python script execution failed."
-        exit 1
-    fi
-fi
+# if [ "$has_pdf" = true ]; then
+#     echo "Running the python script to index PDF data"
+#     $PYTHON_CMD infra/scripts/index_rfp_data.py "$storageAccount" "$blobContainer" "$aiSearch" "$aiSearchIndex"
+#     if [ $? -ne 0 ]; then
+#         echo "Error: PDF indexing python script execution failed."
+#         exit 1
+#     fi
+# fi
 
 if [ "$has_csv" = false ] && [ "$has_pdf" = false ]; then
     echo "No CSV or PDF files found to index."
