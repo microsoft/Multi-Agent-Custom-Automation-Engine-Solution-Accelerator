@@ -11,7 +11,7 @@ from agent_framework import (
     ChatMessage,
     WorkflowOutputEvent,
     MagenticBuilder,
-    MagenticCallbackMode,
+   # MagenticCallbackMode,
     MagenticOrchestratorMessageEvent,
     MagenticAgentDeltaEvent,
     MagenticAgentMessageEvent,
@@ -166,7 +166,7 @@ class OrchestrationManager:
         builder = (
             MagenticBuilder()
             .participants(**participants)
-            .on_event(on_event, mode=MagenticCallbackMode.STREAMING)  # Enable streaming events
+            #.on_event(on_event)  # Enable streaming events
             .with_standard_manager(manager=manager)
         )
 
@@ -255,15 +255,48 @@ class OrchestrationManager:
             
             self.logger.info("Starting workflow execution...")
             async for event in workflow.run_stream(task_text):
-                # Check if this is the final output event
-                if isinstance(event, WorkflowOutputEvent):
-                    # Extract text from ChatMessage object
-                    output_data = event.data
-                    if isinstance(output_data, ChatMessage):
-                        final_output = getattr(output_data, "text", None) or str(output_data)
-                    else:
-                        final_output = str(output_data)
-                    self.logger.debug("Received workflow output event")
+                try:
+                    # Handle orchestrator messages (task assignments, coordination)
+                    if isinstance(event, MagenticOrchestratorMessageEvent):
+                        message_text = getattr(event.message, 'text', '')
+                        self.logger.info(f"[ORCHESTRATOR:{event.kind}] {message_text}")
+                    
+                    # Handle streaming updates from agents
+                    elif isinstance(event, MagenticAgentDeltaEvent):
+                        try:
+                            await streaming_agent_response_callback(
+                                event.agent_id, 
+                                event,  # Pass the event itself as the update object
+                                False,  # Not final yet (streaming in progress)
+                                user_id
+                            )
+                        except Exception as e:
+                            self.logger.error(f"Error in streaming callback for agent {event.agent_id}: {e}")
+                    
+                    # Handle final agent messages (complete response)
+                    elif isinstance(event, MagenticAgentMessageEvent):
+                        if event.message:
+                            try:
+                                agent_response_callback(event.agent_id, event.message, user_id)
+                            except Exception as e:
+                                self.logger.error(f"Error in agent callback for agent {event.agent_id}: {e}")
+                    
+                    # Handle final result from the entire workflow
+                    elif isinstance(event, MagenticFinalResultEvent):
+                        final_text = getattr(event.message, 'text', '')
+                        self.logger.info(f"[FINAL RESULT] Length: {len(final_text)} chars")
+                    
+                    # Handle workflow output event (captures final result)
+                    elif isinstance(event, WorkflowOutputEvent):
+                        output_data = event.data
+                        if isinstance(output_data, ChatMessage):
+                            final_output = getattr(output_data, "text", None) or str(output_data)
+                        else:
+                            final_output = str(output_data)
+                        self.logger.debug("Received workflow output event")
+                        
+                except Exception as e:
+                    self.logger.error(f"Error processing event {type(event).__name__}: {e}", exc_info=True)
 
             # Extract final result
             final_text = final_output if final_output else ""
