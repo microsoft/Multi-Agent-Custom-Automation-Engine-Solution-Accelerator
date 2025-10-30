@@ -512,7 +512,7 @@ module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.13.0' = if (v
     //patchMode: virtualMachineConfiguration.?patchMode
     osType: 'Windows'
     encryptionAtHost: false //The property 'securityProfile.encryptionAtHost' is not valid because the 'Microsoft.Compute/EncryptionAtHost' feature is not enabled for this subscription.
-    vmSize: 'Standard_D2s_v3'
+    vmSize: 'Standard_D2s_v4'
     zone: 0
     extensionAadJoinConfig: {
       enabled: true

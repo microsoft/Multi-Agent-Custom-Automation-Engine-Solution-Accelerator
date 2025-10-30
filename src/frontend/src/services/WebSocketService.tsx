@@ -27,7 +27,7 @@ class WebSocketService {
         // Decide path addition
         let userId = getUserId();
         const hasApiSegment = /\/api(\/|$)/i.test(base);
-        const socketPath = hasApiSegment ? '/v3/socket' : '/api/v3/socket';
+        const socketPath = hasApiSegment ? '/v4/socket' : '/api/v4/socket';
         const url = `${base}${socketPath}${processId ? `/${processId}` : `/${planId}`}?user_id=${userId || ''}`;
         console.log("Constructed WebSocket URL:", url);
         return url;
@@ -309,14 +309,14 @@ class WebSocketService {
             return;
         }
         try {
-            const v3Response = {
+            const v4Response = {
                 m_plan_id: response.plan_id,
                 approved: response.approved,
                 feedback: response.feedback || response.user_response || response.human_clarification || '',
             };
             const message = {
                 type: WebsocketMessageType.PLAN_APPROVAL_RESPONSE,
-                data: v3Response
+                data: v4Response
             };
             this.ws.send(JSON.stringify(message));
         } catch {

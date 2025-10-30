@@ -73,7 +73,6 @@ param gptReasoningModelVersion string = '2025-04-16'
 @description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2025-01-01-preview.')
 param azureopenaiVersion string = '2024-12-01-preview'
 
-
 @minLength(1)
 @allowed([
   'Standard'
@@ -139,7 +138,7 @@ param backendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
 param backendContainerImageName string = 'macaebackend'
 
 @description('Optional. The Container Image Tag to deploy on the backend.')
-param backendContainerImageTag string = 'latest_v3'
+param backendContainerImageTag string = 'latest_v4'
 
 @description('Optional. The Container Registry hostname where the docker images for the frontend are located.')
 param frontendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
@@ -148,7 +147,7 @@ param frontendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
 param frontendContainerImageName string = 'macaefrontend'
 
 @description('Optional. The Container Image Tag to deploy on the frontend.')
-param frontendContainerImageTag string = 'latest_v3'
+param frontendContainerImageTag string = 'latest_v4'
 
 @description('Optional. The Container Registry hostname where the docker images for the MCP are located.')
 param MCPContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
@@ -157,7 +156,7 @@ param MCPContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
 param MCPContainerImageName string = 'macaemcp'
 
 @description('Optional. The Container Image Tag to deploy on the MCP.')
-param MCPContainerImageTag string = 'latest_v3'
+param MCPContainerImageTag string = 'latest_v4'
 
 @description('Optional. Enable/Disable usage telemetry for module.')
 param enableTelemetry bool = true
@@ -224,7 +223,9 @@ var allTags = union(
   tags
 )
 @description('Tag, Created by user name')
-param createdBy string = contains(deployer(), 'userPrincipalName')? split(deployer().userPrincipalName, '@')[0]: deployer().objectId
+param createdBy string = contains(deployer(), 'userPrincipalName')
+  ? split(deployer().userPrincipalName, '@')[0]
+  : deployer().objectId
 
 resource resourceGroupTags 'Microsoft.Resources/tags@2021-04-01' = {
   name: 'default'
@@ -571,7 +572,10 @@ module networkSecurityGroupBastion 'br/public:avm/res/network/network-security-g
 
 var networkSecurityGroupAdministrationResourceName = 'nsg-${solutionSuffix}-administration'
 module networkSecurityGroupAdministration 'br/public:avm/res/network/network-security-group:0.5.1' = if (enablePrivateNetworking) {
-  name: take('avm.res.network.network-security-group.administration.${networkSecurityGroupAdministrationResourceName}', 64)
+  name: take(
+    'avm.res.network.network-security-group.administration.${networkSecurityGroupAdministrationResourceName}',
+    64
+  )
   params: {
     name: networkSecurityGroupAdministrationResourceName
     location: location
@@ -727,7 +731,7 @@ module bastionHost 'br/public:avm/res/network/bastion-host:0.7.0' = if (enablePr
     enableTelemetry: enableTelemetry
     tags: tags
     virtualNetworkResourceId: virtualNetwork!.?outputs.?resourceId
-    availabilityZones:[]
+    availabilityZones: []
     publicIPAddressObject: {
       name: 'pip-bas${solutionSuffix}'
       diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : null
@@ -912,7 +916,7 @@ module proximityPlacementGroup 'br/public:avm/res/compute/proximity-placement-gr
 
 var virtualMachineResourceName = 'vm-${solutionSuffix}'
 var virtualMachineAvailabilityZone = 1
-var virtualMachineSize = 'Standard_D2s_v3'
+var virtualMachineSize = 'Standard_D2s_v4'
 module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.17.0' = if (enablePrivateNetworking) {
   name: take('avm.res.compute.virtual-machine.${virtualMachineResourceName}', 64)
   params: {
@@ -1493,7 +1497,10 @@ module containerRegistry 'br/public:avm/res/container-registry/registry:0.9.1' =
   }
 }
 
-var acrPullRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
+var acrPullRole = subscriptionResourceId(
+  'Microsoft.Authorization/roleDefinitions',
+  '7f951dda-4ed3-4680-a7ca-43fe172d538d'
+)
 
 // ========== Backend Container App Service ========== //
 // WAF best practices for container apps: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/azure-container-apps
@@ -1516,7 +1523,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
         'https://${webSiteResourceName}.azurewebsites.net'
         'http://${webSiteResourceName}.azurewebsites.net'
       ]
-      allowedMethods:[
+      allowedMethods: [
         'GET'
         'POST'
         'PUT'
@@ -1633,16 +1640,16 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
           }
           {
             name: 'AZURE_COGNITIVE_SERVICES'
-            value: 'https://cognitiveservices.azure.com/.default' 
+            value: 'https://cognitiveservices.azure.com/.default'
           }
           {
             name: 'AZURE_BING_CONNECTION_NAME'
-            value: 'binggrnd' 
+            value: 'binggrnd'
           }
           {
             name: 'BING_CONNECTION_NAME'
-            value: 'binggrnd' 
-          } 
+            value: 'binggrnd'
+          }
           {
             name: 'REASONING_MODEL_NAME'
             value: aiFoundryAiServicesReasoningModelDeployment.name
@@ -1653,11 +1660,11 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
           }
           {
             name: 'MCP_SERVER_NAME'
-            value: 'MacaeMcpServer' 
+            value: 'MacaeMcpServer'
           }
           {
             name: 'MCP_SERVER_DESCRIPTION'
-            value: 'MCP server with greeting, HR, and planning tools' 
+            value: 'MCP server with greeting, HR, and planning tools'
           }
           {
             name: 'AZURE_TENANT_ID'
@@ -1669,8 +1676,8 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
           }
           {
             name: 'SUPPORTED_MODELS'
-            value: '["o3","o4-mini","gpt-4.1","gpt-4.1-mini"]' 
-          } 
+            value: '["o3","o4-mini","gpt-4.1","gpt-4.1-mini"]'
+          }
           {
             name: 'AZURE_AI_SEARCH_API_KEY'
             value: 'azure-ai-search-api-key'
@@ -1703,7 +1710,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
 // ========== MCP Container App Service ========== //
 // WAF best practices for container apps: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/azure-container-apps
 // PSRule for Container App: https://azure.github.io/PSRule.Rules.Azure/en/rules/resource/#container-app
-var containerAppMcpResourceName  = 'ca-mcp-${solutionSuffix}'
+var containerAppMcpResourceName = 'ca-mcp-${solutionSuffix}'
 module containerAppMcp 'br/public:avm/res/app/container-app:0.18.1' = {
   name: take('avm.res.app.container-app.${containerAppMcpResourceName}', 64)
   params: {
@@ -1819,7 +1826,7 @@ module webServerFarm 'br/public:avm/res/web/serverfarm:0.5.0' = {
     // WAF aligned configuration for Monitoring
     diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : null
     // WAF aligned configuration for Scalability
-    skuName: enableScalability || enableRedundancy ? 'P1v3' : 'B3'
+    skuName: enableScalability || enableRedundancy ? 'P1v4' : 'B3'
     skuCapacity: enableScalability ? 3 : 1
     // WAF aligned configuration for Redundancy
     zoneRedundant: enableRedundancy ? true : false
@@ -1872,7 +1879,6 @@ module webSite 'modules/web-sites.bicep' = {
   }
 }
 
-
 // ========== Storage Account ========== //
 
 var storageAccountName = replace('st${solutionSuffix}', '-', '')
@@ -1905,13 +1911,13 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
     // WAF aligned networking
     networkAcls: {
       bypass: 'AzureServices'
-      defaultAction: enablePrivateNetworking  ? 'Deny' : 'Allow'
+      defaultAction: enablePrivateNetworking ? 'Deny' : 'Allow'
     }
     allowBlobPublicAccess: false
-    publicNetworkAccess: enablePrivateNetworking  ? 'Disabled' : 'Enabled'
+    publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
 
     // Private endpoints for blob
-    privateEndpoints: enablePrivateNetworking 
+    privateEndpoints: enablePrivateNetworking
       ? [
           {
             name: 'pep-blob-${solutionSuffix}'
@@ -1998,7 +2004,7 @@ module searchService 'br/public:avm/res/search/search-service:0.11.1' = {
         principalType: 'ServicePrincipal'
       }
     ]
-    privateEndpoints:[]
+    privateEndpoints: []
 
     // Removing the Private endpoints as we are facing the issue with connecting to search service while comminicating with agents
 
@@ -2042,7 +2048,6 @@ module aiSearchFoundryConnection 'modules/aifp-connections.bicep' = {
   ]
 }
 
-
 // ========== KeyVault ========== //
 var keyVaultName = 'kv-${solutionSuffix}'
 module keyvault 'br/public:avm/res/key-vault/vault:0.12.1' = {
@@ -2062,9 +2067,7 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.12.1' = {
     enableRbacAuthorization: true
     enableSoftDelete: true
     softDeleteRetentionInDays: 7
-    diagnosticSettings: enableMonitoring 
-      ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] 
-      : []
+    diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : []
     // WAF aligned configuration for Private Networking
     privateEndpoints: enablePrivateNetworking
       ? [
@@ -2072,7 +2075,9 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.12.1' = {
             name: 'pep-${keyVaultName}'
             customNetworkInterfaceName: 'nic-${keyVaultName}'
             privateDnsZoneGroup: {
-              privateDnsZoneGroupConfigs: [{ privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.keyVault]!.outputs.resourceId }]
+              privateDnsZoneGroupConfigs: [
+                { privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.keyVault]!.outputs.resourceId }
+              ]
             }
             service: 'vault'
             subnetResourceId: virtualNetwork!.outputs.subnetResourceIds[0]
@@ -2082,9 +2087,9 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.12.1' = {
     // WAF aligned configuration for Role-based Access Control
     roleAssignments: [
       {
-         principalId: userAssignedIdentity.outputs.principalId
-         principalType: 'ServicePrincipal'
-         roleDefinitionIdOrName: 'Key Vault Administrator'
+        principalId: userAssignedIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
+        roleDefinitionIdOrName: 'Key Vault Administrator'
       }
     ]
     secrets: [
@@ -2122,7 +2127,6 @@ output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerRegistry.outputs.logi
 // Add your User-defined-types here, if any
 //
 
-
 output AZURE_STORAGE_BLOB_URL string = avmStorageAccount.outputs.serviceEndpoints.blob
 output AZURE_STORAGE_ACCOUNT_NAME string = storageAccountName
 output AZURE_STORAGE_CONTAINER_NAME string = storageContainerName
@@ -2147,14 +2151,16 @@ output AZURE_AI_MODEL_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDeploymen
 output AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDeployment.name
 output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiProjectEndpoint
 output APP_ENV string = 'Prod'
-output AI_FOUNDRY_RESOURCE_ID string = !useExistingAiFoundryAiProject ? aiFoundryAiServices.outputs.resourceId : existingAiFoundryAiProjectResourceId
+output AI_FOUNDRY_RESOURCE_ID string = !useExistingAiFoundryAiProject
+  ? aiFoundryAiServices.outputs.resourceId
+  : existingAiFoundryAiProjectResourceId
 output COSMOSDB_ACCOUNT_NAME string = cosmosDbResourceName
-output AZURE_SEARCH_ENDPOINT string =searchService.outputs.endpoint
-output AZURE_CLIENT_ID string  = userAssignedIdentity!.outputs.clientId
+output AZURE_SEARCH_ENDPOINT string = searchService.outputs.endpoint
+output AZURE_CLIENT_ID string = userAssignedIdentity!.outputs.clientId
 output AZURE_TENANT_ID string = tenant().tenantId
-output AZURE_AI_SEARCH_CONNECTION_NAME string  = aiSearchConnectionName
+output AZURE_AI_SEARCH_CONNECTION_NAME string = aiSearchConnectionName
 output AZURE_COGNITIVE_SERVICES string = 'https://cognitiveservices.azure.com/.default'
-output REASONING_MODEL_NAME string =  aiFoundryAiServicesReasoningModelDeployment.name
+output REASONING_MODEL_NAME string = aiFoundryAiServicesReasoningModelDeployment.name
 output MCP_SERVER_NAME string = 'MacaeMcpServer'
 output MCP_SERVER_DESCRIPTION string = 'MCP server with greeting, HR, and planning tools'
 output SUPPORTED_MODELS string = '["o3","o4-mini","gpt-4.1","gpt-4.1-mini"]'
