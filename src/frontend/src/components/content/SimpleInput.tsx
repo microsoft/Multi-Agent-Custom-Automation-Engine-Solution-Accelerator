@@ -94,10 +94,22 @@ const SimpleInput: React.FC<HomeInputProps> = ({
                 }
 
                 if (response.plan_id && response.plan_id !== null) {
-                    showToast("Plan ready for review!", "success");
-                    dismissToast(id);
-                    // Navigate to simple plan page
-                    navigate(`/plan/${response.plan_id}`);
+                    // Show auto-selection notification if applicable
+                    if (response.auto_selected_team_name) {
+                        dismissToast(id);
+                        showToast(
+                            `Automatically selected ${response.auto_selected_team_name} for your task`,
+                            "success"
+                        );
+                        // Small delay before navigating to make notification visible
+                        setTimeout(() => {
+                            navigate(`/plan/${response.plan_id}`);
+                        }, 500);
+                    } else {
+                        showToast("Plan ready for review!", "success");
+                        dismissToast(id);
+                        navigate(`/plan/${response.plan_id}`);
+                    }
                 } else {
                     showToast("Failed to create plan", "error");
                     dismissToast(id);
@@ -108,6 +120,15 @@ const SimpleInput: React.FC<HomeInputProps> = ({
                 dismissToast(id);
                 
                 try {
+                    // Check if error is about team selection
+                    if (error?.response?.status === 400) {
+                        const errorDetail = error?.response?.data?.detail || error?.message || "";
+                        if (errorDetail.includes("select a team") || errorDetail.includes("team")) {
+                            errorMessage = "Please select a team to handle your request. Use the team selector in the sidebar.";
+                            showToast(errorMessage, "warning");
+                            return;
+                        }
+                    }
                     errorMessage = error?.message || errorMessage;
                 } catch (parseError) {
                     console.error("Error parsing error detail:", parseError);
@@ -232,6 +253,14 @@ const SimpleInput: React.FC<HomeInputProps> = ({
 };
 
 export default SimpleInput;
+
+
+
+
+
+
+
+
 
 
 

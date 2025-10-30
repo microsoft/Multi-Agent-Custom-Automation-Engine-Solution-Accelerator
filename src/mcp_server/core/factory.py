@@ -24,6 +24,8 @@ class Domain(Enum):
     OPERATIONS = "operations"
     PRICING = "pricing"
     MARKETING_ANALYTICS = "marketing_analytics"
+    VISUALIZATION = "visualization"
+    CSV_MANIPULATION = "csv_manipulation"
 
 
 class MCPToolBase(ABC):

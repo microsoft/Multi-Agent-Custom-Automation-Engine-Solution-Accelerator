@@ -21,6 +21,7 @@ from fastapi.responses import FileResponse
 from semantic_kernel.agents.runtime import InProcessRuntime
 from v3.common.services.plan_service import PlanService
 from v3.common.services.team_service import TeamService
+from v3.common.services.team_matcher_service import TeamMatcherService
 from v3.common.services.dataset_service import DatasetService
 from v3.config.settings import (connection_config, current_user_id,
                                 orchestration_config, team_config)
@@ -246,6 +247,9 @@ async def process_request(
     if not input_task.session_id:
         input_task.session_id = str(uuid.uuid4())
     
+    # Store original question before context enrichment for team matching
+    original_question = input_task.description
+    
     # Check for previous completed plan in this session and include its results as context
     previous_context = ""
     if input_task.session_id:
@@ -316,8 +320,83 @@ Use this complete context when answering the current request.
         memory_store = await DatabaseFactory.get_database(user_id=user_id)
         user_current_team = await memory_store.get_current_team(user_id=user_id)
         team_id = None
+        auto_selected_team_name = None
+        
         if user_current_team:
             team_id = user_current_team.team_id
+        else:
+            # No team selected - try automatic team matching
+            logger.info(f"No team selected for user {user_id}, attempting auto-selection")
+            team_service = TeamService(memory_store)
+            team_matcher = TeamMatcherService()
+            
+            # Get all available teams
+            available_teams = await team_service.get_all_team_configurations()
+            
+            if available_teams:
+                # Use original question without context for matching (before context enrichment)
+                # Extract original question if context was added
+                original_question = input_task.description
+                if previous_context and "="*70 in original_question:
+                    # Context was appended, extract just the original part
+                    original_question = original_question.split("="*70)[0].strip()
+                
+                matched_team_id, matched_team_name, confidence = await team_matcher.find_best_matching_team(
+                    user_question=original_question,
+                    available_teams=available_teams
+                )
+                
+                if matched_team_id and confidence >= team_matcher.min_confidence_threshold:
+                    # Auto-select the matched team
+                    team_service_instance = TeamService(memory_store)
+                    await team_service_instance.handle_team_selection(
+                        user_id=user_id,
+                        team_id=matched_team_id
+                    )
+                    team_id = matched_team_id
+                    auto_selected_team_name = matched_team_name
+                    
+                    # Get team config for in-memory storage
+                    team_configuration = await team_service.get_team_configuration(
+                        matched_team_id, user_id
+                    )
+                    if team_configuration:
+                        team_config.set_current_team(
+                            user_id=user_id, team_configuration=team_configuration
+                        )
+                    
+                    track_event_if_configured(
+                        "TeamAutoSelected",
+                        {
+                            "user_id": user_id,
+                            "team_id": team_id,
+                            "team_name": matched_team_name,
+                            "confidence": confidence,
+                            "question": original_question[:200],
+                        },
+                    )
+                    logger.info(
+                        f"Auto-selected team '{matched_team_name}' (ID: {team_id}) "
+                        f"with confidence {confidence:.2f} for user {user_id}"
+                    )
+                else:
+                    # No good match found - require manual selection
+                    logger.info(
+                        f"No suitable team match found (confidence: {confidence:.2f}), "
+                        f"requiring manual selection for user {user_id}"
+                    )
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Please select a team to handle your request. No team could be automatically matched to your question.",
+                    )
+            else:
+                # No teams available
+                raise HTTPException(
+                    status_code=404,
+                    detail="No teams available. Please contact an administrator.",
+                )
+        
+        # Verify team exists
         team = await memory_store.get_team_by_id(team_id=team_id)
         if not team:
             raise HTTPException(
@@ -374,11 +453,17 @@ Use this complete context when answering the current request.
 
         background_tasks.add_task(run_with_context)
 
-        return {
+        response_data = {
             "status": "Request started successfully",
             "session_id": input_task.session_id,
             "plan_id": plan_id,
         }
+        
+        # Include auto-selected team info if applicable
+        if auto_selected_team_name:
+            response_data["auto_selected_team_name"] = auto_selected_team_name
+        
+        return response_data
 
     except Exception as e:
         track_event_if_configured(

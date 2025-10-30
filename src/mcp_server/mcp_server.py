@@ -27,6 +27,8 @@ from services.customer_analytics_service import CustomerAnalyticsService
 from services.operations_analytics_service import OperationsAnalyticsService
 from services.pricing_analytics_service import PricingAnalyticsService
 from services.marketing_analytics_service import MarketingAnalyticsService
+from services.csv_manipulation_service import CSVManipulationService
+from services.visualization_service import VisualizationService
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -45,6 +47,8 @@ factory.register_service(CustomerAnalyticsService())
 factory.register_service(OperationsAnalyticsService())
 factory.register_service(PricingAnalyticsService())
 factory.register_service(MarketingAnalyticsService())
+factory.register_service(CSVManipulationService())
+factory.register_service(VisualizationService())
 
 
 

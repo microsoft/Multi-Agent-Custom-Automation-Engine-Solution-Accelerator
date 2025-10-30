@@ -108,14 +108,30 @@ const HomeInput: React.FC<HomeInputProps> = ({
                 }
 
                 if (response.plan_id && response.plan_id !== null) {
-                    showToast("Plan created!", "success");
-                    dismissToast(id);
+                    // Show auto-selection notification if applicable
+                    if (response.auto_selected_team_name) {
+                        dismissToast(id);
+                        showToast(
+                            `Automatically selected ${response.auto_selected_team_name} for your task`,
+                            "success"
+                        );
+                        // Small delay before navigating to make notification visible
+                        setTimeout(() => {
+                            const planPath = isAdvancedMode 
+                                ? `/advanced/plan/${response.plan_id}` 
+                                : `/plan/${response.plan_id}`;
+                            navigate(planPath);
+                        }, 500);
+                    } else {
+                        showToast("Plan created!", "success");
+                        dismissToast(id);
 
-                    // Navigate to the correct mode (advanced or simple)
-                    const planPath = isAdvancedMode 
-                        ? `/advanced/plan/${response.plan_id}` 
-                        : `/plan/${response.plan_id}`;
-                    navigate(planPath);
+                        // Navigate to the correct mode (advanced or simple)
+                        const planPath = isAdvancedMode 
+                            ? `/advanced/plan/${response.plan_id}` 
+                            : `/plan/${response.plan_id}`;
+                        navigate(planPath);
+                    }
                 } else {
                     showToast("Failed to create plan", "error");
                     dismissToast(id);
@@ -126,12 +142,20 @@ const HomeInput: React.FC<HomeInputProps> = ({
                 dismissToast(id);
                 // Check if this is an RAI validation error
                 try {
+                    // Check if error is about team selection
+                    if (error?.response?.status === 400) {
+                        const errorDetail = error?.response?.data?.detail || error?.message || "";
+                        if (errorDetail.includes("select a team") || errorDetail.includes("team")) {
+                            errorMessage = "Please select a team to handle your request. Use the team selector in the sidebar.";
+                            showToast(errorMessage, "warning");
+                            return;
+                        }
+                    }
                     // errorDetail = JSON.parse(error);
                     errorMessage = error?.message || errorMessage;
                 } catch (parseError) {
                     console.error("Error parsing error detail:", parseError);
                 }
-
 
                 showToast(errorMessage, "error");
             } finally {

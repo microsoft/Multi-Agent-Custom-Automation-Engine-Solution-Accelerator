@@ -2,6 +2,7 @@
 import asyncio
 import logging
 import os
+import warnings
 # Azure monitoring
 import re
 import uuid
@@ -21,33 +22,40 @@ from v3.api.router import app_v3
 # Semantic Kernel imports
 from v3.orchestration.orchestration_manager import OrchestrationManager
 
+# Configure logging FIRST before any Azure imports
+logging.basicConfig(level=logging.INFO)
+
+# Suppress Pydantic warnings about model_ namespace conflicts (from third-party libraries)
+warnings.filterwarnings("ignore", message=".*Field.*has conflict with protected namespace.*model_.*")
+
+# Suppress noisy Azure and OpenTelemetry loggers BEFORE configuring monitoring
+logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
+logging.getLogger("azure.identity").setLevel(logging.WARNING)
+logging.getLogger("azure.identity.aio._internal").setLevel(logging.WARNING)
+logging.getLogger("azure.identity._credentials.environment").setLevel(logging.WARNING)
+logging.getLogger("azure.identity._credentials.managed_identity").setLevel(logging.WARNING)
+logging.getLogger("azure.monitor.opentelemetry.exporter.export._base").setLevel(logging.CRITICAL)
+logging.getLogger("azure.monitor.opentelemetry.exporter.statsbeat._manager").setLevel(logging.CRITICAL)
+logging.getLogger("opentelemetry.resource.detector.azure.vm").setLevel(logging.ERROR)
+
 # Check if the Application Insights Instrumentation Key is set in the environment variables
 connection_string = config.APPLICATIONINSIGHTS_CONNECTION_STRING
 if connection_string:
-    # Configure Application Insights if the Instrumentation Key is found
-    configure_azure_monitor(connection_string=connection_string)
-    logging.info(
-        "Application Insights configured with the provided Instrumentation Key"
-    )
+    # Configure Application Insights with resource detectors disabled for local development
+    # This prevents the Azure VM metadata errors when running locally
+    try:
+        configure_azure_monitor(
+            connection_string=connection_string,
+            disable_offline_storage=True,  # Disable offline storage for cleaner local dev
+        )
+        logging.info("Application Insights configured successfully")
+    except Exception as e:
+        logging.warning(f"Application Insights configuration had warnings (expected for local dev): {e}")
 else:
     # Log a warning if the Instrumentation Key is not found
     logging.warning(
         "No Application Insights Instrumentation Key found. Skipping configuration"
     )
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-
-# Suppress INFO logs from 'azure.core.pipeline.policies.http_logging_policy'
-logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(
-    logging.WARNING
-)
-logging.getLogger("azure.identity.aio._internal").setLevel(logging.WARNING)
-
-# # Suppress info logs from OpenTelemetry exporter
-logging.getLogger("azure.monitor.opentelemetry.exporter.export._base").setLevel(
-    logging.WARNING
-)
 
 # Initialize the FastAPI app
 app = FastAPI()

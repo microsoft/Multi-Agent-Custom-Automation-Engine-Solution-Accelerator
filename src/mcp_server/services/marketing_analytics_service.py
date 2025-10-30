@@ -47,10 +47,24 @@ class MarketingAnalyticsService(MCPToolBase):
 
     def _get_metadata(self, dataset_id: str, user_id: str = "default") -> Dict[str, Any]:
         metadata_path = self._metadata_path({"user_id": user_id, "dataset_id": dataset_id})
-        if not metadata_path.exists():
-            raise FileNotFoundError(f"No metadata found for dataset '{dataset_id}'")
-        with open(metadata_path, "r", encoding="utf-8") as f:
-            return json.load(f)
+        
+        # Try specified user first
+        if metadata_path.exists():
+            with open(metadata_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        
+        # Search across all users
+        LOGGER.info(f"Metadata for dataset {dataset_id} not found for user {user_id}, searching all users...")
+        for user_dir in self.dataset_root.iterdir():
+            if not user_dir.is_dir():
+                continue
+            candidate_metadata = self._metadata_path({"user_id": user_dir.name, "dataset_id": dataset_id})
+            if candidate_metadata.exists():
+                LOGGER.info(f"Found metadata for dataset {dataset_id} under user {user_dir.name}")
+                with open(candidate_metadata, "r", encoding="utf-8") as f:
+                    return json.load(f)
+        
+        raise FileNotFoundError(f"No metadata found for dataset '{dataset_id}'")
 
     def _get_dataset_path(self, dataset_id: str, user_id: str = "default") -> Path:
         metadata = self._get_metadata(dataset_id, user_id)

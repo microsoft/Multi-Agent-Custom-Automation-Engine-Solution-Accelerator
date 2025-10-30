@@ -16,6 +16,7 @@ from common.utils.dataset_utils import (
     extract_numeric_series,
     read_preview,
 )
+from fastapi import UploadFile
 
 
 METADATA_FILENAME = "metadata.json"
@@ -111,6 +112,53 @@ class DatasetService:
 
         self._write_metadata(dataset_dir, metadata)
         return metadata
+
+    async def upload_dataset(
+        self,
+        user_id: str,
+        file: UploadFile,
+    ) -> Dict[str, Any]:
+        """Handle FastAPI UploadFile and persist dataset."""
+        from fastapi import HTTPException
+        from common.utils.dataset_utils import ALLOWED_EXTENSIONS
+        
+        if not file or not file.filename:
+            raise HTTPException(status_code=400, detail="No dataset file provided")
+
+        extension = Path(file.filename).suffix.lower()
+        if extension not in ALLOWED_EXTENSIONS:
+            allowed = ", ".join(sorted(ALLOWED_EXTENSIONS))
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported file type '{extension}'. Allowed extensions: {allowed}",
+            )
+
+        contents = await file.read()
+        if not contents:
+            raise HTTPException(status_code=400, detail="Uploaded dataset is empty")
+
+        max_size = 5 * 1024 * 1024  # 5 MB
+        if len(contents) > max_size:
+            max_size_mb = max_size // (1024 * 1024)
+            raise HTTPException(
+                status_code=413,
+                detail=f"Dataset exceeds maximum allowed size of {max_size_mb} MB",
+            )
+
+        try:
+            return self.save_dataset(
+                user_id=user_id,
+                filename=file.filename,
+                content=contents,
+                content_type=file.content_type or "application/octet-stream",
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except Exception as exc:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.exception("Failed to store dataset upload: %s", exc)
+            raise HTTPException(status_code=500, detail="Failed to store dataset") from exc
 
     def list_datasets(self, user_id: str) -> List[Dict[str, Any]]:
         """Return metadata for all datasets uploaded by the user."""

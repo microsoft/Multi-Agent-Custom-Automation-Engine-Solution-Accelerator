@@ -22,4 +22,6 @@ export interface InputTaskResponse {
     plan_id: string;
     /** The original task description */
     description: string;
+    /** Name of automatically selected team (if auto-selection occurred) */
+    auto_selected_team_name?: string;
 }

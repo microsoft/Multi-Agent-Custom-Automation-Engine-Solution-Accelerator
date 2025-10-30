@@ -75,6 +75,34 @@ class FinanceService(MCPToolBase):
                 except json.JSONDecodeError as exc:
                     LOGGER.warning("Failed to parse metadata %s: %s", metadata_file, exc)
 
+    def _get_metadata(self, dataset_id: str, user_id: str = "default") -> Dict[str, Any]:
+        """Get metadata for a dataset. Searches across all users if not found for specified user."""
+        user_folder = _sanitize_identifier(user_id)
+        dataset_folder = _sanitize_identifier(dataset_id)
+        metadata_path = self.dataset_root / user_folder / dataset_folder / METADATA_FILENAME
+        
+        # Try specified user first
+        if metadata_path.exists():
+            try:
+                return json.loads(metadata_path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as exc:
+                LOGGER.warning("Failed to parse metadata %s: %s", metadata_path, exc)
+        
+        # Search across all users
+        LOGGER.info(f"Metadata for dataset {dataset_id} not found for user {user_id}, searching all users...")
+        for user_dir in self.dataset_root.iterdir():
+            if not user_dir.is_dir():
+                continue
+            candidate_metadata = user_dir / dataset_folder / METADATA_FILENAME
+            if candidate_metadata.exists():
+                try:
+                    LOGGER.info(f"Found metadata for dataset {dataset_id} under user {user_dir.name}")
+                    return json.loads(candidate_metadata.read_text(encoding="utf-8"))
+                except json.JSONDecodeError as exc:
+                    LOGGER.warning("Failed to parse metadata %s: %s", candidate_metadata, exc)
+        
+        raise FileNotFoundError(f"No metadata found for dataset '{dataset_id}'")
+
     def _find_metadata(self, dataset_id: str) -> Optional[Dict[str, Any]]:
         target = dataset_id.strip()
         for metadata in self._iter_metadata():
@@ -354,6 +382,262 @@ class FinanceService(MCPToolBase):
                 LOGGER.exception("Failed to profile dataset %s", dataset_id)
                 return {"error": f"Unable to prepare dataset: {exc}"}
 
+        @mcp.tool(tags={self.domain.value})
+        def create_budget_plan(
+            dataset_id: str,
+            budget_periods: int = 12,
+            growth_rate: float = 0.0
+        ) -> Dict[str, Any]:
+            """Create a budget plan based on historical financial data."""
+            metadata = self._find_metadata(dataset_id)
+            if not metadata:
+                return {"error": f"Dataset '{dataset_id}' was not found."}
+
+            dataset_path = self._dataset_file(metadata)
+            if not dataset_path:
+                return {"error": f"Dataset file for '{dataset_id}' is missing."}
+
+            try:
+                import csv
+                values_list = []
+                with open(dataset_path, "r", encoding="utf-8", newline="") as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        for key, value in row.items():
+                            try:
+                                numeric_val = float(value)
+                                values_list.append(numeric_val)
+                                break
+                            except (ValueError, TypeError):
+                                continue
+                
+                if not values_list:
+                    return {"error": "No numeric columns found in dataset"}
+                
+                baseline_avg = sum(values_list[-6:]) / min(6, len(values_list))
+                
+                budget = []
+                for period in range(1, budget_periods + 1):
+                    projected_value = baseline_avg * (1 + growth_rate) ** period
+                    budget.append({
+                        "period": period,
+                        "projected_value": round(projected_value, 2),
+                        "growth_applied": round(growth_rate * 100, 2)
+                    })
+                
+                total_budget = sum(p["projected_value"] for p in budget)
+                
+                return {
+                    "dataset_id": dataset_id,
+                    "budget_periods": budget_periods,
+                    "growth_rate": growth_rate,
+                    "baseline_average": round(baseline_avg, 2),
+                    "budget_plan": budget,
+                    "total_budget": round(total_budget, 2)
+                }
+            except Exception as exc:
+                LOGGER.exception("Failed to create budget plan")
+                return {"error": f"Unable to create budget plan: {exc}"}
+
+        @mcp.tool(tags={self.domain.value})
+        def analyze_budget_variance(
+            actual_dataset_id: str,
+            budget_dataset_id: str,
+            variance_threshold: float = 0.10
+        ) -> Dict[str, Any]:
+            """Analyze variance between actual and budgeted financial performance."""
+            actual_metadata = self._find_metadata(actual_dataset_id)
+            budget_metadata = self._find_metadata(budget_dataset_id)
+            
+            if not actual_metadata or not budget_metadata:
+                return {"error": "One or both datasets not found"}
+            
+            actual_path = self._dataset_file(actual_metadata)
+            budget_path = self._dataset_file(budget_metadata)
+            
+            if not actual_path or not budget_path:
+                return {"error": "One or both dataset files missing"}
+
+            try:
+                import csv
+                with open(actual_path, "r", encoding="utf-8") as f:
+                    actual_data = list(csv.DictReader(f))
+                
+                with open(budget_path, "r", encoding="utf-8") as f:
+                    budget_data = list(csv.DictReader(f))
+                
+                min_len = min(len(actual_data), len(budget_data))
+                variances = []
+                
+                for i in range(min_len):
+                    actual_val = 0
+                    budget_val = 0
+                    
+                    for key in actual_data[i].keys():
+                        try:
+                            actual_val = float(actual_data[i][key])
+                            budget_val = float(budget_data[i][key])
+                            break
+                        except (ValueError, TypeError, KeyError):
+                            continue
+                    
+                    if budget_val != 0:
+                        variance_pct = (actual_val - budget_val) / abs(budget_val)
+                        variances.append({
+                            "period": i + 1,
+                            "actual": round(actual_val, 2),
+                            "budget": round(budget_val, 2),
+                            "variance": round(actual_val - budget_val, 2),
+                            "variance_percent": round(variance_pct * 100, 2),
+                            "is_significant": abs(variance_pct) > variance_threshold
+                        })
+                
+                return {
+                    "total_periods": len(variances),
+                    "variance_threshold": variance_threshold * 100,
+                    "variances": variances
+                }
+            except Exception as exc:
+                LOGGER.exception("Failed to analyze budget variance")
+                return {"error": f"Unable to analyze variance: {exc}"}
+
+        @mcp.tool(tags={self.domain.value})
+        def calculate_financial_ratios(
+            dataset_id: str,
+            ratio_types: Optional[List[str]] = None
+        ) -> Dict[str, Any]:
+            """Calculate key financial ratios from dataset."""
+            metadata = self._find_metadata(dataset_id)
+            if not metadata:
+                return {"error": f"Dataset '{dataset_id}' was not found."}
+
+            dataset_path = self._dataset_file(metadata)
+            if not dataset_path:
+                return {"error": f"Dataset file for '{dataset_id}' is missing."}
+
+            try:
+                columns, preview = read_preview(dataset_path)
+                numeric_columns = detect_numeric_columns(dataset_path)
+                
+                ratios = {}
+                revenue_col = None
+                profit_col = None
+                
+                for col in columns:
+                    col_lower = col.lower()
+                    if 'revenue' in col_lower or 'sales' in col_lower:
+                        revenue_col = col
+                    if 'profit' in col_lower or 'net' in col_lower:
+                        profit_col = col
+                
+                if revenue_col and revenue_col in numeric_columns:
+                    values, _ = extract_numeric_series(dataset_path, revenue_col)
+                    avg_revenue = sum(values) / len(values) if values else 0
+                    
+                    if profit_col and profit_col in numeric_columns:
+                        profit_values, _ = extract_numeric_series(dataset_path, profit_col)
+                        avg_profit = sum(profit_values) / len(profit_values) if profit_values else 0
+                        
+                        if avg_revenue > 0:
+                            profit_margin = (avg_profit / avg_revenue) * 100
+                            ratios["profit_margin"] = {
+                                "value": round(profit_margin, 2),
+                                "unit": "percent"
+                            }
+                
+                return {
+                    "dataset_id": dataset_id,
+                    "ratios_calculated": list(ratios.keys()),
+                    "ratios": ratios
+                }
+            except Exception as exc:
+                LOGGER.exception("Failed to calculate ratios")
+                return {"error": f"Unable to calculate ratios: {exc}"}
+
+        @mcp.tool(tags={self.domain.value})
+        def forecast_scenario_analysis(
+            dataset_id: str,
+            target_column: str,
+            scenarios: List[Dict[str, Any]],
+            periods: int = 3
+        ) -> Dict[str, Any]:
+            """Run scenario analysis with multiple forecast scenarios."""
+            metadata = self._find_metadata(dataset_id)
+            if not metadata:
+                return {"error": f"Dataset '{dataset_id}' was not found."}
+
+            dataset_path = self._dataset_file(metadata)
+            if not dataset_path:
+                return {"error": f"Dataset file for '{dataset_id}' is missing."}
+
+            try:
+                values, row_count = extract_numeric_series(dataset_path, target_column)
+                baseline = summarize_numeric_series(values)
+                baseline_avg = baseline.get("mean", 0)
+                
+                scenario_results = []
+                for scenario in scenarios:
+                    scenario_name = scenario.get("name", "Unnamed")
+                    growth_rate = scenario.get("growth_rate", 0.0)
+                    
+                    forecast_values = []
+                    for period in range(1, periods + 1):
+                        forecast_val = baseline_avg * (1 + growth_rate) ** period
+                        forecast_values.append(round(forecast_val, 2))
+                    
+                    scenario_results.append({
+                        "scenario_name": scenario_name,
+                        "growth_rate": growth_rate,
+                        "forecast": forecast_values
+                    })
+                
+                return {
+                    "dataset_id": dataset_id,
+                    "target_column": target_column,
+                    "scenarios": scenario_results
+                }
+            except Exception as exc:
+                LOGGER.exception("Failed scenario analysis")
+                return {"error": f"Unable to run scenario analysis: {exc}"}
+
+        @mcp.tool(tags={self.domain.value})
+        def optimize_cash_flow(
+            dataset_id: str,
+            cash_in_column: str,
+            cash_out_column: str
+        ) -> Dict[str, Any]:
+            """Analyze and optimize cash flow patterns."""
+            metadata = self._find_metadata(dataset_id)
+            if not metadata:
+                return {"error": f"Dataset '{dataset_id}' was not found."}
+
+            dataset_path = self._dataset_file(metadata)
+            if not dataset_path:
+                return {"error": f"Dataset file for '{dataset_id}' is missing."}
+
+            try:
+                cash_in_values, _ = extract_numeric_series(dataset_path, cash_in_column)
+                cash_out_values, _ = extract_numeric_series(dataset_path, cash_out_column)
+                
+                if len(cash_in_values) != len(cash_out_values):
+                    return {"error": "Cash in and cash out columns must have same number of rows"}
+                
+                net_cash_flow = [in_val - out_val for in_val, out_val in zip(cash_in_values, cash_out_values)]
+                
+                total_in = sum(cash_in_values)
+                total_out = sum(cash_out_values)
+                total_net = sum(net_cash_flow)
+                
+                return {
+                    "dataset_id": dataset_id,
+                    "total_cash_in": round(total_in, 2),
+                    "total_cash_out": round(total_out, 2),
+                    "net_cash_flow": round(total_net, 2)
+                }
+            except Exception as exc:
+                LOGGER.exception("Failed to optimize cash flow")
+                return {"error": f"Unable to analyze cash flow: {exc}"}
+
     @property
     def tool_count(self) -> int:
-        return 5
+        return 9
