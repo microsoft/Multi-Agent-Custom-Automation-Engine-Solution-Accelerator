@@ -205,14 +205,24 @@ class OrchestrationManager:
                                 cls.logger.error("Error closing agent: %s", e)
 
             factory = MagenticAgentFactory()
-            agents = await factory.get_agents(
-                user_id=user_id, team_config_input=team_config
-            )
-            cls.logger.info("Created %d agents for user '%s'", len(agents), user_id)
-            
-            orchestration_config.orchestrations[user_id] = await cls.init_orchestration(
-                agents, user_id
-            )
+            try:
+                agents = await factory.get_agents(
+                    user_id=user_id, team_config_input=team_config
+                )
+                cls.logger.info("Created %d agents for user '%s'", len(agents), user_id)
+            except Exception as e:
+                cls.logger.error("Failed to create agents for user '%s': %s", user_id, e)
+                print(f"Failed to create agents for user '{user_id}': {e}")
+                raise
+            try:
+                cls.logger.info("Initializing new orchestration for user '%s'", user_id)
+                orchestration_config.orchestrations[user_id] = await cls.init_orchestration(
+                    agents, user_id
+                )
+            except Exception as e:
+                cls.logger.error("Failed to initialize orchestration for user '%s': %s", user_id, e)
+                print(f"Failed to initialize orchestration for user '{user_id}': {e}")
+                raise
         return orchestration_config.get_current_orchestration(user_id)
 
     # ---------------------------
