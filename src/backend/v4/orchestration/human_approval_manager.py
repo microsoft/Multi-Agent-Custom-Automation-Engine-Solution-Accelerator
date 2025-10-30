@@ -11,8 +11,6 @@ import v4.models.messages as messages
 from agent_framework import ChatMessage
 from agent_framework._workflows._magentic import (
     MagenticContext,
-    MagenticProgressLedger as ProgressLedger,
-    MagenticProgressLedgerItem as ProgressLedgerItem,
     StandardMagenticManager,
     ORCHESTRATOR_FINAL_ANSWER_PROMPT,
     ORCHESTRATOR_TASK_LEDGER_PLAN_PROMPT,
@@ -75,7 +73,6 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
             ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT + plan_append
         )
         kwargs["final_answer_prompt"] = ORCHESTRATOR_FINAL_ANSWER_PROMPT + final_append
-        #kwargs["current_user_id"] = user_id  # retained for downstream usage if needed
 
         self.current_user_id = user_id
         super().__init__(*args, **kwargs)
@@ -161,11 +158,12 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
         )
         return replan_message
 
-    async def create_progress_ledger(
-        self, magentic_context: MagenticContext
-    ) -> ProgressLedger:
+    async def create_progress_ledger(self, magentic_context: MagenticContext):
         """
         Check for max rounds exceeded and send final message if so, else defer to base.
+        
+        Returns:
+            Progress ledger object (type depends on agent_framework version)
         """
         if magentic_context.round_count >= orchestration_config.max_rounds:
             final_message = messages.FinalResultMessage(
@@ -180,22 +178,24 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
                 message_type=messages.WebsocketMessageType.FINAL_RESULT_MESSAGE,
             )
 
-            return ProgressLedger(
-                is_request_satisfied=ProgressLedgerItem(
-                    reason="Maximum rounds exceeded", answer=True
-                ),
-                is_in_loop=ProgressLedgerItem(reason="Terminating", answer=False),
-                is_progress_being_made=ProgressLedgerItem(
-                    reason="Terminating", answer=False
-                ),
-                next_speaker=ProgressLedgerItem(reason="Task complete", answer=""),
-                instruction_or_question=ProgressLedgerItem(
-                    reason="Task complete",
-                    answer="Process terminated due to maximum rounds exceeded",
-                ),
-            )
+            # Call base class to get the proper ledger type, then raise to terminate
+            ledger = await super().create_progress_ledger(magentic_context)
+            
+            # Override key fields to signal termination
+            ledger.is_request_satisfied.answer = True
+            ledger.is_request_satisfied.reason = "Maximum rounds exceeded"
+            ledger.is_in_loop.answer = False
+            ledger.is_in_loop.reason = "Terminating"
+            ledger.is_progress_being_made.answer = False
+            ledger.is_progress_being_made.reason = "Terminating"
+            ledger.next_speaker.answer = ""
+            ledger.next_speaker.reason = "Task complete"
+            ledger.instruction_or_question.answer = "Process terminated due to maximum rounds exceeded"
+            ledger.instruction_or_question.reason = "Task complete"
+            
+            return ledger
 
-        # Delegate to base (which creates a MagenticProgressLedger)
+        # Delegate to base for normal progress ledger creation
         return await super().create_progress_ledger(magentic_context)
 
     async def _wait_for_user_approval(

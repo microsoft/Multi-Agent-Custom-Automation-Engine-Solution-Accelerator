@@ -160,9 +160,11 @@ class MagenticAgentFactory:
 
                 except (UnsupportedModelError, InvalidConfigurationError) as e:
                     self.logger.warning(f"Skipped agent {agent_cfg.name}: {e}")
+                    print(f"Skipped agent {agent_cfg.name}: {e}")
                     continue
                 except Exception as e:
                     self.logger.error(f"Failed to create agent {agent_cfg.name}: {e}")
+                    print(f"Failed to create agent {agent_cfg.name}: {e}")
                     continue
 
             self.logger.info(

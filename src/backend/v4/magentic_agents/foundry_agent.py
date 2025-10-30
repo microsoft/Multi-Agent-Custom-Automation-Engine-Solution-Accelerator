@@ -65,10 +65,11 @@ class FoundryAgentTemplate(AzureAgentBase):
 
         # File Search tool (RAG)
         if self.search:
-            search_tool = await self._make_file_search_tool()
-            if search_tool:
-                tools.append(search_tool)
-                self.logger.info("Added File Search tool.")
+            print("Adding File Search tool.")
+            # search_tool = await self._make_file_search_tool()
+            # if search_tool:
+            #     tools.append(search_tool)
+            #     self.logger.info("Added File Search tool.")
 
         # Code Interpreter
         if self.enable_code_interpreter:
