@@ -43,7 +43,7 @@ class ReasoningAgentTemplate(MCPEnabledBase):
         agent_description: str,
         agent_instructions: str,
         model_deployment_name: str,
-        azure_ai_project_endpoint: str,
+        project_endpoint: str | None = "",
         search_config: SearchConfig | None = None,
         mcp_config: MCPConfig | None = None,
         max_search_docs: int = 3,
@@ -55,7 +55,7 @@ class ReasoningAgentTemplate(MCPEnabledBase):
             agent_description: Description of the agent's purpose
             agent_instructions: System instructions for the agent
             model_deployment_name: Reasoning model deployment (e.g., "o1", "o3-mini")
-            azure_ai_project_endpoint: Azure AI Project endpoint URL
+            project_endpoint: Azure AI Project endpoint URL
             search_config: Optional search configuration for Azure AI Search
             mcp_config: Optional MCP server configuration
             max_search_docs: Maximum number of search documents to retrieve
@@ -65,7 +65,7 @@ class ReasoningAgentTemplate(MCPEnabledBase):
         self.agent_description = agent_description
         self.base_instructions = agent_instructions
         self.model_deployment_name = model_deployment_name
-        self.project_endpoint = azure_ai_project_endpoint
+        self.project_endpoint = project_endpoint
         self.search_config = search_config
         self.max_search_docs = max_search_docs
         

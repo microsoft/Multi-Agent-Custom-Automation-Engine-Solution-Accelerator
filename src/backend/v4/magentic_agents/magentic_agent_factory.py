@@ -102,13 +102,12 @@ class MagenticAgentFactory:
         if use_reasoning:
             # Get reasoning specific configuration
             azure_openai_endpoint = config.AZURE_OPENAI_ENDPOINT
-
             agent = ReasoningAgentTemplate(
                 agent_name=agent_obj.name,
                 agent_description=getattr(agent_obj, "description", ""),
                 agent_instructions=getattr(agent_obj, "system_message", ""),
                 model_deployment_name=deployment_name,
-                azure_openai_endpoint=azure_openai_endpoint,
+                project_endpoint=azure_openai_endpoint, # type: ignore
                 search_config=search_config,
                 mcp_config=mcp_config,
             )
