@@ -121,6 +121,7 @@ if ($ResourceGroup) {
 # Upload CSV files
 Write-Host "Uploading CSV files to blob storage..."
 az storage blob upload-batch --account-name $StorageAccount --destination $BlobContainer --source "data/datasets" --auth-mode login --pattern "*.csv" --overwrite --output none
+az storage blob upload-batch --account-name $StorageAccount --destination $BlobContainer --source "data/datasets" --auth-mode login --pattern "*.json" --overwrite --output none
 if ($LASTEXITCODE -ne 0) { Write-Host "Error: Failed to upload CSV files."; exit 1 }
 Write-Host "CSV files uploaded successfully."
 
@@ -186,11 +187,11 @@ if ($hasCsv) {
     & $pythonCmd "infra/scripts/index_datasets.py" $StorageAccount $BlobContainer $AiSearch $AiSearchIndex
     if ($LASTEXITCODE -ne 0) { Write-Host "Error: CSV indexing script failed."; exit 1 }
 }
-if ($hasPdf) {
-    Write-Host "Running the python script to index PDF data"
-    & $pythonCmd "infra/scripts/index_rfp_data.py" $StorageAccount $BlobContainer $AiSearch $AiSearchIndex
-    if ($LASTEXITCODE -ne 0) { Write-Host "Error: PDF indexing script failed."; exit 1 }
-}
+# if ($hasPdf) {
+#     Write-Host "Running the python script to index PDF data"
+#     & $pythonCmd "infra/scripts/index_rfp_data.py" $StorageAccount $BlobContainer $AiSearch $AiSearchIndex
+#     if ($LASTEXITCODE -ne 0) { Write-Host "Error: PDF indexing script failed."; exit 1 }
+# }
 if (-not $hasCsv -and -not $hasPdf) {
     Write-Host "No CSV or PDF files found to index."
 }
