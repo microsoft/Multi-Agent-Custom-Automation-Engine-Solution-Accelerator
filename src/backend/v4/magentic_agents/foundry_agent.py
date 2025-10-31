@@ -33,11 +33,12 @@ class FoundryAgentTemplate(AzureAgentBase):
         agent_description: str,
         agent_instructions: str,
         model_deployment_name: str,
+        project_endpoint: str,
         enable_code_interpreter: bool = False,
         mcp_config: MCPConfig | None = None,
         search_config: SearchConfig | None = None,
     ) -> None:
-        super().__init__(mcp=mcp_config, model_deployment_name=model_deployment_name)
+        super().__init__(mcp=mcp_config, model_deployment_name=model_deployment_name, project_endpoint=project_endpoint)
         self.agent_name = agent_name
         self.agent_description = agent_description
         self.agent_instructions = agent_instructions
@@ -110,10 +111,10 @@ class FoundryAgentTemplate(AzureAgentBase):
         query_type = getattr(self.search, "search_query_type", "vector")
         
         # ai_search_conn_id = ""
-        # async for connection in self.client.project_client.connections.list():
-        #     if connection.type == ConnectionType.AZURE_AI_SEARCH:
-        #         ai_search_conn_id = connection.id
-        #         break
+        async for connection in self.client.project_client.connections.list():
+            if connection.type == ConnectionType.AZURE_AI_SEARCH:
+                connection_id = connection.id
+                break
         if not connection_id or not index_name:
             self.logger.error(
                 "Missing azure_search_connection_id or azure_search_index_name in search_config; aborting Azure Search path."

@@ -118,6 +118,7 @@ class MagenticAgentFactory:
                 agent_instructions=getattr(agent_obj, "system_message", ""),
                 model_deployment_name=deployment_name,
                 enable_code_interpreter=getattr(agent_obj, "coding_tools", False),
+                project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
                 mcp_config=mcp_config,
                 search_config=search_config,
             )
