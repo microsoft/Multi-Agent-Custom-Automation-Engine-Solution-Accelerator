@@ -33,6 +33,7 @@ async def create_RAI_agent() -> FoundryAgentTemplate:
         agent_instructions=agent_instructions,
         model_deployment_name=model_deployment_name,
         enable_code_interpreter=False,
+        project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
         mcp_config=None,
         search_config=None,
     )

@@ -111,14 +111,15 @@ class AzureAgentBase(MCPEnabledBase):
       - optionally register themselves via agent_registry
     """
 
-    def __init__(self, mcp: MCPConfig | None = None, model_deployment_name: str | None = None) -> None:
+    def __init__(self, mcp: MCPConfig | None = None, model_deployment_name: str | None = None, project_endpoint: str | None = None) -> None:
         super().__init__(mcp=mcp)
         self.creds: Optional[DefaultAzureCredential] = None
         self.client: Optional[AzureAIAgentClient] = None
-        self.project_endpoint: Optional[str] = None
+       
         self._created_ephemeral: bool = (
             False  # reserved if you add ephemeral agent cleanup
         )
+        self.project_endpoint = project_endpoint
         self.model_deployment_name = model_deployment_name
 
     async def open(self) -> "AzureAgentBase":
@@ -126,12 +127,6 @@ class AzureAgentBase(MCPEnabledBase):
             return self
         self._stack = AsyncExitStack()
 
-        # Resolve Azure AI Project endpoint (mirrors old SK env var usage)
-        self.project_endpoint = os.getenv("AZURE_AI_PROJECT_ENDPOINT")
-        if not self.project_endpoint:
-            raise RuntimeError(
-                "AZURE_AI_PROJECT_ENDPOINT environment variable is required for AzureAgentBase."
-            )
 
         # Acquire credential
         self.creds = DefaultAzureCredential()
