@@ -1,114 +1,130 @@
 import os
+import uuid
+from azure.identity import DefaultAzureCredential
+from azure.storage.blob import BlobServiceClient
 from azure.core.credentials import AzureKeyCredential
-from azure.search.documents.indexes import SearchIndexClient, SearchIndexerClient
+from azure.search.documents import SearchClient
+from azure.search.documents.indexes import SearchIndexClient
 from azure.search.documents.indexes.models import (
     SearchIndex,
     SimpleField,
     SearchableField,
     SearchFieldDataType,
-    SearchIndexerDataSourceConnection,
-    SearchIndexer,
-    SearchIndexerDataContainer,
-    BlobIndexerDataToExtract,
-    BlobIndexerParsingMode,
-    FieldMapping,
-    FieldMappingFunction
 )
+from PyPDF2 import PdfReader
 
 # --- CONFIGURATION ---
-search_service_endpoint = ""
-admin_key = ""
+search_service_endpoint =""
+admin_key =""  
+storage_account_url = ""
+blob_container_name =""
+local_data_folder = ""
+index_name = ""
 
-storage_connection_string = ""
-blob_container_name = "rfp-documents"
+# --- STEP 1: Upload PDFs to Azure Blob Storage ---
+print("Uploading PDF files to Azure Blob Storage using Azure AD authentication...")
 
-data_source_name = "clm-rfp-blob-datasource"
-index_name = "clm-rfp-index"
-indexer_name = "clm-rfp-indexer"
+try:
+    # Authenticate using Azure AD
+    blob_service_client = BlobServiceClient(account_url=storage_account_url, credential=DefaultAzureCredential())
+    container_client = blob_service_client.get_container_client(blob_container_name)
 
-# --- Initialize Clients ---
+    # Create container if it doesn't exist
+    if not container_client.exists():
+        container_client.create_container()
+        print(f"Created container: {blob_container_name}")
+    else:
+        print(f"Container already exists: {blob_container_name}")
+
+    uploaded_files = []
+    for root, _, files in os.walk(local_data_folder):
+        for filename in files:
+            if filename.lower().endswith(".pdf"):
+                file_path = os.path.join(root, filename)
+                blob_path = os.path.relpath(file_path, local_data_folder)
+                blob_client = container_client.get_blob_client(blob_path)
+
+                with open(file_path, "rb") as data:
+                    blob_client.upload_blob(data, overwrite=True)
+                print(f"⬆️ Uploaded: {blob_path}")
+                uploaded_files.append(filename)
+
+    if not uploaded_files:
+        print(" No PDF files found to upload.")
+except Exception as e:
+    print(f" Upload failed: {e}")
+
+# --- STEP 2: Create Azure AI Search Index ---
+print("\n Setting up Azure AI Search index...")
+
 index_client = SearchIndexClient(endpoint=search_service_endpoint, credential=AzureKeyCredential(admin_key))
-indexer_client = SearchIndexerClient(endpoint=search_service_endpoint, credential=AzureKeyCredential(admin_key))
 
-# --- Define Index ---
-fields = [
+index_fields = [ 
     SimpleField(name="id", type=SearchFieldDataType.String, key=True),
-    SearchableField(name="section", type=SearchFieldDataType.String, filterable=True, sortable=True),
-    SearchableField(name="text", type=SearchFieldDataType.String, analyzer_name="en.microsoft"),
-    SimpleField(name="source_csv", type=SearchFieldDataType.String, filterable=True)
+    SearchableField(name="content", type=SearchFieldDataType.String, searchable=True),
+    SearchableField(name="title", type=SearchFieldDataType.String, searchable=True, filterable=True)
 ]
 
-index = SearchIndex(name=index_name, fields=fields)
+index = SearchIndex(name=index_name, fields=index_fields)
 
 try:
     index_client.create_index(index)
-    print(f"✅ Created index: {index_name}")
+    print(f" Created index: {index_name}")
 except Exception as e:
-    if "already exists" in str(e):
-        print(f"⚠️ Index already exists: {index_name}")
+    if "already exists" in str(e).lower():
+        print(f" Index already exists: {index_name}")
     else:
-        print(f"❌ Failed to create index: {e}")
+        print(f" Failed to create index: {e}")
 
-# --- Define Data Source (Blob Storage) ---
-data_source = SearchIndexerDataSourceConnection(
-    name=data_source_name,
-    type="azureblob",
-    connection_string=storage_connection_string,
-    container=SearchIndexerDataContainer(name=blob_container_name),
-    description="CLM RFP CSVs from Azure Blob Storage"
-)
+# --- STEP 3: Extract text from PDFs and index into Azure AI Search ---
+print("\n Extracting text from PDFs and indexing into Azure AI Search...")
 
-try:
-    indexer_client.create_data_source_connection(data_source)
-    print(f"✅ Created data source: {data_source_name}")
-except Exception as e:
-    if "already exists" in str(e):
-        print(f"⚠️ Data source already exists: {data_source_name}")
-    else:
-        print(f"❌ Failed to create data source: {e}")
+search_client = SearchClient(endpoint=search_service_endpoint, index_name=index_name, credential=AzureKeyCredential(admin_key))
 
-# --- Define Indexer (CSV parsing) ---
-indexer = SearchIndexer(
-    name=indexer_name,
-    description="Indexer for CLM RFP CSV data from Blob Storage",
-    data_source_name=data_source_name,
-    target_index_name=index_name,
-    parameters={
-    "configuration": {
-        "parsingMode": "delimitedText",
-        "delimiter": ",",
-        "firstLineContainsHeaders": True,
-        "dataToExtract": "contentAndMetadata",
-        "documentRoot": "/",
-        "failOnUnsupportedContentType": False,
-        "indexedFileNameExtensions": ".csv",
-        "contentTypeDetection": "auto",  # ✅ REQUIRED
-        "detectEncodingFromByteOrderMarks": True,
-        "encoding": "utf-8"
-    }
-}
+def extract_text_from_pdf(pdf_path):
+    """Extract text from a PDF file using PyPDF2."""
+    text = ""
+    try:
+        with open(pdf_path, "rb") as f:
+            reader = PdfReader(f)
+            for page in reader.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text + "\n"
+    except Exception as e:
+        print(f" Error reading {pdf_path}: {e}")
+    return text.strip()
 
-,
-    field_mappings=[
-        FieldMapping(source_field_name="id", target_field_name="id"),
-        FieldMapping(source_field_name="section", target_field_name="section"),
-        FieldMapping(source_field_name="text", target_field_name="text"),
-        FieldMapping(source_field_name="metadata_storage_name", target_field_name="source_csv")
-    ]
-)
+docs = []
+for root, _, files in os.walk(local_data_folder):
+    for filename in files:
+        if filename.lower().endswith(".pdf"):
+            file_path = os.path.join(root, filename)
+            text_content = extract_text_from_pdf(file_path)
 
-try:
-    indexer_client.create_indexer(indexer)
-    print(f"✅ Created indexer: {indexer_name}")
-except Exception as e:
-    if "already exists" in str(e):
-        print(f"⚠️ Indexer already exists: {indexer_name}")
-    else:
-        print(f"❌ Failed to create indexer: {e}")
+            if text_content:
+                docs.append({
+                    "id": str(uuid.uuid4()),
+                    "content": text_content,
+                    "title": filename
+                })
+                print(f" Extracted and prepared: {filename}")
+            else:
+                print(f" No text extracted from {filename}")
 
-# --- Run Indexer ---
-try:
-    indexer_client.run_indexer(indexer_name)
-    print("🚀 Indexer started successfully.")
-except Exception as e:
-    print(f"❌ Failed to run indexer: {e}")
+# --- Upload documents to index ---
+if docs:
+    try:
+        batch_size = 500  # Upload in manageable chunks
+        for i in range(0, len(docs), batch_size):
+            chunk = docs[i:i + batch_size]
+            results = search_client.upload_documents(chunk)
+            succeeded = sum(1 for r in results if r.succeeded)
+            print(f" Indexed {succeeded}/{len(chunk)} documents in batch {i//batch_size + 1}")
+        print(f" Done! Total indexed documents: {len(docs)}")
+    except Exception as e:
+        print(f" Failed to upload documents: {e}")
+else:
+    print(" No documents to index.")
+
+print("\n PDFs are now stored in Azure Blob Storage and indexed in Azure AI Search.")
