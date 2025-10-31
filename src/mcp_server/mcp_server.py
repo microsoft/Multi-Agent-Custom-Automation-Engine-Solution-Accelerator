@@ -13,8 +13,6 @@ from config.settings import config
 from core.factory import MCPToolFactory
 from fastmcp import FastMCP
 from fastmcp.server.auth.providers.jwt import JWTVerifier
-from services.data_tool_service import DataToolService
-from services.general_service import GeneralService
 from services.hr_service import HRService
 from services.marketing_service import MarketingService
 from services.product_service import ProductService
@@ -33,11 +31,6 @@ factory.register_service(TechSupportService())
 factory.register_service(MarketingService())
 factory.register_service(ProductService())
 
-# General service has tests for llm to mcp connectivity
-#factory.register_service(GeneralService())
-
-# Register DataToolService with the dataset path
-#factory.register_service(DataToolService(dataset_path="datasets"))
 
 
 def create_fastmcp_server():

@@ -29,11 +29,6 @@ The solution leverages Azure OpenAI Service, Azure Container Apps, Azure Cosmos 
 |![image](./docs/images/readme/agent_flow.png)|
 |---|
 
-### How to customize
-If you'd like to customize the solution accelerator, here are some common areas to start:
-
-[Custom scenario](./docs/CustomizeSolution.md)
-
 <br/>
 
 ### Additional resources
@@ -71,6 +66,8 @@ Quick deploy
 
 ### How to install or deploy
 Follow the quick deploy steps on the deployment guide to deploy this solution to your own Azure subscription.
+
+> **Note:** This solution accelerator requires **Azure Developer CLI (azd) version 1.18.0 or higher**. Please ensure you have the latest version installed before proceeding with deployment. [Download azd here](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/install-azd).
 
 [Click here to launch the deployment guide](./docs/DeploymentGuide.md)
 <br/><br/>

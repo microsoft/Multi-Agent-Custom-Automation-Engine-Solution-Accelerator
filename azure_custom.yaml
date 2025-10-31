@@ -45,33 +45,60 @@ hooks:
   postdeploy:
     windows:
       run: |
-        Write-Host "To upload Team Configurations to Cosmos. Run the following command in PowerShell:"
-        Write-Host "infra\scripts\Upload-Team-Config.ps1" -ForegroundColor Cyan
         Write-Host ""
-        Write-Host "To index Sample Data into Azure Search. Run the following command in PowerShell:"
-        Write-Host "infra\scripts\Process-Sample-Data.ps1" -ForegroundColor Cyan
+        Write-Host "===============================================================" -ForegroundColor Yellow
+        Write-Host " POST-DEPLOYMENT STEPS (PowerShell) " -ForegroundColor Green
+        Write-Host "===============================================================" -ForegroundColor Yellow
         Write-Host ""
-        Write-Host "If you want to run both scripts as single command, you can use the following command in PowerShell:"
-        Write-Host "infra\scripts\Team-Config-And-Data.ps1" -ForegroundColor Cyan
+
+        Write-Host " STEP 1: Upload Team Configurations to Cosmos DB" -ForegroundColor White
+        Write-Host "  👉 Run the following command in PowerShell:" -ForegroundColor White
+        Write-Host "   infra\scripts\Upload-Team-Config.ps1" -ForegroundColor Cyan
         Write-Host ""
-        Write-Host "You can access the deployed Frontend application at the following URL:"
-        Write-Host "https://$env:webSiteDefaultHostname" -ForegroundColor Cyan
+
+        Write-Host " STEP 2: Index Sample Data into Azure Search" -ForegroundColor White
+        Write-Host "  👉 Run the following command in PowerShell:" -ForegroundColor White
+        Write-Host "   infra\scripts\Process-Sample-Data.ps1" -ForegroundColor Cyan
+        Write-Host ""
+
+        Write-Host "💡 Alternatively, you can run above BOTH steps together using:" -ForegroundColor Yellow
+        Write-Host "   infra\scripts\Team-Config-And-Data.ps1" -ForegroundColor Cyan
+        Write-Host ""
+
+        Write-Host "🌐 Access your deployed Frontend application at:" -ForegroundColor Green
+        Write-Host "   https://$env:webSiteDefaultHostname" -ForegroundColor Cyan
+        Write-Host ""
       shell: pwsh
       interactive: true
     posix:
       run: |
         Blue='\033[0;34m'
+        Green='\033[0;32m'
+        Yellow='\033[1;33m'
         NC='\033[0m'
-        echo "To upload Team Configurations to Cosmos. Run the following command in Bash:"
-        echo "${Blue}bash infra/scripts/upload_team_config.sh"
+
         echo ""
-        echo "${NC}To index Sample Data into Azure Search. Run the following command in Bash:"
-        echo "${Blue}bash infra/scripts/process_sample_data.sh"
+        echo "${Yellow}==============================================================="
+        echo "${Green} POST-DEPLOYMENT STEPS (Bash) "
+        echo "${Yellow}===============================================================${NC}"
         echo ""
-        echo "${NC}If you want to run both scripts as single command, you can use the following command in Bash:"
-        echo "${Blue}bash infra/scripts/team_config_and_data.sh"
+
+        echo " STEP 1: Upload Team Configurations to Cosmos DB"
+        echo "  👉 Run the following command in Bash:"
+        echo "   ${Blue}bash infra/scripts/upload_team_config.sh${NC}"
         echo ""
-        echo "${NC}You can access the deployed Frontend application at the following URL:"
-        echo "${Blue}https://$webSiteDefaultHostname"
+
+        echo " STEP 2: Index Sample Data into Azure Search"
+        echo "  👉 Run the following command in Bash:"
+        echo "   ${Blue}bash infra/scripts/process_sample_data.sh${NC}"
+        echo ""
+
+        echo "💡 Alternatively, you can run above BOTH steps together using:"
+        echo "   ${Blue}bash infra/scripts/team_config_and_data.sh${NC}"
+        echo ""
+
+        echo "🌐 Access your deployed Frontend application at:"
+        echo "   ${Blue}https://$webSiteDefaultHostname${NC}"
+        echo ""
       shell: sh
       interactive: true

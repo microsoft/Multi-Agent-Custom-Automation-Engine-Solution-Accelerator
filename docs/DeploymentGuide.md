@@ -61,6 +61,23 @@ By default, the `azd up` command uses the [`main.parameters.json`](../infra/main
 
 For **production deployments**, the repository also provides [`main.waf.parameters.json`](../infra/main.waf.parameters.json), which applies a [Well-Architected Framework (WAF) aligned](https://learn.microsoft.com/en-us/azure/well-architected/) configuration. This option enables additional Azure best practices for reliability, security, cost optimization, operational excellence, and performance efficiency, such as:
 
+  **Prerequisite** — Enable the Microsoft.Compute/EncryptionAtHost feature for every subscription (and region, if required) where you plan to deploy VMs or VM scale sets with `encryptionAtHost: true`. Repeat the registration steps below for each target subscription (and for each region when applicable). This step is required for **WAF-aligned** (production) deployments.
+
+  Steps to enable the feature:
+  1. Set the target subscription:
+     Run: <code>az account set --subscription "&lt;YourSubscriptionId&gt;"</code>
+  2. Register the feature (one time per subscription):
+     Run: <code>az feature register --name EncryptionAtHost --namespace Microsoft.Compute</code>
+  3. Wait until registration completes and shows "Registered":
+     Run: <code>az feature show --name EncryptionAtHost --namespace Microsoft.Compute --query properties.state -o tsv</code>
+  4. Refresh the provider (if required):
+     Run: <code>az provider register --namespace Microsoft.Compute</code>
+  5. Re-run the deployment after registration is complete.
+
+  Note: Feature registration can take several minutes. Ensure the feature is registered before attempting deployments that require encryptionAtHost.
+
+  Reference: Azure Host Encryption — https://learn.microsoft.com/azure/virtual-machines/disks-enable-host-based-encryption-portal?tabs=azure-cli
+
   - Enhanced network security (e.g., Network protection with private endpoints)
   - Stricter access controls and managed identities
   - Logging, monitoring, and diagnostics enabled by default
@@ -143,7 +160,7 @@ If you're not using one of the above options for opening the project, then you'l
 1. Make sure the following tools are installed:
 
    - [PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell?view=powershell-7.5) <small>(v7.0+)</small> - available for Windows, macOS, and Linux.
-   - [Azure Developer CLI (azd)](https://aka.ms/install-azd) <small>(v1.15.0+)</small> - version
+   - [Azure Developer CLI (azd)](https://aka.ms/install-azd) <small>(v1.18.0+)</small> - version
    - [Python 3.9+](https://www.python.org/downloads/)
    - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
    - [Git](https://git-scm.com/downloads)
@@ -168,19 +185,6 @@ Consider the following settings during your deployment to modify specific settin
 
 When you start the deployment, most parameters will have **default values**, but you can update the following settings [here](../docs/CustomizingAzdParameters.md):
 
-| **Setting**                    | **Description**                                                                      | **Default value** |
-| ------------------------------ | ------------------------------------------------------------------------------------ | ----------------- |
-| **Environment Name**           | Used as a prefix for all resource names to ensure uniqueness across environments.    | macae             |
-| **Azure Region**               | Location of the Azure resources. Controls where the infrastructure will be deployed. | swedencentral     |
-| **OpenAI Deployment Location** | Specifies the region for OpenAI resource deployment.                                 | swedencentral     |
-| **Model Deployment Type**      | Defines the deployment type for the AI model (e.g., Standard, GlobalStandard).      | GlobalStandard    |
-| **GPT Model Name**             | Specifies the name of the GPT model to be deployed.                                 | gpt-4o            |
-| **GPT Model Version**          | Version of the GPT model to be used for deployment.                                 | 2024-08-06        |
-| **GPT Model Capacity**          | Sets the GPT model capacity.                                 | 150        |
-| **Image Tag**                  | Docker image tag used for container deployments.                                    | latest            |
-| **Enable Telemetry**           | Enables telemetry for monitoring and diagnostics.                                    | true              |
-| **Existing Log Analytics Workspace**        | To reuse an existing Log Analytics Workspace ID instead of creating a new one.              | *(none)*          |
-| **Existing Azure AI Foundry Project**        | To reuse an existing Azure AI Foundry Project ID instead of creating a new one.              | *(none)*          |
 
 </details>
 
@@ -232,6 +236,7 @@ Once you've opened the project in [Codespaces](#github-codespaces), [Dev Contain
    ```shell
    azd up
    ```
+   > **Note:** This solution accelerator requires **Azure Developer CLI (azd) version 1.18.0 or higher**. Please ensure you have the latest version installed before proceeding with deployment. [Download azd here](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/install-azd).
 
 3. Provide an `azd` environment name (e.g., "macaeapp").
 4. Select a subscription from your Azure account and choose a location that has quota for all the resources.

@@ -1,7 +1,6 @@
-
 class DebugGlobalAccess:
     """Class to manage global access to the Magentic orchestration manager."""
-    
+
     _managers = []
 
     @classmethod

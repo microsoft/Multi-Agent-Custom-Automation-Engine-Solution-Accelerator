@@ -41,6 +41,7 @@ export class PlanDataService {
     try {
       // Use optimized getPlanById method for better performance
       const planBody = await apiService.getPlanById(planId, useCache);
+      console.log('Raw plan data fetched:', planBody);
       return this.processPlanData(planBody);
     } catch (error) {
       console.log("Failed to fetch plan data:", error);
@@ -209,11 +210,13 @@ export class PlanDataService {
     const team = this.convertTeamConfiguration(planFromAPI.team);
     const mplan = this.convertMPlan(planFromAPI.m_plan);
     const messages: AgentMessageData[] = this.convertAgentMessages(planFromAPI.messages || []);
+    const streaming_message = planFromAPI.streaming_message || null;
     return {
       plan,
       team,
       mplan,
-      messages
+      messages,
+      streaming_message
     };
   }
 
@@ -226,20 +229,20 @@ export class PlanDataService {
   static createAgentMessageResponse(
     agentMessage: AgentMessageData,
     planData: ProcessedPlanData,
-    is_final: boolean = false
+    is_final: boolean = false,
+    streaming_message: string = ''
   ): AgentMessageResponse {
     if (!planData || !planData.plan) {
       console.log("Invalid plan data provided to createAgentMessageResponse");
     }
     return {
-
       plan_id: planData.plan.plan_id,
       agent: agentMessage.agent,
       content: agentMessage.content,
       agent_type: agentMessage.agent_type,
       is_final: is_final,
       raw_data: JSON.stringify(agentMessage.raw_data),
-
+      streaming_message: streaming_message
     };
   }
 
@@ -380,7 +383,7 @@ export class PlanDataService {
 
       const facts =
         body
-          .match(/facts="([^"]*(?:\\.[^"]*)*)"/)?.[1]
+          .match(/facts="((?:[^"\\]|\\.)*)"/)?.[1]
           ?.replace(/\\n/g, '\n')
           .replace(/\\"/g, '"') || '';
 
@@ -789,7 +792,7 @@ export class PlanDataService {
       if (!source) return null;
 
       // question=( "...") OR ('...')
-      const questionRegex = /question=(?:"((?:\\.|[^"])*)"|'((?:\\.|[^'])*)')/;
+      const questionRegex = /question=(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)')/;
       const qMatch = source.match(questionRegex);
       if (!qMatch) return null;
 
@@ -890,16 +893,30 @@ export class PlanDataService {
     }
 
     // Capture the inside of UserClarificationResponse(...)
-    const outerMatch = line.match(/Human clarification:\s*UserClarificationResponse\((.*?)\)/s);
+    const outerMatch = line.match(/Human clarification:\s*UserClarificationResponse\((.*)\)$/s);
     if (!outerMatch) return line;
 
     const inner = outerMatch[1];
 
-    // Find answer= '...' | "..."
-    const answerMatch = inner.match(/answer=(?:"((?:\\.|[^"])*)"|'((?:\\.|[^'])*)')/);
-    if (!answerMatch) return line;
+    // Find answer= '...' | "..." - Updated regex to handle the full content properly
+    const answerMatch = inner.match(/answer='([^']*(?:''[^']*)*)'/);
+    if (!answerMatch) {
+      // Try double quotes if single quotes don't work
+      const doubleQuoteMatch = inner.match(/answer="([^"]*(?:""[^"]*)*)"/);
+      if (!doubleQuoteMatch) return line;
 
-    let answer = answerMatch[1] ?? answerMatch[2] ?? '';
+      let answer = doubleQuoteMatch[1];
+      answer = answer
+        .replace(/\\n/g, '\n')
+        .replace(/\\'/g, "'")
+        .replace(/\\"/g, '"')
+        .replace(/\\\\/g, '\\')
+        .trim();
+
+      return `Human clarification: ${answer}`;
+    }
+
+    let answer = answerMatch[1];
     // Unescape common sequences
     answer = answer
       .replace(/\\n/g, '\n')

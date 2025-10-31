@@ -1,14 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    Button,
     Spinner
 } from '@fluentui/react-components';
-import {
-    Add20Regular,
-    ErrorCircle20Regular,
-    Sparkle20Filled
-} from '@fluentui/react-icons';
 import '../styles/PlanPage.css';
 import CoralShellColumn from '../coral/components/Layout/CoralShellColumn';
 import CoralShellRow from '../coral/components/Layout/CoralShellRow';
@@ -17,7 +11,6 @@ import HomeInput from '@/components/content/HomeInput';
 import { NewTaskService } from '../services/NewTaskService';
 import PlanPanelLeft from '@/components/content/PlanPanelLeft';
 import ContentToolbar from '@/coral/components/Content/ContentToolbar';
-import { TaskService } from '../services/TaskService';
 import { TeamConfig } from '../models/Team';
 import { TeamService } from '../services/TeamService';
 import InlineToaster, { useInlineToaster } from "../components/toast/InlineToaster";
@@ -30,8 +23,8 @@ const HomePage: React.FC = () => {
     const navigate = useNavigate();
     const { showToast, dismissToast } = useInlineToaster();
     const [selectedTeam, setSelectedTeam] = useState<TeamConfig | null>(null);
-    const [isLoadingTeam, setIsLoadingTeam] = useState(true);
-
+    const [isLoadingTeam, setIsLoadingTeam] = useState<boolean>(true);
+    const [reloadLeftList, setReloadLeftList] = useState<boolean>(true);
 
     useEffect(() => {
         const initTeam = async () => {
@@ -39,7 +32,6 @@ const HomePage: React.FC = () => {
 
             try {
                 console.log('Initializing team from backend...');
-
                 // Call the backend init_team endpoint (takes ~20 seconds)
                 const initResponse = await TeamService.initializeTeam();
 
@@ -106,14 +98,16 @@ const HomePage: React.FC = () => {
      */
     const handleTeamSelect = useCallback(async (team: TeamConfig | null) => {
         setSelectedTeam(team);
+        setReloadLeftList(true);
+        console.log('handleTeamSelect called with team:', true);
         if (team) {
 
             try {
-                // TODO REFRACTOR THIS CODE 
                 setIsLoadingTeam(true);
                 const initResponse = await TeamService.initializeTeam(true);
+
                 if (initResponse.data?.status === 'Request started successfully' && initResponse.data?.team_id) {
-                    console.log('Team initialization completed:', initResponse.data?.team_id);
+                    console.log('handleTeamSelect:', initResponse.data?.team_id);
 
                     // Now fetch the actual team details using the team_id
                     const teams = await TeamService.getUserTeams();
@@ -122,9 +116,9 @@ const HomePage: React.FC = () => {
                     if (initializedTeam) {
                         setSelectedTeam(initializedTeam);
                         TeamService.storageTeam(initializedTeam);
-
-                        console.log('Team loaded successfully:', initializedTeam.name);
-                        console.log('Team agents:', initializedTeam.agents?.length || 0);
+                        setReloadLeftList(true)
+                        console.log('Team loaded successfully handleTeamSelect:', initializedTeam.name);
+                        console.log('Team agents handleTeamSelect:', initializedTeam.agents?.length || 0);
 
                         showToast(
                             `${initializedTeam.name} team initialized successfully with ${initializedTeam.agents?.length || 0} agents`,
@@ -152,7 +146,7 @@ const HomePage: React.FC = () => {
                 "info"
             );
         }
-    }, [showToast]);
+    }, [showToast, setReloadLeftList]);
 
 
     /**
@@ -187,6 +181,7 @@ const HomePage: React.FC = () => {
             <CoralShellColumn>
                 <CoralShellRow>
                     <PlanPanelLeft
+                        reloadTasks={reloadLeftList}
                         onNewTaskButton={handleNewTaskButton}
                         onTeamSelect={handleTeamSelect}
                         onTeamUpload={handleTeamUpload}
@@ -202,7 +197,6 @@ const HomePage: React.FC = () => {
                                 selectedTeam={selectedTeam}
                             />
                         ) : (
-                            // TODO MOVE THIS STYLE TO CSS 
                             <div style={{
                                 display: 'flex',
                                 justifyContent: 'center',

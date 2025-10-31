@@ -1,7 +1,7 @@
 import React from 'react';
-import { 
-    Desktop20Regular, 
-    Code20Regular, 
+import {
+    Desktop20Regular,
+    Code20Regular,
     Building20Regular,
     Organization20Regular,
     Search20Regular,
@@ -113,18 +113,18 @@ const generateHash = (str: string): number => {
  */
 const matchStringToFluentIcon = (iconString: string): React.ComponentType<any> | null => {
     if (!iconString || typeof iconString !== 'string') return null;
-    
+
     // Try exact match first
     if (fluentIconMap[iconString]) {
         return fluentIconMap[iconString];
     }
-    
+
     // Try case-insensitive match
     const lowerIconString = iconString.toLowerCase();
     if (fluentIconMap[lowerIconString]) {
         return fluentIconMap[lowerIconString];
     }
-    
+
     // Try removing common suffixes and prefixes
     const cleanedIconString = iconString
         .replace(/20Regular$/i, '')
@@ -134,11 +134,11 @@ const matchStringToFluentIcon = (iconString: string): React.ComponentType<any> |
         .replace(/^icon/i, '')
         .toLowerCase()
         .trim();
-    
+
     if (fluentIconMap[cleanedIconString]) {
         return fluentIconMap[cleanedIconString];
     }
-    
+
     return null;
 };
 
@@ -200,20 +200,20 @@ const getUniqueAgentIcon = (
     iconStyle: React.CSSProperties
 ): React.ReactNode => {
     const cleanName = TaskService.cleanTextToSpaces(agentName).toLowerCase();
-    
+
     // If we already assigned an icon to this agent, use it
     if (agentIconAssignments[cleanName]) {
         const IconComponent = agentIconAssignments[cleanName];
         return React.createElement(IconComponent, { style: iconStyle });
     }
-    
+
     // Get deterministic icon based on agent name patterns
     // This ensures same names always get the same icon regardless of assignment order
     const selectedIcon = getDeterministicAgentIcon(cleanName);
-    
+
     // Cache the assignment for future lookups
     agentIconAssignments[cleanName] = selectedIcon;
-    
+
     return React.createElement(selectedIcon, { style: iconStyle });
 };
 
@@ -222,8 +222,8 @@ const getUniqueAgentIcon = (
  * with consistent fallback patterns across all components
  */
 export const getAgentIcon = (
-    agentName: string, 
-    planData?: any, 
+    agentName: string,
+    planData?: any,
     planApprovalRequest?: any,
     iconColor: string = 'var(--colorNeutralForeground2)'
 ): React.ReactNode => {
@@ -245,7 +245,7 @@ export const getAgentIcon = (
             if (FluentIconComponent) {
                 return React.createElement(FluentIconComponent, { style: iconStyle });
             }
-            
+
             // Fallback: check if it's in the existing iconMap
             if (iconMap[agent.icon]) {
                 return React.cloneElement(iconMap[agent.icon] as React.ReactElement, {
@@ -259,8 +259,8 @@ export const getAgentIcon = (
     const storedTeam = TeamService.getStoredTeam();
     if (storedTeam?.agents) {
         const cleanAgentName = TaskService.cleanTextToSpaces(agentName);
-        
-        const agent = storedTeam.agents.find(a => 
+
+        const agent = storedTeam.agents.find(a =>
             TaskService.cleanTextToSpaces(a.name).toLowerCase().includes(cleanAgentName.toLowerCase()) ||
             a.type.toLowerCase().includes(cleanAgentName.toLowerCase()) ||
             a.input_key.toLowerCase().includes(cleanAgentName.toLowerCase())
@@ -286,7 +286,7 @@ export const getAgentIcon = (
     // 4. Deterministic icon assignment - ensures same names get same icons
     // Get all agent names from current context for unique assignment
     let allAgentNames: string[] = [];
-    
+
     if (planApprovalRequest?.team) {
         allAgentNames = planApprovalRequest.team;
     } else if (planData?.team?.agents) {
@@ -294,7 +294,7 @@ export const getAgentIcon = (
     } else if (storedTeam?.agents) {
         allAgentNames = storedTeam.agents.map(a => a.name);
     }
-    
+
     return getUniqueAgentIcon(agentName, allAgentNames, iconStyle);
 };
 
@@ -313,13 +313,13 @@ export const clearAgentIconAssignments = (): void => {
  */
 export const getAgentDisplayName = (agentName: string): string => {
     if (!agentName) return 'Assistant';
-    
+
     // Clean and format the name
     let cleanName = TaskService.cleanTextToSpaces(agentName);
-    
+
     // Remove "Agent" suffix if it exists (case insensitive)
     cleanName = cleanName.replace(/\s*agent\s*$/gi, '').trim();
-    
+
     // Convert to proper case
     cleanName = cleanName
         .replace(/\bHRHelper\b/gi, 'HR Helper')
@@ -329,8 +329,8 @@ export const getAgentDisplayName = (agentName: string): string => {
 
     // Convert to proper case
     cleanName = cleanName.replace(/\b\w/g, l => l.toUpperCase());
-    
-    
+
+
     // Handle special cases for better readability
     cleanName = cleanName
         .replace(/\bKb\b/g, 'KB')          // KB instead of Kb
@@ -340,7 +340,7 @@ export const getAgentDisplayName = (agentName: string): string => {
         .replace(/\bAi\b/g, 'AI')          // AI instead of Ai
         .replace(/\bUi\b/g, 'UI')          // UI instead of Ui
         .replace(/\bDb\b/g, 'DB');         // DB instead of Db
-    
+
     return cleanName || 'Assistant';
 };
 
@@ -355,19 +355,34 @@ export const getAgentDisplayNameWithSuffix = (agentName: string): string => {
 /**
  * Get agent icon with custom styling override
  */
+/**
+ * Get agent icon with custom styling override
+ */
 export const getStyledAgentIcon = (
-    agentName: string, 
+    agentName: string,
     customStyle: React.CSSProperties,
-    planData?: any, 
+    planData?: any,
     planApprovalRequest?: any
 ): React.ReactNode => {
     const icon = getAgentIcon(agentName, planData, planApprovalRequest);
-    
+
     if (React.isValidElement(icon)) {
-        return React.cloneElement(icon, {
-            style: { ...icon.props.style, ...customStyle }
-        });
+        try {
+            // Safely merge styles
+            const mergedStyle = {
+                ...(icon.props as any)?.style,
+                ...customStyle
+            };
+
+            return React.cloneElement(icon as React.ReactElement<any>, {
+                style: mergedStyle
+            });
+        } catch (error) {
+            // Fallback: return original icon if cloning fails
+            console.warn('Failed to apply custom style to agent icon:', error);
+            return icon;
+        }
     }
-    
+
     return icon;
 };

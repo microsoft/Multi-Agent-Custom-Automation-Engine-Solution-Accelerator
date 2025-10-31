@@ -1,5 +1,4 @@
 import asyncio
-import contextvars
 import json
 import logging
 import uuid
@@ -7,17 +6,14 @@ from typing import Optional
 
 import v3.models.messages as messages
 from auth.auth_utils import get_authenticated_user_details
-from common.config.app_config import config
 from common.database.database_factory import DatabaseFactory
 from common.models.messages_kernel import (
     InputTask,
     Plan,
     PlanStatus,
-    PlanWithSteps,
     TeamSelectionRequest,
 )
 from common.utils.event_utils import track_event_if_configured
-from common.utils.utils_date import format_dates_in_messages
 from common.utils.utils_kernel import rai_success, rai_validate_team_config
 from fastapi import (
     APIRouter,
@@ -30,12 +26,10 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
-from semantic_kernel.agents.runtime import InProcessRuntime
 from v3.common.services.plan_service import PlanService
 from v3.common.services.team_service import TeamService
 from v3.config.settings import (
     connection_config,
-    current_user_id,
     orchestration_config,
     team_config,
 )
@@ -51,25 +45,15 @@ app_v3 = APIRouter(
 
 
 @app_v3.websocket("/socket/{process_id}")
-async def start_comms(websocket: WebSocket, process_id: str):
+async def start_comms(
+    websocket: WebSocket, process_id: str, user_id: str = Query(None)
+):
     """Web-Socket endpoint for real-time process status updates."""
 
     # Always accept the WebSocket connection first
     await websocket.accept()
 
-    user_id = None
-    try:
-        # WebSocket headers are different, try to get user info
-        headers = dict(websocket.headers)
-        authenticated_user = get_authenticated_user_details(request_headers=headers)
-        user_id = authenticated_user.get("user_principal_id")
-        if not user_id:
-            user_id = "00000000-0000-0000-0000-000000000000"
-    except Exception as e:
-        logging.warning(f"Could not extract user from WebSocket headers: {e}")
-        user_id = "00000000-0000-0000-0000-000000000000"
-
-    current_user_id.set(user_id)
+    user_id = user_id or "00000000-0000-0000-0000-000000000000"
 
     # Add to the connection manager for backend updates
     connection_config.add_connection(
@@ -102,7 +86,7 @@ async def start_comms(websocket: WebSocket, process_id: str):
         logging.error(f"Error in WebSocket connection: {str(e)}")
     finally:
         # Always clean up the connection
-        await connection_config.close_connection(user_id)
+        await connection_config.close_connection(process_id=process_id)
 
 
 @app_v3.get("/init_team")
@@ -245,18 +229,7 @@ async def process_request(
         )
         raise HTTPException(
             status_code=400,
-            detail={
-                "error_type": "RAI_VALIDATION_FAILED",
-                "message": "Content Safety Check Failed",
-                "description": "Your request contains content that doesn't meet our safety guidelines. Please modify your request to ensure it's appropriate and try again.",
-                "suggestions": [
-                    "Remove any potentially harmful, inappropriate, or unsafe content",
-                    "Use more professional and constructive language",
-                    "Focus on legitimate business or educational objectives",
-                    "Ensure your request complies with content policies",
-                ],
-                "user_action": "Please revise your request and try again",
-            },
+            detail="Request contains content that doesn't meet our safety guidelines, try again.",
         )
 
     authenticated_user = get_authenticated_user_details(request_headers=request.headers)
@@ -266,7 +239,7 @@ async def process_request(
         track_event_if_configured(
             "UserIdNotFound", {"status_code": 400, "detail": "no user"}
         )
-        raise HTTPException(status_code=400, detail="no user")
+        raise HTTPException(status_code=400, detail="no user found")
 
     # if not input_task.team_id:
     #     track_event_if_configured(
@@ -284,6 +257,12 @@ async def process_request(
         team_id = None
         if user_current_team:
             team_id = user_current_team.team_id
+        team = await memory_store.get_team_by_id(team_id=team_id)
+        if not team:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Team configuration '{team_id}' not found or access denied",
+            )
         plan = Plan(
             id=plan_id,
             plan_id=plan_id,
@@ -302,7 +281,7 @@ async def process_request(
                 "plan_id": plan.plan_id,
                 "session_id": input_task.session_id,
                 "user_id": user_id,
-                "team_id": team_id,  # TODO add current_team_id
+                "team_id": team_id,
                 "description": input_task.description,
             },
         )
@@ -321,18 +300,14 @@ async def process_request(
         raise HTTPException(status_code=500, detail="Failed to create plan")
 
     try:
-        current_user_id.set(user_id)  # Set context
-        current_context = contextvars.copy_context()  # Capture context
         # background_tasks.add_task(
         #     lambda: current_context.run(lambda:OrchestrationManager().run_orchestration, user_id, input_task)
         # )
 
-        async def run_with_context():
-            return await current_context.run(
-                OrchestrationManager().run_orchestration, user_id, input_task
-            )
+        async def run_orchestration_task():
+            await OrchestrationManager().run_orchestration(user_id, input_task)
 
-        background_tasks.add_task(run_with_context)
+        background_tasks.add_task(run_orchestration_task)
 
         return {
             "status": "Request started successfully",
@@ -421,8 +396,8 @@ async def plan_approval(
                 orchestration_config
                 and human_feedback.m_plan_id in orchestration_config.approvals
             ):
-                orchestration_config.approvals[human_feedback.m_plan_id] = (
-                    human_feedback.approved
+                orchestration_config.set_approval_result(
+                    human_feedback.m_plan_id, human_feedback.approved
                 )
                 # orchestration_config.plans[human_feedback.m_plan_id][
                 #     "plan_id"
@@ -522,8 +497,8 @@ async def user_clarification(
         )
     # Set the approval in the orchestration config
     if user_id and human_feedback.request_id:
-        ### validate rai
-        if human_feedback.answer != None or human_feedback.answer != "":
+        # validate rai
+        if human_feedback.answer is not None or human_feedback.answer != "":
             if not await rai_success(human_feedback.answer):
                 track_event_if_configured(
                     "RAI failed",
@@ -553,10 +528,10 @@ async def user_clarification(
             orchestration_config
             and human_feedback.request_id in orchestration_config.clarifications
         ):
-            orchestration_config.clarifications[human_feedback.request_id] = (
-                human_feedback.answer
+            # Use the new event-driven method to set clarification result
+            orchestration_config.set_clarification_result(
+                human_feedback.request_id, human_feedback.answer
             )
-
             try:
                 result = await PlanService.handle_human_clarification(
                     human_feedback, user_id
@@ -823,7 +798,6 @@ async def upload_team_config(
             {
                 "status": "success",
                 "team_id": team_id,
-                "team_id": team_config.team_id,
                 "user_id": user_id,
                 "agents_count": len(team_config.agents),
                 "tasks_count": len(team_config.starting_tasks),
@@ -1237,9 +1211,9 @@ async def get_plans(request: Request):
         )
         raise HTTPException(status_code=400, detail="no user")
 
-    #### <To do: Francia> Replace the following with code to get plan run history from the database
+    # <To do: Francia> Replace the following with code to get plan run history from the database
 
-    # # Initialize memory context
+    # Initialize memory context
     memory_store = await DatabaseFactory.get_database(user_id=user_id)
 
     current_team = await memory_store.get_current_team(user_id=user_id)
@@ -1247,7 +1221,7 @@ async def get_plans(request: Request):
         return []
 
     all_plans = await memory_store.get_all_plans_by_team_id_status(
-        team_id=current_team.team_id, status=PlanStatus.completed
+        user_id=user_id, team_id=current_team.team_id, status=PlanStatus.completed
     )
 
     return all_plans
@@ -1255,7 +1229,10 @@ async def get_plans(request: Request):
 
 # Get plans is called in the initial side rendering of the frontend
 @app_v3.get("/plan")
-async def get_plan_by_id(request: Request,  plan_id: Optional[str] = Query(None),):
+async def get_plan_by_id(
+    request: Request,
+    plan_id: Optional[str] = Query(None),
+):
     """
     Retrieve plans for the current user.
 
@@ -1322,9 +1299,9 @@ async def get_plan_by_id(request: Request,  plan_id: Optional[str] = Query(None)
         )
         raise HTTPException(status_code=400, detail="no user")
 
-    #### <To do: Francia> Replace the following with code to get plan run history from the database
+    # <To do: Francia> Replace the following with code to get plan run history from the database
 
-    # # Initialize memory context
+    # Initialize memory context
     memory_store = await DatabaseFactory.get_database(user_id=user_id)
     try:
         if plan_id:
@@ -1341,12 +1318,15 @@ async def get_plan_by_id(request: Request,  plan_id: Optional[str] = Query(None)
             team = await memory_store.get_team_by_id(team_id=plan.team_id)
             agent_messages = await memory_store.get_agent_messages(plan_id=plan.plan_id)
             mplan = plan.m_plan if plan.m_plan else None
+            streaming_message = plan.streaming_message if plan.streaming_message else ""
+            plan.streaming_message = ""  # clear streaming message after retrieval
             plan.m_plan = None  # remove m_plan from plan object for response
             return {
                 "plan": plan,
                 "team": team if team else None,
                 "messages": agent_messages,
                 "m_plan": mplan,
+                "streaming_message": streaming_message,
             }
         else:
             track_event_if_configured(

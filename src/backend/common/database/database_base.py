@@ -1,8 +1,13 @@
+
 """Database base class for managing database operations."""
+
+# pylint: disable=unnecessary-pass
 
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Type
+
 import v3.models.messages as messages
+
 from ..models.messages_kernel import (
     AgentMessageData,
     BaseDataModel,
@@ -59,7 +64,6 @@ class DatabaseBase(ABC):
         """Delete an item from the database."""
         pass
 
-
     # Plan Operations
     @abstractmethod
     async def add_plan(self, plan: Plan) -> None:
@@ -93,12 +97,10 @@ class DatabaseBase(ABC):
 
     @abstractmethod
     async def get_all_plans_by_team_id_status(
-        self, team_id: str, status: str
+        self, user_id: str, team_id: str, status: str
     ) -> List[Plan]:
         """Retrieve all plans for a specific team."""
         pass
-
-
 
     # Step Operations
     @abstractmethod
@@ -196,7 +198,7 @@ class DatabaseBase(ABC):
     async def update_current_team(self, current_team: UserCurrentTeam) -> None:
         """Update the current team for a user."""
         pass
-    
+
     @abstractmethod
     async def delete_plan_by_plan_id(self, plan_id: str) -> bool:
         """Retrieve the current team for a user."""
@@ -216,7 +218,7 @@ class DatabaseBase(ABC):
     async def get_mplan(self, plan_id: str) -> Optional[messages.MPlan]:
         """Retrieve a mplan configuration by plan_id."""
         pass
-    
+
     @abstractmethod
     async def add_agent_message(self, message: AgentMessageData) -> None:
         pass

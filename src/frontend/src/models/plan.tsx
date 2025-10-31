@@ -216,6 +216,7 @@ export interface PlanFromAPI {
     messages: AgentMessageBE[];
     m_plan: MPlanBE | null;
     team: TeamConfigurationBE | null;
+    streaming_message: string | null;
 }
 /**
  * Interface for processed plan data
@@ -225,6 +226,7 @@ export interface ProcessedPlanData {
     team: TeamConfig | null;
     messages: AgentMessageData[];
     mplan: MPlanData | null;
+    streaming_message: string | null;
 }
 
 

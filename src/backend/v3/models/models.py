@@ -1,9 +1,6 @@
 import uuid
-from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Literal, Optional
-
-from dataclasses import asdict, dataclass, field
+from typing import List
 
 from pydantic import BaseModel, Field
 
@@ -11,7 +8,7 @@ from pydantic import BaseModel, Field
 class PlanStatus(str, Enum):
     CREATED = "created"
     QUEUED = "queued"
-    RUNNING = "running" 
+    RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
@@ -19,12 +16,14 @@ class PlanStatus(str, Enum):
 
 class MStep(BaseModel):
     """model of a step in a plan"""
+
     agent: str = ""
     action: str = ""
 
 
 class MPlan(BaseModel):
     """model of a plan"""
+
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     user_id: str = ""
     team_id: str = ""
@@ -34,4 +33,3 @@ class MPlan(BaseModel):
     team: List[str] = []
     facts: str = ""
     steps: List[MStep] = []
-    

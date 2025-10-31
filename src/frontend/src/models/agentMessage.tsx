@@ -48,6 +48,8 @@ export interface AgentMessageResponse {
     /** Raw data associated with the message */
     raw_data: string;
 
+    streaming_message: string;
+
 }
 
 export interface FinalMessage {

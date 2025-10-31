@@ -12,7 +12,11 @@ interface StreamingBufferMessageProps {
     isStreaming?: boolean;
 }
 
-const renderBufferMessage = (streamingMessageBuffer: string, isStreaming: boolean = false) => {
+// Convert to a proper React component instead of a function
+const StreamingBufferMessage: React.FC<StreamingBufferMessageProps> = ({
+    streamingMessageBuffer,
+    isStreaming = false
+}) => {
     const [isExpanded, setIsExpanded] = useState<boolean>(false);
     const [shouldFade, setShouldFade] = useState<boolean>(false);
     const contentRef = useRef<HTMLDivElement>(null);
@@ -51,11 +55,11 @@ const renderBufferMessage = (streamingMessageBuffer: string, isStreaming: boolea
                 padding: '16px',
                 fontSize: '14px',
                 lineHeight: '1.5',
-                height: isExpanded ? 'auto' : '256px', // Auto height when expanded
+                height: isExpanded ? 'auto' : '256px',
                 display: 'flex',
                 flexDirection: 'column',
                 position: 'relative',
-                overflow: isExpanded ? 'visible' : 'hidden' // Allow overflow when expanded
+                overflow: isExpanded ? 'visible' : 'hidden'
             }}>
                 {/* Header */}
                 <div style={{
@@ -185,7 +189,7 @@ const renderBufferMessage = (streamingMessageBuffer: string, isStreaming: boolea
                     </div>
                 )}
 
-                {/* Content area - expanded state (original behavior) */}
+                {/* Content area - expanded state */}
                 {isExpanded && (
                     <div style={{
                         padding: '12px',
@@ -221,4 +225,4 @@ const renderBufferMessage = (streamingMessageBuffer: string, isStreaming: boolea
     );
 };
 
-export default renderBufferMessage;
+export default StreamingBufferMessage;
