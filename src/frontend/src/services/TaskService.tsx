@@ -195,28 +195,10 @@ export class TaskService {
     try {
       return await apiService.createPlan(inputTask);
     } catch (error: any) {
+
       // You can customize this logic as needed
       let message = "Unable to create plan. Please try again.";
-      if (error?.response?.data?.detail) {
-        const detail = error.response.data.detail;
-        if (typeof detail === 'string' && detail.includes('RAI_VALIDATION_FAILED')) {
-          message = "Your request contains content that doesn't meet our safety guidelines. Please rephrase and try again.";
-        } else if (detail.includes('quota') || detail.includes('limit')) {
-          message = "Service is currently at capacity. Please try again in a few minutes.";
-        } else if (detail.includes('unauthorized') || detail.includes('forbidden')) {
-          message = "You don't have permission to create plans. Please contact your administrator.";
-        } else {
-          message = detail;
-        }
-      } else if (error?.response?.data?.message) {
-        message = error.response.data.message;
-      } else if (error?.message) {
-        if (error.message.includes('Network Error') || error.message.includes('fetch')) {
-          message = "Network error. Please check your connection and try again.";
-        } else {
-          message = error.message;
-        }
-      }
+
       throw new Error(message);
     }
   }

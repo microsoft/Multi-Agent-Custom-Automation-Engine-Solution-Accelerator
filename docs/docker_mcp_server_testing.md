@@ -402,4 +402,4 @@ docker inspect --format='{{.State.Health.Status}}' macae-mcp-server
 
 ---
 
-For additional help and troubleshooting, refer to the main [DeploymentGuide.md](./DeploymentGuide.md) and [LocalDeployment.md](./LocalDeployment.md) documentation.
+For additional help and troubleshooting, refer to the main [DeploymentGuide.md](./DeploymentGuide.md) documentation.

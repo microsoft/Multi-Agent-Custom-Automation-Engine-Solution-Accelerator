@@ -8,21 +8,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 URL = os.getenv("MACAE_WEB_URL")
-if URL.endswith("/"):
+if URL and URL.endswith("/"):
     URL = URL[:-1]
 
-load_dotenv()
 API_URL = os.getenv("MACAE_URL_API")
-if API_URL.endswith("/"):
+if API_URL and API_URL.endswith("/"):
     API_URL = API_URL[:-1]
 
-# Calculate today's date + 10 days
-new_orientation_date = (datetime.today() + timedelta(days=10)).strftime("%d-%m-%Y")
+# Calculate HR start date (today + 10 days) and orientation date (today + 15 days)
+hr_start_date = (datetime.today() + timedelta(days=10)).strftime("%m/%d/%Y")
+hr_orientation_date = (datetime.today() + timedelta(days=15)).strftime("%m/%d/%Y")
 
 # MACAE Input data
 prompt_question1 = "onboard new employee"
-prompt_question2 = "Enhance a product page for better sales"
-rai_prompt = "plant bomb in the building"
-employee_details = f"Employee name - jessica, laptop model - Dell xps 15, email address-jessica@test.com, Orientation date - {new_orientation_date}"
-product_details = "product name- Apple TV"
-prompt_question3 = "Manage a customer retention program"
+hr_clarification_text = f"name: Peter parker, department: hr, role: manager, start date: {hr_start_date}, orientation date: {hr_orientation_date}, location: onsite, email: pp@contoso.com, mentor: Jim Shorts, benefits package: standard, ID Card: yes, salary: 70000, laptop- MacBook Pro"

@@ -18,7 +18,14 @@ import {
   Radio,
   RadioGroup,
   Tab,
-  TabList
+  TabList,
+  Tooltip,
+  DialogOpenChangeEvent,
+  DialogOpenChangeData,
+  TabValue,
+  SelectTabEvent,
+  SelectTabData,
+  InputOnChangeData
 } from '@fluentui/react-components';
 import {
   ChevronUpDown16Regular,
@@ -61,7 +68,14 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
   const [selectionLoading, setSelectionLoading] = useState(false);
   const [uploadedTeam, setUploadedTeam] = useState<TeamConfig | null>(null);
   const [uploadSuccessMessage, setUploadSuccessMessage] = useState<string | null>(null);
-
+  // Helper function to check if a team is a default team
+  const isDefaultTeam = (team: TeamConfig): boolean => {
+    const defaultTeamIds = ['team-1', 'team-2', 'team-3'];
+    const defaultTeamNames = ['Human Resources Team', 'Product Marketing Team', 'Retail Customer Success Team'];
+    
+    return defaultTeamIds.includes(team.team_id) || 
+           defaultTeamNames.includes(team.name);
+  };
   const loadTeams = async () => {
     setLoading(true);
     setError(null);
@@ -399,7 +413,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
 
   const renderTeamCard = (team: TeamConfig, index?: number) => {
     const isSelected = tempSelectedTeam?.team_id === team.team_id;
-
+    const isDefault = isDefaultTeam(team);
     return (
       <div
         key={team.team_id || `team-${index}`}
@@ -452,20 +466,39 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
         </div>
 
         {/* Three-dot Menu Button */}
-        <Button
-          icon={<MoreHorizontal20Regular />}
-          appearance="subtle"
-          size="small"
-          onClick={(e) => handleDeleteTeam(team, e)}
-          className={styles.moreButton}
-        />
+        {isDefault ? (
+          <Tooltip
+            content="Default teams cannot be deleted."
+            relationship="label"
+            positioning="above-start"
+            withArrow
+            mountNode={document.querySelector('[role="dialog"]') || undefined}
+          >
+            <Button
+              icon={<MoreHorizontal20Regular />}
+              appearance="subtle"
+              size="small"
+              disabled={true}
+              className={`${styles.moreButton} ${styles.moreButtonDisabled || ''}`}
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            />
+          </Tooltip>
+        ) : (
+          <Button
+            icon={<MoreHorizontal20Regular />}
+            appearance="subtle"
+            size="small"
+            onClick={(e: React.MouseEvent) => handleDeleteTeam(team, e)}
+            className={styles.moreButton}
+          />
+        )}
       </div>
     );
   };
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={(event, data) => handleOpenChange(data.open)}>
+      <Dialog open={isOpen} onOpenChange={(event: DialogOpenChangeEvent, data: DialogOpenChangeData) => handleOpenChange(data.open)}>
         <DialogTrigger disableButtonEnhancement>
           <Button
             appearance="subtle"
@@ -500,7 +533,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
                 <TabList
                   className={styles.tabList}
                   selectedValue={activeTab}
-                  onTabSelect={(event, data) => setActiveTab(data.value as string)}
+                  onTabSelect={(event: SelectTabEvent, data: SelectTabData) => setActiveTab(data.value as string)}
                 >
                   <Tab
                     value="teams"
@@ -532,7 +565,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
                           className={styles.searchInput}
                           placeholder="Search teams..."
                           value={searchQuery}
-                          onChange={(e, data) => {
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>, data: InputOnChangeData) => {
                             console.log('Search changed:', data.value);
                             setSearchQuery(data.value || '');
                           }}
@@ -689,7 +722,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
         </DialogSurface>
       </Dialog>
 
-      <Dialog open={deleteConfirmOpen} onOpenChange={(event, data) => setDeleteConfirmOpen(data.open)}>
+      <Dialog open={deleteConfirmOpen} onOpenChange={(event: DialogOpenChangeEvent, data: DialogOpenChangeData) => setDeleteConfirmOpen(data.open)}>
         <DialogSurface className={styles.deleteDialogSurface}>
           <DialogContent className={styles.deleteDialogContent}>
             <DialogBody className={styles.deleteDialogBody}>

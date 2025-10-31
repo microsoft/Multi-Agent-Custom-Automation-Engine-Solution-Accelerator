@@ -4,21 +4,17 @@ Test script for
 """
 
 import asyncio
-import uuid
-from datetime import datetime, timezone
+import os
 
 # Add the parent directory to the path so we can import our modules
 import sys
-import os
+import uuid
+from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
-from common.models.messages_kernel import (
-    TeamConfiguration,
-    TeamAgent,
-    StartingTask,
-)
+from common.models.messages_kernel import StartingTask, TeamAgent, TeamConfiguration
 
 
 async def test_team_specific_methods():

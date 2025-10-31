@@ -13,7 +13,7 @@ By default this template will use the environment name as the prefix to prevent 
 | `AZURE_ENV_OPENAI_LOCATION`     | string | `<User selects during deployment>`   | Specifies the region for OpenAI resource deployment.                                                |
 | `AZURE_ENV_MODEL_DEPLOYMENT_TYPE` | string | `GlobalStandard` | Defines the deployment type for the AI model (e.g., Standard, GlobalStandard).                     |
 | `AZURE_ENV_MODEL_NAME`          | string | `gpt-4o`          | Specifies the name of the GPT model to be deployed.                                                |
-| `AZURE_ENV_FOUNDRY_PROJECT_ID`          | string | `<Existing Workspace Id>`          | Set this if you want to reuse an AI Foundry Project instead of creating a new one.                                                |                        
+| `AZURE_EXISTING_AI_PROJECT_RESOURCE_ID`          | string | `<Existing Workspace Id>`          | Set this if you want to reuse an AI Foundry Project instead of creating a new one.                                                |                        
 | `AZURE_ENV_MODEL_VERSION`       | string | `2024-08-06`      | Version of the GPT model to be used for deployment.                                                |
 | `AZURE_ENV_MODEL_CAPACITY`       | int | `150`      | Sets the GPT model capacity.                                                |
 | `AZURE_ENV_IMAGETAG`            | string | `latest`          | Docker image tag used for container deployments.                                                   |

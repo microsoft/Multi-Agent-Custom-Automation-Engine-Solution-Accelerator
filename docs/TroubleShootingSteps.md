@@ -103,13 +103,13 @@ based on available quota you can deploy application otherwise, you can request f
 </details>
  
 <details>
-<summary><b>DeploymentModelNotSupported</b></summary>
+<summary><b>DeploymentModelNotSupported/ ServiceModelDeprecated/ InvalidResourceProperties</b></summary>
  
  -  The updated model may not be supported in the selected region. Please verify its availability in the [Azure AI Foundry models](https://learn.microsoft.com/en-us/azure/ai-foundry/openai/concepts/models?tabs=global-standard%2Cstandard-chat-completions) document.
  
 </details>
  <details>
-<summary><b>LinkedInvalidPropertyId/ ResourceNotFound/DeploymentOutputEvaluationFailed/ CanNotRestoreANonExistingResource </b></summary>
+<summary><b>LinkedInvalidPropertyId/ ResourceNotFound/DeploymentOutputEvaluationFailed/ CanNotRestoreANonExistingResource / The language expression property array index is out of bounds</b></summary>
   
 - Before using any resource ID, ensure it follows the correct format.
 - Verify that the resource ID you are passing actually exists.
@@ -128,6 +128,8 @@ based on available quota you can deploy application otherwise, you can request f
     ```
     /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.MachineLearningServices/workspaces/{name}
     ```
+- You may encounter the error `The language expression property array index '8' is out of bounds` if the resource ID is incomplete. Please ensure your resource ID is correct and contains all required information, as shown in sample resource IDs.
+
 - For more information refer [Resource Not Found errors solutions](https://learn.microsoft.com/en-us/azure/azure-resource-manager/troubleshooting/error-not-found?tabs=bicep)
 
 </details>
@@ -294,6 +296,295 @@ The subscription 'xxxx-xxxx' cannot have more than 1 Container App Environments 
 - To fix this, you can:
   - Deploy the Container App Environment in a **different region**, OR  
   - Request a quota increase via Azure Support → [Quota Increase Request](https://go.microsoft.com/fwlink/?linkid=2208872)  
+ 
+</details>
+
+<details>
+<summary><b>Unauthorized - Operation cannot be completed without additional quota</b> </summary>
+
+- You can check your quota usage using `az vm list-usage`.
+    
+    ```
+    az vm list-usage --location "<Location>" -o table
+    ```
+- To Request more quota refer [VM Quota Request](https://techcommunity.microsoft.com/blog/startupsatmicrosoftblog/how-to-increase-quota-for-specific-types-of-azure-virtual-machines/3792394).
+
+</details>
+
+<details><summary><b>ParentResourceNotFound</b></summary>
+
+- You can refer to the [Parent Resource Not found](https://learn.microsoft.com/en-us/azure/azure-resource-manager/troubleshooting/error-parent-resource?tabs=bicep) documentation if you encounter this error.
+
+</details>
+
+<details><summary><b>ResourceProviderError</b></summary>
+
+- This error occurs when the resource provider is not registered in your subscription. 
+- To register it, refer to [Register Resource Provider](https://learn.microsoft.com/en-us/azure/azure-resource-manager/troubleshooting/error-register-resource-provider?tabs=azure-cli) documentation.
+
+</details>
+
+<details><summary><b>Conflict - Cannot use the SKU Basic with File Change Audit for site.</b></summary>
+
+- This error happens because File Change Audit logs aren’t supported on Basic SKU App Service Plans.
+
+- Upgrading to Premium/Isolated SKU (supports File Change Audit), or
+
+- Disabling File Change Audit in Diagnostic Settings if you must stay on Basic.
+- Always cross-check the [supported log types](https://aka.ms/supported-log-types)
+ before adding diagnostic logs to your Bicep templates.
+
+</details>
+
+<details>
+ 
+<summary><b>AccountPropertyCannotBeUpdated</b></summary>
+ 
+- The property **`isHnsEnabled`** (Hierarchical Namespace for Data Lake Gen2) is **read-only** and can only be set during **storage account creation**.  
+- Once a storage account is created, this property **cannot be updated**.  
+- Trying to update it via ARM template, Bicep, CLI, or Portal will fail.
+ 
+- **Resolution**  
+- Create a **new storage account** with `isHnsEnabled=true` if you require hierarchical namespace.  
+- Migration may be needed if you already have data.  
+- Refer to [Storage Account Update Restrictions](https://aka.ms/storageaccountupdate) for more details.  
+ 
+</details>
+
+<details><summary><b>InvalidRequestContent</b></summary>
+
+- 	The deployment values either include values that aren't recognized, or required values are missing. Confirm the values for your resource type.
+- You can refer [Invalid Request Content error](https://learn.microsoft.com/en-us/azure/azure-resource-manager/troubleshooting/common-deployment-errors#:~:text=InvalidRequestContent,Template%20reference) documentation.
+
+</details>
+
+<details><summary><b>ReadOnlyDisabledSubscription</b></summary>
+
+- Depending on the type of the Azure Subscription, the expiration date might have been reached.
+
+- You have to activate the Azure Subscription before creating any Azure resource.
+- You can refer [Reactivate a disabled Azure subscription](https://learn.microsoft.com/en-us/azure/cost-management-billing/manage/subscription-disabled) Documentation.
+
+</details>
+
+
+<details><summary><b>SkuNotAvailable</b></summary>
+
+- You receive this error in the following scenarios:
+    - When the resource SKU you've selected, such as VM size, isn't available for a location or zone.
+    - If you're deploying an Azure Spot VM or Spot scale set instance, and there isn't any capacity for Azure Spot in this location. For more information, see Spot error messages.
+</details>
+
+<details><summary><b>CrossTenantDeploymentNotPermitted</b></summary>
+
+- Check tenant match: Ensure your deployment identity (user/SP) and the target resource group are in the same tenant.
+    ```
+    az account show
+    az group show --name <RG_NAME>
+    ```
+
+- Verify pipeline/service principal: If using CI/CD, confirm the service principal belongs to the same tenant and has permissions on the resource group.
+
+- Avoid cross-tenant references: Make sure your Bicep doesn’t reference subscriptions, resource groups, or resources in another tenant.
+
+- Test minimal deployment: Deploy a simple resource to the same resource group to confirm identity and tenant are correct.
+
+- Guest/external accounts: Avoid using guest users from other tenants; use native accounts or SPs in the tenant.
+
+</details>
+
+<details><summary><b>RequestDisallowedByPolicy </b></summary>
+
+- This typically indicates that an Azure Policy is preventing the requested action due to policy restrictions in your subscription.
+
+- For more details and guidance on resolving this issue, please refer to the official Microsoft documentation: [RequestDisallowedByPolicy](https://learn.microsoft.com/en-us/troubleshoot/azure/azure-kubernetes/create-upgrade-delete/error-code-requestdisallowedbypolicy)
+
+</details>
+
+<details>
+<summary><b>FlagMustBeSetForRestore/NameUnavailable/CustomDomainInUse</b></summary>
+
+- This error occurs when you try to deploy a Cognitive Services resource that was **soft-deleted** earlier.  
+- Azure requires you to explicitly set the **`restore` flag** to `true` if you want to recover the soft-deleted resource.  
+- If you don’t want to restore the resource, you must **purge the deleted resource** first before redeploying.
+Example causes:
+- Trying to redeploy a Cognitive Services account with the same name as a previously deleted one.  
+- The deleted resource still exists in a **soft-delete retention state**.  
+**How to fix:**
+1. If you want to restore → add `"restore": true` in your template properties.  
+2. If you want a fresh deployment → purge the resource using:  
+   ```bash
+   az cognitiveservices account purge \
+     --name <resource-name> \
+     --resource-group <resource-group> \
+     --location <location>
+    ```
+For more details, refer to [Soft delete and resource restore](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/delete-resource-group?tabs=azure-powershell).
+</details>
+
+<details>
+<summary><b>PrincipalNotFound</b></summary>
+
+- This error occurs when the **principal ID** (Service Principal, User, or Group) specified in a role assignment or deployment does not exist in the Azure Active Directory tenant.  
+- It can also happen due to **replication delays** right after creating a new principal.  
+**Example causes:**
+- The specified **Object ID** is invalid or belongs to another tenant.  
+- The principal was recently created but Azure AD has not yet replicated it.  
+- Attempting to assign a role to a non-existing or deleted Service Principal/User/Group.  
+**How to fix:**
+1. Verify that the **principal ID is correct** and exists in the same directory/tenant.  
+   ```bash
+   az ad sp show --id <object-id>
+    ```
+2. If the principal was just created, wait a few minutes and retry.
+3. Explicitly set the principalType property (ServicePrincipal, User, or Group) in your ARM/Bicep template to avoid replication delays.
+4. If the principal does not exist, create it again before assigning roles.
+For more details, see [Azure PrincipalType documentation](https://learn.microsoft.com/en-us/azure/role-based-access-control/troubleshooting?tabs=bicep)
+</details>
+<details>
+<summary><b>RedundancyConfigurationNotAvailableInRegion</b></summary>
+
+- This issue happens when you try to create a **Storage Account** with a redundancy configuration (e.g., `Standard_GRS`) that is **not supported in the selected Azure region**.
+- Example: Creating a storage account with **GRS** in **italynorth** will fail with this error.
+```bash
+az storage account create -n mystorageacct123 -g myResourceGroup -l italynorth --sku Standard_GRS --kind StorageV2
+```
+- To check supported SKUs for your region:
+```bash
+az storage account list-skus -l italynorth -o table
+```
+Use a supported redundancy option (e.g., Standard_LRS) in the same region
+Or deploy the Storage Account in a region that supports your chosen redundancy.
+For more details, refer to [Azure Storage redundancy documentation](https://learn.microsoft.com/en-us/azure/storage/common/storage-redundancy?utm_source=chatgpt.com).
+</details>
+
+<details> <summary><b>DeploymentNotFound</b></summary>
+
+- This issue occurs when the user deletes a previous deployment along with the resource group (RG), and then redeploys the same RG with the same environment name but in a different location.
+
+- To avoid the DeploymentNotFound error, Do not change the location when redeploying a deleted RG, or Use new names for the RG and environment during redeployment.
+</details>
+
+<details><summary><b>DeploymentCanceled(user.canceled)</b></summary>
+
+- Indicates the deployment was manually canceled by the user (Portal, CLI, or pipeline).
+
+- Check deployment history and logs to confirm who/when it was canceled.
+
+- If accidental, retry the deployment.
+
+- For pipelines, ensure no automation or timeout is triggering cancellation.
+
+- Use deployment locks or retry logic to prevent accidental cancellations.
+
+</details>
+
+<details><summary><b>ResourceGroupDeletionTimeout</b></summary>
+
+- Some resources in the resource group may be stuck deleting or have dependencies; check RG resources and status.
+
+- Ensure no resource locks or Azure Policies are blocking deletion.
+
+- Retry deletion via CLI/PowerShell `(az group delete --name <RG_NAME> --yes --no-wait)`.
+
+- Check Activity Log to identify failing resources; escalate to Azure Support if deletion is stuck.
+
+</details>
+
+<details>
+<summary><b>SubscriptionDoesNotHaveServer</b></summary>
+ 
+- This issue happens when you try to reference an **Azure SQL Server** (`Microsoft.Sql/servers`) that does not exist in the selected subscription.  
+- It can occur if:  
+  - The SQL server name is typed incorrectly.  
+  - The SQL server was **deleted** but is still being referenced.  
+  - You are working in the **wrong subscription context**.  
+  - The server exists in a **different subscription/tenant** where you don’t have access.
+ 
+**Reproduce:**  
+1. Run an Azure CLI command with a non-existent server name:
+```bash
+   az sql db list --server sql-doesnotexist --resource-group myResourceGroup
+```
+ 
+  or
+ 
+```bash
+  az sql server show --name sql-caqfrhxr4i3hyj --resource-group myResourceGroup
+ 
+```
+   
+Resolution:
+ 
+Verify the SQL Server name exists in your subscription:
+ 
+```bash
+    az sql server list --output table
+```
+Make sure you are targeting the correct subscription:
+ 
+```bash
+    az account show
+    az account set --subscription <subscription-id>
+```
+If the server was deleted, either restore it (if possible) or update references to use a valid existing server.
+ 
+</details>
+
+
+<details><summary><b>DeploymentCanceled(user.canceled)</b></summary>
+
+- Indicates the deployment was manually canceled by the user (Portal, CLI, or pipeline).
+
+- Check deployment history and logs to confirm who/when it was canceled.
+
+- If accidental, retry the deployment.
+
+- For pipelines, ensure no automation or timeout is triggering cancellation.
+
+- Use deployment locks or retry logic to prevent accidental cancellations.
+
+</details>
+
+<details><summary><b>BadRequest - DatabaseAccount is in a failed provisioning state because the previous attempt to create it was not successful</b></summary>
+
+- This error occurs when a user attempts to redeploy a resource that previously failed to provision.
+
+- To resolve the issue, delete the failed deployment first, then start a new deployment.
+
+- For guidance on deleting a resource from a Resource Group, refer to the following link: [Delete an Azure Cosmos DB account](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/manage-with-powershell#delete-account:~:text=%3A%24enableMultiMaster-,Delete%20an%20Azure%20Cosmos%20DB%20account,-This%20command%20deletes)
+
+</details>
+
+<details>
+
+<summary><b>SpecialFeatureOrQuotaIdRequired</b></summary>
+
+This error occurs when your subscription does not have access to certain Azure OpenAI models.  
+
+**Example error message:**  
+`SpecialFeatureOrQuotaIdRequired: The current subscription does not have access to this model 'Format:OpenAI,Name:o3,Version:2025-04-16'.`  
+
+**Resolution:**  
+To gain access, submit a request using the official form:  
+👉 [Azure OpenAI Model Access Request](https://customervoice.microsoft.com/Pages/ResponsePage.aspx?id=v4j5cvGGr0GRqy180BHbR7en2Ais5pxKtso_Pz4b1_xUQ1VGQUEzRlBIMVU2UFlHSFpSNkpOR0paRSQlQCN0PWcu)  
+
+You’ll need to use this form if you require access to the following restricted models:  
+- gpt-5  
+- o3  
+- o3-pro  
+- deep research  
+- reasoning summary  
+- gpt-image-1  
+
+Once your request is approved, redeploy your resource.
+
+</details>
+
+<details>
+<summary><b>ContainerAppOperationError</b></summary>
+ 
+- The error is likely due to an improperly built container image. For resolution steps, refer to the [Azure Container Registry (ACR) – Build & Push Guide](./ACRBuildAndPushGuide.md)
  
 </details>
 

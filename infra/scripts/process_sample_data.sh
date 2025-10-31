@@ -6,6 +6,7 @@ blobContainer="$2"
 aiSearch="$3"
 aiSearchIndex="$4"
 resourceGroup="$5"
+azSubscriptionId="$6"
 
 # get parameters from azd env, if not provided
 if [ -z "$storageAccount" ]; then
@@ -28,7 +29,9 @@ if [ -z "$resourceGroup" ]; then
     resourceGroup=$(azd env get-value AZURE_RESOURCE_GROUP)
 fi
 
-azSubscriptionId=$(azd env get-value AZURE_SUBSCRIPTION_ID)
+if [ -z "$azSubscriptionId" ]; then
+    azSubscriptionId=$(azd env get-value AZURE_SUBSCRIPTION_ID)
+fi
 
 # Check if all required arguments are provided
 if [ -z "$storageAccount" ] || [ -z "$blobContainer" ] || [ -z "$aiSearch" ]; then

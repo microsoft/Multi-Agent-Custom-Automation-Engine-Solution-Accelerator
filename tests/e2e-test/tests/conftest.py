@@ -38,7 +38,7 @@ def login_logout():
 @pytest.hookimpl(tryfirst=True)
 def pytest_html_report_title(report):
     """Customize HTML report title."""
-    report.title = "Test Automation MACAE"
+    report.title = "Test Automation MACAE-v3 GP"
 
 
 log_streams = {}

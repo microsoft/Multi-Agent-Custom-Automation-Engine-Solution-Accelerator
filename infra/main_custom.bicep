@@ -133,31 +133,31 @@ param virtualMachineAdminPassword string = newGuid()
 // These parameters are changed for testing - please reset as part of publication
 
 @description('Optional. The Container Registry hostname where the docker images for the backend are located.')
-param backendContainerRegistryHostname string = 'macaev3tst1acr.azurecr.io'
+param backendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
 
 @description('Optional. The Container Image Name to deploy on the backend.')
-param backendContainerImageName string = 'macae-backend'
+param backendContainerImageName string = 'macaebackend'
 
 @description('Optional. The Container Image Tag to deploy on the backend.')
-param backendContainerImageTag string = 'v3tst1'
+param backendContainerImageTag string = 'latest_v3'
 
 @description('Optional. The Container Registry hostname where the docker images for the frontend are located.')
-param frontendContainerRegistryHostname string = 'macaev3tst1acr.azurecr.io'
+param frontendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
 
 @description('Optional. The Container Image Name to deploy on the frontend.')
-param frontendContainerImageName string = 'macae-frontend'
+param frontendContainerImageName string = 'macaefrontend'
 
 @description('Optional. The Container Image Tag to deploy on the frontend.')
-param frontendContainerImageTag string = 'v3tst1'
+param frontendContainerImageTag string = 'latest_v3'
 
 @description('Optional. The Container Registry hostname where the docker images for the MCP are located.')
-param MCPContainerRegistryHostname string = 'macaev3tst1acr.azurecr.io'
+param MCPContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
 
 @description('Optional. The Container Image Name to deploy on the MCP.')
-param MCPContainerImageName string = 'mcp_server'
+param MCPContainerImageName string = 'macaemcp'
 
 @description('Optional. The Container Image Tag to deploy on the MCP.')
-param MCPContainerImageTag string = 'v3tst1'
+param MCPContainerImageTag string = 'latest_v3'
 
 @description('Optional. Enable/Disable usage telemetry for module.')
 param enableTelemetry bool = true
@@ -223,8 +223,8 @@ var allTags = union(
   },
   tags
 )
-@description('Optional created by user name')
-param createdBy string = empty(deployer().userPrincipalName) ? '' : split(deployer().userPrincipalName, '@')[0] 
+@description('Tag, Created by user name')
+param createdBy string = contains(deployer(), 'userPrincipalName')? split(deployer().userPrincipalName, '@')[0]: deployer().objectId
 
 resource resourceGroupTags 'Microsoft.Resources/tags@2021-04-01' = {
   name: 'default'
@@ -232,7 +232,9 @@ resource resourceGroupTags 'Microsoft.Resources/tags@2021-04-01' = {
     tags: {
       ...allTags
       TemplateName: 'MACAE'
+      Type: enablePrivateNetworking ? 'WAF' : 'Non-WAF'
       CreatedBy: createdBy
+      DeploymentName: deployment().name
     }
   }
 }
@@ -284,7 +286,7 @@ module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0
     features: { enableLogAccessUsingOnlyResourcePermissions: true }
     diagnosticSettings: [{ useThisWorkspace: true }]
     // WAF aligned configuration for Redundancy
-    dailyQuotaGb: enableRedundancy ? 10 : null //WAF recommendation: 10 GB per day is a good starting point for most workloads
+    dailyQuotaGb: enableRedundancy ? 150 : null //WAF recommendation: 150 GB per day is a good starting point for most workloads
     replication: enableRedundancy
       ? {
           enabled: true
@@ -673,14 +675,12 @@ module virtualNetwork 'br/public:avm/res/network/virtual-network:0.7.0' = if (en
       {
         name: 'backend'
         addressPrefix: '10.0.0.0/27'
-        //defaultOutboundAccess: false TODO: check this configuration for a more restricted outbound access
         networkSecurityGroupResourceId: networkSecurityGroupBackend!.outputs.resourceId
       }
       {
         name: 'administration'
         addressPrefix: '10.0.0.32/27'
         networkSecurityGroupResourceId: networkSecurityGroupAdministration!.outputs.resourceId
-        //defaultOutboundAccess: false TODO: check this configuration for a more restricted outbound access
         //natGatewayResourceId: natGateway.outputs.resourceId
       }
       {
@@ -727,6 +727,7 @@ module bastionHost 'br/public:avm/res/network/bastion-host:0.7.0' = if (enablePr
     enableTelemetry: enableTelemetry
     tags: tags
     virtualNetworkResourceId: virtualNetwork!.?outputs.?resourceId
+    availabilityZones:[]
     publicIPAddressObject: {
       name: 'pip-bas${solutionSuffix}'
       diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : null
@@ -851,6 +852,26 @@ module windowsVmDataCollectionRules 'br/public:avm/res/insights/data-collection-
             name: 'perfCounterDataSource60'
           }
         ]
+        windowsEventLogs: [
+          {
+            name: 'SecurityAuditEvents'
+            streams: [
+              'Microsoft-WindowsEvent'
+            ]
+            eventLogName: 'Security'
+            eventTypes: [
+              {
+                eventType: 'Audit Success'
+              }
+              {
+                eventType: 'Audit Failure'
+              }
+            ]
+            xPathQueries: [
+              'Security!*[System[(EventID=4624 or EventID=4625)]]'
+            ]
+          }
+        ]
       }
       destinations: {
         logAnalytics: [
@@ -908,7 +929,7 @@ module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.17.0' = if (e
     bypassPlatformSafetyChecksOnUserSchedule: true
     maintenanceConfigurationResourceId: maintenanceConfiguration!.outputs.resourceId
     enableAutomaticUpdates: true
-    encryptionAtHost: false
+    encryptionAtHost: true
     availabilityZone: virtualMachineAvailabilityZone
     proximityPlacementGroupResourceId: proximityPlacementGroup!.outputs.resourceId
     imageReference: {
@@ -1314,7 +1335,6 @@ var cosmosDbResourceName = 'cosmos-${solutionSuffix}'
 var cosmosDbDatabaseName = 'macae'
 var cosmosDbDatabaseMemoryContainerName = 'memory'
 
-//TODO: update to latest version of AVM module
 module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
   name: take('avm.res.document-db.database-account.${cosmosDbResourceName}', 64)
   params: {
@@ -1507,7 +1527,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
     // WAF aligned configuration for Scalability
     scaleSettings: {
       maxReplicas: enableScalability ? 3 : 1
-      minReplicas: enableScalability ? 2 : 1
+      minReplicas: enableScalability ? 1 : 1
       rules: [
         {
           name: 'http-scaler'
@@ -1530,24 +1550,6 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
         name: 'backend'
         //image: '${backendContainerRegistryHostname}/${backendContainerImageName}:${backendContainerImageTag}'
         image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
-        //TODO: configure probes for container app
-        // probes: [
-        //   {
-        //     httpGet: {
-        //       httpHeaders: [
-        //         {
-        //           name: 'Custom-Header'
-        //           value: 'Awesome'
-        //         }
-        //       ]
-        //       path: '/health'
-        //       port: 8080
-        //     }
-        //     initialDelaySeconds: 3
-        //     periodSeconds: 3
-        //     type: 'Liveness'
-        //   }
-        // ]
         resources: {
           cpu: '2.0'
           memory: '4.0Gi'
@@ -1591,11 +1593,11 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
           }
           {
             name: 'AZURE_AI_SUBSCRIPTION_ID'
-            value: subscription().subscriptionId
+            value: aiFoundryAiServicesSubscriptionId
           }
           {
             name: 'AZURE_AI_RESOURCE_GROUP'
-            value: resourceGroup().name
+            value: aiFoundryAiServicesResourceGroupName
           }
           {
             name: 'AZURE_AI_PROJECT_NAME'
@@ -1723,7 +1725,7 @@ module containerAppMcp 'br/public:avm/res/app/container-app:0.18.1' = {
     // WAF aligned configuration for Scalability
     scaleSettings: {
       maxReplicas: enableScalability ? 3 : 1
-      minReplicas: enableScalability ? 2 : 1
+      minReplicas: enableScalability ? 1 : 1
       rules: [
         {
           name: 'http-scaler'
@@ -1746,24 +1748,6 @@ module containerAppMcp 'br/public:avm/res/app/container-app:0.18.1' = {
         name: 'mcp'
         //image: '${backendContainerRegistryHostname}/${backendContainerImageName}:${backendContainerImageTag}'
         image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
-        //TODO: configure probes for container app
-        // probes: [
-        //   {
-        //     httpGet: {
-        //       httpHeaders: [
-        //         {
-        //           name: 'Custom-Header'
-        //           value: 'Awesome'
-        //         }
-        //       ]
-        //       path: '/health'
-        //       port: 8080
-        //     }
-        //     initialDelaySeconds: 3
-        //     periodSeconds: 3
-        //     type: 'Liveness'
-        //   }
-        // ]
         resources: {
           cpu: '2.0'
           memory: '4.0Gi'
@@ -1884,6 +1868,7 @@ module webSite 'modules/web-sites.bicep' = {
     vnetImagePullEnabled: enablePrivateNetworking ? true : false
     virtualNetworkSubnetId: enablePrivateNetworking ? virtualNetwork!.outputs.subnetResourceIds[4] : null
     publicNetworkAccess: 'Enabled' // Always enabling the public network access for Web App
+    e2eEncryptionEnabled: true
   }
 }
 
@@ -1979,7 +1964,11 @@ module searchService 'br/public:avm/res/search/search-service:0.11.1' = {
     managedIdentities: {
       systemAssigned: true
     }
-    publicNetworkAccess: enablePrivateNetworking  ? 'Disabled' : 'Enabled'
+
+    // Enabled the Public access because other services are not able to connect with search search AVM module when public access is disabled
+
+    // publicNetworkAccess: enablePrivateNetworking  ? 'Disabled' : 'Enabled'
+    publicNetworkAccess: 'Enabled'
     networkRuleSet: {
       bypass: 'AzureServices'
     }
@@ -2009,23 +1998,27 @@ module searchService 'br/public:avm/res/search/search-service:0.11.1' = {
         principalType: 'ServicePrincipal'
       }
     ]
-    privateEndpoints: enablePrivateNetworking 
-      ? [
-          {
-            name: 'pep-search-${solutionSuffix}'
-            customNetworkInterfaceName: 'nic-search-${solutionSuffix}'
-            privateDnsZoneGroup: {
-              privateDnsZoneGroupConfigs: [
-                {
-                  privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.search]!.outputs.resourceId
-                }
-              ]
-            }
-            subnetResourceId: virtualNetwork!.outputs.subnetResourceIds[0]
-            service: 'searchService'
-          }
-        ]
-      : []
+    privateEndpoints:[]
+
+    // Removing the Private endpoints as we are facing the issue with connecting to search service while comminicating with agents
+
+    // privateEndpoints: enablePrivateNetworking 
+    //   ? [
+    //       {
+    //         name: 'pep-search-${solutionSuffix}'
+    //         customNetworkInterfaceName: 'nic-search-${solutionSuffix}'
+    //         privateDnsZoneGroup: {
+    //           privateDnsZoneGroupConfigs: [
+    //             {
+    //               privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.search]!.outputs.resourceId
+    //             }
+    //           ]
+    //         }
+    //         subnetResourceId: virtualNetwork!.outputs.subnetResourceIds[0]
+    //         service: 'searchService'
+    //       }
+    //     ]
+    //   : []
   }
 }
 
@@ -2070,7 +2063,7 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.12.1' = {
     enableSoftDelete: true
     softDeleteRetentionInDays: 7
     diagnosticSettings: enableMonitoring 
-      ? [{ workspaceResourceId: logAnalyticsWorkspace!.outputs.resourceId }] 
+      ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] 
       : []
     // WAF aligned configuration for Private Networking
     privateEndpoints: enablePrivateNetworking

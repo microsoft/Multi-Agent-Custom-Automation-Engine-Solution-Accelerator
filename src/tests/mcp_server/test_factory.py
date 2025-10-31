@@ -3,7 +3,7 @@ Tests for the MCP tool factory.
 """
 
 import pytest
-from core.factory import MCPToolFactory, Domain, MCPToolBase
+from src.mcp_server.core.factory import MCPToolFactory, Domain, MCPToolBase
 
 
 class TestMCPToolFactory:

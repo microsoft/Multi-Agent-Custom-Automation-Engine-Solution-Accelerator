@@ -57,7 +57,6 @@ class FoundryService:
             credential = config.get_azure_credentials()
             token = credential.get_token(config.AZURE_MANAGEMENT_SCOPE)
 
-
             # Extract Azure OpenAI resource name from endpoint URL
             openai_endpoint = config.AZURE_OPENAI_ENDPOINT
             # Extract resource name from URL like "https://aisa-macae-d3x6aoi7uldi.openai.azure.com/"

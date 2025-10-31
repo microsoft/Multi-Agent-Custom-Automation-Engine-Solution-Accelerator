@@ -1,25 +1,25 @@
-#!/bin/bash
+#!/bin/sh
 
+echo "Pull latest code for the current branch"
+git fetch
+git pull
+
+set -e 
+
+echo "Setting up Backend..."
 cd ./src/backend
-uv add -r requirements.txt
+uv sync --frozen
+cd ../../
 
-cd ../frontend
-uv add -r requirements.txt
+echo "Setting up Frontend..."
+cd ./src/frontend
+npm install
+pip install -r requirements.txt
+cd ../../
 
-cd ..
+echo "Setting up MCP..."
+cd ./src/mcp_server
+uv sync --frozen
+cd ../../
 
-
-
-
-
-
-
-# pip install --upgrade pip
-
-
-# (cd ./src/frontend; pip install -r requirements.txt)
-
-
-# (cd ./src/backend; pip install -r requirements.txt)
-
-
+echo "Setup complete! 🎉"

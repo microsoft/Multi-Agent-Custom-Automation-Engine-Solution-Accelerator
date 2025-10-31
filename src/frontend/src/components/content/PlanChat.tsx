@@ -31,8 +31,8 @@ import renderPlanResponse from "./streaming/StreamingPlanResponse";
 import { renderPlanExecutionMessage, renderThinkingState } from "./streaming/StreamingPlanState";
 import ContentNotFound from "../NotFound/ContentNotFound";
 import PlanChatBody from "./PlanChatBody";
-import renderBufferMessage from "./streaming/StreamingBufferMessage";
 import renderAgentMessages from "./streaming/StreamingAgentMessage";
+import StreamingBufferMessage from "./streaming/StreamingBufferMessage";
 
 interface SimplifiedPlanChatProps extends PlanChatProps {
   onPlanReceived?: (planData: MPlanData) => void;
@@ -41,6 +41,7 @@ interface SimplifiedPlanChatProps extends PlanChatProps {
   waitingForPlan: boolean;
   messagesContainerRef: React.RefObject<HTMLDivElement>;
   streamingMessageBuffer: string;
+  showBufferingText: boolean;
   agentMessages: AgentMessageData[];
   showProcessingPlanSpinner: boolean;
   showApprovalButtons: boolean;
@@ -63,25 +64,15 @@ const PlanChat: React.FC<SimplifiedPlanChatProps> = ({
   waitingForPlan,
   messagesContainerRef,
   streamingMessageBuffer,
+  showBufferingText,
   agentMessages,
   showProcessingPlanSpinner,
   showApprovalButtons,
   handleApprovePlan,
   handleRejectPlan,
   processingApproval
-
-
 }) => {
-  const navigate = useNavigate();
-
-  const { showToast, dismissToast } = useInlineToaster();
   // States
-
-
-
-
-
-
 
   if (!planData)
     return (
@@ -119,8 +110,12 @@ const PlanChat: React.FC<SimplifiedPlanChatProps> = ({
 
         {showProcessingPlanSpinner && renderPlanExecutionMessage()}
         {/* Streaming plan updates */}
-        {renderBufferMessage(streamingMessageBuffer)}
-
+        {showBufferingText && (
+          <StreamingBufferMessage
+            streamingMessageBuffer={streamingMessageBuffer}
+            isStreaming={true}
+          />
+        )}
       </div>
 
       {/* Chat Input - only show if no plan is waiting for approval */}
@@ -132,7 +127,7 @@ const PlanChat: React.FC<SimplifiedPlanChatProps> = ({
         OnChatSubmit={OnChatSubmit}
         waitingForPlan={waitingForPlan}
         loading={false} />
-        
+
     </div>
   );
 };

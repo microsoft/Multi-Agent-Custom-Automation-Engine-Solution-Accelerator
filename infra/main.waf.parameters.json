@@ -24,10 +24,13 @@
       "value": "${AZURE_ENV_MODEL_CAPACITY}"
     },
     "backendContainerImageTag": {
-      "value": "${AZURE_ENV_IMAGE_TAG=latest}"
+      "value": "${AZURE_ENV_IMAGE_TAG=latest_v3}"
     },
     "frontendContainerImageTag": {
-      "value": "${AZURE_ENV_IMAGE_TAG=latest}"
+      "value": "${AZURE_ENV_IMAGE_TAG=latest_v3}"
+    },
+    "MCPContainerImageTag": {
+      "value": "${AZURE_ENV_IMAGE_TAG=latest_v3}"
     },
     "enableTelemetry": {
       "value": "${AZURE_ENV_ENABLE_TELEMETRY}"
@@ -51,7 +54,26 @@
         "value": "${AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID}"
     },
     "existingAiFoundryAiProjectResourceId": {
-      "value": "${AZURE_ENV_FOUNDRY_PROJECT_ID}"
+      "value": "${AZURE_EXISTING_AI_PROJECT_RESOURCE_ID}"
+    },
+    "allowedFqdnList": {
+      "value": [
+        "mcr.microsoft.com",
+        "openai.azure.com",
+        "cognitiveservices.azure.com",
+        "login.microsoftonline.com",
+        "management.azure.com",
+        "aiinfra.azure.com",
+        "aiinfra.azure.net",
+        "aiinfra.azureedge.net",
+        "blob.core.windows.net",
+        "database.windows.net",
+        "vault.azure.net",
+        "monitoring.azure.com",
+        "dc.services.visualstudio.com",
+        "azconfig.io",
+        "azconfig.azure.net"
+      ]
     }
   }
 }

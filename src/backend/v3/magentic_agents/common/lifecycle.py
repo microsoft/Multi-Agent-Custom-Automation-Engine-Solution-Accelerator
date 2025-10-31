@@ -1,6 +1,4 @@
-import os
 from contextlib import AsyncExitStack
-from dataclasses import dataclass
 from typing import Any
 
 from azure.ai.projects.aio import AIProjectClient
@@ -8,6 +6,7 @@ from azure.identity.aio import DefaultAzureCredential
 from semantic_kernel.agents.azure_ai.azure_ai_agent import AzureAIAgent
 from semantic_kernel.connectors.mcp import MCPStreamableHttpPlugin
 from v3.magentic_agents.models.agent_models import MCPConfig
+from v3.config.agent_registry import agent_registry
 
 
 class MCPEnabledBase:
@@ -18,7 +17,7 @@ class MCPEnabledBase:
 
     def __init__(self, mcp: MCPConfig | None = None) -> None:
         self._stack: AsyncExitStack | None = None
-        self.mcp_cfg: MCPConfig | None = mcp 
+        self.mcp_cfg: MCPConfig | None = mcp
         self.mcp_plugin: MCPStreamableHttpPlugin | None = None
         self._agent: Any | None = None  # delegate target
 
@@ -34,7 +33,7 @@ class MCPEnabledBase:
         if self._stack is None:
             return
         try:
-            #self.cred.close()
+            # self.cred.close()
             await self._stack.aclose()
         finally:
             self._stack = None
@@ -76,12 +75,12 @@ class MCPEnabledBase:
     async def _enter_mcp_if_configured(self) -> None:
         if not self.mcp_cfg:
             return
-        #headers = self._build_mcp_headers()
+        # headers = self._build_mcp_headers()
         plugin = MCPStreamableHttpPlugin(
             name=self.mcp_cfg.name,
             description=self.mcp_cfg.description,
             url=self.mcp_cfg.url,
-            #headers=headers,
+            # headers=headers,
         )
         # Enter MCP async context via the stack to ensure correct LIFO cleanup
         if self._stack is None:
@@ -120,5 +119,32 @@ class AzureAgentBase(MCPEnabledBase):
         return self
 
     async def close(self) -> None:
-        await self.creds.close()
+        """
+        Close the agent and clean up Azure AI Foundry resources.
+        This method deletes the agent from Azure AI Foundry and closes credentials.
+        """
+
+        try:
+            # Delete agent from Azure AI Foundry if we have the necessary information
+            if hasattr(self, '_agent') and self._agent and hasattr(self._agent, 'definition'):
+                agent_id = getattr(self._agent.definition, 'id', None)
+
+                if agent_id and self.client:
+                    try:
+                        await self.client.agents.delete_agent(agent_id)
+                    except Exception:
+                        pass
+            # Unregister from agent registry
+            try:
+                agent_registry.unregister_agent(self)
+            except Exception:
+                pass
+        except Exception:
+            pass
+        # Always close credentials and parent resources
+        try:
+            if hasattr(self, 'creds') and self.creds:
+                await self.creds.close()
+        except Exception:
+            pass
         await super().close()

@@ -41,11 +41,7 @@ const PlanChatBody: React.FC<SimplifiedPlanChatProps> = ({
                 onChange={setInput}
                 onEnter={() => OnChatSubmit(input)}
                 disabledChat={submittingChatDisableInput}
-                placeholder={
-                    waitingForPlan
-                        ? "Creating plan..."
-                        : "Type your message here..."
-                }
+                placeholder="Type your message here..."
                 style={{
                     fontSize: '16px',
                     borderRadius: '8px',
@@ -68,7 +64,7 @@ const PlanChatBody: React.FC<SimplifiedPlanChatProps> = ({
                         backgroundColor: 'transparent',
                         border: 'none',
                         color: (submittingChatDisableInput || !input.trim())
-                            ? 'var(--colorNeutralForegroundDisabled)' 
+                            ? 'var(--colorNeutralForegroundDisabled)'
                             : 'var(--colorBrandForeground1)',
                         flexShrink: 0,
                     }}

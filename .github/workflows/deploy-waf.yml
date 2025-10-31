@@ -1,4 +1,4 @@
-name: Validate WAF Deployment
+name: Validate WAF Deployment v3
 
 on:
   push:
@@ -105,6 +105,10 @@ jobs:
         id: deploy
         run: |
           set -e
+
+          # Generate current timestamp in desired format: YYYY-MM-DDTHH:MM:SS.SSSSSSSZ
+            current_date=$(date -u +"%Y-%m-%dT%H:%M:%S.%7NZ")
+
           az deployment group create \
             --resource-group ${{ env.RESOURCE_GROUP_NAME }} \
             --template-file infra/main.bicep \
@@ -117,6 +121,8 @@ jobs:
               enableMonitoring=true \
               enablePrivateNetworking=true \
               enableScalability=true \
+              createdBy="Pipeline" \
+              tags="{'SecurityControl':'Ignore','Purpose':'Deploying and Cleaning Up Resources for Validation','CreatedDate':'$current_date'}"
               
 
       - name: Send Notification on Failure

@@ -1,5 +1,5 @@
 import logging
-import os
+
 from azure.monitor.events.extension import track_event
 from common.config.app_config import config
 
