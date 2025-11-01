@@ -100,27 +100,69 @@ class FoundryAgentTemplate(AzureAgentBase):
     # -------------------------
     async def _create_azure_search_enabled_client(self):
         """
-        Create a server-side Azure AI agent with raw Azure AI Search tool and return an AzureAIAgentClient.
-        This mirrors your example while fitting existing lifecycle.
+        Create a server-side Azure AI agent with Azure AI Search raw tool.
 
-        If these assumptions differ, adjust accordingly.
+        Requirements:
+          - An Azure AI Project Connection (type=AZURE_AI_SEARCH) that contains either:
+              a) API key + endpoint, OR
+              b) Managed Identity (RBAC enabled on the Search service with Search Service Contributor + Search Index Data Reader).
+          - search_config.index_name must exist in the Search service.
+          - search_config.connection_name OR search_config.connection_id must reference the desired connection.
+
+        Returns:
+            AzureAIAgentClient | None
         """
-
-        connection_id = getattr(self.search, "connection_name", "")
-        index_name = getattr(self.search, "index_name", "")
-        query_type = getattr(self.search, "search_query_type", "vector")
-        
-        # ai_search_conn_id = ""
-        async for connection in self.client.project_client.connections.list():
-            if connection.type == ConnectionType.AZURE_AI_SEARCH:
-                connection_id = connection.id
-                break
-        if not connection_id or not index_name:
-            self.logger.error(
-                "Missing azure_search_connection_id or azure_search_index_name in search_config; aborting Azure Search path."
-            )
+        if not self.search:
+            self.logger.error("Search configuration missing.")
             return None
 
+        desired_connection_id = getattr(self.search, "connection_id", None)
+        desired_connection_name = getattr(self.search, "connection_name", None)
+        index_name = getattr(self.search, "index_name", "")
+        query_type = getattr(self.search, "search_query_type", "vector")
+
+        if not index_name:
+            self.logger.error("index_name not provided in search_config; aborting Azure Search path.")
+            return None
+
+        resolved_connection_id = None
+
+        try:
+            async for connection in self.client.project_client.connections.list():
+                if connection.type == ConnectionType.AZURE_AI_SEARCH:
+                    # Allow direct id override
+                    if desired_connection_id and connection.id == desired_connection_id:
+                        resolved_connection_id = connection.id
+                        break
+                    # Else match by name
+                    if desired_connection_name and connection.name == desired_connection_name:
+                        resolved_connection_id = connection.id
+                        break
+                    # Fallback: if no specific connection requested and none resolved yet, take the first
+                    if not desired_connection_id and not desired_connection_name and not resolved_connection_id:
+                        resolved_connection_id = connection.id
+                        # Do not break yet; we log but allow chance to find a name match later. If not, this stays.
+
+            if not resolved_connection_id:
+                self.logger.error(
+                    "No Azure AI Search connection resolved. "
+                    "Provided connection_id=%s, connection_name=%s",
+                    desired_connection_id,
+                    desired_connection_name,
+                )
+              #  return None
+
+            self.logger.info(
+                "Using Azure AI Search connection (id=%s, requested_name=%s, requested_id=%s).",
+                resolved_connection_id,
+                desired_connection_name,
+                desired_connection_id,
+            )
+        except Exception as ex:
+            self.logger.error("Failed to enumerate connections: %s", ex)
+            return None
+
+        # Create agent with raw tool
         try:
             azure_agent = await self.client.project_client.agents.create_agent(
                 model=self.model_deployment_name,
@@ -134,7 +176,7 @@ class FoundryAgentTemplate(AzureAgentBase):
                     "azure_ai_search": {
                         "indexes": [
                             {
-                                "index_connection_id": connection_id,
+                                "index_connection_id": resolved_connection_id,
                                 "index_name": index_name,
                                 "query_type": query_type,
                             }
@@ -144,9 +186,10 @@ class FoundryAgentTemplate(AzureAgentBase):
             )
             self._azure_server_agent_id = azure_agent.id
             self.logger.info(
-                "Created Azure server agent with Azure AI Search tool (agent_id=%s, index=%s).",
+                "Created Azure server agent with Azure AI Search tool (agent_id=%s, index=%s, query_type=%s).",
                 azure_agent.id,
                 index_name,
+                query_type,
             )
 
             chat_client = AzureAIAgentClient(
@@ -155,9 +198,13 @@ class FoundryAgentTemplate(AzureAgentBase):
             )
             return chat_client
         except Exception as ex:
-            self.logger.error("Failed to create Azure Search enabled agent: %s", ex)
+            self.logger.error(
+                "Failed to create Azure Search enabled agent (connection_id=%s, index=%s): %s",
+                resolved_connection_id,
+                index_name,
+                ex,
+            )
             return None
-
     # -------------------------
     # Agent lifecycle override
     # -------------------------
