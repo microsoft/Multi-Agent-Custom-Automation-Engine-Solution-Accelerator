@@ -178,7 +178,7 @@ class FoundryAgentTemplate(AzureAgentBase):
                             {
                                 "index_connection_id": resolved_connection_id,
                                 "index_name": index_name,
-                                "query_type": query_type,
+                                "query_type": "simple",
                             }
                         ]
                     }
