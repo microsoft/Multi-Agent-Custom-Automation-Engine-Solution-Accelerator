@@ -121,52 +121,10 @@ class OrchestrationManager:
                 participants[name] = ag
                 cls.logger.debug("Added participant '%s'", name)
 
-        # Create unified event callback for Magentic workflow
-        async def on_event(event) -> None:
-            """
-            Handle all Magentic workflow events and route them to appropriate handlers.
-            This replaces the old callback attachment approach with the proper event-based system.
-            """
-            try:
-                if isinstance(event, MagenticOrchestratorMessageEvent):
-                    # Orchestrator messages (task assignments, coordination)
-                    message_text = getattr(event.message, 'text', '')
-                    cls.logger.info(f"[ORCHESTRATOR:{event.kind}] {message_text}")
-                    
-                elif isinstance(event, MagenticAgentDeltaEvent):
-                    # Streaming update from agent - convert to our format
-                    # MagenticAgentDeltaEvent has: agent_id, text, and other properties
-                    try:
-                        await streaming_agent_response_callback(
-                            event.agent_id, 
-                            event,  # Pass the event itself as the update object
-                            False,  # Not final yet (streaming in progress)
-                            user_id
-                        )
-                    except Exception as e:
-                        cls.logger.error(f"Error in streaming callback for agent {event.agent_id}: {e}")
-                    
-                elif isinstance(event, MagenticAgentMessageEvent):
-                    # Final agent message - complete response
-                    if event.message:
-                        try:
-                            agent_response_callback(event.agent_id, event.message, user_id)
-                        except Exception as e:
-                            cls.logger.error(f"Error in agent callback for agent {event.agent_id}: {e}")
-                    
-                elif isinstance(event, MagenticFinalResultEvent):
-                    # Final result from the entire workflow
-                    final_text = getattr(event.message, 'text', '')
-                    cls.logger.info(f"[FINAL RESULT] Length: {len(final_text)} chars")
-                    
-            except Exception as e:
-                cls.logger.error(f"Error in on_event callback: {e}", exc_info=True)
-
         # Assemble workflow with .on_event() callback (proper way for agent_framework)
         builder = (
             MagenticBuilder()
             .participants(**participants)
-            #.on_event(on_event)  # Enable streaming events
             .with_standard_manager(manager=manager)
         )
 
