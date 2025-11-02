@@ -78,14 +78,6 @@ class ReasoningAgentTemplate(MCPEnabledBase):
         
         self.logger = logging.getLogger(__name__)
 
-        # Validate reasoning model
-        if self.model_deployment_name not in {"o1", "o1-mini", "o1-preview", "o3-mini"}:
-            self.logger.warning(
-                "Model '%s' may not support reasoning features. "
-                "Recommended models: o1, o1-mini, o3-mini",
-                self.model_deployment_name
-            )
-
     async def _after_open(self) -> None:
         """Initialize Azure client and search after base setup."""
         try:
@@ -241,84 +233,6 @@ class ReasoningAgentTemplate(MCPEnabledBase):
         
         return tools
 
-    async def invoke(self, prompt: str):
-        """
-        Stream model output for a prompt with optional search augmentation.
-        
-        For reasoning models, this will include:
-        - Reasoning content (thinking process)
-        - Final answer content
-        
-        Args:
-            prompt: User prompt/question
-            
-        Yields:
-            ChatResponseUpdate objects with incremental updates
-        """
-        if not self._client:
-            raise RuntimeError("Agent not initialized; call open() first.")
-
-        # Augment instructions with search results if available
-        instructions = await self._augment_with_search(prompt)
-
-        # Build message
-        messages = [ChatMessage(role=Role.USER, text=prompt)]
-
-        # Prepare tools
-        tools = self._prepare_tools()
-
-        try:
-            # Stream response from reasoning model
-            async for update in self._client.get_streaming_response(
-                messages=messages,
-                instructions=instructions,
-                tools=tools if tools else None,
-                tool_choice="auto" if tools else "none",
-                temperature=1.0,  # Reasoning models use fixed temperature
-            ):
-                yield update
-
-        except Exception as ex:
-            self.logger.error("Error during reasoning agent invocation: %s", ex)
-            raise
-
-    async def invoke_non_streaming(self, prompt: str):
-        """
-        Get complete response (non-streaming) with search augmentation.
-        
-        Args:
-            prompt: User prompt/question
-            
-        Returns:
-            ChatResponse with complete response
-        """
-        if not self._client:
-            raise RuntimeError("Agent not initialized; call open() first.")
-
-        # Augment instructions with search results
-        instructions = await self._augment_with_search(prompt)
-
-        # Build message
-        messages = [ChatMessage(role=Role.USER, text=prompt)]
-
-        # Prepare tools
-        tools = self._prepare_tools()
-
-        try:
-            # Get response from reasoning model
-            response = await self._client.get_response(
-                messages=messages,
-                instructions=instructions,
-                tools=tools if tools else None,
-                tool_choice="auto" if tools else "none",
-                temperature=1.0,
-            )
-            return response
-
-        except Exception as ex:
-            self.logger.error("Error during reasoning agent invocation: %s", ex)
-            raise
-
     @property
     def client(self) -> Optional[AzureAIAgentClient]:
         """Access to underlying client for compatibility."""
@@ -374,13 +288,10 @@ async def create_reasoning_agent(
             ),
         )
         
-        async with agent:
-            async for update in agent.invoke("Explain quantum entanglement"):
-                print(update.text, end="")
         ```
     """
     # Get endpoint from env if not provided
-    endpoint = azure_ai_project_endpoint or os.getenv("AZURE_AI_PROJECT_ENDPOINT")
+    endpoint = azure_ai_project_endpoint 
     if not endpoint:
         raise RuntimeError(
             "AZURE_AI_PROJECT_ENDPOINT must be provided or set as environment variable"
@@ -391,7 +302,7 @@ async def create_reasoning_agent(
         agent_description=agent_description,
         agent_instructions=agent_instructions,
         model_deployment_name=model_deployment_name,
-        azure_ai_project_endpoint=endpoint,
+        project_endpoint=endpoint,
         search_config=search_config,
         mcp_config=mcp_config,
     )
