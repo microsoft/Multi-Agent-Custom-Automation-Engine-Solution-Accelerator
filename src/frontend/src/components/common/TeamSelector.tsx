@@ -119,7 +119,6 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
     try {
       // If this team was just uploaded, skip the selection API call and go directly to homepage
       if (uploadedTeam && uploadedTeam.team_id === tempSelectedTeam.team_id) {
-        console.log('Uploaded team selected, going directly to homepage:', tempSelectedTeam.name);
         onTeamSelect?.(tempSelectedTeam);
         setIsOpen(false);
         return; // Skip the selectTeam API call
@@ -129,7 +128,6 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
       const result = await TeamService.selectTeam(tempSelectedTeam.team_id);
 
       if (result.success) {
-        console.log('Team selected:', result.data);
         onTeamSelect?.(tempSelectedTeam);
         setIsOpen(false);
       } else {
@@ -566,7 +564,6 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
                           placeholder="Search teams..."
                           value={searchQuery}
                           onChange={(e: React.ChangeEvent<HTMLInputElement>, data: InputOnChangeData) => {
-                            console.log('Search changed:', data.value);
                             setSearchQuery(data.value || '');
                           }}
                           contentBefore={<Search20Regular />}
