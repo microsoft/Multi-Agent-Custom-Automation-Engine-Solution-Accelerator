@@ -14,7 +14,9 @@ Check the [Azure Products by Region](https://azure.microsoft.com/en-us/explore/g
 - [Azure AI Search](https://learn.microsoft.com/en-us/azure/search/)
 - [GPT Model Capacity](https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models)
 
-Here are some example regions where the services are available: East US, East US2, Japan East, UK South, Sweden Central.
+The deployment supports a limited set of Azure regions to ensure compatibility with paired regions and maintain data redundancy and failover reliability.
+
+>**Supported regions:** Australia East, Central US, East Asia, East US 2, Japan East, North Europe, Southeast Asia, UK South
 
 ### **Important Note for PowerShell Users**
 
