@@ -19,7 +19,6 @@ from azure.identity.aio import DefaultAzureCredential
 
 from v4.magentic_agents.common.lifecycle import MCPEnabledBase
 from v4.magentic_agents.models.agent_models import MCPConfig, SearchConfig
-from v4.magentic_agents.reasoning_search import ReasoningSearch, create_reasoning_search
 from v4.config.agent_registry import agent_registry
 
 
@@ -73,8 +72,6 @@ class ReasoningAgentTemplate(MCPEnabledBase):
         self._credential: Optional[DefaultAzureCredential] = None
         self._client: Optional[AzureAIAgentClient] = None
         
-        # Search integration
-        self.reasoning_search: Optional[ReasoningSearch] = None
         
         self.logger = logging.getLogger(__name__)
 
@@ -100,16 +97,6 @@ class ReasoningAgentTemplate(MCPEnabledBase):
                 self.model_deployment_name
             )
 
-            # Initialize search capabilities if configured
-            if self.search_config:
-                self.reasoning_search = await create_reasoning_search(self.search_config)
-                if self.reasoning_search.is_available():
-                    self.logger.info(
-                        "Initialized Azure AI Search with index '%s'",
-                        self.search_config.index_name
-                    )
-                else:
-                    self.logger.warning("Azure AI Search initialization failed or incomplete config")
 
             # Initialize MCP tools (called after stack is ready)
             await self._prepare_mcp_tool()
@@ -153,10 +140,6 @@ class ReasoningAgentTemplate(MCPEnabledBase):
     async def close(self) -> None:
         """Close all resources."""
         try:
-            # Close reasoning search
-            if self.reasoning_search:
-                await self.reasoning_search.close()
-                self.reasoning_search = None
 
             # Unregister from registry
             try:
@@ -168,55 +151,6 @@ class ReasoningAgentTemplate(MCPEnabledBase):
             await super().close()
             self._client = None
             self._credential = None
-
-    async def _augment_with_search(self, prompt: str) -> str:
-        """
-        Augment the prompt with relevant search results.
-        
-        Args:
-            prompt: Original user prompt
-            
-        Returns:
-            Augmented instructions including search results
-        """
-        instructions = self.base_instructions
-        
-        if not self.reasoning_search or not self.reasoning_search.is_available():
-            return instructions
-
-        if not prompt.strip():
-            return instructions
-
-        try:
-            # Fetch relevant documents
-            docs = await self.reasoning_search.search_documents(
-                query=prompt,
-                limit=self.max_search_docs
-            )
-            
-            if docs:
-                # Format documents for inclusion
-                doc_context = "\n\n".join(
-                    f"[Document {i+1}]\n{doc}" 
-                    for i, doc in enumerate(docs)
-                )
-                
-                # Append to instructions
-                instructions = (
-                    f"{instructions}\n\n"
-                    f"**Relevant Reference Documents:**\n{doc_context}\n\n"
-                    f"Use the above documents only if they help answer the user's question. "
-                    f"Do not mention the documents unless directly relevant."
-                )
-                
-                self.logger.debug(
-                    "Augmented prompt with %d search documents",
-                    len(docs)
-                )
-        except Exception as ex:
-            self.logger.warning("Search augmentation failed: %s", ex)
-
-        return instructions
 
     def _prepare_tools(self) -> list:
         """
