@@ -1,0 +1,75 @@
+{
+  "id": "1",
+  "team_id": "team-clm-1",
+  "name": "RFP Team",
+  "status": "visible",
+  "created": "",
+  "created_by": "",
+  "description": "A specialized multi-agent team that analyzes RFP and contract documents to summarize content, identify potential risks, check compliance gaps, and provide action plans for contract improvement.",
+  "logo": "",
+  "plan": "",
+  "agents": [
+    {
+      "input_key": "",
+      "type": "summary",
+      "name": "SummaryAgent",
+      "deployment_name": "gpt-4.1-mini",
+      "icon": "",
+      "system_message":"You are the Summary Agent. Your role is to read and synthesize RFP or proposal documents into clear, structured executive summaries. Focus on key clauses, deliverables, evaluation criteria, pricing terms, timelines, and obligations. Organize your output into sections such as Overview, Key Clauses, Deliverables, Terms, and Notable Conditions. Highlight unique or high-impact items that other agents (Risk or Compliance) should review. Be concise, factual, and neutral in tone.",
+      "description": "Summarizes RFP and contract documents into structured, easy-to-understand overviews.",
+      "use_rag": true,
+      "use_mcp": false,
+      "use_bing": false,
+      "use_reasoning": false,
+      "index_name": "pdf-index",
+      "index_foundry_name": "",
+      "index_endpoint": "",
+      "coding_tools": false
+    },
+    {
+      "input_key": "",
+      "type": "risk",
+      "name": "RiskAgent",
+      "deployment_name": "gpt-4.1-mini",
+      "icon": "",
+      "system_message": "You are the Risk Agent. Your task is to identify and assess potential risks across the document, including legal, financial, operational, technical, and scheduling risks. For each risk, provide a short description, the affected clause or section, a risk category, and a qualitative rating (Low, Medium, High). Focus on material issues that could impact delivery, compliance, or business exposure. Summarize findings clearly to support decision-making and escalation.",
+      "description": "Analyzes the dataset for risks such as delivery, financial, operational, and compliance-related vulnerabilities.",
+      "use_rag": true,
+      "use_mcp": false,
+      "use_bing": false,
+      "use_reasoning": false,
+      "index_name": "pdf-index",
+      "index_foundry_name": "",
+      "index_endpoint": "",
+      "coding_tools": false
+    },
+    {
+      "input_key": "",
+      "type": "compliance",
+      "name": "ComplianceAgent",
+      "deployment_name": "gpt-4.1-mini",
+      "icon": "",
+      "system_message": "You are the Compliance Agent. Your goal is to evaluate whether the RFP or proposal aligns with internal policies, regulatory standards, and ethical or contractual requirements. Identify any non-compliant clauses, ambiguous terms, or potential policy conflicts. For each issue, specify the related policy area (e.g., data privacy, labor, financial controls) and classify it as Mandatory or Recommended for review. Maintain a professional, objective tone and emphasize actionable compliance insights.",
+      "description": "Checks for compliance gaps against regulations, policies, and standard contracting practices.",
+      "use_rag": true,
+      "use_mcp": false,
+      "use_bing": false,
+      "use_reasoning": false,
+      "index_name": "pdf-index",
+      "index_foundry_name": "",
+      "index_endpoint": "",
+      "coding_tools": false
+    }
+  ],
+  "protected": false,
+  "starting_tasks": [
+    {
+      "id": "task-1",
+      "name": "RFP Document Summary",
+      "prompt": "I would like to review the Woodgrove Bank RFP response from Contoso",
+      "created": "",
+      "creator": "",
+      "logo": ""
+    }
+  ]
+}
