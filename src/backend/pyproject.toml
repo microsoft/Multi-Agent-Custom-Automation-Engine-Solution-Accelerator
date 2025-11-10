@@ -5,16 +5,10 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "agent-framework-core @ git+https://github.com/microsoft/agent-framework.git@main#subdirectory=python/packages/core",
-    "agent-framework-azure-ai @ git+https://github.com/microsoft/agent-framework.git@main#subdirectory=python/packages/azure-ai",
-    "agent-framework-copilotstudio @ git+https://github.com/microsoft/agent-framework.git@main#subdirectory=python/packages/copilotstudio",
-    "agent-framework-devui @ git+https://github.com/microsoft/agent-framework.git@main#subdirectory=python/packages/devui",
-    "agent-framework-mem0 @ git+https://github.com/microsoft/agent-framework.git@main#subdirectory=python/packages/mem0",
-    "agent-framework-redis @ git+https://github.com/microsoft/agent-framework.git@main#subdirectory=python/packages/redis",
     "azure-ai-evaluation==1.11.0",
     "azure-ai-inference==1.0.0b9",
     "azure-ai-projects==1.0.0",
-    "azure-ai-agents==1.2.0b5",   
+    "azure-ai-agents==1.2.0b5",
     "azure-cosmos==4.9.0",
     "azure-identity==1.24.0",
     "azure-monitor-events-extension==0.1.0",
@@ -37,6 +31,6 @@ dependencies = [
     "uvicorn==0.35.0",
     "pylint-pydantic==0.3.5",
     "pexpect==4.9.0",
-    "mcp==1.13.1"
-
+    "mcp==1.13.1",
+    "agent-framework>=1.0.0b251105",
 ]

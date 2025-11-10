@@ -3,19 +3,16 @@
 import logging
 from typing import List, Optional
 
-from agent_framework import (
-    ChatAgent,
-    ChatMessage,
-    Role,
-    HostedCodeInterpreterTool,
-)
+from agent_framework import (ChatAgent, ChatMessage, HostedCodeInterpreterTool,
+                             Role)
+from agent_framework_azure_ai import \
+    AzureAIAgentClient  # Provided by agent_framework
+from azure.ai.projects.aio import AIProjectClient
 from azure.ai.projects.models import ConnectionType
-from agent_framework_azure_ai import AzureAIAgentClient  # Provided by agent_framework
-
-
+from common.config.app_config import config
+from v4.config.agent_registry import agent_registry
 from v4.magentic_agents.common.lifecycle import AzureAgentBase
 from v4.magentic_agents.models.agent_models import MCPConfig, SearchConfig
-from v4.config.agent_registry import agent_registry
 
 
 class FoundryAgentTemplate(AzureAgentBase):
@@ -45,6 +42,7 @@ class FoundryAgentTemplate(AzureAgentBase):
         self.enable_code_interpreter = enable_code_interpreter
         self.search = search_config
         self.logger = logging.getLogger(__name__)
+        self.project_client = config.get_ai_project_client()
 
         # Decide early whether Azure Search mode should be activated
         self._use_azure_search = self._is_azure_search_requested()
@@ -128,7 +126,7 @@ class FoundryAgentTemplate(AzureAgentBase):
         resolved_connection_id = None
 
         try:
-            async for connection in self.client.project_client.connections.list():
+            async for connection in self.project_client.connections.list():
                 if connection.type == ConnectionType.AZURE_AI_SEARCH:
                     # Allow direct id override
                     if desired_connection_id and connection.id == desired_connection_id:
@@ -164,7 +162,7 @@ class FoundryAgentTemplate(AzureAgentBase):
 
         # Create agent with raw tool
         try:
-            azure_agent = await self.client.project_client.agents.create_agent(
+            azure_agent = await self.client.create_agent(
                 model=self.model_deployment_name,
                 name=self.agent_name,
                 instructions=(
@@ -193,8 +191,10 @@ class FoundryAgentTemplate(AzureAgentBase):
             )
 
             chat_client = AzureAIAgentClient(
-                project_client=self.client.project_client,
+                project_client=self.project_client,
+                #agents_client=self.client,
                 agent_id=azure_agent.id,
+                async_credential=self.creds,
             )
             return chat_client
         except Exception as ex:
@@ -233,7 +233,11 @@ class FoundryAgentTemplate(AzureAgentBase):
                 self.logger.info("Initializing agent in MCP mode.")
                 tools = await self._collect_tools()
                 self._agent = ChatAgent(
-                    chat_client=self.client,
+                    chat_client=AzureAIAgentClient(
+                        project_endpoint=self.project_endpoint,
+                        model_deployment_name=self.model_deployment_name,
+                        async_credential=self.creds,
+                    ),
                     instructions=self.agent_instructions,
                     name=self.agent_name,
                     description=self.agent_description,
@@ -293,23 +297,24 @@ class FoundryAgentTemplate(AzureAgentBase):
 # -------------------------
 # Factory
 # -------------------------
-async def create_foundry_agent(
-    agent_name: str,
-    agent_description: str,
-    agent_instructions: str,
-    model_deployment_name: str,
-    mcp_config: MCPConfig | None,
-    search_config: SearchConfig | None,
-) -> FoundryAgentTemplate:
-    """Factory to create and open a FoundryAgentTemplate."""
-    agent = FoundryAgentTemplate(
-        agent_name=agent_name,
-        agent_description=agent_description,
-        agent_instructions=agent_instructions,
-        model_deployment_name=model_deployment_name,
-        enable_code_interpreter=True,
-        mcp_config=mcp_config,
-        search_config=search_config,
-    )
-    await agent.open()
-    return agent
+# async def create_foundry_agent(
+#     agent_name: str,
+#     agent_description: str,
+#     agent_instructions: str,
+#     model_deployment_name: str,
+#     mcp_config: MCPConfig | None,
+#     search_config: SearchConfig | None,
+# ) -> FoundryAgentTemplate:
+#     """Factory to create and open a FoundryAgentTemplate."""
+#     agent = FoundryAgentTemplate(
+#         agent_name=agent_name,
+#         agent_description=agent_description,
+#         agent_instructions=agent_instructions,
+#         model_deployment_name=model_deployment_name,
+#         enable_code_interpreter=True,
+#         mcp_config=mcp_config,
+#         search_config=search_config,
+
+#     )
+#     await agent.open()
+#     return agent

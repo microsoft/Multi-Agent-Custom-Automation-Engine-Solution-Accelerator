@@ -4,27 +4,18 @@ import os
 from contextlib import AsyncExitStack
 from typing import Any, Optional
 
+from agent_framework import (AggregateContextProvider, ChatAgent,
+                             ChatClientProtocol, ChatMessage,
+                             ChatMessageStoreProtocol, ChatOptions,
+                             ContextProvider, HostedMCPTool,
+                             MCPStreamableHTTPTool, Middleware, Role, ToolMode,
+                             ToolProtocol)
 # from agent_framework.azure import AzureAIAgentClient
 from agent_framework_azure_ai import AzureAIAgentClient
+from azure.ai.agents.aio import AgentsClient
 from azure.identity.aio import DefaultAzureCredential
-from agent_framework import (
-    ChatMessage,
-    Role,
-    ChatOptions,
-    HostedMCPTool,
-    AggregateContextProvider,
-    ChatAgent,
-    ChatClientProtocol,
-    ChatMessageStoreProtocol,
-    ContextProvider,
-    Middleware,
-    ToolMode,
-    ToolProtocol,
-)
-from agent_framework import MCPStreamableHTTPTool
-
-from v4.magentic_agents.models.agent_models import MCPConfig
 from v4.config.agent_registry import agent_registry
+from v4.magentic_agents.models.agent_models import MCPConfig
 
 
 class MCPEnabledBase:
@@ -44,7 +35,7 @@ class MCPEnabledBase:
         if self._stack is not None:
             return self
         self._stack = AsyncExitStack()
-        self._prepare_mcp_tool()
+        await self._prepare_mcp_tool()
         await self._after_open()
         return self
 
@@ -133,10 +124,16 @@ class AzureAgentBase(MCPEnabledBase):
         await self._stack.enter_async_context(self.creds)
 
         # Create AIProjectClient
-        self.client = AzureAIAgentClient(
-            project_endpoint=self.project_endpoint,
-            model_deployment_name=self.model_deployment_name,
-            async_credential=self.creds,
+        # self.client = AzureAIAgentClient(
+        #     project_endpoint=self.project_endpoint,
+        #     model_deployment_name=self.model_deployment_name,
+        #     async_credential=self.creds,
+        # )
+
+        #Create AgentsClient
+        self.client = AgentsClient(
+            endpoint=self.project_endpoint,
+            credential=self.creds,
         )
         await self._stack.enter_async_context(self.client)
 
