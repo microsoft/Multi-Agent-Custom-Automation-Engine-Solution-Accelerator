@@ -105,7 +105,7 @@ class FoundryAgentTemplate(AzureAgentBase):
               a) API key + endpoint, OR
               b) Managed Identity (RBAC enabled on the Search service with Search Service Contributor + Search Index Data Reader).
           - search_config.index_name must exist in the Search service.
-          - search_config.connection_name OR search_config.connection_id must reference the desired connection.
+
 
         Returns:
             AzureAIAgentClient | None
@@ -114,10 +114,10 @@ class FoundryAgentTemplate(AzureAgentBase):
             self.logger.error("Search configuration missing.")
             return None
 
-        desired_connection_id = getattr(self.search, "connection_id", None)
+
         desired_connection_name = getattr(self.search, "connection_name", None)
         index_name = getattr(self.search, "index_name", "")
-        query_type = getattr(self.search, "search_query_type", "vector")
+        query_type = getattr(self.search, "search_query_type", "simple")
 
         if not index_name:
             self.logger.error("index_name not provided in search_config; aborting Azure Search path.")
@@ -128,33 +128,27 @@ class FoundryAgentTemplate(AzureAgentBase):
         try:
             async for connection in self.project_client.connections.list():
                 if connection.type == ConnectionType.AZURE_AI_SEARCH:
-                    # Allow direct id override
-                    if desired_connection_id and connection.id == desired_connection_id:
-                        resolved_connection_id = connection.id
-                        break
-                    # Else match by name
+
                     if desired_connection_name and connection.name == desired_connection_name:
                         resolved_connection_id = connection.id
                         break
                     # Fallback: if no specific connection requested and none resolved yet, take the first
-                    if not desired_connection_id and not desired_connection_name and not resolved_connection_id:
+                    if not desired_connection_name and not resolved_connection_id:
                         resolved_connection_id = connection.id
                         # Do not break yet; we log but allow chance to find a name match later. If not, this stays.
 
             if not resolved_connection_id:
                 self.logger.error(
                     "No Azure AI Search connection resolved. "
-                    "Provided connection_id=%s, connection_name=%s",
-                    desired_connection_id,
+                    "connection_name=%s",
                     desired_connection_name,
                 )
               #  return None
 
             self.logger.info(
-                "Using Azure AI Search connection (id=%s, requested_name=%s, requested_id=%s).",
+                "Using Azure AI Search connection (id=%s, requested_name=%s).",
                 resolved_connection_id,
                 desired_connection_name,
-                desired_connection_id,
             )
         except Exception as ex:
             self.logger.error("Failed to enumerate connections: %s", ex)
@@ -176,7 +170,7 @@ class FoundryAgentTemplate(AzureAgentBase):
                             {
                                 "index_connection_id": resolved_connection_id,
                                 "index_name": index_name,
-                                "query_type": "simple",
+                                "query_type": query_type,
                             }
                         ]
                     }

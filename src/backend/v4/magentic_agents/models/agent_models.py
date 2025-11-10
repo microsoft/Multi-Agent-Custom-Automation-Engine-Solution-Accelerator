@@ -61,14 +61,14 @@ class SearchConfig:
     connection_name: str | None = None
     endpoint: str | None = None
     index_name: str | None = None
-    api_key: str | None = None  # API key for Azure AI Search
+
 
     @classmethod
-    def from_env(cls) -> "SearchConfig":
+    def from_env(cls, index_name: str) -> "SearchConfig":
         connection_name = config.AZURE_AI_SEARCH_CONNECTION_NAME
-        index_name = config.AZURE_AI_SEARCH_INDEX_NAME
+        index_name = index_name or config.AZURE_AI_SEARCH_INDEX_NAME
         endpoint = config.AZURE_AI_SEARCH_ENDPOINT
-        api_key = config.AZURE_AI_SEARCH_API_KEY
+
 
         # Raise exception if any required environment variable is missing
         if not all([connection_name, index_name, endpoint]):
@@ -79,6 +79,5 @@ class SearchConfig:
         return cls(
             connection_name=connection_name,
             index_name=index_name,
-            endpoint=endpoint,
-            api_key=api_key,
+            endpoint=endpoint
         )

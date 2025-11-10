@@ -85,8 +85,9 @@ class MagenticAgentFactory:
                 )
 
         # Only create configs for explicitly requested capabilities
+        index_name = getattr(agent_obj, "index_name", None)
         search_config = (
-            SearchConfig.from_env() if getattr(agent_obj, "use_rag", False) else None
+            SearchConfig.from_env(index_name) if getattr(agent_obj, "use_rag", False) else None
         )
         mcp_config = (
             MCPConfig.from_env() if getattr(agent_obj, "use_mcp", False) else None
@@ -94,7 +95,7 @@ class MagenticAgentFactory:
         # bing_config = BingConfig.from_env() if getattr(agent_obj, 'use_bing', False) else None
 
         self.logger.info(
-            f"Creating agent '{agent_obj.name}' with model '{deployment_name}' "
+            f"Creating agent '{agent_obj.name}' with model '{deployment_name}' {index_name} "
             f"(Template: {'Reasoning' if use_reasoning else 'Foundry'})"
         )
 
