@@ -82,42 +82,6 @@ class ProxyAgent(BaseAgent):
         """
         return AgentThread(**kwargs)
 
-    async def run(
-        self,
-        messages: str | ChatMessage | list[str] | list[ChatMessage] | None = None,
-        *,
-        thread: AgentThread | None = None,
-        **kwargs: Any,
-    ) -> AgentRunResponse:
-        """
-        Get complete clarification response (non-streaming).
-        
-        Args:
-            messages: The message(s) requiring clarification
-            thread: Optional conversation thread
-            kwargs: Additional keyword arguments
-            
-        Returns:
-            AgentRunResponse with the clarification
-        """
-        # Collect all streaming updates
-        response_messages: list[ChatMessage] = []
-        response_id = str(uuid.uuid4())
-        
-        async for update in self.run_stream(messages, thread=thread, **kwargs):
-            if update.contents:
-                response_messages.append(
-                    ChatMessage(
-                        role=update.role or Role.ASSISTANT,
-                        contents=update.contents,
-                    )
-                )
-        
-        return AgentRunResponse(
-            messages=response_messages,
-            response_id=response_id,
-        )
-
     def run_stream(
         self,
         messages: str | ChatMessage | list[str] | list[ChatMessage] | None = None,

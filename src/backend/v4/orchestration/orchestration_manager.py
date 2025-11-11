@@ -199,64 +199,6 @@ class OrchestrationManager:
                 raise
         return orchestration_config.get_current_orchestration(user_id)
 
-# ...existing code...
-    def _reset_workflow_context(self, user_id: str) -> None:
-        """
-        Reset the workflow's conversation context (chat history) while keeping agents alive
-        and persist the reset workflow back into orchestration_config.orchestrations[user_id].
-
-        Behavior:
-        - If workflow is None, retrieves the current one from orchestration_config.
-        - Resets MagenticContext (clears chat_history, resets stall_count, increments reset_count).
-        - Reassigns (persists) the workflow into orchestration_config.orchestrations[user_id] to
-          make the "reset" explicit for any code expecting a refreshed stored reference.
-        """
-        try:
-            # Allow caller to pass None; we'll fetch the currently tracked workflow.
-            workflow = orchestration_config.get_current_orchestration(user_id)
-            if workflow is None:
-                self.logger.warning("⚠️ No orchestration to reset for user '%s'", user_id)
-                return
-
-            # Access inner workflow/executor to reach MagenticContext
-            orchestrator_executor = None
-            if hasattr(workflow, "_workflow"):
-                inner_workflow = workflow._workflow
-                if hasattr(inner_workflow, "executors"):
-                    # Pick the first executor exposing a _context (MagenticOrchestratorExecutor)
-                    for exec_candidate in inner_workflow.executors.values():
-                        if hasattr(exec_candidate, "_context"):
-                            orchestrator_executor = exec_candidate
-                            break
-
-            if orchestrator_executor and hasattr(orchestrator_executor, "_context"):
-                ctx = orchestrator_executor._context
-                prev_reset_count = getattr(ctx, "reset_count", 0)
-                prev_history_len = len(getattr(ctx, "chat_history", []) or [])
-                
-                ctx.reset()  # In-place mutation
-
-                # Persist (even though it's the same object) for clarity & explicitness
-                orchestration_config.orchestrations[user_id] = workflow
-
-                self.logger.info(
-                    "✅ Workflow context reset for user '%s' (prev_history_len=%d, new_history_len=%d, reset_count=%d→%d)",
-                    user_id,
-                    prev_history_len,
-                    len(getattr(ctx, 'chat_history', []) or []),
-                    prev_reset_count,
-                    getattr(ctx, "reset_count", prev_reset_count + 1),
-                )
-            else:
-                self.logger.warning(
-                    "⚠️ Could not locate MagenticContext to reset for user '%s' (missing orchestrator executor)",
-                    user_id,
-                )
-
-        except Exception as e:
-            self.logger.error("❌ Error resetting workflow context for user '%s': %s", user_id, e)
-            # Fail softly; orchestration remains usable
-
     # ---------------------------
     # Execution
     # ---------------------------
@@ -274,7 +216,7 @@ class OrchestrationManager:
         self.logger.info(
             "Starting orchestration job '%s' for user '%s'", job_id, user_id
         )
-        self._reset_workflow_context(user_id)
+
         workflow = orchestration_config.get_current_orchestration(user_id)
         if workflow is None:
             raise ValueError("Orchestration not initialized for user.")
@@ -301,14 +243,14 @@ class OrchestrationManager:
                     elif isinstance(event, MagenticAgentDeltaEvent):
                         try:
                             await streaming_agent_response_callback(
-                                event.agent_id,
+                                event.executor_id,
                                 event,  # Pass the event itself as the update object
                                 False,  # Not final yet (streaming in progress)
                                 user_id,
                             )
                         except Exception as e:
                             self.logger.error(
-                                f"Error in streaming callback for agent {event.agent_id}: {e}"
+                                f"Error in streaming callback for agent {event.executor_id}: {e}"
                             )
 
                     # Handle final agent messages (complete response)
@@ -316,11 +258,11 @@ class OrchestrationManager:
                         if event.message:
                             try:
                                 agent_response_callback(
-                                    event.agent_id, event.message, user_id
+                                    event.executor_id, event.message, user_id
                                 )
                             except Exception as e:
                                 self.logger.error(
-                                    f"Error in agent callback for agent {event.agent_id}: {e}"
+                                    f"Error in agent callback for agent {event.executor_id}: {e}"
                                 )
 
                     # Handle final result from the entire workflow
