@@ -160,7 +160,7 @@ class ProxyAgent(BaseAgent):
         )
         logger.debug("ProxyAgent: Message text: %s", message_text[:100])
         
-        clarification_req_text = f"I need clarification about: {message_text}"
+        clarification_req_text = f"{message_text}"
         clarification_request = UserClarificationRequest(
             question=clarification_req_text,
             request_id=str(uuid.uuid4()),

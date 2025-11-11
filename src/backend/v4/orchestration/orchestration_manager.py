@@ -199,6 +199,7 @@ class OrchestrationManager:
                 raise
         return orchestration_config.get_current_orchestration(user_id)
 
+   
     # ---------------------------
     # Execution
     # ---------------------------
@@ -220,7 +221,8 @@ class OrchestrationManager:
         workflow = orchestration_config.get_current_orchestration(user_id)
         if workflow is None:
             raise ValueError("Orchestration not initialized for user.")
-
+        # Fresh thread per participant to avoid cross-run state bleed
+      
 
         # Build task from input (same as old version)
         task_text = getattr(input_task, "description", str(input_task))
@@ -243,14 +245,14 @@ class OrchestrationManager:
                     elif isinstance(event, MagenticAgentDeltaEvent):
                         try:
                             await streaming_agent_response_callback(
-                                event.executor_id,
+                                event.agent_id,
                                 event,  # Pass the event itself as the update object
                                 False,  # Not final yet (streaming in progress)
                                 user_id,
                             )
                         except Exception as e:
                             self.logger.error(
-                                f"Error in streaming callback for agent {event.executor_id}: {e}"
+                                f"Error in streaming callback for agent {event.agent_id}: {e}"
                             )
 
                     # Handle final agent messages (complete response)
@@ -258,11 +260,11 @@ class OrchestrationManager:
                         if event.message:
                             try:
                                 agent_response_callback(
-                                    event.executor_id, event.message, user_id
+                                    event.agent_id, event.message, user_id
                                 )
                             except Exception as e:
                                 self.logger.error(
-                                    f"Error in agent callback for agent {event.executor_id}: {e}"
+                                    f"Error in agent callback for agent {event.agent_id}: {e}"
                                 )
 
                     # Handle final result from the entire workflow
