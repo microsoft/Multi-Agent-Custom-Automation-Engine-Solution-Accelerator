@@ -11,7 +11,7 @@ from agent_framework import (
     ChatMessage,
     WorkflowOutputEvent,
     MagenticBuilder,
-   # MagenticCallbackMode,
+    # MagenticCallbackMode,
     MagenticOrchestratorMessageEvent,
     MagenticAgentDeltaEvent,
     MagenticAgentMessageEvent,
@@ -52,7 +52,7 @@ class OrchestrationManager:
           - HumanApprovalMagenticManager as orchestrator manager
           - AzureAIAgentClient as the underlying chat client
           - Event-based callbacks for streaming and final responses
-          
+
         This mirrors the old Semantic Kernel orchestration setup:
         - Uses same deployment, endpoint, and credentials
         - Applies same execution settings (temperature, max_tokens)
@@ -72,20 +72,20 @@ class OrchestrationManager:
                 model_deployment_name=config.AZURE_OPENAI_DEPLOYMENT_NAME,
                 async_credential=credential,
             )
-            
+
             cls.logger.info(
                 "Created AzureAIAgentClient for orchestration with model '%s' at endpoint '%s'",
                 config.AZURE_OPENAI_DEPLOYMENT_NAME,
-                config.AZURE_AI_PROJECT_ENDPOINT
+                config.AZURE_AI_PROJECT_ENDPOINT,
             )
         except Exception as e:
             cls.logger.error("Failed to create AzureAIAgentClient: %s", e)
             raise
 
         # Create HumanApprovalMagenticManager with the chat client
-        # Execution settings (temperature=0.1, max_tokens=4000) are configured via 
+        # Execution settings (temperature=0.1, max_tokens=4000) are configured via
         # orchestration_config.create_execution_settings() which matches old SK version
-        try: 
+        try:
             manager = HumanApprovalMagenticManager(
                 user_id=user_id,
                 chat_client=chat_client,
@@ -95,7 +95,7 @@ class OrchestrationManager:
             cls.logger.info(
                 "Created HumanApprovalMagenticManager for user '%s' with max_rounds=%d",
                 user_id,
-                orchestration_config.max_rounds
+                orchestration_config.max_rounds,
             )
         except Exception as e:
             cls.logger.error("Failed to create manager: %s", e)
@@ -107,11 +107,11 @@ class OrchestrationManager:
             name = getattr(ag, "agent_name", None) or getattr(ag, "name", None)
             if not name:
                 name = f"agent_{len(participants)+1}"
-            
+
             # Extract the inner ChatAgent for wrapper templates
             # FoundryAgentTemplate and ReasoningAgentTemplate wrap a ChatAgent in self._agent
             # ProxyAgent directly extends BaseAgent and can be used as-is
-            if hasattr(ag, '_agent') and ag._agent is not None:
+            if hasattr(ag, "_agent") and ag._agent is not None:
                 # This is a wrapper (FoundryAgentTemplate or ReasoningAgentTemplate)
                 # Use the inner ChatAgent which implements AgentProtocol
                 participants[name] = ag._agent
@@ -121,16 +121,23 @@ class OrchestrationManager:
                 participants[name] = ag
                 cls.logger.debug("Added participant '%s'", name)
 
-        # Assemble workflow with .on_event() callback (proper way for agent_framework)
+        # Assemble workflow with callback (proper way for agent_framework)
         builder = (
             MagenticBuilder()
             .participants(**participants)
-            .with_standard_manager(manager=manager)
+            .with_standard_manager(
+                manager=manager,
+                max_round_count=orchestration_config.max_rounds,
+                max_stall_count=0,
+            )
         )
 
         # Build workflow
         workflow = builder.build()
-        cls.logger.info("Built Magentic workflow with %d participants and event callbacks", len(participants))
+        cls.logger.info(
+            "Built Magentic workflow with %d participants and event callbacks",
+            len(participants),
+        )
 
         return workflow
 
@@ -149,10 +156,14 @@ class OrchestrationManager:
         current = orchestration_config.get_current_orchestration(user_id)
         if current is None or team_switched:
             if current is not None and team_switched:
-                cls.logger.info("Team switched, closing previous agents for user '%s'", user_id)
+                cls.logger.info(
+                    "Team switched, closing previous agents for user '%s'", user_id
+                )
                 # Close prior agents (same logic as old version)
                 for agent in getattr(current, "_participants", {}).values():
-                    agent_name = getattr(agent, "agent_name", getattr(agent, "name", ""))
+                    agent_name = getattr(
+                        agent, "agent_name", getattr(agent, "name", "")
+                    )
                     if agent_name != "ProxyAgent":
                         close_coro = getattr(agent, "close", None)
                         if callable(close_coro):
@@ -161,6 +172,7 @@ class OrchestrationManager:
                                 cls.logger.debug("Closed agent '%s'", agent_name)
                             except Exception as e:
                                 cls.logger.error("Error closing agent: %s", e)
+                    
 
             factory = MagenticAgentFactory()
             try:
@@ -169,19 +181,81 @@ class OrchestrationManager:
                 )
                 cls.logger.info("Created %d agents for user '%s'", len(agents), user_id)
             except Exception as e:
-                cls.logger.error("Failed to create agents for user '%s': %s", user_id, e)
+                cls.logger.error(
+                    "Failed to create agents for user '%s': %s", user_id, e
+                )
                 print(f"Failed to create agents for user '{user_id}': {e}")
                 raise
             try:
                 cls.logger.info("Initializing new orchestration for user '%s'", user_id)
-                orchestration_config.orchestrations[user_id] = await cls.init_orchestration(
-                    agents, user_id
+                orchestration_config.orchestrations[user_id] = (
+                    await cls.init_orchestration(agents, user_id)
                 )
             except Exception as e:
-                cls.logger.error("Failed to initialize orchestration for user '%s': %s", user_id, e)
+                cls.logger.error(
+                    "Failed to initialize orchestration for user '%s': %s", user_id, e
+                )
                 print(f"Failed to initialize orchestration for user '{user_id}': {e}")
                 raise
         return orchestration_config.get_current_orchestration(user_id)
+
+# ...existing code...
+    def _reset_workflow_context(self, user_id: str) -> None:
+        """
+        Reset the workflow's conversation context (chat history) while keeping agents alive
+        and persist the reset workflow back into orchestration_config.orchestrations[user_id].
+
+        Behavior:
+        - If workflow is None, retrieves the current one from orchestration_config.
+        - Resets MagenticContext (clears chat_history, resets stall_count, increments reset_count).
+        - Reassigns (persists) the workflow into orchestration_config.orchestrations[user_id] to
+          make the "reset" explicit for any code expecting a refreshed stored reference.
+        """
+        try:
+            # Allow caller to pass None; we'll fetch the currently tracked workflow.
+            workflow = orchestration_config.get_current_orchestration(user_id)
+            if workflow is None:
+                self.logger.warning("⚠️ No orchestration to reset for user '%s'", user_id)
+                return
+
+            # Access inner workflow/executor to reach MagenticContext
+            orchestrator_executor = None
+            if hasattr(workflow, "_workflow"):
+                inner_workflow = workflow._workflow
+                if hasattr(inner_workflow, "executors"):
+                    # Pick the first executor exposing a _context (MagenticOrchestratorExecutor)
+                    for exec_candidate in inner_workflow.executors.values():
+                        if hasattr(exec_candidate, "_context"):
+                            orchestrator_executor = exec_candidate
+                            break
+
+            if orchestrator_executor and hasattr(orchestrator_executor, "_context"):
+                ctx = orchestrator_executor._context
+                prev_reset_count = getattr(ctx, "reset_count", 0)
+                prev_history_len = len(getattr(ctx, "chat_history", []) or [])
+                
+                ctx.reset()  # In-place mutation
+
+                # Persist (even though it's the same object) for clarity & explicitness
+                orchestration_config.orchestrations[user_id] = workflow
+
+                self.logger.info(
+                    "✅ Workflow context reset for user '%s' (prev_history_len=%d, new_history_len=%d, reset_count=%d→%d)",
+                    user_id,
+                    prev_history_len,
+                    len(getattr(ctx, 'chat_history', []) or []),
+                    prev_reset_count,
+                    getattr(ctx, "reset_count", prev_reset_count + 1),
+                )
+            else:
+                self.logger.warning(
+                    "⚠️ Could not locate MagenticContext to reset for user '%s' (missing orchestrator executor)",
+                    user_id,
+                )
+
+        except Exception as e:
+            self.logger.error("❌ Error resetting workflow context for user '%s': %s", user_id, e)
+            # Fail softly; orchestration remains usable
 
     # ---------------------------
     # Execution
@@ -189,7 +263,7 @@ class OrchestrationManager:
     async def run_orchestration(self, user_id: str, input_task) -> None:
         """
         Execute the Magentic workflow for the provided user and task description.
-        
+
         This mirrors the old SK orchestration:
         - Uses same execution settings (temperature=0.1, max_tokens=4000)
         - Maintains same approval workflow
@@ -197,20 +271,14 @@ class OrchestrationManager:
         """
         job_id = str(uuid.uuid4())
         orchestration_config.set_approval_pending(job_id)
-        self.logger.info("Starting orchestration job '%s' for user '%s'", job_id, user_id)
-
+        self.logger.info(
+            "Starting orchestration job '%s' for user '%s'", job_id, user_id
+        )
+        self._reset_workflow_context(user_id)
         workflow = orchestration_config.get_current_orchestration(user_id)
         if workflow is None:
             raise ValueError("Orchestration not initialized for user.")
 
-        # Ensure manager tracks user_id (same as old version)
-        try:
-            manager = getattr(workflow, "_manager", None)
-            if manager and hasattr(manager, "current_user_id"):
-                manager.current_user_id = user_id
-                self.logger.debug("Set user_id on manager = %s", user_id)
-        except Exception as e:
-            self.logger.error("Error setting user_id on manager: %s", e)
 
         # Build task from input (same as old version)
         task_text = getattr(input_task, "description", str(input_task))
@@ -220,62 +288,78 @@ class OrchestrationManager:
             # Execute workflow using run_stream with task as positional parameter
             # The execution settings are configured in the manager/client
             final_output: str | None = None
-            
+
             self.logger.info("Starting workflow execution...")
             async for event in workflow.run_stream(task_text):
                 try:
                     # Handle orchestrator messages (task assignments, coordination)
                     if isinstance(event, MagenticOrchestratorMessageEvent):
-                        message_text = getattr(event.message, 'text', '')
+                        message_text = getattr(event.message, "text", "")
                         self.logger.info(f"[ORCHESTRATOR:{event.kind}] {message_text}")
-                    
+
                     # Handle streaming updates from agents
                     elif isinstance(event, MagenticAgentDeltaEvent):
                         try:
                             await streaming_agent_response_callback(
-                                event.agent_id, 
+                                event.agent_id,
                                 event,  # Pass the event itself as the update object
                                 False,  # Not final yet (streaming in progress)
-                                user_id
+                                user_id,
                             )
                         except Exception as e:
-                            self.logger.error(f"Error in streaming callback for agent {event.agent_id}: {e}")
-                    
+                            self.logger.error(
+                                f"Error in streaming callback for agent {event.agent_id}: {e}"
+                            )
+
                     # Handle final agent messages (complete response)
                     elif isinstance(event, MagenticAgentMessageEvent):
                         if event.message:
                             try:
-                                agent_response_callback(event.agent_id, event.message, user_id)
+                                agent_response_callback(
+                                    event.agent_id, event.message, user_id
+                                )
                             except Exception as e:
-                                self.logger.error(f"Error in agent callback for agent {event.agent_id}: {e}")
-                    
+                                self.logger.error(
+                                    f"Error in agent callback for agent {event.agent_id}: {e}"
+                                )
+
                     # Handle final result from the entire workflow
                     elif isinstance(event, MagenticFinalResultEvent):
-                        final_text = getattr(event.message, 'text', '')
-                        self.logger.info(f"[FINAL RESULT] Length: {len(final_text)} chars")
-                    
+                        final_text = getattr(event.message, "text", "")
+                        self.logger.info(
+                            f"[FINAL RESULT] Length: {len(final_text)} chars"
+                        )
+
                     # Handle workflow output event (captures final result)
                     elif isinstance(event, WorkflowOutputEvent):
                         output_data = event.data
                         if isinstance(output_data, ChatMessage):
-                            final_output = getattr(output_data, "text", None) or str(output_data)
+                            final_output = getattr(output_data, "text", None) or str(
+                                output_data
+                            )
                         else:
                             final_output = str(output_data)
                         self.logger.debug("Received workflow output event")
-                        
+
                 except Exception as e:
-                    self.logger.error(f"Error processing event {type(event).__name__}: {e}", exc_info=True)
+                    self.logger.error(
+                        f"Error processing event {type(event).__name__}: {e}",
+                        exc_info=True,
+                    )
 
             # Extract final result
             final_text = final_output if final_output else ""
-            
-            # Log results (same format as old version)
+
+            # Log results
             self.logger.info("\nAgent responses:")
-            self.logger.info("Orchestration completed. Final result length: %d chars", len(final_text))
+            self.logger.info(
+                "Orchestration completed. Final result length: %d chars",
+                len(final_text),
+            )
             self.logger.info("\nFinal result:\n%s", final_text)
             self.logger.info("=" * 50)
 
-            # Send final result via WebSocket (same as old version)
+            # Send final result via WebSocket
             await connection_config.send_status_update_async(
                 {
                     "type": WebsocketMessageType.FINAL_RESULT_MESSAGE,
@@ -289,15 +373,15 @@ class OrchestrationManager:
                 message_type=WebsocketMessageType.FINAL_RESULT_MESSAGE,
             )
             self.logger.info("Final result sent via WebSocket to user '%s'", user_id)
-            
+
         except Exception as e:
-            # Error handling (enhanced from old version)
+            # Error handling
             self.logger.error("Unexpected orchestration error: %s", e, exc_info=True)
             self.logger.error("Error type: %s", type(e).__name__)
             if hasattr(e, "__dict__"):
                 self.logger.error("Error attributes: %s", e.__dict__)
             self.logger.info("=" * 50)
-            
+
             # Send error status to user
             try:
                 await connection_config.send_status_update_async(

@@ -91,6 +91,7 @@ class WebSocketService {
     }
 
     disconnect(): void {
+        console.log('WebSocketService: Disconnecting WebSocket');
         if (this.reconnectTimer) {
             clearTimeout(this.reconnectTimer);
             this.reconnectTimer = null;
@@ -104,21 +105,6 @@ class WebSocketService {
         this.isConnecting = false;
     }
 
-    subscribeToPlan(planId: string): void {
-        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            const message = { type: 'subscribe_plan', plan_id: planId };
-            this.ws.send(JSON.stringify(message));
-            this.planSubscriptions.add(planId);
-        }
-    }
-
-    unsubscribeFromPlan(planId: string): void {
-        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            const message = { type: 'unsubscribe_plan', plan_id: planId };
-            this.ws.send(JSON.stringify(message));
-            this.planSubscriptions.delete(planId);
-        }
-    }
 
     on(eventType: string, callback: (message: StreamMessage) => void): () => void {
         if (!this.listeners.has(eventType)) {
