@@ -106,6 +106,7 @@ const PlanPage: React.FC = () => {
             if (pendingNavigation) {
                 pendingNavigation();
             }
+            webSocketService.disconnect();
         } catch (error) {
             console.error('❌ Failed to cancel plan:', error);
             showToast('Failed to cancel the plan properly, but navigation will continue.', 'error');
@@ -354,6 +355,7 @@ const PlanPage: React.FC = () => {
 
                 // Wait for the agent message to be processed and persisted
                 // The processAgentMessage function will handle refreshing the task list
+                webSocketService.disconnect();
                 processAgentMessage(agentMessageData, planData, is_final, streamingMessageBuffer);
 
             }
