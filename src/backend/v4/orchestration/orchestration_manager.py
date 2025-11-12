@@ -200,18 +200,6 @@ class OrchestrationManager:
                 raise
         return orchestration_config.get_current_orchestration(user_id)
 
-    def iter_original_agents(self,workflow):
-        """Yield (logical_name, agent_obj) for each original participant agent."""
-        for exec_id, executor in getattr(workflow, "executors", {}).items():
-            # Skip the orchestrator if you only want participants
-            if "orchestrator" in exec_id:
-                continue
-            for attr in ("_agent", "agent", "_participant", "participant"):
-                obj = getattr(executor, attr, None)
-                # Import the appropriate base classes if you want stricter isinstance checks
-                if obj is not None:
-                    yield exec_id, obj
-                    break  
     # ---------------------------
     # Execution
     # ---------------------------
@@ -234,20 +222,44 @@ class OrchestrationManager:
         if workflow is None:
             raise ValueError("Orchestration not initialized for user.")
         # Fresh thread per participant to avoid cross-run state bleed
+        executors = getattr(workflow, "executors", {})
+        self.logger.debug("Executor keys at run start: %s", list(executors.keys()))
 
-        for exec_id, agent in self.iter_original_agents(workflow):
-            # Create a fresh thread
-            if hasattr(agent, "get_new_thread"):
-                try:
-                    new_thread = agent.get_new_thread()
-                    # If agent stores the thread internally, attach it
-                    if hasattr(agent, "_thread"):
-                        agent._thread = new_thread
-                    # Clear any retained local history/message buffers
-                    if hasattr(agent, "_messages"):
-                        agent._messages.clear()
-                except Exception as e:
-                    logging.warning("Failed to reset agent %s: %s", exec_id, e)        
+        for exec_key, executor in executors.items():
+            try:
+                if exec_key == "magentic_orchestrator":
+                    # Orchestrator path
+                    if hasattr(executor, "_conversation"):
+                        conv = getattr(executor, "_conversation")
+                        # Support list-like or custom container with clear()
+                        if hasattr(conv, "clear") and callable(conv.clear):
+                            conv.clear()
+                            self.logger.debug("Cleared orchestrator conversation (%s)", exec_key)
+                        elif isinstance(conv, list):
+                            conv[:] = []
+                            self.logger.debug("Emptied orchestrator conversation list (%s)", exec_key)
+                        else:
+                            self.logger.debug("Orchestrator conversation not clearable type (%s): %s", exec_key, type(conv))
+                    else:
+                        self.logger.debug("Orchestrator has no _conversation attribute (%s)", exec_key)
+                else:
+                    # Agent path
+                    if hasattr(executor, "_chat_history"):
+                        hist = getattr(executor, "_chat_history")
+                        if hasattr(hist, "clear") and callable(hist.clear):
+                            hist.clear()
+                            self.logger.debug("Cleared agent chat history (%s)", exec_key)
+                        elif isinstance(hist, list):
+                            hist[:] = []
+                            self.logger.debug("Emptied agent chat history list (%s)", exec_key)
+                        else:
+                            self.logger.debug("Agent chat history not clearable type (%s): %s", exec_key, type(hist))
+                    else:
+                        self.logger.debug("Agent executor has no _chat_history attribute (%s)", exec_key)
+            except Exception as e:
+                self.logger.warning("Failed clearing state for executor %s: %s", exec_key, e)
+        # --- END NEW BLOCK ---
+           
 
         # Build task from input (same as old version)
         task_text = getattr(input_task, "description", str(input_task))
