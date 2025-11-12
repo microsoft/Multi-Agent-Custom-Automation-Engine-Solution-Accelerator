@@ -71,6 +71,7 @@ class OrchestrationManager:
                 project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
                 model_deployment_name=config.AZURE_OPENAI_DEPLOYMENT_NAME,
                 async_credential=credential,
+                
             )
 
             cls.logger.info(
@@ -199,7 +200,18 @@ class OrchestrationManager:
                 raise
         return orchestration_config.get_current_orchestration(user_id)
 
-   
+    def iter_original_agents(self,workflow):
+        """Yield (logical_name, agent_obj) for each original participant agent."""
+        for exec_id, executor in getattr(workflow, "executors", {}).items():
+            # Skip the orchestrator if you only want participants
+            if "orchestrator" in exec_id:
+                continue
+            for attr in ("_agent", "agent", "_participant", "participant"):
+                obj = getattr(executor, attr, None)
+                # Import the appropriate base classes if you want stricter isinstance checks
+                if obj is not None:
+                    yield exec_id, obj
+                    break  
     # ---------------------------
     # Execution
     # ---------------------------
@@ -222,7 +234,20 @@ class OrchestrationManager:
         if workflow is None:
             raise ValueError("Orchestration not initialized for user.")
         # Fresh thread per participant to avoid cross-run state bleed
-      
+
+        for exec_id, agent in self.iter_original_agents(workflow):
+            # Create a fresh thread
+            if hasattr(agent, "get_new_thread"):
+                try:
+                    new_thread = agent.get_new_thread()
+                    # If agent stores the thread internally, attach it
+                    if hasattr(agent, "_thread"):
+                        agent._thread = new_thread
+                    # Clear any retained local history/message buffers
+                    if hasattr(agent, "_messages"):
+                        agent._messages.clear()
+                except Exception as e:
+                    logging.warning("Failed to reset agent %s: %s", exec_id, e)        
 
         # Build task from input (same as old version)
         task_text = getattr(input_task, "description", str(input_task))
