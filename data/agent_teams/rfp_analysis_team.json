@@ -39,8 +39,6 @@
       "use_bing": false,
       "use_reasoning": false,
       "index_name": "macae-rfp-index",
-      "index_foundry_name": "",
-      "index_endpoint": "",
       "coding_tools": false
     },
     {
@@ -56,8 +54,6 @@
       "use_bing": false,
       "use_reasoning": false,
       "index_name": "macae-rfp-index",
-      "index_foundry_name": "",
-      "index_endpoint": "",
       "coding_tools": false
     }
   ],
