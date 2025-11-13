@@ -11,7 +11,7 @@ from agent_framework import (
     ChatMessage,
     WorkflowOutputEvent,
     MagenticBuilder,
-    # MagenticCallbackMode,
+    InMemoryCheckpointStorage,
     MagenticOrchestratorMessageEvent,
     MagenticAgentDeltaEvent,
     MagenticAgentMessageEvent,
@@ -52,8 +52,6 @@ class OrchestrationManager:
           - HumanApprovalMagenticManager as orchestrator manager
           - AzureAIAgentClient as the underlying chat client
           - Event-based callbacks for streaming and final responses
-
-        This mirrors the old Semantic Kernel orchestration setup:
         - Uses same deployment, endpoint, and credentials
         - Applies same execution settings (temperature, max_tokens)
         - Maintains same human approval workflow
@@ -122,7 +120,8 @@ class OrchestrationManager:
                 participants[name] = ag
                 cls.logger.debug("Added participant '%s'", name)
 
-        # Assemble workflow with callback (proper way for agent_framework)
+        # Assemble workflow with callback 
+        storage = InMemoryCheckpointStorage()
         builder = (
             MagenticBuilder()
             .participants(**participants)
@@ -131,6 +130,7 @@ class OrchestrationManager:
                 max_round_count=orchestration_config.max_rounds,
                 max_stall_count=0,
             )
+            .with_checkpointing(storage)
         )
 
         # Build workflow
@@ -206,11 +206,6 @@ class OrchestrationManager:
     async def run_orchestration(self, user_id: str, input_task) -> None:
         """
         Execute the Magentic workflow for the provided user and task description.
-
-        This mirrors the old SK orchestration:
-        - Uses same execution settings (temperature=0.1, max_tokens=4000)
-        - Maintains same approval workflow
-        - Sends same WebSocket updates
         """
         job_id = str(uuid.uuid4())
         orchestration_config.set_approval_pending(job_id)
@@ -271,6 +266,7 @@ class OrchestrationManager:
             final_output: str | None = None
 
             self.logger.info("Starting workflow execution...")
+            thread_id=f"task-{job_id}"
             async for event in workflow.run_stream(task_text):
                 try:
                     # Handle orchestrator messages (task assignments, coordination)
