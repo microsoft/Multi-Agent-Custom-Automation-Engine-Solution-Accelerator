@@ -44,6 +44,32 @@ app_v4 = APIRouter(
 )
 
 
+async def find_first_available_team(team_service: TeamService, user_id: str) -> str:
+    """
+    Check teams in priority order (4 to 1) and return the first available team ID.
+    Priority: RFP (4) -> Retail (3) -> Marketing (2) -> HR (1)
+    """
+    team_priority_order = [
+        "00000000-0000-0000-0000-000000000004",  # RFP
+        "00000000-0000-0000-0000-000000000003",  # Retail
+        "00000000-0000-0000-0000-000000000002",  # Marketing
+        "00000000-0000-0000-0000-000000000001",  # HR
+    ]
+    
+    for team_id in team_priority_order:
+        try:
+            team_config = await team_service.get_team_configuration(team_id, user_id)
+            if team_config is not None:
+                print(f"Found available team: {team_id}")
+                return team_id
+        except Exception as e:
+            print(f"Error checking team {team_id}: {str(e)}")
+            continue
+    
+    print("No teams found in priority order")
+    return None
+
+
 @app_v4.websocket("/socket/{process_id}")
 async def start_comms(
     websocket: WebSocket, process_id: str, user_id: str = Query(None)
@@ -96,12 +122,8 @@ async def init_team(
 ):  # add team_switched: bool parameter
     """Initialize the user's current team of agents"""
 
-    # Need to store this user state in cosmos db, retrieve it here, and initialize the team
-    # current in-memory store is in team_config from settings.py
-    # For now I will set the initial install team ids as 00000000-0000-0000-0000-000000000001 (HR),
-    # 00000000-0000-0000-0000-000000000002 (Marketing), and 00000000-0000-0000-0000-000000000003 (Retail),
-    # and use this value to initialize to HR each time.
-    init_team_id = "00000000-0000-0000-0000-000000000001"
+    # Get first available team from 4 to 1 (RFP -> Retail -> Marketing -> HR)
+    # Falls back to HR if no teams are available.
     print(f"Init team called, team_switched={team_switched}")
     try:
         authenticated_user = get_authenticated_user_details(
@@ -117,6 +139,15 @@ async def init_team(
         # Initialize memory store and service
         memory_store = await DatabaseFactory.get_database(user_id=user_id)
         team_service = TeamService(memory_store)
+        
+        # Find the first available team from 4 to 1, or use HR as fallback
+        init_team_id = await find_first_available_team(team_service, user_id)
+        if not init_team_id:
+            init_team_id = "00000000-0000-0000-0000-000000000001"  # HR fallback
+            print("No available teams found, using HR fallback")
+        else:
+            print(f"Using first available team: {init_team_id}")
+
         user_current_team = await memory_store.get_current_team(user_id=user_id)
         if not user_current_team:
             print("User has no current team, setting to default:", init_team_id)

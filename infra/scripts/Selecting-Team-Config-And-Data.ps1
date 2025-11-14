@@ -440,13 +440,13 @@ if($useCaseSelection -eq "1" -or $useCaseSelection -eq "all" -or $useCaseSelecti
 }
 
 if($useCaseSelection -eq "2" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "5") {
-    Write-Host "Uploading Team Configuration for Marketing Press Release..."
+    Write-Host "Uploading Team Configuration for Retail Customer Satisfaction..."
     $directoryPath = "data/agent_teams"
     $teamId = "00000000-0000-0000-0000-000000000003"
     try {
         $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $directoryPath, $userPrincipalId, $teamId -Wait -NoNewWindow -PassThru
         if ($process.ExitCode -ne 0) {
-            Write-Host "Error: Team configuration for Marketing Press Release upload failed."
+            Write-Host "Error: Team configuration for Retail Customer Satisfaction upload failed."
             $failedTeamConfigs += 1
             $isTeamConfigFailed = $true
         }
@@ -454,11 +454,11 @@ if($useCaseSelection -eq "2" -or $useCaseSelection -eq "all" -or $useCaseSelecti
         Write-Host "Error: Uploading team configuration failed."
         $isTeamConfigFailed = $true
     }
-    Write-Host "Uploaded Team Configuration for Marketing Press Release..."
+    Write-Host "Uploaded Team Configuration for Retail Customer Satisfaction..."
 
     $directoryPath = "data/datasets/retail/customer"
     # Upload sample files to blob storage
-    Write-Host "Uploading sample files to blob storage for Marketing Press Release ..."
+    Write-Host "Uploading sample files to blob storage for Retail Customer Satisfaction ..."
     $result = az storage blob upload-batch --account-name $storageAccount --destination "retail-dataset-customer" --source $directoryPath --auth-mode login --pattern "*" --overwrite --output none
 
     if ($LASTEXITCODE -ne 0) {
@@ -466,7 +466,7 @@ if($useCaseSelection -eq "2" -or $useCaseSelection -eq "all" -or $useCaseSelecti
         $isSampleDataFailed = $true
         exit 1
     }
-    
+
     $directoryPath = "data/datasets/retail/order"
     $result = az storage blob upload-batch --account-name $storageAccount --destination "retail-dataset-order" --source "data/datasets/retail/order" --auth-mode login --pattern "*" --overwrite --output none
 
@@ -478,7 +478,7 @@ if($useCaseSelection -eq "2" -or $useCaseSelection -eq "all" -or $useCaseSelecti
     Write-Host "Files uploaded successfully to blob storage."
 
     # Run the Python script to index data
-    Write-Host "Running the python script to index data for Marketing Press Release"
+    Write-Host "Running the python script to index data for Retail Customer Satisfaction"
     $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/index_datasets.py", $storageAccount, "retail-dataset-customer", $aiSearch, "macae-retail-customer-index" -Wait -NoNewWindow -PassThru
 
     if ($process.ExitCode -ne 0) {
@@ -493,7 +493,7 @@ if($useCaseSelection -eq "2" -or $useCaseSelection -eq "all" -or $useCaseSelecti
         $isSampleDataFailed = $true
         exit 1
     }
-    Write-Host "Python script to index data for Marketing Press Release successfully executed."
+    Write-Host "Python script to index data for Retail Customer Satisfaction successfully executed."
 }
 
 

@@ -95,7 +95,7 @@ for idx, blob in enumerate(blob_list, start=1):
     #if blob.name.endswith(".csv"):
     title = blob.name.replace(".csv", "")
     title = title.replace(".json", "")
-    title = blob.name.replace(".pdf", "")
+    title = title.replace(".pdf", "")
     data = container_client.download_blob(blob.name).readall()
     
     try:
