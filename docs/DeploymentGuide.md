@@ -97,7 +97,7 @@ You can run this solution using GitHub Codespaces. The button will open a web-ba
 </details>
 
 <details>
-  <summary><b>Deploy in VS Code</b></summary>
+  <summary><b>Deploy in VS Code Dev Containers</b></summary>
 
 ### VS Code Dev Containers
 
@@ -215,43 +215,52 @@ For **production deployments**, the repository also provides [`main.waf.paramete
 
 ---
 
+### 🔁 Safe Redeployment or Environment Update Workflow
+
+  **[!IMPORTANT]**
+  > **Never run `azd init` again after your initial setup.** Doing so can overwrite your configuration and break your deployment.
+  
+  For subsequent deployments or environment changes, use one of the following safe approaches:
+  
+  #### Option 1: Create a New Environment (Recommended for Clean Redeployments)
+  
+  Create a fresh deployment environment with its own settings and resource group:  
+  ```bash
+  azd env new <your-new-env-name>
+  ```
+
+  #### Option 2: Update Your Current Environment Settings
+  
+  To modify settings (e.g., Azure region, resource suffix), edit the environment file directly:
+  ```bash
+  azd env set AZURE_LOCATION <your-desired-location>
+  ```
+
 ### 🔒 Security Considerations for Cosmos DB
 
-This solution deploys Cosmos DB with security controls aligned to the **Azure Well-Architected Framework**. Access is **never public by default** — all access is explicitly controlled via **managed identities**, **role-based access control (RBAC)**, and **private networking**.
+This solution uses Azure AD-based RBAC (not account keys) for Cosmos DB data access. The level of network exposure depends on your deployment mode:
 
-#### 📌 Intended Access Level
-- **Public network access**: **Disabled** (when `enablePrivateNetworking = true`, which is the default for WAF-aligned deployments).
-- **Private access**: Enabled via **Private Endpoints** integrated with your virtual network.
-- **No public write or read access** is allowed from the internet.
+✅ **WAF-Aligned Deployment** (enablePrivateNetworking = true)
 
-> 💡 In sandbox mode (`main.parameters.json`), public access may be enabled for rapid testing. **Do not use sandbox settings in production.**
+- Network access: Private only — Cosmos DB is not reachable from the public internet.
 
-#### ✅ Allowed Operations
-| Operation        | Allowed? | Details |
-|------------------|----------|--------|
-| Read (data)      | ✅ Yes   | Via assigned managed identity with **Cosmos DB Built-in Data Reader** or **Contributor** role |
-| Write (data)     | ✅ Yes   | Via assigned managed identity with **Cosmos DB Built-in Data Contributor** role |
-| Control-plane ops (create/delete DB) | ❌ No (for apps) | Only deployment principal (user or service principal running `azd up`) has control-plane access |
+- Access path: Application (Container Apps) → Private Endpoint in backendSubnet → Cosmos DB.
 
-#### 👥 Authorized Principals & Network Paths
-- **Identity-based access**:
-  - The **application’s user-assigned managed identity** is granted fine-grained data-plane roles:
-    - `Cosmos DB Built-in Data Contributor` (for read + write)
-    - *Or* `Cosmos DB Built-in Data Reader` (if read-only)
-  - **No shared keys or connection strings** are used — all access uses **Azure AD authentication** (token-based).
-- **Network-based access**:
-  - Traffic flows exclusively over **private endpoints** within your virtual network.
-  - **No public IPs** or internet-facing endpoints are exposed for Cosmos DB.
-  - Network Security Groups (NSGs) and Azure Firewall rules (if configured) further restrict lateral movement.
+- Authentication: Via user-assigned managed identity.
 
-#### ⚠️ Important Notes
-- If you **disable private networking** (`enablePrivateNetworking = false`), the Cosmos DB account will allow public access — **not recommended for production**.
-- Always review and **remove unnecessary role assignments** post-deployment.
-- Audit access using **Azure Activity Logs** and **Cosmos DB diagnostic logs** (enabled by default in WAF mode).
+- Role assigned: Cosmos DB Built-in Data Contributor → full read + write to all data.
 
-For more details, see:
-- [Azure Cosmos DB Role-Based Access Control](https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-setup-rbac)
-- [Secure access to Cosmos DB using Private Endpoints](https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-configure-private-endpoints)
+- Who can access: Only the app’s managed identity. No human users or public endpoints.
+
+⚠️ **Sandbox Deployment** (enablePrivateNetworking = false)
+
+- Network access: Public endpoint enabled — Cosmos DB accepts requests from the internet.
+
+- Authentication: Still Azure AD RBAC only (no account keys).
+
+- Role assigned: Same Cosmos DB Built-in Data Contributor → full read + write.
+
+- Who can access: Only the app’s managed identity — no additional users or groups are granted access.
 
 ### Deploying with AZD
 
@@ -350,35 +359,13 @@ Check all resources in your environment's resource group
 
 > 💡 **Please refer:**
 
-   ![Image showing the post deployment scripts](../docs/images/macae-post-deployment.png)
+  ![Image showing the post deployment scripts](../docs/images/macae-post-deployment.png)
 
 3. Once the deployment has completed successfully, open the [Azure Portal](https://portal.azure.com/), go to the deployed resource group, find the App Service, and get the app URL from `Default domain`.
 
 4. When Deployment is complete, follow steps in [Set Up Authentication in Azure App Service](../docs/azure_app_service_auth_setup.md) to add app authentication to your web app running on Azure App Service
 
 5. If you are done trying out the application, you can delete the resources by running `azd down`.
-
-### 🔁 Safe Redeployment or Environment Update Workflow
-
-  > [!IMPORTANT]
-  > **Never run `azd init` again after your initial setup.** Doing so can overwrite your configuration and break your deployment.
-  
-  For subsequent deployments or environment changes, use one of the following safe approaches:
-  
-  #### Option 1: Create a New Environment (Recommended for Clean Redeployments)
-  
-  Create a fresh deployment environment with its own settings and resource group:  
-  ```bash
-  azd env new <your-new-env-name>
-  ```
-
-  #### Option 2: Update Your Current Environment Settings
-  
-  To modify settings (e.g., Azure region, resource suffix), edit the environment file directly:
-  ```bash
-  azd env set AZURE_LOCATION <your-desired-location>
-  ```
-
 
 ### 🛠️ Troubleshooting
  If you encounter any issues during the deployment process, please refer [troubleshooting](../docs/TroubleShootingSteps.md) document for detailed steps and solutions.
