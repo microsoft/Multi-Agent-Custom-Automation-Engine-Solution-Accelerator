@@ -51,4 +51,3 @@ class PlannerResponsePlan(BaseModel):
     steps: List[PlannerResponseStep]
     summary_plan_and_steps: str
     human_clarification_request: Optional[str] = None
-
