@@ -44,7 +44,7 @@ class MCPEnabledBase:
         team_service: TeamService | None = None,
         team_config: TeamConfiguration | None = None,
         project_endpoint: str | None = None,
-        memory_store: DatabaseBase| None = None,
+        memory_store: DatabaseBase | None = None,
     ) -> None:
         self._stack: AsyncExitStack | None = None
         self.mcp_cfg: MCPConfig | None = mcp
@@ -159,7 +159,13 @@ class AzureAgentBase(MCPEnabledBase):
         team_config: TeamConfiguration | None = None,
         memory_store: DatabaseBase | None = None,
     ) -> None:
-        super().__init__(mcp=mcp, team_service=team_service, team_config=team_config, project_endpoint=project_endpoint, memory_store=memory_store)
+        super().__init__(
+            mcp=mcp,
+            team_service=team_service,
+            team_config=team_config,
+            project_endpoint=project_endpoint,
+            memory_store=memory_store,
+        )
 
         self._created_ephemeral: bool = (
             False  # reserved if you add ephemeral agent cleanup

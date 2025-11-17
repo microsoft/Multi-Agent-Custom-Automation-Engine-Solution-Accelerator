@@ -146,7 +146,11 @@ class OrchestrationManager:
     # ---------------------------
     @classmethod
     async def get_current_or_new_orchestration(
-        cls, user_id: str, team_config: TeamConfiguration, team_switched: bool, team_service: Optional[TeamService] = None
+        cls,
+        user_id: str,
+        team_config: TeamConfiguration,
+        team_switched: bool,
+        team_service: Optional[TeamService] = None,
     ):
         """
         Return an existing workflow for the user or create a new one if:
@@ -176,7 +180,9 @@ class OrchestrationManager:
             factory = MagenticAgentFactory(team_service=team_service)
             try:
                 agents = await factory.get_agents(
-                    user_id=user_id, team_config_input=team_config, memory_store=team_service.memory_context
+                    user_id=user_id,
+                    team_config_input=team_config,
+                    memory_store=team_service.memory_context,
                 )
                 cls.logger.info("Created %d agents for user '%s'", len(agents), user_id)
             except Exception as e:
@@ -227,30 +233,53 @@ class OrchestrationManager:
                         # Support list-like or custom container with clear()
                         if hasattr(conv, "clear") and callable(conv.clear):
                             conv.clear()
-                            self.logger.debug("Cleared orchestrator conversation (%s)", exec_key)
+                            self.logger.debug(
+                                "Cleared orchestrator conversation (%s)", exec_key
+                            )
                         elif isinstance(conv, list):
                             conv[:] = []
-                            self.logger.debug("Emptied orchestrator conversation list (%s)", exec_key)
+                            self.logger.debug(
+                                "Emptied orchestrator conversation list (%s)", exec_key
+                            )
                         else:
-                            self.logger.debug("Orchestrator conversation not clearable type (%s): %s", exec_key, type(conv))
+                            self.logger.debug(
+                                "Orchestrator conversation not clearable type (%s): %s",
+                                exec_key,
+                                type(conv),
+                            )
                     else:
-                        self.logger.debug("Orchestrator has no _conversation attribute (%s)", exec_key)
+                        self.logger.debug(
+                            "Orchestrator has no _conversation attribute (%s)", exec_key
+                        )
                 else:
                     # Agent path
                     if hasattr(executor, "_chat_history"):
                         hist = getattr(executor, "_chat_history")
                         if hasattr(hist, "clear") and callable(hist.clear):
                             hist.clear()
-                            self.logger.debug("Cleared agent chat history (%s)", exec_key)
+                            self.logger.debug(
+                                "Cleared agent chat history (%s)", exec_key
+                            )
                         elif isinstance(hist, list):
                             hist[:] = []
-                            self.logger.debug("Emptied agent chat history list (%s)", exec_key)
+                            self.logger.debug(
+                                "Emptied agent chat history list (%s)", exec_key
+                            )
                         else:
-                            self.logger.debug("Agent chat history not clearable type (%s): %s", exec_key, type(hist))
+                            self.logger.debug(
+                                "Agent chat history not clearable type (%s): %s",
+                                exec_key,
+                                type(hist),
+                            )
                     else:
-                        self.logger.debug("Agent executor has no _chat_history attribute (%s)", exec_key)
+                        self.logger.debug(
+                            "Agent executor has no _chat_history attribute (%s)",
+                            exec_key,
+                        )
             except Exception as e:
-                self.logger.warning("Failed clearing state for executor %s: %s", exec_key, e)
+                self.logger.warning(
+                    "Failed clearing state for executor %s: %s", exec_key, e
+                )
         # --- END NEW BLOCK ---
 
         # Build task from input (same as old version)
@@ -263,7 +292,7 @@ class OrchestrationManager:
             final_output: str | None = None
 
             self.logger.info("Starting workflow execution...")
-            thread_id =f"task-{job_id}"
+            thread_id = f"task-{job_id}"
             async for event in workflow.run_stream(task_text):
                 try:
                     # Handle orchestrator messages (task assignments, coordination)

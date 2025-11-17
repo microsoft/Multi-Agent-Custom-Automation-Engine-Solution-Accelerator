@@ -30,10 +30,11 @@ class InvalidConfigurationError(Exception):
 class MagenticAgentFactory:
     """Factory for creating and managing magentic agents from JSON configurations."""
 
-    def __init__(self,team_service: Optional[TeamService] = None):
+    def __init__(self, team_service: Optional[TeamService] = None):
         self.logger = logging.getLogger(__name__)
         self._agent_list: List = []
         self.team_service = team_service
+
     # @staticmethod
     # def parse_team_config(file_path: Union[str, Path]) -> SimpleNamespace:
     #     """Parse JSON file into objects using SimpleNamespace."""
@@ -41,7 +42,13 @@ class MagenticAgentFactory:
     #         data = json.load(f)
     #     return json.loads(json.dumps(data), object_hook=lambda d: SimpleNamespace(**d))
 
-    async def create_agent_from_config(self, user_id: str, agent_obj: SimpleNamespace, team_config: TeamConfiguration, memory_store: DatabaseBase) -> Union[FoundryAgentTemplate, ReasoningAgentTemplate, ProxyAgent]:
+    async def create_agent_from_config(
+        self,
+        user_id: str,
+        agent_obj: SimpleNamespace,
+        team_config: TeamConfiguration,
+        memory_store: DatabaseBase,
+    ) -> Union[FoundryAgentTemplate, ReasoningAgentTemplate, ProxyAgent]:
         """
         Create an agent from configuration object.
 
@@ -89,7 +96,9 @@ class MagenticAgentFactory:
         # Only create configs for explicitly requested capabilities
         index_name = getattr(agent_obj, "index_name", None)
         search_config = (
-            SearchConfig.from_env(index_name) if getattr(agent_obj, "use_rag", False) else None
+            SearchConfig.from_env(index_name)
+            if getattr(agent_obj, "use_rag", False)
+            else None
         )
         mcp_config = (
             MCPConfig.from_env() if getattr(agent_obj, "use_mcp", False) else None
@@ -138,7 +147,12 @@ class MagenticAgentFactory:
         )
         return agent
 
-    async def get_agents(self, user_id: str, team_config_input: TeamConfiguration, memory_store: DatabaseBase) -> List:
+    async def get_agents(
+        self,
+        user_id: str,
+        team_config_input: TeamConfiguration,
+        memory_store: DatabaseBase,
+    ) -> List:
         """
         Create and return a team of agents from JSON configuration.
 
@@ -157,9 +171,13 @@ class MagenticAgentFactory:
 
             for i, agent_cfg in enumerate(team_config_input.agents, 1):
                 try:
-                    self.logger.info(f"Creating agent {i}/{len(team_config_input.agents)}: {agent_cfg.name}")
+                    self.logger.info(
+                        f"Creating agent {i}/{len(team_config_input.agents)}: {agent_cfg.name}"
+                    )
 
-                    agent = await self.create_agent_from_config(user_id, agent_cfg, team_config_input, memory_store)
+                    agent = await self.create_agent_from_config(
+                        user_id, agent_cfg, team_config_input, memory_store
+                    )
                     initalized_agents.append(agent)
                     self._agent_list.append(agent)  # Keep track for cleanup
 
