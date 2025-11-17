@@ -143,10 +143,10 @@ class MCPEnabledBase:
             )
             if currentAgent and currentAgent.agent_foundry_id:
                 agent = self.client.get_agent(
-                    id=currentAgent.agent_foundry_id
+                    agent_id=currentAgent.agent_foundry_id
                 )
 
-        except Exception as ex:
+        except Exception as ex:  # Consider narrowing this to specific exceptions if possible
             self.logger.error("Failed to initialize ReasoningAgentTemplate: %s", ex)
         return agent
     
@@ -157,7 +157,7 @@ class MCPEnabledBase:
                 team_id=self.team_config.team_id,
                 team_name=self.team_config.name,
                 agent_name=self.agent_name,
-                agent_foundry_id=self._agent.id,
+                agent_foundry_id=self._agent.chat_client.agent_id,
                 agent_description=self.agent_description,
                 agent_instructions=self.agent_instructions,
             )
