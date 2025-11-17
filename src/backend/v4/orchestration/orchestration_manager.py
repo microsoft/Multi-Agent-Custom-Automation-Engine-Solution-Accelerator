@@ -150,7 +150,7 @@ class OrchestrationManager:
         user_id: str,
         team_config: TeamConfiguration,
         team_switched: bool,
-        team_service: Optional[TeamService] = None,
+        team_service:TeamService = None,
     ):
         """
         Return an existing workflow for the user or create a new one if:

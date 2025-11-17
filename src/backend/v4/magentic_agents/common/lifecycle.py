@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from contextlib import AsyncExitStack
 from typing import Any, Optional
@@ -45,6 +46,9 @@ class MCPEnabledBase:
         team_config: TeamConfiguration | None = None,
         project_endpoint: str | None = None,
         memory_store: DatabaseBase | None = None,
+        agent_name: str | None = None,
+        agent_description: str | None = None,
+        agent_instructions: str | None = None,
     ) -> None:
         self._stack: AsyncExitStack | None = None
         self.mcp_cfg: MCPConfig | None = mcp
@@ -56,6 +60,10 @@ class MCPEnabledBase:
         self.project_endpoint = project_endpoint
         self.creds: Optional[DefaultAzureCredential] = None
         self.memory_store: Optional[DatabaseBase] = memory_store
+        self.agent_name: str | None = agent_name
+        self.agent_description: str | None = agent_description
+        self.agent_instructions: str | None = agent_instructions
+        self.logger = logging.getLogger(__name__)
 
     async def open(self) -> "MCPEnabledBase":
         if self._stack is not None:
@@ -142,15 +150,16 @@ class MCPEnabledBase:
             self.logger.error("Failed to initialize ReasoningAgentTemplate: %s", ex)
         return agent
     
-    async def save_database_team_agent(self, agent_name, description, instructions) -> None:
+    async def save_database_team_agent(self) -> None:
         """Save current team agent to database."""
         try:
             currentAgent = CurrentTeamAgent(
                 team_id=self.team_config.team_id,
-                agent_name=agent_name,
+                team_name=self.team_config.name,
+                agent_name=self.agent_name,
                 agent_foundry_id=self._agent.id,
-                agent_description=description,
-                agent_instructions=instructions,
+                agent_description=self.agent_description,
+                agent_instructions=self.agent_instructions,
             )
             await self.memory_store.add_team_agent(currentAgent)
 
@@ -191,6 +200,9 @@ class AzureAgentBase(MCPEnabledBase):
         team_service: TeamService | None = None,
         team_config: TeamConfiguration | None = None,
         memory_store: DatabaseBase | None = None,
+        agent_name: str | None = None,
+        agent_description: str | None = None,
+        agent_instructions: str | None = None,
     ) -> None:
         super().__init__(
             mcp=mcp,
@@ -198,6 +210,9 @@ class AzureAgentBase(MCPEnabledBase):
             team_config=team_config,
             project_endpoint=project_endpoint,
             memory_store=memory_store,
+            agent_name=agent_name,
+            agent_description=agent_description,
+            agent_instructions=agent_instructions,
         )
 
         self._created_ephemeral: bool = (

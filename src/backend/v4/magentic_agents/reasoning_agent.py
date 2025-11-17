@@ -70,9 +70,6 @@ class ReasoningAgentTemplate(MCPEnabledBase):
             project_endpoint=project_endpoint,
             memory_store=memory_store,
         )
-        self.agent_name = agent_name
-        self.agent_description = agent_description
-        self.base_instructions = agent_instructions
         self.model_deployment_name = model_deployment_name
 
         self.search_config = search_config
@@ -118,10 +115,8 @@ class ReasoningAgentTemplate(MCPEnabledBase):
                     temperature=1.0,  # Reasoning models use fixed temperature
                     model_id=self.model_deployment_name,
                 )
-                await self.save_database_team_agent(
-                    self.agent_name, self.agent_description, self.base_instructions
-                )
-
+                await self.save_database_team_agent()
+                    
             else:
                 self._agent = agent
                 self.logger.info("Using existing ReasoningAgent '%s'", self.agent_name)

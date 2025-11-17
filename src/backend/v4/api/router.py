@@ -14,7 +14,11 @@ from common.models.messages_af import (
     TeamSelectionRequest,
 )
 from common.utils.event_utils import track_event_if_configured
-from common.utils.utils_af import find_first_available_team, rai_success, rai_validate_team_config
+from common.utils.utils_af import (
+    find_first_available_team,
+    rai_success,
+    rai_validate_team_config,
+)
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -149,7 +153,10 @@ async def init_team(
 
         # Initialize agent team for this user session
         await OrchestrationManager.get_current_or_new_orchestration(
-            user_id=user_id, team_config=team_configuration, team_switched=team_switched
+            user_id=user_id,
+            team_config=team_configuration,
+            team_switched=team_switched,
+            team_service=team_service,
         )
 
         return {

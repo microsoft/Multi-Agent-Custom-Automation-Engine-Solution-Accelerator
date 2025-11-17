@@ -45,10 +45,11 @@ class FoundryAgentTemplate(AzureAgentBase):
             team_service=team_service,
             team_config=team_config,
             memory_store=memory_store,
+            agent_name=agent_name,
+            agent_description=agent_description,
+            agent_instructions=agent_instructions,
         )
-        self.agent_name = agent_name
-        self.agent_description = agent_description
-        self.agent_instructions = agent_instructions
+
         self.enable_code_interpreter = enable_code_interpreter
         self.search = search_config
         self.logger = logging.getLogger(__name__)
@@ -260,9 +261,7 @@ class FoundryAgentTemplate(AzureAgentBase):
 
                 self.logger.info("Initialized ChatAgent '%s'", self.agent_name)
 
-                await self.save_database_team_agent(
-                    self.agent_name, self.agent_description, self.agent_instructions
-                )
+                await self.save_database_team_agent()
 
             else:
                 self.logger.info("Using existing ChatAgent '%s'", self.agent_name)
