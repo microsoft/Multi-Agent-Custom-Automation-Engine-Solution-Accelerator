@@ -87,9 +87,6 @@ class AppConfig:
         self.AZURE_AI_SEARCH_CONNECTION_NAME = self._get_optional(
             "AZURE_AI_SEARCH_CONNECTION_NAME"
         )
-        self.AZURE_AI_SEARCH_INDEX_NAME = self._get_optional(
-            "AZURE_AI_SEARCH_INDEX_NAME"
-        )
         self.AZURE_AI_SEARCH_ENDPOINT = self._get_optional("AZURE_AI_SEARCH_ENDPOINT")
         self.AZURE_AI_SEARCH_API_KEY = self._get_optional("AZURE_AI_SEARCH_API_KEY")
         # self.BING_CONNECTION_NAME = self._get_optional("BING_CONNECTION_NAME")

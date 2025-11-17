@@ -1278,10 +1278,6 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
             value: aiSearchConnectionName
           }
           {
-            name: 'AZURE_AI_SEARCH_INDEX_NAME'
-            value: aiSearchIndexName
-          }
-          {
             name: 'AZURE_AI_SEARCH_ENDPOINT'
             value: searchService.outputs.endpoint
           }
@@ -1332,10 +1328,6 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
           {
             name: 'AZURE_STORAGE_BLOB_URL'
             value: avmStorageAccount.outputs.serviceEndpoints.blob
-          }
-          {
-            name: 'AZURE_STORAGE_CONTAINER_NAME'
-            value: storageContainerName
           }
           {
             name: 'AZURE_AI_MODEL_DEPLOYMENT_NAME'
@@ -1785,10 +1777,8 @@ output webSiteDefaultHostname string = webSite.outputs.defaultHostname
 
 output AZURE_STORAGE_BLOB_URL string = avmStorageAccount.outputs.serviceEndpoints.blob
 output AZURE_STORAGE_ACCOUNT_NAME string = storageAccountName
-output AZURE_STORAGE_CONTAINER_NAME string = storageContainerName
 output AZURE_AI_SEARCH_ENDPOINT string = searchService.outputs.endpoint
 output AZURE_AI_SEARCH_NAME string = searchService.outputs.name
-output AZURE_AI_SEARCH_INDEX_NAME string = aiSearchIndexName
 
 output COSMOSDB_ENDPOINT string = 'https://${cosmosDbResourceName}.documents.azure.com:443/'
 output COSMOSDB_DATABASE string = cosmosDbDatabaseName

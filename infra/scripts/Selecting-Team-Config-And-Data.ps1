@@ -522,5 +522,10 @@ if ($isTeamConfigFailed -or $isSampleDataFailed) {
     Write-Host "`nOne or more tasks failed. Please check the error messages above."
     exit 1
 } else {
-    Write-Host "`nTeam configuration upload and sample data processing completed successfully."
+    if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "5"){
+        Write-Host "`nTeam configuration upload and sample data processing completed successfully."
+    }else {
+        Write-Host "`nTeam configuration upload completed successfully."
+    }
+    
 }
