@@ -41,6 +41,16 @@ class MagenticAgentFactory:
     #     with open(file_path, 'r') as f:
     #         data = json.load(f)
     #     return json.loads(json.dumps(data), object_hook=lambda d: SimpleNamespace(**d))
+    # Ensure only an explicit boolean True in the source sets this flag.
+    def extract_use_reasoning(agent_obj):
+        # Support both dict and attribute-style objects
+        if isinstance(agent_obj, dict):
+            val = agent_obj.get("use_reasoning", False)
+        else:
+            val = getattr(agent_obj, "use_reasoning", False)
+
+        # Accept only the literal boolean True
+        return True if val is True else False
 
     async def create_agent_from_config(
         self,
@@ -80,7 +90,8 @@ class MagenticAgentFactory:
             )
 
         # Determine which template to use
-        use_reasoning = getattr(agent_obj, "use_reasoning", False)
+            # Usage
+        use_reasoning = self.extract_use_reasoning(agent_obj)
 
         # Validate reasoning template constraints
         if use_reasoning:
