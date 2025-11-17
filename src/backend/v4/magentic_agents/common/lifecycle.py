@@ -4,16 +4,28 @@ import os
 from contextlib import AsyncExitStack
 from typing import Any, Optional
 
-from agent_framework import (AggregateContextProvider, ChatAgent,
-                             ChatClientProtocol, ChatMessage,
-                             ChatMessageStoreProtocol, ChatOptions,
-                             ContextProvider, HostedMCPTool,
-                             MCPStreamableHTTPTool, Middleware, Role, ToolMode,
-                             ToolProtocol)
+from agent_framework import (
+    AggregateContextProvider,
+    ChatAgent,
+    ChatClientProtocol,
+    ChatMessage,
+    ChatMessageStoreProtocol,
+    ChatOptions,
+    ContextProvider,
+    HostedMCPTool,
+    MCPStreamableHTTPTool,
+    Middleware,
+    Role,
+    ToolMode,
+    ToolProtocol,
+)
+
 # from agent_framework.azure import AzureAIAgentClient
 from agent_framework_azure_ai import AzureAIAgentClient
 from azure.ai.agents.aio import AgentsClient
 from azure.identity.aio import DefaultAzureCredential
+from common.models.messages_af import TeamConfiguration
+from v4.common.services.team_service import TeamService
 from v4.config.agent_registry import agent_registry
 from v4.magentic_agents.models.agent_models import MCPConfig
 
@@ -25,18 +37,51 @@ class MCPEnabledBase:
     Subclasses must implement _after_open() and assign self._agent.
     """
 
-    def __init__(self, mcp: MCPConfig | None = None) -> None:
+    def __init__(
+        self,
+        mcp: MCPConfig | None = None,
+        team_service: TeamService | None = None,
+        team_config: TeamConfiguration | None = None,
+        project_endpoint: str | None = None,
+    ) -> None:
         self._stack: AsyncExitStack | None = None
         self.mcp_cfg: MCPConfig | None = mcp
         self.mcp_tool: HostedMCPTool | None = None
-        self._agent: ChatAgent | None = None  
+        self._agent: ChatAgent | None = None
+        self.team_service: TeamService | None = team_service
+        self.team_config: TeamConfiguration | None = team_config
+        self.client: Optional[AzureAIAgentClient] = None
+        self.project_endpoint = project_endpoint
+        self.creds: Optional[DefaultAzureCredential] = None
 
     async def open(self) -> "MCPEnabledBase":
         if self._stack is not None:
             return self
         self._stack = AsyncExitStack()
+
+        # Acquire credential
+        self.creds = DefaultAzureCredential()
+        if self._stack:
+            await self._stack.enter_async_context(self.creds)
+        # Create AgentsClient
+        self.client = AgentsClient(
+            endpoint=self.project_endpoint,
+            credential=self.creds,
+        )
+        if self._stack:
+            await self._stack.enter_async_context(self.client)
+        # Prepare MCP
         await self._prepare_mcp_tool()
+
+        # Let subclass build agent client
         await self._after_open()
+
+        # Register agent (best effort)
+        try:
+            agent_registry.register_agent(self)
+        except Exception:
+            pass
+
         return self
 
     async def close(self) -> None:
@@ -47,12 +92,12 @@ class MCPEnabledBase:
             if self._agent and hasattr(self._agent, "close"):
                 try:
                     await self._agent.close()  # AzureAIAgentClient has async close
-                except Exception:  
+                except Exception:
                     pass
             # Unregister from registry if present
             try:
                 agent_registry.unregister_agent(self)
-            except Exception:  
+            except Exception:
                 pass
             await self._stack.aclose()
         finally:
@@ -85,11 +130,11 @@ class MCPEnabledBase:
             mcp_tool = MCPStreamableHTTPTool(
                 name=self.mcp_cfg.name,
                 description=self.mcp_cfg.description,
-                url=self.mcp_cfg.url
+                url=self.mcp_cfg.url,
             )
             await self._stack.enter_async_context(mcp_tool)
             self.mcp_tool = mcp_tool  # Store for later use
-        except Exception:  
+        except Exception:
             self.mcp_tool = None
 
 
@@ -102,15 +147,20 @@ class AzureAgentBase(MCPEnabledBase):
       - optionally register themselves via agent_registry
     """
 
-    def __init__(self, mcp: MCPConfig | None = None, model_deployment_name: str | None = None, project_endpoint: str | None = None) -> None:
-        super().__init__(mcp=mcp)
-        self.creds: Optional[DefaultAzureCredential] = None
-        self.client: Optional[AzureAIAgentClient] = None
-       
+    def __init__(
+        self,
+        mcp: MCPConfig | None = None,
+        model_deployment_name: str | None = None,
+        project_endpoint: str | None = None,
+        team_service: TeamService | None = None,
+        team_config: TeamConfiguration | None = None,
+    ) -> None:
+        super().__init__(mcp=mcp, team_service=team_service, team_config=team_config, project_endpoint=project_endpoint)
+
         self._created_ephemeral: bool = (
             False  # reserved if you add ephemeral agent cleanup
         )
-        self.project_endpoint = project_endpoint
+
         self.model_deployment_name = model_deployment_name
 
     async def open(self) -> "AzureAgentBase":
@@ -118,25 +168,17 @@ class AzureAgentBase(MCPEnabledBase):
             return self
         self._stack = AsyncExitStack()
 
-
         # Acquire credential
         self.creds = DefaultAzureCredential()
-        await self._stack.enter_async_context(self.creds)
-
-        # Create AIProjectClient
-        # self.client = AzureAIAgentClient(
-        #     project_endpoint=self.project_endpoint,
-        #     model_deployment_name=self.model_deployment_name,
-        #     async_credential=self.creds,
-        # )
-
-        #Create AgentsClient
+        if self._stack:
+            await self._stack.enter_async_context(self.creds)
+        # Create AgentsClient
         self.client = AgentsClient(
             endpoint=self.project_endpoint,
             credential=self.creds,
         )
-        await self._stack.enter_async_context(self.client)
-
+        if self._stack:
+            await self._stack.enter_async_context(self.client)
         # Prepare MCP
         await self._prepare_mcp_tool()
 
@@ -146,7 +188,7 @@ class AzureAgentBase(MCPEnabledBase):
         # Register agent (best effort)
         try:
             agent_registry.register_agent(self)
-        except Exception:  
+        except Exception:
             pass
 
         return self
@@ -170,25 +212,25 @@ class AzureAgentBase(MCPEnabledBase):
             if self._agent and hasattr(self._agent, "close"):
                 try:
                     await self._agent.close()
-                except Exception:  
+                except Exception:
                     pass
 
             # Unregister from registry
             try:
                 agent_registry.unregister_agent(self)
-            except Exception:  
+            except Exception:
                 pass
 
             # Close credential and project client
             if self.client:
                 try:
                     await self.client.close()
-                except Exception:  
+                except Exception:
                     pass
             if self.creds:
                 try:
                     await self.creds.close()
-                except Exception:  
+                except Exception:
                     pass
 
         finally:

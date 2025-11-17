@@ -21,7 +21,7 @@ from agent_framework import (
 from common.config.app_config import config
 from common.models.messages_af import TeamConfiguration
 
-# Existing (legacy) callbacks
+from v4.common.services.team_service import TeamService
 from v4.callbacks.response_handlers import (
     agent_response_callback,
     streaming_agent_response_callback,
@@ -147,7 +147,7 @@ class OrchestrationManager:
     # ---------------------------
     @classmethod
     async def get_current_or_new_orchestration(
-        cls, user_id: str, team_config: TeamConfiguration, team_switched: bool
+        cls, user_id: str, team_config: TeamConfiguration, team_switched: bool, team_service: Optional[TeamService] = None
     ):
         """
         Return an existing workflow for the user or create a new one if:
@@ -175,7 +175,7 @@ class OrchestrationManager:
                                 cls.logger.error("Error closing agent: %s", e)
                     
 
-            factory = MagenticAgentFactory()
+            factory = MagenticAgentFactory(team_service=team_service)
             try:
                 agents = await factory.get_agents(
                     user_id=user_id, team_config_input=team_config

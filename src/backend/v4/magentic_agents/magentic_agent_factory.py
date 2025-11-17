@@ -4,10 +4,11 @@
 import json
 import logging
 from types import SimpleNamespace
-from typing import List, Union
+from typing import List, Optional, Union
 
 from common.config.app_config import config
 from common.models.messages_af import TeamConfiguration
+from v4.common.services.team_service import TeamService
 from v4.magentic_agents.foundry_agent import FoundryAgentTemplate
 from v4.magentic_agents.models.agent_models import MCPConfig, SearchConfig
 
@@ -28,10 +29,10 @@ class InvalidConfigurationError(Exception):
 class MagenticAgentFactory:
     """Factory for creating and managing magentic agents from JSON configurations."""
 
-    def __init__(self):
+    def __init__(self,team_service: Optional[TeamService] = None):
         self.logger = logging.getLogger(__name__)
         self._agent_list: List = []
-
+        self.team_service = team_service
     # @staticmethod
     # def parse_team_config(file_path: Union[str, Path]) -> SimpleNamespace:
     #     """Parse JSON file into objects using SimpleNamespace."""
@@ -39,7 +40,7 @@ class MagenticAgentFactory:
     #         data = json.load(f)
     #     return json.loads(json.dumps(data), object_hook=lambda d: SimpleNamespace(**d))
 
-    async def create_agent_from_config(self, user_id: str, agent_obj: SimpleNamespace) -> Union[FoundryAgentTemplate, ReasoningAgentTemplate, ProxyAgent]:
+    async def create_agent_from_config(self, user_id: str, agent_obj: SimpleNamespace, team_config: TeamConfiguration) -> Union[FoundryAgentTemplate, ReasoningAgentTemplate, ProxyAgent]:
         """
         Create an agent from configuration object.
 
@@ -111,6 +112,8 @@ class MagenticAgentFactory:
                 project_endpoint=project_endpoint, # type: ignore
                 search_config=search_config,
                 mcp_config=mcp_config,
+                team_service=self.team_service,
+                team_config=team_config,
             )
         else:
             agent = FoundryAgentTemplate(
@@ -122,6 +125,8 @@ class MagenticAgentFactory:
                 project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
                 mcp_config=mcp_config,
                 search_config=search_config,
+                team_service=self.team_service,
+                team_config=team_config,
             )
 
         await agent.open()
@@ -151,7 +156,7 @@ class MagenticAgentFactory:
                 try:
                     self.logger.info(f"Creating agent {i}/{len(team_config_input.agents)}: {agent_cfg.name}")
 
-                    agent = await self.create_agent_from_config(user_id, agent_cfg)
+                    agent = await self.create_agent_from_config(user_id, agent_cfg, team_config_input)
                     initalized_agents.append(agent)
                     self._agent_list.append(agent)  # Keep track for cleanup
 

@@ -15,8 +15,8 @@ from azure.identity.aio import DefaultAzureCredential
 
 #from agent_framework.azure import AzureOpenAIChatClient
 
-
-
+from common.models.messages_af import TeamConfiguration
+from v4.common.services.team_service import TeamService
 from v4.magentic_agents.common.lifecycle import MCPEnabledBase
 from v4.magentic_agents.models.agent_models import MCPConfig, SearchConfig
 from v4.config.agent_registry import agent_registry
@@ -46,6 +46,8 @@ class ReasoningAgentTemplate(MCPEnabledBase):
         search_config: SearchConfig | None = None,
         mcp_config: MCPConfig | None = None,
         max_search_docs: int = 3,
+        team_service: TeamService | None = None,
+        team_config: TeamConfiguration | None = None,
     ) -> None:
         """Initialize reasoning agent.
         
@@ -59,18 +61,15 @@ class ReasoningAgentTemplate(MCPEnabledBase):
             mcp_config: Optional MCP server configuration
             max_search_docs: Maximum number of search documents to retrieve
         """
-        super().__init__(mcp=mcp_config)
+        super().__init__(mcp=mcp_config, team_service=team_service, team_config=team_config, project_endpoint=project_endpoint)
         self.agent_name = agent_name
         self.agent_description = agent_description
         self.base_instructions = agent_instructions
         self.model_deployment_name = model_deployment_name
-        self.project_endpoint = project_endpoint
+
         self.search_config = search_config
         self.max_search_docs = max_search_docs
         
-        # Azure resources
-        self._credential: Optional[DefaultAzureCredential] = None
-        self._client: Optional[AzureAIAgentClient] = None
         
         
         self.logger = logging.getLogger(__name__)
@@ -78,19 +77,6 @@ class ReasoningAgentTemplate(MCPEnabledBase):
     async def _after_open(self) -> None:
         """Initialize Azure client and search after base setup."""
         try:
-            # Initialize Azure credential
-            self._credential = DefaultAzureCredential()
-            if self._stack:
-                await self._stack.enter_async_context(self._credential)
-
-            # Create AzureAIAgentClient for direct model access
-            self._client = AzureAIAgentClient(
-                project_endpoint=self.project_endpoint,
-                model_deployment_name=self.model_deployment_name,
-                async_credential=self._credential,
-            )
-            if self._stack:
-                await self._stack.enter_async_context(self._client)
 
             self.logger.info(
                 "Initialized AzureAIAgentClient for model '%s'",
@@ -113,7 +99,7 @@ class ReasoningAgentTemplate(MCPEnabledBase):
 
             # Create ChatAgent instance (similar to foundry_agent)
             self._agent = ChatAgent(
-                chat_client=self._client,
+                chat_client=self.client,
                 instructions=self.base_instructions,
                 name=self.agent_name,
                 description=self.agent_description,
@@ -149,8 +135,8 @@ class ReasoningAgentTemplate(MCPEnabledBase):
 
         finally:
             await super().close()
-            self._client = None
-            self._credential = None
+            self.client = None
+            self.creds = None
 
     def _prepare_tools(self) -> list:
         """
@@ -167,10 +153,6 @@ class ReasoningAgentTemplate(MCPEnabledBase):
         
         return tools
 
-    @property
-    def client(self) -> Optional[AzureAIAgentClient]:
-        """Access to underlying client for compatibility."""
-        return self._client
 
 
 # -------------------------
