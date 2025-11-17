@@ -8,6 +8,7 @@ import v4.models.messages as messages
 from ..models.messages_af import (
     AgentMessageData,
     BaseDataModel,
+    CurrentTeamAgent,
     Plan,
     Step,
     TeamConfiguration,
@@ -230,4 +231,21 @@ class DatabaseBase(ABC):
     @abstractmethod
     async def get_agent_messages(self, plan_id: str) -> Optional[AgentMessageData]:
         """Retrieve agent messages by plan_id."""
+        pass
+
+    @abstractmethod
+    async def add_team_agent(self, team_agent: CurrentTeamAgent) -> None:
+        """Add an agent message to the database."""
+        pass
+
+    @abstractmethod
+    async def delete_team_agent(self, team_id: str, agent_name: str) -> None:
+        """Delete a team agent from the database."""
+        pass
+
+    @abstractmethod
+    async def get_team_agent(
+        self, team_id: str, agent_name: str
+    ) -> Optional[CurrentTeamAgent]:
+        """Retrieve a team agent by team_id and agent_name."""
         pass
