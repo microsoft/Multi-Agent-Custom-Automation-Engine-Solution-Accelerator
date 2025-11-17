@@ -8,7 +8,7 @@ from agent_framework_azure_ai import AzureAIAgentClient  # Provided by agent_fra
 from azure.ai.projects.models import ConnectionType
 from common.config.app_config import config
 from common.models.messages_af import TeamConfiguration
-from src.backend.common.database.database_base import DatabaseBase
+from common.database.database_base import DatabaseBase
 from v4.common.services.team_service import TeamService
 from v4.config.agent_registry import agent_registry
 from v4.magentic_agents.common.lifecycle import AzureAgentBase
@@ -214,55 +214,59 @@ class FoundryAgentTemplate(AzureAgentBase):
     # -------------------------
     async def _after_open(self) -> None:
         """Initialize ChatAgent after connections are established."""
-        try:
-            agent = self.client.get_agent(
-                agent_name=self.agent_name
-            )
 
-        except Exception as ex:
-            self.logger.error("Failed to initialize ReasoningAgentTemplate: %s", ex)
         try:
-            if self._use_azure_search:
-                # Azure Search mode (skip MCP + Code Interpreter due to incompatibility)
-                self.logger.info(
-                    "Initializing agent in Azure AI Search mode (exclusive)."
-                )
-                chat_client = await self._create_azure_search_enabled_client()
-                if not chat_client:
-                    raise RuntimeError(
-                        "Azure AI Search mode requested but setup failed."
+            agent = await self.get_database_team_agent()
+            if agent is None:
+                if self._use_azure_search:
+                    # Azure Search mode (skip MCP + Code Interpreter due to incompatibility)
+                    self.logger.info(
+                        "Initializing agent in Azure AI Search mode (exclusive)."
+                    )
+                    chat_client = await self._create_azure_search_enabled_client()
+                    if not chat_client:
+                        raise RuntimeError(
+                            "Azure AI Search mode requested but setup failed."
+                        )
+
+                    # In Azure Search raw tool path, tools/tool_choice are handled server-side.
+                    self._agent = ChatAgent(
+                        chat_client=chat_client,
+                        instructions=self.agent_instructions,
+                        name=self.agent_name,
+                        description=self.agent_description,
+                        tool_choice="required",  # Force usage
+                        temperature=0.7,
+                        model_id=self.model_deployment_name,
+                    )
+                else:
+                    # use MCP path
+                    self.logger.info("Initializing agent in MCP mode.")
+                    tools = await self._collect_tools()
+                    self._agent = ChatAgent(
+                        chat_client=AzureAIAgentClient(
+                            project_endpoint=self.project_endpoint,
+                            model_deployment_name=self.model_deployment_name,
+                            async_credential=self.creds,
+                        ),
+                        instructions=self.agent_instructions,
+                        name=self.agent_name,
+                        description=self.agent_description,
+                        tools=tools if tools else None,
+                        tool_choice="auto" if tools else "none",
+                        temperature=0.7,
+                        model_id=self.model_deployment_name,
                     )
 
-                # In Azure Search raw tool path, tools/tool_choice are handled server-side.
-                self._agent = ChatAgent(
-                    chat_client=chat_client,
-                    instructions=self.agent_instructions,
-                    name=self.agent_name,
-                    description=self.agent_description,
-                    tool_choice="required",  # Force usage
-                    temperature=0.7,
-                    model_id=self.model_deployment_name,
-                )
-            else:
-                # use MCP path
-                self.logger.info("Initializing agent in MCP mode.")
-                tools = await self._collect_tools()
-                self._agent = ChatAgent(
-                    chat_client=AzureAIAgentClient(
-                        project_endpoint=self.project_endpoint,
-                        model_deployment_name=self.model_deployment_name,
-                        async_credential=self.creds,
-                    ),
-                    instructions=self.agent_instructions,
-                    name=self.agent_name,
-                    description=self.agent_description,
-                    tools=tools if tools else None,
-                    tool_choice="auto" if tools else "none",
-                    temperature=0.7,
-                    model_id=self.model_deployment_name,
+                self.logger.info("Initialized ChatAgent '%s'", self.agent_name)
+
+                await self.save_database_team_agent(
+                    self.agent_name, self.agent_description, self.agent_instructions
                 )
 
-            self.logger.info("Initialized ChatAgent '%s'", self.agent_name)
+            else:
+                self.logger.info("Using existing ChatAgent '%s'", self.agent_name)
+                self._agent = agent
         except Exception as ex:
             self.logger.error("Failed to initialize ChatAgent: %s", ex)
             raise

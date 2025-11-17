@@ -24,7 +24,7 @@ from agent_framework import (
 from agent_framework_azure_ai import AzureAIAgentClient
 from azure.ai.agents.aio import AgentsClient
 from azure.identity.aio import DefaultAzureCredential
-from common.models.messages_af import TeamConfiguration
+from common.models.messages_af import CurrentTeamAgent, TeamConfiguration
 from common.database.database_base import DatabaseBase
 from v4.common.services.team_service import TeamService
 from v4.config.agent_registry import agent_registry
@@ -125,6 +125,39 @@ class MCPEnabledBase:
         """Subclasses must build self._agent here."""
         raise NotImplementedError
 
+    async def get_database_team_agent(self) -> Optional[CurrentTeamAgent]:
+        """Retrieve existing team agent from database, if any."""
+        agent = None
+        try:
+            currentAgent = await self.memory_store.get_team_agent(
+                team_id=self.team_config.team_id,
+                agent_name=self.agent_name
+            )
+            if currentAgent and currentAgent.agent_foundry_id:
+                agent = self.client.get_agent(
+                    id=currentAgent.agent_foundry_id
+                )
+
+        except Exception as ex:
+            self.logger.error("Failed to initialize ReasoningAgentTemplate: %s", ex)
+        return agent
+    
+    async def save_database_team_agent(self, agent_name, description, instructions) -> None:
+        """Save current team agent to database."""
+        try:
+            currentAgent = CurrentTeamAgent(
+                team_id=self.team_config.team_id,
+                agent_name=agent_name,
+                agent_foundry_id=self._agent.id,
+                agent_description=description,
+                agent_instructions=instructions,
+            )
+            await self.memory_store.add_team_agent(currentAgent)
+
+        except Exception as ex:
+            self.logger.error("Failed to save ReasoningAgentTemplate: %s", ex)
+            
+        
     async def _prepare_mcp_tool(self) -> None:
         """Translate MCPConfig to a HostedMCPTool (agent_framework construct)."""
         if not self.mcp_cfg:
