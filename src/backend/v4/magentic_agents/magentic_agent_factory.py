@@ -41,8 +41,9 @@ class MagenticAgentFactory:
     #     with open(file_path, 'r') as f:
     #         data = json.load(f)
     #     return json.loads(json.dumps(data), object_hook=lambda d: SimpleNamespace(**d))
+    
     # Ensure only an explicit boolean True in the source sets this flag.
-    def extract_use_reasoning(agent_obj):
+    def extract_use_reasoning(self, agent_obj):
         # Support both dict and attribute-style objects
         if isinstance(agent_obj, dict):
             val = agent_obj.get("use_reasoning", False)
