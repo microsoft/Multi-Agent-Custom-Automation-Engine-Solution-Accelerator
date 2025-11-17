@@ -25,6 +25,7 @@ from agent_framework_azure_ai import AzureAIAgentClient
 from azure.ai.agents.aio import AgentsClient
 from azure.identity.aio import DefaultAzureCredential
 from common.models.messages_af import TeamConfiguration
+from common.database.database_base import DatabaseBase
 from v4.common.services.team_service import TeamService
 from v4.config.agent_registry import agent_registry
 from v4.magentic_agents.models.agent_models import MCPConfig
@@ -43,6 +44,7 @@ class MCPEnabledBase:
         team_service: TeamService | None = None,
         team_config: TeamConfiguration | None = None,
         project_endpoint: str | None = None,
+        memory_store: DatabaseBase| None = None,
     ) -> None:
         self._stack: AsyncExitStack | None = None
         self.mcp_cfg: MCPConfig | None = mcp
@@ -53,6 +55,7 @@ class MCPEnabledBase:
         self.client: Optional[AzureAIAgentClient] = None
         self.project_endpoint = project_endpoint
         self.creds: Optional[DefaultAzureCredential] = None
+        self.memory_store: Optional[DatabaseBase] = memory_store
 
     async def open(self) -> "MCPEnabledBase":
         if self._stack is not None:
@@ -154,8 +157,9 @@ class AzureAgentBase(MCPEnabledBase):
         project_endpoint: str | None = None,
         team_service: TeamService | None = None,
         team_config: TeamConfiguration | None = None,
+        memory_store: DatabaseBase | None = None,
     ) -> None:
-        super().__init__(mcp=mcp, team_service=team_service, team_config=team_config, project_endpoint=project_endpoint)
+        super().__init__(mcp=mcp, team_service=team_service, team_config=team_config, project_endpoint=project_endpoint, memory_store=memory_store)
 
         self._created_ephemeral: bool = (
             False  # reserved if you add ephemeral agent cleanup

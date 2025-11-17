@@ -51,6 +51,7 @@ async def create_RAI_agent() -> FoundryAgentTemplate:
         "- Is completely meaningless, incoherent, or appears to be spam\n"
         "Respond with 'TRUE' if the input violates any rules and should be blocked, otherwise respond with 'FALSE'."
     )
+    
     model_deployment_name = config.AZURE_OPENAI_DEPLOYMENT_NAME
     agent = FoundryAgentTemplate(
         agent_name=agent_name,

@@ -8,6 +8,7 @@ from agent_framework_azure_ai import AzureAIAgentClient  # Provided by agent_fra
 from azure.ai.projects.models import ConnectionType
 from common.config.app_config import config
 from common.models.messages_af import TeamConfiguration
+from src.backend.common.database.database_base import DatabaseBase
 from v4.common.services.team_service import TeamService
 from v4.config.agent_registry import agent_registry
 from v4.magentic_agents.common.lifecycle import AzureAgentBase
@@ -35,6 +36,7 @@ class FoundryAgentTemplate(AzureAgentBase):
         search_config: SearchConfig | None = None,
         team_service: TeamService | None = None,
         team_config: TeamConfiguration | None = None,
+        memory_store: DatabaseBase | None = None,
     ) -> None:
         super().__init__(
             mcp=mcp_config,
@@ -42,6 +44,7 @@ class FoundryAgentTemplate(AzureAgentBase):
             project_endpoint=project_endpoint,
             team_service=team_service,
             team_config=team_config,
+            memory_store=memory_store,
         )
         self.agent_name = agent_name
         self.agent_description = agent_description

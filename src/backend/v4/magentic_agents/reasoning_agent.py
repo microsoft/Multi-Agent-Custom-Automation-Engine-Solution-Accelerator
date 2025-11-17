@@ -16,6 +16,7 @@ from azure.identity.aio import DefaultAzureCredential
 #from agent_framework.azure import AzureOpenAIChatClient
 
 from common.models.messages_af import TeamConfiguration
+from src.backend.common.database.database_base import DatabaseBase
 from v4.common.services.team_service import TeamService
 from v4.magentic_agents.common.lifecycle import MCPEnabledBase
 from v4.magentic_agents.models.agent_models import MCPConfig, SearchConfig
@@ -48,6 +49,7 @@ class ReasoningAgentTemplate(MCPEnabledBase):
         max_search_docs: int = 3,
         team_service: TeamService | None = None,
         team_config: TeamConfiguration | None = None,
+        memory_store: DatabaseBase | None = None,
     ) -> None:
         """Initialize reasoning agent.
         
@@ -61,7 +63,7 @@ class ReasoningAgentTemplate(MCPEnabledBase):
             mcp_config: Optional MCP server configuration
             max_search_docs: Maximum number of search documents to retrieve
         """
-        super().__init__(mcp=mcp_config, team_service=team_service, team_config=team_config, project_endpoint=project_endpoint)
+        super().__init__(mcp=mcp_config, team_service=team_service, team_config=team_config, project_endpoint=project_endpoint, memory_store=memory_store)
         self.agent_name = agent_name
         self.agent_description = agent_description
         self.base_instructions = agent_instructions

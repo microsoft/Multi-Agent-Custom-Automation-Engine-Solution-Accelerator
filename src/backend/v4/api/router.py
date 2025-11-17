@@ -44,9 +44,6 @@ app_v4 = APIRouter(
 )
 
 
-
-
-
 @app_v4.websocket("/socket/{process_id}")
 async def start_comms(
     websocket: WebSocket, process_id: str, user_id: str = Query(None)
