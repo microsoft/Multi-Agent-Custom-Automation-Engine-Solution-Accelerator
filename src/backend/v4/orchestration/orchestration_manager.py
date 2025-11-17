@@ -69,7 +69,6 @@ class OrchestrationManager:
                 project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
                 model_deployment_name=config.AZURE_OPENAI_DEPLOYMENT_NAME,
                 async_credential=credential,
-                
             )
 
             cls.logger.info(
@@ -105,7 +104,7 @@ class OrchestrationManager:
         for ag in agents:
             name = getattr(ag, "agent_name", None) or getattr(ag, "name", None)
             if not name:
-                name = f"agent_{len(participants)+1}"
+                name = f"agent_{len(participants) + 1}"
 
             # Extract the inner ChatAgent for wrapper templates
             # FoundryAgentTemplate and ReasoningAgentTemplate wrap a ChatAgent in self._agent
@@ -120,7 +119,7 @@ class OrchestrationManager:
                 participants[name] = ag
                 cls.logger.debug("Added participant '%s'", name)
 
-        # Assemble workflow with callback 
+        # Assemble workflow with callback
         storage = InMemoryCheckpointStorage()
         builder = (
             MagenticBuilder()
@@ -173,7 +172,6 @@ class OrchestrationManager:
                                 cls.logger.debug("Closed agent '%s'", agent_name)
                             except Exception as e:
                                 cls.logger.error("Error closing agent: %s", e)
-                    
 
             factory = MagenticAgentFactory(team_service=team_service)
             try:
@@ -254,7 +252,6 @@ class OrchestrationManager:
             except Exception as e:
                 self.logger.warning("Failed clearing state for executor %s: %s", exec_key, e)
         # --- END NEW BLOCK ---
-           
 
         # Build task from input (same as old version)
         task_text = getattr(input_task, "description", str(input_task))
@@ -266,7 +263,7 @@ class OrchestrationManager:
             final_output: str | None = None
 
             self.logger.info("Starting workflow execution...")
-            thread_id=f"task-{job_id}"
+            thread_id =f"task-{job_id}"
             async for event in workflow.run_stream(task_text):
                 try:
                     # Handle orchestrator messages (task assignments, coordination)

@@ -109,7 +109,7 @@ class MagenticAgentFactory:
                 agent_description=getattr(agent_obj, "description", ""),
                 agent_instructions=getattr(agent_obj, "system_message", ""),
                 model_deployment_name=deployment_name,
-                project_endpoint=project_endpoint, # type: ignore
+                project_endpoint=project_endpoint,  # type: ignore
                 search_config=search_config,
                 mcp_config=mcp_config,
                 team_service=self.team_service,

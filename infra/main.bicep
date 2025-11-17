@@ -70,8 +70,11 @@ param gptReasoningModelName string = 'o4-mini'
 @description('Optional. Version of the GPT Reasoning model to deploy. Defaults to 2025-04-14.')
 param gptReasoningModelVersion string = '2025-04-16'
 
-@description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2025-01-01-preview.')
+@description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2024-12-01-preview.')
 param azureopenaiVersion string = '2024-12-01-preview'
+
+@description('Optional. Version of the Azure AI Agent API version. Defaults to 2025-01-01-preview.')
+param azureAiAgentAPIVersion string = '2025-01-01-preview'
 
 @minLength(1)
 @allowed([
@@ -132,31 +135,31 @@ param virtualMachineAdminPassword string = newGuid()
 // These parameters are changed for testing - please reset as part of publication
 
 @description('Optional. The Container Registry hostname where the docker images for the backend are located.')
-param backendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
+param backendContainerRegistryHostname string = 'macaev3tst1acr.azurecr.io'
 
 @description('Optional. The Container Image Name to deploy on the backend.')
-param backendContainerImageName string = 'macaebackend'
+param backendContainerImageName string = 'macae-backend'
 
 @description('Optional. The Container Image Tag to deploy on the backend.')
-param backendContainerImageTag string = 'latest_v4'
+param backendContainerImageTag string = 'v4tst2'
 
 @description('Optional. The Container Registry hostname where the docker images for the frontend are located.')
-param frontendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
+param frontendContainerRegistryHostname string = 'macaev3tst1acr.azurecr.io'
 
 @description('Optional. The Container Image Name to deploy on the frontend.')
-param frontendContainerImageName string = 'macaefrontend'
+param frontendContainerImageName string = 'macae-frontend'
 
 @description('Optional. The Container Image Tag to deploy on the frontend.')
-param frontendContainerImageTag string = 'latest_v4'
+param frontendContainerImageTag string = 'v4tst2'
 
 @description('Optional. The Container Registry hostname where the docker images for the MCP are located.')
-param MCPContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
+param MCPContainerRegistryHostname string = 'macaev3tst1acr.azurecr.io'
 
 @description('Optional. The Container Image Name to deploy on the MCP.')
-param MCPContainerImageName string = 'macaemcp'
+param MCPContainerImageName string = 'mcp_server'
 
 @description('Optional. The Container Image Tag to deploy on the MCP.')
-param MCPContainerImageTag string = 'latest_v4'
+param MCPContainerImageTag string = 'v4tst1'
 
 @description('Optional. Enable/Disable usage telemetry for module.')
 param enableTelemetry bool = true
@@ -1258,10 +1261,10 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
             name: 'FRONTEND_SITE_NAME'
             value: 'https://${webSiteResourceName}.azurewebsites.net'
           }
-          {
-            name: 'AZURE_AI_AGENT_ENDPOINT'
-            value: aiFoundryAiProjectEndpoint
-          }
+          // {
+          //   name: 'AZURE_AI_AGENT_ENDPOINT'
+          //   value: aiFoundryAiProjectEndpoint
+          // }
           {
             name: 'AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME'
             value: aiFoundryAiServicesModelDeployment.name
@@ -1273,10 +1276,6 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
           {
             name: 'AZURE_AI_SEARCH_CONNECTION_NAME'
             value: aiSearchConnectionName
-          }
-          {
-            name: 'AZURE_AI_SEARCH_INDEX_NAME'
-            value: aiSearchIndexName
           }
           {
             name: 'AZURE_AI_SEARCH_ENDPOINT'
@@ -1331,12 +1330,28 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
             value: avmStorageAccount.outputs.serviceEndpoints.blob
           }
           {
-            name: 'AZURE_STORAGE_CONTAINER_NAME'
-            value: storageContainerName
-          }
-          {
             name: 'AZURE_AI_MODEL_DEPLOYMENT_NAME'
             value: aiFoundryAiServicesModelDeployment.name
+          }
+          {
+            name: 'AZURE_AI_PROJECT_ENDPOINT'
+            value: aiFoundryAiProjectEndpoint
+          }
+          {
+            name: 'AZURE_AI_AGENT_ENDPOINT'
+            value: aiFoundryAiProjectEndpoint
+          }
+          {
+            name: 'AZURE_AI_AGENT_API_VERSION'
+            value: azureAiAgentAPIVersion
+          }
+          {
+            name: 'AZURE_AI_AGENT_PROJECT_CONNECTION_STRING'
+            value: '${aiFoundryAiServicesResourceName}.services.ai.azure.com;${aiFoundryAiServicesSubscriptionId};${aiFoundryAiServicesResourceGroupName};${aiFoundryAiProjectResourceName}'
+          }
+           {
+            name: 'AZURE_DEV_COLLECT_TELEMETRY'
+            value: 'no'
           }
         ]
       }
@@ -1517,6 +1532,9 @@ module webSite 'modules/web-sites.bicep' = {
 
 var storageAccountName = replace('st${solutionSuffix}', '-', '')
 param storageContainerName string = 'sample-dataset'
+param storageContainerNameRetailCustomer string = 'retail-dataset-customer'
+param storageContainerNameRetailOrder string = 'retail-dataset-order'
+param storageContainerNameRFP string = 'rfp-dataset'
 module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
   name: take('avm.res.storage.storage-account.${storageAccountName}', 64)
   params: {
@@ -1575,7 +1593,15 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
       containerDeleteRetentionPolicyEnabled: true
       containers: [
         {
-          name: storageContainerName
+          name: storageContainerNameRetailCustomer
+          publicAccess: 'None'
+        }
+        {
+          name: storageContainerNameRetailOrder
+          publicAccess: 'None'
+        }
+        {
+          name: storageContainerNameRFP
           publicAccess: 'None'
         }
       ]
@@ -1590,6 +1616,9 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
 
 var searchServiceName = 'srch-${solutionSuffix}'
 var aiSearchIndexName = 'sample-dataset-index'
+var aiSearchIndexNameForRetailCustomer = 'macae-retail-customer-index'
+var aiSearchIndexNameForRetailOrder = 'macae-retail-order-index'
+var aiSearchIndexNameForRFP = 'macae-rfp-index'
 module searchService 'br/public:avm/res/search/search-service:0.11.1' = {
   name: take('avm.res.search.search-service.${solutionSuffix}', 64)
   params: {
@@ -1748,10 +1777,8 @@ output webSiteDefaultHostname string = webSite.outputs.defaultHostname
 
 output AZURE_STORAGE_BLOB_URL string = avmStorageAccount.outputs.serviceEndpoints.blob
 output AZURE_STORAGE_ACCOUNT_NAME string = storageAccountName
-output AZURE_STORAGE_CONTAINER_NAME string = storageContainerName
 output AZURE_AI_SEARCH_ENDPOINT string = searchService.outputs.endpoint
 output AZURE_AI_SEARCH_NAME string = searchService.outputs.name
-output AZURE_AI_SEARCH_INDEX_NAME string = aiSearchIndexName
 
 output COSMOSDB_ENDPOINT string = 'https://${cosmosDbResourceName}.documents.azure.com:443/'
 output COSMOSDB_DATABASE string = cosmosDbDatabaseName
@@ -1768,7 +1795,7 @@ output AZURE_AI_PROJECT_NAME string = aiFoundryAiProjectName
 output AZURE_AI_MODEL_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDeployment.name
 // output APPLICATIONINSIGHTS_CONNECTION_STRING string = applicationInsights.outputs.connectionString
 output AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDeployment.name
-output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiProjectEndpoint
+// output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiProjectEndpoint
 output APP_ENV string = 'Prod'
 output AI_FOUNDRY_RESOURCE_ID string = !useExistingAiFoundryAiProject
   ? aiFoundryAiServices.outputs.resourceId
@@ -1785,3 +1812,17 @@ output MCP_SERVER_DESCRIPTION string = 'MCP server with greeting, HR, and planni
 output SUPPORTED_MODELS string = '["o3","o4-mini","gpt-4.1","gpt-4.1-mini"]'
 output AZURE_AI_SEARCH_API_KEY string = '<Deployed-Search-ApiKey>'
 output BACKEND_URL string = 'https://${containerApp.outputs.fqdn}'
+output AZURE_AI_PROJECT_ENDPOINT string = aiFoundryAiProjectEndpoint
+output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiProjectEndpoint
+output AZURE_AI_AGENT_API_VERSION string = azureAiAgentAPIVersion
+output AZURE_AI_AGENT_PROJECT_CONNECTION_STRING string = '${aiFoundryAiServicesResourceName}.services.ai.azure.com;${aiFoundryAiServicesSubscriptionId};${aiFoundryAiServicesResourceGroupName};${aiFoundryAiProjectResourceName}'
+output AZURE_DEV_COLLECT_TELEMETRY  string = 'no'
+
+
+output AZURE_STORAGE_CONTAINER_NAME_RETAIL_CUSTOMER string = storageContainerNameRetailCustomer
+output AZURE_STORAGE_CONTAINER_NAME_RETAIL_ORDER string = storageContainerNameRetailOrder
+output AZURE_STORAGE_CONTAINER_NAME_RFP string = storageContainerNameRFP
+output AZURE_AI_SEARCH_INDEX_NAME_RETAIL_CUSTOMER string = aiSearchIndexNameForRetailCustomer
+output AZURE_AI_SEARCH_INDEX_NAME_RETAIL_ORDER string = aiSearchIndexNameForRetailOrder
+output AZURE_AI_SEARCH_INDEX_NAME_RFP string = aiSearchIndexNameForRFP
+
