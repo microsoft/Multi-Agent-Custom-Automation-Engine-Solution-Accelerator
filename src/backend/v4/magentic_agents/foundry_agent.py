@@ -69,12 +69,9 @@ class FoundryAgentTemplate(AzureAgentBase):
             return True
         return False
 
-
-
     async def _collect_tools(self) -> List:
         """Collect tool definitions for ChatAgent (MCP path only)."""
         tools: List = []
-
 
         # Code Interpreter (only in MCP path per incompatibility note)
         if self.enable_code_interpreter:
@@ -114,7 +111,6 @@ class FoundryAgentTemplate(AzureAgentBase):
             self.logger.error("Search configuration missing.")
             return None
 
-
         desired_connection_name = getattr(self.search, "connection_name", None)
         index_name = getattr(self.search, "index_name", "")
         query_type = getattr(self.search, "search_query_type", "simple")
@@ -143,7 +139,7 @@ class FoundryAgentTemplate(AzureAgentBase):
                     "connection_name=%s",
                     desired_connection_name,
                 )
-              #  return None
+            #  return None
 
             self.logger.info(
                 "Using Azure AI Search connection (id=%s, requested_name=%s).",
@@ -186,7 +182,7 @@ class FoundryAgentTemplate(AzureAgentBase):
 
             chat_client = AzureAIAgentClient(
                 project_client=self.project_client,
-                #agents_client=self.client,
+                # agents_client=self.client,
                 agent_id=azure_agent.id,
                 async_credential=self.creds,
             )
@@ -202,6 +198,7 @@ class FoundryAgentTemplate(AzureAgentBase):
     # -------------------------
     # Agent lifecycle override
     # -------------------------
+
     async def _after_open(self) -> None:
         """Initialize ChatAgent after connections are established."""
         try:

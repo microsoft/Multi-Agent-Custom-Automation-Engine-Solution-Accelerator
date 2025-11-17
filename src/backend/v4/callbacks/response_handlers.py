@@ -75,7 +75,7 @@ def agent_response_callback(
     """
     agent_name = getattr(message, "author_name", None) or agent_id or "Unknown Agent"
     role = getattr(message, "role", "assistant")
-    
+
     # FIX: Properly extract text from ChatMessage
     # ChatMessage has a .text property that concatenates all TextContent items
     text = ""
@@ -84,7 +84,7 @@ def agent_response_callback(
     else:
         # Fallback for non-ChatMessage objects
         text = str(getattr(message, "text", ""))
-    
+
     text = clean_citations(text or "")
 
     if not user_id:
@@ -105,8 +105,9 @@ def agent_response_callback(
             )
         )
         logger.info("%s message (agent=%s): %s", str(role).capitalize(), agent_name, text[:200])
-    except Exception as e:  
+    except Exception as e:
         logger.error("agent_response_callback error sending WebSocket message: %s", e)
+
 
 async def streaming_agent_response_callback(
     agent_id: str,
@@ -157,5 +158,5 @@ async def streaming_agent_response_callback(
                 message_type=WebsocketMessageType.AGENT_MESSAGE_STREAMING,
             )
             logger.debug("Streaming chunk (agent=%s final=%s len=%d)", agent_id, is_final, len(cleaned))
-    except Exception as e:  
+    except Exception as e:
         logger.error("streaming_agent_response_callback error: %s", e)

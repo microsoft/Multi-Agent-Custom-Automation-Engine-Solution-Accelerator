@@ -258,20 +258,20 @@ Once you've opened the project in [Codespaces](#github-codespaces), [Dev Contain
    - This deployment will take _4-6 minutes_ to provision the resources in your account and set up the solution with sample data.
    - If you encounter an error or timeout during deployment, changing the location may help, as there could be availability constraints for the resources.
 
-5. After deployment completes, you can upload Team Configurations using command printed in the terminal. The command will look like one of the following. Run the appropriate command for your shell from the project root:
+5. After deployment completes, you can upload team configurations and index sample data using command printed in the terminal. The command will look like one of the following. Run the appropriate command for your shell from the project root:
 
 - **For Bash (Linux/macOS/WSL):**
 
   ```bash
-  bash infra/scripts/upload_team_config.sh
+  bash infra/scripts/selecting_team_config_and_data.sh
   ```
 
 - **For PowerShell (Windows):**
   ```powershell
-  infra\scripts\Upload-Team-Config.ps1
+  infra\scripts\Selecting-Team-Config-And-Data.ps1
   ```
 
-6. After deployment completes, you can index Sample Data into Search Service using command printed in the terminal. The command will look like one of the following. Run the appropriate command for your shell from the project root:
+<!-- 6. After deployment completes, you can index Sample Data into Search Service using command printed in the terminal. The command will look like one of the following. Run the appropriate command for your shell from the project root:
 
 - **For Bash (Linux/macOS/WSL):**
 
@@ -281,10 +281,10 @@ Once you've opened the project in [Codespaces](#github-codespaces), [Dev Contain
 
 - **For PowerShell (Windows):**
   ```powershell
-  infra\scripts\Process-Sample-Data.ps1
-  ```
+  infra\scripts\Process-Sample-Data.ps1 
+  ``` --->
 
-7. To upload team configurations and index sample data in one step. Run the appropriate command for your shell from the project root:
+<!-- 7. To upload team configurations and index sample data in one step. Run the appropriate command for your shell from the project root:
 
 - **For Bash (Linux/macOS/WSL):**
 
@@ -295,7 +295,7 @@ Once you've opened the project in [Codespaces](#github-codespaces), [Dev Contain
 - **For PowerShell (Windows):**
   ```powershell
   infra\scripts\Team-Config-And-Data.ps1
-  ```
+  ``` -->
 
 8. Once the deployment has completed successfully, open the [Azure Portal](https://portal.azure.com/), go to the deployed resource group, find the App Service, and get the app URL from `Default domain`.
 

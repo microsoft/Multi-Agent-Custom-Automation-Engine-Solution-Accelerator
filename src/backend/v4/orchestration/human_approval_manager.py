@@ -118,7 +118,7 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
 
         try:
             orchestration_config.plans[self.magentic_plan.id] = self.magentic_plan
-        except Exception as e:  
+        except Exception as e:
             logger.error("Error processing plan approval: %s", e)
 
         # Send approval request
@@ -161,7 +161,7 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
     async def create_progress_ledger(self, magentic_context: MagenticContext):
         """
         Check for max rounds exceeded and send final message if so, else defer to base.
-        
+
         Returns:
             Progress ledger object (type depends on agent_framework version)
         """
@@ -180,7 +180,7 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
 
             # Call base class to get the proper ledger type, then raise to terminate
             ledger = await super().create_progress_ledger(magentic_context)
-            
+
             # Override key fields to signal termination
             ledger.is_request_satisfied.answer = True
             ledger.is_request_satisfied.reason = "Maximum rounds exceeded"
@@ -192,7 +192,7 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
             ledger.next_speaker.reason = "Task complete"
             ledger.instruction_or_question.answer = "Process terminated due to maximum rounds exceeded"
             ledger.instruction_or_question.reason = "Task complete"
-            
+
             return ledger
 
         # Delegate to base for normal progress ledger creation
@@ -242,13 +242,13 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
                     self.current_user_id,
                     m_plan_id,
                 )
-            except Exception as e:  
+            except Exception as e:
                 logger.error("Failed to send timeout notification: %s", e)
 
             orchestration_config.cleanup_approval(m_plan_id)
             return None
 
-        except KeyError as e:  
+        except KeyError as e:
             logger.debug("Plan ID not found: %s - terminating process silently", e)
             return None
 
@@ -257,7 +257,7 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
             orchestration_config.cleanup_approval(m_plan_id)
             return None
 
-        except Exception as e:  
+        except Exception as e:
             logger.debug(
                 "Unexpected error waiting for approval: %s - terminating process silently",
                 e,

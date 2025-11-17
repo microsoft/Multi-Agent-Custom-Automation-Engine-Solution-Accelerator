@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 class ProxyAgent(BaseAgent):
     """
     A human-in-the-loop clarification agent extending agent_framework's BaseAgent.
-    
+
     This agent mediates human clarification requests rather than using an LLM.
     It follows the agent_framework protocol with run() and run_stream() methods.
     """
@@ -73,14 +73,15 @@ class ProxyAgent(BaseAgent):
         """
         Create a new thread for ProxyAgent conversations.
         Required by AgentProtocol for workflow integration.
-        
+
         Args:
             **kwargs: Additional keyword arguments for thread creation
-            
+
         Returns:
             A new AgentThread instance
         """
         return AgentThread(**kwargs)
+
     async def run(
         self,
         messages: str | ChatMessage | list[str] | list[ChatMessage] | None = None,
@@ -90,19 +91,19 @@ class ProxyAgent(BaseAgent):
     ) -> AgentRunResponse:
         """
         Get complete clarification response (non-streaming).
-        
+
         Args:
             messages: The message(s) requiring clarification
             thread: Optional conversation thread
             kwargs: Additional keyword arguments
-            
+
         Returns:
             AgentRunResponse with the clarification
         """
         # Collect all streaming updates
         response_messages: list[ChatMessage] = []
         response_id = str(uuid.uuid4())
-        
+
         async for update in self.run_stream(messages, thread=thread, **kwargs):
             if update.contents:
                 response_messages.append(
@@ -111,7 +112,7 @@ class ProxyAgent(BaseAgent):
                         contents=update.contents,
                     )
                 )
-        
+
         return AgentRunResponse(
             messages=response_messages,
             response_id=response_id,
@@ -126,12 +127,12 @@ class ProxyAgent(BaseAgent):
     ) -> AsyncIterable[AgentRunResponseUpdate]:
         """
         Stream clarification process with human interaction.
-        
+
         Args:
             messages: The message(s) requiring clarification
             thread: Optional conversation thread
             kwargs: Additional keyword arguments
-            
+
         Yields:
             AgentRunResponseUpdate objects with clarification progress
         """
@@ -145,21 +146,21 @@ class ProxyAgent(BaseAgent):
     ) -> AsyncIterable[AgentRunResponseUpdate]:
         """
         Internal streaming implementation.
-        
+
         1. Sends clarification request via websocket
         2. Waits for human response / timeout
         3. Yields AgentRunResponseUpdate with the clarified answer
         """
         # Normalize messages to string
         message_text = self._extract_message_text(messages)
-        
+
         logger.info(
             "ProxyAgent: Requesting clarification (thread=%s, user=%s)",
             "present" if thread else "None",
             self.user_id
         )
         logger.debug("ProxyAgent: Message text: %s", message_text[:100])
-        
+
         clarification_req_text = f"{message_text}"
         clarification_request = UserClarificationRequest(
             question=clarification_req_text,
@@ -193,10 +194,10 @@ class ProxyAgent(BaseAgent):
             if human_response.answer
             else "No additional clarification provided."
         )
-        
+
         # Return just the user's answer directly - no prefix that might confuse orchestrator
         synthetic_reply = answer_text
-        
+
         logger.info("ProxyAgent: Received clarification: %s", synthetic_reply[:100])
 
         # Generate consistent IDs for this response
@@ -211,7 +212,7 @@ class ProxyAgent(BaseAgent):
             response_id=response_id,
             message_id=message_id,
         )
-        
+
         logger.debug("ProxyAgent: Yielding text update (text length=%d)", len(synthetic_reply))
         yield text_update
 
@@ -232,10 +233,10 @@ class ProxyAgent(BaseAgent):
             response_id=response_id,
             message_id=message_id,  # Same message_id groups with text content
         )
-        
+
         logger.debug("ProxyAgent: Yielding usage update")
         yield usage_update
-        
+
         logger.info("ProxyAgent: Completed clarification response")
 
     # ---------------------------
@@ -330,10 +331,10 @@ class ProxyAgent(BaseAgent):
 async def create_proxy_agent(user_id: str | None = None) -> ProxyAgent:
     """
     Factory for ProxyAgent.
-    
+
     Args:
         user_id: User ID for websocket communication
-        
+
     Returns:
         Initialized ProxyAgent instance
     """

@@ -5,6 +5,50 @@ from azure.search.documents.indexes.models import SearchIndex, SimpleField, Sear
 from azure.storage.blob import BlobServiceClient
 import sys
 
+
+# PDF text extraction function
+def extract_pdf_text(pdf_bytes):
+    """Extract text content from PDF bytes using PyPDF2"""
+    try:
+        import PyPDF2
+        import io
+
+        pdf_file = io.BytesIO(pdf_bytes)
+        pdf_reader = PyPDF2.PdfReader(pdf_file)
+
+        # Check if PDF is encrypted/protected
+        if pdf_reader.is_encrypted:
+            return "PDF_PROTECTED: This PDF document is password-protected or encrypted and cannot be processed."
+
+        text_content = []
+        for page in pdf_reader.pages:
+            try:
+                page_text = page.extract_text()
+                if page_text and page_text.strip():
+                    text_content.append(page_text)
+            except Exception:
+                continue
+
+        full_text = "\n".join(text_content).strip()
+
+        # Check for protection messages
+        protection_indicators = [
+            "protected by Microsoft Office",
+            "You'll need a different reader",
+            "Download a compatible PDF reader",
+            "This PDF Document has been protected"
+        ]
+
+        if any(indicator.lower() in full_text.lower() for indicator in protection_indicators):
+            return "PDF_PROTECTED: This PDF document appears to be protected or encrypted."
+
+        return full_text if full_text else "PDF_NO_TEXT: No readable text content found in PDF."
+
+    except ImportError:
+        return "PDF_ERROR: PyPDF2 library not available. Install with: pip install PyPDF2"
+    except Exception as e:
+        return f"PDF_ERROR: Error reading PDF content: {str(e)}"
+
 if len(sys.argv) < 4:
     print("Usage: python index_datasets.py <storage_account_name> <blob_container_name> <ai_search_endpoint> [<ai_search_index_name>]")
     sys.exit(1)
@@ -51,11 +95,18 @@ for idx, blob in enumerate(blob_list, start=1):
     #if blob.name.endswith(".csv"):
     title = blob.name.replace(".csv", "")
     title = title.replace(".json", "")
+    title = title.replace(".pdf", "")
     data = container_client.download_blob(blob.name).readall()
     
     try:
         print(f"Reading data from blob: {blob.name}...")
-        text = data.decode('utf-8')
+        #text = data.decode('utf-8')
+        # Check if this is a PDF file and process accordingly
+        if blob.name.lower().endswith('.pdf'):
+            text = extract_pdf_text(data)
+        else:
+            # Original processing for non-PDF files
+            text = data.decode('utf-8')
         data_list.append({
             "content": text,
             "id": str(idx),
