@@ -16,7 +16,7 @@ from azure.identity.aio import DefaultAzureCredential
 #from agent_framework.azure import AzureOpenAIChatClient
 
 from common.models.messages_af import TeamConfiguration
-from src.backend.common.database.database_base import DatabaseBase
+from common.database.database_base import DatabaseBase
 from v4.common.services.team_service import TeamService
 from v4.magentic_agents.common.lifecycle import MCPEnabledBase
 from v4.magentic_agents.models.agent_models import MCPConfig, SearchConfig
