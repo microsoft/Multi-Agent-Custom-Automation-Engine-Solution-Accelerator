@@ -69,6 +69,9 @@ class ReasoningAgentTemplate(MCPEnabledBase):
             team_config=team_config,
             project_endpoint=project_endpoint,
             memory_store=memory_store,
+            agent_name=agent_name,
+            agent_description=agent_description,    
+            agent_instructions=agent_instructions,
         )
         self.model_deployment_name = model_deployment_name
 
