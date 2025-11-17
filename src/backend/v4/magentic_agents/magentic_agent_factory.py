@@ -8,6 +8,7 @@ from typing import List, Optional, Union
 
 from common.config.app_config import config
 from common.models.messages_af import TeamConfiguration
+from common.database.database_base import DatabaseBase
 from v4.common.services.team_service import TeamService
 from v4.magentic_agents.foundry_agent import FoundryAgentTemplate
 from v4.magentic_agents.models.agent_models import MCPConfig, SearchConfig
@@ -40,7 +41,7 @@ class MagenticAgentFactory:
     #         data = json.load(f)
     #     return json.loads(json.dumps(data), object_hook=lambda d: SimpleNamespace(**d))
 
-    async def create_agent_from_config(self, user_id: str, agent_obj: SimpleNamespace, team_config: TeamConfiguration) -> Union[FoundryAgentTemplate, ReasoningAgentTemplate, ProxyAgent]:
+    async def create_agent_from_config(self, user_id: str, agent_obj: SimpleNamespace, team_config: TeamConfiguration, memory_store: DatabaseBase) -> Union[FoundryAgentTemplate, ReasoningAgentTemplate, ProxyAgent]:
         """
         Create an agent from configuration object.
 
@@ -72,7 +73,7 @@ class MagenticAgentFactory:
             )
 
         # Determine which template to use
-        use_reasoning = deployment_name.startswith("o")
+        use_reasoning = getattr(agent_obj, "use_reasoning", False)
 
         # Validate reasoning template constraints
         if use_reasoning:
@@ -114,6 +115,7 @@ class MagenticAgentFactory:
                 mcp_config=mcp_config,
                 team_service=self.team_service,
                 team_config=team_config,
+                memory_store=memory_store,
             )
         else:
             agent = FoundryAgentTemplate(
@@ -127,6 +129,7 @@ class MagenticAgentFactory:
                 search_config=search_config,
                 team_service=self.team_service,
                 team_config=team_config,
+                memory_store=memory_store,
             )
 
         await agent.open()
@@ -135,7 +138,7 @@ class MagenticAgentFactory:
         )
         return agent
 
-    async def get_agents(self, user_id: str, team_config_input: TeamConfiguration) -> List:
+    async def get_agents(self, user_id: str, team_config_input: TeamConfiguration, memory_store: DatabaseBase) -> List:
         """
         Create and return a team of agents from JSON configuration.
 
@@ -156,7 +159,7 @@ class MagenticAgentFactory:
                 try:
                     self.logger.info(f"Creating agent {i}/{len(team_config_input.agents)}: {agent_cfg.name}")
 
-                    agent = await self.create_agent_from_config(user_id, agent_cfg, team_config_input)
+                    agent = await self.create_agent_from_config(user_id, agent_cfg, team_config_input, memory_store)
                     initalized_agents.append(agent)
                     self._agent_list.append(agent)  # Keep track for cleanup
 

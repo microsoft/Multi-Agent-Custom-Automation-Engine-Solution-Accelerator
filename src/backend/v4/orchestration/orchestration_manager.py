@@ -176,7 +176,7 @@ class OrchestrationManager:
             factory = MagenticAgentFactory(team_service=team_service)
             try:
                 agents = await factory.get_agents(
-                    user_id=user_id, team_config_input=team_config
+                    user_id=user_id, team_config_input=team_config, memory_store=team_service.memory_context
                 )
                 cls.logger.info("Created %d agents for user '%s'", len(agents), user_id)
             except Exception as e:
