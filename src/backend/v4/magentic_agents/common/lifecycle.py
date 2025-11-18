@@ -139,26 +139,34 @@ class MCPEnabledBase:
         """Return the underlying ChatClientProtocol (AzureAIAgentClient)."""
         if chat_client:
             return chat_client
-        if self._agent and self._agent.chat_client and self._agent.chat_client.agent_id is not None:
+        if (
+            self._agent
+            and self._agent.chat_client
+            and self._agent.chat_client.agent_id is not None
+        ):
             return self._agent.chat_client  # type: ignore
         chat_client = AzureAIAgentClient(
-                        project_endpoint=self.project_endpoint,
-                        model_deployment_name=self.model_deployment_name,
-                        async_credential=self.creds,
-                    )
-        self.logger.info("Created new AzureAIAgentClient for  get chat client", extra={"agent_id": chat_client.agent_id})
+            project_endpoint=self.project_endpoint,
+            model_deployment_name=self.model_deployment_name,
+            async_credential=self.creds,
+        )
+        self.logger.info(
+            "Created new AzureAIAgentClient for  get chat client",
+            extra={"agent_id": chat_client.agent_id},
+        )
         return chat_client
-    
+
     async def get_database_team_agent(self) -> Optional[AzureAIAgentClient]:
         """Retrieve existing team agent from database, if any."""
         chat_client = None
         try:
             currentAgent = await self.memory_store.get_team_agent(
-                team_id=self.team_config.team_id,
-                agent_name=self.agent_name
+                team_id=self.team_config.team_id, agent_name=self.agent_name
             )
             if currentAgent and currentAgent.agent_foundry_id:
-                agent = await self.client.get_agent(agent_id=currentAgent.agent_foundry_id)
+                agent = await self.client.get_agent(
+                    agent_id=currentAgent.agent_foundry_id
+                )
                 if agent and agent.agent_id is not None:
                     chat_client = AzureAIAgentClient(
                         project_endpoint=self.project_endpoint,
@@ -167,17 +175,19 @@ class MCPEnabledBase:
                         async_credential=self.creds,
                     )
 
-        except Exception as ex:  # Consider narrowing this to specific exceptions if possible
+        except (
+            Exception
+        ) as ex:  # Consider narrowing this to specific exceptions if possible
             self.logger.error("Failed to initialize Get database team agent: %s", ex)
         return chat_client
-    
+
     async def save_database_team_agent(self) -> None:
         """Save current team agent to database."""
         try:
             if self._agent.chat_client.agent_id is None:
                 self.logger.error("Cannot save database team agent: agent_id is None")
-                return  
-            
+                return
+
             currentAgent = CurrentTeamAgent(
                 team_id=self.team_config.team_id,
                 team_name=self.team_config.name,
@@ -190,8 +200,7 @@ class MCPEnabledBase:
 
         except Exception as ex:
             self.logger.error("Failed to save save database: %s", ex)
-            
-        
+
     async def _prepare_mcp_tool(self) -> None:
         """Translate MCPConfig to a HostedMCPTool (agent_framework construct)."""
         if not self.mcp_cfg:
@@ -244,8 +253,6 @@ class AzureAgentBase(MCPEnabledBase):
         self._created_ephemeral: bool = (
             False  # reserved if you add ephemeral agent cleanup
         )
-
-
 
     # async def open(self) -> "AzureAgentBase":
     #     if self._stack is not None:
