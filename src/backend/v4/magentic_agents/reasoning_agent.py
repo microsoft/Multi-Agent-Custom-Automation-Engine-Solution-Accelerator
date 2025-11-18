@@ -110,7 +110,7 @@ class ReasoningAgentTemplate(MCPEnabledBase):
             chatClient = await self.get_database_team_agent()
             
             self._agent = ChatAgent(
-                chat_client = chatClient or self.client,
+                chat_client = self.get_chat_client(chatClient),
                 instructions=self.agent_instructions,
                 name=self.agent_name,
                 description=self.agent_description,

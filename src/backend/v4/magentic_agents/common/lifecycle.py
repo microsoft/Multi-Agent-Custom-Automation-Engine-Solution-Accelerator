@@ -135,6 +135,19 @@ class MCPEnabledBase:
         """Subclasses must build self._agent here."""
         raise NotImplementedError
 
+    def get_chat_client(self, chat_client) -> AzureAIAgentClient:
+        """Return the underlying ChatClientProtocol (AzureAIAgentClient)."""
+        if chat_client:
+            return chat_client
+        if self._agent:
+            return self._agent.chat_client  # type: ignore
+        chat_client = AzureAIAgentClient(
+                        project_endpoint=self.project_endpoint,
+                        model_deployment_name=self.model_deployment_name,
+                        async_credential=self.creds,
+                    )
+        return chat_client
+    
     async def get_database_team_agent(self) -> Optional[AzureAIAgentClient]:
         """Retrieve existing team agent from database, if any."""
         chat_client = None
