@@ -229,6 +229,13 @@ async def process_request(
               type: string
               description: Error message
     """
+    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    user_id = authenticated_user["user_principal_id"]
+    if not user_id:
+      track_event_if_configured(
+          "UserIdNotFound", {"status_code": 400, "detail": "no user"}
+      )
+      raise HTTPException(status_code=400, detail="no user found")
     try:
         memory_store = await DatabaseFactory.get_database(user_id=user_id)
         user_current_team = await memory_store.get_current_team(user_id=user_id)
@@ -261,20 +268,6 @@ async def process_request(
             detail="Request contains content that doesn't meet our safety guidelines, try again.",
         )
 
-    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
-    user_id = authenticated_user["user_principal_id"]
-
-    if not user_id:
-        track_event_if_configured(
-            "UserIdNotFound", {"status_code": 400, "detail": "no user"}
-        )
-        raise HTTPException(status_code=400, detail="no user found")
-
-    # if not input_task.team_id:
-    #     track_event_if_configured(
-    #         "TeamIDNofound", {"status_code": 400, "detail": "no team id"}
-    #     )
-    #     raise HTTPException(status_code=400, detail="no team id")
 
     if not input_task.session_id:
         input_task.session_id = str(uuid.uuid4())
@@ -315,12 +308,9 @@ async def process_request(
                 "error": str(e),
             },
         )
-        raise HTTPException(status_code=500, detail="Failed to create plan")
+        raise HTTPException(status_code=500, detail="Failed to create plan") from e
 
     try:
-        # background_tasks.add_task(
-        #     lambda: current_context.run(lambda:OrchestrationManager().run_orchestration, user_id, input_task)
-        # )
 
         async def run_orchestration_task():
             await OrchestrationManager().run_orchestration(user_id, input_task)
@@ -714,10 +704,27 @@ async def upload_team_config(
     authenticated_user = get_authenticated_user_details(request_headers=request.headers)
     user_id = authenticated_user["user_principal_id"]
     if not user_id:
+      track_event_if_configured(
+          "UserIdNotFound", {"status_code": 400, "detail": "no user"}
+      )
+      raise HTTPException(status_code=400, detail="no user found")
+    try:
+        memory_store = await DatabaseFactory.get_database(user_id=user_id)
+        user_current_team = await memory_store.get_current_team(user_id=user_id)
+        team_id = None
+        if user_current_team:
+            team_id = user_current_team.team_id
+        team = await memory_store.get_team_by_id(team_id=team_id)
+        if not team:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Team configuration '{team_id}' not found or access denied",
+            )
+    except Exception as e:
         raise HTTPException(
-            status_code=401, detail="Missing or invalid user information"
-        )
-
+            status_code=400,
+            detail=f"Error retrieving team configuration: {e}",
+        ) from e
     # Validate file is provided and is JSON
     if not file:
         raise HTTPException(status_code=400, detail="No file provided")
@@ -737,7 +744,7 @@ async def upload_team_config(
 
         # Validate content with RAI before processing
         if not team_id:
-            rai_valid, rai_error = await rai_validate_team_config(json_data)
+            rai_valid, rai_error = await rai_validate_team_config(json_data, team, memory_store)
             if not rai_valid:
                 track_event_if_configured(
                     "Team configuration RAI validation failed",
@@ -754,8 +761,6 @@ async def upload_team_config(
             "Team configuration RAI validation passed",
             {"status": "passed", "user_id": user_id, "filename": file.filename},
         )
-        # Initialize memory store and service
-        memory_store = await DatabaseFactory.get_database(user_id=user_id)
         team_service = TeamService(memory_store)
 
         # Validate model deployments

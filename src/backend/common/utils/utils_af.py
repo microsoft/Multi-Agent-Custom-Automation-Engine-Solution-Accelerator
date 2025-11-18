@@ -145,7 +145,7 @@ async def rai_success(description: str, team_config: TeamConfiguration,  memory_
                 pass
 
 
-async def rai_validate_team_config(team_config_json: dict) -> tuple[bool, str]:
+async def rai_validate_team_config(team_config_json: dict, team_config: TeamConfiguration,  memory_store: DatabaseBase) -> tuple[bool, str]:
     """
     Validate a team configuration for RAI compliance.
 
@@ -187,7 +187,7 @@ async def rai_validate_team_config(team_config_json: dict) -> tuple[bool, str]:
         if not combined:
             return False, "Team configuration contains no readable text content."
 
-        if not await rai_success(combined):
+        if not await rai_success(combined, team_config, memory_store):
             return (
                 False,
                 "Team configuration contains inappropriate content and cannot be uploaded.",
