@@ -1231,7 +1231,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
           }
           {
             name: 'AZURE_OPENAI_DEPLOYMENT_NAME'
-            value: aiFoundryAiServicesModelDeployment.name
+            value: aiFoundryAiServices4_1ModelDeployment.name
           }
           {
             name: 'AZURE_OPENAI_API_VERSION'
