@@ -58,7 +58,76 @@ Upgrade commands by OS:
 
 ## Deployment Options & Steps
 
-### Sandbox or WAF Aligned Deployment Options
+### Deployment Steps 
+
+Pick from the options below to see step-by-step instructions for GitHub Codespaces, VS Code Dev Containers, Local Environments, and Bicep deployments.
+
+| [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) | [![Open in Dev Containers](https://img.shields.io/static/v1?style=for-the-badge&label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+
+<details>
+  <summary><b>Deploy in GitHub Codespaces</b></summary>
+
+### GitHub Codespaces
+
+You can run this solution using GitHub Codespaces. The button will open a web-based VS Code instance in your browser:
+
+1. Open the solution accelerator (this may take several minutes):
+
+   [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator)
+
+2. Accept the default values on the create Codespaces page.
+3. Open a terminal window if it is not already open.
+4. Continue with the [deployment options](#deployment-options).
+
+</details>
+
+<details>
+  <summary><b>Deploy in VS Code Dev Containers</b></summary>
+
+### VS Code Dev Containers
+
+You can run this solution in VS Code Dev Containers, which will open the project in your local VS Code using the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers):
+
+1. Start Docker Desktop (install it if not already installed).
+2. Open the project:
+
+   [![Open in Dev Containers](https://img.shields.io/static/v1?style=for-the-badge&label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator)
+
+3. In the VS Code window that opens, once the project files show up (this may take several minutes), open a terminal window.
+4. Continue with the [deployment options](#deployment-options).
+
+</details>
+
+<details>
+  <summary><b>Deploy in your local Environment</b></summary>
+
+### Local Environment
+
+If you're not using one of the above options for opening the project, then you'll need to:
+
+1. Make sure the following tools are installed:
+
+   - [PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell?view=powershell-7.5) <small>(v7.0+)</small> - available for Windows, macOS, and Linux.
+   - [Azure Developer CLI (azd)](https://aka.ms/install-azd) <small>(v1.18.0+)</small> - version
+   - [Python 3.9+](https://www.python.org/downloads/)
+   - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+   - [Git](https://git-scm.com/downloads)
+
+2. Clone the repository or download the project code via command-line:
+
+   ```shell
+   azd init -t microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/
+   ```
+
+   > **⚠️ Warning:** The `azd init` command will download and initialize the project template. If you run this command in a directory that already contains project files, it may override your existing changes. Only run this command once when setting up the project for the first time. If you need to update an existing project, consider using `git pull` or manually downloading updates instead.
+
+3. Open the project folder in your terminal or editor.
+4. Continue with the [deployment options](#deployment-options).
+
+</details>
+
+### Deployment Options
 
 The [`infra`](../infra) folder of the Multi Agent Solution Accelerator contains the [`main.bicep`](../infra/main.bicep) Bicep script, which defines all Azure infrastructure components for this solution.
 
@@ -114,76 +183,6 @@ azd env set AZURE_ENV_VM_ADMIN_PASSWORD <your-password>
 > [!IMPORTANT]
 > The WAF-aligned configuration is under active development. More Azure Well-Architected recommendations will be added in future updates.
 
-### Deployment Steps 
-
-Pick from the options below to see step-by-step instructions for GitHub Codespaces, VS Code Dev Containers, Local Environments, and Bicep deployments.
-
-| [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) | [![Open in Dev Containers](https://img.shields.io/static/v1?style=for-the-badge&label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-
-<details>
-  <summary><b>Deploy in GitHub Codespaces</b></summary>
-
-### GitHub Codespaces
-
-You can run this solution using GitHub Codespaces. The button will open a web-based VS Code instance in your browser:
-
-1. Open the solution accelerator (this may take several minutes):
-
-   [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator)
-
-2. Accept the default values on the create Codespaces page.
-3. Open a terminal window if it is not already open.
-4. Continue with the [deploying steps](#deploying-with-azd).
-
-</details>
-
-<details>
-  <summary><b>Deploy in VS Code Dev Containers</b></summary>
-
-### VS Code Dev Containers
-
-You can run this solution in VS Code Dev Containers, which will open the project in your local VS Code using the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers):
-
-1. Start Docker Desktop (install it if not already installed).
-2. Open the project:
-
-   [![Open in Dev Containers](https://img.shields.io/static/v1?style=for-the-badge&label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator)
-
-3. In the VS Code window that opens, once the project files show up (this may take several minutes), open a terminal window.
-4. Continue with the [deploying steps](#deploying-with-azd).
-
-</details>
-
-<details>
-  <summary><b>Deploy in your local Environment</b></summary>
-
-### Local Environment
-
-If you're not using one of the above options for opening the project, then you'll need to:
-
-1. Make sure the following tools are installed:
-
-   - [PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell?view=powershell-7.5) <small>(v7.0+)</small> - available for Windows, macOS, and Linux.
-   - [Azure Developer CLI (azd)](https://aka.ms/install-azd) <small>(v1.18.0+)</small> - version
-   - [Python 3.9+](https://www.python.org/downloads/)
-   - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-   - [Git](https://git-scm.com/downloads)
-
-2. Clone the repository or download the project code via command-line:
-
-   ```shell
-   azd init -t microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/
-   ```
-
-   > **⚠️ Warning:** The `azd init` command will download and initialize the project template. If you run this command in a directory that already contains project files, it may override your existing changes. Only run this command once when setting up the project for the first time. If you need to update an existing project, consider using `git pull` or manually downloading updates instead.
-
-3. Open the project folder in your terminal or editor.
-4. Continue with the [deploying steps](#deploying-with-azd).
-
-</details>
-
-<br/>
 
 Consider the following settings during your deployment to modify specific settings:
 
@@ -292,10 +291,20 @@ Once you've opened the project in [Codespaces](#github-codespaces), [Dev Contain
 
 9. **Access your application:** Open the [Azure Portal](https://portal.azure.com/), go to your resource group, find the App Service that runs the frontend application, and get the application URL from the **Default domain** field.
 
-10. **Clean up resources:** If you are done trying out the application, you can delete all resources by running `azd down`.
-
 ### 🛠️ Troubleshooting
  If you encounter any issues during the deployment process, please refer [troubleshooting](../docs/TroubleShootingSteps.md) document for detailed steps and solutions.
+
+ ## Next Steps
+Now that you've completed your deployment, you can start using the solution. 
+
+To help you get started, here are some [Sample Questions](./SampleQuestions.md) you can follow to try it out.
+
+## Clean Up Resources
+If you are done trying out the application, you can delete all resources by running:
+
+```shell
+azd down
+```
 
 # Local setup
 
@@ -504,7 +513,3 @@ To debug the python server in the frontend directory (frontend_server.py) and re
       "jinja": true
     }
 ```
-## Next Steps
-Now that you've completed your deployment, you can start using the solution. 
-
-To help you get started, here are some [Sample Questions](./SampleQuestions.md) you can follow to try it out.
