@@ -4,6 +4,11 @@
 
 To deploy this solution accelerator, ensure you have access to an [Azure subscription](https://azure.microsoft.com/free/) with the necessary permissions to create **resource groups, resources, app registrations, and assign roles at the resource group level**. This should include Contributor role at the subscription level and Role Based Access Control role on the subscription and/or resource group level. Follow the steps in [Azure Account Set Up](../docs/AzureAccountSetUp.md).
 
+> **Note:** When you deploy this solution, you will automatically be granted access to interact with the Cosmos DB database that stores your application data. Specifically, you'll have permissions to:
+> - Read database information and settings
+> - Create, modify, and delete data storage containers (think of these as folders for organizing your data)
+> - Add, view, update, and remove individual data records within those containers
+
 Check the [Azure Products by Region](https://azure.microsoft.com/en-us/explore/global-infrastructure/products-by-region/?products=all&regions=all) page and select a **region** where the following services are available:
 
 - [Azure AI Foundry](https://learn.microsoft.com/en-us/azure/ai-foundry/)
@@ -52,6 +57,43 @@ Upgrade commands by OS:
   ```
 
 ## Deployment Options & Steps
+
+### Sandbox or WAF Aligned Deployment Options
+
+The [`infra`](../infra) folder of the Multi Agent Solution Accelerator contains the [`main.bicep`](../infra/main.bicep) Bicep script, which defines all Azure infrastructure components for this solution.
+
+By default, the `azd up` command uses the [`main.parameters.json`](../infra/main.parameters.json) file to deploy the solution. This file is pre-configured for a **sandbox environment** — ideal for development and proof-of-concept scenarios, with minimal security and cost controls for rapid iteration.
+
+For **production deployments**, the repository also provides [`main.waf.parameters.json`](../infra/main.waf.parameters.json), which applies a [Well-Architected Framework (WAF) aligned](https://learn.microsoft.com/en-us/azure/well-architected/) configuration. This option enables additional Azure best practices for reliability, security, cost optimization, operational excellence, and performance efficiency, such as:
+
+  **Prerequisite** — Enable the Microsoft.Compute/EncryptionAtHost feature for every subscription (and region, if required) where you plan to deploy VMs or VM scale sets with `encryptionAtHost: true`. Repeat the registration steps below for each target subscription (and for each region when applicable). This step is required for **WAF-aligned** (production) deployments.
+
+  Steps to enable the feature:
+  1. Set the target subscription:
+     Run: <code>az account set --subscription "&lt;YourSubscriptionId&gt;"</code>
+  2. Register the feature (one time per subscription):
+     Run: <code>az feature register --name EncryptionAtHost --namespace Microsoft.Compute</code>
+  3. Wait until registration completes and shows "Registered":
+     Run: <code>az feature show --name EncryptionAtHost --namespace Microsoft.Compute --query properties.state -o tsv</code>
+  4. Refresh the provider (if required):
+     Run: <code>az provider register --namespace Microsoft.Compute</code>
+  5. Re-run the deployment after registration is complete.
+
+  Note: Feature registration can take several minutes. Ensure the feature is registered before attempting deployments that require encryptionAtHost.
+
+  Reference: Azure Host Encryption — https://learn.microsoft.com/azure/virtual-machines/disks-enable-host-based-encryption-portal?tabs=azure-cli
+
+  - Enhanced network security (e.g., Network protection with private endpoints)
+  - Stricter access controls and managed identities
+  - Logging, monitoring, and diagnostics enabled by default
+  - Resource tagging and cost management recommendations
+
+**How to choose your deployment configuration:**
+
+* Use the default `main.parameters.json` file for a **sandbox/dev environment**
+* For a **WAF-aligned, production-ready deployment**, copy the contents of `main.waf.parameters.json` into `main.parameters.json` before running `azd up`
+
+---
 
 ### VM Credentials Configuration
 
@@ -134,6 +176,8 @@ If you're not using one of the above options for opening the project, then you'l
    azd init -t microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/
    ```
 
+   > **⚠️ Warning:** The `azd init` command will download and initialize the project template. If you run this command in a directory that already contains project files, it may override your existing changes. Only run this command once when setting up the project for the first time. If you need to update an existing project, consider using `git pull` or manually downloading updates instead.
+
 3. Open the project folder in your terminal or editor.
 4. Continue with the [deploying steps](#deploying-with-azd).
 
@@ -178,90 +222,6 @@ To adjust quota settings, follow these [steps](./AzureGPTQuotaSettings.md).
 
 </details>
 
-### Sandbox or WAF Aligned Deployment Options
-
-The [`infra`](../infra) folder of the Multi Agent Solution Accelerator contains the [`main.bicep`](../infra/main.bicep) Bicep script, which defines all Azure infrastructure components for this solution.
-
-By default, the `azd up` command uses the [`main.parameters.json`](../infra/main.parameters.json) file to deploy the solution. This file is pre-configured for a **sandbox environment** — ideal for development and proof-of-concept scenarios, with minimal security and cost controls for rapid iteration.
-
-For **production deployments**, the repository also provides [`main.waf.parameters.json`](../infra/main.waf.parameters.json), which applies a [Well-Architected Framework (WAF) aligned](https://learn.microsoft.com/en-us/azure/well-architected/) configuration. This option enables additional Azure best practices for reliability, security, cost optimization, operational excellence, and performance efficiency, such as:
-
-  **Prerequisite** — Enable the Microsoft.Compute/EncryptionAtHost feature for every subscription (and region, if required) where you plan to deploy VMs or VM scale sets with `encryptionAtHost: true`. Repeat the registration steps below for each target subscription (and for each region when applicable). This step is required for **WAF-aligned** (production) deployments.
-
-  Steps to enable the feature:
-  1. Set the target subscription:
-     Run: <code>az account set --subscription "&lt;YourSubscriptionId&gt;"</code>
-  2. Register the feature (one time per subscription):
-     Run: <code>az feature register --name EncryptionAtHost --namespace Microsoft.Compute</code>
-  3. Wait until registration completes and shows "Registered":
-     Run: <code>az feature show --name EncryptionAtHost --namespace Microsoft.Compute --query properties.state -o tsv</code>
-  4. Refresh the provider (if required):
-     Run: <code>az provider register --namespace Microsoft.Compute</code>
-  5. Re-run the deployment after registration is complete.
-
-  Note: Feature registration can take several minutes. Ensure the feature is registered before attempting deployments that require encryptionAtHost.
-
-  Reference: Azure Host Encryption — https://learn.microsoft.com/azure/virtual-machines/disks-enable-host-based-encryption-portal?tabs=azure-cli
-
-  - Enhanced network security (e.g., Network protection with private endpoints)
-  - Stricter access controls and managed identities
-  - Logging, monitoring, and diagnostics enabled by default
-  - Resource tagging and cost management recommendations
-
-**How to choose your deployment configuration:**
-
-* Use the default `main.parameters.json` file for a **sandbox/dev environment**
-* For a **WAF-aligned, production-ready deployment**, copy the contents of `main.waf.parameters.json` into `main.parameters.json` before running `azd up`
-
----
-
-### 🔁 Safe Redeployment or Environment Update Workflow
-
-  **[!IMPORTANT]**
-  > **Never run `azd init` again after your initial setup.** Doing so can overwrite your configuration and break your deployment.
-  
-  For subsequent deployments or environment changes, use one of the following safe approaches:
-  
-  #### Option 1: Create a New Environment (Recommended for Clean Redeployments)
-  
-  Create a fresh deployment environment with its own settings and resource group:  
-  ```bash
-  azd env new <your-new-env-name>
-  ```
-
-  #### Option 2: Update Your Current Environment Settings
-  
-  To modify settings (e.g., Azure region, resource suffix), edit the environment file directly:
-  ```bash
-  azd env set AZURE_LOCATION <your-desired-location>
-  ```
-
-### 🔒 Security Considerations for Cosmos DB
-
-This solution uses Azure AD-based RBAC (not account keys) for Cosmos DB data access. The level of network exposure depends on your deployment mode:
-
-✅ **WAF-Aligned Deployment** (enablePrivateNetworking = true)
-
-- Network access: Private only — Cosmos DB is not reachable from the public internet.
-
-- Access path: Application (Container Apps) → Private Endpoint in backendSubnet → Cosmos DB.
-
-- Authentication: Via user-assigned managed identity.
-
-- Role assigned: Cosmos DB Built-in Data Contributor → full read + write to all data.
-
-- Who can access: Only the app’s managed identity. No human users or public endpoints.
-
-⚠️ **Sandbox Deployment** (enablePrivateNetworking = false)
-
-- Network access: Public endpoint enabled — Cosmos DB accepts requests from the internet.
-
-- Authentication: Still Azure AD RBAC only (no account keys).
-
-- Role assigned: Same Cosmos DB Built-in Data Contributor → full read + write.
-
-- Who can access: Only the app’s managed identity — no additional users or groups are granted access.
-
 ### Deploying with AZD
 
 Once you've opened the project in [Codespaces](#github-codespaces), [Dev Containers](#vs-code-dev-containers), or [locally](#local-environment), you can deploy it to Azure by following these steps:
@@ -290,38 +250,9 @@ Once you've opened the project in [Codespaces](#github-codespaces), [Dev Contain
 
    - This deployment will take _4-6 minutes_ to provision the resources in your account and set up the solution with sample data.
    - If you encounter an error or timeout during deployment, changing the location may help, as there could be availability constraints for the resources.
+   - **Upon successful completion**, you will see a success message indicating that all resources have been deployed, along with the application URL and next steps for uploading team configurations and sample data.
 
-### ✅ Confirm Your Deployment Environment
-
-After running `azd up`, verify that your environment matches your intended configuration:
-
-- **Sandbox**:
-  - Uses `main.parameters.json`
-  - Public endpoints may be enabled (e.g., Cosmos DB, Key Vault)
-  - Minimal security controls for rapid iteration
-
-  ![Image showing the resources created in Sandbox deployment](../docs/images/macae-non-waf.png)
-
-- **WAF-Aligned**:
-  - Uses `main.waf.parameters.json` (copied into `main.parameters.json` before deployment)
-  - All resources deployed with **private endpoints**, **managed identities**, and **RBAC**
-  - Public network access is **disabled** for sensitive services (Cosmos DB, Key Vault, etc.)
-
-  ![Image showing the resources created in WAF deployment](../docs/images/macae-waf.png)
-
-Check your active environment settings:
- ```powershell
- azd env get-values
- ```
-
-Check all resources in your environment's resource group
- ```powershell
- az resource list --resource-group <your-resource-group-name> --output table
- ``` 
-
-### Post Deployment Steps
-
-1. After deployment completes, you can upload Team Configurations using command printed in the terminal. The command will look like one of the following. Run the appropriate command for your shell from the project root:
+5. Upload Team Configurations using command printed in the terminal. The command will look like one of the following. Run the appropriate command for your shell from the project root:
 
   - **For Bash (Linux/macOS/WSL):**
     ```bash
@@ -333,7 +264,7 @@ Check all resources in your environment's resource group
     infra\scripts\Upload-Team-Config.ps1
     ```
 
-2. After deployment completes, you can index Sample Data into Search Service using command printed in the terminal. The command will look like one of the following. Run the appropriate command for your shell from the project root:
+6. Index Sample Data into Search Service using command printed in the terminal. The command will look like one of the following. Run the appropriate command for your shell from the project root:
 
   - **For Bash (Linux/macOS/WSL):**
     ```bash
@@ -345,7 +276,7 @@ Check all resources in your environment's resource group
     infra\scripts\Process-Sample-Data.ps1
     ```
 
---> **To upload team configurations and index sample data in one step**, run the appropriate command for your shell from the project root:
+7. **[Alternative]** To upload team configurations and index sample data in one step, run the appropriate command for your shell from the project root:
 
   - **For Bash (Linux/macOS/WSL):**
     ```bash
@@ -357,15 +288,11 @@ Check all resources in your environment's resource group
     infra\scripts\Team-Config-And-Data.ps1
     ```
 
-> 💡 **Please refer:**
+8. **[Optional]** Set up authentication for your web application by following the steps in [Set Up Authentication in Azure App Service](../docs/azure_app_service_auth_setup.md).
 
-  ![Image showing the post deployment scripts](../docs/images/macae-post-deployment.png)
+9. **Access your application:** Open the [Azure Portal](https://portal.azure.com/), go to your resource group, find the App Service that runs the frontend application, and get the application URL from the **Default domain** field.
 
-3. Once the deployment has completed successfully, open the [Azure Portal](https://portal.azure.com/), go to the deployed resource group, find the App Service, and get the app URL from `Default domain`.
-
-4. When Deployment is complete, follow steps in [Set Up Authentication in Azure App Service](../docs/azure_app_service_auth_setup.md) to add app authentication to your web app running on Azure App Service
-
-5. If you are done trying out the application, you can delete the resources by running `azd down`.
+10. **Clean up resources:** If you are done trying out the application, you can delete all resources by running `azd down`.
 
 ### 🛠️ Troubleshooting
  If you encounter any issues during the deployment process, please refer [troubleshooting](../docs/TroubleShootingSteps.md) document for detailed steps and solutions.
