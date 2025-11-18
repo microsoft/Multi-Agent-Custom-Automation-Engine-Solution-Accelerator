@@ -3,13 +3,40 @@
 import logging
 
 # Converted import path (agent_framework version of FoundryAgentTemplate)
+from common.database.database_base import DatabaseBase
+from common.models.messages_af import TeamConfiguration
+from v4.common.services.team_service import TeamService
 from v4.magentic_agents.foundry_agent import FoundryAgentTemplate  # formerly v4.magentic_agents.foundry_agent
 from v4.config.agent_registry import agent_registry
 from common.config.app_config import config
 logging.basicConfig(level=logging.INFO)
 
+async def find_first_available_team(team_service: TeamService, user_id: str) -> str:
+    """
+    Check teams in priority order (4 to 1) and return the first available team ID.
+    Priority: RFP (4) -> Retail (3) -> Marketing (2) -> HR (1)
+    """
+    team_priority_order = [
+        "00000000-0000-0000-0000-000000000004",  # RFP
+        "00000000-0000-0000-0000-000000000003",  # Retail
+        "00000000-0000-0000-0000-000000000002",  # Marketing
+        "00000000-0000-0000-0000-000000000001",  # HR
+    ]
 
-async def create_RAI_agent() -> FoundryAgentTemplate:
+    for team_id in team_priority_order:
+        try:
+            team_config = await team_service.get_team_configuration(team_id, user_id)
+            if team_config is not None:
+                print(f"Found available team: {team_id}")
+                return team_id
+        except Exception as e:
+            print(f"Error checking team {team_id}: {str(e)}")
+            continue
+
+    print("No teams found in priority order")
+    return None
+
+async def create_RAI_agent(team: TeamConfiguration, memory_store: DatabaseBase) -> FoundryAgentTemplate:
     """Create and initialize a FoundryAgentTemplate for Responsible AI (RAI) checks."""
     agent_name = "RAIAgent"
     agent_description = "A comprehensive research assistant for integration testing"
@@ -26,7 +53,11 @@ async def create_RAI_agent() -> FoundryAgentTemplate:
         "- Is completely meaningless, incoherent, or appears to be spam\n"
         "Respond with 'TRUE' if the input violates any rules and should be blocked, otherwise respond with 'FALSE'."
     )
+    
     model_deployment_name = config.AZURE_OPENAI_DEPLOYMENT_NAME
+    team.team_id = "rai_team"  # Use a fixed team ID for RAI agent
+    team.name = "RAI Team"
+    team.description = "Team responsible for Responsible AI checks"
     agent = FoundryAgentTemplate(
         agent_name=agent_name,
         agent_description=agent_description,
@@ -36,6 +67,8 @@ async def create_RAI_agent() -> FoundryAgentTemplate:
         project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
         mcp_config=None,
         search_config=None,
+        team_config=team,
+        memory_store=memory_store,
     )
 
     await agent.open()
@@ -78,14 +111,14 @@ async def _get_agent_response(agent: FoundryAgentTemplate, query: str) -> str:
         return "TRUE"  # Default to blocking on error
 
 
-async def rai_success(description: str) -> bool:
+async def rai_success(description: str, team_config: TeamConfiguration,  memory_store: DatabaseBase) -> bool:
     """
     Run a RAI compliance check on the provided description using the RAIAgent.
     Returns True if content is safe (should proceed), False if it should be blocked.
     """
     agent: FoundryAgentTemplate | None = None
     try:
-        agent = await create_RAI_agent()
+        agent = await create_RAI_agent(team_config, memory_store)
         if not agent:
             logging.error("Failed to instantiate RAIAgent.")
             return False
@@ -112,7 +145,7 @@ async def rai_success(description: str) -> bool:
                 pass
 
 
-async def rai_validate_team_config(team_config_json: dict) -> tuple[bool, str]:
+async def rai_validate_team_config(team_config_json: dict, team_config: TeamConfiguration,  memory_store: DatabaseBase) -> tuple[bool, str]:
     """
     Validate a team configuration for RAI compliance.
 
@@ -154,7 +187,7 @@ async def rai_validate_team_config(team_config_json: dict) -> tuple[bool, str]:
         if not combined:
             return False, "Team configuration contains no readable text content."
 
-        if not await rai_success(combined):
+        if not await rai_success(combined, team_config, memory_store):
             return (
                 False,
                 "Team configuration contains inappropriate content and cannot be uploaded.",

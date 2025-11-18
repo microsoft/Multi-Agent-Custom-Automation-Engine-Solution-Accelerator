@@ -14,7 +14,11 @@ from common.models.messages_af import (
     TeamSelectionRequest,
 )
 from common.utils.event_utils import track_event_if_configured
-from common.utils.utils_af import rai_success, rai_validate_team_config
+from common.utils.utils_af import (
+    find_first_available_team,
+    rai_success,
+    rai_validate_team_config,
+)
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -42,32 +46,6 @@ app_v4 = APIRouter(
     prefix="/api/v4",
     responses={404: {"description": "Not found"}},
 )
-
-
-async def find_first_available_team(team_service: TeamService, user_id: str) -> str:
-    """
-    Check teams in priority order (4 to 1) and return the first available team ID.
-    Priority: RFP (4) -> Retail (3) -> Marketing (2) -> HR (1)
-    """
-    team_priority_order = [
-        "00000000-0000-0000-0000-000000000004",  # RFP
-        "00000000-0000-0000-0000-000000000003",  # Retail
-        "00000000-0000-0000-0000-000000000002",  # Marketing
-        "00000000-0000-0000-0000-000000000001",  # HR
-    ]
-
-    for team_id in team_priority_order:
-        try:
-            team_config = await team_service.get_team_configuration(team_id, user_id)
-            if team_config is not None:
-                print(f"Found available team: {team_id}")
-                return team_id
-        except Exception as e:
-            print(f"Error checking team {team_id}: {str(e)}")
-            continue
-
-    print("No teams found in priority order")
-    return None
 
 
 @app_v4.websocket("/socket/{process_id}")
@@ -175,7 +153,10 @@ async def init_team(
 
         # Initialize agent team for this user session
         await OrchestrationManager.get_current_or_new_orchestration(
-            user_id=user_id, team_config=team_configuration, team_switched=team_switched
+            user_id=user_id,
+            team_config=team_configuration,
+            team_switched=team_switched,
+            team_service=team_service,
         )
 
         return {
@@ -248,8 +229,32 @@ async def process_request(
               type: string
               description: Error message
     """
-
-    if not await rai_success(input_task.description):
+    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    user_id = authenticated_user["user_principal_id"]
+    if not user_id:
+      track_event_if_configured(
+          "UserIdNotFound", {"status_code": 400, "detail": "no user"}
+      )
+      raise HTTPException(status_code=400, detail="no user found")
+    try:
+        memory_store = await DatabaseFactory.get_database(user_id=user_id)
+        user_current_team = await memory_store.get_current_team(user_id=user_id)
+        team_id = None
+        if user_current_team:
+            team_id = user_current_team.team_id
+        team = await memory_store.get_team_by_id(team_id=team_id)
+        if not team:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Team configuration '{team_id}' not found or access denied",
+            )
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error retrieving team configuration: {e}",
+        ) from e
+    
+    if not await rai_success(input_task.description, team, memory_store):
         track_event_if_configured(
             "RAI failed",
             {
@@ -263,37 +268,12 @@ async def process_request(
             detail="Request contains content that doesn't meet our safety guidelines, try again.",
         )
 
-    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
-    user_id = authenticated_user["user_principal_id"]
-
-    if not user_id:
-        track_event_if_configured(
-            "UserIdNotFound", {"status_code": 400, "detail": "no user"}
-        )
-        raise HTTPException(status_code=400, detail="no user found")
-
-    # if not input_task.team_id:
-    #     track_event_if_configured(
-    #         "TeamIDNofound", {"status_code": 400, "detail": "no team id"}
-    #     )
-    #     raise HTTPException(status_code=400, detail="no team id")
 
     if not input_task.session_id:
         input_task.session_id = str(uuid.uuid4())
     try:
         plan_id = str(uuid.uuid4())
         # Initialize memory store and service
-        memory_store = await DatabaseFactory.get_database(user_id=user_id)
-        user_current_team = await memory_store.get_current_team(user_id=user_id)
-        team_id = None
-        if user_current_team:
-            team_id = user_current_team.team_id
-        team = await memory_store.get_team_by_id(team_id=team_id)
-        if not team:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Team configuration '{team_id}' not found or access denied",
-            )
         plan = Plan(
             id=plan_id,
             plan_id=plan_id,
@@ -328,12 +308,9 @@ async def process_request(
                 "error": str(e),
             },
         )
-        raise HTTPException(status_code=500, detail="Failed to create plan")
+        raise HTTPException(status_code=500, detail="Failed to create plan") from e
 
     try:
-        # background_tasks.add_task(
-        #     lambda: current_context.run(lambda:OrchestrationManager().run_orchestration, user_id, input_task)
-        # )
 
         async def run_orchestration_task():
             await OrchestrationManager().run_orchestration(user_id, input_task)
@@ -526,11 +503,28 @@ async def user_clarification(
         raise HTTPException(
             status_code=401, detail="Missing or invalid user information"
         )
+    try:
+        memory_store = await DatabaseFactory.get_database(user_id=user_id)
+        user_current_team = await memory_store.get_current_team(user_id=user_id)
+        team_id = None
+        if user_current_team:
+            team_id = user_current_team.team_id
+        team = await memory_store.get_team_by_id(team_id=team_id)
+        if not team:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Team configuration '{team_id}' not found or access denied",
+            )
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error retrieving team configuration: {e}",
+        ) from e
     # Set the approval in the orchestration config
     if user_id and human_feedback.request_id:
         # validate rai
         if human_feedback.answer is not None or human_feedback.answer != "":
-            if not await rai_success(human_feedback.answer):
+            if not await rai_success(human_feedback.answer, team, memory_store):
                 track_event_if_configured(
                     "RAI failed",
                     {
@@ -710,10 +704,27 @@ async def upload_team_config(
     authenticated_user = get_authenticated_user_details(request_headers=request.headers)
     user_id = authenticated_user["user_principal_id"]
     if not user_id:
+      track_event_if_configured(
+          "UserIdNotFound", {"status_code": 400, "detail": "no user"}
+      )
+      raise HTTPException(status_code=400, detail="no user found")
+    try:
+        memory_store = await DatabaseFactory.get_database(user_id=user_id)
+        user_current_team = await memory_store.get_current_team(user_id=user_id)
+        team_id = None
+        if user_current_team:
+            team_id = user_current_team.team_id
+        team = await memory_store.get_team_by_id(team_id=team_id)
+        if not team:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Team configuration '{team_id}' not found or access denied",
+            )
+    except Exception as e:
         raise HTTPException(
-            status_code=401, detail="Missing or invalid user information"
-        )
-
+            status_code=400,
+            detail=f"Error retrieving team configuration: {e}",
+        ) from e
     # Validate file is provided and is JSON
     if not file:
         raise HTTPException(status_code=400, detail="No file provided")
@@ -733,7 +744,7 @@ async def upload_team_config(
 
         # Validate content with RAI before processing
         if not team_id:
-            rai_valid, rai_error = await rai_validate_team_config(json_data)
+            rai_valid, rai_error = await rai_validate_team_config(json_data, team, memory_store)
             if not rai_valid:
                 track_event_if_configured(
                     "Team configuration RAI validation failed",
@@ -750,8 +761,6 @@ async def upload_team_config(
             "Team configuration RAI validation passed",
             {"status": "passed", "user_id": user_id, "filename": file.filename},
         )
-        # Initialize memory store and service
-        memory_store = await DatabaseFactory.get_database(user_id=user_id)
         team_service = TeamService(memory_store)
 
         # Validate model deployments

@@ -1,18 +1,33 @@
 from __future__ import annotations
 
+import logging
+import os
 from contextlib import AsyncExitStack
 from typing import Any, Optional
 
-from agent_framework import (AggregateContextProvider, ChatAgent,
-                             ChatClientProtocol, ChatMessage,
-                             ChatMessageStoreProtocol, ChatOptions,
-                             ContextProvider, HostedMCPTool,
-                             MCPStreamableHTTPTool, Middleware, Role, ToolMode,
-                             ToolProtocol)
+from agent_framework import (
+    AggregateContextProvider,
+    ChatAgent,
+    ChatClientProtocol,
+    ChatMessage,
+    ChatMessageStoreProtocol,
+    ChatOptions,
+    ContextProvider,
+    HostedMCPTool,
+    MCPStreamableHTTPTool,
+    Middleware,
+    Role,
+    ToolMode,
+    ToolProtocol,
+)
+
 # from agent_framework.azure import AzureAIAgentClient
 from agent_framework_azure_ai import AzureAIAgentClient
 from azure.ai.agents.aio import AgentsClient
 from azure.identity.aio import DefaultAzureCredential
+from common.models.messages_af import CurrentTeamAgent, TeamConfiguration
+from common.database.database_base import DatabaseBase
+from v4.common.services.team_service import TeamService
 from v4.config.agent_registry import agent_registry
 from v4.magentic_agents.models.agent_models import MCPConfig
 
@@ -24,18 +39,62 @@ class MCPEnabledBase:
     Subclasses must implement _after_open() and assign self._agent.
     """
 
-    def __init__(self, mcp: MCPConfig | None = None) -> None:
+    def __init__(
+        self,
+        mcp: MCPConfig | None = None,
+        team_service: TeamService | None = None,
+        team_config: TeamConfiguration | None = None,
+        project_endpoint: str | None = None,
+        memory_store: DatabaseBase | None = None,
+        agent_name: str | None = None,
+        agent_description: str | None = None,
+        agent_instructions: str | None = None,
+        model_deployment_name: str | None = None,
+    ) -> None:
         self._stack: AsyncExitStack | None = None
         self.mcp_cfg: MCPConfig | None = mcp
         self.mcp_tool: HostedMCPTool | None = None
         self._agent: ChatAgent | None = None
+        self.team_service: TeamService | None = team_service
+        self.team_config: TeamConfiguration | None = team_config
+        self.client: Optional[AzureAIAgentClient] = None
+        self.project_endpoint = project_endpoint
+        self.creds: Optional[DefaultAzureCredential] = None
+        self.memory_store: Optional[DatabaseBase] = memory_store
+        self.agent_name: str | None = agent_name
+        self.agent_description: str | None = agent_description
+        self.agent_instructions: str | None = agent_instructions
+        self.model_deployment_name: str | None = model_deployment_name
+        self.logger = logging.getLogger(__name__)
 
     async def open(self) -> "MCPEnabledBase":
         if self._stack is not None:
             return self
         self._stack = AsyncExitStack()
+
+        # Acquire credential
+        self.creds = DefaultAzureCredential()
+        if self._stack:
+            await self._stack.enter_async_context(self.creds)
+        # Create AgentsClient
+        self.client = AgentsClient(
+            endpoint=self.project_endpoint,
+            credential=self.creds,
+        )
+        if self._stack:
+            await self._stack.enter_async_context(self.client)
+        # Prepare MCP
         await self._prepare_mcp_tool()
+
+        # Let subclass build agent client
         await self._after_open()
+
+        # Register agent (best effort)
+        try:
+            agent_registry.register_agent(self)
+        except Exception:
+            pass
+
         return self
 
     async def close(self) -> None:
@@ -76,6 +135,72 @@ class MCPEnabledBase:
         """Subclasses must build self._agent here."""
         raise NotImplementedError
 
+    def get_chat_client(self, chat_client) -> AzureAIAgentClient:
+        """Return the underlying ChatClientProtocol (AzureAIAgentClient)."""
+        if chat_client:
+            return chat_client
+        if (
+            self._agent
+            and self._agent.chat_client
+            and self._agent.chat_client.agent_id is not None
+        ):
+            return self._agent.chat_client  # type: ignore
+        chat_client = AzureAIAgentClient(
+            project_endpoint=self.project_endpoint,
+            model_deployment_name=self.model_deployment_name,
+            async_credential=self.creds,
+        )
+        self.logger.info(
+            "Created new AzureAIAgentClient for  get chat client",
+            extra={"agent_id": chat_client.agent_id},
+        )
+        return chat_client
+
+    async def get_database_team_agent(self) -> Optional[AzureAIAgentClient]:
+        """Retrieve existing team agent from database, if any."""
+        chat_client = None
+        try:
+            currentAgent = await self.memory_store.get_team_agent(
+                team_id=self.team_config.team_id, agent_name=self.agent_name
+            )
+            if currentAgent and currentAgent.agent_foundry_id:
+                agent = await self.client.get_agent(
+                    agent_id=currentAgent.agent_foundry_id
+                )
+                if agent and agent.agent_id is not None:
+                    chat_client = AzureAIAgentClient(
+                        project_endpoint=self.project_endpoint,
+                        agent_id=agent.agent_id,
+                        model_deployment_name=self.model_deployment_name,
+                        async_credential=self.creds,
+                    )
+
+        except (
+            Exception
+        ) as ex:  # Consider narrowing this to specific exceptions if possible
+            self.logger.error("Failed to initialize Get database team agent: %s", ex)
+        return chat_client
+
+    async def save_database_team_agent(self) -> None:
+        """Save current team agent to database."""
+        try:
+            if self._agent.chat_client.agent_id is None:
+                self.logger.error("Cannot save database team agent: agent_id is None")
+                return
+
+            currentAgent = CurrentTeamAgent(
+                team_id=self.team_config.team_id,
+                team_name=self.team_config.name,
+                agent_name=self.agent_name,
+                agent_foundry_id=self._agent.chat_client.agent_id,
+                agent_description=self.agent_description,
+                agent_instructions=self.agent_instructions,
+            )
+            await self.memory_store.add_team_agent(currentAgent)
+
+        except Exception as ex:
+            self.logger.error("Failed to save save database: %s", ex)
+
     async def _prepare_mcp_tool(self) -> None:
         """Translate MCPConfig to a HostedMCPTool (agent_framework construct)."""
         if not self.mcp_cfg:
@@ -84,7 +209,7 @@ class MCPEnabledBase:
             mcp_tool = MCPStreamableHTTPTool(
                 name=self.mcp_cfg.name,
                 description=self.mcp_cfg.description,
-                url=self.mcp_cfg.url
+                url=self.mcp_cfg.url,
             )
             await self._stack.enter_async_context(mcp_tool)
             self.mcp_tool = mcp_tool  # Store for later use
@@ -101,53 +226,63 @@ class AzureAgentBase(MCPEnabledBase):
       - optionally register themselves via agent_registry
     """
 
-    def __init__(self, mcp: MCPConfig | None = None, model_deployment_name: str | None = None, project_endpoint: str | None = None) -> None:
-        super().__init__(mcp=mcp)
-        self.creds: Optional[DefaultAzureCredential] = None
-        self.client: Optional[AzureAIAgentClient] = None
+    def __init__(
+        self,
+        mcp: MCPConfig | None = None,
+        model_deployment_name: str | None = None,
+        project_endpoint: str | None = None,
+        team_service: TeamService | None = None,
+        team_config: TeamConfiguration | None = None,
+        memory_store: DatabaseBase | None = None,
+        agent_name: str | None = None,
+        agent_description: str | None = None,
+        agent_instructions: str | None = None,
+    ) -> None:
+        super().__init__(
+            mcp=mcp,
+            team_service=team_service,
+            team_config=team_config,
+            project_endpoint=project_endpoint,
+            memory_store=memory_store,
+            agent_name=agent_name,
+            agent_description=agent_description,
+            agent_instructions=agent_instructions,
+            model_deployment_name=model_deployment_name,
+        )
 
         self._created_ephemeral: bool = (
             False  # reserved if you add ephemeral agent cleanup
         )
-        self.project_endpoint = project_endpoint
-        self.model_deployment_name = model_deployment_name
 
-    async def open(self) -> "AzureAgentBase":
-        if self._stack is not None:
-            return self
-        self._stack = AsyncExitStack()
+    # async def open(self) -> "AzureAgentBase":
+    #     if self._stack is not None:
+    #         return self
+    #     self._stack = AsyncExitStack()
 
-        # Acquire credential
-        self.creds = DefaultAzureCredential()
-        await self._stack.enter_async_context(self.creds)
+    #     # Acquire credential
+    #     self.creds = DefaultAzureCredential()
+    #     if self._stack:
+    #         await self._stack.enter_async_context(self.creds)
+    #     # Create AgentsClient
+    #     self.client = AgentsClient(
+    #         endpoint=self.project_endpoint,
+    #         credential=self.creds,
+    #     )
+    #     if self._stack:
+    #         await self._stack.enter_async_context(self.client)
+    #     # Prepare MCP
+    #     await self._prepare_mcp_tool()
 
-        # Create AIProjectClient
-        # self.client = AzureAIAgentClient(
-        #     project_endpoint=self.project_endpoint,
-        #     model_deployment_name=self.model_deployment_name,
-        #     async_credential=self.creds,
-        # )
+    #     # Let subclass build agent client
+    #     await self._after_open()
 
-        # Create AgentsClient
-        self.client = AgentsClient(
-            endpoint=self.project_endpoint,
-            credential=self.creds,
-        )
-        await self._stack.enter_async_context(self.client)
+    #     # Register agent (best effort)
+    #     try:
+    #         agent_registry.register_agent(self)
+    #     except Exception:
+    #         pass
 
-        # Prepare MCP
-        await self._prepare_mcp_tool()
-
-        # Let subclass build agent client
-        await self._after_open()
-
-        # Register agent (best effort)
-        try:
-            agent_registry.register_agent(self)
-        except Exception:
-            pass
-
-        return self
+    #     return self
 
     async def close(self) -> None:
         """

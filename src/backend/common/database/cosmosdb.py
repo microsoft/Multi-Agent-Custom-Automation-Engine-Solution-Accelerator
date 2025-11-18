@@ -12,6 +12,7 @@ from ..models.messages_af import (
     AgentMessage,
     AgentMessageData,
     BaseDataModel,
+    CurrentTeamAgent,
     DataType,
     Plan,
     Step,
@@ -491,3 +492,46 @@ class CosmosDBClient(DatabaseBase):
         ]
 
         return await self.query_items(query, parameters, AgentMessageData)
+
+    async def add_team_agent(self, team_agent: CurrentTeamAgent) -> None:
+        """Add an agent message to the database."""
+        await self.delete_team_agent(team_agent.team_id, team_agent.agent_name) # Ensure no duplicates
+        await self.add_item(team_agent)
+
+    async def delete_team_agent(self, team_id: str, agent_name: str) -> None:
+        """Delete the current team for a user."""
+        query = "SELECT c.id, c.session_id FROM c WHERE c.team_id=@team_id AND c.data_type=@data_type AND c.agent_name=@agent_name"
+
+        params = [
+            {"name": "@team_id", "value": team_id},
+            {"name": "@agent_name", "value": agent_name},
+            {"name": "@data_type", "value": DataType.current_team_agent},
+        ]
+        items = self.container.query_items(query=query, parameters=params)
+        print("Items to delete:", items)
+        if items:
+            async for doc in items:
+                try:
+                    await self.container.delete_item(
+                        doc["id"], partition_key=doc["session_id"]
+                    )
+                except Exception as e:
+                    self.logger.warning(
+                        "Failed deleting current team doc %s: %s", doc.get("id"), e
+                    )
+
+        return True
+
+    async def get_team_agent(
+        self, team_id: str, agent_name: str
+    ) -> Optional[CurrentTeamAgent]:
+        """Retrieve a team agent by team_id and agent_name."""
+        query = "SELECT * FROM c WHERE c.team_id=@team_id AND c.data_type=@data_type AND c.agent_name=@agent_name"
+        params = [
+            {"name": "@team_id", "value": team_id},
+            {"name": "@agent_name", "value": agent_name},
+            {"name": "@data_type", "value": DataType.current_team_agent},
+        ]
+
+        results = await self.query_items(query, params, CurrentTeamAgent)
+        return results[0] if results else None

@@ -22,6 +22,7 @@ class DataType(str, Enum):
     agent_message = "agent_message"
     team_config = "team_config"
     user_current_team = "user_current_team"
+    current_team_agent = "current_team_agent"
     m_plan = "m_plan"
     m_plan_message = "m_plan_message"
 
@@ -110,6 +111,17 @@ class UserCurrentTeam(BaseDataModel):
     data_type: Literal[DataType.user_current_team] = DataType.user_current_team
     user_id: str
     team_id: str
+
+class CurrentTeamAgent(BaseDataModel):
+    """Represents the current agent of a user."""
+    data_type: Literal[DataType.current_team_agent] = DataType.current_team_agent
+    team_id: str
+    team_name: str
+    agent_name: str
+    agent_description: str
+    agent_instructions: str
+    agent_foundry_id: str
+
 
 
 class Plan(BaseDataModel):
