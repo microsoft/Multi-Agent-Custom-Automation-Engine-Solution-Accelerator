@@ -76,6 +76,7 @@ class AppConfig:
         # Logging settings
         self.AZURE_BASIC_LOGGING_LEVEL = self._get_optional("AZURE_BASIC_LOGGING_LEVEL", "INFO")
         self.AZURE_PACKAGE_LOGGING_LEVEL = self._get_optional("AZURE_PACKAGE_LOGGING_LEVEL", "WARNING")
+        self.AZURE_LOGGING_PACKAGES = self._get_logging_packages("AZURE_LOGGING_PACKAGES")
 
         # Optional MCP server endpoint (for local MCP server or remote)
         # Example: http://127.0.0.1:8000/mcp
@@ -192,6 +193,25 @@ class AppConfig:
             True if the environment variable exists and is set to 'true' or '1', False otherwise
         """
         return name in os.environ and os.environ[name].lower() in ["true", "1"]
+
+    def _get_logging_packages(self, name: str) -> list[str]:
+        """Get a list of logging package names from environment variables.
+
+        Args:
+            name: The name of the environment variable containing comma-separated package names
+
+        Returns:
+            A list of package names, or empty list if not specified
+        """
+        try:
+            env_value = os.environ.get(name, "").strip()
+            if env_value:
+                packages = [pkg.strip() for pkg in env_value.split(",") if pkg.strip()]
+                return packages
+            return []
+        except (AttributeError, ValueError) as e:
+            logging.warning(f"Error parsing {name}: {e}. Using empty list.")
+            return []
 
     def get_cosmos_database_client(self):
         """Get a Cosmos DB client for the configured database.

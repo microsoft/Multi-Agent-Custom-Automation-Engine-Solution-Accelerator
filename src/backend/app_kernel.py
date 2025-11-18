@@ -65,11 +65,7 @@ logging.basicConfig(level=getattr(logging, config.AZURE_BASIC_LOGGING_LEVEL.uppe
 
 # Configure Azure package logging levels
 azure_level = getattr(logging, config.AZURE_PACKAGE_LOGGING_LEVEL.upper(), logging.WARNING)
-for logger_name in [
-    "azure.core.pipeline.policies.http_logging_policy",
-    "azure.identity.aio._internal",
-    "azure.monitor.opentelemetry.exporter.export._base"
-]:
+for logger_name in config.AZURE_LOGGING_PACKAGES:
     logging.getLogger(logger_name).setLevel(azure_level)
 
 logging.getLogger("opentelemetry.sdk").setLevel(logging.ERROR)
