@@ -104,7 +104,7 @@ class FoundryAgentTemplate(AzureAgentBase):
     # -------------------------
     # Azure Search helper
     # -------------------------
-    async def _create_azure_search_enabled_client(self):
+    async def _create_azure_search_enabled_client(self, chatClient=None) -> Optional[AzureAIAgentClient]:
         """
         Create a server-side Azure AI agent with Azure AI Search raw tool.
 
@@ -118,6 +118,9 @@ class FoundryAgentTemplate(AzureAgentBase):
         Returns:
             AzureAIAgentClient | None
         """
+        if chatClient:
+            return chatClient
+        
         if not self.search:
             self.logger.error("Search configuration missing.")
             return None
@@ -217,55 +220,48 @@ class FoundryAgentTemplate(AzureAgentBase):
         """Initialize ChatAgent after connections are established."""
 
         try:
-            agent = await self.get_database_team_agent()
-            if agent is None:
-                if self._use_azure_search:
-                    # Azure Search mode (skip MCP + Code Interpreter due to incompatibility)
-                    self.logger.info(
-                        "Initializing agent in Azure AI Search mode (exclusive)."
-                    )
-                    chat_client = await self._create_azure_search_enabled_client()
-                    if not chat_client:
-                        raise RuntimeError(
-                            "Azure AI Search mode requested but setup failed."
-                        )
-
-                    # In Azure Search raw tool path, tools/tool_choice are handled server-side.
-                    self._agent = ChatAgent(
-                        chat_client=chat_client,
-                        instructions=self.agent_instructions,
-                        name=self.agent_name,
-                        description=self.agent_description,
-                        tool_choice="required",  # Force usage
-                        temperature=0.7,
-                        model_id=self.model_deployment_name,
-                    )
-                else:
-                    # use MCP path
-                    self.logger.info("Initializing agent in MCP mode.")
-                    tools = await self._collect_tools()
-                    self._agent = ChatAgent(
-                        chat_client=AzureAIAgentClient(
-                            project_endpoint=self.project_endpoint,
-                            model_deployment_name=self.model_deployment_name,
-                            async_credential=self.creds,
-                        ),
-                        instructions=self.agent_instructions,
-                        name=self.agent_name,
-                        description=self.agent_description,
-                        tools=tools if tools else None,
-                        tool_choice="auto" if tools else "none",
-                        temperature=0.7,
-                        model_id=self.model_deployment_name,
+            chatClient= await self.get_database_team_agent()
+            
+            if self._use_azure_search:
+                # Azure Search mode (skip MCP + Code Interpreter due to incompatibility)
+                self.logger.info(
+                    "Initializing agent in Azure AI Search mode (exclusive)."
+                )
+                chat_client = await self._create_azure_search_enabled_client(chatClient)
+                if not chat_client:
+                    raise RuntimeError(
+                        "Azure AI Search mode requested but setup failed."
                     )
 
-                self.logger.info("Initialized ChatAgent '%s'", self.agent_name)
+                # In Azure Search raw tool path, tools/tool_choice are handled server-side.
+                self._agent = ChatAgent(
+                    chat_client=chat_client,
+                    instructions=self.agent_instructions,
+                    name=self.agent_name,
+                    description=self.agent_description,
+                    tool_choice="required",  # Force usage
+                    temperature=0.7,
+                    model_id=self.model_deployment_name,
+                )
+            else:
+                # use MCP path
+                self.logger.info("Initializing agent in MCP mode.")
+                tools = await self._collect_tools()
+                self._agent = ChatAgent(
+                    chat_client=chatClient or self.client,
+                    instructions=self.agent_instructions,
+                    name=self.agent_name,
+                    description=self.agent_description,
+                    tools=tools if tools else None,
+                    tool_choice="auto" if tools else "none",
+                    temperature=0.7,
+                    model_id=self.model_deployment_name,
+                )
 
+            self.logger.info("Initialized ChatAgent '%s'", self.agent_name)
+            if not chatClient: # Only save if we didn't load from DB
                 await self.save_database_team_agent()
 
-            else:
-                self.logger.info("Using existing ChatAgent '%s'", self.agent_name)
-                self._agent = agent
         except Exception as ex:
             self.logger.error("Failed to initialize ChatAgent: %s", ex)
             raise

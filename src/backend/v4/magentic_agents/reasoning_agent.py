@@ -72,8 +72,9 @@ class ReasoningAgentTemplate(MCPEnabledBase):
             agent_name=agent_name,
             agent_description=agent_description,    
             agent_instructions=agent_instructions,
+            model_deployment_name=model_deployment_name,
         )
-        self.model_deployment_name = model_deployment_name
+
 
         self.search_config = search_config
         self.max_search_docs = max_search_docs
@@ -106,22 +107,20 @@ class ReasoningAgentTemplate(MCPEnabledBase):
             # Prepare tools for the agent
             tools = self._prepare_tools()
 
-            agent = await self.get_database_team_agent()
-            if not agent:
-                self._agent = ChatAgent(
-                    chat_client=self.client,
-                    instructions=self.base_instructions,
-                    name=self.agent_name,
-                    description=self.agent_description,
-                    tools=tools if tools else None,
-                    tool_choice="auto" if tools else "none",
-                    temperature=1.0,  # Reasoning models use fixed temperature
-                    model_id=self.model_deployment_name,
-                )
+            chatClient = await self.get_database_team_agent()
+            
+            self._agent = ChatAgent(
+                chat_client = chatClient or self.client,
+                instructions=self.agent_instructions,
+                name=self.agent_name,
+                description=self.agent_description,
+                tools=tools if tools else None,
+                tool_choice="auto" if tools else "none",
+                temperature=1.0,  # Reasoning models use fixed temperature
+                model_id=self.model_deployment_name,
+            )
+            if not chatClient:
                 await self.save_database_team_agent()
-                    
-            else:
-                self._agent = agent
                 self.logger.info("Using existing ReasoningAgent '%s'", self.agent_name)
             # Register agent globally
             try:
