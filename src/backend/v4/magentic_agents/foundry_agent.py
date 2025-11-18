@@ -235,12 +235,12 @@ class FoundryAgentTemplate(AzureAgentBase):
 
                 # In Azure Search raw tool path, tools/tool_choice are handled server-side.
                 self._agent = ChatAgent(
-                    chat_client=chat_client,
+                    chat_client=self.get_chat_client(chatClient),
                     instructions=self.agent_instructions,
                     name=self.agent_name,
                     description=self.agent_description,
                     tool_choice="required",  # Force usage
-                    temperature=0.7,
+                    temperature=1.0,
                     model_id=self.model_deployment_name,
                 )
             else:
