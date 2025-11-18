@@ -3,6 +3,8 @@
 import logging
 
 # Converted import path (agent_framework version of FoundryAgentTemplate)
+from common.database.database_base import DatabaseBase
+from common.models.messages_af import TeamConfiguration
 from v4.common.services.team_service import TeamService
 from v4.magentic_agents.foundry_agent import FoundryAgentTemplate  # formerly v4.magentic_agents.foundry_agent
 from v4.config.agent_registry import agent_registry
@@ -34,7 +36,7 @@ async def find_first_available_team(team_service: TeamService, user_id: str) -> 
     print("No teams found in priority order")
     return None
 
-async def create_RAI_agent() -> FoundryAgentTemplate:
+async def create_RAI_agent(team: TeamConfiguration, memory_store: DatabaseBase) -> FoundryAgentTemplate:
     """Create and initialize a FoundryAgentTemplate for Responsible AI (RAI) checks."""
     agent_name = "RAIAgent"
     agent_description = "A comprehensive research assistant for integration testing"
@@ -53,6 +55,9 @@ async def create_RAI_agent() -> FoundryAgentTemplate:
     )
     
     model_deployment_name = config.AZURE_OPENAI_DEPLOYMENT_NAME
+    team.team_id = "rai_team"  # Use a fixed team ID for RAI agent
+    team.name = "RAI Team"
+    team.description = "Team responsible for Responsible AI checks"
     agent = FoundryAgentTemplate(
         agent_name=agent_name,
         agent_description=agent_description,
@@ -62,6 +67,8 @@ async def create_RAI_agent() -> FoundryAgentTemplate:
         project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
         mcp_config=None,
         search_config=None,
+        team_config=team,
+        memory_store=memory_store,
     )
 
     await agent.open()
@@ -104,14 +111,14 @@ async def _get_agent_response(agent: FoundryAgentTemplate, query: str) -> str:
         return "TRUE"  # Default to blocking on error
 
 
-async def rai_success(description: str) -> bool:
+async def rai_success(description: str, team_config: TeamConfiguration,  memory_store: DatabaseBase) -> bool:
     """
     Run a RAI compliance check on the provided description using the RAIAgent.
     Returns True if content is safe (should proceed), False if it should be blocked.
     """
     agent: FoundryAgentTemplate | None = None
     try:
-        agent = await create_RAI_agent()
+        agent = await create_RAI_agent(team_config, memory_store)
         if not agent:
             logging.error("Failed to instantiate RAIAgent.")
             return False

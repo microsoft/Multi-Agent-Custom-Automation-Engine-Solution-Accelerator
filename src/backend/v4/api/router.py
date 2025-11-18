@@ -229,8 +229,25 @@ async def process_request(
               type: string
               description: Error message
     """
-
-    if not await rai_success(input_task.description):
+    try:
+        memory_store = await DatabaseFactory.get_database(user_id=user_id)
+        user_current_team = await memory_store.get_current_team(user_id=user_id)
+        team_id = None
+        if user_current_team:
+            team_id = user_current_team.team_id
+        team = await memory_store.get_team_by_id(team_id=team_id)
+        if not team:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Team configuration '{team_id}' not found or access denied",
+            )
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error retrieving team configuration: {e}",
+        ) from e
+    
+    if not await rai_success(input_task.description, team, memory_store):
         track_event_if_configured(
             "RAI failed",
             {
@@ -264,17 +281,6 @@ async def process_request(
     try:
         plan_id = str(uuid.uuid4())
         # Initialize memory store and service
-        memory_store = await DatabaseFactory.get_database(user_id=user_id)
-        user_current_team = await memory_store.get_current_team(user_id=user_id)
-        team_id = None
-        if user_current_team:
-            team_id = user_current_team.team_id
-        team = await memory_store.get_team_by_id(team_id=team_id)
-        if not team:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Team configuration '{team_id}' not found or access denied",
-            )
         plan = Plan(
             id=plan_id,
             plan_id=plan_id,
@@ -507,11 +513,28 @@ async def user_clarification(
         raise HTTPException(
             status_code=401, detail="Missing or invalid user information"
         )
+    try:
+        memory_store = await DatabaseFactory.get_database(user_id=user_id)
+        user_current_team = await memory_store.get_current_team(user_id=user_id)
+        team_id = None
+        if user_current_team:
+            team_id = user_current_team.team_id
+        team = await memory_store.get_team_by_id(team_id=team_id)
+        if not team:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Team configuration '{team_id}' not found or access denied",
+            )
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error retrieving team configuration: {e}",
+        ) from e
     # Set the approval in the orchestration config
     if user_id and human_feedback.request_id:
         # validate rai
         if human_feedback.answer is not None or human_feedback.answer != "":
-            if not await rai_success(human_feedback.answer):
+            if not await rai_success(human_feedback.answer, team, memory_store):
                 track_event_if_configured(
                     "RAI failed",
                     {
