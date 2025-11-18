@@ -107,10 +107,10 @@ class OrchestrationManager:
                 name = f"agent_{len(participants) + 1}"
 
             # Extract the inner ChatAgent for wrapper templates
-            # FoundryAgentTemplate and ReasoningAgentTemplate wrap a ChatAgent in self._agent
+            # FoundryAgentTemplate wrap a ChatAgent in self._agent
             # ProxyAgent directly extends BaseAgent and can be used as-is
             if hasattr(ag, "_agent") and ag._agent is not None:
-                # This is a wrapper (FoundryAgentTemplate or ReasoningAgentTemplate)
+                # This is a wrapper (FoundryAgentTemplate)
                 # Use the inner ChatAgent which implements AgentProtocol
                 participants[name] = ag._agent
                 cls.logger.debug("Added participant '%s' (extracted inner agent)", name)

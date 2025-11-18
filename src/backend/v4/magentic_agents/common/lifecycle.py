@@ -189,7 +189,7 @@ class MCPEnabledBase:
             await self.memory_store.add_team_agent(currentAgent)
 
         except Exception as ex:
-            self.logger.error("Failed to save ReasoningAgentTemplate: %s", ex)
+            self.logger.error("Failed to save save database: %s", ex)
             
         
     async def _prepare_mcp_tool(self) -> None:
@@ -247,35 +247,35 @@ class AzureAgentBase(MCPEnabledBase):
 
 
 
-    async def open(self) -> "AzureAgentBase":
-        if self._stack is not None:
-            return self
-        self._stack = AsyncExitStack()
+    # async def open(self) -> "AzureAgentBase":
+    #     if self._stack is not None:
+    #         return self
+    #     self._stack = AsyncExitStack()
 
-        # Acquire credential
-        self.creds = DefaultAzureCredential()
-        if self._stack:
-            await self._stack.enter_async_context(self.creds)
-        # Create AgentsClient
-        self.client = AgentsClient(
-            endpoint=self.project_endpoint,
-            credential=self.creds,
-        )
-        if self._stack:
-            await self._stack.enter_async_context(self.client)
-        # Prepare MCP
-        await self._prepare_mcp_tool()
+    #     # Acquire credential
+    #     self.creds = DefaultAzureCredential()
+    #     if self._stack:
+    #         await self._stack.enter_async_context(self.creds)
+    #     # Create AgentsClient
+    #     self.client = AgentsClient(
+    #         endpoint=self.project_endpoint,
+    #         credential=self.creds,
+    #     )
+    #     if self._stack:
+    #         await self._stack.enter_async_context(self.client)
+    #     # Prepare MCP
+    #     await self._prepare_mcp_tool()
 
-        # Let subclass build agent client
-        await self._after_open()
+    #     # Let subclass build agent client
+    #     await self._after_open()
 
-        # Register agent (best effort)
-        try:
-            agent_registry.register_agent(self)
-        except Exception:
-            pass
+    #     # Register agent (best effort)
+    #     try:
+    #         agent_registry.register_agent(self)
+    #     except Exception:
+    #         pass
 
-        return self
+    #     return self
 
     async def close(self) -> None:
         """

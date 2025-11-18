@@ -254,7 +254,7 @@ class FoundryAgentTemplate(AzureAgentBase):
                     description=self.agent_description,
                     tools=tools if tools else None,
                     tool_choice="auto" if tools else "none",
-                    temperature=0.7,
+                    temperature=1.0,
                     model_id=self.model_deployment_name,
                 )
 

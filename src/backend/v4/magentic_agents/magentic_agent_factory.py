@@ -16,7 +16,6 @@ from v4.magentic_agents.models.agent_models import MCPConfig, SearchConfig
 # from v4.magentic_agents.models.agent_models import (BingConfig, MCPConfig,
 #                                                     SearchConfig)
 from v4.magentic_agents.proxy_agent import ProxyAgent
-from v4.magentic_agents.reasoning_agent import ReasoningAgentTemplate
 
 
 class UnsupportedModelError(Exception):
@@ -41,7 +40,7 @@ class MagenticAgentFactory:
     #     with open(file_path, 'r') as f:
     #         data = json.load(f)
     #     return json.loads(json.dumps(data), object_hook=lambda d: SimpleNamespace(**d))
-    
+
     # Ensure only an explicit boolean True in the source sets this flag.
     def extract_use_reasoning(self, agent_obj):
         # Support both dict and attribute-style objects
@@ -59,7 +58,7 @@ class MagenticAgentFactory:
         agent_obj: SimpleNamespace,
         team_config: TeamConfiguration,
         memory_store: DatabaseBase,
-    ) -> Union[FoundryAgentTemplate, ReasoningAgentTemplate, ProxyAgent]:
+    ) -> Union[FoundryAgentTemplate, ProxyAgent]:
         """
         Create an agent from configuration object.
 
@@ -91,16 +90,16 @@ class MagenticAgentFactory:
             )
 
         # Determine which template to use
-            # Usage
+        # Usage
         use_reasoning = self.extract_use_reasoning(agent_obj)
 
-        # Validate reasoning template constraints
+        # Validate reasoning constraints
         if use_reasoning:
             if getattr(agent_obj, "use_bing", False) or getattr(
                 agent_obj, "coding_tools", False
             ):
                 raise InvalidConfigurationError(
-                    f"ReasoningAgentTemplate cannot use Bing search or coding tools. "
+                    f"Agent cannot use Bing search or coding tools. "
                     f"Agent '{agent_obj.name}' has use_bing={getattr(agent_obj, 'use_bing', False)}, "
                     f"coding_tools={getattr(agent_obj, 'coding_tools', False)}"
                 )
@@ -118,44 +117,30 @@ class MagenticAgentFactory:
         # bing_config = BingConfig.from_env() if getattr(agent_obj, 'use_bing', False) else None
 
         self.logger.info(
-            f"Creating agent '{agent_obj.name}' with model '{deployment_name}' {index_name} "
-            f"(Template: {'Reasoning' if use_reasoning else 'Foundry'})"
+            "Creating agent '%s' with model '%s' %s (Template: %s)",
+            agent_obj.name,
+            deployment_name,
+            index_name,
+            "Reasoning" if use_reasoning else "Foundry",
         )
 
-        # Create appropriate agent
-        if use_reasoning:
-            # Get reasoning specific configuration
-            project_endpoint = config.AZURE_AI_PROJECT_ENDPOINT
-            agent = ReasoningAgentTemplate(
-                agent_name=agent_obj.name,
-                agent_description=getattr(agent_obj, "description", ""),
-                agent_instructions=getattr(agent_obj, "system_message", ""),
-                model_deployment_name=deployment_name,
-                project_endpoint=project_endpoint,  # type: ignore
-                search_config=search_config,
-                mcp_config=mcp_config,
-                team_service=self.team_service,
-                team_config=team_config,
-                memory_store=memory_store,
-            )
-        else:
-            agent = FoundryAgentTemplate(
-                agent_name=agent_obj.name,
-                agent_description=getattr(agent_obj, "description", ""),
-                agent_instructions=getattr(agent_obj, "system_message", ""),
-                model_deployment_name=deployment_name,
-                enable_code_interpreter=getattr(agent_obj, "coding_tools", False),
-                project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
-                mcp_config=mcp_config,
-                search_config=search_config,
-                team_service=self.team_service,
-                team_config=team_config,
-                memory_store=memory_store,
-            )
+        agent = FoundryAgentTemplate(
+            agent_name=agent_obj.name,
+            agent_description=getattr(agent_obj, "description", ""),
+            agent_instructions=getattr(agent_obj, "system_message", ""),
+            model_deployment_name=deployment_name,
+            enable_code_interpreter=getattr(agent_obj, "coding_tools", False),
+            project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
+            mcp_config=mcp_config,
+            search_config=search_config,
+            team_service=self.team_service,
+            team_config=team_config,
+            memory_store=memory_store,
+        )
 
         await agent.open()
         self.logger.info(
-            f"Successfully created and initialized agent '{agent_obj.name}'"
+            "Successfully created and initialized agent '%s'", agent_obj.name
         )
         return agent
 
@@ -184,7 +169,10 @@ class MagenticAgentFactory:
             for i, agent_cfg in enumerate(team_config_input.agents, 1):
                 try:
                     self.logger.info(
-                        f"Creating agent {i}/{len(team_config_input.agents)}: {agent_cfg.name}"
+                        "Creating agent %d/%d: %s",
+                        i,
+                        len(team_config_input.agents),
+                        agent_cfg.name
                     )
 
                     agent = await self.create_agent_from_config(
@@ -194,7 +182,10 @@ class MagenticAgentFactory:
                     self._agent_list.append(agent)  # Keep track for cleanup
 
                     self.logger.info(
-                        f"✅ Agent {i}/{len(team_config_input.agents)} created: {agent_cfg.name}"
+                        "✅ Agent %d/%d created: %s",
+                        i,
+                        len(team_config_input.agents),
+                        agent_cfg.name
                     )
 
                 except (UnsupportedModelError, InvalidConfigurationError) as e:
@@ -207,7 +198,10 @@ class MagenticAgentFactory:
                     continue
 
             self.logger.info(
-                f"Successfully created {len(initalized_agents)}/{len(team_config_input.agents)} agents for team '{team_config_input.name}'"
+                "Successfully created %d/%d agents for team '%s'",
+                len(initalized_agents),
+                len(team_config_input.agents),
+                team_config_input.name
             )
             return initalized_agents
 
