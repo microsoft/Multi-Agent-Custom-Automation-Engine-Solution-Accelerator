@@ -7,12 +7,11 @@ from types import SimpleNamespace
 from typing import List, Optional, Union
 
 from common.config.app_config import config
-from common.models.messages_af import TeamConfiguration
 from common.database.database_base import DatabaseBase
+from common.models.messages_af import TeamConfiguration
 from v4.common.services.team_service import TeamService
 from v4.magentic_agents.foundry_agent import FoundryAgentTemplate
 from v4.magentic_agents.models.agent_models import MCPConfig, SearchConfig
-
 # from v4.magentic_agents.models.agent_models import (BingConfig, MCPConfig,
 #                                                     SearchConfig)
 from v4.magentic_agents.proxy_agent import ProxyAgent
@@ -128,6 +127,7 @@ class MagenticAgentFactory:
             agent_name=agent_obj.name,
             agent_description=getattr(agent_obj, "description", ""),
             agent_instructions=getattr(agent_obj, "system_message", ""),
+            use_reasoning=use_reasoning,
             model_deployment_name=deployment_name,
             enable_code_interpreter=getattr(agent_obj, "coding_tools", False),
             project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,

@@ -1,34 +1,27 @@
 from __future__ import annotations
 
 import logging
-import os
-from contextlib import AsyncExitStack
 import secrets
 import string
+from contextlib import AsyncExitStack
 from typing import Any, Optional
 
 from agent_framework import (
-    AggregateContextProvider,
     ChatAgent,
-    ChatClientProtocol,
-    ChatMessage,
-    ChatMessageStoreProtocol,
-    ChatOptions,
-    ContextProvider,
     HostedMCPTool,
     MCPStreamableHTTPTool,
-    Middleware,
-    Role,
-    ToolMode,
-    ToolProtocol,
 )
 
 # from agent_framework.azure import AzureAIAgentClient
 from agent_framework_azure_ai import AzureAIAgentClient
 from azure.ai.agents.aio import AgentsClient
 from azure.identity.aio import DefaultAzureCredential
-from common.models.messages_af import CurrentTeamAgent, TeamConfiguration
 from common.database.database_base import DatabaseBase
+from common.models.messages_af import CurrentTeamAgent, TeamConfiguration
+from common.utils.utils_agents import (
+    generate_assistant_id,
+    get_database_team_agent_id,
+)
 from v4.common.services.team_service import TeamService
 from v4.config.agent_registry import agent_registry
 from v4.magentic_agents.models.agent_models import MCPConfig
@@ -157,19 +150,6 @@ class MCPEnabledBase:
             extra={"agent_id": chat_client.agent_id},
         )
         return chat_client
-    def generate_assistant_id(self, prefix: str = "asst_", length: int = 24) -> str:
-        """
-        Generate a unique ID like 'asst_jRgR5t2U7o8nUPkNGv5HWOgV'.
-
-        - prefix: leading string (defaults to 'asst_')
-        - length: number of random characters after the prefix
-        """
-        # URL-safe characters similar to what OpenAI-style IDs use
-        alphabet = string.ascii_letters + string.digits  # a-zA-Z0-9
-
-        # cryptographically strong randomness
-        random_part = "".join(secrets.choice(alphabet) for _ in range(length))
-        return f"{prefix}{random_part}"
 
     def get_agent_id(self, chat_client) -> str:
         """Return the underlying agent ID."""
@@ -181,7 +161,7 @@ class MCPEnabledBase:
             and self._agent.chat_client.agent_id is not None
         ):
             return self._agent.chat_client.agent_id  # type: ignore
-        id = self.generate_assistant_id()
+        id = generate_assistant_id()
         self.logger.info("Generated new agent ID: %s", id)
         return id
 
@@ -189,17 +169,16 @@ class MCPEnabledBase:
         """Retrieve existing team agent from database, if any."""
         chat_client = None
         try:
-            currentAgent = await self.memory_store.get_team_agent(
-                team_id=self.team_config.team_id, agent_name=self.agent_name
+            agent_id = await get_database_team_agent_id(
+                self.memory_store, self.team_config, self.agent_name
             )
-            if currentAgent and currentAgent.agent_foundry_id:
-                agent = await self.client.get_agent(
-                    agent_id=currentAgent.agent_foundry_id
-                )
-                if agent and agent.agent_id is not None:
+
+            if agent_id:
+                agent = await self.client.get_agent(agent_id=agent_id)
+                if agent and agent.id is not None:
                     chat_client = AzureAIAgentClient(
                         project_endpoint=self.project_endpoint,
-                        agent_id=agent.agent_id,
+                        agent_id=agent.id,
                         model_deployment_name=self.model_deployment_name,
                         async_credential=self.creds,
                     )
@@ -213,7 +192,7 @@ class MCPEnabledBase:
     async def save_database_team_agent(self) -> None:
         """Save current team agent to database."""
         try:
-            if self._agent.chat_client.agent_id is None:
+            if self._agent.id is None:
                 self.logger.error("Cannot save database team agent: agent_id is None")
                 return
 
@@ -221,7 +200,7 @@ class MCPEnabledBase:
                 team_id=self.team_config.team_id,
                 team_name=self.team_config.name,
                 agent_name=self.agent_name,
-                agent_foundry_id=self._agent.chat_client.agent_id,
+                agent_foundry_id=self._agent.id,
                 agent_description=self.agent_description,
                 agent_instructions=self.agent_instructions,
             )

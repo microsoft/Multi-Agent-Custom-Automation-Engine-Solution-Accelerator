@@ -103,6 +103,7 @@ class TeamService:
                 team_id=unique_team_id,  # Use generated GUID
                 name=json_data["name"],
                 status=json_data["status"],
+                deployment_name=json_data.get("deployment_name", ""),
                 created=current_timestamp,  # Use generated timestamp
                 created_by=user_id,  # Use user_id who uploaded the config
                 agents=agents,

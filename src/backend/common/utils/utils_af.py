@@ -1,15 +1,19 @@
-"""Utility functions for agent_framework-based integration and agent management (converted from agent framework )."""
+"""Utility functions for agent_framework-based integration and agent management."""
 
 import logging
+import uuid
+from common.config.app_config import config
 
-# Converted import path (agent_framework version of FoundryAgentTemplate)
 from common.database.database_base import DatabaseBase
 from common.models.messages_af import TeamConfiguration
 from v4.common.services.team_service import TeamService
-from v4.magentic_agents.foundry_agent import FoundryAgentTemplate  # formerly v4.magentic_agents.foundry_agent
 from v4.config.agent_registry import agent_registry
-from common.config.app_config import config
+from v4.magentic_agents.foundry_agent import (
+    FoundryAgentTemplate,
+)  # formerly v4.magentic_agents.foundry_agent
+
 logging.basicConfig(level=logging.INFO)
+
 
 async def find_first_available_team(team_service: TeamService, user_id: str) -> str:
     """
@@ -36,7 +40,10 @@ async def find_first_available_team(team_service: TeamService, user_id: str) -> 
     print("No teams found in priority order")
     return None
 
-async def create_RAI_agent(team: TeamConfiguration, memory_store: DatabaseBase) -> FoundryAgentTemplate:
+
+async def create_RAI_agent(
+    team: TeamConfiguration, memory_store: DatabaseBase
+) -> FoundryAgentTemplate:
     """Create and initialize a FoundryAgentTemplate for Responsible AI (RAI) checks."""
     agent_name = "RAIAgent"
     agent_description = "A comprehensive research assistant for integration testing"
@@ -53,7 +60,7 @@ async def create_RAI_agent(team: TeamConfiguration, memory_store: DatabaseBase) 
         "- Is completely meaningless, incoherent, or appears to be spam\n"
         "Respond with 'TRUE' if the input violates any rules and should be blocked, otherwise respond with 'FALSE'."
     )
-    
+
     model_deployment_name = config.AZURE_OPENAI_DEPLOYMENT_NAME
     team.team_id = "rai_team"  # Use a fixed team ID for RAI agent
     team.name = "RAI Team"
@@ -62,6 +69,7 @@ async def create_RAI_agent(team: TeamConfiguration, memory_store: DatabaseBase) 
         agent_name=agent_name,
         agent_description=agent_description,
         agent_instructions=agent_instructions,
+        use_reasoning=False,
         model_deployment_name=model_deployment_name,
         enable_code_interpreter=False,
         project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
@@ -111,7 +119,9 @@ async def _get_agent_response(agent: FoundryAgentTemplate, query: str) -> str:
         return "TRUE"  # Default to blocking on error
 
 
-async def rai_success(description: str, team_config: TeamConfiguration,  memory_store: DatabaseBase) -> bool:
+async def rai_success(
+    description: str, team_config: TeamConfiguration, memory_store: DatabaseBase
+) -> bool:
     """
     Run a RAI compliance check on the provided description using the RAIAgent.
     Returns True if content is safe (should proceed), False if it should be blocked.
@@ -145,7 +155,9 @@ async def rai_success(description: str, team_config: TeamConfiguration,  memory_
                 pass
 
 
-async def rai_validate_team_config(team_config_json: dict, team_config: TeamConfiguration,  memory_store: DatabaseBase) -> tuple[bool, str]:
+async def rai_validate_team_config(
+    team_config_json: dict, memory_store: DatabaseBase
+) -> tuple[bool, str]:
     """
     Validate a team configuration for RAI compliance.
 
@@ -187,6 +199,22 @@ async def rai_validate_team_config(team_config_json: dict, team_config: TeamConf
         if not combined:
             return False, "Team configuration contains no readable text content."
 
+        team_config = TeamConfiguration(
+            id=str(uuid.uuid4()),
+            session_id=str(uuid.uuid4()),
+            team_id=str(uuid.uuid4()),
+            name="Uploaded Team",
+            status="active",
+            created=str(uuid.uuid4()),
+            created_by=str(uuid.uuid4()),
+            deployment_name="",
+            agents=[],
+            description="",
+            logo="",
+            plan="",
+            starting_tasks=[],
+            user_id=str(uuid.uuid4()),
+        )
         if not await rai_success(combined, team_config, memory_store):
             return (
                 False,

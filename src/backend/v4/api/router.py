@@ -438,13 +438,14 @@ async def plan_approval(
                 return {"status": "approval recorded"}
             else:
                 logging.warning(
-                    f"No orchestration or plan found for plan_id: {human_feedback.m_plan_id}"
+                    "No orchestration or plan found for plan_id: %s",
+                    human_feedback.m_plan_id
                 )
                 raise HTTPException(
                     status_code=404, detail="No active plan found for approval"
                 )
     except Exception as e:
-        logging.error(f"Error processing plan approval: {e}")
+        logging.error("Error processing plan approval: %s", e)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -710,16 +711,7 @@ async def upload_team_config(
       raise HTTPException(status_code=400, detail="no user found")
     try:
         memory_store = await DatabaseFactory.get_database(user_id=user_id)
-        user_current_team = await memory_store.get_current_team(user_id=user_id)
-        team_id = None
-        if user_current_team:
-            team_id = user_current_team.team_id
-        team = await memory_store.get_team_by_id(team_id=team_id)
-        if not team:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Team configuration '{team_id}' not found or access denied",
-            )
+
     except Exception as e:
         raise HTTPException(
             status_code=400,
@@ -740,11 +732,11 @@ async def upload_team_config(
         except json.JSONDecodeError as e:
             raise HTTPException(
                 status_code=400, detail=f"Invalid JSON format: {str(e)}"
-            )
+            ) from e
 
         # Validate content with RAI before processing
         if not team_id:
-            rai_valid, rai_error = await rai_validate_team_config(json_data, team, memory_store)
+            rai_valid, rai_error = await rai_validate_team_config(json_data, memory_store)
             if not rai_valid:
                 track_event_if_configured(
                     "Team configuration RAI validation failed",
@@ -819,7 +811,7 @@ async def upload_team_config(
                 json_data, user_id
             )
         except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            raise HTTPException(status_code=400, detail=str(e)) from e
 
         # Save the configuration
         try:
@@ -831,7 +823,7 @@ async def upload_team_config(
         except ValueError as e:
             raise HTTPException(
                 status_code=500, detail=f"Failed to save configuration: {str(e)}"
-            )
+            ) from e
 
         track_event_if_configured(
             "Team configuration uploaded",
@@ -855,7 +847,7 @@ async def upload_team_config(
     except HTTPException:
         raise
     except Exception as e:
-        logging.error(f"Unexpected error uploading team configuration: {str(e)}")
+        logging.error("Unexpected error uploading team configuration: %s", str(e))
         raise HTTPException(status_code=500, detail="Internal server error occurred")
 
 
