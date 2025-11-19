@@ -84,7 +84,7 @@ class OrchestrationManager:
             chat_client = AzureAIAgentClient(
                 project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
                 model_deployment_name=team_config.deployment_name,
-                agent_id=agent_id,
+               # agent_id=agent_id,
                 agent_name=agent_name,
                 async_credential=credential,
             )
