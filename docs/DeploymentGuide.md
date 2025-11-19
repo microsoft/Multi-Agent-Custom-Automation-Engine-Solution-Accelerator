@@ -225,6 +225,27 @@ To adjust quota settings, follow these [steps](./AzureGPTQuotaSettings.md).
 
 Once you've opened the project in [Codespaces](#github-codespaces), [Dev Containers](#vs-code-dev-containers), or [locally](#local-environment), you can deploy it to Azure by following these steps:
 
+#### Important: Environment Management for Redeployments
+
+> **⚠️ Critical:** If you're redeploying or have deployed this solution before, you **must** create a fresh environment to avoid conflicts and deployment failures.
+
+**Choose one of the following before deployment:**
+
+**Option A: Create a completely new environment (Recommended)**
+```shell
+azd env new <new-environment-name>
+```
+
+**Option B: Reinitialize in a new directory**
+```shell
+# Navigate to a new directory
+cd ../my-new-deployment
+azd init -t microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/
+```
+
+> **💡 Why is this needed?** Azure resources maintain state information tied to your environment. Reusing an old environment can cause naming conflicts, permission issues, and deployment failures.
+
+#### Deployment the solution
 1. Login to Azure:
 
    ```shell
