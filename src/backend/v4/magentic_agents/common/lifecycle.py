@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 import os
 from contextlib import AsyncExitStack
+import secrets
+import string
 from typing import Any, Optional
 
 from agent_framework import (
@@ -155,6 +157,33 @@ class MCPEnabledBase:
             extra={"agent_id": chat_client.agent_id},
         )
         return chat_client
+    def generate_assistant_id(self, prefix: str = "asst_", length: int = 24) -> str:
+        """
+        Generate a unique ID like 'asst_jRgR5t2U7o8nUPkNGv5HWOgV'.
+
+        - prefix: leading string (defaults to 'asst_')
+        - length: number of random characters after the prefix
+        """
+        # URL-safe characters similar to what OpenAI-style IDs use
+        alphabet = string.ascii_letters + string.digits  # a-zA-Z0-9
+
+        # cryptographically strong randomness
+        random_part = "".join(secrets.choice(alphabet) for _ in range(length))
+        return f"{prefix}{random_part}"
+
+    def get_agent_id(self, chat_client) -> str:
+        """Return the underlying agent ID."""
+        if chat_client and chat_client.agent_id is not None:
+            return chat_client.agent_id
+        if (
+            self._agent
+            and self._agent.chat_client
+            and self._agent.chat_client.agent_id is not None
+        ):
+            return self._agent.chat_client.agent_id  # type: ignore
+        id = self.generate_assistant_id()
+        self.logger.info("Generated new agent ID: %s", id)
+        return id
 
     async def get_database_team_agent(self) -> Optional[AzureAIAgentClient]:
         """Retrieve existing team agent from database, if any."""

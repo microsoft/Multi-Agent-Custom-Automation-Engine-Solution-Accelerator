@@ -235,7 +235,8 @@ class FoundryAgentTemplate(AzureAgentBase):
 
                 # In Azure Search raw tool path, tools/tool_choice are handled server-side.
                 self._agent = ChatAgent(
-                    chat_client=self.get_chat_client(chatClient),
+                    id=self.get_agent_id(chat_client),
+                    chat_client=self.get_chat_client(chat_client),
                     instructions=self.agent_instructions,
                     name=self.agent_name,
                     description=self.agent_description,
@@ -248,6 +249,7 @@ class FoundryAgentTemplate(AzureAgentBase):
                 self.logger.info("Initializing agent in MCP mode.")
                 tools = await self._collect_tools()
                 self._agent = ChatAgent(
+                    id=self.get_agent_id(chatClient),
                     chat_client=self.get_chat_client(chatClient),
                     instructions=self.agent_instructions,
                     name=self.agent_name,
