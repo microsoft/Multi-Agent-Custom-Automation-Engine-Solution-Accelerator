@@ -21,6 +21,11 @@ from agent_framework import (
 from common.config.app_config import config
 from common.models.messages_af import TeamConfiguration
 
+from src.backend.common.database.database_base import DatabaseBase
+from src.backend.common.utils.utils_af import (
+    generate_assistant_id,
+    get_database_team_agent_id,
+)
 from v4.common.services.team_service import TeamService
 from v4.callbacks.response_handlers import (
     agent_response_callback,
@@ -45,7 +50,13 @@ class OrchestrationManager:
     # Orchestration construction
     # ---------------------------
     @classmethod
-    async def init_orchestration(cls, agents: List, user_id: str | None = None):
+    async def init_orchestration(
+        cls,
+        agents: List,
+        team_config: TeamConfiguration,
+        memory_store: DatabaseBase,
+        user_id: str | None = None,
+    ):
         """
         Initialize a Magentic workflow with:
           - Provided agents (participants)
@@ -64,16 +75,23 @@ class OrchestrationManager:
 
         # Create Azure AI Agent client for orchestration using config
         # This replaces AzureChatCompletion from SK
+        agent_name = team_config.name if team_config.name else "OrchestratorAgent"
+        db_agent_id = await get_database_team_agent_id(
+            memory_store, team_config, agent_name
+        )
+        agent_id = db_agent_id or generate_assistant_id()
         try:
             chat_client = AzureAIAgentClient(
                 project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
-                model_deployment_name=config.AZURE_OPENAI_DEPLOYMENT_NAME,
+                model_deployment_name=team_config.deployment_name,
+                agent_id=agent_id,
+                agent_name=agent_name,
                 async_credential=credential,
             )
 
             cls.logger.info(
                 "Created AzureAIAgentClient for orchestration with model '%s' at endpoint '%s'",
-                config.AZURE_OPENAI_DEPLOYMENT_NAME,
+                team_config.deployment_name,
                 config.AZURE_AI_PROJECT_ENDPOINT,
             )
         except Exception as e:
@@ -150,7 +168,7 @@ class OrchestrationManager:
         user_id: str,
         team_config: TeamConfiguration,
         team_switched: bool,
-        team_service:TeamService = None,
+        team_service: TeamService = None,
     ):
         """
         Return an existing workflow for the user or create a new one if:
@@ -194,7 +212,9 @@ class OrchestrationManager:
             try:
                 cls.logger.info("Initializing new orchestration for user '%s'", user_id)
                 orchestration_config.orchestrations[user_id] = (
-                    await cls.init_orchestration(agents, user_id)
+                    await cls.init_orchestration(
+                        agents, team_config, team_service.memory_context, user_id
+                    )
                 )
             except Exception as e:
                 cls.logger.error(

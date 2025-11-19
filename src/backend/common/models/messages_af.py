@@ -196,6 +196,7 @@ class TeamConfiguration(BaseDataModel):
     status: str
     created: str
     created_by: str
+    deployment_name: str
     agents: List[TeamAgent] = Field(default_factory=list)
     description: str = ""
     logo: str = ""
