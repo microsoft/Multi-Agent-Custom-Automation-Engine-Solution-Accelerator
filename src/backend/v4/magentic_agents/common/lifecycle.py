@@ -18,7 +18,7 @@ from azure.ai.agents.aio import AgentsClient
 from azure.identity.aio import DefaultAzureCredential
 from common.database.database_base import DatabaseBase
 from common.models.messages_af import CurrentTeamAgent, TeamConfiguration
-from src.backend.common.utils.utils_af import (
+from common.utils.utils_af import (
     generate_assistant_id,
     get_database_team_agent_id,
 )

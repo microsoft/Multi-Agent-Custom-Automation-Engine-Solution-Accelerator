@@ -21,8 +21,8 @@ from agent_framework import (
 from common.config.app_config import config
 from common.models.messages_af import TeamConfiguration
 
-from src.backend.common.database.database_base import DatabaseBase
-from src.backend.common.utils.utils_af import (
+from common.database.database_base import DatabaseBase
+from common.utils.utils_af import (
     generate_assistant_id,
     get_database_team_agent_id,
 )
