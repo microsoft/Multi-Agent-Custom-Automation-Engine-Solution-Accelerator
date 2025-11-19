@@ -1,15 +1,7 @@
 """Utility functions for agent_framework-based integration and agent management."""
 
-from http import client
 import logging
-import secrets
-import string
-from typing import Optional  # <-- Add this import
-
-from tomlkit import (
-    string as toml_string,
-)  # <-- If you need tomlkit.string elsewhere, alias it
-
+import uuid
 from common.config.app_config import config
 
 from common.database.database_base import DatabaseBase
@@ -206,7 +198,23 @@ async def rai_validate_team_config(
         combined = " ".join(text_content).strip()
         if not combined:
             return False, "Team configuration contains no readable text content."
-        team_config = TeamConfiguration(**team_config_json)
+
+        team_config = TeamConfiguration(
+            id=str(uuid.uuid4()),
+            session_id=str(uuid.uuid4()),
+            team_id=str(uuid.uuid4()),
+            name="Uploaded Team",
+            status="active",
+            created=str(uuid.uuid4()),
+            created_by=str(uuid.uuid4()),
+            deployment_name="",
+            agents=[],
+            description="",
+            logo="",
+            plan="",
+            starting_tasks=[],
+            user_id=str(uuid.uuid4()),
+        )
         if not await rai_success(combined, team_config, memory_store):
             return (
                 False,
