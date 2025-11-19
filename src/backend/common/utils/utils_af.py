@@ -2,13 +2,15 @@
 
 import logging
 
+from common.config.app_config import config
 # Converted import path (agent_framework version of FoundryAgentTemplate)
 from common.database.database_base import DatabaseBase
 from common.models.messages_af import TeamConfiguration
 from v4.common.services.team_service import TeamService
-from v4.magentic_agents.foundry_agent import FoundryAgentTemplate  # formerly v4.magentic_agents.foundry_agent
 from v4.config.agent_registry import agent_registry
-from common.config.app_config import config
+from v4.magentic_agents.foundry_agent import \
+    FoundryAgentTemplate  # formerly v4.magentic_agents.foundry_agent
+
 logging.basicConfig(level=logging.INFO)
 
 async def find_first_available_team(team_service: TeamService, user_id: str) -> str:
@@ -62,6 +64,7 @@ async def create_RAI_agent(team: TeamConfiguration, memory_store: DatabaseBase) 
         agent_name=agent_name,
         agent_description=agent_description,
         agent_instructions=agent_instructions,
+        use_reasoning=False,
         model_deployment_name=model_deployment_name,
         enable_code_interpreter=False,
         project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,

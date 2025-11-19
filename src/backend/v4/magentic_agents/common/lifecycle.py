@@ -2,33 +2,23 @@ from __future__ import annotations
 
 import logging
 import os
-from contextlib import AsyncExitStack
 import secrets
 import string
+from contextlib import AsyncExitStack
 from typing import Any, Optional
 
-from agent_framework import (
-    AggregateContextProvider,
-    ChatAgent,
-    ChatClientProtocol,
-    ChatMessage,
-    ChatMessageStoreProtocol,
-    ChatOptions,
-    ContextProvider,
-    HostedMCPTool,
-    MCPStreamableHTTPTool,
-    Middleware,
-    Role,
-    ToolMode,
-    ToolProtocol,
-)
-
+from agent_framework import (AggregateContextProvider, ChatAgent,
+                             ChatClientProtocol, ChatMessage,
+                             ChatMessageStoreProtocol, ChatOptions,
+                             ContextProvider, HostedMCPTool,
+                             MCPStreamableHTTPTool, Middleware, Role, ToolMode,
+                             ToolProtocol)
 # from agent_framework.azure import AzureAIAgentClient
 from agent_framework_azure_ai import AzureAIAgentClient
 from azure.ai.agents.aio import AgentsClient
 from azure.identity.aio import DefaultAzureCredential
-from common.models.messages_af import CurrentTeamAgent, TeamConfiguration
 from common.database.database_base import DatabaseBase
+from common.models.messages_af import CurrentTeamAgent, TeamConfiguration
 from v4.common.services.team_service import TeamService
 from v4.config.agent_registry import agent_registry
 from v4.magentic_agents.models.agent_models import MCPConfig
@@ -196,10 +186,10 @@ class MCPEnabledBase:
                 agent = await self.client.get_agent(
                     agent_id=currentAgent.agent_foundry_id
                 )
-                if agent and agent.agent_id is not None:
+                if agent and agent.id is not None:
                     chat_client = AzureAIAgentClient(
                         project_endpoint=self.project_endpoint,
-                        agent_id=agent.agent_id,
+                        agent_id=agent.id,
                         model_deployment_name=self.model_deployment_name,
                         async_credential=self.creds,
                     )
@@ -213,7 +203,7 @@ class MCPEnabledBase:
     async def save_database_team_agent(self) -> None:
         """Save current team agent to database."""
         try:
-            if self._agent.chat_client.agent_id is None:
+            if self._agent.id is None:
                 self.logger.error("Cannot save database team agent: agent_id is None")
                 return
 
@@ -221,7 +211,7 @@ class MCPEnabledBase:
                 team_id=self.team_config.team_id,
                 team_name=self.team_config.name,
                 agent_name=self.agent_name,
-                agent_foundry_id=self._agent.chat_client.agent_id,
+                agent_foundry_id=self._agent.id,
                 agent_description=self.agent_description,
                 agent_instructions=self.agent_instructions,
             )

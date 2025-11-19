@@ -3,12 +3,14 @@
 import logging
 from typing import List, Optional
 
-from agent_framework import ChatAgent, ChatMessage, HostedCodeInterpreterTool, Role
-from agent_framework_azure_ai import AzureAIAgentClient  # Provided by agent_framework
+from agent_framework import (ChatAgent, ChatMessage, HostedCodeInterpreterTool,
+                             Role)
+from agent_framework_azure_ai import \
+    AzureAIAgentClient  # Provided by agent_framework
 from azure.ai.projects.models import ConnectionType
 from common.config.app_config import config
-from common.models.messages_af import TeamConfiguration
 from common.database.database_base import DatabaseBase
+from common.models.messages_af import TeamConfiguration
 from v4.common.services.team_service import TeamService
 from v4.config.agent_registry import agent_registry
 from v4.magentic_agents.common.lifecycle import AzureAgentBase
@@ -29,6 +31,7 @@ class FoundryAgentTemplate(AzureAgentBase):
         agent_name: str,
         agent_description: str,
         agent_instructions: str,
+        use_reasoning: bool,
         model_deployment_name: str,
         project_endpoint: str,
         enable_code_interpreter: bool = False,
@@ -57,6 +60,7 @@ class FoundryAgentTemplate(AzureAgentBase):
 
         # Decide early whether Azure Search mode should be activated
         self._use_azure_search = self._is_azure_search_requested()
+        self.use_reasoning = use_reasoning
 
         # Placeholder for server-created Azure AI agent id (if Azure Search path)
         self._azure_server_agent_id: Optional[str] = None
@@ -218,6 +222,13 @@ class FoundryAgentTemplate(AzureAgentBase):
     # -------------------------
     async def _after_open(self) -> None:
         """Initialize ChatAgent after connections are established."""
+        if self.use_reasoning:
+            self.logger.info("Initializing agent in Reasoning mode.")
+            temp = None
+        else:
+            self.logger.info("Initializing agent in Foundry mode.")
+            temp = 0.1
+
 
         try:
             chatClient= await self.get_database_team_agent()
@@ -241,7 +252,7 @@ class FoundryAgentTemplate(AzureAgentBase):
                     name=self.agent_name,
                     description=self.agent_description,
                     tool_choice="required",  # Force usage
-                    temperature=1.0,
+                    temperature=temp,
                     model_id=self.model_deployment_name,
                 )
             else:
@@ -256,7 +267,7 @@ class FoundryAgentTemplate(AzureAgentBase):
                     description=self.agent_description,
                     tools=tools if tools else None,
                     tool_choice="auto" if tools else "none",
-                    temperature=1.0,
+                    temperature=temp,
                     model_id=self.model_deployment_name,
                 )
 
