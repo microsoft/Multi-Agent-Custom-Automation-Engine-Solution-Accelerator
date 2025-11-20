@@ -33,9 +33,6 @@ class AppConfig:
             "APPLICATIONINSIGHTS_CONNECTION_STRING"
         )
         self.APP_ENV = self._get_required("APP_ENV", "prod")
-        # self.AZURE_AI_MODEL_DEPLOYMENT_NAME = self._get_required(
-        #     "AZURE_AI_MODEL_DEPLOYMENT_NAME", "gpt-4o"
-        # )
 
         self.AZURE_COGNITIVE_SERVICES = self._get_optional(
             "AZURE_COGNITIVE_SERVICES", "https://cognitiveservices.azure.com/.default"
@@ -48,6 +45,10 @@ class AppConfig:
         # Azure OpenAI settings
         self.AZURE_OPENAI_DEPLOYMENT_NAME = self._get_required(
             "AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o"
+        )
+
+        self.AZURE_OPENAI_RAI_DEPLOYMENT_NAME = self._get_required(
+            "AZURE_OPENAI_RAI_DEPLOYMENT_NAME", "gpt-4.1"
         )
         self.AZURE_OPENAI_API_VERSION = self._get_required(
             "AZURE_OPENAI_API_VERSION", "2024-11-20"

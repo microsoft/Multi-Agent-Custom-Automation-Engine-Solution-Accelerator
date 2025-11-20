@@ -1231,6 +1231,10 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
           }
           {
             name: 'AZURE_OPENAI_DEPLOYMENT_NAME'
+            value: aiFoundryAiServicesModelDeployment.name
+          }
+          {
+            name: 'AZURE_OPENAI_RAI_DEPLOYMENT_NAME'
             value: aiFoundryAiServices4_1ModelDeployment.name
           }
           {
@@ -1328,10 +1332,6 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
           {
             name: 'AZURE_STORAGE_BLOB_URL'
             value: avmStorageAccount.outputs.serviceEndpoints.blob
-          }
-          {
-            name: 'AZURE_AI_MODEL_DEPLOYMENT_NAME'
-            value: aiFoundryAiServicesModelDeployment.name
           }
           {
             name: 'AZURE_AI_PROJECT_ENDPOINT'
@@ -1786,13 +1786,13 @@ output COSMOSDB_CONTAINER string = cosmosDbDatabaseMemoryContainerName
 output AZURE_OPENAI_ENDPOINT string = 'https://${aiFoundryAiServicesResourceName}.openai.azure.com/'
 output AZURE_OPENAI_MODEL_NAME string = aiFoundryAiServicesModelDeployment.name
 output AZURE_OPENAI_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDeployment.name
+output AZURE_OPENAI_RAI_DEPLOYMENT_NAME string = aiFoundryAiServices4_1ModelDeployment.name
 output AZURE_OPENAI_API_VERSION string = azureopenaiVersion
 // output APPLICATIONINSIGHTS_INSTRUMENTATION_KEY string = applicationInsights.outputs.instrumentationKey
 // output AZURE_AI_PROJECT_ENDPOINT string = aiFoundryAiServices.outputs.aiProjectInfo.apiEndpoint
 output AZURE_AI_SUBSCRIPTION_ID string = subscription().subscriptionId
 output AZURE_AI_RESOURCE_GROUP string = resourceGroup().name
 output AZURE_AI_PROJECT_NAME string = aiFoundryAiProjectName
-output AZURE_AI_MODEL_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDeployment.name
 // output APPLICATIONINSIGHTS_CONNECTION_STRING string = applicationInsights.outputs.connectionString
 output AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDeployment.name
 // output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiProjectEndpoint
