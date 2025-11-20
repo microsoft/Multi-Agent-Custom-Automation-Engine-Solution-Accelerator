@@ -61,7 +61,7 @@ async def create_RAI_agent(
         "Respond with 'TRUE' if the input violates any rules and should be blocked, otherwise respond with 'FALSE'."
     )
 
-    model_deployment_name = config.AZURE_OPENAI_DEPLOYMENT_NAME
+    model_deployment_name = config.AZURE_OPENAI_RAI_DEPLOYMENT_NAME
     team.team_id = "rai_team"  # Use a fixed team ID for RAI agent
     team.name = "RAI Team"
     team.description = "Team responsible for Responsible AI checks"
