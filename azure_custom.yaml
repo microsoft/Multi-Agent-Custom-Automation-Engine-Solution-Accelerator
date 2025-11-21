@@ -13,6 +13,7 @@ services:
     docker:
       path: ./Dockerfile.NoCache
       image: backend
+      registry: ${AZURE_CONTAINER_REGISTRY_ENDPOINT}
       remoteBuild: true
   
   mcp:
@@ -21,6 +22,7 @@ services:
     host: containerapp
     docker:
       image: mcp
+      registry: ${AZURE_CONTAINER_REGISTRY_ENDPOINT}
       remoteBuild: true
 
   frontend:
