@@ -391,8 +391,8 @@
   min-height: auto !important;
 }
 
-/* More Button Column */
-.moreButton {
+/* Delete Button Column */
+.deleteButton {
   color: var(--colorNeutralForeground2) !important;
   background-color: transparent !important;
   min-width: 32px !important;
@@ -403,18 +403,18 @@
   margin-top: 2px;
 }
 
-.moreButton:hover {
-  background-color: var(--colorNeutralBackground3) !important;
-  color: var(--colorNeutralForeground1) !important;
+.deleteButton:hover {
+  background-color: var(--colorPaletteRedBackground2) !important;
+  color: var(--colorPaletteRedForeground1) !important;
 }
-.moreButtonDisabled {
+.deleteButtonDisabled {
   color: var(--colorNeutralForeground4) !important;
   background-color: transparent !important;
   cursor: not-allowed !important;
   opacity: 0.6 !important;
 }
 
-.moreButtonDisabled:hover {
+.deleteButtonDisabled:hover {
   background-color: transparent !important;
   color: var(--colorNeutralForeground4) !important;
   opacity: 0.6 !important;

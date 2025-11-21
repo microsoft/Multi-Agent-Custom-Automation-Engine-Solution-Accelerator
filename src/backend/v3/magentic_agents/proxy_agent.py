@@ -282,7 +282,7 @@ class ProxyAgent(Agent):
         Raises:
             asyncio.TimeoutError: If timeout is exceeded (300 seconds default)
         """
-        # logger.info(f"Waiting for user clarification for request: {request_id}")
+        logger.info(f"Waiting for clarification: {request_id}")
 
         # Initialize clarification as pending using the new event-driven method
         orchestration_config.set_clarification_pending(request_id)
@@ -291,14 +291,14 @@ class ProxyAgent(Agent):
             # Wait for clarification with timeout using the new event-driven method
             answer = await orchestration_config.wait_for_clarification(request_id)
 
-            # logger.info(f"Clarification received for request {request_id}: {answer}")
+            logger.info(f"Clarification received for {request_id} : {answer}")
             return UserClarificationResponse(
                 request_id=request_id,
                 answer=answer,
             )
         except asyncio.TimeoutError:
             # Enhanced timeout handling - notify user via WebSocket and cleanup
-            logger.debug(f"Clarification timeout for request {request_id} - notifying user and terminating process")
+            logger.warning(f"Clarification timeout for request: {request_id}")
 
             # Create timeout notification message
             from v3.models.messages import TimeoutNotification, WebsocketMessageType

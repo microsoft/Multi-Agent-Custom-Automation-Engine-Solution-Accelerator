@@ -29,7 +29,7 @@ import {
 } from '@fluentui/react-components';
 import {
   ChevronUpDown16Regular,
-  MoreHorizontal20Regular,
+  DeleteRegular,
   Search20Regular,
   Dismiss20Regular,
   CheckmarkCircle20Filled,
@@ -475,21 +475,21 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
             mountNode={document.querySelector('[role="dialog"]') || undefined}
           >
             <Button
-              icon={<MoreHorizontal20Regular />}
+              icon={<DeleteRegular />}
               appearance="subtle"
               size="small"
               disabled={true}
-              className={`${styles.moreButton} ${styles.moreButtonDisabled || ''}`}
+              className={`${styles.deleteButton} ${styles.deleteButtonDisabled || ''}`}
               onClick={(e: React.MouseEvent) => e.stopPropagation()}
             />
           </Tooltip>
         ) : (
           <Button
-            icon={<MoreHorizontal20Regular />}
+            icon={<DeleteRegular />}
             appearance="subtle"
             size="small"
             onClick={(e: React.MouseEvent) => handleDeleteTeam(team, e)}
-            className={styles.moreButton}
+            className={styles.deleteButton}
           />
         )}
       </div>

@@ -48,6 +48,28 @@ function Get-ValuesFromAzdEnv {
     return $true
 }
 
+function Get-DeploymentValue {
+    param(
+        [object]$DeploymentOutputs,
+        [string]$PrimaryKey,
+        [string]$FallbackKey
+    )
+    
+    $value = $null
+    
+    # Try primary key first
+    if ($DeploymentOutputs.PSObject.Properties[$PrimaryKey]) {
+        $value = $DeploymentOutputs.$PrimaryKey.value
+    }
+    
+    # If primary key failed, try fallback key
+    if (-not $value -and $DeploymentOutputs.PSObject.Properties[$FallbackKey]) {
+        $value = $DeploymentOutputs.$FallbackKey.value
+    }
+    
+    return $value
+}
+
 function Get-ValuesFromAzDeployment {
     Write-Host "Getting values from Azure deployment outputs..."
     
@@ -67,12 +89,12 @@ function Get-ValuesFromAzDeployment {
         return $false
     }
     
-    # Extract specific outputs
-    $script:storageAccount = $deploymentOutputs.azurE_STORAGE_ACCOUNT_NAME.value
-    $script:blobContainer = $deploymentOutputs.azurE_STORAGE_CONTAINER_NAME.value
-    $script:aiSearch = $deploymentOutputs.azurE_AI_SEARCH_NAME.value
-    $script:aiSearchIndex = $deploymentOutputs.azurE_AI_SEARCH_INDEX_NAME.value
-    $script:backendUrl = $deploymentOutputs.backenD_URL.value
+    # Extract specific outputs with fallback logic
+    $script:storageAccount = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_STORAGE_ACCOUNT_NAME" -FallbackKey "azureStorageAccountName"
+    $script:blobContainer = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_STORAGE_CONTAINER_NAME" -FallbackKey "azureStorageContainerName"
+    $script:aiSearch = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_NAME" -FallbackKey "azureAiSearchName"
+    $script:aiSearchIndex = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_INDEX_NAME" -FallbackKey "azureAiSearchIndexName"
+    $script:backendUrl = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "backenD_URL" -FallbackKey "backendUrl"
     
     # Validate that we extracted all required values
     if (-not $script:storageAccount -or -not $script:blobContainer -or -not $script:aiSearch -or -not $script:aiSearchIndex -or -not $script:backendUrl) {

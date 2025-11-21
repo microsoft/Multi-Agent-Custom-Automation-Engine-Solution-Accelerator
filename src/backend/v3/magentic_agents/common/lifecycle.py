@@ -1,5 +1,6 @@
 from contextlib import AsyncExitStack
 from typing import Any
+import logging
 
 from azure.ai.projects.aio import AIProjectClient
 from azure.identity.aio import DefaultAzureCredential
@@ -7,6 +8,8 @@ from semantic_kernel.agents.azure_ai.azure_ai_agent import AzureAIAgent
 from semantic_kernel.connectors.mcp import MCPStreamableHttpPlugin
 from v3.magentic_agents.models.agent_models import MCPConfig
 from v3.config.agent_registry import agent_registry
+
+logger = logging.getLogger(__name__)
 
 
 class MCPEnabledBase:
@@ -74,6 +77,7 @@ class MCPEnabledBase:
 
     async def _enter_mcp_if_configured(self) -> None:
         if not self.mcp_cfg:
+            logger.error("No MCP configuration provided")
             return
         # headers = self._build_mcp_headers()
         plugin = MCPStreamableHttpPlugin(
@@ -85,7 +89,13 @@ class MCPEnabledBase:
         # Enter MCP async context via the stack to ensure correct LIFO cleanup
         if self._stack is None:
             self._stack = AsyncExitStack()
-        self.mcp_plugin = await self._stack.enter_async_context(plugin)
+
+        try:
+            self.mcp_plugin = await self._stack.enter_async_context(plugin)
+            logger.info(f"✅ MCP plugin '{self.mcp_cfg.name}' successfully initialized")
+        except Exception as e:
+            logger.error(f"❌ Failed to initialize MCP plugin '{self.mcp_cfg.name}': {e}")
+            raise
 
 
 class AzureAgentBase(MCPEnabledBase):

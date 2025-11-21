@@ -442,7 +442,8 @@ The files for the dev container are located in `/.devcontainer/` folder.
    - Make sure to set APP_ENV to "**dev**" in `.env` file.
    - For local development, make sure to include below env variables in the `.env`
      - `BACKEND_API_URL=http://localhost:8000`
-     - `FRONTEND_SITE_NAME=http://127.0.0.1:3000` .
+     - `FRONTEND_SITE_NAME=http://127.0.0.1:3000` 
+     - `MCP_SERVER_ENDPOINT=http://localhost:9000/mcp`.
 
 7. **(Optional) Set up a virtual environment:**
 
@@ -474,7 +475,16 @@ The files for the dev container are located in `/.devcontainer/` folder.
       npm run build
       ```
 
-10. **Run the application:**
+10. **Install requirements - MCP server:**
+
+   - To install the requirement for mcp server -
+     Open a terminal in the `src/mcp_server` folder and run:
+     ```bash
+     pip install uv
+     uv sync
+     ```
+
+11. **Run the application:**
 
 - From the `src/backend` directory activate the virtual environment created through step 8 and Run:
 
@@ -494,6 +504,12 @@ or Run
   npm run dev
   ```
 
+- From the `src/mcp_server` directory activate the virtual environment created through step 10 and Run:
+
+```bash
+python mcp_server.py --transport streamable-http --host 0.0.0.0 --port 9000
+```
+
 11. Open a browser and navigate to `http://localhost:3000`
 12. To see swagger API documentation, you can navigate to `http://localhost:8000/docs`
 
@@ -501,7 +517,7 @@ or Run
 To Deploy your local changes rename the below files.
    1. Rename `azure.yaml` to `azure_custom2.yaml` and `azure_custom.yaml` to `azure.yaml`.
    2. Go to `infra` directory
-        - Remove `main.bicep` to `main_custom2.bicep` and `main_custom.bicep` to `main.bicep`.
+        - Rename `main.bicep` to `main_custom2.bicep` and `main_custom.bicep` to `main.bicep`.
 Continue with the [deploying steps](#deploying-with-azd).
 
 
@@ -510,15 +526,26 @@ Continue with the [deploying steps](#deploying-with-azd).
 You can debug the API backend running locally with VSCode using the following launch.json entry:
 
 ```
-    {
-      "name": "Python Debugger: Backend",
-      "type": "debugpy",
-      "request": "launch",
-      "cwd": "${workspaceFolder}/src/backend",
-      "module": "uvicorn",
-      "args": ["app:app", "--reload"],
-      "jinja": true
-    }
+      {
+        "name": "Debug Backend (FastAPI)",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/src/backend/app_kernel.py",
+        "cwd": "${workspaceFolder}/src/backend",
+        "console": "integratedTerminal",
+        "justMyCode": false,
+        "python": "${workspaceFolder}/src/backend/.venv/Scripts/python.exe",
+        "env": {
+            "PYTHONPATH": "${workspaceFolder}/src/backend",
+            "UVICORN_LOG_LEVEL": "debug"
+        },
+        "args": [],
+        "serverReadyAction": {
+            "pattern": "Uvicorn running on (https?://[^\\s]+)",
+            "uriFormat": "%s",
+            "action": "openExternally"
+        }
+      }
 ```
 
 To debug the python server in the frontend directory (frontend_server.py) and related, add the following launch.json entry:
@@ -533,4 +560,27 @@ To debug the python server in the frontend directory (frontend_server.py) and re
       "args": ["frontend_server:app", "--port", "3000", "--reload"],
       "jinja": true
     }
+```
+
+To debug the MCP server by adding the following launch.json entry:
+
+```
+     {
+        "name": "Debug MCP Server",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/src/mcp_server/mcp_server.py",
+        "cwd": "${workspaceFolder}/src/mcp_server",
+        "console": "integratedTerminal",
+        "justMyCode": false,
+        "python": "${workspaceFolder}/src/mcp_server/.venv/Scripts/python.exe",
+        "env": {
+            "PYTHONPATH": "${workspaceFolder}/src/mcp_server"
+        },
+        "args": [
+            "--transport", "streamable-http",
+            "--host", "0.0.0.0",
+            "--port", "9000"
+        ]
+      }
 ```
