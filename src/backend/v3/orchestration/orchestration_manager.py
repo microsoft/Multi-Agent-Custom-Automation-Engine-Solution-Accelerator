@@ -40,6 +40,7 @@ class OrchestrationManager:
         cls, agents: List, user_id: str = None
     ) -> MagenticOrchestration:
         """Main function to run the agents."""
+        cls.logger.info(f"Initializing orchestration for user: {user_id}")
 
         # Custom execution settings that should work with Azure OpenAI
         execution_settings = OpenAIChatPromptExecutionSettings(
@@ -106,6 +107,7 @@ class OrchestrationManager:
         cls, user_id: str, team_config: TeamConfiguration, team_switched: bool
     ) -> MagenticOrchestration:  # add team_switched: bool parameter
         """get existing orchestration instance."""
+        cls.logger.info(f"Getting orchestration for user: {user_id}, team_switched: {team_switched}")
         current_orchestration = orchestration_config.get_current_orchestration(user_id)
         if (
             current_orchestration is None or team_switched
@@ -126,6 +128,7 @@ class OrchestrationManager:
 
     async def run_orchestration(self, user_id, input_task) -> None:
         """Run the orchestration with user input loop."""
+        self.logger.info(f"Starting orchestration run for user: {user_id}")
 
         job_id = str(uuid.uuid4())
 
@@ -148,6 +151,7 @@ class OrchestrationManager:
 
         runtime = InProcessRuntime()
         runtime.start()
+        self.logger.info(f"🎯 Starting task execution: {input_task.description[:100]}...")
 
         try:
 
@@ -155,6 +159,7 @@ class OrchestrationManager:
                 task=input_task.description,
                 runtime=runtime,
             )
+            self.logger.info("📊 Task invocation completed, retrieving results")
 
             try:
                 self.logger.info("\nAgent responses:")

@@ -74,6 +74,10 @@ logging.getLogger("azure.monitor.opentelemetry.exporter.export._base").setLevel(
     logging.WARNING
 )
 
+logging.getLogger("opentelemetry.sdk").setLevel(
+    logging.ERROR
+)
+
 # Initialize the FastAPI app
 app = FastAPI(lifespan=lifespan)
 
