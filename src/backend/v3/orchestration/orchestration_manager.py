@@ -99,7 +99,7 @@ class OrchestrationManager:
             except Exception as e:
                 logger = logging.getLogger(f"{__name__}.OrchestrationManager")
                 logger.error(f"Error in streaming agent response callback: {e}")
-                
+
         return callback
 
     @classmethod

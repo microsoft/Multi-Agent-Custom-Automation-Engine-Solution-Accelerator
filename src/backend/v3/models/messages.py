@@ -215,4 +215,3 @@ class WebsocketMessageType(str, Enum):
     FINAL_RESULT_MESSAGE = "final_result_message"
     TIMEOUT_NOTIFICATION = "timeout_notification"
     ERROR_MESSAGE = "error_message"
-    

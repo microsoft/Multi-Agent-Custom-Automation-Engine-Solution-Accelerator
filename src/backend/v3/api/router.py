@@ -307,10 +307,10 @@ async def process_request(
 
         async def run_orchestration_task():
             await OrchestrationManager.get_current_or_new_orchestration(
-              user_id=user_id,
-              team_config=team_config,
-              team_switched=False,
-          )
+                user_id=user_id,
+                team_config=team_config,
+                team_switched=False,
+            )
             await OrchestrationManager().run_orchestration(user_id, input_task)
 
         background_tasks.add_task(run_orchestration_task)
@@ -337,12 +337,11 @@ async def process_request(
 
 @app_v3.post("/plan_approval")
 async def plan_approval(human_feedback: messages.PlanApprovalResponse, request: Request):
-    
     authenticated_user = get_authenticated_user_details(request_headers=request.headers)
     user_id = authenticated_user["user_principal_id"]
     if not user_id:
         raise HTTPException(
-          status_code=401, detail="Missing or invalid user information"
+            status_code=401, detail="Missing or invalid user information"
         )
     # Set the approval in the orchestration config
     try:
