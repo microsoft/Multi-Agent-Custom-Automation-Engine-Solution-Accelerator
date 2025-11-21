@@ -81,7 +81,6 @@ class OrchestrationManager:
             except Exception as e:
                 logger = logging.getLogger(f"{__name__}.OrchestrationManager")
                 logger.error(f"Error in agent response callback: {e}")
-                
         return callback
 
     @staticmethod
@@ -89,7 +88,8 @@ class OrchestrationManager:
         """Factory method that creates a streaming callback with captured user_id"""
 
         async def callback(
-        streaming_message: StreamingChatMessageContent, is_final: bool
+            streaming_message: StreamingChatMessageContent,
+            is_final: bool
         ):
             try:
                 return await streaming_agent_response_callback(
@@ -241,7 +241,7 @@ class OrchestrationManager:
                 )
 
         except Exception as e:
-            self.logger.exception("🚨 Unexpected error during orchestration")
+            self.logger.error(f"🚨 Unexpected error during orchestration: {e}")
             # Always send error to frontend
             await connection_config.send_status_update_async(
                 {
