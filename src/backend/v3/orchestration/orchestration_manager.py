@@ -9,6 +9,7 @@ from common.config.app_config import config
 from common.models.messages_kernel import TeamConfiguration
 from semantic_kernel.agents.orchestration.magentic import MagenticOrchestration
 from semantic_kernel.agents.runtime import InProcessRuntime
+from azure.core.exceptions import ResourceNotFoundError
 
 # Create custom execution settings to fix schema issues
 from semantic_kernel.connectors.ai.open_ai import (
@@ -75,8 +76,12 @@ class OrchestrationManager:
         """Factory method that creates a callback with captured user_id"""
 
         def callback(message: ChatMessageContent):
-            return agent_response_callback(message, user_id)
-
+            try:
+                return agent_response_callback(message, user_id)
+            except Exception as e:
+                logger = logging.getLogger(f"{__name__}.OrchestrationManager")
+                logger.error(f"Error in agent response callback: {e}")
+                
         return callback
 
     @staticmethod
@@ -84,12 +89,16 @@ class OrchestrationManager:
         """Factory method that creates a streaming callback with captured user_id"""
 
         async def callback(
-            streaming_message: StreamingChatMessageContent, is_final: bool
+        streaming_message: StreamingChatMessageContent, is_final: bool
         ):
-            return await streaming_agent_response_callback(
-                streaming_message, is_final, user_id
-            )
-
+            try:
+                return await streaming_agent_response_callback(
+                    streaming_message, is_final, user_id
+                )
+            except Exception as e:
+                logger = logging.getLogger(f"{__name__}.OrchestrationManager")
+                logger.error(f"Error in streaming agent response callback: {e}")
+                
         return callback
 
     @classmethod
@@ -167,14 +176,85 @@ class OrchestrationManager:
                     message_type=WebsocketMessageType.FINAL_RESULT_MESSAGE,
                 )
                 self.logger.info(f"Final result sent via WebSocket to user {user_id}")
+
             except Exception as e:
-                self.logger.info(f"Error: {e}")
-                self.logger.info(f"Error type: {type(e).__name__}")
-                if hasattr(e, "__dict__"):
-                    self.logger.info(f"Error attributes: {e.__dict__}")
-                self.logger.info("=" * 50)
+                self.logger.error(f"Error processing final result: {e}")
+                # Send error message to user
+                await connection_config.send_status_update_async(
+                    {
+                        "type": WebsocketMessageType.ERROR_MESSAGE,
+                        "data": {
+                            "content": "An error occurred while processing the final response.",
+                            "status": "error",
+                            "timestamp": asyncio.get_event_loop().time(),
+                        },
+                    },
+                    user_id,
+                    message_type=WebsocketMessageType.ERROR_MESSAGE,
+                )
+
+        except ResourceNotFoundError as e:
+            self.logger.error(f"Agent not found: {e}")
+            await connection_config.send_status_update_async(
+                {
+                    "type": WebsocketMessageType.ERROR_MESSAGE,
+                    "data": {
+                        "content": "The agent is currently unavailable. Please check if it was deleted or recreated.",
+                        "status": "error",
+                        "timestamp": asyncio.get_event_loop().time(),
+                    },
+                },
+                user_id,
+                message_type=WebsocketMessageType.ERROR_MESSAGE,
+            )
+
+        except RuntimeError as e:
+            if "did not return any response" in str(e):
+                self.logger.error(f"Agent failed: {e}")
+                # Send user-friendly error via WebSocket
+                await connection_config.send_status_update_async(
+                    {
+                        "type": WebsocketMessageType.ERROR_MESSAGE,
+                        "data": {
+                            "content": "I'm having trouble connecting to the agent right now. Please try again later.",
+                            "status": "error",
+                            "timestamp": asyncio.get_event_loop().time(),
+                        },
+                    },
+                    user_id,
+                    message_type=WebsocketMessageType.ERROR_MESSAGE,
+                )
+            else:
+                self.logger.exception("Unexpected RuntimeError")
+                # Fallback error message
+                await connection_config.send_status_update_async(
+                    {
+                        "type": WebsocketMessageType.ERROR_MESSAGE,
+                        "data": {
+                            "content": "Something went wrong. Please try again later.",
+                            "status": "error",
+                            "timestamp": asyncio.get_event_loop().time(),
+                        },
+                    },
+                    user_id,
+                    message_type=WebsocketMessageType.ERROR_MESSAGE,
+                )
 
         except Exception as e:
-            self.logger.error(f"Unexpected error: {e}")
+            self.logger.exception("🚨 Unexpected error during orchestration")
+            # Always send error to frontend
+            await connection_config.send_status_update_async(
+                {
+                    "type": WebsocketMessageType.ERROR_MESSAGE,
+                    "data": {
+                        "content": "Something went wrong. Please try again later.",
+                        "status": "error",
+                        "timestamp": asyncio.get_event_loop().time(),
+                    },
+                },
+                user_id,
+                message_type=WebsocketMessageType.ERROR_MESSAGE,
+            )
+
         finally:
             await runtime.stop_when_idle()
