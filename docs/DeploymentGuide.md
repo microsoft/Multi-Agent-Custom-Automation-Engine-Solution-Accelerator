@@ -262,6 +262,7 @@ Once you've opened the project in [Codespaces](#github-codespaces), [Dev Contain
 6. When Deployment is complete, follow steps in [Set Up Authentication in Azure App Service](../docs/azure_app_service_auth_setup.md) to add app authentication to your web app running on Azure App Service
 
 7. If you are done trying out the application, you can delete the resources by running `azd down`.
+   > **Note:** If you deployed with `enableRedundancy=true` and Log Analytics workspace replication is enabled, you must first disable replication before running `azd down` else resource group delete will fail. Follow the steps in [Handling Log Analytics Workspace Deletion with Replication Enabled](./LogAnalyticsReplicationDisable.md), wait until replication returns `false`, then run `azd down`.
 
 
 ### 🛠️ Troubleshooting
