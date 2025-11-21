@@ -166,6 +166,12 @@ class WebSocketService {
         });
     }
 
+    onErrorMessage(callback: (data: any) => void): () => void {
+        return this.on(WebsocketMessageType.ERROR_MESSAGE, (message: StreamMessage) => {
+            callback(message.data);
+        });
+    }
+
     private emit(eventType: string, data: any): void {
         const message: StreamMessage = {
             type: eventType as any,
@@ -249,6 +255,11 @@ class WebSocketService {
                     this.emit(WebsocketMessageType.FINAL_RESULT_MESSAGE, transformed);
                 }
                 break;
+            }
+            case WebsocketMessageType.ERROR_MESSAGE: {
+            console.log("Received ERROR_MESSAGE:", message);
+            this.emit(WebsocketMessageType.ERROR_MESSAGE, message.data); // Emit the data
+            break;
             }
             case WebsocketMessageType.USER_CLARIFICATION_RESPONSE:
             case WebsocketMessageType.REPLAN_APPROVAL_REQUEST:
