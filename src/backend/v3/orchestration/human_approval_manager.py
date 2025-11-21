@@ -53,6 +53,7 @@ class HumanApprovalMagenticManager(StandardMagenticManager):
         # Remove any custom kwargs before passing to parent
 
         plan_append = """
+
 IMPORTANT: Never ask the user for information or clarification until all agents on the team have been asked first.
 
 EXAMPLE: If the user request involves product information, first ask all agents on the team to provide the information.
@@ -69,7 +70,6 @@ Here is an example of a well-structured plan:
 - **DocumentCreationAgent** to draft a comprehensive onboarding plan that includes a checklist of resources and materials needed for effective onboarding.
 - **ProxyAgent** to review the drafted onboarding plan for clarity and completeness.
 - **MagenticManager** to finalize the onboarding plan and prepare it for presentation to stakeholders.
-
 """
 
         final_append = """

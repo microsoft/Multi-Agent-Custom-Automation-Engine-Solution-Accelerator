@@ -365,7 +365,7 @@ jobs:
           echo "Resource purging completed successfully"
 
       - name: Send Notification on Failure
-        
+        if: failure()
         run: |
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
