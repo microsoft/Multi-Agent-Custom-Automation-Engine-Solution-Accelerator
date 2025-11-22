@@ -17,7 +17,7 @@ Use these as quick reference guides to unblock your deployments.
   <summary><b>MissingSubscriptionRegistration/ AllowBringYourOwnPublicIpAddress</b></summary>
  
  
-Enable `AllowBringYourOwnPublicIpAddress` Feature
+Enable `AllowBringYourOwnPublicIpAddress` & Feature
  
 Before deploying the resources, you may need to enable the **Bring Your Own Public IP Address** feature in Azure. This is required only once per subscription.
  
@@ -465,20 +465,6 @@ For more details, refer to [Azure Storage redundancy documentation](https://lear
 - To avoid the DeploymentNotFound error, Do not change the location when redeploying a deleted RG, or Use new names for the RG and environment during redeployment.
 </details>
 
-<details><summary><b>DeploymentCanceled(user.canceled)</b></summary>
-
-- Indicates the deployment was manually canceled by the user (Portal, CLI, or pipeline).
-
-- Check deployment history and logs to confirm who/when it was canceled.
-
-- If accidental, retry the deployment.
-
-- For pipelines, ensure no automation or timeout is triggering cancellation.
-
-- Use deployment locks or retry logic to prevent accidental cancellations.
-
-</details>
-
 <details><summary><b>ResourceGroupDeletionTimeout</b></summary>
 
 - Some resources in the resource group may be stuck deleting or have dependencies; check RG resources and status.
@@ -585,7 +571,404 @@ Once your request is approved, redeploy your resource.
 <summary><b>ContainerAppOperationError</b></summary>
  
 - The error is likely due to an improperly built container image. For resolution steps, refer to the [Azure Container Registry (ACR) – Build & Push Guide](./ACRBuildAndPushGuide.md)
+
+Permission issue (UNAUTHORIZED):
+
+- If you encounter this error, ensure the necessary permissions are granted. Refer to the following documentation for guidance: [Azure Container Registry Entra permissions and role assignments](https://learn.microsoft.com/en-us/azure/container-registry/container-registry-rbac-built-in-roles-overview?tabs=registries-configured-with-rbac-registry-permissions).
+
+- permission to read secrets from the Key Vault
+  - The Azure Container App is configured to retrieve a secret from Azure Key Vault.
+
+  - It uses a User-Assigned Managed Identity (UAMI) to access the Key Vault.
+
+  - The issue occurs because this managed identity lacks the required permissions to read secrets from the Key Vault.
+
+  - Refer to the following documentation to assign the necessary permissions: [Add Permission to get secret from Key Vault](https://learn.microsoft.com/en-us/azure/container-apps/manage-secrets?tabs=azure-portal#:~:text=Reference%20secret%20from%20Key%20Vault)
+
+- Container image error during local deployment:
+  - For custom deployments, the only valid image tag is **latest**. Using any other tag (e.g., latest_v3 or dev) will result in an error.
+
+- Default valid container image tag for MACAE_v3 deployment:
+  - dev_v3
+  - demo_v3
+  - latest_v3
+
+- Default valid container image tag for MACAE_v2 deployment:
+  - dev
+  - demo
+  - latest
+
  
+</details>
+
+</details>
+
+<details>
+<summary><b>ManagedEnvironmentNoAvailableCapacityInRegion</b></summary>
+ 
+- **Check Azure Status:** Verify if the selected region has any capacity or service issues.
+
+- **Try a Different Region:** Deploy the environment to another region with available capacity.
+
+- **Check Quotas:** Ensure your subscription hasn’t reached limits for Container Apps or compute resources. See [Azure Container Apps quotas](https://learn.microsoft.com/en-us/azure/container-apps/quotas).
+
+- **Retry Later:** Temporary capacity issues may resolve after some time.
+
+- **Contact Support:** If deployment must be in the same region, raise a support request with Microsoft.
+ 
+</details>
+
+
+<details>
+<summary><b>PreconditionFailed</b></summary>
+ 
+- **Wait and Retry:** Exclusive locks are temporary—retry the operation after a few minutes.
+
+- **Check Active Operations:** Look in Azure Portal → Cosmos DB → Activity log for ongoing updates or scaling operations.
+
+- **Avoid Concurrent Changes:** Ensure no other operations or scripts are modifying the account at the same time.
+
+- **Understand Locks:** Review [Cosmos DB resource locks](https://learn.microsoft.com/en-us/azure/cosmos-db/resource-locks?tabs=powershell%2Cjson)
+ to see which operations require exclusive access.
+
+- **Contact Support:** If the lock persists unusually long, raise a support request with Microsoft including the ActivityId.
+ 
+</details>
+<details>
+<summary><b>InvalidCapacity</b></summary>
+ 
+- **Check Capacity Value:** Ensure the capacity parameter in your deployment template is at least 1 (cannot be 0).
+
+- **Validate Deployment:** Run a validation before deploying to catch errors:
+
+- **Check Limits:** Ensure capacity does not exceed maximum allowed units. See [Azure OpenAI quotas and limits](https://learn.microsoft.com/en-us/azure/ai-foundry/openai/quotas-limits?tabs=REST).
+
+- **Redeploy:** After fixing the capacity value, redeploy the template.
+ 
+</details>
+
+<details>
+<summary><b>'Microsoft.Compute/EncryptionAtHost' feature is not enabled for this subscription.</b></summary>
+
+ - To enable encryptionAtHost, follow the steps outlined in the [Enable Enscryption at host](https://learn.microsoft.com/en-us/azure/virtual-machines/windows/disks-enable-host-based-encryption-powershell#:~:text=Execute%20the%20following%20command%20to%20register%20the%20feature%20for%20your%20subscription) documentation.
+ 
+</details>
+
+<details>
+<summary><b>RoleAssignmentUpdateNotPermitted</b></summary>
+
+ - The RoleAssignmentUpdateNotPermitted error occurs when attempting to modify or overwrite an existing role assignment that cannot be changed.
+ 
+ - Refer this link to resolve this issue: [Role assignment returns BadRequest status](https://learn.microsoft.com/en-us/azure/role-based-access-control/troubleshooting?tabs=bicep#:~:text=ARM%20template%20role%20assignment%20returns%20BadRequest%20status)
+ 
+</details>
+
+<details>
+<summary><b>DeploymentScriptACIProvisioningTimeout</b></summary>
+
+- The **DeploymentScriptACIProvisioningTimeout** error occurs when the Azure Container Instance (ACI) used by the deployment script fails to start or times out during provisioning.
+
+- **Resolution:** Redeploy in another region, increase the script timeout, or verify ACI/VNet capacity and permissions.
+
+</details>
+<details>
+<summary><b>VMSizeIsNotPermittedToEnableAcceleratedNetworking</b></summary>
+
+- The **VMSizeIsNotPermittedToEnableAcceleratedNetworking** error occurs when a selected VM size (e.g., `Standard_A2m_v2`) does not support Accelerated Networking.
+
+- To fix this issue, use a VM size that supports Accelerated Networking.  
+  👉 Check the [Microsoft list of supported VM sizes](https://learn.microsoft.com/azure/virtual-network/accelerated-networking-overview#supported-vm-instances).
+
+</details>
+
+<details>
+<summary><b>PropertyChangeNotAllowed</b></summary>
+
+- This error occurs because the `osProfile.adminUsername` property of a Virtual Machine is **immutable** once the VM is created. If you modify the VM username or password in the deployment template and attempt to redeploy, Azure prevents the change and triggers this error.
+- **Resolution:** Before redeployment, delete the existing VM deployment and then redeploy with the new credentials.
+  ```bash
+  # Redeploy with new credentials
+  azd env set AZURE_ENV_VM_ADMIN_USERNAME "newusername"
+  azd env set AZURE_ENV_VM_ADMIN_PASSWORD "NewSecurePassword123!
+</details>
+<details>
+<summary><b>Conflict: Website with given name already exists</b></summary>
+
+- This conflict occurs when a deployment attempts to create an **App Service** with a name (e.g., `app-multi-agent`) that already exists in another resource group or subscription. App Service names are **globally unique** across all Azure regions and subscriptions.
+- **Resolution:**  
+  1. Verify whether the App Service name already exists by running:  
+     ```bash
+     az webapp show --name app-multi-agent --resource-group <any-rg>
+     ```  
+  2. If the App Service exists, delete the existing App Service or resource group and redeploy with unique name.
+</details>
+<details>
+<summary><b>InvalidParameter - Weak VM Admin Password</b></summary>
+
+- This error occurs when the Virtual Machine admin password does not meet Azure's password complexity requirements.  
+  The deployment fails validation because the provided password is too weak or insecure.
+
+- **Resolution:**  
+  Use a strong password that meets at least **3 of the following 4 conditions:**  
+  - Uppercase letter (**A–Z**)  
+  - Lowercase letter (**a–z**)  
+  - Number (**0–9**)  
+  - Special character (**!@#$%^&***)
+
+</details>
+<details>
+<summary><b>InvalidParameter - Invalid Image Reference</b></summary>
+
+- The VM deployment fails when the specified image reference — for example:  
+  **Publisher:** `MicrosoftWindowsServer`, **Offer:** `WindowsServer`, **Sku:** `2019-datacenter-g2` —  
+  is invalid or unavailable in the selected Azure region.
+- **Resolution:**  
+  1. Verify available images in the selected region by running:  
+     ```bash
+     az vm image list --location <region> --publisher MicrosoftWindowsServer --offer WindowsServer --output table
+     ```  
+  2. Choose a valid image SKU that exists in that region and update the template accordingly.  
+  3. Redeploy the VM after correcting the image reference.
+
+</details>
+<details>
+<summary><b>Conflict - Duplicate Data Sink Usage in Diagnostic Settings</b></summary>
+
+- This issue occurs when two or more diagnostic settings are configured using the **same Log Analytics workspace** and **same category** on the **same resource**.  
+  Azure does not allow reusing the same data sink (workspace) for identical category-resource combinations.
+
+- To fix this issue, keep only **one diagnostic setting** per resource–category–workspace combination, **or** Change either the **category** or the **workspace** in one of the diagnostic settings.
+
+</details>
+
+<details>
+<summary><b>SubscriptionNotFound</b></summary>
+ 
+- This error occurs when the specified subscription ID or name is invalid, misspelled, or inaccessible to the logged-in user.
+ 
+- Example:
+  ```bash
+  az group list --subscription "Git"
+    ```
+**Output:**
+  ```
+  SubscriptionNotFound: The subscription 'Git' could not be found.
+  ```
+ 
+- **Fix:**
+  1. List available subscriptions:
+  ```bash
+  az account list -o table
+  ```
+  2. Set a valid subscription:
+  ```bash
+  az account set --subscription "<subscription-id>"
+  ```
+  3. Ensure the subscription exists and you have access to it.
+ 
+</details>
+
+<details>
+<summary><b>DatabaseAccountNotOnline</b></summary>
+
+- This error occurs when a Cosmos DB account is not yet in the **Online** state during operations such as database or container creation.
+
+  - Example:
+    ```json
+    {"code":"BadRequest","message":"The requested operation cannot be performed because the database account cosmos-cps-omhkx7ntgoh5 state is not Online."}
+    ```
+
+- **Root Cause:**
+  - The Cosmos DB account is still provisioning or failed to deploy.
+  - A dependent operation was triggered too soon after account creation.
+
+- **Fix:**
+  1. Wait until the account state becomes **Online**:
+     ```bash
+     az cosmosdb show -n <account-name> -g <resource-group> --query "provisioningState"
+     ```
+  2. Retry the operation after the provisioning completes.
+  3. If the state remains **Failed**, delete and recreate the Cosmos DB account.
+  4. Check [Azure Status](https://status.azure.com) for any regional issues.
+
+</details>
+
+<details>
+<summary><b>NoRegisteredProviderFound</b></summary>
+
+- This error occurs when the **resource provider** or **API version** used in the deployment is not registered or supported in the selected Azure region.  
+- It often appears while deploying resources (e.g., `Microsoft.Search/searchServices`) using an **unsupported API version** or to a **region that does not support the resource type**.
+
+- **Possible Causes:**
+  - The resource provider (e.g., `Microsoft.Search`) is not registered in the subscription.
+  - The API version used (`2020-06-30`) is deprecated or unavailable in the target region.
+  - The chosen Azure region does not support the resource type.
+
+- **How to Fix:**
+  1. Register the required provider:
+     ```bash
+     az provider register --namespace Microsoft.Search
+     ```
+  2. Verify available API versions and regions:
+     ```bash
+     az provider show --namespace Microsoft.Search --query "resourceTypes[?resourceType=='searchServices'].apiVersions"
+     az provider show --namespace Microsoft.Search --query "resourceTypes[?resourceType=='searchServices'].locations" -o table
+     ```
+  3. Update the deployment template to use a **supported API version** (e.g., `2023-11-01` or later).
+  4. Redeploy the resource in a **supported region** such as `northeurope`, `uksouth`, or `eastus`.
+
+- **Reference Documentation:**
+  - [Azure Resource Providers and Types](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/resource-providers-and-types)
+  - [Azure Cognitive Search REST API Versions](https://learn.microsoft.com/en-us/rest/api/searchservice/)
+
+</details>
+
+<details>
+<summary><b>InvalidFailoverPriorityConfiguration</b></summary>
+
+- This error occurs when configuring failover regions for **Azure Cosmos DB** with an invalid failover priority setup.
+
+  - Example:
+    ```json
+    {"code":"BadRequest","message":"Failover priority value 0 supplied for region Sweden Central is invalid"}
+    ```
+
+- **Root Cause:**
+  - Multiple regions were assigned the same **failoverPriority** value (e.g., two regions with `0`).
+  - A secondary region was assigned failoverPriority = 0, which is reserved for the primary write region.
+
+- **Fix:**
+  1. Ensure each region has a unique failover priority.
+  2. Only the **primary write region** should use `failoverPriority: 0`.
+  3. Example of valid configuration:
+     ```bash
+     az cosmosdb update \
+       -n <account-name> \
+       -g <resource-group> \
+       --locations regionName=westeurope failoverPriority=0 \
+                     regionName=swedencentral failoverPriority=1
+     ```
+  4. Verify using:
+     ```bash
+     az cosmosdb show -n <account-name> -g <resource-group> --query "locations"
+     ```
+
+</details>
+<details>
+<summary><b>FailedIdentityOperation</b></summary>
+
+- This issue occurs when an identity operation fails during deployment of a Managed Environment or Container App due to a **conflict** between an existing resource and a new deployment.
+
+- **Possible Causes:**
+  - A resource with the same name already exists.
+  - A previous resource deletion is still pending.
+  - A managed identity creation or update operation overlaps with another deployment.
+
+- **How to Fix:**
+  1. Verify if the resource exists or is in a deleting state:
+     ```bash
+     az resource show --ids "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.App/managedEnvironments/<env-name>"
+     ```
+  2. Wait for the delete operation to complete or use a new resource name.
+  3. Retry deployment after a few minutes.
+
+- **Reference Documentation:**
+  - [Azure Resource Manager Deployment Errors](https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/common-deployment-errors)
+
+</details>
+
+<details>
+<summary><b>ServiceQuotaExceeded</b></summary>
+
+- This error occurs when the deployment exceeds the allowed **Free tier (F)** quota for Azure Cognitive Search.  
+  Each subscription can only have **one Free-tier** Cognitive Search service.
+
+- **Possible Causes:**
+  - A Free-tier Cognitive Search service already exists in the subscription.
+  - The deployment template or script attempts to create another Free-tier resource.
+
+- **How to Fix:**
+  1. Delete the existing Free-tier service:
+     ```bash
+     az search service delete -n <existing-service> -g <resource-group>
+     ```
+  2. Or deploy with a different SKU, such as **Basic**:
+     ```bash
+     az search service create -n <new-service> -g <resource-group> --sku basic
+     ```
+  3. For quota increase requests, refer to:  
+     [Quota Request Documentation](https://aka.ms/AddQuotaSubscription)
+
+- **Reference Documentation:**
+  - [Azure Cognitive Search Pricing](https://learn.microsoft.com/en-us/azure/search/search-sku-tier)
+  - [Common Azure Deployment Errors](https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/common-deployment-errors)
+
+</details>
+
+<details>
+<summary><b>InvalidTemplate - Missing or Null Property</b></summary>
+
+- This error occurs when a required property (such as `version`) in the ARM/Bicep deployment template is **missing** or **set to null**.  
+  Azure Resource Manager (ARM) fails template validation before deployment.
+
+- **Possible Causes:**
+  - The `deployments[0].model` parameter is missing the required `version` field.
+  - Incorrect or incomplete parameter values passed during deployment.
+  - Template schema mismatch between resource type and provided properties.
+
+- **How to Fix:**
+  1. Ensure all required fields are defined in your template:
+     ```json
+     "model": {
+       "name": "myAppModel",
+       "version": "1.0.0"
+     }
+     ```
+  2. Validate the template before deployment:
+     ```bash
+     az deployment group validate --resource-group <rg-name> --template-file <template.json>
+     ```
+  3. Refer to the official ARM template syntax guide:  
+     [Azure ARM Template Parameters Syntax](https://aka.ms/arm-syntax-parameters)
+
+</details>
+
+<details>
+<summary><b>InvalidResourceGroupLocation</b></summary>
+
+- This error occurs when you try to **create or deploy resources in a Resource Group (RG)** that already exists **in a different Azure region**.
+
+- **Root Cause:**
+  - A Resource Group with the same name already exists, but in another location.
+  - Azure Resource Groups are globally unique per subscription, and their location cannot be changed once created.
+  - Attempting to redeploy a resource or template with the same RG name but a different location will trigger this error.
+
+- **Example Scenario:**
+  - Existing Resource Group: `rg-demo` in `eastus`
+  - Deployment attempt: `az group create -n rg-demo -l westus`
+  - Result:  
+    ```
+    {"error":{"code":"InvalidResourceGroupLocation","message":"The provided resource group location 'westus' is not the same as the existing resource group location 'eastus'."}}
+    ```
+
+- **Resolution Steps:**
+  1. Use the **same location** as the existing resource group:
+     ```bash
+     az group create -n rg-demo -l eastus
+     ```
+  2. Or, create a **new Resource Group name** if you want to deploy in another region:
+     ```bash
+     az group create -n rg-demo-west -l westus
+     ```
+  3. Verify the location of existing Resource Groups:
+     ```bash
+     az group show -n rg-demo --query location -o tsv
+     ```
+
+- **References:**
+  - [Azure Resource Manager Resource Groups Documentation](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/manage-resource-groups-portal)
+  - [az group create command](https://learn.microsoft.com/en-us/cli/azure/group#az-group-create)
+
 </details>
 
 💡 Note: If you encounter any other issues, you can refer to the [Common Deployment Errors](https://learn.microsoft.com/en-us/azure/azure-resource-manager/troubleshooting/common-deployment-errors) documentation.
