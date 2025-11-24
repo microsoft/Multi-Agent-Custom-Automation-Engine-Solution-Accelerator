@@ -337,6 +337,54 @@ async def process_request(
 
 @app_v3.post("/plan_approval")
 async def plan_approval(human_feedback: messages.PlanApprovalResponse, request: Request):
+    """
+    Endpoint to receive plan approval or rejection from the user.
+    ---
+    tags:
+        - Plans
+      parameters:
+        - name: user_principal_id
+          in: header
+          type: string
+          required: true
+          description: User ID extracted from the authentication header
+      requestBody:
+        description: Plan approval payload
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                m_plan_id:
+                  type: string
+                  description: The internal m_plan id for the plan (required)
+                approved:
+                  type: boolean
+                  description: Whether the plan is approved (true) or rejected (false)
+                feedback:
+                  type: string
+                  description: Optional feedback or comment from the user
+                plan_id:
+                  type: string
+                  description: Optional user-facing plan_id
+      responses:
+        200:
+          description: Approval recorded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+        401:
+          description: Missing or invalid user information
+        404:
+          description: No active plan found for approval
+        500:
+          description: Internal server error
+    """
     authenticated_user = get_authenticated_user_details(request_headers=request.headers)
     user_id = authenticated_user["user_principal_id"]
     if not user_id:
