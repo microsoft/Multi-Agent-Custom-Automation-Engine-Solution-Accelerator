@@ -96,6 +96,8 @@ for idx, blob in enumerate(blob_list, start=1):
     title = blob.name.replace(".csv", "")
     title = title.replace(".json", "")
     title = title.replace(".pdf", "")
+    title = title.replace(".docx", "")
+    title = title.replace(".pptx", "")
     data = container_client.download_blob(blob.name).readall()
     
     try:
