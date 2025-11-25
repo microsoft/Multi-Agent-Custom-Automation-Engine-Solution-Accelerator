@@ -177,7 +177,7 @@ class AppConfig:
             default: Default value if not found (default: "")
 
         Returns:
-            The value of the environment variable or the default value.
+            The value of the environment variable or the default value
         """
         if name in os.environ:
             return os.environ[name]
