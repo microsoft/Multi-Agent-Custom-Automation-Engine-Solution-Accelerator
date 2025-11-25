@@ -65,8 +65,11 @@ logging.basicConfig(level=getattr(logging, config.AZURE_BASIC_LOGGING_LEVEL.uppe
 
 # Configure Azure package logging levels
 azure_level = getattr(logging, config.AZURE_PACKAGE_LOGGING_LEVEL.upper(), logging.WARNING)
-for logger_name in config.AZURE_LOGGING_PACKAGES:
-    logging.getLogger(logger_name).setLevel(azure_level)
+# Parse comma-separated logging packages
+if config.AZURE_LOGGING_PACKAGES:
+    packages = [pkg.strip() for pkg in config.AZURE_LOGGING_PACKAGES.split(",") if pkg.strip()]
+    for logger_name in packages:
+        logging.getLogger(logger_name).setLevel(azure_level)
 
 logging.getLogger("opentelemetry.sdk").setLevel(logging.ERROR)
 
