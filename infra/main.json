@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.37.4.10188",
-      "templateHash": "5324473159726924421"
+      "templateHash": "13483630447639906471"
     },
     "name": "Multi-Agent Custom Automation Engine",
     "description": "This module contains the resources required to deploy the [Multi-Agent Custom Automation Engine solution accelerator](https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) for both Sandbox environments and WAF aligned environments.\r\n\r\n> **Note:** This module is not intended for broad, generic use, as it was designed by the Commercial Solution Areas CTO team, as a Microsoft Solution Accelerator. Feature requests and bug fix requests are welcome if they support the needs of this organization but may not be incorporated if they aim to make this module more generic than what it needs to be for its primary use case. This module will likely be updated to leverage AVM resource modules in the future. This may result in breaking changes in upcoming versions when these features are implemented.\r\n"
@@ -34378,7 +34378,8 @@
                   "BACKEND_API_URL": "[format('https://{0}', reference('containerApp').outputs.fqdn.value)]",
                   "AUTH_ENABLED": "false",
                   "AZURE_BASIC_LOGGING_LEVEL": "INFO",
-                  "AZURE_PACKAGE_LOGGING_LEVEL": "WARNING"
+                  "AZURE_PACKAGE_LOGGING_LEVEL": "WARNING",
+                  "AZURE_LOGGING_PACKAGES": ""
                 },
                 "applicationInsightResourceId": "[if(parameters('enableMonitoring'), reference('applicationInsights').outputs.resourceId.value, null())]"
               }
