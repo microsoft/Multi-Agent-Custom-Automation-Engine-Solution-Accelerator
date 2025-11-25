@@ -178,11 +178,9 @@ class AppConfig:
 
         Returns:
             The value of the environment variable or the default value.
-            Returns default if the environment variable is empty or only whitespace.
         """
         if name in os.environ:
-            value = os.environ[name].strip() if os.environ[name] else ""
-            return value if value else default
+            return os.environ[name]
         return default
 
     def _get_bool(self, name: str) -> bool:
