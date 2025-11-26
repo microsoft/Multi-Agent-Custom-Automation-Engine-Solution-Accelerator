@@ -67,7 +67,7 @@ param gpt4_1ModelVersion string = '2025-04-14'
 @description('Optional. Name of the GPT Reasoning model to deploy:')
 param gptReasoningModelName string = 'o4-mini'
 
-@description('Optional. Version of the GPT Reasoning model to deploy. Defaults to 2025-04-14.')
+@description('Optional. Version of the GPT Reasoning model to deploy. Defaults to 2025-04-16.')
 param gptReasoningModelVersion string = '2025-04-16'
 
 @description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2025-01-01-preview.')
