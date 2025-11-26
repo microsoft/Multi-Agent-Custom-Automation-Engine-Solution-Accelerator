@@ -57,21 +57,24 @@ param gptModelName string = 'gpt-4.1-mini'
 param gptModelVersion string = '2025-04-14'
 
 @minLength(1)
-@description('Optional. Name of the GPT Reasoning model to deploy:')
-param gptReasoningModelName string = 'o4-mini'
-
-@minLength(1)
 @description('Optional. Name of the GPT model to deploy:')
 param gpt4_1ModelName string = 'gpt-4.1'
 
 @description('Optional. Version of the GPT model to deploy. Defaults to 2025-04-14.')
 param gpt4_1ModelVersion string = '2025-04-14'
 
-@description('Optional. Version of the GPT Reasoning model to deploy. Defaults to 2025-04-14.')
+@minLength(1)
+@description('Optional. Name of the GPT Reasoning model to deploy:')
+param gptReasoningModelName string = 'o4-mini'
+
+@description('Optional. Version of the GPT Reasoning model to deploy. Defaults to 2025-04-16.')
 param gptReasoningModelVersion string = '2025-04-16'
 
 @description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2025-01-01-preview.')
 param azureopenaiVersion string = '2024-12-01-preview'
+
+@description('Optional. Version of the Azure AI Agent API version. Defaults to 2025-01-01-preview.')
+param azureAiAgentAPIVersion string = '2025-01-01-preview'
 
 @minLength(1)
 @allowed([
@@ -226,6 +229,7 @@ var allTags = union(
 param createdBy string = contains(deployer(), 'userPrincipalName')
   ? split(deployer().userPrincipalName, '@')[0]
   : deployer().objectId
+var deployerPrincipalType = contains(deployer(), 'userPrincipalName') ? 'User' : 'ServicePrincipal'
 
 resource resourceGroupTags 'Microsoft.Resources/tags@2021-04-01' = {
   name: 'default'
@@ -380,341 +384,20 @@ module userAssignedIdentity 'br/public:avm/res/managed-identity/user-assigned-id
     enableTelemetry: enableTelemetry
   }
 }
-
-// ========== Network Security Groups ========== //
-// WAF best practices for virtual networks: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/virtual-network
-// WAF recommendations for networking and connectivity: https://learn.microsoft.com/en-us/azure/well-architected/security/networking
-var networkSecurityGroupBackendResourceName = 'nsg-${solutionSuffix}-backend'
-module networkSecurityGroupBackend 'br/public:avm/res/network/network-security-group:0.5.1' = if (enablePrivateNetworking) {
-  name: take('avm.res.network.network-security-group.backend.${networkSecurityGroupBackendResourceName}', 64)
-  params: {
-    name: networkSecurityGroupBackendResourceName
-    location: location
-    tags: tags
-    enableTelemetry: enableTelemetry
-    diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : null
-    securityRules: [
-      {
-        name: 'deny-hop-outbound'
-        properties: {
-          access: 'Deny'
-          destinationAddressPrefix: '*'
-          destinationPortRanges: [
-            '22'
-            '3389'
-          ]
-          direction: 'Outbound'
-          priority: 200
-          protocol: 'Tcp'
-          sourceAddressPrefix: 'VirtualNetwork'
-          sourcePortRange: '*'
-        }
-      }
-    ]
-  }
-}
-
-var networkSecurityGroupBastionResourceName = 'nsg-${solutionSuffix}-bastion'
-module networkSecurityGroupBastion 'br/public:avm/res/network/network-security-group:0.5.1' = if (enablePrivateNetworking) {
-  name: take('avm.res.network.network-security-group.bastion${networkSecurityGroupBastionResourceName}', 64)
-  params: {
-    name: networkSecurityGroupBastionResourceName
-    location: location
-    tags: tags
-    enableTelemetry: enableTelemetry
-    diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : null
-    securityRules: [
-      {
-        name: 'AllowHttpsInBound'
-        properties: {
-          protocol: 'Tcp'
-          sourcePortRange: '*'
-          sourceAddressPrefix: 'Internet'
-          destinationPortRange: '443'
-          destinationAddressPrefix: '*'
-          access: 'Allow'
-          priority: 100
-          direction: 'Inbound'
-        }
-      }
-      {
-        name: 'AllowGatewayManagerInBound'
-        properties: {
-          protocol: 'Tcp'
-          sourcePortRange: '*'
-          sourceAddressPrefix: 'GatewayManager'
-          destinationPortRange: '443'
-          destinationAddressPrefix: '*'
-          access: 'Allow'
-          priority: 110
-          direction: 'Inbound'
-        }
-      }
-      {
-        name: 'AllowLoadBalancerInBound'
-        properties: {
-          protocol: 'Tcp'
-          sourcePortRange: '*'
-          sourceAddressPrefix: 'AzureLoadBalancer'
-          destinationPortRange: '443'
-          destinationAddressPrefix: '*'
-          access: 'Allow'
-          priority: 120
-          direction: 'Inbound'
-        }
-      }
-      {
-        name: 'AllowBastionHostCommunicationInBound'
-        properties: {
-          protocol: '*'
-          sourcePortRange: '*'
-          sourceAddressPrefix: 'VirtualNetwork'
-          destinationPortRanges: [
-            '8080'
-            '5701'
-          ]
-          destinationAddressPrefix: 'VirtualNetwork'
-          access: 'Allow'
-          priority: 130
-          direction: 'Inbound'
-        }
-      }
-      {
-        name: 'DenyAllInBound'
-        properties: {
-          protocol: '*'
-          sourcePortRange: '*'
-          sourceAddressPrefix: '*'
-          destinationPortRange: '*'
-          destinationAddressPrefix: '*'
-          access: 'Deny'
-          priority: 1000
-          direction: 'Inbound'
-        }
-      }
-      {
-        name: 'AllowSshRdpOutBound'
-        properties: {
-          protocol: 'Tcp'
-          sourcePortRange: '*'
-          sourceAddressPrefix: '*'
-          destinationPortRanges: [
-            '22'
-            '3389'
-          ]
-          destinationAddressPrefix: 'VirtualNetwork'
-          access: 'Allow'
-          priority: 100
-          direction: 'Outbound'
-        }
-      }
-      {
-        name: 'AllowAzureCloudCommunicationOutBound'
-        properties: {
-          protocol: 'Tcp'
-          sourcePortRange: '*'
-          sourceAddressPrefix: '*'
-          destinationPortRange: '443'
-          destinationAddressPrefix: 'AzureCloud'
-          access: 'Allow'
-          priority: 110
-          direction: 'Outbound'
-        }
-      }
-      {
-        name: 'AllowBastionHostCommunicationOutBound'
-        properties: {
-          protocol: '*'
-          sourcePortRange: '*'
-          sourceAddressPrefix: 'VirtualNetwork'
-          destinationPortRanges: [
-            '8080'
-            '5701'
-          ]
-          destinationAddressPrefix: 'VirtualNetwork'
-          access: 'Allow'
-          priority: 120
-          direction: 'Outbound'
-        }
-      }
-      {
-        name: 'AllowGetSessionInformationOutBound'
-        properties: {
-          protocol: '*'
-          sourcePortRange: '*'
-          sourceAddressPrefix: '*'
-          destinationAddressPrefix: 'Internet'
-          destinationPortRanges: [
-            '80'
-            '443'
-          ]
-          access: 'Allow'
-          priority: 130
-          direction: 'Outbound'
-        }
-      }
-      {
-        name: 'DenyAllOutBound'
-        properties: {
-          protocol: '*'
-          sourcePortRange: '*'
-          destinationPortRange: '*'
-          sourceAddressPrefix: '*'
-          destinationAddressPrefix: '*'
-          access: 'Deny'
-          priority: 1000
-          direction: 'Outbound'
-        }
-      }
-    ]
-  }
-}
-
-var networkSecurityGroupAdministrationResourceName = 'nsg-${solutionSuffix}-administration'
-module networkSecurityGroupAdministration 'br/public:avm/res/network/network-security-group:0.5.1' = if (enablePrivateNetworking) {
-  name: take(
-    'avm.res.network.network-security-group.administration.${networkSecurityGroupAdministrationResourceName}',
-    64
-  )
-  params: {
-    name: networkSecurityGroupAdministrationResourceName
-    location: location
-    tags: tags
-    enableTelemetry: enableTelemetry
-    diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : null
-    securityRules: [
-      {
-        name: 'deny-hop-outbound'
-        properties: {
-          access: 'Deny'
-          destinationAddressPrefix: '*'
-          destinationPortRanges: [
-            '22'
-            '3389'
-          ]
-          direction: 'Outbound'
-          priority: 200
-          protocol: 'Tcp'
-          sourceAddressPrefix: 'VirtualNetwork'
-          sourcePortRange: '*'
-        }
-      }
-    ]
-  }
-}
-
-var networkSecurityGroupContainersResourceName = 'nsg-${solutionSuffix}-containers'
-module networkSecurityGroupContainers 'br/public:avm/res/network/network-security-group:0.5.1' = if (enablePrivateNetworking) {
-  name: take('avm.res.network.network-security-group.containers.${networkSecurityGroupContainersResourceName}', 64)
-  params: {
-    name: networkSecurityGroupContainersResourceName
-    location: location
-    tags: tags
-    enableTelemetry: enableTelemetry
-    diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : null
-    securityRules: [
-      {
-        name: 'deny-hop-outbound'
-        properties: {
-          access: 'Deny'
-          destinationAddressPrefix: '*'
-          destinationPortRanges: [
-            '22'
-            '3389'
-          ]
-          direction: 'Outbound'
-          priority: 200
-          protocol: 'Tcp'
-          sourceAddressPrefix: 'VirtualNetwork'
-          sourcePortRange: '*'
-        }
-      }
-    ]
-  }
-}
-
-var networkSecurityGroupWebsiteResourceName = 'nsg-${solutionSuffix}-website'
-module networkSecurityGroupWebsite 'br/public:avm/res/network/network-security-group:0.5.1' = if (enablePrivateNetworking) {
-  name: take('avm.res.network.network-security-group.website.${networkSecurityGroupWebsiteResourceName}', 64)
-  params: {
-    name: networkSecurityGroupWebsiteResourceName
-    location: location
-    tags: tags
-    enableTelemetry: enableTelemetry
-    diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : null
-    securityRules: [
-      {
-        name: 'deny-hop-outbound'
-        properties: {
-          access: 'Deny'
-          destinationAddressPrefix: '*'
-          destinationPortRanges: [
-            '22'
-            '3389'
-          ]
-          direction: 'Outbound'
-          priority: 200
-          protocol: 'Tcp'
-          sourceAddressPrefix: 'VirtualNetwork'
-          sourcePortRange: '*'
-        }
-      }
-    ]
-  }
-}
-
 // ========== Virtual Network ========== //
 // WAF best practices for virtual networks: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/virtual-network
 // WAF recommendations for networking and connectivity: https://learn.microsoft.com/en-us/azure/well-architected/security/networking
 var virtualNetworkResourceName = 'vnet-${solutionSuffix}'
-module virtualNetwork 'br/public:avm/res/network/virtual-network:0.7.0' = if (enablePrivateNetworking) {
-  name: take('avm.res.network.virtual-network.${virtualNetworkResourceName}', 64)
+module virtualNetwork 'modules/virtualNetwork.bicep' = if (enablePrivateNetworking) {
+  name: take('module.virtualNetwork.${solutionSuffix}', 64)
   params: {
-    name: virtualNetworkResourceName
+    name: 'vnet-${solutionSuffix}'
     location: location
     tags: tags
     enableTelemetry: enableTelemetry
     addressPrefixes: ['10.0.0.0/8']
-    subnets: [
-      {
-        name: 'backend'
-        addressPrefix: '10.0.0.0/27'
-        networkSecurityGroupResourceId: networkSecurityGroupBackend!.outputs.resourceId
-      }
-      {
-        name: 'administration'
-        addressPrefix: '10.0.0.32/27'
-        networkSecurityGroupResourceId: networkSecurityGroupAdministration!.outputs.resourceId
-        //natGatewayResourceId: natGateway.outputs.resourceId
-      }
-      {
-        // For Azure Bastion resources deployed on or after November 2, 2021, the minimum AzureBastionSubnet size is /26 or larger (/25, /24, etc.).
-        // https://learn.microsoft.com/en-us/azure/bastion/configuration-settings#subnet
-        name: 'AzureBastionSubnet' //This exact name is required for Azure Bastion
-        addressPrefix: '10.0.0.64/26'
-        networkSecurityGroupResourceId: networkSecurityGroupBastion!.outputs.resourceId
-      }
-      {
-        // If you use your own vnw, you need to provide a subnet that is dedicated exclusively to the Container App environment you deploy. This subnet isn't available to other services
-        // https://learn.microsoft.com/en-us/azure/container-apps/networking?tabs=workload-profiles-env%2Cazure-cli#custom-vnw-configuration
-        name: 'containers'
-        addressPrefix: '10.0.2.0/23' //subnet of size /23 is required for container app
-        delegation: 'Microsoft.App/environments'
-        networkSecurityGroupResourceId: networkSecurityGroupContainers!.outputs.resourceId
-        privateEndpointNetworkPolicies: 'Enabled'
-        privateLinkServiceNetworkPolicies: 'Enabled'
-      }
-      {
-        // If you use your own vnw, you need to provide a subnet that is dedicated exclusively to the App Environment you deploy. This subnet isn't available to other services
-        // https://learn.microsoft.com/en-us/azure/app-service/overview-vnet-integration#subnet-requirements
-        name: 'webserverfarm'
-        addressPrefix: '10.0.4.0/27' //When you're creating subnets in Azure portal as part of integrating with the virtual network, a minimum size of /27 is required
-        delegation: 'Microsoft.Web/serverfarms'
-        networkSecurityGroupResourceId: networkSecurityGroupWebsite!.outputs.resourceId
-        privateEndpointNetworkPolicies: 'Enabled'
-        privateLinkServiceNetworkPolicies: 'Enabled'
-      }
-    ]
+    logAnalyticsWorkspaceId: logAnalyticsWorkspaceResourceId
+    resourceSuffix: solutionSuffix
   }
 }
 
@@ -963,7 +646,7 @@ module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.17.0' = if (e
         ipConfigurations: [
           {
             name: '${virtualMachineResourceName}-nic01-ipconfig01'
-            subnetResourceId: virtualNetwork!.outputs.subnetResourceIds[1]
+            subnetResourceId: virtualNetwork!.outputs.administrationSubnetResourceId
             diagnosticSettings: enableMonitoring //WAF aligned configuration for Monitoring
               ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }]
               : null
@@ -1266,12 +949,12 @@ module aiFoundryAiServices 'br:mcr.microsoft.com/bicep/avm/res/cognitive-service
       {
         roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
         principalId: deployingUserPrincipalId
-        principalType: 'User'
+        principalType: deployerPrincipalType
       }
       {
         roleDefinitionIdOrName: '64702f94-c441-49e6-a78b-ef80e0188fee' // Azure AI Developer
         principalId: deployingUserPrincipalId
-        principalType: 'User'
+        principalType: deployerPrincipalType
       }
     ]
     // WAF aligned configuration for Monitoring
@@ -1282,7 +965,7 @@ module aiFoundryAiServices 'br:mcr.microsoft.com/bicep/avm/res/cognitive-service
           {
             name: 'pep-${aiFoundryAiServicesResourceName}'
             customNetworkInterfaceName: 'nic-${aiFoundryAiServicesResourceName}'
-            subnetResourceId: virtualNetwork!.outputs.subnetResourceIds[0]
+            subnetResourceId: virtualNetwork!.outputs.backendSubnetResourceId
             privateDnsZoneGroup: {
               privateDnsZoneGroupConfigs: [
                 {
@@ -1395,7 +1078,7 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
               ]
             }
             service: 'Sql'
-            subnetResourceId: virtualNetwork!.outputs.subnetResourceIds[0]
+            subnetResourceId: virtualNetwork!.outputs.backendSubnetResourceId
           }
         ]
       : []
@@ -1440,7 +1123,7 @@ module containerAppEnvironment 'br/public:avm/res/app/managed-environment:0.11.2
     // WAF aligned configuration for Private Networking
     publicNetworkAccess: 'Enabled' // Always enabling the publicNetworkAccess for Container App Environment
     internal: false //  Must be false when publicNetworkAccess is'Enabled'
-    infrastructureSubnetResourceId: enablePrivateNetworking ? virtualNetwork.?outputs.?subnetResourceIds[3] : null
+    infrastructureSubnetResourceId: enablePrivateNetworking ? virtualNetwork.?outputs.?containerSubnetResourceId : null
     // WAF aligned configuration for Monitoring
     appLogsConfiguration: enableMonitoring
       ? {
@@ -1587,6 +1270,10 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
             value: aiFoundryAiServicesModelDeployment.name
           }
           {
+            name: 'AZURE_OPENAI_RAI_DEPLOYMENT_NAME'
+            value: aiFoundryAiServices4_1ModelDeployment.name
+          }
+          {
             name: 'AZURE_OPENAI_API_VERSION'
             value: azureopenaiVersion
           }
@@ -1614,10 +1301,10 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
             name: 'FRONTEND_SITE_NAME'
             value: 'https://${webSiteResourceName}.azurewebsites.net'
           }
-          {
-            name: 'AZURE_AI_AGENT_ENDPOINT'
-            value: aiFoundryAiProjectEndpoint
-          }
+          // {
+          //   name: 'AZURE_AI_AGENT_ENDPOINT'
+          //   value: aiFoundryAiProjectEndpoint
+          // }
           {
             name: 'AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME'
             value: aiFoundryAiServicesModelDeployment.name
@@ -1629,10 +1316,6 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
           {
             name: 'AZURE_AI_SEARCH_CONNECTION_NAME'
             value: aiSearchConnectionName
-          }
-          {
-            name: 'AZURE_AI_SEARCH_INDEX_NAME'
-            value: aiSearchIndexName
           }
           {
             name: 'AZURE_AI_SEARCH_ENDPOINT'
@@ -1680,19 +1363,35 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
           }
           {
             name: 'AZURE_AI_SEARCH_API_KEY'
-            value: 'azure-ai-search-api-key'
+            secretRef: 'azure-ai-search-api-key'
           }
           {
             name: 'AZURE_STORAGE_BLOB_URL'
             value: avmStorageAccount.outputs.serviceEndpoints.blob
           }
           {
-            name: 'AZURE_STORAGE_CONTAINER_NAME'
-            value: storageContainerName
-          }
-          {
             name: 'AZURE_AI_MODEL_DEPLOYMENT_NAME'
             value: aiFoundryAiServicesModelDeployment.name
+          }
+          {
+            name: 'AZURE_AI_PROJECT_ENDPOINT'
+            value: aiFoundryAiProjectEndpoint
+          }
+          {
+            name: 'AZURE_AI_AGENT_ENDPOINT'
+            value: aiFoundryAiProjectEndpoint
+          }
+          {
+            name: 'AZURE_AI_AGENT_API_VERSION'
+            value: azureAiAgentAPIVersion
+          }
+          {
+            name: 'AZURE_AI_AGENT_PROJECT_CONNECTION_STRING'
+            value: '${aiFoundryAiServicesResourceName}.services.ai.azure.com;${aiFoundryAiServicesSubscriptionId};${aiFoundryAiServicesResourceGroupName};${aiFoundryAiProjectResourceName}'
+          }
+           {
+            name: 'AZURE_DEV_COLLECT_TELEMETRY'
+            value: 'no'
           }
         ]
       }
@@ -1873,7 +1572,7 @@ module webSite 'modules/web-sites.bicep' = {
     // WAF aligned configuration for Private Networking
     vnetRouteAllEnabled: enablePrivateNetworking ? true : false
     vnetImagePullEnabled: enablePrivateNetworking ? true : false
-    virtualNetworkSubnetId: enablePrivateNetworking ? virtualNetwork!.outputs.subnetResourceIds[4] : null
+    virtualNetworkSubnetId: enablePrivateNetworking ? virtualNetwork!.outputs.webserverfarmSubnetResourceId : null
     publicNetworkAccess: 'Enabled' // Always enabling the public network access for Web App
     e2eEncryptionEnabled: true
   }
@@ -1883,6 +1582,9 @@ module webSite 'modules/web-sites.bicep' = {
 
 var storageAccountName = replace('st${solutionSuffix}', '-', '')
 param storageContainerName string = 'sample-dataset'
+param storageContainerNameRetailCustomer string = 'retail-dataset-customer'
+param storageContainerNameRetailOrder string = 'retail-dataset-order'
+param storageContainerNameRFP string = 'rfp-dataset'
 module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
   name: take('avm.res.storage.storage-account.${storageAccountName}', 64)
   params: {
@@ -1904,7 +1606,7 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
       {
         principalId: deployingUserPrincipalId
         roleDefinitionIdOrName: 'Storage Blob Data Contributor'
-        principalType: 'User'
+        principalType: deployerPrincipalType
       }
     ]
 
@@ -1930,7 +1632,7 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
                 }
               ]
             }
-            subnetResourceId: virtualNetwork!.outputs.subnetResourceIds[0]
+            subnetResourceId: virtualNetwork!.outputs.backendSubnetResourceId
             service: 'blob'
           }
         ]
@@ -1941,7 +1643,15 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
       containerDeleteRetentionPolicyEnabled: true
       containers: [
         {
-          name: storageContainerName
+          name: storageContainerNameRetailCustomer
+          publicAccess: 'None'
+        }
+        {
+          name: storageContainerNameRetailOrder
+          publicAccess: 'None'
+        }
+        {
+          name: storageContainerNameRFP
           publicAccess: 'None'
         }
       ]
@@ -1956,6 +1666,9 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
 
 var searchServiceName = 'srch-${solutionSuffix}'
 var aiSearchIndexName = 'sample-dataset-index'
+var aiSearchIndexNameForRetailCustomer = 'macae-retail-customer-index'
+var aiSearchIndexNameForRetailOrder = 'macae-retail-order-index'
+var aiSearchIndexNameForRFP = 'macae-rfp-index'
 module searchService 'br/public:avm/res/search/search-service:0.11.1' = {
   name: take('avm.res.search.search-service.${solutionSuffix}', 64)
   params: {
@@ -1991,7 +1704,7 @@ module searchService 'br/public:avm/res/search/search-service:0.11.1' = {
       {
         principalId: deployingUserPrincipalId
         roleDefinitionIdOrName: 'Search Index Data Contributor'
-        principalType: 'User'
+        principalType: deployerPrincipalType
       }
       {
         principalId: aiFoundryAiProjectPrincipalId
@@ -2004,10 +1717,10 @@ module searchService 'br/public:avm/res/search/search-service:0.11.1' = {
         principalType: 'ServicePrincipal'
       }
     ]
+
+    //Removing the Private endpoints as we are facing the issue with connecting to search service while comminicating with agents
+
     privateEndpoints: []
-
-    // Removing the Private endpoints as we are facing the issue with connecting to search service while comminicating with agents
-
     // privateEndpoints: enablePrivateNetworking 
     //   ? [
     //       {
@@ -2080,7 +1793,7 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.12.1' = {
               ]
             }
             service: 'vault'
-            subnetResourceId: virtualNetwork!.outputs.subnetResourceIds[0]
+            subnetResourceId: virtualNetwork!.outputs.backendSubnetResourceId
           }
         ]
       : []
@@ -2112,27 +1825,10 @@ output resourceGroupName string = resourceGroup().name
 @description('The default url of the website to connect to the Multi-Agent Custom Automation Engine solution.')
 output webSiteDefaultHostname string = webSite.outputs.defaultHostname
 
-output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerRegistry.outputs.loginServer
-
-// @description('The name of the resource.')
-// output name string = <Resource>.name
-
-// @description('The location the resource was deployed into.')
-// output location string = <Resource>.location
-
-// ================ //
-// Definitions      //
-// ================ //
-//
-// Add your User-defined-types here, if any
-//
-
 output AZURE_STORAGE_BLOB_URL string = avmStorageAccount.outputs.serviceEndpoints.blob
 output AZURE_STORAGE_ACCOUNT_NAME string = storageAccountName
-output AZURE_STORAGE_CONTAINER_NAME string = storageContainerName
 output AZURE_AI_SEARCH_ENDPOINT string = searchService.outputs.endpoint
 output AZURE_AI_SEARCH_NAME string = searchService.outputs.name
-output AZURE_AI_SEARCH_INDEX_NAME string = aiSearchIndexName
 
 output COSMOSDB_ENDPOINT string = 'https://${cosmosDbResourceName}.documents.azure.com:443/'
 output COSMOSDB_DATABASE string = cosmosDbDatabaseName
@@ -2140,6 +1836,7 @@ output COSMOSDB_CONTAINER string = cosmosDbDatabaseMemoryContainerName
 output AZURE_OPENAI_ENDPOINT string = 'https://${aiFoundryAiServicesResourceName}.openai.azure.com/'
 output AZURE_OPENAI_MODEL_NAME string = aiFoundryAiServicesModelDeployment.name
 output AZURE_OPENAI_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDeployment.name
+output AZURE_OPENAI_RAI_DEPLOYMENT_NAME string = aiFoundryAiServices4_1ModelDeployment.name
 output AZURE_OPENAI_API_VERSION string = azureopenaiVersion
 // output APPLICATIONINSIGHTS_INSTRUMENTATION_KEY string = applicationInsights.outputs.instrumentationKey
 // output AZURE_AI_PROJECT_ENDPOINT string = aiFoundryAiServices.outputs.aiProjectInfo.apiEndpoint
@@ -2149,7 +1846,7 @@ output AZURE_AI_PROJECT_NAME string = aiFoundryAiProjectName
 output AZURE_AI_MODEL_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDeployment.name
 // output APPLICATIONINSIGHTS_CONNECTION_STRING string = applicationInsights.outputs.connectionString
 output AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDeployment.name
-output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiProjectEndpoint
+// output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiProjectEndpoint
 output APP_ENV string = 'Prod'
 output AI_FOUNDRY_RESOURCE_ID string = !useExistingAiFoundryAiProject
   ? aiFoundryAiServices.outputs.resourceId
@@ -2166,3 +1863,21 @@ output MCP_SERVER_DESCRIPTION string = 'MCP server with greeting, HR, and planni
 output SUPPORTED_MODELS string = '["o3","o4-mini","gpt-4.1","gpt-4.1-mini"]'
 output AZURE_AI_SEARCH_API_KEY string = '<Deployed-Search-ApiKey>'
 output BACKEND_URL string = 'https://${containerApp.outputs.fqdn}'
+output AZURE_AI_PROJECT_ENDPOINT string = aiFoundryAiProjectEndpoint
+output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiProjectEndpoint
+output AZURE_AI_AGENT_API_VERSION string = azureAiAgentAPIVersion
+output AZURE_AI_AGENT_PROJECT_CONNECTION_STRING string = '${aiFoundryAiServicesResourceName}.services.ai.azure.com;${aiFoundryAiServicesSubscriptionId};${aiFoundryAiServicesResourceGroupName};${aiFoundryAiProjectResourceName}'
+output AZURE_DEV_COLLECT_TELEMETRY  string = 'no'
+
+
+output AZURE_STORAGE_CONTAINER_NAME_RETAIL_CUSTOMER string = storageContainerNameRetailCustomer
+output AZURE_STORAGE_CONTAINER_NAME_RETAIL_ORDER string = storageContainerNameRetailOrder
+output AZURE_STORAGE_CONTAINER_NAME_RFP string = storageContainerNameRFP
+output AZURE_AI_SEARCH_INDEX_NAME_RETAIL_CUSTOMER string = aiSearchIndexNameForRetailCustomer
+output AZURE_AI_SEARCH_INDEX_NAME_RETAIL_ORDER string = aiSearchIndexNameForRetailOrder
+output AZURE_AI_SEARCH_INDEX_NAME_RFP string = aiSearchIndexNameForRFP
+
+// Container Registry Outputs
+output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerRegistry.outputs.loginServer
+output AZURE_CONTAINER_REGISTRY_NAME string = containerRegistry.outputs.name
+
