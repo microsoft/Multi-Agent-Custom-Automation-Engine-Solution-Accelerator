@@ -41,7 +41,6 @@ export class PlanDataService {
     try {
       // Use optimized getPlanById method for better performance
       const planBody = await apiService.getPlanById(planId, useCache);
-      console.log('Raw plan data fetched:', planBody);
       return this.processPlanData(planBody);
     } catch (error) {
       console.log("Failed to fetch plan data:", error);

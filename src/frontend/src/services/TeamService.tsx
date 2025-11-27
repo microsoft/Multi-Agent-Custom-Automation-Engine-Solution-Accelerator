@@ -32,14 +32,11 @@ export class TeamService {
         error?: string;
     }> {
         try {
-            console.log('Calling /v3/init_team endpoint...');
             const response = await apiClient.get('/v3/init_team', {
                 params: {
                     team_switched
                 }
             });
-
-            console.log('Team initialization response:', response);
 
             return {
                 success: true,
@@ -81,7 +78,6 @@ export class TeamService {
         try {
             const formData = new FormData();
             formData.append('file', teamFile);
-            console.log(formData);
             const response = await apiClient.upload('/v3/upload_team_config', formData);
 
             return {

@@ -31,12 +31,10 @@ const HomePage: React.FC = () => {
             setIsLoadingTeam(true);
 
             try {
-                console.log('Initializing team from backend...');
                 // Call the backend init_team endpoint (takes ~20 seconds)
                 const initResponse = await TeamService.initializeTeam();
 
                 if (initResponse.data?.status === 'Request started successfully' && initResponse.data?.team_id) {
-                    console.log('Team initialization completed:', initResponse.data?.team_id);
 
                     // Now fetch the actual team details using the team_id
                     const teams = await TeamService.getUserTeams();
@@ -46,16 +44,12 @@ const HomePage: React.FC = () => {
                         setSelectedTeam(initializedTeam);
                         TeamService.storageTeam(initializedTeam);
 
-                        console.log('Team loaded successfully:', initializedTeam.name);
-                        console.log('Team agents:', initializedTeam.agents?.length || 0);
-
                         showToast(
                             `${initializedTeam.name} team initialized successfully with ${initializedTeam.agents?.length || 0} agents`,
                             "success"
                         );
                     } else {
                         // Fallback: if we can't find the specific team, use HR team or first available
-                        console.log('Specific team not found, using default selection logic');
                         const hrTeam = teams.find(team => team.name === "Human Resources Team");
                         const defaultTeam = hrTeam || teams[0];
 
@@ -99,7 +93,6 @@ const HomePage: React.FC = () => {
     const handleTeamSelect = useCallback(async (team: TeamConfig | null) => {
         setSelectedTeam(team);
         setReloadLeftList(true);
-        console.log('handleTeamSelect called with team:', true);
         if (team) {
 
             try {
@@ -107,7 +100,6 @@ const HomePage: React.FC = () => {
                 const initResponse = await TeamService.initializeTeam(true);
 
                 if (initResponse.data?.status === 'Request started successfully' && initResponse.data?.team_id) {
-                    console.log('handleTeamSelect:', initResponse.data?.team_id);
 
                     // Now fetch the actual team details using the team_id
                     const teams = await TeamService.getUserTeams();
@@ -117,9 +109,6 @@ const HomePage: React.FC = () => {
                         setSelectedTeam(initializedTeam);
                         TeamService.storageTeam(initializedTeam);
                         setReloadLeftList(true)
-                        console.log('Team loaded successfully handleTeamSelect:', initializedTeam.name);
-                        console.log('Team agents handleTeamSelect:', initializedTeam.agents?.length || 0);
-
                         showToast(
                             `${initializedTeam.name} team initialized successfully with ${initializedTeam.agents?.length || 0} agents`,
                             "success"
@@ -155,15 +144,12 @@ const HomePage: React.FC = () => {
     const handleTeamUpload = useCallback(async () => {
         try {
             const teams = await TeamService.getUserTeams();
-            console.log('Teams refreshed after upload:', teams.length);
 
             if (teams.length > 0) {
                 // Always keep "Human Resources Team" as default, even after new uploads
                 const hrTeam = teams.find(team => team.name === "Human Resources Team");
                 const defaultTeam = hrTeam || teams[0];
                 setSelectedTeam(defaultTeam);
-                console.log('Default team after upload:', defaultTeam.name);
-                console.log('Human Resources Team remains default');
                 showToast(
                     `Team uploaded successfully! ${defaultTeam.name} remains your default team.`,
                     "success"

@@ -97,7 +97,6 @@ const HomeInput: React.FC<HomeInputProps> = ({
                     input.trim(),
                     selectedTeam?.team_id
                 );
-                console.log("Plan created:", response);
                 setInput("");
 
                 if (textareaRef.current) {
