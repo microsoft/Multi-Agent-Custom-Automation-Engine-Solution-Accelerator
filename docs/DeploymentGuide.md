@@ -366,7 +366,7 @@ When you start the development container for the first time, the container will 
 
 The files for the dev container are located in `/.devcontainer/` folder.
 
-## Local deployment and debugging:
+## Local deployment, Setup and debugging:
 
 1. **Clone the repository.**
 
@@ -410,7 +410,7 @@ The files for the dev container are located in `/.devcontainer/` folder.
 
      **Role Assignments in Bicep Deployment:**
 
-     The **main.bicep** deployment includes the assignment of the appropriate roles to AOAI and Cosmos services. If you want to modify an existing implementation—for example, to use resources deployed as part of the simple deployment for local debugging—you will need to add your own credentials to access the Cosmos and AOAI services. You can add these permissions using the following commands:
+     The **main.bicep** deployment includes the assignment of the appropriate roles to AOAI, Storage account, Search service and Cosmos services. If you want to use resource group which is not deployed by you for local debugging—you will need to add your own credentials to access the Cosmos Storage account, Search service and AOAI services. You can add these permissions using the following commands:
 
      ```bash
      az cosmosdb sql role assignment create --resource-group <solution-accelerator-rg> --account-name <cosmos-db-account-name> --role-definition-name "Cosmos DB Built-in Data Contributor" --principal-id <aad-user-object-id> --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.DocumentDB/databaseAccounts/<cosmos-db-account-name>
@@ -418,6 +418,22 @@ The files for the dev container are located in `/.devcontainer/` folder.
 
      ```bash
      az role assignment create --assignee <aad-user-upn> --role "Azure AI User" --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.CognitiveServices/accounts/<azure-ai-foundry-name>
+     ```
+
+     ```bash
+     az role assignment create --assignee <aad-user-upn> --role " Azure AI Developer " --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.CognitiveServices/accounts/<azure-ai-foundry-name> 
+     ```
+
+     ```bash
+     az role assignment create --assignee <aad-user-upn> --role " Cognitive Services OpenAI User " --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.CognitiveServices/accounts/<azure-ai-foundry-name> 
+     ```
+
+     ```bash
+     az role assignment create --assignee <aad-user-upn> --role "Search Index Data Contributor" --scope /subscriptions/ <subscription-id> /resourceGroups/ <solution-accelerator-rg> /providers/Microsoft.Search/searchServices/<Search-service-name> 
+     ```
+
+     ```bash
+     az role assignment create --assignee <aad-user-upn> --role "Storage Blob Data Contributor" --scope /subscriptions/ <subscription-id> /resourceGroups/ <solution-accelerator-rg> /providers/Microsoft.Storage/storageAccounts/<storage-account-name> 
      ```
 
      **Using a Different Database in Cosmos:**
@@ -430,7 +446,7 @@ The files for the dev container are located in `/.devcontainer/` folder.
 5. **Create a `.env` file:**
 
    - Navigate to the `src\backend` folder and create a `.env` file based on the provided `.env.sample` file.
-   - Update the `.env` file with the required values from your Azure resource group in Azure Portal App Service environment variables.
+   - Update the `.env` file with the required values from your Azure resource group in Azure Portal Backend Container app environment variables.
    - Alternatively, if resources were
    provisioned using `azd provision` or `azd up`, a `.env` file is automatically generated in the `.azure/<env-name>/.env`
    file. You can copy the contents of this file into your backend `.env` file.
