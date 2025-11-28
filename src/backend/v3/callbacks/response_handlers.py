@@ -17,6 +17,8 @@ from v3.models.messages import (
     WebsocketMessageType,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def clean_citations(text: str) -> str:
     """Remove citation markers from agent responses while preserving formatting."""
@@ -43,18 +45,26 @@ def agent_response_callback(message: ChatMessageContent, user_id: str = None) ->
     # Get agent name to determine handling
     agent_name = message.name or "Unknown Agent"
 
+    logger.info(f"🤖 Agent Response from '{agent_name}' for user: {user_id}")
+
     role = getattr(message, "role", "unknown")
 
     # Send to WebSocket
     if user_id:
         try:
             if message.items and message.items[0].content_type == "function_call":
+                logger.info(f" Message content_type: {message.items[0].content_type}")
+                logger.info(f"🔧 Tool calls detected from agent: {agent_name}")
                 final_message = AgentToolMessage(agent_name=agent_name)
                 for item in message.items:
                     if item.content_type == "function_call":
+                        tool_name = item.name or "unknown_tool"
+                        tool_args = item.arguments or {}
+                        logger.info(f"🛠️ Tool call: {tool_name} with args: {str(tool_args)[:200]}...")
+
                         tool_call = AgentToolCall(
-                            tool_name=item.name or "unknown_tool",
-                            arguments=item.arguments or {},
+                            tool_name=tool_name,
+                            arguments=tool_args,
                         )
                         final_message.tool_calls.append(tool_call)
 
@@ -67,9 +77,18 @@ def agent_response_callback(message: ChatMessageContent, user_id: str = None) ->
                 )
                 logging.info(f"Function call: {final_message}")
             elif message.items and message.items[0].content_type == "function_result":
+                # Log function results for debugging
+                logger.info(f" Message content_type: {message.items[0].content_type}")
+                logger.info(f"📥 Function result received from agent: {agent_name}")
+                for item in message.items:
+                    if item.content_type == "function_result":
+                        result_content = str(item.result)[:300] if hasattr(item, 'result') else "No result"
+                        logger.info(f"🔍 Function result: {result_content}...")
                 # skip returning these results for now - agent will return in a later message
                 pass
             else:
+                logger.info(f" Message content_type: {message.items[0].content_type}")
+                logger.info(f"💬 Text message from agent: {agent_name}")
                 final_message = AgentMessage(
                     agent_name=agent_name,
                     timestamp=time.time() or "",

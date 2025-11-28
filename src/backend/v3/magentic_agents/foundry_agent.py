@@ -172,14 +172,22 @@ class FoundryAgentTemplate(AzureAgentBase):
         # Add MCP plugins if available
         plugins = [self.mcp_plugin] if self.mcp_plugin else []
 
+        if self.mcp_plugin:
+            self.logger.info(f"🔧 Adding MCP plugin to agent: {self.agent_name}")
+            self.logger.debug(f"MCP plugin name: {getattr(self.mcp_plugin, 'name', 'Unknown')}")
+        else:
+            self.logger.debug(f"No MCP plugin for agent: {self.agent_name}")
+
         try:
+            self.logger.info(f"🤖 Creating AzureAI agent: {self.agent_name}")
             self._agent = AzureAIAgent(
                 client=self.client,
                 definition=definition,
                 plugins=plugins,
             )
+            self.logger.info(f"✅ AzureAI agent created successfully: {self.agent_name}")
         except Exception as ex:
-            self.logger.error("Failed to create AzureAIAgent: %s", ex)
+            self.logger.error("❌ Failed to create AzureAIAgent '%s': %s", self.agent_name, ex)
             raise
 
         # Register agent with global registry for tracking and cleanup

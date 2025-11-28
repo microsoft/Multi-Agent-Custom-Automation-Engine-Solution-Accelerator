@@ -1,0 +1,85 @@
+# ========== .NET ========== #
+## Build results
+bin/
+obj/
+[Bb]uild/
+[Ll]ogs/
+*.log
+## User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.vsp
+*.vspx
+*.vspscc
+## Rider / VS Code / Visual Studio
+.idea/
+.vscode/
+.vs/
+## NuGet packages
+*.nupkg
+packages/
+*.snupkg
+project.lock.json
+project.assets.json
+## Dotnet tools
+.tools/
+# ========== Java ========== #
+## Compiled class files
+*.class
+## Logs
+*.log
+## Maven
+target/
+## Gradle
+.gradle/
+build/
+## Eclipse
+.project
+.classpath
+.settings/
+.loadpath
+## IntelliJ IDEA
+*.iml
+*.ipr
+*.iws
+out/
+.idea/
+# ========== Python ========== #
+## Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+## Virtual environment
+env/
+venv/
+ENV/
+.venv/
+.env*
+## PyInstaller
+*.spec
+dist/
+build/
+## Jupyter Notebook
+.ipynb_checkpoints/
+## Misc
+*.log
+*.pot
+*.pyc
+.DS_Store
+*.sqlite3
+# ========== General ========== #
+## OS generated
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+*.swp
+*.swo
+*.bak
+*.tmp
+*.old
+## Node (just in case mixed project)
+node_modules/
+# End

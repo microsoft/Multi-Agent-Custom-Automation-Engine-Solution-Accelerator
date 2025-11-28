@@ -61,14 +61,17 @@ class MCPConfig:
         self.url = config.MCP_SERVER_ENDPOINT
         self.name = config.MCP_SERVER_NAME
         self.description = config.MCP_SERVER_DESCRIPTION
+        logger.info(f"🔧 MCP Config initialized - URL: {self.url}, Name: {self.name}")
 
     def get_headers(self, token: str):
         """Get MCP headers with authentication token."""
-        return (
+        headers = (
             {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
             if token
             else {}
         )
+        logger.debug(f"📋 MCP Headers created: {headers}")
+        return headers
 
 
 class OrchestrationConfig:
@@ -127,6 +130,7 @@ class OrchestrationConfig:
             asyncio.TimeoutError: If timeout is exceeded
             KeyError: If plan_id is not found in approvals
         """
+        logger.info(f"Waiting for approval: {plan_id}")
         if timeout is None:
             timeout = self.default_timeout
 
@@ -142,9 +146,11 @@ class OrchestrationConfig:
 
         try:
             await asyncio.wait_for(self._approval_events[plan_id].wait(), timeout=timeout)
+            logger.info(f"Approval received: {plan_id}")
             return self.approvals[plan_id]
         except asyncio.TimeoutError:
             # Clean up on timeout
+            logger.warning(f"Approval timeout: {plan_id}")
             self.cleanup_approval(plan_id)
             raise
         except asyncio.CancelledError:
