@@ -405,12 +405,14 @@ async def plan_approval(human_feedback: messages.PlanApprovalResponse, request: 
                     print("Plan approval processed:", result)
 
                 except ValueError as ve:
-                    print(f"ValueError processing plan approval: {ve}")
+                    # print(f"ValueError processing plan approval: {ve}")
+                    logger.error(f"ValueError processing plan approval: {ve}")
                     await connection_config.send_status_update_async(
                         {
                             "type": WebsocketMessageType.ERROR_MESSAGE,
                             "data": {
-                                "content": f"Approval failed: {str(ve)}",
+                                # "content": f"Approval failed: {str(ve)}",
+                                "content": "Approval failed due to invalid input.",
                                 "status": "error",
                                 "timestamp": asyncio.get_event_loop().time(),
                             },
@@ -420,12 +422,18 @@ async def plan_approval(human_feedback: messages.PlanApprovalResponse, request: 
                     )
 
                 except Exception as e:
-                    print(f"Error processing plan approval: {e}")
+                    # print(f"Error processing plan approval: {e}")
+                    # await connection_config.send_status_update_async(
+                    #     {
+                    #         "type": WebsocketMessageType.ERROR_MESSAGE,
+                    #         "data": {
+                    #             "content": f"Failed to process approval: {str(e)}",
+                    logger.error("Error processing plan approval", exc_info=True)
                     await connection_config.send_status_update_async(
                         {
                             "type": WebsocketMessageType.ERROR_MESSAGE,
                             "data": {
-                                "content": f"Failed to process approval: {str(e)}",
+                                "content": "An unexpected error occurred while processing the approval.",
                                 "status": "error",
                                 "timestamp": asyncio.get_event_loop().time(),
                             },
@@ -460,7 +468,8 @@ async def plan_approval(human_feedback: messages.PlanApprovalResponse, request: 
                 {
                     "type": WebsocketMessageType.ERROR_MESSAGE,
                     "data": {
-                        "content": f"Approval error: {str(e)}",
+                        # "content": f"Approval error: {str(e)}",
+                        "content": "An error occurred while processing your approval request.",
                         "status": "error",
                         "timestamp": asyncio.get_event_loop().time(),
                     },

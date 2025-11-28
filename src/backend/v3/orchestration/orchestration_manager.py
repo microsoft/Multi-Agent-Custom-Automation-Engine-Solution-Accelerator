@@ -200,6 +200,11 @@ class OrchestrationManager:
 
         except ResourceNotFoundError as e:
             self.logger.error(f"Agent not found: {e}")
+            self.logger.info(f"Error: {e}")
+            self.logger.info(f"Error type: {type(e).__name__}")
+            if hasattr(e, "__dict__"):
+                self.logger.info(f"Error attributes: {e.__dict__}")
+            self.logger.info("=" * 50)
             await connection_config.send_status_update_async(
                 {
                     "type": WebsocketMessageType.ERROR_MESSAGE,
@@ -231,6 +236,11 @@ class OrchestrationManager:
                 )
             else:
                 self.logger.exception("Unexpected RuntimeError")
+                self.logger.info(f"Error: {e}")
+                self.logger.info(f"Error type: {type(e).__name__}")
+                if hasattr(e, "__dict__"):
+                    self.logger.info(f"Error attributes: {e.__dict__}")
+                self.logger.info("=" * 50)
                 # Fallback error message
                 await connection_config.send_status_update_async(
                     {
@@ -247,6 +257,11 @@ class OrchestrationManager:
 
         except Exception as e:
             self.logger.error(f"🚨 Unexpected error during orchestration: {e}")
+            self.logger.info(f"Error: {e}")
+            self.logger.info(f"Error type: {type(e).__name__}")
+            if hasattr(e, "__dict__"):
+                self.logger.info(f"Error attributes: {e.__dict__}")
+            self.logger.info("=" * 50)
             # Always send error to frontend
             await connection_config.send_status_update_async(
                 {

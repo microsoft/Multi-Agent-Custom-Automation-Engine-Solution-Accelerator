@@ -57,9 +57,12 @@ const PlanPage: React.FC = () => {
     const [streamingMessageBuffer, setStreamingMessageBuffer] = useState<string>("");
     const [showBufferingText, setShowBufferingText] = useState<boolean>(false);
     const [agentMessages, setAgentMessages] = useState<AgentMessageData[]>([]);
-    const formatErrorMessage = (content: string): string => {
+    // const formatErrorMessage = (content: string): string => {
+    //     return `⚠️ ${content}`;
+    // };
+    const formatErrorMessage = useCallback((content: string): string => {
         return `⚠️ ${content}`;
-    };
+    }, []);
     // Plan approval state - track when plan is approved
     const [planApproved, setPlanApproved] = useState<boolean>(false);
 
@@ -413,7 +416,6 @@ const PlanPage: React.FC = () => {
 
             setAgentMessages(prev => [...prev, errorAgentMessage]);
             setShowProcessingPlanSpinner(false);
-            setSubmittingChatDisableInput(false);
             setShowBufferingText(false);
             setIsProcessing(false);
             setShowProcessingMessage(false);
@@ -422,7 +424,7 @@ const PlanPage: React.FC = () => {
         });
 
         return () => unsubscribe();
-    }, [scrollToBottom, showToast]);
+    }, [scrollToBottom, showToast, formatErrorMessage, networkError]);
 
     //WebsocketMessageType.AGENT_MESSAGE
     useEffect(() => {
@@ -531,7 +533,7 @@ const PlanPage: React.FC = () => {
     // Force spinner off whenever network error occurs
     useEffect(() => {
         if (networkError) {
-            console.log('🛑 [NETWORK ERROR DETECTED] Forcing spinner OFF');
+            console.log('[NETWORK ERROR DETECTED] Forcing spinner OFF');
             setShowProcessingPlanSpinner(false);
             setIsProcessing(false);
             setShowProcessingMessage(false);
@@ -540,20 +542,20 @@ const PlanPage: React.FC = () => {
     }, [networkError]);
 
     // Enable input when clarification message is present
-    useEffect(() => {
-        if (clarificationMessage) {
-            console.log('✅ Clarification message present - enabling input');
-            setSubmittingChatDisableInput(false);
-        }
-    }, [clarificationMessage]);
+    // useEffect(() => {
+    //     if (clarificationMessage) {
+    //         console.log('✅ Clarification message present - enabling input');
+    //         setSubmittingChatDisableInput(false);
+    //     }
+    // }, [clarificationMessage]);
 
     useEffect(() => {
         const handleOffline = () => {
-            console.log('🔴 Network disconnected - stopping all processing');
+            console.log('Network disconnected - stopping all processing');
             // Set a flag to show network error and stop all processing states
             setNetworkError(true);
             setShowProcessingMessage(false);
-            console.log('🛑 [OFFLINE] Setting showProcessingPlanSpinner = false');
+            console.log('[OFFLINE] Setting showProcessingPlanSpinner = false');
             setShowProcessingPlanSpinner(false);
             setIsProcessing(false);
             setShowBufferingText(false);
@@ -599,14 +601,14 @@ const PlanPage: React.FC = () => {
                     setAgentMessages(planResult.messages);
                     
                     // Check if the last message is a clarification request
-                    const lastMessage = planResult.messages[planResult.messages.length - 1];
-                    if (lastMessage?.agent === AgentType.GROUP_CHAT_MANAGER && 
-                        lastMessage?.agent_type === AgentMessageType.AI_AGENT &&
-                        lastMessage?.content) {
-                        // This is likely a clarification request, enable input
-                        console.log('📝 Found clarification message in loaded plan, enabling input');
-                        setSubmittingChatDisableInput(false);
-                    }
+                    // const lastMessage = planResult.messages[planResult.messages.length - 1];
+                    // if (lastMessage?.agent === AgentType.GROUP_CHAT_MANAGER && 
+                    //     lastMessage?.agent_type === AgentMessageType.AI_AGENT &&
+                    //     lastMessage?.content) {
+                    //     // This is likely a clarification request, enable input
+                    //     console.log('📝 Found clarification message in loaded plan, enabling input');
+                    //     setSubmittingChatDisableInput(false);
+                    // }
                 }
                 if (planResult?.mplan) {
                     setPlanApprovalRequest(planResult.mplan);
@@ -643,7 +645,6 @@ const PlanPage: React.FC = () => {
         const timeoutId = setTimeout(() => {
             dismissToast(id);
             setShowProcessingPlanSpinner(false);
-            setSubmittingChatDisableInput(false);
             setProcessingApproval(false);
             setNetworkError(true); 
             setIsProcessing(false);
