@@ -5,6 +5,7 @@
   "status": "visible",
   "created": "",
   "created_by": "",
+  "deployment_name": "gpt-4.1-mini",
   "description": "A multi-agent legal review team that summarizes NDAs, identifies risks, checks compliance, and recommends improvements using advanced legal reasoning and retrieval-augmented analysis.",
   "logo": "",
   "plan": "",
@@ -21,9 +22,7 @@
       "use_mcp": false,
       "use_bing": false,
       "use_reasoning": false,
-      "index_name": "macae-legal-index",
-      "index_foundry_name": "",
-      "index_endpoint": "",
+      "index_name": "sample-dataset-index",
       "coding_tools": false
     },
     {
@@ -38,9 +37,7 @@
       "use_mcp": false,
       "use_bing": false,
       "use_reasoning": false,
-      "index_name": "macae-legal-index",
-      "index_foundry_name": "",
-      "index_endpoint": "",
+      "index_name": "sample-dataset-index",
       "coding_tools": false
     },
     {
@@ -55,9 +52,7 @@
       "use_mcp": false,
       "use_bing": false,
       "use_reasoning": false,
-      "index_name": "macae-legal-index",
-      "index_foundry_name": "",
-      "index_endpoint": "",
+      "index_name": "sample-dataset-index",
       "coding_tools": false
     }
   ],
@@ -66,7 +61,7 @@
     {
       "id": "task-1",
       "name": "NDA Contract Review",
-      "prompt": "Please review the following NDA contract for summary, risks, and compliance issues.",
+      "prompt": "Review Contoso's NDA. Provide a summary (parties, date, term, governing law), assess risks (High/Medium/Low with clause references), audit compliance against company policy, and suggest edits for any issues.",
       "created": "",
       "creator": "",
       "logo": ""

@@ -21,7 +21,7 @@
       "use_mcp": false,
       "use_bing": false,
       "use_reasoning": false,
-      "index_name": "macae-rfp-index",
+      "index_name": "sample-dataset-index",
       "index_foundry_name": "",
       "index_endpoint": "",
       "coding_tools": false
@@ -38,7 +38,7 @@
       "use_mcp": false,
       "use_bing": false,
       "use_reasoning": false,
-      "index_name": "macae-rfp-index",
+      "index_name": "sample-dataset-index",
       "coding_tools": false
     },
     {
@@ -53,7 +53,7 @@
       "use_mcp": false,
       "use_bing": false,
       "use_reasoning": false,
-      "index_name": "macae-rfp-index",
+      "index_name": "sample-dataset-index",
       "coding_tools": false
     }
   ],

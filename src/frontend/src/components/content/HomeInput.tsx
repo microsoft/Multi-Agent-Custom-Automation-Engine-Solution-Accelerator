@@ -3,6 +3,8 @@ import {
     Button,
     Caption1,
     Title2,
+    MessageBar,
+    MessageBarBody,
 } from "@fluentui/react-components";
 
 import React, { useRef, useEffect, useState } from "react";
@@ -65,6 +67,9 @@ const HomeInput: React.FC<HomeInputProps> = ({
     const navigate = useNavigate();
     const location = useLocation(); // ✅ location.state used to control focus
     const { showToast, dismissToast } = useInlineToaster();
+
+    // Check if the selected team is the Legal Contract Review Team
+    const isLegalTeam = selectedTeam?.name?.toLowerCase().includes("legal contract");
 
     useEffect(() => {
         if (location.state?.focusInput) {
@@ -182,6 +187,21 @@ const HomeInput: React.FC<HomeInputProps> = ({
                     <div className="home-input-title-wrapper">
                         <Title2>How can I help?</Title2>
                     </div>
+
+                    {/* Legal Disclaimer for Legal Contract Review Team */}
+                    {isLegalTeam && (
+                        <MessageBar 
+                            intent="warning"
+                            style={{ 
+                                marginBottom: '16px',
+                                maxWidth: '100%'
+                            }}
+                        >
+                            <MessageBarBody>
+                                <strong>Disclaimer:</strong> This tool is not intended to give legal advice; it is intended solely for the purpose of assessing contracts against internal guidance and policy frameworks.
+                            </MessageBarBody>
+                        </MessageBar>
+                    )}
 
                     {/* Show RAI error if present */}
                     {/* {raiError && (

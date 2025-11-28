@@ -12,7 +12,7 @@ from azure.core.credentials import AzureKeyCredential
 try:
     from docx import Document
     from docx.opc.exceptions import PackageNotFoundError
-except Exception:
+except ImportError:
     Document = None
     PackageNotFoundError = None
 
@@ -36,6 +36,7 @@ if Document is None:
     sys.exit(1)
 
 def extract_text_from_docx(file_path):
+    """Extract text from a DOCX file."""
     file_path = str(file_path)
     if not os.path.exists(file_path):
         raise FileNotFoundError(file_path)
@@ -45,27 +46,34 @@ def extract_text_from_docx(file_path):
         return "\n".join(paragraphs)
     except PackageNotFoundError:
         # Not a valid .docx archive (possibly a renamed file) — treat as skip
+        print(f"Error: {file_path} is not a valid DOCX file.")
         raise
-    except Exception:
+    except Exception as e:
+        print(f"Error processing {file_path}: {e}")
         raise
 
+# --------------------------
 # Collect documents
 documents = []
 skipped = []
 
 for entry in sorted(os.listdir(LOCAL_DOCX_FOLDER)):
+    print(f"Checking file: {entry}")  # Log the file being checked
     if not entry.lower().endswith(".docx"):
+        print(f"Skipping non-DOCX file: {entry}")  # Log skipped file
         continue
     if entry.startswith("~$"):
-        # skip Word temp files
+        print(f"Skipping temp file: {entry}")  # Log temp files being skipped
         continue
 
     path = LOCAL_DOCX_FOLDER / entry
     if not path.is_file():
+        print(f"Skipping non-file: {entry}")  # Log non-file entries
         continue
 
     try:
         text = extract_text_from_docx(path)
+        print(f"Extracted text from {entry}")  # Log successful extraction
     except PackageNotFoundError:
         print(f"Skipping (invalid .docx): {entry}")
         skipped.append(entry)
@@ -76,7 +84,7 @@ for entry in sorted(os.listdir(LOCAL_DOCX_FOLDER)):
         continue
 
     if not text or not text.strip():
-        print(f"Skipping (no text): {entry}")
+        print(f"Skipping (empty text): {entry}, Text length: {len(text)}")
         skipped.append(entry)
         continue
 
@@ -116,7 +124,7 @@ index_client.create_or_update_index(index)
 print("Azure Search index created/updated.")
 
 # --------------------------
-# Upload documents
+# Upload documents to Azure Search
 search_client = SearchClient(
     endpoint=f"https://{AZURE_SEARCH_SERVICE}.search.windows.net",
     index_name=AZURE_SEARCH_INDEX_NAME,
@@ -127,7 +135,8 @@ upload_results = search_client.upload_documents(documents)
 succeeded = sum(1 for r in upload_results if getattr(r, "succeeded", False) is True)
 print(f"Uploaded {succeeded}/{len(documents)} documents to Azure Search.")
 
-# Optional quick search
+# --------------------------
+# Optional: Quick search query to test the upload
 query = "Compliance"
 try:
     results = search_client.search(query, top=5)
