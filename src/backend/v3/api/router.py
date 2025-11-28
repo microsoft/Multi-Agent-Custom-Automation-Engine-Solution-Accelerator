@@ -405,13 +405,11 @@ async def plan_approval(human_feedback: messages.PlanApprovalResponse, request: 
                     print("Plan approval processed:", result)
 
                 except ValueError as ve:
-                    # print(f"ValueError processing plan approval: {ve}")
                     logger.error(f"ValueError processing plan approval: {ve}")
                     await connection_config.send_status_update_async(
                         {
                             "type": WebsocketMessageType.ERROR_MESSAGE,
                             "data": {
-                                # "content": f"Approval failed: {str(ve)}",
                                 "content": "Approval failed due to invalid input.",
                                 "status": "error",
                                 "timestamp": asyncio.get_event_loop().time(),

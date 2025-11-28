@@ -22,7 +22,7 @@ import { APIService } from "../api/apiService";
 import { StreamMessage, StreamingPlanUpdate } from "../models";
 import { usePlanCancellationAlert } from "../hooks/usePlanCancellationAlert";
 import PlanCancellationDialog from "../components/common/PlanCancellationDialog";
-import { renderPlanExecutionMessage, renderThinkingState } from '../components/content/streaming/StreamingPlanState';
+// import { renderPlanExecutionMessage, renderThinkingState } from '../components/content/streaming/StreamingPlanState';
 import "../styles/PlanPage.css"
 
 // Create API service instance
@@ -57,9 +57,6 @@ const PlanPage: React.FC = () => {
     const [streamingMessageBuffer, setStreamingMessageBuffer] = useState<string>("");
     const [showBufferingText, setShowBufferingText] = useState<boolean>(false);
     const [agentMessages, setAgentMessages] = useState<AgentMessageData[]>([]);
-    // const formatErrorMessage = (content: string): string => {
-    //     return `⚠️ ${content}`;
-    // };
     const formatErrorMessage = useCallback((content: string): string => {
         return `⚠️ ${content}`;
     }, []);
@@ -541,14 +538,6 @@ const PlanPage: React.FC = () => {
         }
     }, [networkError]);
 
-    // Enable input when clarification message is present
-    // useEffect(() => {
-    //     if (clarificationMessage) {
-    //         console.log('✅ Clarification message present - enabling input');
-    //         setSubmittingChatDisableInput(false);
-    //     }
-    // }, [clarificationMessage]);
-
     useEffect(() => {
         const handleOffline = () => {
             console.log('Network disconnected - stopping all processing');
@@ -599,16 +588,6 @@ const PlanPage: React.FC = () => {
                 }
                 if (planResult?.messages) {
                     setAgentMessages(planResult.messages);
-                    
-                    // Check if the last message is a clarification request
-                    // const lastMessage = planResult.messages[planResult.messages.length - 1];
-                    // if (lastMessage?.agent === AgentType.GROUP_CHAT_MANAGER && 
-                    //     lastMessage?.agent_type === AgentMessageType.AI_AGENT &&
-                    //     lastMessage?.content) {
-                    //     // This is likely a clarification request, enable input
-                    //     console.log('📝 Found clarification message in loaded plan, enabling input');
-                    //     setSubmittingChatDisableInput(false);
-                    // }
                 }
                 if (planResult?.mplan) {
                     setPlanApprovalRequest(planResult.mplan);
