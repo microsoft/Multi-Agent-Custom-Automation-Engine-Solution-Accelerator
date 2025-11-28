@@ -35,7 +35,9 @@ echo "✅ Azure subscription set successfully."
 
 # Define models and their minimum required capacities
 declare -A MIN_CAPACITY=(
-    ["OpenAI.GlobalStandard.gpt4.1"]=$GPT_MIN_CAPACITY
+    ["OpenAI.GlobalStandard.o4-mini"]="${O4_MINI_MIN_CAPACITY}"
+    ["OpenAI.GlobalStandard.gpt4.1"]="${GPT_MIN_CAPACITY}"
+    ["OpenAI.GlobalStandard.gpt4.1-mini"]="${GPT41_MINI_MIN_CAPACITY}"
 )
 
 VALID_REGION=""
