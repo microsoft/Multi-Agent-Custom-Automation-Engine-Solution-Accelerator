@@ -399,7 +399,35 @@ const PlanPage: React.FC = () => {
     useEffect(() => {
         const unsubscribe = webSocketService.on(WebsocketMessageType.ERROR_MESSAGE, (errorMessage: any) => {
             console.log('❌ Received ERROR_MESSAGE:', errorMessage);
-            const errorContent = errorMessage?.data?.content || "Something went wrong. Please try again later.";
+            console.log('❌ Error message data:', errorMessage?.data);
+            
+            // Try multiple ways to extract the error message
+            let errorContent = "An unexpected error occurred. Please try again later.";
+            
+            // Check for double-nested data structure
+            if (errorMessage?.data?.data?.content) {
+                const content = errorMessage.data.data.content.trim();
+                if (content.length > 0) {
+                    errorContent = content;
+                }
+            } else if (errorMessage?.data?.content) {
+                const content = errorMessage.data.content.trim();
+                if (content.length > 0) {
+                    errorContent = content;
+                }
+            } else if (errorMessage?.content) {
+                const content = errorMessage.content.trim();
+                if (content.length > 0) {
+                    errorContent = content;
+                }
+            } else if (typeof errorMessage === 'string') {
+                const content = errorMessage.trim();
+                if (content.length > 0) {
+                    errorContent = content;
+                }
+            }
+
+            console.log('❌ Final error content to display:', errorContent);
 
             const errorAgentMessage: AgentMessageData = {
                 agent: 'system',
@@ -416,6 +444,7 @@ const PlanPage: React.FC = () => {
             setShowBufferingText(false);
             setIsProcessing(false);
             setShowProcessingMessage(false);
+            setSubmittingChatDisableInput(false);
             scrollToBottom();
             showToast(errorContent, "error");
         });
@@ -466,8 +495,8 @@ const PlanPage: React.FC = () => {
 
     // WebSocket connection with proper error handling and v3 backend compatibility
     useEffect(() => {
-        if (planId && continueWithWebsocketFlow) {
-            console.log('🔌 Connecting WebSocket:', { planId, continueWithWebsocketFlow });
+        if (planId) {
+            console.log('🔌 Connecting WebSocket:', { planId });
 
             const connectWebSocket = async () => {
                 try {
@@ -525,7 +554,7 @@ const PlanPage: React.FC = () => {
                 webSocketService.disconnect();
             };
         }
-    }, [planId, loading, continueWithWebsocketFlow]);
+    }, [planId]);
 
     // Force spinner off whenever network error occurs
     useEffect(() => {
