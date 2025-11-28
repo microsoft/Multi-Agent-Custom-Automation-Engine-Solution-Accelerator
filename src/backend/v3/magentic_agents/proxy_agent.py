@@ -3,6 +3,7 @@
 
 import asyncio
 import logging
+import time
 import uuid
 from collections.abc import AsyncIterable
 from typing import AsyncIterator, Optional
@@ -29,6 +30,9 @@ from v3.callbacks.response_handlers import (agent_response_callback,
 from v3.config.settings import connection_config, orchestration_config
 from v3.models.messages import (UserClarificationRequest,
                                 UserClarificationResponse, WebsocketMessageType)
+
+# Initialize logger for the module
+logger = logging.getLogger(__name__)
 
 
 class DummyAgentThread(AgentThread):
@@ -185,10 +189,16 @@ class ProxyAgent(Agent):
             clarification_message.request_id
         )
 
-        if not human_response:
-            human_response = "No additional clarification provided."
+        # Handle silent timeout/cancellation
+        if human_response is None:
+            # Process was terminated silently - don't yield any response
+            logger.debug("Clarification process terminated silently - ending invoke")
+            return
 
-        response = f"Human clarification: {human_response}"
+        # Extract the answer from the response
+        answer = human_response.answer if human_response else "No additional clarification provided."
+
+        response = f"Human clarification: {answer}"
 
         chat_message = self._create_message_content(response, thread.id)
 
@@ -242,10 +252,16 @@ class ProxyAgent(Agent):
             clarification_message.request_id
         )
 
-        if not human_response:
-            human_response = "No additional clarification provided."
+        # Handle silent timeout/cancellation
+        if human_response is None:
+            # Process was terminated silently - don't yield any response
+            logger.debug("Clarification process terminated silently - ending invoke_stream")
+            return
 
-        response = f"Human clarification: {human_response}"
+        # Extract the answer from the response
+        answer = human_response.answer if human_response else "No additional clarification provided."
+
+        response = f"Human clarification: {answer}"
 
         chat_message = self._create_message_content(response, thread.id)
 
@@ -254,16 +270,86 @@ class ProxyAgent(Agent):
     async def _wait_for_user_clarification(
         self, request_id: str
     ) -> Optional[UserClarificationResponse]:
-        """Wait for user clarification response."""
-        # To do: implement timeout and error handling
-        if request_id not in orchestration_config.clarifications:
-            orchestration_config.clarifications[request_id] = None
-        while orchestration_config.clarifications[request_id] is None:
-            await asyncio.sleep(0.2)
-        return UserClarificationResponse(
-            request_id=request_id,
-            answer=orchestration_config.clarifications[request_id],
-        )
+        """
+        Wait for user clarification response using event-driven pattern with timeout handling.
+
+        Args:
+            request_id: The request ID to wait for clarification
+
+        Returns:
+            UserClarificationResponse: Clarification result with request ID and answer
+
+        Raises:
+            asyncio.TimeoutError: If timeout is exceeded (300 seconds default)
+        """
+        logger.info(f"Waiting for clarification: {request_id}")
+
+        # Initialize clarification as pending using the new event-driven method
+        orchestration_config.set_clarification_pending(request_id)
+
+        try:
+            # Wait for clarification with timeout using the new event-driven method
+            answer = await orchestration_config.wait_for_clarification(request_id)
+
+            logger.info(f"Clarification received for {request_id} : {answer}")
+            return UserClarificationResponse(
+                request_id=request_id,
+                answer=answer,
+            )
+        except asyncio.TimeoutError:
+            # Enhanced timeout handling - notify user via WebSocket and cleanup
+            logger.warning(f"Clarification timeout for request: {request_id}")
+
+            # Create timeout notification message
+            from v3.models.messages import TimeoutNotification, WebsocketMessageType
+            timeout_notification = TimeoutNotification(
+                timeout_type="clarification",
+                request_id=request_id,
+                message=f"User clarification request timed out after {orchestration_config.default_timeout} seconds. Please try again.",
+                timestamp=time.time(),
+                timeout_duration=orchestration_config.default_timeout
+            )
+
+            # Send timeout notification to user via WebSocket
+            try:
+                await connection_config.send_status_update_async(
+                    message=timeout_notification,
+                    user_id=self.user_id,
+                    message_type=WebsocketMessageType.TIMEOUT_NOTIFICATION,
+                )
+                logger.info(f"Timeout notification sent to user {self.user_id} for clarification {request_id}")
+            except Exception as e:
+                logger.error(f"Failed to send timeout notification: {e}")
+
+            # Clean up this specific request
+            orchestration_config.cleanup_clarification(request_id)
+
+            # Return None to indicate silent termination
+            # The timeout naturally stops this specific wait operation without affecting other tasks
+            return None
+
+        except KeyError as e:
+            # Silent error handling for invalid request IDs
+            logger.debug(f"Request ID not found: {e} - terminating process silently")
+            return None
+
+        except asyncio.CancelledError:
+            # Handle task cancellation gracefully
+            logger.debug(f"Clarification request {request_id} was cancelled")
+            orchestration_config.cleanup_clarification(request_id)
+            return None
+
+        except Exception as e:
+            # Silent error handling for unexpected errors
+            logger.debug(f"Unexpected error waiting for clarification: {e} - terminating process silently")
+            orchestration_config.cleanup_clarification(request_id)
+            return None
+        finally:
+            # Ensure cleanup happens for any incomplete requests
+            # This provides an additional safety net for resource cleanup
+            if (request_id in orchestration_config.clarifications and orchestration_config.clarifications[request_id] is None):
+                logger.debug(f"Final cleanup for pending clarification request {request_id}")
+                orchestration_config.cleanup_clarification(request_id)
 
     async def get_response(self, chat_history, **kwargs):
         """Get response from the agent - required by Agent base class."""

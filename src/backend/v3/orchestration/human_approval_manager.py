@@ -53,6 +53,7 @@ class HumanApprovalMagenticManager(StandardMagenticManager):
         # Remove any custom kwargs before passing to parent
 
         plan_append = """
+
 IMPORTANT: Never ask the user for information or clarification until all agents on the team have been asked first.
 
 EXAMPLE: If the user request involves product information, first ask all agents on the team to provide the information.
@@ -69,7 +70,6 @@ Here is an example of a well-structured plan:
 - **DocumentCreationAgent** to draft a comprehensive onboarding plan that includes a checklist of resources and materials needed for effective onboarding.
 - **ProxyAgent** to review the drafted onboarding plan for clarity and completeness.
 - **MagenticManager** to finalize the onboarding plan and prepare it for presentation to stakeholders.
-
 """
 
         final_append = """
@@ -206,16 +206,88 @@ Here is an example of a well-structured plan:
     async def _wait_for_user_approval(
         self, m_plan_id: Optional[str] = None
     ) -> Optional[messages.PlanApprovalResponse]:
-        """Wait for user approval response."""
+        """
+        Wait for user approval response using event-driven pattern with timeout handling.
 
-        # To do: implement timeout and error handling
-        if m_plan_id not in orchestration_config.approvals:
-            orchestration_config.approvals[m_plan_id] = None
-        while orchestration_config.approvals[m_plan_id] is None:
-            await asyncio.sleep(0.2)
-        return messages.PlanApprovalResponse(
-            approved=orchestration_config.approvals[m_plan_id], m_plan_id=m_plan_id
-        )
+        Args:
+            m_plan_id: The plan ID to wait for approval
+
+        Returns:
+            PlanApprovalResponse: Approval result with approved status and plan ID
+
+        Raises:
+            asyncio.TimeoutError: If timeout is exceeded (300 seconds default)
+        """
+        logger.info(f"Waiting for user approval for plan: {m_plan_id}")
+
+        if not m_plan_id:
+            logger.error("No plan ID provided for approval")
+            return messages.PlanApprovalResponse(approved=False, m_plan_id=m_plan_id)
+
+        # Initialize approval as pending using the new event-driven method
+        orchestration_config.set_approval_pending(m_plan_id)
+
+        try:
+            # Wait for approval with timeout using the new event-driven method
+            approved = await orchestration_config.wait_for_approval(m_plan_id)
+
+            logger.info(f"Approval received for plan {m_plan_id}: {approved}")
+            return messages.PlanApprovalResponse(
+                approved=approved, m_plan_id=m_plan_id
+            )
+        except asyncio.TimeoutError:
+            # Enhanced timeout handling - notify user via WebSocket and cleanup
+            logger.debug(f"Approval timeout for plan {m_plan_id} - notifying user and terminating process")
+
+            # Create timeout notification message
+            timeout_message = messages.TimeoutNotification(
+                timeout_type="approval",
+                request_id=m_plan_id,
+                message=f"Plan approval request timed out after {orchestration_config.default_timeout} seconds. Please try again.",
+                timestamp=asyncio.get_event_loop().time(),
+                timeout_duration=orchestration_config.default_timeout
+            )
+
+            # Send timeout notification to user via WebSocket
+            try:
+                await connection_config.send_status_update_async(
+                    message=timeout_message,
+                    user_id=self.current_user_id,
+                    message_type=messages.WebsocketMessageType.TIMEOUT_NOTIFICATION,
+                )
+                logger.info(f"Timeout notification sent to user {self.current_user_id} for plan {m_plan_id}")
+            except Exception as e:
+                logger.error(f"Failed to send timeout notification: {e}")
+
+            # Clean up this specific request
+            orchestration_config.cleanup_approval(m_plan_id)
+
+            # Return None to indicate silent termination
+            # The timeout naturally stops this specific wait operation without affecting other tasks
+            return None
+
+        except KeyError as e:
+            # Silent error handling for invalid plan IDs
+            logger.debug(f"Plan ID not found: {e} - terminating process silently")
+            return None
+
+        except asyncio.CancelledError:
+            # Handle task cancellation gracefully
+            logger.debug(f"Approval request {m_plan_id} was cancelled")
+            orchestration_config.cleanup_approval(m_plan_id)
+            return None
+
+        except Exception as e:
+            # Silent error handling for unexpected errors
+            logger.debug(f"Unexpected error waiting for approval: {e} - terminating process silently")
+            orchestration_config.cleanup_approval(m_plan_id)
+            return None
+        finally:
+            # Ensure cleanup happens for any incomplete requests
+            # This provides an additional safety net for resource cleanup
+            if (m_plan_id in orchestration_config.approvals and orchestration_config.approvals[m_plan_id] is None):
+                logger.debug(f"Final cleanup for pending approval plan {m_plan_id}")
+                orchestration_config.cleanup_approval(m_plan_id)
 
     async def prepare_final_answer(
         self, magentic_context: MagenticContext

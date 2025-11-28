@@ -47,6 +47,19 @@ get_values_from_azd_env() {
     return 0
 }
 
+# Helper function to extract value with fallback
+extract_value() {
+    local primary_key="$1"
+    local fallback_key="$2"
+    local result
+    
+    result=$(echo "$deploymentOutputs" | grep -A 3 "\"$primary_key\"" | grep '"value"' | sed 's/.*"value": *"\([^"]*\)".*/\1/')
+    if [ -z "$result" ]; then
+        result=$(echo "$deploymentOutputs" | grep -A 3 "\"$fallback_key\"" | grep '"value"' | sed 's/.*"value": *"\([^"]*\)".*/\1/')
+    fi
+    echo "$result"
+}
+
 get_values_from_az_deployment() {
     echo "Getting values from Azure deployment outputs..."
     
@@ -66,12 +79,12 @@ get_values_from_az_deployment() {
         return 1
     fi
     
-    # Extract specific outputs
-    storageAccount=$(echo "$deploymentOutputs" | grep -A 3 '"azurE_STORAGE_ACCOUNT_NAME"' | grep '"value"' | sed 's/.*"value": *"\([^"]*\)".*/\1/')
-    blobContainer=$(echo "$deploymentOutputs" | grep -A 3 '"azurE_STORAGE_CONTAINER_NAME"' | grep '"value"' | sed 's/.*"value": *"\([^"]*\)".*/\1/')
-    aiSearch=$(echo "$deploymentOutputs" | grep -A 3 '"azurE_AI_SEARCH_NAME"' | grep '"value"' | sed 's/.*"value": *"\([^"]*\)".*/\1/')
-    aiSearchIndex=$(echo "$deploymentOutputs" | grep -A 3 '"azurE_AI_SEARCH_INDEX_NAME"' | grep '"value"' | sed 's/.*"value": *"\([^"]*\)".*/\1/')
-    backendUrl=$(echo "$deploymentOutputs" | grep -A 3 '"backenD_URL"' | grep '"value"' | sed 's/.*"value": *"\([^"]*\)".*/\1/')
+    # Extract all values using the helper function
+    storageAccount=$(extract_value "azurE_STORAGE_ACCOUNT_NAME" "azureStorageAccountName")
+    blobContainer=$(extract_value "azurE_STORAGE_CONTAINER_NAME" "azureStorageContainerName")
+    aiSearch=$(extract_value "azurE_AI_SEARCH_NAME" "azureAiSearchName")
+    aiSearchIndex=$(extract_value "azurE_AI_SEARCH_INDEX_NAME" "azureAiSearchIndexName")
+    backendUrl=$(extract_value "backenD_URL" "backendUrl")
     
     # Validate that we extracted all required values
     if [ -z "$storageAccount" ] || [ -z "$blobContainer" ] || [ -z "$aiSearch" ] || [ -z "$aiSearchIndex" ] || [ -z "$backendUrl" ]; then

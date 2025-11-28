@@ -6,7 +6,7 @@ Handles Azure OpenAI, MCP, and environment setup.
 import asyncio
 import json
 import logging
-from typing import Dict
+from typing import Dict, Optional
 
 from common.config.app_config import config
 from common.models.messages_kernel import TeamConfiguration
@@ -61,14 +61,17 @@ class MCPConfig:
         self.url = config.MCP_SERVER_ENDPOINT
         self.name = config.MCP_SERVER_NAME
         self.description = config.MCP_SERVER_DESCRIPTION
+        logger.info(f"🔧 MCP Config initialized - URL: {self.url}, Name: {self.name}")
 
     def get_headers(self, token: str):
         """Get MCP headers with authentication token."""
-        return (
+        headers = (
             {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
             if token
             else {}
         )
+        logger.debug(f"📋 MCP Headers created: {headers}")
+        return headers
 
 
 class OrchestrationConfig:
@@ -86,9 +89,161 @@ class OrchestrationConfig:
             20  # Maximum number of replanning rounds 20 needed to accommodate complex tasks
         )
 
+        # Event-driven notification system for approvals and clarifications
+        self._approval_events: Dict[str, asyncio.Event] = {}
+        self._clarification_events: Dict[str, asyncio.Event] = {}
+
+        # Default timeout for waiting operations (5 minutes)
+        self.default_timeout: float = 300.0
+
     def get_current_orchestration(self, user_id: str) -> MagenticOrchestration:
         """get existing orchestration instance."""
         return self.orchestrations.get(user_id, None)
+
+    def set_approval_pending(self, plan_id: str) -> None:
+        """Set an approval as pending and create an event for it."""
+        self.approvals[plan_id] = None
+        if plan_id not in self._approval_events:
+            self._approval_events[plan_id] = asyncio.Event()
+        else:
+            # Clear existing event to reset state
+            self._approval_events[plan_id].clear()
+
+    def set_approval_result(self, plan_id: str, approved: bool) -> None:
+        """Set the approval result and trigger the event."""
+        self.approvals[plan_id] = approved
+        if plan_id in self._approval_events:
+            self._approval_events[plan_id].set()
+
+    async def wait_for_approval(self, plan_id: str, timeout: Optional[float] = None) -> bool:
+        """
+        Wait for an approval decision with timeout.
+
+        Args:
+            plan_id: The plan ID to wait for
+            timeout: Timeout in seconds (defaults to default_timeout)
+
+        Returns:
+            The approval decision (True/False)
+
+        Raises:
+            asyncio.TimeoutError: If timeout is exceeded
+            KeyError: If plan_id is not found in approvals
+        """
+        logger.info(f"Waiting for approval: {plan_id}")
+        if timeout is None:
+            timeout = self.default_timeout
+
+        if plan_id not in self.approvals:
+            raise KeyError(f"Plan ID {plan_id} not found in approvals")
+
+        if self.approvals[plan_id] is not None:
+            # Already has a result
+            return self.approvals[plan_id]
+
+        if plan_id not in self._approval_events:
+            self._approval_events[plan_id] = asyncio.Event()
+
+        try:
+            await asyncio.wait_for(self._approval_events[plan_id].wait(), timeout=timeout)
+            logger.info(f"Approval received: {plan_id}")
+            return self.approvals[plan_id]
+        except asyncio.TimeoutError:
+            # Clean up on timeout
+            logger.warning(f"Approval timeout: {plan_id}")
+            self.cleanup_approval(plan_id)
+            raise
+        except asyncio.CancelledError:
+            # Handle task cancellation gracefully
+            logger.debug(f"Approval request {plan_id} was cancelled")
+            raise
+        except Exception as e:
+            # Handle any other unexpected errors
+            logger.error(f"Unexpected error waiting for approval {plan_id}: {e}")
+            raise
+        finally:
+            # Ensure cleanup happens regardless of how the try block exits
+            # Only cleanup if the approval is still pending (None) to avoid
+            # cleaning up successful approvals
+            if plan_id in self.approvals and self.approvals[plan_id] is None:
+                self.cleanup_approval(plan_id)
+
+    def set_clarification_pending(self, request_id: str) -> None:
+        """Set a clarification as pending and create an event for it."""
+        self.clarifications[request_id] = None
+        if request_id not in self._clarification_events:
+            self._clarification_events[request_id] = asyncio.Event()
+        else:
+            # Clear existing event to reset state
+            self._clarification_events[request_id].clear()
+
+    def set_clarification_result(self, request_id: str, answer: str) -> None:
+        """Set the clarification response and trigger the event."""
+        self.clarifications[request_id] = answer
+        if request_id in self._clarification_events:
+            self._clarification_events[request_id].set()
+
+    async def wait_for_clarification(self, request_id: str, timeout: Optional[float] = None) -> str:
+        """
+        Wait for a clarification response with timeout.
+
+        Args:
+            request_id: The request ID to wait for
+            timeout: Timeout in seconds (defaults to default_timeout)
+
+        Returns:
+            The clarification response
+
+        Raises:
+            asyncio.TimeoutError: If timeout is exceeded
+            KeyError: If request_id is not found in clarifications
+        """
+        if timeout is None:
+            timeout = self.default_timeout
+
+        if request_id not in self.clarifications:
+            raise KeyError(f"Request ID {request_id} not found in clarifications")
+
+        if self.clarifications[request_id] is not None:
+            # Already has a result
+            return self.clarifications[request_id]
+
+        if request_id not in self._clarification_events:
+            self._clarification_events[request_id] = asyncio.Event()
+
+        try:
+            await asyncio.wait_for(self._clarification_events[request_id].wait(), timeout=timeout)
+            return self.clarifications[request_id]
+        except asyncio.TimeoutError:
+            # Clean up on timeout
+            self.cleanup_clarification(request_id)
+            raise
+        except asyncio.CancelledError:
+            # Handle task cancellation gracefully
+            logger.debug(f"Clarification request {request_id} was cancelled")
+            raise
+        except Exception as e:
+            # Handle any other unexpected errors
+            logger.error(f"Unexpected error waiting for clarification {request_id}: {e}")
+            raise
+        finally:
+            # Ensure cleanup happens regardless of how the try block exits
+            # Only cleanup if the clarification is still pending (None) to avoid
+            # cleaning up successful clarifications
+            if request_id in self.clarifications and self.clarifications[request_id] is None:
+                self.cleanup_clarification(request_id)
+
+    def cleanup_approval(self, plan_id: str) -> None:
+        """Clean up approval resources."""
+        self.approvals.pop(plan_id, None)
+        if plan_id in self._approval_events:
+            del self._approval_events[plan_id]
+
+    def cleanup_clarification(self, request_id: str) -> None:
+        """Clean up clarification resources."""
+        self.clarifications.pop(request_id, None)
+        if request_id in self._clarification_events:
+            del self._clarification_events[request_id]
 
 
 class ConnectionConfig:

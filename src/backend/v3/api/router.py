@@ -396,8 +396,8 @@ async def plan_approval(
                 orchestration_config
                 and human_feedback.m_plan_id in orchestration_config.approvals
             ):
-                orchestration_config.approvals[human_feedback.m_plan_id] = (
-                    human_feedback.approved
+                orchestration_config.set_approval_result(
+                    human_feedback.m_plan_id, human_feedback.approved
                 )
                 # orchestration_config.plans[human_feedback.m_plan_id][
                 #     "plan_id"
@@ -528,10 +528,10 @@ async def user_clarification(
             orchestration_config
             and human_feedback.request_id in orchestration_config.clarifications
         ):
-            orchestration_config.clarifications[human_feedback.request_id] = (
-                human_feedback.answer
+            # Use the new event-driven method to set clarification result
+            orchestration_config.set_clarification_result(
+                human_feedback.request_id, human_feedback.answer
             )
-
             try:
                 result = await PlanService.handle_human_clarification(
                     human_feedback, user_id
@@ -749,10 +749,12 @@ async def upload_team_config(
         )
 
         # Validate search indexes
+        logger.info(f"🔍 Validating search indexes for user: {user_id}")
         search_valid, search_errors = await team_service.validate_team_search_indexes(
             json_data
         )
         if not search_valid:
+            logger.warning(f"❌ Search validation failed for user {user_id}: {search_errors}")
             error_message = (
                 f"Search index validation failed:\n\n{chr(10).join([f'• {error}' for error in search_errors])}\n\n"
                 f"Please ensure all referenced search indexes exist in your Azure AI Search service."
@@ -768,6 +770,7 @@ async def upload_team_config(
             )
             raise HTTPException(status_code=400, detail=error_message)
 
+        logger.info(f"✅ Search validation passed for user: {user_id}")
         track_event_if_configured(
             "Team configuration search validation passed",
             {"status": "passed", "user_id": user_id, "filename": file.filename},

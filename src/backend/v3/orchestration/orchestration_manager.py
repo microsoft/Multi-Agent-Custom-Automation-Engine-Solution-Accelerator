@@ -5,7 +5,6 @@ import logging
 import uuid
 from typing import List, Optional
 
-from azure.identity import DefaultAzureCredential as SyncDefaultAzureCredential
 from common.config.app_config import config
 from common.models.messages_kernel import TeamConfiguration
 from semantic_kernel.agents.orchestration.magentic import MagenticOrchestration
@@ -40,13 +39,14 @@ class OrchestrationManager:
         cls, agents: List, user_id: str = None
     ) -> MagenticOrchestration:
         """Main function to run the agents."""
+        cls.logger.info(f"Initializing orchestration for user: {user_id}")
 
         # Custom execution settings that should work with Azure OpenAI
         execution_settings = OpenAIChatPromptExecutionSettings(
             max_tokens=4000, temperature=0.1
         )
 
-        credential = SyncDefaultAzureCredential()
+        credential = config.get_azure_credential(client_id=config.AZURE_CLIENT_ID)
 
         def get_token():
             token = credential.get_token("https://cognitiveservices.azure.com/.default")
@@ -98,6 +98,7 @@ class OrchestrationManager:
         cls, user_id: str, team_config: TeamConfiguration, team_switched: bool
     ) -> MagenticOrchestration:  # add team_switched: bool parameter
         """get existing orchestration instance."""
+        cls.logger.info(f"Getting orchestration for user: {user_id}, team_switched: {team_switched}")
         current_orchestration = orchestration_config.get_current_orchestration(user_id)
         if (
             current_orchestration is None or team_switched
@@ -118,9 +119,12 @@ class OrchestrationManager:
 
     async def run_orchestration(self, user_id, input_task) -> None:
         """Run the orchestration with user input loop."""
+        self.logger.info(f"Starting orchestration run for user: {user_id}")
 
         job_id = str(uuid.uuid4())
-        orchestration_config.approvals[job_id] = None
+
+        # Use the new event-driven method to set approval as pending
+        orchestration_config.set_approval_pending(job_id)
 
         magentic_orchestration = orchestration_config.get_current_orchestration(user_id)
 
@@ -138,6 +142,7 @@ class OrchestrationManager:
 
         runtime = InProcessRuntime()
         runtime.start()
+        self.logger.info(f"🎯 Starting task execution: {input_task.description[:100]}...")
 
         try:
 
@@ -145,6 +150,7 @@ class OrchestrationManager:
                 task=input_task.description,
                 runtime=runtime,
             )
+            self.logger.info("📊 Task invocation completed, retrieving results")
 
             try:
                 self.logger.info("\nAgent responses:")

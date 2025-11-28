@@ -8,6 +8,8 @@ import {
   DialogBody,
   DialogActions,
   Button,
+  DialogOpenChangeEvent,
+  DialogOpenChangeData
 } from '@fluentui/react-components';
 import { Warning20Regular } from '@fluentui/react-icons';
 import "../../styles/Panel.css";
@@ -29,7 +31,7 @@ const PlanCancellationDialog: React.FC<PlanCancellationDialogProps> = ({
   loading = false
 }) => {
   return (
-    <Dialog open={isOpen} onOpenChange={(_, data) => !data.open && onCancel()}>
+    <Dialog open={isOpen} onOpenChange={(_: DialogOpenChangeEvent, data: DialogOpenChangeData) => !data.open && onCancel()}>
       <DialogSurface>
         <DialogBody>
           <DialogTitle>

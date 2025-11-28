@@ -10,6 +10,10 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      GPT_MIN_CAPACITY: 1
+      O4_MINI_MIN_CAPACITY: 1
+      GPT41_MINI_MIN_CAPACITY: 1
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -21,7 +25,9 @@ jobs:
           export AZURE_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}
           export AZURE_CLIENT_SECRET=${{ secrets.AZURE_CLIENT_SECRET }}
           export AZURE_SUBSCRIPTION_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-          export GPT_MIN_CAPACITY="150"
+          export GPT_MIN_CAPACITY="1"
+          export O4_MINI_MIN_CAPACITY="1"
+          export GPT41_MINI_MIN_CAPACITY="1"
           export AZURE_REGIONS="${{ vars.AZURE_REGIONS }}"
 
           chmod +x infra/scripts/checkquota.sh
@@ -116,7 +122,9 @@ jobs:
               solutionName=${{ env.SOLUTION_PREFIX }} \
               location="${{ env.AZURE_LOCATION }}" \
               azureAiServiceLocation='${{ env.AZURE_LOCATION }}' \
-              gptModelCapacity=5 \
+              gptModelCapacity=${{ env.GPT_MIN_CAPACITY }} \
+              gpt4_1ModelCapacity=${{ env.GPT41_MINI_MIN_CAPACITY }} \
+              gptReasoningModelCapacity=${{ env.O4_MINI_MIN_CAPACITY }} \
               enableTelemetry=true \
               enableMonitoring=true \
               enablePrivateNetworking=true \

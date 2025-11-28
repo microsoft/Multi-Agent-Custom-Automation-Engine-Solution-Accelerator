@@ -176,6 +176,27 @@ class AgentMessageResponse:
     streaming_message: str = None
 
 
+@dataclass(slots=True)
+class TimeoutNotification:
+    """Notification sent to user when session timeout occurs."""
+
+    timeout_type: str  # "approval" or "clarification"
+    request_id: str    # plan_id or request_id that timed out
+    message: str       # Human-readable timeout message
+    timestamp: float   # When the timeout occurred
+    timeout_duration: float  # How long we waited before timing out
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
+        return {
+            "timeout_type": self.timeout_type,
+            "request_id": self.request_id,
+            "message": self.message,
+            "timestamp": self.timestamp,
+            "timeout_duration": self.timeout_duration
+        }
+
+
 class WebsocketMessageType(str, Enum):
     """Types of WebSocket messages."""
 
@@ -192,3 +213,4 @@ class WebsocketMessageType(str, Enum):
     USER_CLARIFICATION_REQUEST = "user_clarification_request"
     USER_CLARIFICATION_RESPONSE = "user_clarification_response"
     FINAL_RESULT_MESSAGE = "final_result_message"
+    TIMEOUT_NOTIFICATION = "timeout_notification"
