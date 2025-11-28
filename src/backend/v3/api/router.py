@@ -421,13 +421,7 @@ async def plan_approval(human_feedback: messages.PlanApprovalResponse, request: 
                         message_type=WebsocketMessageType.ERROR_MESSAGE,
                     )
 
-                except Exception as e:
-                    # print(f"Error processing plan approval: {e}")
-                    # await connection_config.send_status_update_async(
-                    #     {
-                    #         "type": WebsocketMessageType.ERROR_MESSAGE,
-                    #         "data": {
-                    #             "content": f"Failed to process approval: {str(e)}",
+                except Exception:
                     logger.error("Error processing plan approval", exc_info=True)
                     await connection_config.send_status_update_async(
                         {
