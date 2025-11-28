@@ -1856,6 +1856,9 @@ module webSite 'modules/web-sites.bicep' = {
           //WEBSITES_CONTAINER_START_TIME_LIMIT: '1800' // 30 minutes, adjust as needed
           BACKEND_API_URL: 'https://${containerApp.outputs.fqdn}'
           AUTH_ENABLED: 'false'
+          AZURE_BASIC_LOGGING_LEVEL: 'INFO'
+          AZURE_PACKAGE_LOGGING_LEVEL: 'WARNING'
+          AZURE_LOGGING_PACKAGES: ''
           ENABLE_ORYX_BUILD: 'True'
         }
         // WAF aligned configuration for Monitoring
