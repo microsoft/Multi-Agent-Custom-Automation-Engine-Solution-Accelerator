@@ -6,7 +6,7 @@ import uuid
 from typing import List, Optional
 
 from common.config.app_config import config
-from common.models.messages_kernel import TeamConfiguration, AgentMessage, AgentType
+from common.models.messages_kernel import TeamConfiguration
 from semantic_kernel.agents.orchestration.magentic import MagenticOrchestration
 from semantic_kernel.agents.runtime import InProcessRuntime
 from azure.core.exceptions import ResourceNotFoundError
@@ -22,7 +22,6 @@ from v3.config.settings import connection_config, orchestration_config
 from v3.magentic_agents.magentic_agent_factory import MagenticAgentFactory
 from v3.models.messages import WebsocketMessageType
 from v3.orchestration.human_approval_manager import HumanApprovalMagenticManager
-from common.database.database_factory import DatabaseFactory
 
 
 class OrchestrationManager:
@@ -190,9 +189,7 @@ class OrchestrationManager:
                 if hasattr(e, "__dict__"):
                     self.logger.info(f"Error attributes: {e.__dict__}")
                 self.logger.info("=" * 50)
-
                 error_content = "The agent is currently unavailable. Please check if it was deleted or recreated.\n\nIf yes, please create a new plan from the home page."
-                
                 self.logger.info(f"🔴 Sending error message to user {user_id}: {error_content}")
 
                 await connection_config.send_status_update_async(
@@ -207,7 +204,6 @@ class OrchestrationManager:
                     user_id,
                     message_type=WebsocketMessageType.ERROR_MESSAGE,
                 )
-                
                 self.logger.info(f"✅ Error message sent via WebSocket to user {user_id}")
 
             except Exception as e:
@@ -272,7 +268,7 @@ class OrchestrationManager:
             self.logger.info("=" * 50)
 
             error_content = "Something went wrong.\n\nPlease try creating a new plan from the home page or try again later."
-            
+
             self.logger.info(f"🔴 Sending error message to user {user_id}: {error_content}")
 
             await connection_config.send_status_update_async(
@@ -287,7 +283,7 @@ class OrchestrationManager:
                 user_id,
                 message_type=WebsocketMessageType.ERROR_MESSAGE,
             )
-            
+
             self.logger.info(f"✅ Error message sent via WebSocket to user {user_id}")
 
         finally:
