@@ -51,6 +51,10 @@ australiaeast, eastus2, francecentral, japaneast, norwayeast, swedencentral, uks
   ```
  ./quota_check_params.sh --models gpt4.1:150 --regions eastus2,westus --verbose
   ```
+✔️ Multiple models with single region:
+  ```
+ ./quota_check_params.sh --models gpt4.1:150,gpt4.1-mini:50 --regions eastus2 --verbose
+  ```
 
 ### **Sample Output**
 The final table lists regions with available quota. You can select any of these regions for deployment.
