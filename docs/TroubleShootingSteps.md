@@ -79,27 +79,12 @@ Use these as quick reference guides to unblock your deployments.
 
 ---------------------------------
 
- ### Network & Infrastructure Configuration
+### Network & Infrastructure Configuration
 
-<details>
-<summary><b>NetcfgSubnetRangeOutsideVnet</b></summary>
-
-- Ensure the subnet’s IP address range falls within the virtual network’s address space.
-- Always validate that the subnet CIDR block is a subset of the VNet range.
-- For Azure Bastion, the AzureBastionSubnet must be at least /27.
-- Confirm that the AzureBastionSubnet is deployed inside the VNet.
-</details>
-
-<details>
-<summary><b>DisableExport_PublicNetworkAccessMustBeDisabled</b></summary>
-
-- <b>Check container source:</b> Confirm whether the deployment is using a Docker image or Azure Container Registry (ACR).
-- <b>Verify ACR configuration:</b> If ACR is included, review its settings to ensure they comply with Azure requirements.
-- <b>Check export settings:</b> If export is disabled in ACR, make sure public network access is also disabled.
-- <b>Dedeploy after fix:</b> Correct the configuration and redeploy. This will prevent the Conflict error during deployment.
-- For more information refer [ACR Data Loss Prevention](https://learn.microsoft.com/en-us/azure/container-registry/data-loss-prevention) document. 
-</details>
-
+| Issue/Error Code | Description | Steps to Resolve |
+|-----------------|-------------|------------------|
+| **NetcfgSubnetRangeOutsideVnet** | | - Ensure the subnet's IP address range falls within the virtual network's address space<br>- Always validate that the subnet CIDR block is a subset of the VNet range<br>- For Azure Bastion, the AzureBastionSubnet must be at least /27<br>- Confirm that the AzureBastionSubnet is deployed inside the VNet |
+| **DisableExport_PublicNetworkAccessMustBeDisabled** | | - **Check container source:** Confirm whether the deployment is using a Docker image or Azure Container Registry (ACR)<br>- **Verify ACR configuration:** If ACR is included, review its settings to ensure they comply with Azure requirements<br>- **Check export settings:** If export is disabled in ACR, make sure public network access is also disabled<br>- **Redeploy after fix:** Correct the configuration and redeploy. This will prevent the Conflict error during deployment<br>- For more information refer [ACR Data Loss Prevention](https://learn.microsoft.com/en-us/azure/container-registry/data-loss-prevention) document |
 
 ---------------------------------
 
