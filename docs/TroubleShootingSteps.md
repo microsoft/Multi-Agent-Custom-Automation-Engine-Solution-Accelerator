@@ -101,10 +101,24 @@ Use these as quick reference guides to unblock your deployments.
 
 ### Resource State & Provisioning
 
-| Issue/Error Code | Description | Steps to Resolve |
-|-----------------|-------------|------------------|
-| **AccountProvisioningStateInvalid** | | - The AccountProvisioningStateInvalid error occurs when you try to use resources while they are still in the Accepted provisioning state<br>- This means the deployment has not yet fully completed<br>- To avoid this error, wait until the provisioning state changes to Succeeded<br>- Only use the resources once the deployment is fully completed |
-| **BadRequest - DatabaseAccount is in a failed provisioning state because the previous attempt to create it was not successful** | | - This error occurs when a user attempts to redeploy a resource that previously failed to provision<br>- To resolve the issue, delete the failed deployment first, then start a new deployment<br>- For guidance on deleting a resource from a Resource Group, refer to the following link: [Delete an Azure Cosmos DB account](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/manage-with-powershell#delete-account:~:text=%3A%24enableMultiMaster-,Delete%20an%20Azure%20Cosmos%20DB%20account,-This%20command%20deletes) |
+ <details>
+<summary><b>AccountProvisioningStateInvalid</b></summary>
+
+- The AccountProvisioningStateInvalid error occurs when you try to use resources while they are still in the Accepted provisioning state.
+- This means the deployment has not yet fully completed.
+- To avoid this error, wait until the provisioning state changes to Succeeded.
+- Only use the resources once the deployment is fully completed.
+</details>
+
+<details><summary><b>BadRequest - DatabaseAccount is in a failed provisioning state because the previous attempt to create it was not successful</b></summary>
+
+- This error occurs when a user attempts to redeploy a resource that previously failed to provision.
+
+- To resolve the issue, delete the failed deployment first, then start a new deployment.
+
+- For guidance on deleting a resource from a Resource Group, refer to the following link: [Delete an Azure Cosmos DB account](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/manage-with-powershell#delete-account:~:text=%3A%24enableMultiMaster-,Delete%20an%20Azure%20Cosmos%20DB%20account,-This%20command%20deletes)
+
+</details>
 
 ---------------------------------
 
@@ -113,18 +127,7 @@ Use these as quick reference guides to unblock your deployments.
 | Issue/Error Code | Description | Steps to Resolve |
 |-----------------|-------------|------------------|
 | **DeploymentModelNotSupported/ServiceModelDeprecated/InvalidResourceProperties** | | - The updated model may not be supported in the selected region. Please verify its availability in the [Azure AI Foundry models](https://learn.microsoft.com/en-us/azure/ai-foundry/openai/concepts/models?tabs=global-standard%2Cstandard-chat-completions) document |
-
-<details>
-<summary><b>FlagMustBeSetForRestore/NameUnavailable/CustomDomainInUse</b></summary>
-
-- This error occurs when you try to deploy a Cognitive Services resource that was **soft-deleted** earlier.  
-- Azure requires you to explicitly set the **`restore` flag** to `true` if you want to recover the soft-deleted resource.  
-- If you don’t want to restore the resource, you must **purge the deleted resource** first before redeploying.
-Example causes:
-- Trying to redeploy a Cognitive Services account with the same name as a previously deleted one.  
-- The deleted resource still exists in a **soft-delete retention state**.  
-**How to fix:**
-1. If you want to restore → add `"restore": true` in your template properties<br>2. If you want a fresh deployment → purge the resource using:<br>`az cognitiveservices account purge --name <resource-name> --resource-group <resource-group> --location <location>`<br>- For more details, refer to [Soft delete and resource restore](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/delete-resource-group?tabs=azure-powershell) |
+| **FlagMustBeSetForRestore/NameUnavailable/CustomDomainInUse** | | - This error occurs when you try to deploy a Cognitive Services resource that was **soft-deleted** earlier<br>- Azure requires you to explicitly set the **`restore` flag** to `true` if you want to recover the soft-deleted resource<br>- If you don't want to restore the resource, you must **purge the deleted resource** first before redeploying<br>**Example causes:**<br>- Trying to redeploy a Cognitive Services account with the same name as a previously deleted one<br>- The deleted resource still exists in a **soft-delete retention state**<br>**How to fix:**<br>1. If you want to restore → add `"restore": true` in your template properties<br>2. If you want a fresh deployment → purge the resource using: `az cognitiveservices account purge --name <resource-name> --resource-group <resource-group> --location <location>`<br>- For more details, refer to [Soft delete and resource restore](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/delete-resource-group?tabs=azure-powershell) |
 | **ContainerAppOperationError** | | - The error is likely due to an improperly built container image. For resolution steps, refer to the [Azure Container Registry (ACR) – Build & Push Guide](./ACRBuildAndPushGuide.md) |
 
 ---------------------------------
