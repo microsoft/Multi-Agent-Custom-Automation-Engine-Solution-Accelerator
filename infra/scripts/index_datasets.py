@@ -48,6 +48,39 @@ def extract_pdf_text(pdf_bytes):
         return "PDF_ERROR: PyPDF2 library not available. Install with: pip install PyPDF2"
     except Exception as e:
         return f"PDF_ERROR: Error reading PDF content: {str(e)}"
+    
+
+# DOCX text extraction function
+def extract_docx_text(docx_bytes):
+    """Extract text content from DOCX bytes using python-docx"""
+    try:
+        from docx import Document
+        import io
+
+        docx_file = io.BytesIO(docx_bytes)
+        doc = Document(docx_file)
+
+        text_content = []
+        
+        # Extract text from paragraphs
+        for paragraph in doc.paragraphs:
+            if paragraph.text.strip():
+                text_content.append(paragraph.text)
+        
+        # Extract text from tables
+        for table in doc.tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    if cell.text.strip():
+                        text_content.append(cell.text)
+
+        full_text = "\n".join(text_content).strip()
+        return full_text if full_text else "DOCX_NO_TEXT: No readable text content found in DOCX."
+
+    except ImportError:
+        return "DOCX_ERROR: python-docx library not available. Install with: pip install python-docx"
+    except Exception as e:
+        return f"DOCX_ERROR: Error reading DOCX content: {str(e)}"
 
 if len(sys.argv) < 4:
     print("Usage: python index_datasets.py <storage_account_name> <blob_container_name> <ai_search_endpoint> [<ai_search_index_name>]")
@@ -106,6 +139,8 @@ for idx, blob in enumerate(blob_list, start=1):
         # Check if this is a PDF file and process accordingly
         if blob.name.lower().endswith('.pdf'):
             text = extract_pdf_text(data)
+        elif blob.name.lower().endswith('.docx'):
+            text = extract_docx_text(data)
         else:
             # Original processing for non-PDF files
             text = data.decode('utf-8')
