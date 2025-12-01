@@ -495,7 +495,7 @@ class CosmosDBClient(DatabaseBase):
 
     async def add_team_agent(self, team_agent: CurrentTeamAgent) -> None:
         """Add an agent message to the database."""
-        await self.delete_team_agent(team_agent.team_id, team_agent.agent_name) # Ensure no duplicates
+        await self.delete_team_agent(team_agent.team_id, team_agent.agent_name)  # Ensure no duplicates
         await self.add_item(team_agent)
 
     async def delete_team_agent(self, team_id: str, agent_name: str) -> None:

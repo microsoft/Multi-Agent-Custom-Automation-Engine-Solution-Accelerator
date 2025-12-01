@@ -79,12 +79,12 @@ class OrchestrationManager:
         db_agent_id = await get_database_team_agent_id(
             memory_store, team_config, agent_name
         )
-        agent_id = db_agent_id or generate_assistant_id()
+        # agent_id = db_agent_id or generate_assistant_id()
         try:
             chat_client = AzureAIAgentClient(
                 project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
                 model_deployment_name=team_config.deployment_name,
-               # agent_id=agent_id,
+                # agent_id=agent_id,
                 agent_name=agent_name,
                 async_credential=credential,
             )
@@ -312,7 +312,7 @@ class OrchestrationManager:
             final_output: str | None = None
 
             self.logger.info("Starting workflow execution...")
-            thread_id = f"task-{job_id}"
+            # thread_id = f"task-{job_id}"
             async for event in workflow.run_stream(task_text):
                 try:
                     # Handle orchestrator messages (task assignments, coordination)

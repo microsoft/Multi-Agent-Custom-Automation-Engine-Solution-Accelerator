@@ -124,7 +124,7 @@ class FoundryAgentTemplate(AzureAgentBase):
         """
         if chatClient:
             return chatClient
-        
+
         if not self.search:
             self.logger.error("Search configuration missing.")
             return None
@@ -229,10 +229,9 @@ class FoundryAgentTemplate(AzureAgentBase):
             self.logger.info("Initializing agent in Foundry mode.")
             temp = 0.1
 
-
         try:
-            chatClient= await self.get_database_team_agent()
-            
+            chatClient = await self.get_database_team_agent()
+
             if self._use_azure_search:
                 # Azure Search mode (skip MCP + Code Interpreter due to incompatibility)
                 self.logger.info(
@@ -272,7 +271,7 @@ class FoundryAgentTemplate(AzureAgentBase):
                 )
 
             self.logger.info("Initialized ChatAgent '%s'", self.agent_name)
-            if not chatClient: # Only save if we didn't load from DB
+            if not chatClient:  # Only save if we didn't load from DB
                 await self.save_database_team_agent()
 
         except Exception as ex:
