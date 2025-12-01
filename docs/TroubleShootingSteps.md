@@ -53,61 +53,18 @@ Use these as quick reference guides to unblock your deployments.
 | **InvalidResourceLocation** | | - You may encounter an InvalidResourceLocation error if you change the region for Cosmos DB or the Storage Account (secondary location) multiple times in the main.bicep file and redeploy<br>- Azure resources like Cosmos DB and Storage Accounts do not support changing regions after deployment<br>- If you need to change the region again, first delete the existing deployment<br>- Then redeploy the resources with the updated region configuration |
 | **ServiceUnavailable/ResourceNotFound** | | - Regions are restricted to guarantee compatibility with paired regions and replica locations for data redundancy and failover scenarios based on articles [Azure regions list](https://learn.microsoft.com/en-us/azure/reliability/regions-list) and [Azure Database for MySQL Flexible Server - Azure Regions](https://learn.microsoft.com/azure/mysql/flexible-server/overview#azure-regions)<br>- You can request more quota, refer [Quota Request](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/create-support-request-quota-increase) Documentation |
 | **ResourceOperationFailure/ProvisioningDisabled** | | - This error occurs when provisioning of a resource is restricted in the selected region. It usually happens because the service is not available in that region or provisioning has been temporarily disabled<br>- Regions are restricted to guarantee compatibility with paired regions and replica locations for data redundancy and failover scenarios based on articles [Azure regions list](https://learn.microsoft.com/en-us/azure/reliability/regions-list) and [Azure Database for MySQL Flexible Server - Azure Regions](https://learn.microsoft.com/azure/mysql/flexible-server/overview#azure-regions)<br>- If you need to use the same region, you can request a quota or provisioning exception. Refer [Quota Request](https://docs.microsoft.com/en-us/azure/sql-database/quota-increase-request) for more details |
-| **RedundancyConfigurationNotAvailableInRegion** | | - This issue happens when you try to create a **Storage Account** with a redundancy configuration (e.g., `Standard_GRS`) that is **not supported in the selected Azure region**<br>- Example: Creating a storage account with **GRS** in **italynorth** will fail with this error<br>- To check supported SKUs for your region:<br>`az storage account list-skus -l italynorth -o table`<br>- Use a supported redundancy option (e.g., Standard_LRS) in the same region or deploy the Storage Account in a region that supports your chosen redundancy<br>- For more details, refer to [Azure Storage redundancy documentation](https://learn.microsoft.com/en-us/azure/storage/common/storage-redundancy?utm_source=chatgpt.com) |
+| **RedundancyConfigurationNotAvailableInRegion** | | - This issue happens when you try to create a **Storage Account** with a redundancy configuration (e.g., `Standard_GRS`) that is **not supported in the selected Azure region**<br>- Example: Creating a storage account with **GRS** in **italynorth** will fail with error `az storage account create -n mystorageacct123 -g myResourceGroup -l italynorth --sku Standard_GRS --kind StorageV2` <br>- To check supported SKUs for your region:<br>`az storage account list-skus -l italynorth -o table`<br>- Use a supported redundancy option (e.g., Standard_LRS) in the same region or deploy the Storage Account in a region that supports your chosen redundancy<br>- For more details, refer to [Azure Storage redundancy documentation](https://learn.microsoft.com/en-us/azure/storage/common/storage-redundancy?utm_source=chatgpt.com) |
 
 --------------------------------
 
 ### Resource Naming & Validation
 
- <details>
-<summary><b>ResourceNameInvalid</b></summary>
- 
-- Ensure the resource name is within the allowed length and naming rules defined for that specific resource type, you can refer [Resource Naming Convention](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/resource-name-rules) document.
-
-</details>
-
-<details>
-<summary><b>Workspace Name - InvalidParameter</b></summary>
-
- To avoid this errors in workspace ID follow below rules. 
-1. Must start and end with an alphanumeric character (letter or number).
-2. Allowed characters:
-    `a–z`
-    `0–9`
-    `- (hyphen)`
-3. Cannot start or end with a hyphen -.
-4. No spaces, underscores (_), periods (.), or special characters.
-5. Must be unique within the Azure region & subscription.
-6. Length: 3–33 characters (for AML workspaces).
-</details>
-
- <details>
-<summary><b>VaultNameNotValid</b></summary>
-
- In this template Vault name will be unique everytime, but if you trying to hard code the name then please make sure below points.
- 1. Check name length
-    - Ensure the Key Vault name is between 3 and 24 characters.
- 2. Validate allowed characters
-    - The name can only contain letters (a–z, A–Z) and numbers (0–9).
-    - Hyphens are allowed, but not at the beginning or end, and not consecutive (--).
-3. Ensure proper start and end
-    - The name must start with a letter.
-    - The name must end with a letter or digit (not a hyphen).
-4. Test with a new name
-    - Example of a valid vault name:
-        ✅ `cartersaikeyvault1`
-        ✅ `securevaultdemo`
-        ✅ `kv-project123`
-</details>
-
-<details>
-<summary><b>BadRequest: Dns record under zone Document is already taken</b></summary>
-
-This error can occur only when user hardcoding the CosmosDB Service name. To avoid this you can try few below suggestions.
-- Verify resource names are globally unique.
-- If you already created an account/resource with same name in another subscription or resource group, check and delete it before reusing the name.
-- By default in this template we are using unique prefix with every resource/account name to avoid this kind for errors.
-</details>
+| Issue/Error Code | Description | Steps to Resolve |
+|-----------------|-------------|------------------|
+| **ResourceNameInvalid** | | - Ensure the resource name is within the allowed length and naming rules defined for that specific resource type, you can refer [Resource Naming Convention](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/resource-name-rules) document |
+| **Workspace Name - InvalidParameter** | | To avoid this errors in workspace ID follow below rules:<br>1. Must start and end with an alphanumeric character (letter or number)<br>2. Allowed characters: `a–z`, `0–9`, `- (hyphen)`<br>3. Cannot start or end with a hyphen -<br>4. No spaces, underscores (_), periods (.), or special characters<br>5. Must be unique within the Azure region & subscription<br>6. Length: 3–33 characters (for AML workspaces) |
+| **VaultNameNotValid** | | In this template Vault name will be unique everytime, but if you trying to hard code the name then please make sure below points:<br>1. Check name length - Ensure the Key Vault name is between 3 and 24 characters<br>2. Validate allowed characters - The name can only contain letters (a–z, A–Z) and numbers (0–9). Hyphens are allowed, but not at the beginning or end, and not consecutive (--)<br>3. Ensure proper start and end - The name must start with a letter. The name must end with a letter or digit (not a hyphen)<br>4. Test with a new name - Example of a valid vault name: ✅ `cartersaikeyvault1`, ✅ `securevaultdemo`, ✅ `kv-project123` |
+| **BadRequest: Dns record under zone Document is already taken** | | This error can occur only when user hardcoding the CosmosDB Service name. To avoid this you can try few below suggestions:<br>- Verify resource names are globally unique<br>- If you already created an account/resource with same name in another subscription or resource group, check and delete it before reusing the name<br>- By default in this template we are using unique prefix with every resource/account name to avoid this kind for errors |
 
 ---------------------------------
 
