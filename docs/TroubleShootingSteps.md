@@ -101,24 +101,10 @@ Use these as quick reference guides to unblock your deployments.
 
 ### Resource State & Provisioning
 
- <details>
-<summary><b>AccountProvisioningStateInvalid</b></summary>
-
-- The AccountProvisioningStateInvalid error occurs when you try to use resources while they are still in the Accepted provisioning state.
-- This means the deployment has not yet fully completed.
-- To avoid this error, wait until the provisioning state changes to Succeeded.
-- Only use the resources once the deployment is fully completed.
-</details>
-
-<details><summary><b>BadRequest - DatabaseAccount is in a failed provisioning state because the previous attempt to create it was not successful</b></summary>
-
-- This error occurs when a user attempts to redeploy a resource that previously failed to provision.
-
-- To resolve the issue, delete the failed deployment first, then start a new deployment.
-
-- For guidance on deleting a resource from a Resource Group, refer to the following link: [Delete an Azure Cosmos DB account](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/manage-with-powershell#delete-account:~:text=%3A%24enableMultiMaster-,Delete%20an%20Azure%20Cosmos%20DB%20account,-This%20command%20deletes)
-
-</details>
+| Issue/Error Code | Description | Steps to Resolve |
+|-----------------|-------------|------------------|
+| **AccountProvisioningStateInvalid** | | - The AccountProvisioningStateInvalid error occurs when you try to use resources while they are still in the Accepted provisioning state<br>- This means the deployment has not yet fully completed<br>- To avoid this error, wait until the provisioning state changes to Succeeded<br>- Only use the resources once the deployment is fully completed |
+| **BadRequest - DatabaseAccount is in a failed provisioning state because the previous attempt to create it was not successful** | | - This error occurs when a user attempts to redeploy a resource that previously failed to provision<br>- To resolve the issue, delete the failed deployment first, then start a new deployment<br>- For guidance on deleting a resource from a Resource Group, refer to the following link: [Delete an Azure Cosmos DB account](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/manage-with-powershell#delete-account:~:text=%3A%24enableMultiMaster-,Delete%20an%20Azure%20Cosmos%20DB%20account,-This%20command%20deletes) |
 
 ---------------------------------
 
