@@ -58,7 +58,20 @@ const PlanPage: React.FC = () => {
     const [showBufferingText, setShowBufferingText] = useState<boolean>(false);
     const [agentMessages, setAgentMessages] = useState<AgentMessageData[]>([]);
     const formatErrorMessage = useCallback((content: string): string => {
-        return `⚠️ ${content}`;
+        // return `⚠️ ${content}`;
+        // Split content by newlines and add proper indentation
+        const lines = content.split('\n');
+        const formattedLines = lines.map((line, index) => {
+            if (index === 0) {
+                return `⚠️ ${line}`;
+            } else if (line.trim() === '') {
+                return ''; // Preserve blank lines
+            } else {
+                // Use HTML non-breaking spaces to avoid Markdown code block formatting
+                return `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${line}`;
+            }
+        });
+        return formattedLines.join('\n');
     }, []);
     // Plan approval state - track when plan is approved
     const [planApproved, setPlanApproved] = useState<boolean>(false);
