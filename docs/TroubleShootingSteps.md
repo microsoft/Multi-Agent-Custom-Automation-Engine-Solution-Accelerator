@@ -45,71 +45,19 @@ Use these as quick reference guides to unblock your deployments.
 
 --------------------------------
 
- ### Regional & Location Issues
+### Regional & Location Issues
 
-<details>
-<summary><b>LocationNotAvailableForResourceType</b></summary>
- 
-- You may encounter a LocationNotAvailableForResourceType error if you set the secondary location to 'Australia Central' in the main.bicep file.
-- This happens because 'Australia Central' is not a supported region for that resource type.
-- Always refer to the README file or Azure documentation to check the list of supported regions.
-- Update the deployment with a valid supported region to resolve the issue.
- 
-</details>
-
-<details>
-<summary><b>InvalidResourceLocation</b></summary>  
- 
-- You may encounter an InvalidResourceLocation error if you change the region for Cosmos DB or the Storage Account (secondary location) multiple times in the main.bicep file and redeploy.
-- Azure resources like Cosmos DB and Storage Accounts do not support changing regions after deployment.
-- If you need to change the region again, first delete the existing deployment.
-- Then redeploy the resources with the updated region configuration.
- 
-</details>
-
-<details>
-<summary><b>ServiceUnavailable/ResourceNotFound</b></summary>
- 
-  - Regions are restricted to guarantee compatibility with paired regions and replica locations for data redundancy and failover scenarios based on articles [Azure regions list](https://learn.microsoft.com/en-us/azure/reliability/regions-list) and [Azure Database for MySQL Flexible Server - Azure Regions](https://learn.microsoft.com/azure/mysql/flexible-server/overview#azure-regions).
-
-  - You can request more quota, refer [Quota Request](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/create-support-request-quota-increase) Documentation
-
-
-</details>
-
-<details>
-<summary><b>ResourceOperationFailure/ProvisioningDisabled</b></summary>
- 
-  - This error occurs when provisioning of a resource is restricted in the selected region.
-    It usually happens because the service is not available in that region or provisioning has been temporarily disabled.  
- 
-  - Regions are restricted to guarantee compatibility with paired regions and replica locations for data redundancy and failover scenarios based on articles [Azure regions list](https://learn.microsoft.com/en-us/azure/reliability/regions-list) and [Azure Database for MySQL Flexible Server - Azure Regions](https://learn.microsoft.com/azure/mysql/flexible-server/overview#azure-regions).
-   
-- If you need to use the same region, you can request a quota or provisioning exception.  
-  Refer [Quota Request](https://docs.microsoft.com/en-us/azure/sql-database/quota-increase-request) for more details.
- 
-</details>
-
-<details>
-<summary><b>RedundancyConfigurationNotAvailableInRegion</b></summary>
-
-- This issue happens when you try to create a **Storage Account** with a redundancy configuration (e.g., `Standard_GRS`) that is **not supported in the selected Azure region**.
-- Example: Creating a storage account with **GRS** in **italynorth** will fail with this error.
-```bash
-az storage account create -n mystorageacct123 -g myResourceGroup -l italynorth --sku Standard_GRS --kind StorageV2
-```
-- To check supported SKUs for your region:
-```bash
-az storage account list-skus -l italynorth -o table
-```
-Use a supported redundancy option (e.g., Standard_LRS) in the same region
-Or deploy the Storage Account in a region that supports your chosen redundancy.
-For more details, refer to [Azure Storage redundancy documentation](https://learn.microsoft.com/en-us/azure/storage/common/storage-redundancy?utm_source=chatgpt.com).
-</details>
+| Issue/Error Code | Description | Steps to Resolve |
+|-----------------|-------------|------------------|
+| **LocationNotAvailableForResourceType** | | - You may encounter a LocationNotAvailableForResourceType error if you set the secondary location to 'Australia Central' in the main.bicep file<br>- This happens because 'Australia Central' is not a supported region for that resource type<br>- Always refer to the README file or Azure documentation to check the list of supported regions<br>- Update the deployment with a valid supported region to resolve the issue |
+| **InvalidResourceLocation** | | - You may encounter an InvalidResourceLocation error if you change the region for Cosmos DB or the Storage Account (secondary location) multiple times in the main.bicep file and redeploy<br>- Azure resources like Cosmos DB and Storage Accounts do not support changing regions after deployment<br>- If you need to change the region again, first delete the existing deployment<br>- Then redeploy the resources with the updated region configuration |
+| **ServiceUnavailable/ResourceNotFound** | | - Regions are restricted to guarantee compatibility with paired regions and replica locations for data redundancy and failover scenarios based on articles [Azure regions list](https://learn.microsoft.com/en-us/azure/reliability/regions-list) and [Azure Database for MySQL Flexible Server - Azure Regions](https://learn.microsoft.com/azure/mysql/flexible-server/overview#azure-regions)<br>- You can request more quota, refer [Quota Request](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/create-support-request-quota-increase) Documentation |
+| **ResourceOperationFailure/ProvisioningDisabled** | | - This error occurs when provisioning of a resource is restricted in the selected region. It usually happens because the service is not available in that region or provisioning has been temporarily disabled<br>- Regions are restricted to guarantee compatibility with paired regions and replica locations for data redundancy and failover scenarios based on articles [Azure regions list](https://learn.microsoft.com/en-us/azure/reliability/regions-list) and [Azure Database for MySQL Flexible Server - Azure Regions](https://learn.microsoft.com/azure/mysql/flexible-server/overview#azure-regions)<br>- If you need to use the same region, you can request a quota or provisioning exception. Refer [Quota Request](https://docs.microsoft.com/en-us/azure/sql-database/quota-increase-request) for more details |
+| **RedundancyConfigurationNotAvailableInRegion** | | - This issue happens when you try to create a **Storage Account** with a redundancy configuration (e.g., `Standard_GRS`) that is **not supported in the selected Azure region**<br>- Example: Creating a storage account with **GRS** in **italynorth** will fail with this error<br>- To check supported SKUs for your region:<br>`az storage account list-skus -l italynorth -o table`<br>- Use a supported redundancy option (e.g., Standard_LRS) in the same region or deploy the Storage Account in a region that supports your chosen redundancy<br>- For more details, refer to [Azure Storage redundancy documentation](https://learn.microsoft.com/en-us/azure/storage/common/storage-redundancy?utm_source=chatgpt.com) |
 
 --------------------------------
 
-Resource Naming & Validation
+### Resource Naming & Validation
 
  <details>
 <summary><b>ResourceNameInvalid</b></summary>
