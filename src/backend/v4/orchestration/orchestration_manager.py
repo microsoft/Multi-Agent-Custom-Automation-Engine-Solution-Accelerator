@@ -22,9 +22,7 @@ from common.config.app_config import config
 from common.models.messages_af import TeamConfiguration
 
 from common.database.database_base import DatabaseBase
-from common.utils.utils_agents import (
-    get_database_team_agent_id,
-)
+
 from v4.common.services.team_service import TeamService
 from v4.callbacks.response_handlers import (
     agent_response_callback,
@@ -83,7 +81,7 @@ class OrchestrationManager:
             chat_client = AzureAIAgentClient(
                 project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
                 model_deployment_name=team_config.deployment_name,
-               # agent_id=agent_id,
+                # agent_id=agent_id,
                 agent_name=agent_name,
                 async_credential=credential,
             )
