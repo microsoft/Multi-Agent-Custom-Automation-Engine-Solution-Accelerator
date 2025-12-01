@@ -90,77 +90,29 @@ Use these as quick reference guides to unblock your deployments.
 
 ### Configuration & Property Errors
 
-
-<details><summary><b>InvalidRequestContent</b></summary>
-
-- 	The deployment values either include values that aren't recognized, or required values are missing. Confirm the values for your resource type.
-- You can refer [Invalid Request Content error](https://learn.microsoft.com/en-us/azure/azure-resource-manager/troubleshooting/common-deployment-errors#:~:text=InvalidRequestContent,Template%20reference) documentation.
-
-</details>
-
-<details><summary><b>Conflict - Cannot use the SKU Basic with File Change Audit for site.</b></summary>
-
-- This error happens because File Change Audit logs aren’t supported on Basic SKU App Service Plans.
-
-- Upgrading to Premium/Isolated SKU (supports File Change Audit), or
-
-- Disabling File Change Audit in Diagnostic Settings if you must stay on Basic.
-- Always cross-check the [supported log types](https://aka.ms/supported-log-types)
- before adding diagnostic logs to your Bicep templates.
-
-</details>
-
-<details>
- 
-<summary><b>AccountPropertyCannotBeUpdated</b></summary>
- 
-- The property **`isHnsEnabled`** (Hierarchical Namespace for Data Lake Gen2) is **read-only** and can only be set during **storage account creation**.  
-- Once a storage account is created, this property **cannot be updated**.  
-- Trying to update it via ARM template, Bicep, CLI, or Portal will fail.
- 
-- **Resolution**  
-- Create a **new storage account** with `isHnsEnabled=true` if you require hierarchical namespace.  
-- Migration may be needed if you already have data.  
-- Refer to [Storage Account Update Restrictions](https://aka.ms/storageaccountupdate) for more details.  
- 
-</details>
-
+| Issue/Error Code | Description | Steps to Resolve |
+|-----------------|-------------|------------------|
+| **InvalidRequestContent** | | - The deployment values either include values that aren't recognized, or required values are missing. Confirm the values for your resource type<br>- You can refer [Invalid Request Content error](https://learn.microsoft.com/en-us/azure/azure-resource-manager/troubleshooting/common-deployment-errors#:~:text=InvalidRequestContent,Template%20reference) documentation |
+| **Conflict - Cannot use the SKU Basic with File Change Audit for site** | | - This error happens because File Change Audit logs aren't supported on Basic SKU App Service Plans<br>- Upgrading to Premium/Isolated SKU (supports File Change Audit), or<br>- Disabling File Change Audit in Diagnostic Settings if you must stay on Basic<br>- Always cross-check the [supported log types](https://aka.ms/supported-log-types) before adding diagnostic logs to your Bicep templates |
+| **AccountPropertyCannotBeUpdated** | | - The property **`isHnsEnabled`** (Hierarchical Namespace for Data Lake Gen2) is **read-only** and can only be set during **storage account creation**<br>- Once a storage account is created, this property **cannot be updated**<br>- Trying to update it via ARM template, Bicep, CLI, or Portal will fail<br>**Resolution:**<br>- Create a **new storage account** with `isHnsEnabled=true` if you require hierarchical namespace<br>- Migration may be needed if you already have data<br>- Refer to [Storage Account Update Restrictions](https://aka.ms/storageaccountupdate) for more details |
 
 
 ----------------------------------
 
 ### Resource State & Provisioning
 
- <details>
-<summary><b>AccountProvisioningStateInvalid</b></summary>
-
-- The AccountProvisioningStateInvalid error occurs when you try to use resources while they are still in the Accepted provisioning state.
-- This means the deployment has not yet fully completed.
-- To avoid this error, wait until the provisioning state changes to Succeeded.
-- Only use the resources once the deployment is fully completed.
-</details>
-
-<details><summary><b>BadRequest - DatabaseAccount is in a failed provisioning state because the previous attempt to create it was not successful</b></summary>
-
-- This error occurs when a user attempts to redeploy a resource that previously failed to provision.
-
-- To resolve the issue, delete the failed deployment first, then start a new deployment.
-
-- For guidance on deleting a resource from a Resource Group, refer to the following link: [Delete an Azure Cosmos DB account](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/manage-with-powershell#delete-account:~:text=%3A%24enableMultiMaster-,Delete%20an%20Azure%20Cosmos%20DB%20account,-This%20command%20deletes)
-
-</details>
+| Issue/Error Code | Description | Steps to Resolve |
+|-----------------|-------------|------------------|
+| **AccountProvisioningStateInvalid** | | - The AccountProvisioningStateInvalid error occurs when you try to use resources while they are still in the Accepted provisioning state<br>- This means the deployment has not yet fully completed<br>- To avoid this error, wait until the provisioning state changes to Succeeded<br>- Only use the resources once the deployment is fully completed |
+| **BadRequest - DatabaseAccount is in a failed provisioning state because the previous attempt to create it was not successful** | | - This error occurs when a user attempts to redeploy a resource that previously failed to provision<br>- To resolve the issue, delete the failed deployment first, then start a new deployment<br>- For guidance on deleting a resource from a Resource Group, refer to the following link: [Delete an Azure Cosmos DB account](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/manage-with-powershell#delete-account:~:text=%3A%24enableMultiMaster-,Delete%20an%20Azure%20Cosmos%20DB%20account,-This%20command%20deletes) |
 
 ---------------------------------
 
 ### Miscellaneous
 
-
-<details>
-<summary><b>DeploymentModelNotSupported/ ServiceModelDeprecated/ InvalidResourceProperties</b></summary>
- 
- -  The updated model may not be supported in the selected region. Please verify its availability in the [Azure AI Foundry models](https://learn.microsoft.com/en-us/azure/ai-foundry/openai/concepts/models?tabs=global-standard%2Cstandard-chat-completions) document.
- 
-</details>
+| Issue/Error Code | Description | Steps to Resolve |
+|-----------------|-------------|------------------|
+| **DeploymentModelNotSupported/ServiceModelDeprecated/InvalidResourceProperties** | | - The updated model may not be supported in the selected region. Please verify its availability in the [Azure AI Foundry models](https://learn.microsoft.com/en-us/azure/ai-foundry/openai/concepts/models?tabs=global-standard%2Cstandard-chat-completions) document |
 
 <details>
 <summary><b>FlagMustBeSetForRestore/NameUnavailable/CustomDomainInUse</b></summary>
@@ -172,23 +124,8 @@ Example causes:
 - Trying to redeploy a Cognitive Services account with the same name as a previously deleted one.  
 - The deleted resource still exists in a **soft-delete retention state**.  
 **How to fix:**
-1. If you want to restore → add `"restore": true` in your template properties.  
-2. If you want a fresh deployment → purge the resource using:  
-   ```bash
-   az cognitiveservices account purge \
-     --name <resource-name> \
-     --resource-group <resource-group> \
-     --location <location>
-    ```
-For more details, refer to [Soft delete and resource restore](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/delete-resource-group?tabs=azure-powershell).
-</details>
-
-<details>
-<summary><b>ContainerAppOperationError</b></summary>
- 
-- The error is likely due to an improperly built container image. For resolution steps, refer to the [Azure Container Registry (ACR) – Build & Push Guide](./ACRBuildAndPushGuide.md)
- 
-</details>
+1. If you want to restore → add `"restore": true` in your template properties<br>2. If you want a fresh deployment → purge the resource using:<br>`az cognitiveservices account purge --name <resource-name> --resource-group <resource-group> --location <location>`<br>- For more details, refer to [Soft delete and resource restore](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/delete-resource-group?tabs=azure-powershell) |
+| **ContainerAppOperationError** | | - The error is likely due to an improperly built container image. For resolution steps, refer to the [Azure Container Registry (ACR) – Build & Push Guide](./ACRBuildAndPushGuide.md) |
 
 ---------------------------------
 
