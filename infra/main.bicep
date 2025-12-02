@@ -608,7 +608,7 @@ module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.17.0' = if (e
     computerName: take(virtualMachineResourceName, 15)
     osType: 'Windows'
     vmSize: virtualMachineSize
-    adminUsername: virtualMachineAdminUsername  ?? 'JumpboxAdminUser'
+    adminUsername: virtualMachineAdminUsername ?? 'JumpboxAdminUser'
     adminPassword: virtualMachineAdminPassword ?? 'JumpboxAdminP@ssw0rd1234!'
     patchMode: 'AutomaticByPlatform'
     bypassPlatformSafetyChecksOnUserSchedule: true
