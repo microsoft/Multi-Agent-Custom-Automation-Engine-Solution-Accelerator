@@ -4,9 +4,7 @@ When deploying Azure resources, you may come across different error codes that s
  
 Use these as quick reference guides to unblock your deployments.
 
-## Error Codes
-
-### Subscription & Access Issues
+## Subscription & Access Issues
 
 | Issue/Error Code | Description | Steps to Resolve |
 |-----------|-------------|------------------|
@@ -20,7 +18,7 @@ Use these as quick reference guides to unblock your deployments.
 
 --------------------------------
 
-### Quota & Capacity Limitations
+## Quota & Capacity Limitations
 
 | Issue/Error Code | Description | Steps to Resolve |
 |-----------------|-------------|------------------|
@@ -31,7 +29,7 @@ Use these as quick reference guides to unblock your deployments.
 
 --------------------------------
 
-### Resource Group & Deployment Management
+## Resource Group & Deployment Management
 
 | Issue/Error Code | Description | Steps to Resolve |
 |-----------------|-------------|------------------|
@@ -45,7 +43,7 @@ Use these as quick reference guides to unblock your deployments.
 
 --------------------------------
 
-### Regional & Location Issues
+## Regional & Location Issues
 
 | Issue/Error Code | Description | Steps to Resolve |
 |-----------------|-------------|------------------|
@@ -57,7 +55,7 @@ Use these as quick reference guides to unblock your deployments.
 
 --------------------------------
 
-### Resource Naming & Validation
+## Resource Naming & Validation
 
 | Issue/Error Code | Description | Steps to Resolve |
 |-----------------|-------------|------------------|
@@ -68,7 +66,7 @@ Use these as quick reference guides to unblock your deployments.
 
 ---------------------------------
 
-### Resource Identification & References
+## Resource Identification & References
 
 | Issue/Error Code | Description | Steps to Resolve |
 |-----------------|-------------|------------------|
@@ -79,7 +77,7 @@ Use these as quick reference guides to unblock your deployments.
 
 ---------------------------------
 
-### Network & Infrastructure Configuration
+## Network & Infrastructure Configuration
 
 | Issue/Error Code | Description | Steps to Resolve |
 |-----------------|-------------|------------------|
@@ -88,7 +86,7 @@ Use these as quick reference guides to unblock your deployments.
 
 ---------------------------------
 
-### Configuration & Property Errors
+## Configuration & Property Errors
 
 | Issue/Error Code | Description | Steps to Resolve |
 |-----------------|-------------|------------------|
@@ -99,7 +97,7 @@ Use these as quick reference guides to unblock your deployments.
 
 ----------------------------------
 
-### Resource State & Provisioning
+## Resource State & Provisioning
 
 | Issue/Error Code | Description | Steps to Resolve |
 |-----------------|-------------|------------------|
@@ -108,7 +106,7 @@ Use these as quick reference guides to unblock your deployments.
 
 ---------------------------------
 
-### Miscellaneous
+## Miscellaneous
 
 | Issue/Error Code | Description | Steps to Resolve |
 |-------------|-------------|------------------|
