@@ -22,7 +22,7 @@
       "use_mcp": false,
       "use_bing": false,
       "use_reasoning": false,
-      "index_name": "sample-dataset-index",
+      "index_name": "legal-doc-index",
       "coding_tools": false
     },
     {
@@ -37,7 +37,7 @@
       "use_mcp": false,
       "use_bing": false,
       "use_reasoning": false,
-      "index_name": "sample-dataset-index",
+      "index_name": "legal-doc-index",
       "coding_tools": false
     },
     {
@@ -52,7 +52,7 @@
       "use_mcp": false,
       "use_bing": false,
       "use_reasoning": false,
-      "index_name": "sample-dataset-index",
+      "index_name": "legal-doc-index",
       "coding_tools": false
     }
   ],
