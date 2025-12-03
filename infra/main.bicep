@@ -1535,6 +1535,7 @@ param storageContainerName string = 'sample-dataset'
 param storageContainerNameRetailCustomer string = 'retail-dataset-customer'
 param storageContainerNameRetailOrder string = 'retail-dataset-order'
 param storageContainerNameRFP string = 'rfp-dataset'
+param storageContainerNameLegalContract string = 'legal-contract-dataset'
 module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
   name: take('avm.res.storage.storage-account.${storageAccountName}', 64)
   params: {
@@ -1604,6 +1605,10 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
           name: storageContainerNameRFP
           publicAccess: 'None'
         }
+         {
+          name: storageContainerNameLegalContract
+          publicAccess: 'None'
+        }
       ]
       deleteRetentionPolicyDays: 9
       deleteRetentionPolicyEnabled: true
@@ -1615,7 +1620,7 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
 // ========== Search Service ========== //
 
 var searchServiceName = 'srch-${solutionSuffix}'
-var aiSearchIndexName = 'sample-dataset-index'
+var aiSearchIndexNameForLegalContract = 'sample-dataset-index'
 var aiSearchIndexNameForRetailCustomer = 'macae-retail-customer-index'
 var aiSearchIndexNameForRetailOrder = 'macae-retail-order-index'
 var aiSearchIndexNameForRFP = 'macae-rfp-index'
@@ -1822,7 +1827,9 @@ output AZURE_DEV_COLLECT_TELEMETRY  string = 'no'
 output AZURE_STORAGE_CONTAINER_NAME_RETAIL_CUSTOMER string = storageContainerNameRetailCustomer
 output AZURE_STORAGE_CONTAINER_NAME_RETAIL_ORDER string = storageContainerNameRetailOrder
 output AZURE_STORAGE_CONTAINER_NAME_RFP string = storageContainerNameRFP
+output AZURE_STORAGE_CONTAINER_NAME_LEGAL_CONTRACT string = storageContainerNameLegalContract
 output AZURE_AI_SEARCH_INDEX_NAME_RETAIL_CUSTOMER string = aiSearchIndexNameForRetailCustomer
 output AZURE_AI_SEARCH_INDEX_NAME_RETAIL_ORDER string = aiSearchIndexNameForRetailOrder
 output AZURE_AI_SEARCH_INDEX_NAME_RFP string = aiSearchIndexNameForRFP
+output AZURE_AI_SEARCH_INDEX_NAME_LEGAL_CONTRACT string = aiSearchIndexNameForLegalContract
 
