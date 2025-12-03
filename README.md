@@ -33,7 +33,7 @@ The solution leverages Azure OpenAI Service, Azure Container Apps, Azure Cosmos 
 
 ### Additional resources
 
-[Semantic Kernel Documentation](https://learn.microsoft.com/en-us/semantic-kernel/)
+[Agent Framework Documentation](https://learn.microsoft.com/en-us/agent-framework//)
 
 [Azure AI Foundry Documentation](https://learn.microsoft.com/en-us/azure/ai-foundry/)
 
