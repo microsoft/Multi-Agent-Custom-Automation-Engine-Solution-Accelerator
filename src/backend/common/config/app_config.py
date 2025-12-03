@@ -8,7 +8,6 @@ from azure.cosmos import CosmosClient
 from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
 from dotenv import load_dotenv
 
-
 # Load environment variables from .env file
 load_dotenv()
 
@@ -98,11 +97,11 @@ class AppConfig:
 
         # Cached clients and resources
         self._azure_credentials = None
-        self._cosmos_client = None
-        self._cosmos_database = None
+        # self._cosmos_client = None
+        # self._cosmos_database = None
         self._ai_project_client = None
 
-        self._agents = {}
+        # self._agents = {}
 
     def get_azure_credential(self, client_id=None):
         """
@@ -187,31 +186,31 @@ class AppConfig:
         """
         return name in os.environ and os.environ[name].lower() in ["true", "1"]
 
-    def get_cosmos_database_client(self):
-        """Get a Cosmos DB client for the configured database.
+    # def get_cosmos_database_client(self):
+    #     """Get a Cosmos DB client for the configured database.
 
-        Returns:
-            A Cosmos DB database client
-        """
-        try:
-            if self._cosmos_client is None:
-                self._cosmos_client = CosmosClient(
-                    self.COSMOSDB_ENDPOINT,
-                    credential=self.get_azure_credential(self.AZURE_CLIENT_ID),
-                )
+    #     Returns:
+    #         A Cosmos DB database client
+    #     """
+    #     try:
+    #         if self._cosmos_client is None:
+    #             self._cosmos_client = CosmosClient(
+    #                 self.COSMOSDB_ENDPOINT,
+    #                 credential=self.get_azure_credential(self.AZURE_CLIENT_ID),
+    #             )
 
-            if self._cosmos_database is None:
-                self._cosmos_database = self._cosmos_client.get_database_client(
-                    self.COSMOSDB_DATABASE
-                )
+    #         if self._cosmos_database is None:
+    #             self._cosmos_database = self._cosmos_client.get_database_client(
+    #                 self.COSMOSDB_DATABASE
+    #             )
 
-            return self._cosmos_database
-        except Exception as exc:
-            logging.error(
-                "Failed to create CosmosDB client: %s. CosmosDB is required for this application.",
-                exc,
-            )
-            raise
+    #         return self._cosmos_database
+    #     except Exception as exc:
+    #         logging.error(
+    #             "Failed to create CosmosDB client: %s. CosmosDB is required for this application.",
+    #             exc,
+    #         )
+    #         raise
 
     def get_ai_project_client(self):
         """Create and return an AIProjectClient for Azure AI Foundry using from_connection_string.
@@ -256,13 +255,13 @@ class AppConfig:
         os.environ["USER_LOCAL_BROWSER_LANGUAGE"] = language
 
     # Get agent team list by user_id dictionary index
-    def get_agents(self) -> dict[str, list]:
-        """Get the list of agents configured in the application.
+    # def get_agents(self) -> dict[str, list]:
+    #     """Get the list of agents configured in the application.
 
-        Returns:
-            A list of agent names or configurations
-        """
-        return self._agents
+    #     Returns:
+    #         A list of agent names or configurations
+    #     """
+    #     return self._agents
 
 
 # Create a global instance of AppConfig

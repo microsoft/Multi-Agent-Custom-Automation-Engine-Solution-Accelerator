@@ -6,22 +6,15 @@ import string
 from contextlib import AsyncExitStack
 from typing import Any, Optional
 
-from agent_framework import (
-    ChatAgent,
-    HostedMCPTool,
-    MCPStreamableHTTPTool,
-)
-
+from agent_framework import ChatAgent, HostedMCPTool, MCPStreamableHTTPTool
 # from agent_framework.azure import AzureAIAgentClient
 from agent_framework_azure_ai import AzureAIAgentClient
 from azure.ai.agents.aio import AgentsClient
 from azure.identity.aio import DefaultAzureCredential
 from common.database.database_base import DatabaseBase
 from common.models.messages_af import CurrentTeamAgent, TeamConfiguration
-from common.utils.utils_agents import (
-    generate_assistant_id,
-    get_database_team_agent_id,
-)
+from common.utils.utils_agents import (generate_assistant_id,
+                                       get_database_team_agent_id)
 from v4.common.services.team_service import TeamService
 from v4.config.agent_registry import agent_registry
 from v4.magentic_agents.models.agent_models import MCPConfig
@@ -261,36 +254,6 @@ class AzureAgentBase(MCPEnabledBase):
         self._created_ephemeral: bool = (
             False  # reserved if you add ephemeral agent cleanup
         )
-
-    # async def open(self) -> "AzureAgentBase":
-    #     if self._stack is not None:
-    #         return self
-    #     self._stack = AsyncExitStack()
-
-    #     # Acquire credential
-    #     self.creds = DefaultAzureCredential()
-    #     if self._stack:
-    #         await self._stack.enter_async_context(self.creds)
-    #     # Create AgentsClient
-    #     self.client = AgentsClient(
-    #         endpoint=self.project_endpoint,
-    #         credential=self.creds,
-    #     )
-    #     if self._stack:
-    #         await self._stack.enter_async_context(self.client)
-    #     # Prepare MCP
-    #     await self._prepare_mcp_tool()
-
-    #     # Let subclass build agent client
-    #     await self._after_open()
-
-    #     # Register agent (best effort)
-    #     try:
-    #         agent_registry.register_agent(self)
-    #     except Exception:
-    #         pass
-
-    #     return self
 
     async def close(self) -> None:
         """
