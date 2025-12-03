@@ -5,36 +5,36 @@ import logging
 import uuid
 from typing import List, Optional
 
+import v4.models.messages as messages
+from agent_framework import ChatMessage  # MagenticCallbackMode,
+from agent_framework import (InMemoryCheckpointStorage,
+                             MagenticAgentDeltaEvent,
+                             MagenticAgentMessageEvent, MagenticBuilder,
+                             MagenticFinalResultEvent,
+                             MagenticOrchestratorMessageEvent,
+                             MagenticPlanReviewDecision,
+                             MagenticPlanReviewReply,
+                             MagenticPlanReviewRequest, RequestInfoEvent,
+                             WorkflowOutputEvent)
 # agent_framework imports
 from agent_framework_azure_ai import AzureAIAgentClient
-from agent_framework import (
-    ChatMessage,
-    WorkflowOutputEvent,
-    MagenticBuilder,
-    InMemoryCheckpointStorage,
-    MagenticOrchestratorMessageEvent,
-    MagenticAgentDeltaEvent,
-    MagenticAgentMessageEvent,
-    MagenticFinalResultEvent,
-)
-
 from common.config.app_config import config
-from common.models.messages_af import TeamConfiguration
-
 from common.database.database_base import DatabaseBase
-from common.utils.utils_agents import (
-    generate_assistant_id,
-    get_database_team_agent_id,
-)
+from common.models.messages_af import TeamConfiguration
+from common.utils.utils_agents import (generate_assistant_id,
+                                       get_database_team_agent_id)
+from v4.callbacks.response_handlers import (agent_response_callback,
+                                            streaming_agent_response_callback)
 from v4.common.services.team_service import TeamService
-from v4.callbacks.response_handlers import (
-    agent_response_callback,
-    streaming_agent_response_callback,
-)
 from v4.config.settings import connection_config, orchestration_config
-from v4.models.messages import WebsocketMessageType
-from v4.orchestration.human_approval_manager import HumanApprovalMagenticManager
 from v4.magentic_agents.magentic_agent_factory import MagenticAgentFactory
+from v4.models.messages import (PlanApprovalRequest, PlanApprovalResponse,
+                                TimeoutNotification, WebsocketMessageType)
+from v4.models.models import MPlan
+from v4.orchestration.helper.plan_to_mplan_converter import \
+    PlanToMPlanConverter
+from v4.orchestration.human_approval_manager import \
+    HumanApprovalMagenticManager
 
 
 class OrchestrationManager:
@@ -143,10 +143,13 @@ class OrchestrationManager:
             MagenticBuilder()
             .participants(**participants)
             .with_standard_manager(
-                manager=manager,
+                #manager=manager,
+                chat_client=chat_client,
                 max_round_count=orchestration_config.max_rounds,
                 max_stall_count=0,
+                max_reset_count=2,
             )
+            .with_plan_review()
             .with_checkpointing(storage)
         )
 
@@ -364,6 +367,52 @@ class OrchestrationManager:
                             final_output = str(output_data)
                         self.logger.debug("Received workflow output event")
 
+                    elif isinstance(event, RequestInfoEvent) and event.request_type is MagenticPlanReviewRequest:
+                        self.m_plan = self.plan_to_obj(event)
+                        self.m_plan.user_id = user_id  # annotate with user
+                        # task_text = event.data.task_text if hasattr(event.data, "task_text") else ""
+                        # participant_descriptions = event.executors.keys()
+
+                        approval_message = messages.PlanApprovalRequest(
+                            plan=self.m_plan,
+                            status="PENDING_APPROVAL",
+                            context=(
+                                {
+                                    "task": self.m_plan.user_request,
+                                    "participant_descriptions": self.m_plan.team,
+                                }
+                            ),
+                        )
+
+                        try:
+                            orchestration_config.plans[self.m_plan.id] = self.m_plan
+                        except Exception as e:
+                            self.logger.error("Error processing plan approval: %s", e)
+                        
+                        # Send approval request
+                        await connection_config.send_status_update_async(
+                            message=approval_message,
+                            user_id=user_id,
+                            message_type=WebsocketMessageType.PLAN_APPROVAL_REQUEST,
+                        )
+                                # Await user response
+                        approval_response = await self._wait_for_user_approval(approval_message.plan.id)
+
+                        if approval_response and approval_response.approved:
+                            self.logger.info("Plan approved - proceeding with execution...")
+                            #return plan_message
+                        else:
+                            self.logger.debug("Plan execution cancelled by user")
+                            await connection_config.send_status_update_async(
+                                {
+                                    "type": WebsocketMessageType.PLAN_APPROVAL_RESPONSE,
+                                    "data": approval_response,
+                                },
+                                user_id=user_id,
+                                message_type=WebsocketMessageType.PLAN_APPROVAL_RESPONSE,
+                            )
+                            raise Exception("Plan execution cancelled by user")
+
                 except Exception as e:
                     self.logger.error(
                         f"Error processing event {type(event).__name__}: {e}",
@@ -422,3 +471,101 @@ class OrchestrationManager:
             except Exception as send_error:
                 self.logger.error("Failed to send error status: %s", send_error)
             raise
+
+    async def _wait_for_user_approval(
+        self, m_plan_id: Optional[str] = None
+    ) -> Optional[PlanApprovalResponse]:
+        """
+        Wait for user approval response using event-driven pattern with timeout handling.
+        """
+        self.logger.info("Waiting for user approval for plan: %s", m_plan_id)
+
+        if not m_plan_id:
+            self.logger.error("No plan ID provided for approval")
+            return PlanApprovalResponse(approved=False, m_plan_id=m_plan_id)
+
+        orchestration_config.set_approval_pending(m_plan_id)
+
+        try:
+            approved = await orchestration_config.wait_for_approval(m_plan_id)
+            self.logger.info("Approval received for plan %s: %s", m_plan_id, approved)
+            return PlanApprovalResponse(approved=approved, m_plan_id=m_plan_id)
+
+        except asyncio.TimeoutError:
+            self.logger.debug(
+                "Approval timeout for plan %s - notifying user and terminating process",
+                m_plan_id,
+            )
+
+            timeout_message = messages.TimeoutNotification(
+                timeout_type="approval",
+                request_id=m_plan_id,
+                message=f"Plan approval request timed out after {orchestration_config.default_timeout} seconds. Please try again.",
+                timestamp=asyncio.get_event_loop().time(),
+                timeout_duration=orchestration_config.default_timeout,
+            )
+
+            try:
+                await connection_config.send_status_update_async(
+                    message=timeout_message,
+                    user_id=self.user_id,
+                    message_type=WebsocketMessageType.TIMEOUT_NOTIFICATION,
+                )
+                self.logger.info(
+                    "Timeout notification sent to user %s for plan %s",
+                    self.user_id,
+                    m_plan_id,
+                )
+            except Exception as e:  
+                self.logger.error("Failed to send timeout notification: %s", e)
+
+            orchestration_config.cleanup_approval(m_plan_id)
+            return None
+
+        except KeyError as e:  
+            self.logger.debug("Plan ID not found: %s - terminating process silently", e)
+            return None
+
+        except asyncio.CancelledError:
+            self.logger.debug("Approval request %s was cancelled", m_plan_id)
+            orchestration_config.cleanup_approval(m_plan_id)
+            return None
+
+        except Exception as e:  
+            self.logger.debug(
+                "Unexpected error waiting for approval: %s - terminating process silently",
+                e,
+            )
+            orchestration_config.cleanup_approval(m_plan_id)
+            return None
+
+        finally:
+            if (
+                m_plan_id in orchestration_config.approvals
+                and orchestration_config.approvals[m_plan_id] is None
+            ):
+                self.logger.debug("Final cleanup for pending approval plan %s", m_plan_id)
+                orchestration_config.cleanup_approval(m_plan_id)
+
+    def plan_to_obj(self, event: RequestInfoEvent) -> MPlan:
+        """Convert the generated plan from the ledger into a structured MPlan object."""
+        if (
+            event is None
+            or not event.data.plan_text
+            or not event.data.facts_text
+        ):
+            raise ValueError(
+                "Invalid ledger structure; expected plan and facts attributes."
+            )
+
+        task_text = getattr(event.data,"task_text","")
+        team = list(next(iter(orchestration_config.orchestrations.values())).executors.keys())
+
+        return_plan: MPlan = PlanToMPlanConverter.convert(
+            plan_text=event.data.plan_text,
+            facts=event.data.facts_text,
+            team=team,
+            task=task_text,
+        )
+
+        return return_plan

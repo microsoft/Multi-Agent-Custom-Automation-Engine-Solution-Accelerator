@@ -10,16 +10,13 @@ from typing import Any, Optional
 import v4.models.messages as messages
 from agent_framework import ChatMessage
 from agent_framework._workflows._magentic import (
-    MagenticContext,
-    StandardMagenticManager,
-    ORCHESTRATOR_FINAL_ANSWER_PROMPT,
-    ORCHESTRATOR_TASK_LEDGER_PLAN_PROMPT,
-    ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT,
-)
-
+    ORCHESTRATOR_FINAL_ANSWER_PROMPT, ORCHESTRATOR_TASK_LEDGER_PLAN_PROMPT,
+    ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT, MagenticContext,
+    StandardMagenticManager)
 from v4.config.settings import connection_config, orchestration_config
 from v4.models.models import MPlan
-from v4.orchestration.helper.plan_to_mplan_converter import PlanToMPlanConverter
+from v4.orchestration.helper.plan_to_mplan_converter import \
+    PlanToMPlanConverter
 
 logger = logging.getLogger(__name__)
 
@@ -43,36 +40,36 @@ class HumanApprovalMagenticManager(StandardMagenticManager):
             **kwargs: Additional keyword arguments for the parent StandardMagenticManager.
         """
 
-        plan_append = """
-IMPORTANT: Never ask the user for information or clarification until all agents on the team have been asked first.
+#         plan_append = """
+# IMPORTANT: Never ask the user for information or clarification until all agents on the team have been asked first.
 
-EXAMPLE: If the user request involves product information, first ask all agents on the team to provide the information.
-Do not ask the user unless all agents have been consulted and the information is still missing.
+# EXAMPLE: If the user request involves product information, first ask all agents on the team to provide the information.
+# Do not ask the user unless all agents have been consulted and the information is still missing.
 
-Plan steps should always include a bullet point, followed by an agent name, followed by a description of the action
-to be taken. If a step involves multiple actions, separate them into distinct steps with an agent included in each step.
-If the step is taken by an agent that is not part of the team, such as the MagenticManager, please always list the MagenticManager as the agent for that step. At any time, if more information is needed from the user, use the ProxyAgent to request this information.
+# Plan steps should always include a bullet point, followed by an agent name, followed by a description of the action
+# to be taken. If a step involves multiple actions, separate them into distinct steps with an agent included in each step.
+# If the step is taken by an agent that is not part of the team, such as the MagenticManager, please always list the MagenticManager as the agent for that step. At any time, if more information is needed from the user, use the ProxyAgent to request this information.
 
-Here is an example of a well-structured plan:
-- **EnhancedResearchAgent** to gather authoritative data on the latest industry trends and best practices in employee onboarding
-- **EnhancedResearchAgent** to gather authoritative data on Innovative onboarding techniques that enhance new hire engagement and retention.
-- **DocumentCreationAgent** to draft a comprehensive onboarding plan that includes a detailed schedule of onboarding activities and milestones.
-- **DocumentCreationAgent** to draft a comprehensive onboarding plan that includes a checklist of resources and materials needed for effective onboarding.
-- **ProxyAgent** to review the drafted onboarding plan for clarity and completeness.
-- **MagenticManager** to finalize the onboarding plan and prepare it for presentation to stakeholders.
-"""
+# Here is an example of a well-structured plan:
+# - **EnhancedResearchAgent** to gather authoritative data on the latest industry trends and best practices in employee onboarding
+# - **EnhancedResearchAgent** to gather authoritative data on Innovative onboarding techniques that enhance new hire engagement and retention.
+# - **DocumentCreationAgent** to draft a comprehensive onboarding plan that includes a detailed schedule of onboarding activities and milestones.
+# - **DocumentCreationAgent** to draft a comprehensive onboarding plan that includes a checklist of resources and materials needed for effective onboarding.
+# - **ProxyAgent** to review the drafted onboarding plan for clarity and completeness.
+# - **MagenticManager** to finalize the onboarding plan and prepare it for presentation to stakeholders.
+# """
 
-        final_append = """
-DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final answer and end with a polite closing.
-"""
+#         final_append = """
+# DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final answer and end with a polite closing.
+# """
 
-        kwargs["task_ledger_plan_prompt"] = (
-            ORCHESTRATOR_TASK_LEDGER_PLAN_PROMPT + plan_append
-        )
-        kwargs["task_ledger_plan_update_prompt"] = (
-            ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT + plan_append
-        )
-        kwargs["final_answer_prompt"] = ORCHESTRATOR_FINAL_ANSWER_PROMPT + final_append
+#         kwargs["task_ledger_plan_prompt"] = (
+#             ORCHESTRATOR_TASK_LEDGER_PLAN_PROMPT + plan_append
+#         )
+#         kwargs["task_ledger_plan_update_prompt"] = (
+#             ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT + plan_append
+#         )
+#         kwargs["final_answer_prompt"] = ORCHESTRATOR_FINAL_ANSWER_PROMPT + final_append
 
         self.current_user_id = user_id
         super().__init__(*args, **kwargs)
