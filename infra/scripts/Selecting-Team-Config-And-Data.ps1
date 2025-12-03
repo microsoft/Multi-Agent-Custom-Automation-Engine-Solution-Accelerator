@@ -11,12 +11,10 @@ $storageAccount = ""
 $blobContainerForRetailCustomer = ""
 $blobContainerForRetailOrder = ""
 $blobContainerForRFP = ""
-$blobContainerForLegalContract = ""
 $aiSearch = ""
 $aiSearchIndexForRetailCustomer = ""
 $aiSearchIndexForRetailOrder = ""
 $aiSearchIndexForRFP = ""
-$aiSearchIndexForLegalContract = ""
 $azSubscriptionId = ""
 
 function Test-AzdInstalled {
@@ -42,12 +40,10 @@ function Get-ValuesFromAzdEnv {
     $script:blobContainerForRetailCustomer = $(azd env get-value AZURE_STORAGE_CONTAINER_NAME_RETAIL_CUSTOMER)
     $script:blobContainerForRetailOrder = $(azd env get-value AZURE_STORAGE_CONTAINER_NAME_RETAIL_ORDER)
     $script:blobContainerForRFP = $(azd env get-value AZURE_STORAGE_CONTAINER_NAME_RFP)
-    $script:blobContainerForLegalContract = $(azd env get-value AZURE_STORAGE_CONTAINER_NAME_LEGAL_CONTRACT)
     $script:aiSearch = $(azd env get-value AZURE_AI_SEARCH_NAME)
     $script:aiSearchIndexForRetailCustomer = $(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_RETAIL_CUSTOMER)
     $script:aiSearchIndexForRetailOrder = $(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_RETAIL_ORDER)
     $script:aiSearchIndexForRFP = $(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_RFP)
-    $script:aiSearchIndexForLegalContract = $(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_LEGAL_CONTRACT)
     $script:ResourceGroup = $(azd env get-value AZURE_RESOURCE_GROUP)
     
     # Validate that we got all required values
@@ -85,11 +81,9 @@ function Get-ValuesFromAzDeployment {
     $script:blobContainerForRetailCustomer = $deploymentOutputs.azurE_STORAGE_CONTAINER_NAME_RETAIL_CUSTOMER.value
     $script:blobContainerForRetailOrder = $deploymentOutputs.azurE_STORAGE_CONTAINER_NAME_RETAIL_ORDER.value
     $script:blobContainerForRFP = $deploymentOutputs.azurE_STORAGE_CONTAINER_NAME_RFP.value
-    $script:blobContainerForLegalContract = $deploymentOutputs.azurE_STORAGE_CONTAINER_NAME_LEGAL_CONTRACT.value
     $script:aiSearchIndexForRetailCustomer = $deploymentOutputs.azurE_AI_SEARCH_INDEX_NAME_RETAIL_CUSTOMER.value
     $script:aiSearchIndexForRetailOrder = $deploymentOutputs.azurE_AI_SEARCH_INDEX_NAME_RETAIL_ORDER.value
     $script:aiSearchIndexForRFP = $deploymentOutputs.azurE_AI_SEARCH_INDEX_NAME_RFP.value
-    $script:aiSearchIndexForLegalContract = $deploymentOutputs.azurE_AI_SEARCH_INDEX_NAME_LEGAL_CONTRACT.value
     $script:aiSearch = $deploymentOutputs.azurE_AI_SEARCH_NAME.value
     $script:backendUrl = $deploymentOutputs.backenD_URL.value
     
@@ -206,8 +200,7 @@ Write-Host "1. RFP Evaluation"
 Write-Host "2. Retail Customer Satisfaction"
 Write-Host "3. HR Employee Onboarding"
 Write-Host "4. Marketing Press Release"
-Write-Host "5. Legal Contract Review"
-Write-Host "6. All"
+Write-Host "5. All"
 Write-Host "==============================================="
 Write-Host ""
 
@@ -216,7 +209,7 @@ do {
     $useCaseSelection = Read-Host "Please enter the number of the use case you would like to install."
     
     # Handle both numeric and text input for 'all'
-    if ($useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
+    if ($useCaseSelection -eq "all" -or $useCaseSelection -eq "5") {
         $selectedUseCase = "All"
         $useCaseValid = $true
         Write-Host "Selected: All use cases will be installed."
@@ -245,15 +238,9 @@ do {
         Write-Host "Selected: Marketing Press Release"
         Write-Host "Note: If you choose to install a single use case, installation of other use cases will require re-running this script."
     }
-    elseif ($useCaseSelection -eq "5") {
-        $selectedUseCase = "Legal Contract Review"
-        $useCaseValid = $true
-        Write-Host "Selected: Legal Contract Review"
-        Write-Host "Note: If you choose to install a single use case, installation of other use cases will require re-running this script."
-    }
     else {
         $useCaseValid = $false
-        Write-Host "Invalid selection. Please enter a number from 1-6." -ForegroundColor Red
+        Write-Host "Invalid selection. Please enter a number from 1-5." -ForegroundColor Red
     }
 } while (-not $useCaseValid)
 
@@ -338,7 +325,7 @@ $isSampleDataFailed = $false
 $failedTeamConfigs = 0
 
 # Use Case 3 -----=--
-if($useCaseSelection -eq "3" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
+if($useCaseSelection -eq "3" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "5") {
     Write-Host "Uploading Team Configuration for HR Employee Onboarding..."
     $directoryPath = "data/agent_teams"
     $teamId = "00000000-0000-0000-0000-000000000001"
@@ -357,7 +344,7 @@ if($useCaseSelection -eq "3" -or $useCaseSelection -eq "all" -or $useCaseSelecti
 }
 
 # Use Case 4 -----=--
-if($useCaseSelection -eq "4" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
+if($useCaseSelection -eq "4" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "5") {
     Write-Host "Uploading Team Configuration for Marketing Press Release..."
     $directoryPath = "data/agent_teams"
     $teamId = "00000000-0000-0000-0000-000000000002"
@@ -378,7 +365,7 @@ if($useCaseSelection -eq "4" -or $useCaseSelection -eq "all" -or $useCaseSelecti
 $stIsPublicAccessDisabled = $false
 $srchIsPublicAccessDisabled = $false
 # Enable public access for resources
-if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5"  -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6"){
+if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "5"){
     if ($ResourceGroup) {
         $stPublicAccess = $(az storage account show --name $storageAccount --resource-group $ResourceGroup --query "publicNetworkAccess" -o tsv)
         if ($stPublicAccess -eq "Disabled") {
@@ -412,7 +399,7 @@ if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection 
 
 
 
-if($useCaseSelection -eq "1" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
+if($useCaseSelection -eq "1" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "5") {
     Write-Host "Uploading Team Configuration for RFP Evaluation..."
     $directoryPath = "data/agent_teams"
     $teamId = "00000000-0000-0000-0000-000000000004"
@@ -452,48 +439,7 @@ if($useCaseSelection -eq "1" -or $useCaseSelection -eq "all" -or $useCaseSelecti
     Write-Host "Python script to index data for RFP Evaluation successfully executed."
 }
 
-
-if($useCaseSelection -eq "5" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
-    Write-Host "Uploading Team Configuration for Legal Contract..."
-    $directoryPath = "data/agent_teams"
-    $teamId = "00000000-0000-0000-0000-000000000005"
-    try {
-        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $directoryPath, $userPrincipalId, $teamId -Wait -NoNewWindow -PassThru
-        if ($process.ExitCode -ne 0) {
-            Write-Host "Error: Team configuration for Legal Contract upload failed."
-            $failedTeamConfigs += 1
-            $isTeamConfigFailed = $true
-        }
-    } catch {
-        Write-Host "Error: Uploading team configuration failed."
-        $isTeamConfigFailed = $true
-    }
-    Write-Host "Uploaded Team Configuration for Legal Contract..."
-
-    $directoryPath = "data/datasets/legal_contract"
-    # Upload sample files to blob storage
-    Write-Host "Uploading sample files to blob storage for Legal Contract..."
-    $result = az storage blob upload-batch --account-name $storageAccount --destination $blobContainerForLegalContract --source $directoryPath --auth-mode login --pattern "*" --overwrite --output none
-
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Error: Failed to upload files to blob storage."
-        $isSampleDataFailed = $true
-        exit 1
-    }
-    Write-Host "Files uploaded successfully to blob storage."
-
-    # Run the Python script to index data
-    Write-Host "Running the python script to index data for Legal Contract"
-    $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/index_datasets.py", $storageAccount, $blobContainerForLegalContract , $aiSearch, $aiSearchIndexForLegalContract -Wait -NoNewWindow -PassThru
-
-    if ($process.ExitCode -ne 0) {
-        Write-Host "Error: Indexing python script execution failed."
-        $isSampleDataFailed = $true
-    }
-    Write-Host "Python script to index data for Legal Contract successfully executed."
-}
-
-if($useCaseSelection -eq "2" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
+if($useCaseSelection -eq "2" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "5") {
     Write-Host "Uploading Team Configuration for Retail Customer Satisfaction..."
     $directoryPath = "data/agent_teams"
     $teamId = "00000000-0000-0000-0000-000000000003"
@@ -576,7 +522,7 @@ if ($isTeamConfigFailed -or $isSampleDataFailed) {
     Write-Host "`nOne or more tasks failed. Please check the error messages above."
     exit 1
 } else {
-    if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6"){
+    if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "5"){
         Write-Host "`nTeam configuration upload and sample data processing completed successfully."
     }else {
         Write-Host "`nTeam configuration upload completed successfully."

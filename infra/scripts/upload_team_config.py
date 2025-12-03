@@ -51,7 +51,6 @@ files_to_process = [
     ("marketing.json", "00000000-0000-0000-0000-000000000002"),
     ("retail.json", "00000000-0000-0000-0000-000000000003"),
     ("rfp_analysis_team.json", "00000000-0000-0000-0000-000000000004"),
-    ("legal_contract_team.json", "00000000-0000-0000-0000-000000000005"),
 ]
 
 upload_endpoint = backend_url.rstrip('/') + '/api/v4/upload_team_config'
