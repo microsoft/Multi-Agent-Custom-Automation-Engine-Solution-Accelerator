@@ -55,7 +55,7 @@ Before deploying the resources, you may need to enable the **Bring Your Own Publ
 ## Option 1
 ### Steps
  
-1. Go to [Azure Portal](https:/portal.azure.com/#home).
+1. Go to [Azure Portal](https://portal.azure.com/#home).
  
 2. Click on the **"Resource groups"** option available on the Azure portal home page.
 ![alt text](../docs/images/AzureHomePage.png)
