@@ -145,6 +145,17 @@ By using the *Multi-Agent Custom Automation Engine* solution accelerator, users 
 
 </details>
 
+### Use Case
+<details>
+  <summary>Click to learn more about what use cases this solution provides</summary>
+
+| Use Case | Persona   | Challenges | Summary/Approach | 
+|----------|-----------|------------|------------------|
+| RFP Reviewer  | VP of Finance  | Reviewing RFPs manually under tight deadlines is challenging. Compliance checks and risk assessments slow progress, leaving critical gaps and delaying decisions. | Multi-Agent RFP Reviewer is an intelligent platform addresses these issues by deploying AI agents to review RFPs, identify risks, recommend remediation, and execute actions seamlessly - transforming a labor-intensive process into a fast, accurate, and compliant workflow. |
+| Legal Contract Reviewer | Legal Counsel  | Reviewing Legal Contracts manually under tight deadlines is challenging. Compliance checks and risk assessments slow progress, leaving critical gaps and delaying decisions. | Multi-Agent Legal Contract Reviewer is an intelligent platform addresses these issues by deploying AI agents to review Legal Contracts, identify risks, recommend remediation, and execute actions seamlessly - transforming a labor-intensive process into a fast, accurate, and compliant workflow. |
+
+</details>
+
 <br /><br />
 
 <h2><img src="./docs/images/readme/supporting-documentation.png" width="48" />
