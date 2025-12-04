@@ -73,15 +73,11 @@ class OrchestrationManager:
         # Create Azure AI Agent client for orchestration using config
         # This replaces AzureChatCompletion from SK
         agent_name = team_config.name if team_config.name else "OrchestratorAgent"
-        # db_agent_id = await get_database_team_agent_id(
-        #     memory_store, team_config, agent_name
-        # )
-        # agent_id = db_agent_id or generate_assistant_id()
+
         try:
             chat_client = AzureAIAgentClient(
                 project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
                 model_deployment_name=team_config.deployment_name,
-                # agent_id=agent_id,
                 agent_name=agent_name,
                 async_credential=credential,
             )
