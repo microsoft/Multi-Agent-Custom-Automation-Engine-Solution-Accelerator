@@ -232,10 +232,10 @@ async def process_request(
     authenticated_user = get_authenticated_user_details(request_headers=request.headers)
     user_id = authenticated_user["user_principal_id"]
     if not user_id:
-      track_event_if_configured(
-          "UserIdNotFound", {"status_code": 400, "detail": "no user"}
-      )
-      raise HTTPException(status_code=400, detail="no user found")
+        track_event_if_configured(
+            "UserIdNotFound", {"status_code": 400, "detail": "no user"}
+        )
+        raise HTTPException(status_code=400, detail="no user found")
     try:
         memory_store = await DatabaseFactory.get_database(user_id=user_id)
         user_current_team = await memory_store.get_current_team(user_id=user_id)
@@ -253,7 +253,7 @@ async def process_request(
             status_code=400,
             detail=f"Error retrieving team configuration: {e}",
         ) from e
-    
+
     if not await rai_success(input_task.description, team, memory_store):
         track_event_if_configured(
             "RAI failed",
@@ -267,7 +267,6 @@ async def process_request(
             status_code=400,
             detail="Request contains content that doesn't meet our safety guidelines, try again.",
         )
-
 
     if not input_task.session_id:
         input_task.session_id = str(uuid.uuid4())
@@ -705,10 +704,10 @@ async def upload_team_config(
     authenticated_user = get_authenticated_user_details(request_headers=request.headers)
     user_id = authenticated_user["user_principal_id"]
     if not user_id:
-      track_event_if_configured(
-          "UserIdNotFound", {"status_code": 400, "detail": "no user"}
-      )
-      raise HTTPException(status_code=400, detail="no user found")
+        track_event_if_configured(
+            "UserIdNotFound", {"status_code": 400, "detail": "no user"}
+        )
+        raise HTTPException(status_code=400, detail="no user found")
     try:
         memory_store = await DatabaseFactory.get_database(user_id=user_id)
 

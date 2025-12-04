@@ -112,6 +112,7 @@ class UserCurrentTeam(BaseDataModel):
     user_id: str
     team_id: str
 
+
 class CurrentTeamAgent(BaseDataModel):
     """Represents the current agent of a user."""
     data_type: Literal[DataType.current_team_agent] = DataType.current_team_agent
@@ -121,7 +122,6 @@ class CurrentTeamAgent(BaseDataModel):
     agent_description: str
     agent_instructions: str
     agent_foundry_id: str
-
 
 
 class Plan(BaseDataModel):
