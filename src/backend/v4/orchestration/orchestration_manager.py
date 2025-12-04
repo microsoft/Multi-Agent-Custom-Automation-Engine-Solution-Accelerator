@@ -305,7 +305,6 @@ class OrchestrationManager:
             final_output: str | None = None
 
             self.logger.info("Starting workflow execution...")
-            # thread_id = f"task-{job_id}"
             async for event in workflow.run_stream(task_text):
                 try:
                     # Handle orchestrator messages (task assignments, coordination)
