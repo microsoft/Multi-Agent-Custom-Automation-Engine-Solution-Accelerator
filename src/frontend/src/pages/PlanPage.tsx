@@ -131,14 +131,8 @@ const PlanPage: React.FC = () => {
 
         // Persist / forward to backend (fire-and-forget with logging)
         const agentMessageResponse = PlanDataService.createAgentMessageResponse(agentMessageData, planData, is_final, streaming_message);
-        console.log('📤 Persisting agent message:', agentMessageResponse);
         const sendPromise = apiService.sendAgentMessage(agentMessageResponse)
             .then(saved => {
-                console.log('[agent_message][persisted]', {
-                    agent: agentMessageData.agent,
-                    type: agentMessageData.agent_type,
-                    ts: agentMessageData.timestamp
-                });
                 
                 // If this is a final message, refresh the task list after successful persistence
                 if (is_final) {
@@ -219,7 +213,6 @@ const PlanPage: React.FC = () => {
     //WebsocketMessageType.PLAN_APPROVAL_REQUEST
     useEffect(() => {
         const unsubscribe = webSocketService.on(WebsocketMessageType.PLAN_APPROVAL_REQUEST, (approvalRequest: any) => {
-            console.log('📋 Plan received:', approvalRequest);
 
             let mPlanData: MPlanData | null = null;
 
@@ -244,7 +237,6 @@ const PlanPage: React.FC = () => {
             }
 
             if (mPlanData) {
-                console.log('✅ Parsed plan data:', mPlanData);
                 setPlanApprovalRequest(mPlanData);
                 setWaitingForPlan(false);
                 setShowProcessingPlanSpinner(false);
@@ -260,7 +252,6 @@ const PlanPage: React.FC = () => {
     //(WebsocketMessageType.AGENT_MESSAGE_STREAMING
     useEffect(() => {
         const unsubscribe = webSocketService.on(WebsocketMessageType.AGENT_MESSAGE_STREAMING, (streamingMessage: any) => {
-            //console.log('📋 Streaming Message', streamingMessage);
             // if is final true clear buffer and add final message to agent messages
             const line = PlanDataService.simplifyHumanClarification(streamingMessage.data.content);
             setShowBufferingText(true);
@@ -275,8 +266,6 @@ const PlanPage: React.FC = () => {
     //WebsocketMessageType.USER_CLARIFICATION_REQUEST
     useEffect(() => {
         const unsubscribe = webSocketService.on(WebsocketMessageType.USER_CLARIFICATION_REQUEST, (clarificationMessage: any) => {
-            console.log('📋 Clarification Message', clarificationMessage);
-            console.log('📋 Current plan data User clarification', planData);
             if (!clarificationMessage) {
                 console.warn('⚠️ clarification message missing data:', clarificationMessage);
                 return;
@@ -290,7 +279,6 @@ const PlanPage: React.FC = () => {
                 content: clarificationMessage.data.question || '',
                 raw_data: clarificationMessage.data || '',
             } as AgentMessageData;
-            console.log('✅ Parsed clarification message:', agentMessageData);
             setClarificationMessage(clarificationMessage.data as ParsedUserClarification | null);
             setAgentMessages(prev => [...prev, agentMessageData]);
             setShowBufferingText(false);
@@ -307,7 +295,6 @@ const PlanPage: React.FC = () => {
     //WebsocketMessageType.AGENT_TOOL_MESSAGE
     useEffect(() => {
         const unsubscribe = webSocketService.on(WebsocketMessageType.AGENT_TOOL_MESSAGE, (toolMessage: any) => {
-            console.log('📋 Tool Message', toolMessage);
             // scrollToBottom()
 
         });
@@ -319,7 +306,6 @@ const PlanPage: React.FC = () => {
     //WebsocketMessageType.FINAL_RESULT_MESSAGE
     useEffect(() => {
         const unsubscribe = webSocketService.on(WebsocketMessageType.FINAL_RESULT_MESSAGE, (finalMessage: any) => {
-            console.log('📋 Final Result Message', finalMessage);
             if (!finalMessage) {
 
                 console.warn('⚠️ Final result message missing data:', finalMessage);
@@ -335,8 +321,6 @@ const PlanPage: React.FC = () => {
                 raw_data: finalMessage || '',
             } as AgentMessageData;
 
-
-            console.log('✅ Parsed final result message:', agentMessageData);
             // we ignore the terminated message 
             if (finalMessage?.data?.status === PlanStatus.COMPLETED) {
 
@@ -367,8 +351,6 @@ const PlanPage: React.FC = () => {
     //WebsocketMessageType.AGENT_MESSAGE
     useEffect(() => {
         const unsubscribe = webSocketService.on(WebsocketMessageType.AGENT_MESSAGE, (agentMessage: any) => {
-            console.log('📋 Agent Message', agentMessage)
-            console.log('📋 Current plan data', planData);
             const agentMessageData = agentMessage.data as AgentMessageData;
             if (agentMessageData) {
                 agentMessageData.content = PlanDataService.simplifyHumanClarification(agentMessageData?.content);
@@ -399,12 +381,10 @@ const PlanPage: React.FC = () => {
     // WebSocket connection with proper error handling and v3 backend compatibility
     useEffect(() => {
         if (planId && continueWithWebsocketFlow) {
-            console.log('🔌 Connecting WebSocket:', { planId, continueWithWebsocketFlow });
 
             const connectWebSocket = async () => {
                 try {
                     await webSocketService.connect(planId);
-                    console.log('✅ WebSocket connected successfully');
                 } catch (error) {
                     console.error('❌ WebSocket connection failed:', error);
                     // Continue without WebSocket - the app should still work
@@ -415,25 +395,21 @@ const PlanPage: React.FC = () => {
 
             const handleConnectionChange = (connected: boolean) => {
                 setWsConnected(connected);
-                console.log('🔗 WebSocket connection status:', connected);
             };
 
             const handleStreamingMessage = (message: StreamMessage) => {
-                console.log('📨 Received streaming message:', message);
                 if (message.data && message.data.plan_id) {
                     setStreamingMessages(prev => [...prev, message.data]);
                 }
             };
 
             const handlePlanApprovalResponse = (message: StreamMessage) => {
-                console.log('✅ Plan approval response received:', message);
                 if (message.data && message.data.approved) {
                     setPlanApproved(true);
                 }
             };
 
             const handlePlanApprovalRequest = (message: StreamMessage) => {
-                console.log('📥 Plan approval request received:', message);
                 // This is handled by PlanChat component through its own listener
             };
 
@@ -448,7 +424,6 @@ const PlanPage: React.FC = () => {
             const unsubscribeParsedPlanApprovalRequest = webSocketService.on(WebsocketMessageType.PLAN_APPROVAL_REQUEST, handlePlanApprovalRequest);
 
             return () => {
-                console.log('🔌 Cleaning up WebSocket connections');
                 unsubscribeConnection();
                 unsubscribeStreaming();
                 unsubscribePlanApproval();
@@ -468,9 +443,7 @@ const PlanPage: React.FC = () => {
             try {
 
                 let planResult: ProcessedPlanData | null = null;
-                console.log("Fetching plan with ID:", planId);
                 planResult = await PlanDataService.fetchPlanData(planId, useCache);
-                console.log("Plan data fetched:", planResult);
                 if (planResult?.plan?.overall_status === PlanStatus.IN_PROGRESS) {
                     setShowApprovalButtons(true);
 
@@ -582,8 +555,6 @@ const PlanPage: React.FC = () => {
                     plan_id: planData?.plan.id,
                     m_plan_id: planApprovalRequest?.id || ""
                 });
-
-                console.log("Clarification submitted successfully:", response);
                 setInput("");
                 dismissToast(id);
                 showToast("Clarification submitted successfully", "success");
