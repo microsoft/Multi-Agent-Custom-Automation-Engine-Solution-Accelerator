@@ -1620,7 +1620,7 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
 // ========== Search Service ========== //
 
 var searchServiceName = 'srch-${solutionSuffix}'
-var aiSearchIndexNameForLegalContract = 'sample-dataset-index'
+var aiSearchIndexNameForLegalContract = 'legal-doc-index'
 var aiSearchIndexNameForRetailCustomer = 'macae-retail-customer-index'
 var aiSearchIndexNameForRetailOrder = 'macae-retail-order-index'
 var aiSearchIndexNameForRFP = 'macae-rfp-index'
