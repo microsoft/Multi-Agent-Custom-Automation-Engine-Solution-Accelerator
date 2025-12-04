@@ -4,19 +4,17 @@ When deploying Azure resources, you may come across different error codes that s
  
 Use these as quick reference guides to unblock your deployments.
 
-## 📘 Index
+## 📖 Table of Contents
 
-- [Subscription & Access Issues](#subscription--access-issues)
-- [Quota & Capacity Limitations](#quota--capacity-limitations)
-- [Resource Group & Deployment Management](#resource-group--deployment-management)
-- [Regional & Location Issues](#regional--location-issues)
-- [Resource Naming & Validation](#resource-naming--validation)
-- [Resource Identification & References](#resource-identification--references)
-- [Network & Infrastructure Configuration](#network--infrastructure-configuration)
-- [Configuration & Property Errors](#configuration--property-errors)
-- [Resource State & Provisioning](#resource-state--provisioning)
-- [Miscellaneous](#miscellaneous)
-
+- [Subscription & Access Issues](#subscription--access-issues)  
+- [Quota & Capacity Limitations](#quota--capacity-limitations)  
+- [Regional & Location Issues](#regional--location-issues)  
+- [Resource Naming & Validation](#resource-naming--validation)  
+- [Resource Identification & References](#resource-identification--references)  
+- [Network & Infrastructure Configuration](#network--infrastructure-configuration)  
+- [Configuration & Property Errors](#configuration--property-errors)  
+- [Resource State & Provisioning](#resource-state--provisioning)  
+- [Miscellaneous](#miscellaneous)  
 
 ## Subscription & Access Issues
 
