@@ -21,22 +21,6 @@ from v3.api.router import app_v3
 # Semantic Kernel imports
 from v3.config.agent_registry import agent_registry
 
-# Configure logging levels from environment variables (force configuration)
-basic_level = getattr(logging, config.AZURE_BASIC_LOGGING_LEVEL.upper(), logging.INFO)
-logging.getLogger().setLevel(basic_level)  # Force root logger level
-logging.basicConfig(level=basic_level, force=True)  # Force reconfiguration
-
-# Configure Azure package logging levels
-azure_level = getattr(logging, config.AZURE_PACKAGE_LOGGING_LEVEL.upper(), logging.WARNING)
-# Parse comma-separated logging packages
-packages = []
-if config.AZURE_LOGGING_PACKAGES:
-    packages = [pkg.strip() for pkg in config.AZURE_LOGGING_PACKAGES.split(",") if pkg.strip()]
-    for logger_name in packages:
-        logging.getLogger(logger_name).setLevel(azure_level)
-
-logging.info(f"Logging configured - Basic: {basic_level}, Azure packages: {azure_level}, Packages: {packages}")
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -75,6 +59,20 @@ else:
     logging.warning(
         "No Application Insights Instrumentation Key found. Skipping configuration"
     )
+
+# Configure logging levels from environment variables
+logging.basicConfig(level=getattr(logging, config.AZURE_BASIC_LOGGING_LEVEL.upper(), logging.INFO))
+
+# Configure Azure package logging levels
+azure_level = getattr(logging, config.AZURE_PACKAGE_LOGGING_LEVEL.upper(), logging.WARNING)
+# Parse comma-separated logging packages
+if config.AZURE_LOGGING_PACKAGES:
+    packages = [pkg.strip() for pkg in config.AZURE_LOGGING_PACKAGES.split(",") if pkg.strip()]
+    for logger_name in packages:
+        logging.getLogger(logger_name).setLevel(azure_level)
+
+logging.getLogger("opentelemetry.sdk").setLevel(logging.ERROR)
+
 # Initialize the FastAPI app
 app = FastAPI(lifespan=lifespan)
 
