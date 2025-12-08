@@ -1,4 +1,4 @@
-name: Deployment orchestrator v2
+name: Deployment orchestrator
 
 on:
   workflow_call:

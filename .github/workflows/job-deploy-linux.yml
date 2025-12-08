@@ -1,4 +1,4 @@
-name: Deploy Steps - Linux v2
+name: Deploy Steps - Linux
 
 on:
   workflow_call:
