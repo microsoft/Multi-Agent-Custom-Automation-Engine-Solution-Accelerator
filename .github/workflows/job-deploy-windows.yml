@@ -1,4 +1,4 @@
-name: Deploy Steps - Windows v2
+name: Deploy Steps - Windows
 
 on:
   workflow_call:

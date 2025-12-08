@@ -1,4 +1,4 @@
-name: Deploy Job v2
+name: Deploy Job
 
 on:
   workflow_call:
@@ -268,7 +268,7 @@ jobs:
             if [[ "$BRANCH_NAME" == "main" ]]; then
               IMAGE_TAG="latest_v3"
             elif [[ "$BRANCH_NAME" == "dev-v3" ]]; then
-              IMAGE_TAG="dev-v3"
+              IMAGE_TAG="dev_v3"
             elif [[ "$BRANCH_NAME" == "hotfix" ]]; then
               IMAGE_TAG="hotfix"
             else

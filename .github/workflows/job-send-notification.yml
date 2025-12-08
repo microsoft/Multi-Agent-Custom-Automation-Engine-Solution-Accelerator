@@ -1,4 +1,4 @@
-name: Send Notification Job v2
+name: Send Notification Job
 
 on:
   workflow_call:

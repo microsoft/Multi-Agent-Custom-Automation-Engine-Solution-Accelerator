@@ -1,4 +1,4 @@
-name: Cleanup Deployment Job v2
+name: Cleanup Deployment Job
 
 on:
   workflow_call:
