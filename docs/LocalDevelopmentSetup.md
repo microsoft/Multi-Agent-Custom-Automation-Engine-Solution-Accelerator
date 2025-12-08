@@ -221,42 +221,39 @@ The **main.bicep** deployment includes the assignment of the appropriate roles t
 
 #### Get Principal Id
 ```bash
-     az ad signed-in-user show --query id -o tsv
+az ad signed-in-user show --query id -o tsv
 ```
 
 #### Cosmos DB Access
 ```bash
-
 # Assign Cosmos DB Built-in Data Contributor role
-    az cosmosdb sql role assignment create --resource-group <solution-accelerator-rg> --account-name <cosmos-db-account-name> --role-definition-name "Cosmos DB Built-in Data Contributor" --principal-id <aad-user-object-id> --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.DocumentDB/databaseAccounts/<cosmos-db-account-name>
-
-
+az cosmosdb sql role assignment create --resource-group <solution-accelerator-rg> --account-name <cosmos-db-account-name> --role-definition-name "Cosmos DB Built-in Data Contributor" --principal-id <aad-user-object-id> --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.DocumentDB/databaseAccounts/<cosmos-db-account-name>
 ```
 
 #### AI Foundry access
 
 ```bash
-    az role assignment create --assignee <aad-user-upn> --role "Azure AI User" --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.CognitiveServices/accounts/<azure-ai-foundry-name>
+az role assignment create --assignee <aad-user-upn> --role "Azure AI User" --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.CognitiveServices/accounts/<azure-ai-foundry-name>
 ```
 
 ```bash
-    az role assignment create --assignee <aad-user-upn> --role " Azure AI Developer " --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.CognitiveServices/accounts/<azure-ai-foundry-name> 
+az role assignment create --assignee <aad-user-upn> --role " Azure AI Developer " --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.CognitiveServices/accounts/<azure-ai-foundry-name> 
 ```
 
 ```bash
-    az role assignment create --assignee <aad-user-upn> --role " Cognitive Services OpenAI User " --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.CognitiveServices/accounts/<azure-ai-foundry-name> 
+az role assignment create --assignee <aad-user-upn> --role " Cognitive Services OpenAI User " --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.CognitiveServices/accounts/<azure-ai-foundry-name> 
 ```
 
 #### Search Service Access
 
  ```bash
-     az role assignment create --assignee <aad-user-upn> --role "Search Index Data Contributor" --scope /subscriptions/ <subscription-id> /resourceGroups/ <solution-accelerator-rg> /providers/Microsoft.Search/searchServices/<Search-service-name> 
+az role assignment create --assignee <aad-user-upn> --role "Search Index Data Contributor" --scope /subscriptions/ <subscription-id> /resourceGroups/ <solution-accelerator-rg> /providers/Microsoft.Search/searchServices/<Search-service-name> 
 ```
 
 #### Storage Account Access
 
 ```bash
-     az role assignment create --assignee <aad-user-upn> --role "Storage Blob Data Contributor" --scope /subscriptions/ <subscription-id> /resourceGroups/ <solution-accelerator-rg> /providers/Microsoft.Storage/storageAccounts/<storage-account-name> 
+az role assignment create --assignee <aad-user-upn> --role "Storage Blob Data Contributor" --scope /subscriptions/ <subscription-id> /resourceGroups/ <solution-accelerator-rg> /providers/Microsoft.Storage/storageAccounts/<storage-account-name> 
 ```
 
 
