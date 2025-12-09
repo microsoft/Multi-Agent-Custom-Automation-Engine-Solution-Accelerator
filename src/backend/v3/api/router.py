@@ -5,6 +5,7 @@ import uuid
 from typing import Optional
 
 import v3.models.messages as messages
+from v3.models.messages import WebsocketMessageType
 from auth.auth_utils import get_authenticated_user_details
 from common.database.database_factory import DatabaseFactory
 from common.models.messages_kernel import (
@@ -335,7 +336,6 @@ async def plan_approval(
 ):
     """
     Endpoint to receive plan approval or rejection from the user.
-
     ---
     tags:
       - Plans
@@ -382,7 +382,6 @@ async def plan_approval(
       500:
         description: Internal server error
     """
-
     authenticated_user = get_authenticated_user_details(request_headers=request.headers)
     user_id = authenticated_user["user_principal_id"]
     if not user_id:
@@ -399,23 +398,44 @@ async def plan_approval(
                 orchestration_config.set_approval_result(
                     human_feedback.m_plan_id, human_feedback.approved
                 )
-                # orchestration_config.plans[human_feedback.m_plan_id][
-                #     "plan_id"
-                # ] = human_feedback.plan_id
                 print("Plan approval received:", human_feedback)
-                # print(
-                #     "Updated orchestration config:",
-                #     orchestration_config.plans[human_feedback.m_plan_id],
-                # )
+
                 try:
                     result = await PlanService.handle_plan_approval(
                         human_feedback, user_id
                     )
                     print("Plan approval processed:", result)
+
                 except ValueError as ve:
-                    print(f"ValueError processing plan approval: {ve}")
-                except Exception as e:
-                    print(f"Error processing plan approval: {e}")
+                    logger.error(f"ValueError processing plan approval: {ve}")
+                    await connection_config.send_status_update_async(
+                        {
+                            "type": WebsocketMessageType.ERROR_MESSAGE,
+                            "data": {
+                                "content": "Approval failed due to invalid input.",
+                                "status": "error",
+                                "timestamp": asyncio.get_event_loop().time(),
+                            },
+                        },
+                        user_id,
+                        message_type=WebsocketMessageType.ERROR_MESSAGE,
+                    )
+
+                except Exception:
+                    logger.error("Error processing plan approval", exc_info=True)
+                    await connection_config.send_status_update_async(
+                        {
+                            "type": WebsocketMessageType.ERROR_MESSAGE,
+                            "data": {
+                                "content": "An unexpected error occurred while processing the approval.",
+                                "status": "error",
+                                "timestamp": asyncio.get_event_loop().time(),
+                            },
+                        },
+                        user_id,
+                        message_type=WebsocketMessageType.ERROR_MESSAGE,
+                    )
+
                 track_event_if_configured(
                     "PlanApprovalReceived",
                     {
@@ -437,6 +457,22 @@ async def plan_approval(
                 )
     except Exception as e:
         logging.error(f"Error processing plan approval: {e}")
+        try:
+            await connection_config.send_status_update_async(
+                {
+                    "type": WebsocketMessageType.ERROR_MESSAGE,
+                    "data": {
+                        "content": "An error occurred while processing your approval request.",
+                        "status": "error",
+                        "timestamp": asyncio.get_event_loop().time(),
+                    },
+                },
+                user_id,
+                message_type=WebsocketMessageType.ERROR_MESSAGE,
+            )
+        except Exception as ws_error:
+            # Don't let WebSocket send failure break the HTTP response
+            logging.warning(f"Failed to send WebSocket error: {ws_error}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
