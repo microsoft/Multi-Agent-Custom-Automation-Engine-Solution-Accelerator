@@ -58,7 +58,6 @@ const PlanPage: React.FC = () => {
     const [showBufferingText, setShowBufferingText] = useState<boolean>(false);
     const [agentMessages, setAgentMessages] = useState<AgentMessageData[]>([]);
     const formatErrorMessage = useCallback((content: string): string => {
-        // return `⚠️ ${content}`;
         // Split content by newlines and add proper indentation
         const lines = content.split('\n');
         const formattedLines = lines.map((line, index) => {

@@ -333,7 +333,7 @@ async def process_request(
 @app_v3.post("/plan_approval")
 async def plan_approval(
     human_feedback: messages.PlanApprovalResponse, request: Request
-    ):
+):
     """
     Endpoint to receive plan approval or rejection from the user.
     ---
@@ -462,7 +462,6 @@ async def plan_approval(
                 {
                     "type": WebsocketMessageType.ERROR_MESSAGE,
                     "data": {
-                        # "content": f"Approval error: {str(e)}",
                         "content": "An error occurred while processing your approval request.",
                         "status": "error",
                         "timestamp": asyncio.get_event_loop().time(),
