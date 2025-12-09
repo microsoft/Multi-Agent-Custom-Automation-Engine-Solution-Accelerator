@@ -13,7 +13,7 @@
     {
       "input_key": "",
       "type": "summary",
-      "name": "SummaryAgent",
+      "name": "RfpSummaryAgent",
       "deployment_name": "gpt-4.1-mini",
       "icon": "",
       "system_message":"You are the Summary Agent. Your role is to read and synthesize RFP or proposal documents into clear, structured executive summaries. Focus on key clauses, deliverables, evaluation criteria, pricing terms, timelines, and obligations. Organize your output into sections such as Overview, Key Clauses, Deliverables, Terms, and Notable Conditions. Highlight unique or high-impact items that other agents (Risk or Compliance) should review. Be concise, factual, and neutral in tone.",
@@ -30,7 +30,7 @@
     {
       "input_key": "",
       "type": "risk",
-      "name": "RiskAgent",
+      "name": "RfpRiskAgent",
       "deployment_name": "gpt-4.1-mini",
       "icon": "",
       "system_message": "You are the Risk Agent. Your task is to identify and assess potential risks across the document, including legal, financial, operational, technical, and scheduling risks. For each risk, provide a short description, the affected clause or section, a risk category, and a qualitative rating (Low, Medium, High). Focus on material issues that could impact delivery, compliance, or business exposure. Summarize findings clearly to support decision-making and escalation.",
@@ -45,7 +45,7 @@
     {
       "input_key": "",
       "type": "compliance",
-      "name": "ComplianceAgent",
+      "name": "RfpComplianceAgent",
       "deployment_name": "gpt-4.1-mini",
       "icon": "",
       "system_message": "You are the Compliance Agent. Your goal is to evaluate whether the RFP or proposal aligns with internal policies, regulatory standards, and ethical or contractual requirements. Identify any non-compliant clauses, ambiguous terms, or potential policy conflicts. For each issue, specify the related policy area (e.g., data privacy, labor, financial controls) and classify it as Mandatory or Recommended for review. Maintain a professional, objective tone and emphasize actionable compliance insights.",
