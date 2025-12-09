@@ -182,14 +182,21 @@ class OrchestrationManager:
                 )
                 self.logger.info(f"Final result sent via WebSocket to user {user_id}")
 
-            except Exception as e:
-                self.logger.error(f"Error processing final result: {e}")
-                # Send error message to user
+            except ResourceNotFoundError as e:
+                self.logger.error(f"Agent not found: {e}")
+                self.logger.info(f"Error: {e}")
+                self.logger.info(f"Error type: {type(e).__name__}")
+                if hasattr(e, "__dict__"):
+                    self.logger.info(f"Error attributes: {e.__dict__}")
+                self.logger.info("=" * 50)
+                error_content = "**Attention:** The agent is currently unavailable. Please check if it was deleted or recreated.\n\nIf yes, please create a new plan from the home page."
+                self.logger.info(f"🔴 Sending error message to user {user_id}: {error_content}")
+
                 await connection_config.send_status_update_async(
                     {
                         "type": WebsocketMessageType.ERROR_MESSAGE,
                         "data": {
-                            "content": "An error occurred while processing the final response.",
+                            "content": error_content,
                             "status": "error",
                             "timestamp": asyncio.get_event_loop().time(),
                         },
@@ -197,26 +204,23 @@ class OrchestrationManager:
                     user_id,
                     message_type=WebsocketMessageType.ERROR_MESSAGE,
                 )
+                self.logger.info(f"✅ Error message sent via WebSocket to user {user_id}")
 
-        except ResourceNotFoundError as e:
-            self.logger.error(f"Agent not found: {e}")
-            self.logger.info(f"Error: {e}")
-            self.logger.info(f"Error type: {type(e).__name__}")
-            if hasattr(e, "__dict__"):
-                self.logger.info(f"Error attributes: {e.__dict__}")
-            self.logger.info("=" * 50)
-            await connection_config.send_status_update_async(
-                {
-                    "type": WebsocketMessageType.ERROR_MESSAGE,
-                    "data": {
-                        "content": "The agent is currently unavailable. Please check if it was deleted or recreated.",
-                        "status": "error",
-                        "timestamp": asyncio.get_event_loop().time(),
+            except Exception as e:
+                self.logger.error(f"Error processing final result: {e}")
+                # Send error message to user
+                await connection_config.send_status_update_async(
+                    {
+                        "type": WebsocketMessageType.ERROR_MESSAGE,
+                        "data": {
+                            "content": "**Attention:** An error occurred while processing the final response.\n\nPlease try creating a new plan from the home page.",
+                            "status": "error",
+                            "timestamp": asyncio.get_event_loop().time(),
+                        },
                     },
-                },
-                user_id,
-                message_type=WebsocketMessageType.ERROR_MESSAGE,
-            )
+                    user_id,
+                    message_type=WebsocketMessageType.ERROR_MESSAGE,
+                )
 
         except RuntimeError as e:
             if "did not return any response" in str(e):
@@ -226,7 +230,7 @@ class OrchestrationManager:
                     {
                         "type": WebsocketMessageType.ERROR_MESSAGE,
                         "data": {
-                            "content": "I'm having trouble connecting to the agent right now. Please try again later.",
+                            "content": "**Attention:** I'm having trouble connecting to the agent right now.\n\nPlease try creating a new plan from the home page or try again later.",
                             "status": "error",
                             "timestamp": asyncio.get_event_loop().time(),
                         },
@@ -246,7 +250,7 @@ class OrchestrationManager:
                     {
                         "type": WebsocketMessageType.ERROR_MESSAGE,
                         "data": {
-                            "content": "Something went wrong. Please try again later.",
+                            "content": "**Attention:** Something went wrong.\n\nPlease try creating a new plan from the home page or try again later.",
                             "status": "error",
                             "timestamp": asyncio.get_event_loop().time(),
                         },
@@ -262,12 +266,16 @@ class OrchestrationManager:
             if hasattr(e, "__dict__"):
                 self.logger.info(f"Error attributes: {e.__dict__}")
             self.logger.info("=" * 50)
-            # Always send error to frontend
+
+            error_content = "**Attention:** Something went wrong.\n\nPlease try creating a new plan from the home page or try again later."
+
+            self.logger.info(f"🔴 Sending error message to user {user_id}: {error_content}")
+
             await connection_config.send_status_update_async(
                 {
                     "type": WebsocketMessageType.ERROR_MESSAGE,
                     "data": {
-                        "content": "Something went wrong. Please try again later.",
+                        "content": error_content,
                         "status": "error",
                         "timestamp": asyncio.get_event_loop().time(),
                     },
@@ -275,6 +283,8 @@ class OrchestrationManager:
                 user_id,
                 message_type=WebsocketMessageType.ERROR_MESSAGE,
             )
+
+            self.logger.info(f"✅ Error message sent via WebSocket to user {user_id}")
 
         finally:
             await runtime.stop_when_idle()

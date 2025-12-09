@@ -48,7 +48,6 @@ interface SimplifiedPlanChatProps extends PlanChatProps {
   handleApprovePlan: () => Promise<void>;
   handleRejectPlan: () => Promise<void>;
   processingApproval: boolean;
-  networkError: boolean;
 
 }
 
@@ -59,7 +58,6 @@ const PlanChat: React.FC<SimplifiedPlanChatProps> = ({
   submittingChatDisableInput,
   OnChatSubmit,
   onPlanApproval,
-  networkError,
   onPlanReceived,
   initialTask,
   planApprovalRequest,
@@ -110,7 +108,7 @@ const PlanChat: React.FC<SimplifiedPlanChatProps> = ({
         {renderPlanResponse(planApprovalRequest, handleApprovePlan, handleRejectPlan, processingApproval, showApprovalButtons)}
         {renderAgentMessages(agentMessages)}
 
-        {showProcessingPlanSpinner && !networkError && renderPlanExecutionMessage()}
+        {showProcessingPlanSpinner && renderPlanExecutionMessage()}
         {/* Streaming plan updates */}
         {showBufferingText && (
           <StreamingBufferMessage

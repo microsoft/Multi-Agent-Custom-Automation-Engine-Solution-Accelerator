@@ -58,7 +58,19 @@ const PlanPage: React.FC = () => {
     const [showBufferingText, setShowBufferingText] = useState<boolean>(false);
     const [agentMessages, setAgentMessages] = useState<AgentMessageData[]>([]);
     const formatErrorMessage = useCallback((content: string): string => {
-        return `⚠️ ${content}`;
+        // return `⚠️ ${content}`;
+        // Split content by newlines and add proper indentation
+        const lines = content.split('\n');
+        const formattedLines = lines.map((line, index) => {
+            if (index === 0) {
+                return `⚠️ ${line}`;
+            } else if (line.trim() === '') {
+                return ''; // Preserve blank lines
+            } else {
+                return `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${line}`;
+            }
+        });
+        return formattedLines.join('\n');
     }, []);
     // Plan approval state - track when plan is approved
     const [planApproved, setPlanApproved] = useState<boolean>(false);
@@ -218,18 +230,12 @@ const PlanPage: React.FC = () => {
         }, 100);
     }, []);
 
-    const [networkError, setNetworkError] = useState<boolean>(false);
     const [isProcessing, setIsProcessing] = useState<boolean>(false);
     const [showProcessingMessage, setShowProcessingMessage] = useState<boolean>(false);
 
     //WebsocketMessageType.PLAN_APPROVAL_REQUEST
     useEffect(() => {
         const unsubscribe = webSocketService.on(WebsocketMessageType.PLAN_APPROVAL_REQUEST, (approvalRequest: any) => {
-            // Ignore all messages when there's a network error
-            if (networkError) {
-                console.log('⚠️ Ignoring PLAN_APPROVAL_REQUEST due to network error');
-                return;
-            }
             console.log('📋 Plan received:', approvalRequest);
 
             let mPlanData: MPlanData | null = null;
@@ -271,11 +277,7 @@ const PlanPage: React.FC = () => {
     //(WebsocketMessageType.AGENT_MESSAGE_STREAMING
     useEffect(() => {
         const unsubscribe = webSocketService.on(WebsocketMessageType.AGENT_MESSAGE_STREAMING, (streamingMessage: any) => {
-            // Ignore all messages when there's a network error
-            if (networkError) {
-                console.log('⚠️ Ignoring AGENT_MESSAGE_STREAMING due to network error');
-                return;
-            }
+            
             //console.log('📋 Streaming Message', streamingMessage);
             // if is final true clear buffer and add final message to agent messages
             const line = PlanDataService.simplifyHumanClarification(streamingMessage.data.content);
@@ -286,16 +288,11 @@ const PlanPage: React.FC = () => {
         });
 
         return () => unsubscribe();
-    }, [scrollToBottom, networkError]);
+    }, [scrollToBottom]);
 
     //WebsocketMessageType.USER_CLARIFICATION_REQUEST
     useEffect(() => {
         const unsubscribe = webSocketService.on(WebsocketMessageType.USER_CLARIFICATION_REQUEST, (clarificationMessage: any) => {
-            // Ignore all messages when there's a network error
-            if (networkError) {
-                console.log('⚠️ Ignoring USER_CLARIFICATION_REQUEST due to network error');
-                return;
-            }
             console.log('📋 Clarification Message', clarificationMessage);
             console.log('📋 Current plan data User clarification', planData);
             if (!clarificationMessage) {
@@ -324,32 +321,22 @@ const PlanPage: React.FC = () => {
         });
 
         return () => unsubscribe();
-    }, [scrollToBottom, planData, processAgentMessage, networkError]);
+    }, [scrollToBottom, planData, processAgentMessage]);
     //WebsocketMessageType.AGENT_TOOL_MESSAGE
     useEffect(() => {
         const unsubscribe = webSocketService.on(WebsocketMessageType.AGENT_TOOL_MESSAGE, (toolMessage: any) => {
-            // Ignore all messages when there's a network error
-            if (networkError) {
-                console.log('⚠️ Ignoring AGENT_TOOL_MESSAGE due to network error');
-                return;
-            }
             console.log('📋 Tool Message', toolMessage);
             // scrollToBottom()
 
         });
 
         return () => unsubscribe();
-    }, [scrollToBottom, networkError]);
+    }, [scrollToBottom]);
 
 
     //WebsocketMessageType.FINAL_RESULT_MESSAGE
     useEffect(() => {
         const unsubscribe = webSocketService.on(WebsocketMessageType.FINAL_RESULT_MESSAGE, (finalMessage: any) => {
-            // Ignore all messages when there's a network error
-            if (networkError) {
-                console.log('⚠️ Ignoring FINAL_RESULT_MESSAGE due to network error');
-                return;
-            }
             console.log('📋 Final Result Message', finalMessage);
             if (!finalMessage) {
 
@@ -393,13 +380,41 @@ const PlanPage: React.FC = () => {
         });
 
         return () => unsubscribe();
-    }, [scrollToBottom, planData, processAgentMessage, streamingMessageBuffer, setSelectedTeam, networkError]);
+    }, [scrollToBottom, planData, processAgentMessage, streamingMessageBuffer, setSelectedTeam]);
 
     // WebsocketMessageType.ERROR_MESSAGE
     useEffect(() => {
         const unsubscribe = webSocketService.on(WebsocketMessageType.ERROR_MESSAGE, (errorMessage: any) => {
             console.log('❌ Received ERROR_MESSAGE:', errorMessage);
-            const errorContent = errorMessage?.data?.content || "Something went wrong. Please try again later.";
+            console.log('❌ Error message data:', errorMessage?.data);
+            
+            // Try multiple ways to extract the error message
+            let errorContent = "An unexpected error occurred. Please try again later.";
+            
+            // Check for double-nested data structure
+            if (errorMessage?.data?.data?.content) {
+                const content = errorMessage.data.data.content.trim();
+                if (content.length > 0) {
+                    errorContent = content;
+                }
+            } else if (errorMessage?.data?.content) {
+                const content = errorMessage.data.content.trim();
+                if (content.length > 0) {
+                    errorContent = content;
+                }
+            } else if (errorMessage?.content) {
+                const content = errorMessage.content.trim();
+                if (content.length > 0) {
+                    errorContent = content;
+                }
+            } else if (typeof errorMessage === 'string') {
+                const content = errorMessage.trim();
+                if (content.length > 0) {
+                    errorContent = content;
+                }
+            }
+
+            console.log('❌ Final error content to display:', errorContent);
 
             const errorAgentMessage: AgentMessageData = {
                 agent: 'system',
@@ -416,32 +431,24 @@ const PlanPage: React.FC = () => {
             setShowBufferingText(false);
             setIsProcessing(false);
             setShowProcessingMessage(false);
+            setSubmittingChatDisableInput(false);
             scrollToBottom();
             showToast(errorContent, "error");
         });
 
         return () => unsubscribe();
-    }, [scrollToBottom, showToast, formatErrorMessage, networkError]);
+    }, [scrollToBottom, showToast, formatErrorMessage]);
 
     //WebsocketMessageType.AGENT_MESSAGE
     useEffect(() => {
         const unsubscribe = webSocketService.on(WebsocketMessageType.AGENT_MESSAGE, (agentMessage: any) => {
-            // Ignore all messages when there's a network error
-            if (networkError) {
-                console.log('⚠️ Ignoring AGENT_MESSAGE due to network error');
-                return;
-            }
             console.log('📋 Agent Message', agentMessage)
             console.log('📋 Current plan data', planData);
             const agentMessageData = agentMessage.data as AgentMessageData;
             if (agentMessageData) {
                 agentMessageData.content = PlanDataService.simplifyHumanClarification(agentMessageData?.content);
                 setAgentMessages(prev => [...prev, agentMessageData]);
-                // Only show processing spinner if there's no network error
-                if (!networkError) {
-                    console.log('🔄 [AGENT_MESSAGE] Setting showProcessingPlanSpinner = true');
-                    setShowProcessingPlanSpinner(true);
-                }
+                setShowProcessingPlanSpinner(true);
                 scrollToBottom();
                 processAgentMessage(agentMessageData, planData);
             }
@@ -449,7 +456,7 @@ const PlanPage: React.FC = () => {
         });
 
         return () => unsubscribe();
-    }, [scrollToBottom, planData, processAgentMessage, networkError]); //onPlanReceived, scrollToBottom
+    }, [scrollToBottom, planData, processAgentMessage]); //onPlanReceived, scrollToBottom
 
     // Loading message rotation effect
     useEffect(() => {
@@ -527,43 +534,6 @@ const PlanPage: React.FC = () => {
         }
     }, [planId, loading, continueWithWebsocketFlow]);
 
-    // Force spinner off whenever network error occurs
-    useEffect(() => {
-        if (networkError) {
-            console.log('[NETWORK ERROR DETECTED] Forcing spinner OFF');
-            setShowProcessingPlanSpinner(false);
-            setIsProcessing(false);
-            setShowProcessingMessage(false);
-            setShowBufferingText(false);
-        }
-    }, [networkError]);
-
-    useEffect(() => {
-        const handleOffline = () => {
-            console.log('Network disconnected - stopping all processing');
-            // Set a flag to show network error and stop all processing states
-            setNetworkError(true);
-            setShowProcessingMessage(false);
-            console.log('[OFFLINE] Setting showProcessingPlanSpinner = false');
-            setShowProcessingPlanSpinner(false);
-            setIsProcessing(false);
-            setShowBufferingText(false);
-        };
-    
-        const handleOnline = () => {
-            console.log('Network reconnected');
-            setNetworkError(false);
-        };
-    
-        window.addEventListener('offline', handleOffline);
-        window.addEventListener('online', handleOnline);
-    
-        return () => {
-            window.removeEventListener('offline', handleOffline);
-            window.removeEventListener('online', handleOnline);
-        };
-    }, []);
-
     // Create loadPlanData function with useCallback to memoize it
     const loadPlanData = useCallback(
         async (useCache = true): Promise<ProcessedPlanData | null> => {
@@ -620,17 +590,6 @@ const PlanPage: React.FC = () => {
         setProcessingApproval(true);
         let id = showToast("Submitting Approval", "progress");
 
-        // Start a 10-second timeout
-        const timeoutId = setTimeout(() => {
-            dismissToast(id);
-            setShowProcessingPlanSpinner(false);
-            setProcessingApproval(false);
-            setNetworkError(true); 
-            setIsProcessing(false);
-            setShowProcessingMessage(false);
-            showToast("Approval timed out. Please check your network and try again.", "error");
-        }, 10000); 
-
         try {
             await apiService.approvePlan({
                 m_plan_id: planApprovalRequest.id,
@@ -638,22 +597,14 @@ const PlanPage: React.FC = () => {
                 approved: true,
                 feedback: 'Plan approved by user'
             });
-
-            clearTimeout(timeoutId);
+            
             dismissToast(id);
-            // Only show processing spinner if there's no network error
-            if (!networkError) {
-                console.log('🔄 [APPROVAL] Setting showProcessingPlanSpinner = true');
-                setShowProcessingPlanSpinner(true);
-            } else {
-                console.log('⚠️ [APPROVAL] Skipping spinner due to network error');
-            }
+            setShowProcessingPlanSpinner(true);
             setShowApprovalButtons(false);
             setIsProcessing(false);
             setShowProcessingMessage(false);
 
         } catch (error) {
-            clearTimeout(timeoutId);
             dismissToast(id);
             showToast("Failed to submit approval", "error");
             console.error('❌ Failed to approve plan:', error);
@@ -731,13 +682,7 @@ const PlanPage: React.FC = () => {
 
                 setAgentMessages(prev => [...prev, agentMessageData]);
                 setSubmittingChatDisableInput(true);
-                // Only show processing spinner if there's no network error
-                if (!networkError) {
-                    console.log('🔄 [CLARIFICATION] Setting showProcessingPlanSpinner = true');
-                    setShowProcessingPlanSpinner(true);
-                } else {
-                    console.log('⚠️ [CLARIFICATION] Skipping spinner due to network error');
-                }
+                setShowProcessingPlanSpinner(true);
                 scrollToBottom();
 
             } catch (error: any) {
@@ -842,32 +787,7 @@ const PlanPage: React.FC = () => {
                         </>
                     ) : (
                         <>
-
-                            {networkError && (
-                                <div style={{
-                                    maxWidth: '800px',
-                                    margin: '0 auto 32px auto',
-                                    padding: '0 24px'
-                                }}>
-                                    <div style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '16px',
-                                        backgroundColor: 'var(--colorPaletteRedBackground1)',
-                                        borderRadius: '8px',
-                                        border: '1px solid var(--colorPaletteRedBorder1)',
-                                        padding: '16px'
-                                    }}>
-                                        <span style={{
-                                            fontSize: '14px',
-                                            color: 'var(--colorPaletteRedForeground1)',
-                                            fontWeight: '500'
-                                        }}>
-                                            ❌ Network connection lost. Please reconnect to the internet and try again.
-                                        </span>
-                                    </div>
-                                </div>
-                            )}
+                            
                             <ContentToolbar
                                 panelTitle="Multi-Agent Planner"
                             >
@@ -897,7 +817,6 @@ const PlanPage: React.FC = () => {
                                 processingApproval={processingApproval}
                                 handleApprovePlan={handleApprovePlan}
                                 handleRejectPlan={handleRejectPlan}
-                                networkError={networkError}
 
                             />
                         </>
