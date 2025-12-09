@@ -22,7 +22,6 @@ import { APIService } from "../api/apiService";
 import { StreamMessage, StreamingPlanUpdate } from "../models";
 import { usePlanCancellationAlert } from "../hooks/usePlanCancellationAlert";
 import PlanCancellationDialog from "../components/common/PlanCancellationDialog";
-// import { renderPlanExecutionMessage, renderThinkingState } from '../components/content/streaming/StreamingPlanState';
 import "../styles/PlanPage.css"
 
 // Create API service instance
