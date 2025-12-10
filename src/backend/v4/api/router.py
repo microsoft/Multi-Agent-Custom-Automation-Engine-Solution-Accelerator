@@ -780,10 +780,12 @@ async def upload_team_config(
         )
 
         # Validate search indexes
+        logger.info(f"🔍 Validating search indexes for user: {user_id}")
         search_valid, search_errors = await team_service.validate_team_search_indexes(
             json_data
         )
         if not search_valid:
+            logger.warning(f"❌ Search validation failed for user {user_id}: {search_errors}")
             error_message = (
                 f"Search index validation failed:\n\n{chr(10).join([f'• {error}' for error in search_errors])}\n\n"
                 f"Please ensure all referenced search indexes exist in your Azure AI Search service."
@@ -799,6 +801,7 @@ async def upload_team_config(
             )
             raise HTTPException(status_code=400, detail=error_message)
 
+        logger.info(f"✅ Search validation passed for user: {user_id}")
         track_event_if_configured(
             "Team configuration search validation passed",
             {"status": "passed", "user_id": user_id, "filename": file.filename},

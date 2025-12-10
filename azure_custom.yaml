@@ -60,6 +60,9 @@ hooks:
 
         Write-Host "🌐 Access your deployed Frontend application at:" -ForegroundColor Green
         Write-Host "   https://$env:webSiteDefaultHostname" -ForegroundColor Cyan
+
+        Write-Host "🌐 Access your deployed Frontend application at:" -ForegroundColor Green
+        Write-Host "   https://$env:webSiteDefaultHostname" -ForegroundColor Cyan
         Write-Host ""
         
       shell: pwsh

@@ -35,7 +35,7 @@ const AppWrapper = () => {
         setEnvData(config);
         setApiUrl(config.API_URL);
         setConfig(config);
-        let defaultUserInfo = config.ENABLE_AUTH ? await getUserInfo() : ({} as UserInfo);
+        let defaultUserInfo = await getUserInfo()
         window.userInfo = defaultUserInfo;
         setUserInfoGlobal(defaultUserInfo);
         const browserLanguage = await apiService.sendUserBrowserLanguage();

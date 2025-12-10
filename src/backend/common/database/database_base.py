@@ -1,4 +1,7 @@
+
 """Database base class for managing database operations."""
+
+# pylint: disable=unnecessary-pass
 
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Type

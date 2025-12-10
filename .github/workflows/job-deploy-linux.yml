@@ -1,0 +1,238 @@
+name: Deploy Steps - Linux
+
+on:
+  workflow_call:
+    inputs:
+      ENV_NAME:
+        required: true
+        type: string
+      AZURE_ENV_OPENAI_LOCATION:
+        required: true
+        type: string
+      AZURE_LOCATION:
+        required: true
+        type: string
+      RESOURCE_GROUP_NAME:
+        required: true
+        type: string
+      IMAGE_TAG:
+        required: true
+        type: string
+      BUILD_DOCKER_IMAGE:
+        required: true
+        type: string
+      EXP:
+        required: true
+        type: string
+      WAF_ENABLED:
+        required: false
+        type: string
+        default: 'false'
+      AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID:
+        required: false
+        type: string
+      AZURE_EXISTING_AI_PROJECT_RESOURCE_ID:
+        required: false
+        type: string
+    outputs:
+      WEBAPP_URL:
+        description: "Web Application URL"
+        value: ${{ jobs.deploy-linux.outputs.WEBAPP_URL }}
+      MACAE_URL_API:
+        description: "MACAE API URL"
+        value: ${{ jobs.deploy-linux.outputs.MACAE_URL_API }}
+
+jobs:
+  deploy-linux:
+    runs-on: ubuntu-latest
+    env:
+      AZURE_DEV_COLLECT_TELEMETRY: ${{ vars.AZURE_DEV_COLLECT_TELEMETRY }}
+    outputs:
+      WEBAPP_URL: ${{ steps.get_output_linux.outputs.WEBAPP_URL }}
+      MACAE_URL_API: ${{ steps.get_output_linux.outputs.BACKEND_URL }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Configure Parameters Based on WAF Setting
+        shell: bash
+        run: |
+          if [[ "${{ inputs.WAF_ENABLED }}" == "true" ]]; then
+            cp infra/main.waf.parameters.json infra/main.parameters.json
+            echo "✅ Successfully copied WAF parameters to main parameters file"
+          else
+            echo "🔧 Configuring Non-WAF deployment - using default main.parameters.json..."
+          fi
+      
+      - name: Setup Azure CLI
+        shell: bash
+        run: |
+          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
+      - name: Setup Azure Developer CLI (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          curl -fsSL https://aka.ms/install-azd.sh | sudo bash
+          azd version
+          
+      - name: Login to AZD
+        id: login-azure
+        shell: bash
+        run: |
+          az login --service-principal -u ${{ secrets.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_TENANT_ID }}
+          az account set --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          azd auth login --client-id ${{ secrets.AZURE_CLIENT_ID }} --client-secret ${{ secrets.AZURE_CLIENT_SECRET }} --tenant-id ${{ secrets.AZURE_TENANT_ID }}
+
+      - name: Deploy using azd up and extract values (Linux)
+        id: get_output_linux
+        shell: bash
+        run: |
+          set -e          
+          # Install azd (Azure Developer CLI)
+          curl -fsSL https://aka.ms/install-azd.sh | bash
+
+          echo "Creating environment..."
+          azd env new ${{ inputs.ENV_NAME }} --no-prompt
+          echo "Environment created: ${{ inputs.ENV_NAME }}"
+
+          echo "Setting default subscription..."
+          azd config set defaults.subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        
+          # Set additional parameters
+          azd env set AZURE_SUBSCRIPTION_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          azd env set AZURE_ENV_OPENAI_LOCATION="${{ inputs.AZURE_ENV_OPENAI_LOCATION }}"
+          azd env set AZURE_LOCATION="${{ inputs.AZURE_LOCATION }}"
+          azd env set AZURE_RESOURCE_GROUP="${{ inputs.RESOURCE_GROUP_NAME }}"
+          azd env set AZURE_ENV_IMAGE_TAG="${{ inputs.IMAGE_TAG }}"
+          
+          if [[ "${{ inputs.BUILD_DOCKER_IMAGE }}" == "true" ]]; then
+            ACR_NAME=$(echo "${{ secrets.ACR_TEST_LOGIN_SERVER }}")
+            azd env set AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT="$ACR_NAME"
+            echo "Set ACR name to: $ACR_NAME"
+          else
+            echo "Skipping ACR name configuration (using existing image)"
+          fi
+
+          if [[ "${{ inputs.EXP }}" == "true" ]]; then
+            echo "✅ EXP ENABLED - Setting EXP parameters..."
+            
+            if [[ -n "${{ inputs.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID }}" ]]; then
+              EXP_LOG_ANALYTICS_ID="${{ inputs.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID }}"
+            else
+              EXP_LOG_ANALYTICS_ID="${{ secrets.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID }}"
+            fi
+            
+            if [[ -n "${{ inputs.AZURE_EXISTING_AI_PROJECT_RESOURCE_ID }}" ]]; then
+              EXP_AI_PROJECT_ID="${{ inputs.AZURE_EXISTING_AI_PROJECT_RESOURCE_ID }}"
+            else
+              EXP_AI_PROJECT_ID="${{ secrets.AZURE_ENV_FOUNDRY_PROJECT_ID }}"
+            fi
+            
+            echo "AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID: $EXP_LOG_ANALYTICS_ID"
+            echo "AZURE_ENV_FOUNDRY_PROJECT_ID: $EXP_AI_PROJECT_ID"
+            azd env set AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID="$EXP_LOG_ANALYTICS_ID"
+            azd env set AZURE_EXISTING_AI_PROJECT_RESOURCE_ID="$EXP_AI_PROJECT_ID"
+          else
+            echo "EXP DISABLED - Skipping EXP parameters"
+          fi
+
+          # Set tags for deployment  
+          echo "Setting deployment tags..."
+          azd env set AZURE_TAG_SECURITY_CONTROL="Ignore"
+
+          azd up --no-prompt
+          
+          echo "✅ Deployment succeeded."
+          echo "$DEPLOY_OUTPUT"
+
+          echo "Extracting deployment outputs..."
+          DEPLOY_OUTPUT=$(azd env get-values --output json)
+          echo "Deployment output: $DEPLOY_OUTPUT"
+          
+          if [[ -z "$DEPLOY_OUTPUT" ]]; then
+            echo "Error: Deployment output is empty. Please check the deployment logs."
+            exit 1
+          fi
+
+          export AZURE_AI_SEARCH_NAME=$(echo "$DEPLOY_OUTPUT" | jq -r '.AZURE_AI_SEARCH_NAME // empty')
+          echo "AZURE_AI_SEARCH_NAME=$AZURE_AI_SEARCH_NAME" >> $GITHUB_OUTPUT
+
+          export AZURE_ENV_NAME=$(echo "$DEPLOY_OUTPUT" | jq -r '.AZURE_ENV_NAME // empty')
+          echo "AZURE_ENV_NAME=$AZURE_ENV_NAME" >> $GITHUB_OUTPUT
+
+          export AZURE_STORAGE_ACCOUNT_NAME=$(echo "$DEPLOY_OUTPUT" | jq -r '.AZURE_STORAGE_ACCOUNT_NAME // empty')
+          echo "AZURE_STORAGE_ACCOUNT_NAME=$AZURE_STORAGE_ACCOUNT_NAME" >> $GITHUB_OUTPUT
+
+          export BACKEND_URL=$(echo "$DEPLOY_OUTPUT" | jq -r '.BACKEND_URL // empty')
+          echo "BACKEND_URL=$BACKEND_URL" >> $GITHUB_ENV
+          echo "BACKEND_URL=$BACKEND_URL" >> $GITHUB_OUTPUT
+
+          export WEBAPP_URL="https://$(echo "$DEPLOY_OUTPUT" | jq -r '.webSiteDefaultHostname // empty')"
+          echo "WEBAPP_URL=$WEBAPP_URL" >> $GITHUB_ENV
+          echo "WEBAPP_URL=$WEBAPP_URL" >> $GITHUB_OUTPUT
+
+      - name: Run Post deployment scripts
+        run: |
+          set -e
+          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+
+          # Set environment variables for team_config_and_data.sh
+          export AZURE_SUBSCRIPTION_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          export AZURE_RESOURCE_GROUP="${{ inputs.RESOURCE_GROUP_NAME }}"
+          export BACKEND_URL="${{ steps.get_output_linux.outputs.BACKEND_URL }}"
+          export AZURE_STORAGE_ACCOUNT_NAME="${{ steps.get_output_linux.outputs.AZURE_STORAGE_ACCOUNT_NAME }}"
+          export AZURE_STORAGE_CONTAINER_NAME="sample-dataset"
+          export AZURE_AI_SEARCH_NAME="${{ steps.get_output_linux.outputs.AZURE_AI_SEARCH_NAME }}"
+          export AZURE_AI_SEARCH_INDEX_NAME="sample-dataset-index"
+          export AZURE_ENV_NAME="${{ steps.get_output_linux.outputs.AZURE_ENV_NAME }}"
+          
+          # Upload team configurations and index sample data in one step
+          bash infra/scripts/team_config_and_data.sh "${{ inputs.RESOURCE_GROUP_NAME }}"
+
+      - name: Generate Deployment Summary
+        if: always()
+        shell: bash
+        run: |
+          echo "## 🚀 Deploy Job Summary (Linux)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Job Status** | ${{ job.status == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Resource Group** | \`${{ inputs.RESOURCE_GROUP_NAME }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Configuration Type** | \`${{ inputs.WAF_ENABLED == 'true' && inputs.EXP == 'true' && 'WAF + EXP' || inputs.WAF_ENABLED == 'true' && inputs.EXP != 'true' && 'WAF + Non-EXP' || inputs.WAF_ENABLED != 'true' && inputs.EXP == 'true' && 'Non-WAF + EXP' || 'Non-WAF + Non-EXP' }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Azure Region (Infrastructure)** | \`${{ inputs.AZURE_LOCATION }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Azure OpenAI Region** | \`${{ inputs.AZURE_ENV_OPENAI_LOCATION }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Docker Image Tag** | \`${{ inputs.IMAGE_TAG }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ job.status }}" == "success" ]]; then
+            echo "### ✅ Deployment Details" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            # Display Web App URL if available
+            if [[ -n "${{ steps.get_output_linux.outputs.WEBAPP_URL }}" ]]; then
+              echo "- **Web Application URL**: [${{ steps.get_output_linux.outputs.WEBAPP_URL }}](${{ steps.get_output_linux.outputs.WEBAPP_URL }})" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            # Display Container App Backend URL if available
+            if [[ -n "${{ steps.get_output_linux.outputs.BACKEND_URL }}" ]]; then
+              echo "- **Backend API URL**: [${{ steps.get_output_linux.outputs.BACKEND_URL }}](${{ steps.get_output_linux.outputs.BACKEND_URL }})" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "#### 🎯 Post-Deployment Actions Completed:" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ Azure resources provisioned and configured" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ Agent team configurations uploaded" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ Sample datasets processed and indexed" >> $GITHUB_STEP_SUMMARY            
+          else
+            echo "### ❌ Deployment Failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "- ❌ Deployment process encountered an error" >> $GITHUB_STEP_SUMMARY
+            echo "- 🔍 Check the deployment steps above for detailed error information" >> $GITHUB_STEP_SUMMARY
+          fi
+      - name: Logout from Azure
+        if: always()
+        shell: bash
+        run: |
+          az logout || true
+          echo "Logged out from Azure."

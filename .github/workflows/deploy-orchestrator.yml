@@ -1,0 +1,140 @@
+name: Deployment orchestrator
+
+on:
+  workflow_call:
+    inputs:
+      runner_os:
+        description: 'Runner OS (ubuntu-latest or windows-latest)'
+        required: true
+        type: string
+      azure_location:
+        description: 'Azure Location For Deployment'
+        required: false
+        default: 'australiaeast'
+        type: string
+      resource_group_name:
+        description: 'Resource Group Name (Optional)'
+        required: false
+        default: ''
+        type: string
+      waf_enabled:
+        description: 'Enable WAF'
+        required: false
+        default: false
+        type: boolean
+      EXP:
+        description: 'Enable EXP'
+        required: false
+        default: false
+        type: boolean
+      build_docker_image:
+        description: 'Build And Push Docker Image (Optional)'
+        required: false
+        default: false
+        type: boolean
+      cleanup_resources:
+        description: 'Cleanup Deployed Resources'
+        required: false
+        default: false
+        type: boolean
+      run_e2e_tests:
+        description: 'Run End-to-End Tests'
+        required: false
+        default: 'GoldenPath-Testing'
+        type: string
+      AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID:
+        description: 'Log Analytics Workspace ID (Optional)'
+        required: false
+        default: ''
+        type: string
+      AZURE_EXISTING_AI_PROJECT_RESOURCE_ID:
+        description: 'AI Project Resource ID (Optional)'
+        required: false
+        default: ''
+        type: string
+      existing_webapp_url:
+        description: 'Existing Container WebApp URL (Skips Deployment)'
+        required: false
+        default: ''
+        type: string
+      trigger_type:
+        description: 'Trigger type (workflow_dispatch, pull_request, schedule)'
+        required: true
+        type: string
+
+env:
+  AZURE_DEV_COLLECT_TELEMETRY: ${{ vars.AZURE_DEV_COLLECT_TELEMETRY }}
+
+jobs:
+  docker-build:
+    uses: ./.github/workflows/job-docker-build.yml
+    with:
+      trigger_type: ${{ inputs.trigger_type }}
+      build_docker_image: ${{ inputs.build_docker_image }}
+    secrets: inherit
+
+  deploy:
+    if: always() && (inputs.trigger_type != 'workflow_dispatch' || inputs.existing_webapp_url == '' || inputs.existing_webapp_url == null)
+    needs: docker-build
+    uses: ./.github/workflows/job-deploy.yml
+    with:
+      trigger_type: ${{ inputs.trigger_type }}
+      runner_os: ${{ inputs.runner_os }}
+      azure_location: ${{ inputs.azure_location }}
+      resource_group_name: ${{ inputs.resource_group_name }}
+      waf_enabled: ${{ inputs.waf_enabled }}
+      EXP: ${{ inputs.EXP }}
+      build_docker_image: ${{ inputs.build_docker_image }}
+      existing_webapp_url: ${{ inputs.existing_webapp_url }}
+      AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID: ${{ inputs.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID }}
+      AZURE_EXISTING_AI_PROJECT_RESOURCE_ID: ${{ inputs.AZURE_EXISTING_AI_PROJECT_RESOURCE_ID }}
+      docker_image_tag: ${{ needs.docker-build.outputs.IMAGE_TAG }}
+      run_e2e_tests: ${{ inputs.run_e2e_tests }}
+      cleanup_resources: ${{ inputs.cleanup_resources }}
+    secrets: inherit
+
+  e2e-test:
+    if: always() && ((needs.deploy.result == 'success' && needs.deploy.outputs.WEBAPP_URL != '') || (inputs.existing_webapp_url != '' && inputs.existing_webapp_url != null)) && (inputs.trigger_type != 'workflow_dispatch' || (inputs.run_e2e_tests != 'None' && inputs.run_e2e_tests != '' && inputs.run_e2e_tests != null))
+    needs: [docker-build, deploy]
+    uses: ./.github/workflows/test-automation-v2.yml
+    with:
+      MACAE_WEB_URL: ${{ needs.deploy.outputs.WEBAPP_URL || inputs.existing_webapp_url }}
+      MACAE_URL_API: ${{ needs.deploy.outputs.MACAE_URL_API }}
+      MACAE_RG: ${{ needs.deploy.outputs.RESOURCE_GROUP_NAME }}
+      TEST_SUITE: ${{ inputs.trigger_type == 'workflow_dispatch' && inputs.run_e2e_tests || 'GoldenPath-Testing' }}
+    secrets: inherit
+
+  send-notification:
+    if: always()
+    needs: [docker-build, deploy, e2e-test]
+    uses: ./.github/workflows/job-send-notification.yml
+    with:
+      trigger_type: ${{ inputs.trigger_type }}
+      waf_enabled: ${{ inputs.waf_enabled }}
+      EXP: ${{ inputs.EXP }}
+      run_e2e_tests: ${{ inputs.run_e2e_tests }}
+      existing_webapp_url: ${{ inputs.existing_webapp_url }}
+      deploy_result: ${{ needs.deploy.result }}
+      e2e_test_result: ${{ needs.e2e-test.result }}
+      CONTAINER_WEB_APPURL: ${{ needs.deploy.outputs.WEBAPP_URL }}
+      RESOURCE_GROUP_NAME: ${{ needs.deploy.outputs.RESOURCE_GROUP_NAME }}
+      QUOTA_FAILED: ${{ needs.deploy.outputs.QUOTA_FAILED }}
+      TEST_SUCCESS: ${{ needs.e2e-test.outputs.TEST_SUCCESS }}
+      TEST_REPORT_URL: ${{ needs.e2e-test.outputs.TEST_REPORT_URL }}
+    secrets: inherit
+
+  cleanup-deployment:
+    if: always() && needs.deploy.result == 'success' && needs.deploy.outputs.RESOURCE_GROUP_NAME != '' && inputs.existing_webapp_url == '' && (inputs.trigger_type != 'workflow_dispatch' || inputs.cleanup_resources)
+    needs: [docker-build, deploy, e2e-test]
+    uses: ./.github/workflows/job-cleanup-deployment.yml
+    with:
+      runner_os: ${{ inputs.runner_os }}
+      trigger_type: ${{ inputs.trigger_type }}
+      cleanup_resources: ${{ inputs.cleanup_resources }}
+      existing_webapp_url: ${{ inputs.existing_webapp_url }}
+      RESOURCE_GROUP_NAME: ${{ needs.deploy.outputs.RESOURCE_GROUP_NAME }}
+      AZURE_LOCATION: ${{ needs.deploy.outputs.AZURE_LOCATION }}
+      AZURE_ENV_OPENAI_LOCATION: ${{ needs.deploy.outputs.AZURE_ENV_OPENAI_LOCATION }}
+      ENV_NAME: ${{ needs.deploy.outputs.ENV_NAME }}
+      IMAGE_TAG: ${{ needs.deploy.outputs.IMAGE_TAG }}
+    secrets: inherit
