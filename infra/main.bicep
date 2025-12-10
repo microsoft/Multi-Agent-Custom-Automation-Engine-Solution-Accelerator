@@ -123,11 +123,11 @@ param enablePrivateNetworking bool = false
 
 @secure()
 @description('Optional. The user name for the administrator account of the virtual machine. Allows to customize credentials if `enablePrivateNetworking` is set to true.')
-param virtualMachineAdminUsername string = take(newGuid(), 20)
+param virtualMachineAdminUsername string?
 
 @description('Optional. The password for the administrator account of the virtual machine. Allows to customize credentials if `enablePrivateNetworking` is set to true.')
 @secure()
-param virtualMachineAdminPassword string = newGuid()
+param virtualMachineAdminPassword string?
 
 // These parameters are changed for testing - please reset as part of publication
 
@@ -608,8 +608,8 @@ module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.17.0' = if (e
     computerName: take(virtualMachineResourceName, 15)
     osType: 'Windows'
     vmSize: virtualMachineSize
-    adminUsername: virtualMachineAdminUsername
-    adminPassword: virtualMachineAdminPassword
+    adminUsername: virtualMachineAdminUsername ?? 'JumpboxAdminUser'
+    adminPassword: virtualMachineAdminPassword ?? 'JumpboxAdminP@ssw0rd1234!'
     patchMode: 'AutomaticByPlatform'
     bypassPlatformSafetyChecksOnUserSchedule: true
     maintenanceConfigurationResourceId: maintenanceConfiguration!.outputs.resourceId
@@ -1339,8 +1339,19 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
             name: 'AZURE_AI_MODEL_DEPLOYMENT_NAME'
             value: aiFoundryAiServicesModelDeployment.name
           }
+          {
+            name: 'AZURE_BASIC_LOGGING_LEVEL'
+            value: 'INFO'
+          }
+          {
+            name: 'AZURE_PACKAGE_LOGGING_LEVEL'
+            value: 'WARNING'
+          }
+          {
+            name: 'AZURE_LOGGING_PACKAGES'
+            value: ''
+          }
         ]
-        
       }
     ]
     secrets: [

@@ -9,7 +9,6 @@ from v3.magentic_agents.foundry_agent import FoundryAgentTemplate
 
 from v3.config.agent_registry import agent_registry
 
-logging.basicConfig(level=logging.INFO)
 
 # Cache for agent instances by session
 agent_instances: Dict[str, Dict[str, Any]] = {}

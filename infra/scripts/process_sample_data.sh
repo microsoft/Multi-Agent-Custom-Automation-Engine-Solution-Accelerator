@@ -124,7 +124,8 @@ if [ -n "$resourceGroup" ]; then
 
 fi
 
-
+echo "Waiting for all network access changes to propagate..."
+sleep 30
 #Upload sample files to blob storage
 echo "Uploading sample files to blob storage..."
 az storage blob upload-batch --account-name "$storageAccount" --destination "$blobContainer" --source "data/datasets" --auth-mode login --pattern '*' --overwrite --output none
