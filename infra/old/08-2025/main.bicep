@@ -20,9 +20,9 @@ param existingLogAnalyticsWorkspaceId string = ''
 
 // Restricting deployment to only supported Azure OpenAI regions validated with GPT-4o model
 @metadata({
-  azd : {
+  azd: {
     type: 'location'
-    usageName : [
+    usageName: [
       'OpenAI.GlobalStandard.gpt-4o, 150'
     ]
   }
@@ -147,8 +147,8 @@ param virtualMachineConfiguration virtualMachineConfigurationType = {
   location: solutionLocation
   tags: tags
   adminUsername: 'adminuser'
-  adminPassword: useWafAlignedArchitecture? 'P@ssw0rd1234' : guid(solutionPrefix, subscription().subscriptionId)
-  vmSize: 'Standard_D2s_v3'
+  adminPassword: useWafAlignedArchitecture ? 'P@ssw0rd1234' : guid(solutionPrefix, subscription().subscriptionId)
+  vmSize: 'Standard_D2s_v4'
   subnetResourceId: null //Default value set on module configuration
 }
 
@@ -215,7 +215,7 @@ param webServerFarmConfiguration webServerFarmConfigurationType = {
   enabled: true
   name: 'asp-${solutionPrefix}'
   location: solutionLocation
-  skuName: useWafAlignedArchitecture? 'P1v3' : 'B2'
+  skuName: useWafAlignedArchitecture ? 'P1v4' : 'B2'
   skuCapacity: useWafAlignedArchitecture ? 3 : 1
   tags: tags
 }
@@ -265,7 +265,9 @@ module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0
   }
 }
 
-var logAnalyticsWorkspaceId = useExistingWorkspace ? existingWorkspaceResourceId : logAnalyticsWorkspace.outputs.resourceId
+var logAnalyticsWorkspaceId = useExistingWorkspace
+  ? existingWorkspaceResourceId
+  : logAnalyticsWorkspace.outputs.resourceId
 
 // ========== Application Insights ========== //
 // WAF best practices for Application Insights: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/application-insights
@@ -638,7 +640,7 @@ module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.13.0' = if (v
     location: virtualMachineConfiguration.?location ?? solutionLocation
     tags: virtualMachineConfiguration.?tags ?? tags
     enableTelemetry: enableTelemetry
-    vmSize: virtualMachineConfiguration.?vmSize ?? 'Standard_D2s_v3'
+    vmSize: virtualMachineConfiguration.?vmSize ?? 'Standard_D2s_v4'
     adminUsername: virtualMachineConfiguration.?adminUsername ?? 'adminuser'
     adminPassword: virtualMachineConfiguration.?adminPassword ?? guid(solutionPrefix, subscription().subscriptionId)
     nicConfigurations: [
@@ -710,8 +712,10 @@ module privateDnsZonesAiServices 'br/public:avm/res/network/private-dns-zone:0.7
 
 // NOTE: Required version 'Microsoft.CognitiveServices/accounts@2024-04-01-preview' not available in AVM
 var useExistingFoundryProject = !empty(existingFoundryProjectResourceId)
-var existingAiFoundryName = useExistingFoundryProject?split( existingFoundryProjectResourceId,'/')[8]:''
-var aiFoundryAiServicesResourceName = useExistingFoundryProject? existingAiFoundryName : aiFoundryAiServicesConfiguration.?name ?? 'aisa-${solutionPrefix}'
+var existingAiFoundryName = useExistingFoundryProject ? split(existingFoundryProjectResourceId, '/')[8] : ''
+var aiFoundryAiServicesResourceName = useExistingFoundryProject
+  ? existingAiFoundryName
+  : aiFoundryAiServicesConfiguration.?name ?? 'aisa-${solutionPrefix}'
 var aiFoundryAIservicesEnabled = aiFoundryAiServicesConfiguration.?enabled ?? true
 var aiFoundryAiServicesModelDeployment = {
   format: 'OpenAI'
@@ -750,7 +754,7 @@ module aiFoundryAiServices 'modules/account/main.bicep' = if (aiFoundryAIservice
     publicNetworkAccess: virtualNetworkEnabled ? 'Disabled' : 'Enabled'
     networkAcls: {
       bypass: 'AzureServices'
-      defaultAction: (virtualNetworkEnabled) ? 'Deny' : 'Allow' 
+      defaultAction: (virtualNetworkEnabled) ? 'Deny' : 'Allow'
     }
     privateEndpoints: virtualNetworkEnabled && !useExistingFoundryProject
       ? ([
@@ -766,7 +770,7 @@ module aiFoundryAiServices 'modules/account/main.bicep' = if (aiFoundryAIservice
             }
           }
         ])
-      : [] 
+      : []
     deployments: aiFoundryAiServicesConfiguration.?deployments ?? [
       {
         name: aiFoundryAiServicesModelDeployment.name
@@ -787,12 +791,14 @@ module aiFoundryAiServices 'modules/account/main.bicep' = if (aiFoundryAIservice
 
 // AI Foundry: AI Project
 // WAF best practices for Open AI: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/azure-openai
-var existingAiFounryProjectName = useExistingFoundryProject ? last(split( existingFoundryProjectResourceId,'/')) : ''
-var aiFoundryAiProjectName =  useExistingFoundryProject ? existingAiFounryProjectName : aiFoundryAiProjectConfiguration.?name ?? 'aifp-${solutionPrefix}'
+var existingAiFounryProjectName = useExistingFoundryProject ? last(split(existingFoundryProjectResourceId, '/')) : ''
+var aiFoundryAiProjectName = useExistingFoundryProject
+  ? existingAiFounryProjectName
+  : aiFoundryAiProjectConfiguration.?name ?? 'aifp-${solutionPrefix}'
 
 var useExistingResourceId = !empty(existingFoundryProjectResourceId)
 
-module cogServiceRoleAssignmentsNew './modules/role.bicep' = if(!useExistingResourceId) {
+module cogServiceRoleAssignmentsNew './modules/role.bicep' = if (!useExistingResourceId) {
   params: {
     name: 'new-${guid(containerApp.name, aiFoundryAiServices.outputs.resourceId)}'
     principalId: containerApp.outputs.?systemAssignedMIPrincipalId!
@@ -801,13 +807,13 @@ module cogServiceRoleAssignmentsNew './modules/role.bicep' = if(!useExistingReso
   scope: resourceGroup(subscription().subscriptionId, resourceGroup().name)
 }
 
-module cogServiceRoleAssignmentsExisting './modules/role.bicep' = if(useExistingResourceId) {
+module cogServiceRoleAssignmentsExisting './modules/role.bicep' = if (useExistingResourceId) {
   params: {
     name: 'reuse-${guid(containerApp.name, aiFoundryAiServices.outputs.aiProjectInfo.resourceId)}'
     principalId: containerApp.outputs.?systemAssignedMIPrincipalId!
     aiServiceName: aiFoundryAiServices.outputs.name
   }
-  scope: resourceGroup( split(existingFoundryProjectResourceId, '/')[2], split(existingFoundryProjectResourceId, '/')[4])
+  scope: resourceGroup(split(existingFoundryProjectResourceId, '/')[2], split(existingFoundryProjectResourceId, '/')[4])
 }
 
 // ========== Cosmos DB ========== //
@@ -1055,7 +1061,7 @@ module webServerFarm 'br/public:avm/res/web/serverfarm:0.4.1' = if (webServerFar
     name: webServerFarmResourceName
     tags: tags
     location: webServerFarmConfiguration.?location ?? solutionLocation
-    skuName: webServerFarmConfiguration.?skuName ?? 'P1v3'
+    skuName: webServerFarmConfiguration.?skuName ?? 'P1v4'
     skuCapacity: webServerFarmConfiguration.?skuCapacity ?? 3
     reserved: true
     diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceId }]
@@ -1355,18 +1361,18 @@ type virtualMachineConfigurationType = {
     | 'Standard_D3_v2'
     | 'Standard_D4_v2'
     | 'Standard_D5_v2'
-    | 'Standard_D2_v3'
-    | 'Standard_D4_v3'
-    | 'Standard_D8_v3'
-    | 'Standard_D16_v3'
-    | 'Standard_D32_v3'
-    | 'Standard_D64_v3'
-    | 'Standard_D2s_v3'
-    | 'Standard_D4s_v3'
-    | 'Standard_D8s_v3'
-    | 'Standard_D16s_v3'
-    | 'Standard_D32s_v3'
-    | 'Standard_D64s_v3'
+    | 'Standard_D2_v4'
+    | 'Standard_D4_v4'
+    | 'Standard_D8_v4'
+    | 'Standard_D16_v4'
+    | 'Standard_D32_v4'
+    | 'Standard_D64_v4'
+    | 'Standard_D2s_v4'
+    | 'Standard_D4s_v4'
+    | 'Standard_D8s_v4'
+    | 'Standard_D16s_v4'
+    | 'Standard_D32s_v4'
+    | 'Standard_D64s_v4'
     | 'Standard_D11_v2'
     | 'Standard_D12_v2'
     | 'Standard_D13_v2'
@@ -1394,22 +1400,22 @@ type virtualMachineConfigurationType = {
     | 'Standard_DS13-2_v2'
     | 'Standard_DS14-8_v2'
     | 'Standard_DS14-4_v2'
-    | 'Standard_E2_v3'
-    | 'Standard_E4_v3'
-    | 'Standard_E8_v3'
-    | 'Standard_E16_v3'
-    | 'Standard_E32_v3'
-    | 'Standard_E64_v3'
-    | 'Standard_E2s_v3'
-    | 'Standard_E4s_v3'
-    | 'Standard_E8s_v3'
-    | 'Standard_E16s_v3'
-    | 'Standard_E32s_v3'
-    | 'Standard_E64s_v3'
-    | 'Standard_E32-16_v3'
-    | 'Standard_E32-8s_v3'
-    | 'Standard_E64-32s_v3'
-    | 'Standard_E64-16s_v3'
+    | 'Standard_E2_v4'
+    | 'Standard_E4_v4'
+    | 'Standard_E8_v4'
+    | 'Standard_E16_v4'
+    | 'Standard_E32_v4'
+    | 'Standard_E64_v4'
+    | 'Standard_E2s_v4'
+    | 'Standard_E4s_v4'
+    | 'Standard_E8s_v4'
+    | 'Standard_E16s_v4'
+    | 'Standard_E32s_v4'
+    | 'Standard_E64s_v4'
+    | 'Standard_E32-16_v4'
+    | 'Standard_E32-8s_v4'
+    | 'Standard_E64-32s_v4'
+    | 'Standard_E64-16s_v4'
     | 'Standard_F1'
     | 'Standard_F2'
     | 'Standard_F4'
@@ -1467,10 +1473,10 @@ type virtualMachineConfigurationType = {
     | 'Standard_NC12s_v2'
     | 'Standard_NC24s_v2'
     | 'Standard_NC24rs_v2'
-    | 'Standard_NC6s_v3'
-    | 'Standard_NC12s_v3'
-    | 'Standard_NC24s_v3'
-    | 'Standard_NC24rs_v3'
+    | 'Standard_NC6s_v4'
+    | 'Standard_NC12s_v4'
+    | 'Standard_NC24s_v4'
+    | 'Standard_NC24rs_v4'
     | 'Standard_ND6s'
     | 'Standard_ND12s'
     | 'Standard_ND24s'
@@ -1679,7 +1685,7 @@ type webServerFarmConfigurationType = {
   @description('Optional. The tags to set for the Web Server Farm resource.')
   tags: object?
 
-  @description('Optional. The name of th SKU that will determine the tier, size and family for the Web Server Farm resource. This defaults to P1v3 to leverage availability zones.')
+  @description('Optional. The name of th SKU that will determine the tier, size and family for the Web Server Farm resource. This defaults to P1v4 to leverage availability zones.')
   skuName: string?
 
   @description('Optional. Number of workers associated with the App Service Plan. This defaults to 3, to leverage availability zones.')

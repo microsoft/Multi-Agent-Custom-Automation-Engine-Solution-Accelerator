@@ -5,7 +5,7 @@ export class TeamService {
     /**
      * Upload a custom team configuration
      */
-    private static readonly STORAGE_KEY = 'macae.v3.customTeam';
+    private static readonly STORAGE_KEY = 'macae.v4.customTeam';
 
     static storageTeam(team: TeamConfig): boolean {
         // Persist a TeamConfig to localStorage (browser-only).
@@ -32,8 +32,8 @@ export class TeamService {
         error?: string;
     }> {
         try {
-            console.log('Calling /v3/init_team endpoint...');
-            const response = await apiClient.get('/v3/init_team', {
+            console.log('Calling /v4/init_team endpoint...');
+            const response = await apiClient.get('/v4/init_team', {
                 params: {
                     team_switched
                 }
@@ -82,7 +82,7 @@ export class TeamService {
             const formData = new FormData();
             formData.append('file', teamFile);
             console.log(formData);
-            const response = await apiClient.upload('/v3/upload_team_config', formData);
+            const response = await apiClient.upload('/v4/upload_team_config', formData);
 
             return {
                 success: true,
@@ -135,7 +135,7 @@ export class TeamService {
      */
     static async getUserTeams(): Promise<TeamConfig[]> {
         try {
-            const response = await apiClient.get('/v3/team_configs');
+            const response = await apiClient.get('/v4/team_configs');
 
             // The apiClient returns the response data directly, not wrapped in a data property
             const teams = Array.isArray(response) ? response : [];
@@ -164,7 +164,7 @@ export class TeamService {
      */
     static async deleteTeam(teamId: string): Promise<boolean> {
         try {
-            const response = await apiClient.delete(`/v3/team_configs/${teamId}`);
+            const response = await apiClient.delete(`/v4/team_configs/${teamId}`);
             return true;
         } catch (error: any) {
             return false;
@@ -180,7 +180,7 @@ export class TeamService {
         error?: string;
     }> {
         try {
-            const response = await apiClient.post('/v3/select_team', {
+            const response = await apiClient.post('/v4/select_team', {
                 team_id: teamId,
             });
 
@@ -234,12 +234,12 @@ export class TeamService {
                     }
                 }
 
-            const isProxyAgent = agent.name && agent.name.toLowerCase() === 'proxyagent';
+                const isProxyAgent = agent.name && agent.name.toLowerCase() === 'proxyagent';
 
-            // Deployment name validation (skip for proxy agents)
-            if (!isProxyAgent && !agent.deployment_name) {
-                errors.push(`Agent ${index + 1} (${agent.name}): Missing required field: deployment_name (required for non-proxy agents)`);
-            }
+                // Deployment name validation (skip for proxy agents)
+                if (!isProxyAgent && !agent.deployment_name) {
+                    errors.push(`Agent ${index + 1} (${agent.name}): Missing required field: deployment_name (required for non-proxy agents)`);
+                }
 
 
                 // RAG agent validation

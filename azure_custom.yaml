@@ -13,6 +13,7 @@ services:
     docker:
       path: ./Dockerfile.NoCache
       image: backend
+      registry: ${AZURE_CONTAINER_REGISTRY_ENDPOINT}
       remoteBuild: true
   
   mcp:
@@ -21,6 +22,7 @@ services:
     host: containerapp
     docker:
       image: mcp
+      registry: ${AZURE_CONTAINER_REGISTRY_ENDPOINT}
       remoteBuild: true
 
   frontend:
@@ -47,27 +49,22 @@ hooks:
       run: |
         Write-Host ""
         Write-Host "===============================================================" -ForegroundColor Yellow
-        Write-Host " POST-DEPLOYMENT STEPS (PowerShell) " -ForegroundColor Green
+        Write-Host " POST-DEPLOYMENT STEP (PowerShell) " -ForegroundColor Green
         Write-Host "===============================================================" -ForegroundColor Yellow
         Write-Host ""
 
-        Write-Host " STEP 1: Upload Team Configurations to Cosmos DB" -ForegroundColor White
+        Write-Host " Upload Team Configurations and index sample data" -ForegroundColor White
         Write-Host "  👉 Run the following command in PowerShell:" -ForegroundColor White
-        Write-Host "   infra\scripts\Upload-Team-Config.ps1" -ForegroundColor Cyan
-        Write-Host ""
-
-        Write-Host " STEP 2: Index Sample Data into Azure Search" -ForegroundColor White
-        Write-Host "  👉 Run the following command in PowerShell:" -ForegroundColor White
-        Write-Host "   infra\scripts\Process-Sample-Data.ps1" -ForegroundColor Cyan
-        Write-Host ""
-
-        Write-Host "💡 Alternatively, you can run above BOTH steps together using:" -ForegroundColor Yellow
-        Write-Host "   infra\scripts\Team-Config-And-Data.ps1" -ForegroundColor Cyan
+        Write-Host "   infra\scripts\Selecting-Team-Config-And-Data.ps1" -ForegroundColor Cyan
         Write-Host ""
 
         Write-Host "🌐 Access your deployed Frontend application at:" -ForegroundColor Green
         Write-Host "   https://$env:webSiteDefaultHostname" -ForegroundColor Cyan
+
+        Write-Host "🌐 Access your deployed Frontend application at:" -ForegroundColor Green
+        Write-Host "   https://$env:webSiteDefaultHostname" -ForegroundColor Cyan
         Write-Host ""
+        
       shell: pwsh
       interactive: true
     posix:
@@ -78,20 +75,14 @@ hooks:
         NC='\033[0m'
 
         printf "\n"
+
         printf "${Yellow}===============================================================\n"
         printf "${Green} POST-DEPLOYMENT STEPS (Bash)\n"
         printf "${Yellow}===============================================================${NC}\n\n"
 
-        printf " STEP 1: Upload Team Configurations to Cosmos DB\n"
-        printf "  👉 Run the following command in Bash:\n"
-        printf "   ${Blue}bash infra/scripts/upload_team_config.sh${NC}\n\n"
-
-        printf " STEP 2: Index Sample Data into Azure Search\n"
-        printf "  👉 Run the following command in Bash:\n"
-        printf "   ${Blue}bash infra/scripts/process_sample_data.sh${NC}\n\n"
-
-        printf "💡 Alternatively, you can run above BOTH steps together using:\n"
-        printf "   ${Blue}bash infra/scripts/team_config_and_data.sh${NC}\n\n"
+        printf  "Upload Team Configurations and index sample data:\n"
+        printf  "  👉 Run the following command in Bash:\n"
+        printf  "   ${Blue}bash infra/scripts/selecting_team_config_and_data.sh${NC}\n\n"
 
         printf "🌐 Access your deployed Frontend application at:\n"
         printf "   ${Blue}https://%s${NC}\n\n" "$webSiteDefaultHostname"

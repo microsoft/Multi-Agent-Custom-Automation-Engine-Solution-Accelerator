@@ -72,7 +72,7 @@ const PlanPage: React.FC = () => {
     const { isPlanActive, handleNavigationWithConfirmation } = usePlanCancellationAlert({
         planData,
         planApprovalRequest,
-        onNavigate: pendingNavigation || (() => {})
+        onNavigate: pendingNavigation || (() => { })
     });
 
     // Handle navigation with plan cancellation check
@@ -91,7 +91,7 @@ const PlanPage: React.FC = () => {
     // Handle confirmation dialog response
     const handleConfirmCancellation = useCallback(async () => {
         setCancellingPlan(true);
-        
+
         try {
             if (planApprovalRequest?.id) {
                 await apiService.approvePlan({
@@ -106,6 +106,7 @@ const PlanPage: React.FC = () => {
             if (pendingNavigation) {
                 pendingNavigation();
             }
+            webSocketService.disconnect();
         } catch (error) {
             console.error('❌ Failed to cancel plan:', error);
             showToast('Failed to cancel the plan properly, but navigation will continue.', 'error');
@@ -139,7 +140,7 @@ const PlanPage: React.FC = () => {
                     type: agentMessageData.agent_type,
                     ts: agentMessageData.timestamp
                 });
-                
+
                 // If this is a final message, refresh the task list after successful persistence
                 if (is_final) {
                     // Single refresh with a delay to ensure backend processing is complete
@@ -354,6 +355,7 @@ const PlanPage: React.FC = () => {
 
                 // Wait for the agent message to be processed and persisted
                 // The processAgentMessage function will handle refreshing the task list
+                webSocketService.disconnect();
                 processAgentMessage(agentMessageData, planData, is_final, streamingMessageBuffer);
 
             }
@@ -396,7 +398,7 @@ const PlanPage: React.FC = () => {
         return () => clearInterval(interval);
     }, [loading]);
 
-    // WebSocket connection with proper error handling and v3 backend compatibility
+    // WebSocket connection with proper error handling and v4 backend compatibility
     useEffect(() => {
         if (planId && continueWithWebsocketFlow) {
             console.log('🔌 Connecting WebSocket:', { planId, continueWithWebsocketFlow });
@@ -437,7 +439,7 @@ const PlanPage: React.FC = () => {
                 // This is handled by PlanChat component through its own listener
             };
 
-            // Subscribe to all relevant v3 backend events
+            // Subscribe to all relevant v4 backend events
             const unsubscribeConnection = webSocketService.on('connection_status', (message) => {
                 handleConnectionChange(message.data?.connected || false);
             });
@@ -560,7 +562,7 @@ const PlanPage: React.FC = () => {
             setProcessingApproval(false);
         }
     }, [planApprovalRequest, planData, navigate, setProcessingApproval]);
-    // Chat submission handler - updated for v3 backend compatibility
+    // Chat submission handler - updated for v4 backend compatibility
 
     const handleOnchatSubmit = useCallback(
         async (chatInput: string) => {
@@ -575,7 +577,7 @@ const PlanPage: React.FC = () => {
             let id = showToast("Submitting clarification", "progress");
 
             try {
-                // Use legacy method for non-v3 backends
+                // Use legacy method for non-v4 backends
                 const response = await PlanDataService.submitClarification({
                     request_id: clarificationMessage?.request_id || "",
                     answer: chatInput,

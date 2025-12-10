@@ -38,19 +38,19 @@ The `azd` version must be **1.18.0 or higher**.
 
 Upgrade commands by OS:
 
-* **Windows (using winget):**
+- **Windows (using winget):**
 
   ```bash
   winget install microsoft.azd
   ```
 
-* **Linux (using apt):**
+- **Linux (using apt):**
 
   ```bash
   curl -fsSL https://aka.ms/install-azd.sh | bash
   ```
 
-* **macOS (using Homebrew):**
+- **macOS (using Homebrew):**
 
   ```bash
   brew update && brew tap azure/azd && brew install azd
@@ -162,32 +162,33 @@ By default, the `azd up` command uses the [`main.parameters.json`](../infra/main
 
 For **production deployments**, the repository also provides [`main.waf.parameters.json`](../infra/main.waf.parameters.json), which applies a [Well-Architected Framework (WAF) aligned](https://learn.microsoft.com/en-us/azure/well-architected/) configuration. This option enables additional Azure best practices for reliability, security, cost optimization, operational excellence, and performance efficiency, such as:
 
-  **Prerequisite** — Enable the Microsoft.Compute/EncryptionAtHost feature for every subscription (and region, if required) where you plan to deploy VMs or VM scale sets with `encryptionAtHost: true`. Repeat the registration steps below for each target subscription (and for each region when applicable). This step is required for **WAF-aligned** (production) deployments.
+**Prerequisite** — Enable the Microsoft.Compute/EncryptionAtHost feature for every subscription (and region, if required) where you plan to deploy VMs or VM scale sets with `encryptionAtHost: true`. Repeat the registration steps below for each target subscription (and for each region when applicable). This step is required for **WAF-aligned** (production) deployments.
 
-  Steps to enable the feature:
-  1. Set the target subscription:
-     Run: <code>az account set --subscription "&lt;YourSubscriptionId&gt;"</code>
-  2. Register the feature (one time per subscription):
-     Run: <code>az feature register --name EncryptionAtHost --namespace Microsoft.Compute</code>
-  3. Wait until registration completes and shows "Registered":
-     Run: <code>az feature show --name EncryptionAtHost --namespace Microsoft.Compute --query properties.state -o tsv</code>
-  4. Refresh the provider (if required):
-     Run: <code>az provider register --namespace Microsoft.Compute</code>
-  5. Re-run the deployment after registration is complete.
+Steps to enable the feature:
 
-  Note: Feature registration can take several minutes. Ensure the feature is registered before attempting deployments that require encryptionAtHost.
+1. Set the target subscription:
+   Run: <code>az account set --subscription "&lt;YourSubscriptionId&gt;"</code>
+2. Register the feature (one time per subscription):
+   Run: <code>az feature register --name EncryptionAtHost --namespace Microsoft.Compute</code>
+3. Wait until registration completes and shows "Registered":
+   Run: <code>az feature show --name EncryptionAtHost --namespace Microsoft.Compute --query properties.state -o tsv</code>
+4. Refresh the provider (if required):
+   Run: <code>az provider register --namespace Microsoft.Compute</code>
+5. Re-run the deployment after registration is complete.
 
-  Reference: Azure Host Encryption — https://learn.microsoft.com/azure/virtual-machines/disks-enable-host-based-encryption-portal?tabs=azure-cli
+Note: Feature registration can take several minutes. Ensure the feature is registered before attempting deployments that require encryptionAtHost.
 
-  - Enhanced network security (e.g., Network protection with private endpoints)
-  - Stricter access controls and managed identities
-  - Logging, monitoring, and diagnostics enabled by default
-  - Resource tagging and cost management recommendations
+Reference: Azure Host Encryption — https://learn.microsoft.com/azure/virtual-machines/disks-enable-host-based-encryption-portal?tabs=azure-cli
+
+- Enhanced network security (e.g., Network protection with private endpoints)
+- Stricter access controls and managed identities
+- Logging, monitoring, and diagnostics enabled by default
+- Resource tagging and cost management recommendations
 
 **How to choose your deployment configuration:**
 
-* Use the default `main.parameters.json` file for a **sandbox/dev environment**
-* For a **WAF-aligned, production-ready deployment**, copy the contents of `main.waf.parameters.json` into `main.parameters.json` before running `azd up`
+- Use the default `main.parameters.json` file for a **sandbox/dev environment**
+- For a **WAF-aligned, production-ready deployment**, copy the contents of `main.waf.parameters.json` into `main.parameters.json` before running `azd up`
 
 ---
 
@@ -206,10 +207,77 @@ azd env set AZURE_ENV_VM_ADMIN_PASSWORD <your-password>
 > [!TIP]
 > Always review and adjust parameter values (such as region, capacity, security settings and log analytics workspace configuration) to match your organization’s requirements before deploying. For production, ensure you have sufficient quota and follow the principle of least privilege for all identities and role assignments.
 
-
 > [!IMPORTANT]
 > The WAF-aligned configuration is under active development. More Azure Well-Architected recommendations will be added in future updates.
 
+### Deployment Steps 
+
+Pick from the options below to see step-by-step instructions for GitHub Codespaces, VS Code Dev Containers, Local Environments, and Bicep deployments.
+
+| [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) | [![Open in Dev Containers](https://img.shields.io/static/v1?style=for-the-badge&label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+
+<details>
+  <summary><b>Deploy in GitHub Codespaces</b></summary>
+
+### GitHub Codespaces
+
+You can run this solution using GitHub Codespaces. The button will open a web-based VS Code instance in your browser:
+
+1. Open the solution accelerator (this may take several minutes):
+
+   [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator)
+
+2. Accept the default values on the create Codespaces page.
+3. Open a terminal window if it is not already open.
+4. Continue with the [deploying steps](#deploying-with-azd).
+
+</details>
+
+<details>
+  <summary><b>Deploy in VS Code</b></summary>
+
+### VS Code Dev Containers
+
+You can run this solution in VS Code Dev Containers, which will open the project in your local VS Code using the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers):
+
+1. Start Docker Desktop (install it if not already installed).
+2. Open the project:
+
+   [![Open in Dev Containers](https://img.shields.io/static/v1?style=for-the-badge&label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator)
+
+3. In the VS Code window that opens, once the project files show up (this may take several minutes), open a terminal window.
+4. Continue with the [deploying steps](#deploying-with-azd).
+
+</details>
+
+<details>
+  <summary><b>Deploy in your local Environment</b></summary>
+
+### Local Environment
+
+If you're not using one of the above options for opening the project, then you'll need to:
+
+1. Make sure the following tools are installed:
+
+   - [PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell?view=powershell-7.5) <small>(v7.0+)</small> - available for Windows, macOS, and Linux.
+   - [Azure Developer CLI (azd)](https://aka.ms/install-azd) <small>(v1.18.0+)</small> - version
+   - [Python 3.9+](https://www.python.org/downloads/)
+   - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+   - [Git](https://git-scm.com/downloads)
+
+2. Clone the repository or download the project code via command-line:
+
+   ```shell
+   azd init -t microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/
+   ```
+
+3. Open the project folder in your terminal or editor.
+4. Continue with the [deploying steps](#deploying-with-azd).
+
+</details>
+
+<br/>
 
 Consider the following settings during your deployment to modify specific settings:
 
@@ -218,6 +286,19 @@ Consider the following settings during your deployment to modify specific settin
 
 When you start the deployment, most parameters will have **default values**, but you can update the following settings [here](../docs/CustomizingAzdParameters.md):
 
+| **Setting**                    | **Description**                                                                      | **Default value** |
+| ------------------------------ | ------------------------------------------------------------------------------------ | ----------------- |
+| **Environment Name**           | Used as a prefix for all resource names to ensure uniqueness across environments.    | macae             |
+| **Azure Region**               | Location of the Azure resources. Controls where the infrastructure will be deployed. | swedencentral     |
+| **OpenAI Deployment Location** | Specifies the region for OpenAI resource deployment.                                 | swedencentral     |
+| **Model Deployment Type**      | Defines the deployment type for the AI model (e.g., Standard, GlobalStandard).      | GlobalStandard    |
+| **GPT Model Name**             | Specifies the name of the GPT model to be deployed.                                 | gpt-4o            |
+| **GPT Model Version**          | Version of the GPT model to be used for deployment.                                 | 2024-08-06        |
+| **GPT Model Capacity**          | Sets the GPT model capacity.                                 | 150        |
+| **Image Tag**                  | Docker image tag used for container deployments.                                    | latest            |
+| **Enable Telemetry**           | Enables telemetry for monitoring and diagnostics.                                    | true              |
+| **Existing Log Analytics Workspace**        | To reuse an existing Log Analytics Workspace ID instead of creating a new one.              | *(none)*          |
+| **Existing Azure AI Foundry Project**        | To reuse an existing Azure AI Foundry Project ID instead of creating a new one.              | *(none)*          |
 
 </details>
 
@@ -236,7 +317,7 @@ To adjust quota settings, follow these [steps](./AzureGPTQuotaSettings.md).
 
   <summary><b>Reusing an Existing Log Analytics Workspace</b></summary>
 
-  Guide to get your [Existing Workspace ID](/docs/re-use-log-analytics.md)
+Guide to get your [Existing Workspace ID](/docs/re-use-log-analytics.md)
 
 </details>
 
@@ -244,7 +325,7 @@ To adjust quota settings, follow these [steps](./AzureGPTQuotaSettings.md).
 
   <summary><b>Reusing an Existing Azure AI Foundry Project</b></summary>
 
-  Guide to get your [Existing Project ID](/docs/re-use-foundry-project.md)
+Guide to get your [Existing Project ID](/docs/re-use-foundry-project.md)
 
 </details>
 
@@ -290,6 +371,7 @@ azd init -t microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/
    ```shell
    azd up
    ```
+
    > **Note:** This solution accelerator requires **Azure Developer CLI (azd) version 1.18.0 or higher**. Please ensure you have the latest version installed before proceeding with deployment. [Download azd here](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/install-azd).
 
 3. Provide an `azd` environment name (e.g., "macaeapp").
@@ -299,48 +381,55 @@ azd init -t microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/
    - If you encounter an error or timeout during deployment, changing the location may help, as there could be availability constraints for the resources.
    - **Upon successful completion**, you will see a success message indicating that all resources have been deployed, along with the application URL and next steps for uploading team configurations and sample data.
 
-5. Upload Team Configurations using command printed in the terminal. The command will look like one of the following. Run the appropriate command for your shell from the project root:
+5. After deployment completes, you can upload Team Configurations using command printed in the terminal. The command will look like one of the following. Run the appropriate command for your shell from the project root:
 
-  - **For Bash (Linux/macOS/WSL):**
-    ```bash
-    bash infra/scripts/upload_team_config.sh
-    ```
+- **For Bash (Linux/macOS/WSL):**
 
-  - **For PowerShell (Windows):**
-    ```powershell
-    infra\scripts\Upload-Team-Config.ps1
-    ```
+  ```bash
+  bash infra/scripts/selecting_team_config_and_data.sh
+  ```
 
-6. Index Sample Data into Search Service using command printed in the terminal. The command will look like one of the following. Run the appropriate command for your shell from the project root:
+- **For PowerShell (Windows):**
+  ```powershell
+  infra\scripts\Selecting-Team-Config-And-Data.ps1
+  ```
 
-  - **For Bash (Linux/macOS/WSL):**
-    ```bash
-    bash infra/scripts/process_sample_data.sh
-    ```
+6. After deployment completes, you can index Sample Data into Search Service using command printed in the terminal. The command will look like one of the following. Run the appropriate command for your shell from the project root:
 
-  - **For PowerShell (Windows):**
-    ```powershell
-    infra\scripts\Process-Sample-Data.ps1
-    ```
+- **For Bash (Linux/macOS/WSL):**
 
-7. **[Alternative]** To upload team configurations and index sample data in one step, run the appropriate command for your shell from the project root:
+  ```bash
+  bash infra/scripts/process_sample_data.sh
+  ```
 
-  - **For Bash (Linux/macOS/WSL):**
-    ```bash
-    bash infra/scripts/team_config_and_data.sh
-    ```
+- **For PowerShell (Windows):**
+  ```powershell
+  infra\scripts\Process-Sample-Data.ps1 
+  ``` --->
 
-  - **For PowerShell (Windows):**
-    ```powershell
-    infra\scripts\Team-Config-And-Data.ps1
-    ```
+7. To upload team configurations and index sample data in one step. Run the appropriate command for your shell from the project root:
+
+- **For Bash (Linux/macOS/WSL):**
+
+  ```bash
+  bash infra/scripts/team_config_and_data.sh
+  ```
+
+- **For PowerShell (Windows):**
+  ```powershell
+  infra\scripts\Team-Config-And-Data.ps1
+  ``` -->
 
 8. **[Optional]** Set up authentication for your web application by following the steps in [Set Up Authentication in Azure App Service](../docs/azure_app_service_auth_setup.md).
 
-9. **Access your application:** Open the [Azure Portal](https://portal.azure.com/), go to your resource group, find the App Service that runs the frontend application, and get the application URL from the **Default domain** field.
+9. When Deployment is complete, follow steps in [Set Up Authentication in Azure App Service](../docs/azure_app_service_auth_setup.md) to add app authentication to your web app running on Azure App Service
+
+10. If you are done trying out the application, you can delete the resources by running `azd down`.
+
 
 ### 🛠️ Troubleshooting
- If you encounter any issues during the deployment process, please refer [troubleshooting](../docs/TroubleShootingSteps.md) document for detailed steps and solutions.
+
+If you encounter any issues during the deployment process, please refer [troubleshooting](../docs/TroubleShootingSteps.md) document for detailed steps and solutions.
 
  ## Next Steps
 Now that you've completed your deployment, you can start using the solution. 
@@ -421,7 +510,7 @@ The files for the dev container are located in `/.devcontainer/` folder.
 
 4. **Deploy the Bicep template:**
 
-   - You can use the Bicep extension for VSCode (Right-click the `.bicep` file, then select "Show  deployment plan") or use the Azure CLI:
+   - You can use the Bicep extension for VSCode (Right-click the `.bicep` file, then select "Show deployment plan") or use the Azure CLI:
      ```bash
      az deployment group create -g <resource-group-name> -f infra/main.bicep --query 'properties.outputs'
      ```
@@ -459,10 +548,10 @@ The files for the dev container are located in `/.devcontainer/` folder.
    - Navigate to the `src\backend` folder and create a `.env` file based on the provided `.env.sample` file.
    - Update the `.env` file with the required values from your Azure resource group in Azure Portal App Service environment variables.
    - Alternatively, if resources were
-   provisioned using `azd provision` or `azd up`, a `.env` file is automatically generated in the `.azure/<env-name>/.env`
-   file. You can copy the contents of this file into your backend `.env` file.
+     provisioned using `azd provision` or `azd up`, a `.env` file is automatically generated in the `.azure/<env-name>/.env`
+     file. You can copy the contents of this file into your backend `.env` file.
 
-    _**Note**: To get your `<env-name>` run `azd env list` to see which env is default._
+   _**Note**: To get your `<env-name>` run `azd env list` to see which env is default._
 
 6. **Fill in the `.env` file:**
 
@@ -485,23 +574,24 @@ The files for the dev container are located in `/.devcontainer/` folder.
      pip install uv
      uv sync
      ```
-     
+
 9. **Build the frontend (important):**
 
-    - To install the requirement for frontend -
+   - To install the requirement for frontend -
      Open a terminal in the `src/frontend` folder and run:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+   - Before running the frontend server, you must build the frontend to generate the necessary `build/assets` directory.
+
+     From the `src/frontend` directory, run:
+
      ```bash
-     pip install -r requirements.txt
+     npm install
+     npm run build
      ```
-
-    - Before running the frontend server, you must build the frontend to generate the necessary `build/assets` directory.
-
-      From the `src/frontend` directory, run:
-
-      ```bash
-      npm install
-      npm run build
-      ```
 
 10. **Install requirements - MCP server:**
 
@@ -517,7 +607,7 @@ The files for the dev container are located in `/.devcontainer/` folder.
 - From the `src/backend` directory activate the virtual environment created through step 8 and Run:
 
 ```bash
-python app_kernel.py
+python app.py
 ```
 
 - In a new terminal from the src/frontend directory
@@ -526,28 +616,22 @@ python app_kernel.py
  python frontend_server.py
 ```
 
-or Run 
+or Run
 
   ```bash
   npm run dev
   ```
 
-- From the `src/mcp_server` directory activate the virtual environment created through step 10 and Run:
-
-```bash
-python mcp_server.py --transport streamable-http --host 0.0.0.0 --port 9000
-```
-
 11. Open a browser and navigate to `http://localhost:3000`
 12. To see swagger API documentation, you can navigate to `http://localhost:8000/docs`
 
 ## Deploy Your local changes
+
 To Deploy your local changes rename the below files.
    1. Rename `azure.yaml` to `azure_custom2.yaml` and `azure_custom.yaml` to `azure.yaml`.
    2. Go to `infra` directory
-        - Rename `main.bicep` to `main_custom2.bicep` and `main_custom.bicep` to `main.bicep`.
+        - Remove `main.bicep` to `main_custom2.bicep` and `main_custom.bicep` to `main.bicep`.
 Continue with the [deploying steps](#deploying-with-azd).
-
 
 ## Debugging the solution locally
 

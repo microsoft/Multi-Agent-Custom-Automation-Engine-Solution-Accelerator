@@ -48,13 +48,13 @@
       "value": "${AZURE_ENV_REASONING_MODEL_CAPACITY}"
     },
     "backendContainerImageTag": {
-      "value": "${AZURE_ENV_IMAGE_TAG=latest_v3}"
+      "value": "${AZURE_ENV_IMAGE_TAG=latest_v4}"
     },
     "frontendContainerImageTag": {
-      "value": "${AZURE_ENV_IMAGE_TAG=latest_v3}"
+      "value": "${AZURE_ENV_IMAGE_TAG=latest_v4}"
     },
     "MCPContainerImageTag": {
-      "value": "${AZURE_ENV_IMAGE_TAG=latest_v3}"
+      "value": "${AZURE_ENV_IMAGE_TAG=latest_v4}"
     },
     "enableTelemetry": {
       "value": "${AZURE_ENV_ENABLE_TELEMETRY}"
@@ -75,7 +75,7 @@
       "value": "${AZURE_ENV_VM_ADMIN_PASSWORD}"
     },
     "existingLogAnalyticsWorkspaceId": {
-        "value": "${AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID}"
+      "value": "${AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID}"
     },
     "existingAiFoundryAiProjectResourceId": {
       "value": "${AZURE_EXISTING_AI_PROJECT_RESOURCE_ID}"

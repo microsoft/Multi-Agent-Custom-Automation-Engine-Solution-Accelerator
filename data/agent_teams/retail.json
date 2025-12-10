@@ -5,6 +5,7 @@
   "status": "visible",
   "created": "",
   "created_by": "",
+  "deployment_name": "gpt-4.1-mini",
   "agents": [
     {
       "input_key": "",
@@ -18,9 +19,7 @@
       "use_mcp": false,
       "use_bing": false,
       "use_reasoning": false,
-      "index_name": "macae-index",
-      "index_foundry_name": "",
-      "index_endpoint": "",
+      "index_name": "macae-retail-customer-index",
       "coding_tools": false
     },
     {
@@ -35,7 +34,7 @@
       "use_mcp": false,
       "use_bing": false,
       "use_reasoning": false,
-      "index_name": "macae-index",
+      "index_name": "macae-retail-order-index",
       "index_foundry_name": "",
       "coding_tools": false
     },
@@ -45,8 +44,8 @@
       "name": "AnalysisRecommendationAgent",
       "deployment_name": "o4-mini",
       "icon": "",
-      "system_message": "You are a reasoning agent that can analyze customer data and provide recommendations for improving customer satisfaction and retention. You do not have access to any data sources, but you can reason based on the information provided to you by other agents. Use your reasoning skills to identify patterns, trends, and insights that can help improve customer satisfaction and retention. Provide actionable recommendations based on your analysis. You have access to other agents that can answer questions and provide data about customers, products, orders, inventory, and fulfilment. Use these agents to gather information as needed.",
-      "description": "A reasoning agent that can analyze customer data and provide recommendations for improving customer satisfaction and retention.",
+      "system_message": "You are a reasoning agent that can analyze customer and order data and provide recommendations for improving customer satisfaction and retention. You do not have access to any data sources, but you can reason based on the information provided to you by other agents. Use your reasoning skills to identify patterns, trends, and insights that can help improve customer satisfaction and retention. Provide actionable recommendations based on your analysis. You have access to other agents that can answer questions and provide data about customers, products, orders, inventory, and fulfilment. Use these agents to gather information as needed.",
+      "description": "A reasoning agent that can analyze customer and order data and provide recommendations for improving customer satisfaction and retention.",
       "use_rag": false,
       "use_mcp": false,
       "use_bing": false,
