@@ -11,7 +11,7 @@ from config.constants import hr_clarification_text, prompt_question1, rai_prompt
 logger = logging.getLogger(__name__)
 
 
-
+@pytest.mark.gp
 def test_retail_customer_success_workflow(login_logout, request):
     """
     Validate Golden path for MACAE-v3.
@@ -442,7 +442,6 @@ def test_validate_source_text_not_visible(login_logout, request):
         logger.error(f"Execution time before failure: {total_duration:.2f}s")
         logger.error("=" * 80)
         raise
-
 
 
 def test_rai_validation_unable_to_create_plan(login_logout, request):
