@@ -8,24 +8,24 @@ Use these as quick reference guides to unblock your deployments.
 
 | Error Code | Common Cause | Full Details |
 |------------|--------------|--------------|
-| **ContainerAppOperationError** | Improperly built container image | [View Solution](#miscellaneous) |
+| **InsufficientQuota** | Not enough quota available in subscription | [View Solution](#quota--capacity-limitations) |
+| **MissingSubscriptionRegistration** | Required feature not registered in subscription | [View Solution](#subscription--access-issues) |
 | **ResourceGroupNotFound** | RG doesn't exist or using old .env file | [View Solution](#resource-group--deployment-management) |
+| **DeploymentModelNotSupported** | Model not available in selected region | [View Solution](#regional--location-issues) |
+| **DeploymentNotFound** | Deployment record not found or was deleted | [View Solution](#resource-group--deployment-management) |
+| **ResourceNotFound** | Resource does not exist or cannot be found | [View Solution](#resource-identification--references) |
+| **SpecialFeatureOrQuotaIdRequired** | Subscription lacks access to specific model | [View Solution](#subscription--access-issues) |
+| **ContainerAppOperationError** | Improperly built container image | [View Solution](#miscellaneous) |
 | **ServiceUnavailable** | Service not available in selected region | [View Solution](#regional--location-issues) |
 | **BadRequest - DatabaseAccount is in a failed provisioning state** | Previous deployment failed | [View Solution](#resource-state--provisioning) |
-| **Unauthorized - Operation cannot be completed without additional quota** | Insufficient quota for requested operation | [View Solution](#subscription--access-issues) |
-| **DeploymentModelNotSupported** | Model not available in selected region | [View Solution](#regional--location-issues) |
+| **Unauthorized - Operation cannot be completed<br> without additional quota** | Insufficient quota for requested operation | [View Solution](#subscription--access-issues) |
 | **ResourceGroupBeingDeleted** | Resource group deletion in progress | [View Solution](#resource-group--deployment-management) |
-| **SpecialFeatureOrQuotaIdRequired** | Subscription lacks access to specific model | [View Solution](#subscription--access-issues) |
 | **FlagMustBeSetForRestore** | Soft-deleted resource requires restore flag or purge | [View Solution](#miscellaneous) |
-| **InsufficientQuota** | Not enough quota available in subscription | [View Solution](#quota--capacity-limitations) |
 | **ParentResourceNotFound** | Parent resource does not exist or cannot be found | [View Solution](#resource-identification--references) |
-| **MissingSubscriptionRegistration** | Required feature not registered in subscription | [View Solution](#subscription--access-issues) |
 | **AccountProvisioningStateInvalid** | Resource used before provisioning completed | [View Solution](#resource-state--provisioning) |
 | **InternalSubscriptionIsOverQuotaForSku** | Subscription quota exceeded for the requested SKU | [View Solution](#quota--capacity-limitations) |
-| **DeploymentNotFound** | Deployment record not found or was deleted | [View Solution](#resource-group--deployment-management) |
 | **InvalidResourceGroup** | Invalid resource group configuration | [View Solution](#resource-group--deployment-management) |
 | **RequestDisallowedByPolicy** | Azure Policy blocking the requested operation | [View Solution](#subscription--access-issues) |
-| **ResourceNotFound** | Resource does not exist or cannot be found | [View Solution](#resource-identification--references) |
 
 ## 📖 Table of Contents
 
