@@ -4,6 +4,11 @@
 
 To deploy this solution accelerator, ensure you have access to an [Azure subscription](https://azure.microsoft.com/free/) with the necessary permissions to create **resource groups, resources, app registrations, and assign roles at the resource group level**. This should include Contributor role at the subscription level and Role Based Access Control role on the subscription and/or resource group level. Follow the steps in [Azure Account Set Up](../docs/AzureAccountSetUp.md).
 
+> **Note:** When you deploy this solution, you will automatically be granted access to interact with the Cosmos DB database that stores your application data. Specifically, you'll have permissions to:
+> - Read database information and settings
+> - Create, modify, and delete data storage containers (think of these as folders for organizing your data)
+> - Add, view, update, and remove individual data records within those containers
+
 Check the [Azure Products by Region](https://azure.microsoft.com/en-us/explore/global-infrastructure/products-by-region/?products=all&regions=all) page and select a **region** where the following services are available:
 
 - [Azure AI Foundry](https://learn.microsoft.com/en-us/azure/ai-foundry/)
@@ -53,7 +58,103 @@ Upgrade commands by OS:
 
 ## Deployment Options & Steps
 
-### Sandbox or WAF Aligned Deployment Options
+### Deployment Steps 
+
+Pick from the options below to see step-by-step instructions for GitHub Codespaces, VS Code Dev Containers, Local Environments, and Bicep deployments.
+
+| [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) | [![Open in Dev Containers](https://img.shields.io/static/v1?style=for-the-badge&label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) | [![Open in Visual Studio Code Web](https://img.shields.io/static/v1?style=for-the-badge&label=Visual%20Studio%20Code%20(Web)&message=Open&color=blue&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/azure/?vscode-azure-exp=foundry&agentPayload=eyJiYXNlVXJsIjogImh0dHBzOi8vcmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbS9taWNyb3NvZnQvTXVsdGktQWdlbnQtQ3VzdG9tLUF1dG9tYXRpb24tRW5naW5lLVNvbHV0aW9uLUFjY2VsZXJhdG9yL3JlZnMvaGVhZHMvbWFpbi9pbmZyYS92c2NvZGVfd2ViIiwgImluZGV4VXJsIjogIi9pbmRleC5qc29uIiwgInZhcmlhYmxlcyI6IHsiYWdlbnRJZCI6ICIiLCAiY29ubmVjdGlvblN0cmluZyI6ICIiLCAidGhyZWFkSWQiOiAiIiwgInVzZXJNZXNzYWdlIjogIiIsICJwbGF5Z3JvdW5kTmFtZSI6ICIiLCAibG9jYXRpb24iOiAiIiwgInN1YnNjcmlwdGlvbklkIjogIiIsICJyZXNvdXJjZUlkIjogIiIsICJwcm9qZWN0UmVzb3VyY2VJZCI6ICIiLCAiZW5kcG9pbnQiOiAiIn0sICJjb2RlUm91dGUiOiBbImFpLXByb2plY3RzLXNkayIsICJweXRob24iLCAiZGVmYXVsdC1henVyZS1hdXRoIiwgImVuZHBvaW50Il19) |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+
+<details>
+  <summary><b>Deploy in GitHub Codespaces</b></summary>
+
+### GitHub Codespaces
+
+You can run this solution using GitHub Codespaces. The button will open a web-based VS Code instance in your browser:
+
+1. Open the solution accelerator (this may take several minutes):
+
+   [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator)
+
+2. Accept the default values on the create Codespaces page.
+3. Open a terminal window if it is not already open.
+4. Continue with the [deployment options](#deployment-options).
+
+</details>
+
+<details>
+  <summary><b>Deploy in VS Code Dev Containers</b></summary>
+
+### VS Code Dev Containers
+
+You can run this solution in VS Code Dev Containers, which will open the project in your local VS Code using the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers):
+
+1. Start Docker Desktop (install it if not already installed).
+2. Open the project:
+
+   [![Open in Dev Containers](https://img.shields.io/static/v1?style=for-the-badge&label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator)
+
+3. In the VS Code window that opens, once the project files show up (this may take several minutes), open a terminal window.
+4. Continue with the [deployment options](#deployment-options).
+
+</details>
+
+<details>
+  <summary><b>Deploy in VS Code Web</b></summary>
+
+### VS Code Web
+
+[![Open in Visual Studio Code Web](https://img.shields.io/static/v1?style=for-the-badge&label=Visual%20Studio%20Code%20(Web)&message=Open&color=blue&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/azure/?vscode-azure-exp=foundry&agentPayload=eyJiYXNlVXJsIjogImh0dHBzOi8vcmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbS9taWNyb3NvZnQvTXVsdGktQWdlbnQtQ3VzdG9tLUF1dG9tYXRpb24tRW5naW5lLVNvbHV0aW9uLUFjY2VsZXJhdG9yL3JlZnMvaGVhZHMvbWFpbi9pbmZyYS92c2NvZGVfd2ViIiwgImluZGV4VXJsIjogIi9pbmRleC5qc29uIiwgInZhcmlhYmxlcyI6IHsiYWdlbnRJZCI6ICIiLCAiY29ubmVjdGlvblN0cmluZyI6ICIiLCAidGhyZWFkSWQiOiAiIiwgInVzZXJNZXNzYWdlIjogIiIsICJwbGF5Z3JvdW5kTmFtZSI6ICIiLCAibG9jYXRpb24iOiAiIiwgInN1YnNjcmlwdGlvbklkIjogIiIsICJyZXNvdXJjZUlkIjogIiIsICJwcm9qZWN0UmVzb3VyY2VJZCI6ICIiLCAiZW5kcG9pbnQiOiAiIn0sICJjb2RlUm91dGUiOiBbImFpLXByb2plY3RzLXNkayIsICJweXRob24iLCAiZGVmYXVsdC1henVyZS1hdXRoIiwgImVuZHBvaW50Il19)
+
+1. Click the badge above (may take a few minutes to load)
+2. Sign in with your Azure account when prompted
+3. Select the subscription where you want to deploy the solution
+4. Wait for the environment to initialize (includes all deployment tools)
+5. Once the solution opens, the **AI Foundry terminal** will automatically start running the following command to install the required dependencies:
+
+    ```shell
+    sh install.sh
+    ```
+    During this process, you’ll be prompted with the message:
+    ```
+    What would you like to do with these files?
+    - Overwrite with versions from template
+    - Keep my existing files unchanged
+    ```
+    Choose “**Overwrite with versions from template**” and provide a unique environment name when prompted.
+6. Continue with the [deployment options](#deployment-options).
+
+</details>
+
+<details>
+  <summary><b>Deploy in your local Environment</b></summary>
+
+### Local Environment
+
+If you're not using one of the above options for opening the project, then you'll need to:
+
+1. Make sure the following tools are installed:
+
+   - [PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell?view=powershell-7.5) <small>(v7.0+)</small> - available for Windows, macOS, and Linux.
+   - [Azure Developer CLI (azd)](https://aka.ms/install-azd) <small>(v1.18.0+)</small> - version
+   - [Python 3.9+](https://www.python.org/downloads/)
+   - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+   - [Git](https://git-scm.com/downloads)
+
+2. Clone the repository or download the project code via command-line:
+
+   ```shell
+   azd init -t microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/
+   ```
+
+   > **⚠️ Warning:** The `azd init` command will download and initialize the project template. If you run this command in a directory that already contains project files, it may override your existing changes. Only run this command once when setting up the project for the first time. If you need to update an existing project, consider using `git pull` or manually downloading updates instead.
+
+3. Open the project folder in your terminal or editor.
+4. Continue with the [deployment options](#deployment-options).
+
+</details>
+
+### Deployment Options
 
 The [`infra`](../infra) folder of the Multi Agent Solution Accelerator contains the [`main.bicep`](../infra/main.bicep) Bicep script, which defines all Azure infrastructure components for this solution.
 
@@ -109,7 +210,7 @@ azd env set AZURE_ENV_VM_ADMIN_PASSWORD <your-password>
 > [!IMPORTANT]
 > The WAF-aligned configuration is under active development. More Azure Well-Architected recommendations will be added in future updates.
 
-### Deployment Steps
+### Deployment Steps 
 
 Pick from the options below to see step-by-step instructions for GitHub Codespaces, VS Code Dev Containers, Local Environments, and Bicep deployments.
 
@@ -185,19 +286,19 @@ Consider the following settings during your deployment to modify specific settin
 
 When you start the deployment, most parameters will have **default values**, but you can update the following settings [here](../docs/CustomizingAzdParameters.md):
 
-| **Setting**                           | **Description**                                                                      | **Default value** |
-| ------------------------------------- | ------------------------------------------------------------------------------------ | ----------------- |
-| **Environment Name**                  | Used as a prefix for all resource names to ensure uniqueness across environments.    | macae             |
-| **Azure Region**                      | Location of the Azure resources. Controls where the infrastructure will be deployed. | swedencentral     |
-| **OpenAI Deployment Location**        | Specifies the region for OpenAI resource deployment.                                 | swedencentral     |
-| **Model Deployment Type**             | Defines the deployment type for the AI model (e.g., Standard, GlobalStandard).       | GlobalStandard    |
-| **GPT Model Name**                    | Specifies the name of the GPT model to be deployed.                                  | gpt-4o            |
-| **GPT Model Version**                 | Version of the GPT model to be used for deployment.                                  | 2024-08-06        |
-| **GPT Model Capacity**                | Sets the GPT model capacity.                                                         | 150               |
-| **Image Tag**                         | Docker image tag used for container deployments.                                     | latest            |
-| **Enable Telemetry**                  | Enables telemetry for monitoring and diagnostics.                                    | true              |
-| **Existing Log Analytics Workspace**  | To reuse an existing Log Analytics Workspace ID instead of creating a new one.       | _(none)_          |
-| **Existing Azure AI Foundry Project** | To reuse an existing Azure AI Foundry Project ID instead of creating a new one.      | _(none)_          |
+| **Setting**                    | **Description**                                                                      | **Default value** |
+| ------------------------------ | ------------------------------------------------------------------------------------ | ----------------- |
+| **Environment Name**           | Used as a prefix for all resource names to ensure uniqueness across environments.    | macae             |
+| **Azure Region**               | Location of the Azure resources. Controls where the infrastructure will be deployed. | swedencentral     |
+| **OpenAI Deployment Location** | Specifies the region for OpenAI resource deployment.                                 | swedencentral     |
+| **Model Deployment Type**      | Defines the deployment type for the AI model (e.g., Standard, GlobalStandard).      | GlobalStandard    |
+| **GPT Model Name**             | Specifies the name of the GPT model to be deployed.                                 | gpt-4o            |
+| **GPT Model Version**          | Version of the GPT model to be used for deployment.                                 | 2024-08-06        |
+| **GPT Model Capacity**          | Sets the GPT model capacity.                                 | 150        |
+| **Image Tag**                  | Docker image tag used for container deployments.                                    | latest            |
+| **Enable Telemetry**           | Enables telemetry for monitoring and diagnostics.                                    | true              |
+| **Existing Log Analytics Workspace**        | To reuse an existing Log Analytics Workspace ID instead of creating a new one.              | *(none)*          |
+| **Existing Azure AI Foundry Project**        | To reuse an existing Azure AI Foundry Project ID instead of creating a new one.              | *(none)*          |
 
 </details>
 
@@ -232,6 +333,27 @@ Guide to get your [Existing Project ID](/docs/re-use-foundry-project.md)
 
 Once you've opened the project in [Codespaces](#github-codespaces), [Dev Containers](#vs-code-dev-containers), or [locally](#local-environment), you can deploy it to Azure by following these steps:
 
+#### Important: Environment Management for Redeployments
+
+> **⚠️ Critical:** If you're redeploying or have deployed this solution before, you **must** create a fresh environment to avoid conflicts and deployment failures.
+
+**Choose one of the following before deployment:**
+
+**Option A: Create a completely new environment (Recommended)**
+```shell
+azd env new <new-environment-name>
+```
+
+**Option B: Reinitialize in a new directory**
+```shell
+# Navigate to a new directory
+cd ../my-new-deployment
+azd init -t microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/
+```
+
+> **💡 Why is this needed?** Azure resources maintain state information tied to your environment. Reusing an old environment can cause naming conflicts, permission issues, and deployment failures.
+
+#### Deploy the solution
 1. Login to Azure:
 
    ```shell
@@ -257,8 +379,9 @@ Once you've opened the project in [Codespaces](#github-codespaces), [Dev Contain
 
    - This deployment will take _4-6 minutes_ to provision the resources in your account and set up the solution with sample data.
    - If you encounter an error or timeout during deployment, changing the location may help, as there could be availability constraints for the resources.
+   - **Upon successful completion**, you will see a success message indicating that all resources have been deployed, along with the application URL and next steps for uploading team configurations and sample data.
 
-5. After deployment completes, you can upload team configurations and index sample data using command printed in the terminal. The command will look like one of the following. Run the appropriate command for your shell from the project root:
+5. After deployment completes, you can upload Team Configurations using command printed in the terminal. The command will look like one of the following. Run the appropriate command for your shell from the project root:
 
 - **For Bash (Linux/macOS/WSL):**
 
@@ -271,7 +394,7 @@ Once you've opened the project in [Codespaces](#github-codespaces), [Dev Contain
   infra\scripts\Selecting-Team-Config-And-Data.ps1
   ```
 
-<!-- 6. After deployment completes, you can index Sample Data into Search Service using command printed in the terminal. The command will look like one of the following. Run the appropriate command for your shell from the project root:
+6. After deployment completes, you can index Sample Data into Search Service using command printed in the terminal. The command will look like one of the following. Run the appropriate command for your shell from the project root:
 
 - **For Bash (Linux/macOS/WSL):**
 
@@ -284,7 +407,7 @@ Once you've opened the project in [Codespaces](#github-codespaces), [Dev Contain
   infra\scripts\Process-Sample-Data.ps1 
   ``` --->
 
-<!-- 7. To upload team configurations and index sample data in one step. Run the appropriate command for your shell from the project root:
+7. To upload team configurations and index sample data in one step. Run the appropriate command for your shell from the project root:
 
 - **For Bash (Linux/macOS/WSL):**
 
@@ -297,15 +420,29 @@ Once you've opened the project in [Codespaces](#github-codespaces), [Dev Contain
   infra\scripts\Team-Config-And-Data.ps1
   ``` -->
 
-8. Once the deployment has completed successfully, open the [Azure Portal](https://portal.azure.com/), go to the deployed resource group, find the App Service, and get the app URL from `Default domain`.
+8. **[Optional]** Set up authentication for your web application by following the steps in [Set Up Authentication in Azure App Service](../docs/azure_app_service_auth_setup.md).
 
 9. When Deployment is complete, follow steps in [Set Up Authentication in Azure App Service](../docs/azure_app_service_auth_setup.md) to add app authentication to your web app running on Azure App Service
 
 10. If you are done trying out the application, you can delete the resources by running `azd down`.
 
+
 ### 🛠️ Troubleshooting
 
 If you encounter any issues during the deployment process, please refer [troubleshooting](../docs/TroubleShootingSteps.md) document for detailed steps and solutions.
+
+ ## Next Steps
+Now that you've completed your deployment, you can start using the solution. 
+
+To help you get started, here are some [Sample Questions](./SampleQuestions.md) you can follow to try it out.
+
+## Clean Up Resources
+If you are done trying out the application, you can delete all resources by running:
+
+```shell
+azd down
+```
+> **Note:** If you deployed with `enableRedundancy=true` and Log Analytics workspace replication is enabled, you must first disable replication before running `azd down` else resource group delete will fail. Follow the steps in [Handling Log Analytics Workspace Deletion with Replication Enabled](./LogAnalyticsReplicationDisable.md), wait until replication returns `false`, then run `azd down`.
 
 # Local setup
 
@@ -422,7 +559,8 @@ The files for the dev container are located in `/.devcontainer/` folder.
    - Make sure to set APP_ENV to "**dev**" in `.env` file.
    - For local development, make sure to include below env variables in the `.env`
      - `BACKEND_API_URL=http://localhost:8000`
-     - `FRONTEND_SITE_NAME=http://127.0.0.1:3000` .
+     - `FRONTEND_SITE_NAME=http://127.0.0.1:3000` 
+     - `MCP_SERVER_ENDPOINT=http://localhost:9000/mcp`.
 
 7. **(Optional) Set up a virtual environment:**
 
@@ -455,7 +593,16 @@ The files for the dev container are located in `/.devcontainer/` folder.
      npm run build
      ```
 
-10. **Run the application:**
+10. **Install requirements - MCP server:**
+
+   - To install the requirement for mcp server -
+     Open a terminal in the `src/mcp_server` folder and run:
+     ```bash
+     pip install uv
+     uv sync
+     ```
+
+11. **Run the application:**
 
 - From the `src/backend` directory activate the virtual environment created through step 8 and Run:
 
@@ -471,9 +618,9 @@ python app.py
 
 or Run
 
-```bash
-npm run dev
-```
+  ```bash
+  npm run dev
+  ```
 
 11. Open a browser and navigate to `http://localhost:3000`
 12. To see swagger API documentation, you can navigate to `http://localhost:8000/docs`
@@ -481,25 +628,36 @@ npm run dev
 ## Deploy Your local changes
 
 To Deploy your local changes rename the below files.
-
-1.  Rename `azure.yaml` to `azure_custom2.yaml` and `azure_custom.yaml` to `azure.yaml`.
-2.  Go to `infra` directory - Remove `main.bicep` to `main_custom2.bicep` and `main_custom.bicep` to `main.bicep`.
-    Continue with the [deploying steps](#deploying-with-azd).
+   1. Rename `azure.yaml` to `azure_custom2.yaml` and `azure_custom.yaml` to `azure.yaml`.
+   2. Go to `infra` directory
+        - Remove `main.bicep` to `main_custom2.bicep` and `main_custom.bicep` to `main.bicep`.
+Continue with the [deploying steps](#deploying-with-azd).
 
 ## Debugging the solution locally
 
 You can debug the API backend running locally with VSCode using the following launch.json entry:
 
 ```
-    {
-      "name": "Python Debugger: Backend",
-      "type": "debugpy",
-      "request": "launch",
-      "cwd": "${workspaceFolder}/src/backend",
-      "module": "uvicorn",
-      "args": ["app:app", "--reload"],
-      "jinja": true
-    }
+      {
+        "name": "Debug Backend (FastAPI)",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/src/backend/app_kernel.py",
+        "cwd": "${workspaceFolder}/src/backend",
+        "console": "integratedTerminal",
+        "justMyCode": false,
+        "python": "${workspaceFolder}/src/backend/.venv/Scripts/python.exe",
+        "env": {
+            "PYTHONPATH": "${workspaceFolder}/src/backend",
+            "UVICORN_LOG_LEVEL": "debug"
+        },
+        "args": [],
+        "serverReadyAction": {
+            "pattern": "Uvicorn running on (https?://[^\\s]+)",
+            "uriFormat": "%s",
+            "action": "openExternally"
+        }
+      }
 ```
 
 To debug the python server in the frontend directory (frontend_server.py) and related, add the following launch.json entry:
@@ -514,4 +672,27 @@ To debug the python server in the frontend directory (frontend_server.py) and re
       "args": ["frontend_server:app", "--port", "3000", "--reload"],
       "jinja": true
     }
+```
+
+To debug the MCP server by adding the following launch.json entry:
+
+```
+     {
+        "name": "Debug MCP Server",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/src/mcp_server/mcp_server.py",
+        "cwd": "${workspaceFolder}/src/mcp_server",
+        "console": "integratedTerminal",
+        "justMyCode": false,
+        "python": "${workspaceFolder}/src/mcp_server/.venv/Scripts/python.exe",
+        "env": {
+            "PYTHONPATH": "${workspaceFolder}/src/mcp_server"
+        },
+        "args": [
+            "--transport", "streamable-http",
+            "--host", "0.0.0.0",
+            "--port", "9000"
+        ]
+      }
 ```

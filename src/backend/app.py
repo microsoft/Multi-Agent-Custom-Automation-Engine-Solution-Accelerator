@@ -60,19 +60,18 @@ else:
         "No Application Insights Instrumentation Key found. Skipping configuration"
     )
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Configure logging levels from environment variables
+logging.basicConfig(level=getattr(logging, config.AZURE_BASIC_LOGGING_LEVEL.upper(), logging.INFO))
 
-# Suppress INFO logs from 'azure.core.pipeline.policies.http_logging_policy'
-logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(
-    logging.WARNING
-)
-logging.getLogger("azure.identity.aio._internal").setLevel(logging.WARNING)
+# Configure Azure package logging levels
+azure_level = getattr(logging, config.AZURE_PACKAGE_LOGGING_LEVEL.upper(), logging.WARNING)
+# Parse comma-separated logging packages
+if config.AZURE_LOGGING_PACKAGES:
+    packages = [pkg.strip() for pkg in config.AZURE_LOGGING_PACKAGES.split(",") if pkg.strip()]
+    for logger_name in packages:
+        logging.getLogger(logger_name).setLevel(azure_level)
 
-# # Suppress info logs from OpenTelemetry exporter
-logging.getLogger("azure.monitor.opentelemetry.exporter.export._base").setLevel(
-    logging.WARNING
-)
+logging.getLogger("opentelemetry.sdk").setLevel(logging.ERROR)
 
 # Initialize the FastAPI app
 app = FastAPI(lifespan=lifespan)

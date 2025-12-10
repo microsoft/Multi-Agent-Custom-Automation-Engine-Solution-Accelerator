@@ -5,8 +5,9 @@ import os
 import sys
 from pathlib import Path
 
-# Add the backend path to sys.path so we can import v4 modules
-backend_path = Path(__file__).parent.parent.parent / "backend"
+# Add the backend path to sys.path so we can import v3 modules
+
+backend_path = Path(__file__).parent.parent.parent.parent / "backend"
 sys.path.insert(0, str(backend_path))
 
 from af.magentic_agents.models.agent_models import MCPConfig, SearchConfig

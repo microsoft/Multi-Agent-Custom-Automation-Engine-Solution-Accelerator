@@ -30,6 +30,8 @@ hooks:
         Blue='\033[0;34m'
         Green='\033[0;32m'
         Yellow='\033[1;33m'
+        Green='\033[0;32m'
+        Yellow='\033[1;33m'
         NC='\033[0m'
 
         echo ""

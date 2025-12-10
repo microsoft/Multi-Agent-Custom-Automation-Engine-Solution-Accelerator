@@ -31,7 +31,7 @@ jobs:
       MACAE_URL_API: ${{ inputs.MACAE_URL_API }}
       MACAE_RG: ${{ inputs.MACAE_RG }}
       MACAE_CONTAINER_APP: ${{ inputs.MACAE_CONTAINER_APP }}
-      accelerator_name: "MACAE"
+      accelerator_name: "MACAE v3"
 
     steps:
       - name: Checkout repository

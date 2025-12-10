@@ -23,6 +23,30 @@
     "gptModelCapacity": {
       "value": "${AZURE_ENV_MODEL_CAPACITY}"
     },
+    "gpt4_1ModelDeploymentType": {
+      "value": "${AZURE_ENV_MODEL_4_1_DEPLOYMENT_TYPE}"
+    },
+    "gpt4_1ModelName": {
+      "value": "${AZURE_ENV_MODEL_4_1_NAME}"
+    },
+    "gpt4_1ModelVersion": {
+      "value": "${AZURE_ENV_MODEL_4_1_VERSION}"
+    },
+    "gpt4_1ModelCapacity": {
+      "value": "${AZURE_ENV_MODEL_4_1_CAPACITY}"
+    },
+    "gptReasoningModelDeploymentType": {
+      "value": "${AZURE_ENV_REASONING_MODEL_DEPLOYMENT_TYPE}"
+    },
+    "gptReasoningModelName": {
+      "value": "${AZURE_ENV_REASONING_MODEL_NAME}"
+    },
+    "gptReasoningModelVersion": {
+      "value": "${AZURE_ENV_REASONING_MODEL_VERSION}"
+    },
+    "gptReasoningModelCapacity": {
+      "value": "${AZURE_ENV_REASONING_MODEL_CAPACITY}"
+    },
     "backendContainerImageTag": {
       "value": "${AZURE_ENV_IMAGE_TAG=latest_v4}"
     },
@@ -55,6 +79,20 @@
     },
     "existingAiFoundryAiProjectResourceId": {
       "value": "${AZURE_EXISTING_AI_PROJECT_RESOURCE_ID}"
+    },
+    "backendContainerRegistryHostname": {
+      "value": "${AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT}"
+    },
+    "frontendContainerRegistryHostname": {
+      "value": "${AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT}"
+    },
+    "MCPContainerRegistryHostname": {
+      "value": "${AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT}"
+    },
+    "tags": {
+      "value": {
+        "SecurityControl": "${AZURE_TAG_SECURITY_CONTROL=Ignore}"
+      }
     },
     "allowedFqdnList": {
       "value": [
