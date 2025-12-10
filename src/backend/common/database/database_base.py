@@ -26,12 +26,10 @@ class DatabaseBase(ABC):
     async def initialize(self) -> None:
         """Initialize the database client and create containers if needed."""
         pass
-        pass
 
     @abstractmethod
     async def close(self) -> None:
         """Close database connection."""
-        pass
         pass
 
     # Core CRUD Operations
@@ -39,12 +37,10 @@ class DatabaseBase(ABC):
     async def add_item(self, item: BaseDataModel) -> None:
         """Add an item to the database."""
         pass
-        pass
 
     @abstractmethod
     async def update_item(self, item: BaseDataModel) -> None:
         """Update an item in the database."""
-        pass
         pass
 
     @abstractmethod
@@ -52,7 +48,6 @@ class DatabaseBase(ABC):
         self, item_id: str, partition_key: str, model_class: Type[BaseDataModel]
     ) -> Optional[BaseDataModel]:
         """Retrieve an item by its ID and partition key."""
-        pass
         pass
 
     @abstractmethod
@@ -63,7 +58,6 @@ class DatabaseBase(ABC):
         model_class: Type[BaseDataModel],
     ) -> List[BaseDataModel]:
         """Query items from the database and return a list of model instances."""
-        pass
         pass
 
     @abstractmethod
