@@ -74,19 +74,17 @@ hooks:
         Yellow='\033[1;33m'
         NC='\033[0m'
 
-        echo ""
-        echo "${Yellow}==============================================================="
-        echo "${Green} POST-DEPLOYMENT STEPS (Bash) "
-        echo "${Yellow}===============================================================${NC}"
-        echo ""
+        printf "\n"
 
-        echo "Upload Team Configurations and index sample data:"
-        echo "  👉 Run the following command in Bash:"
-        echo "   ${Blue}bash infra/scripts/selecting_team_config_and_data.sh${NC}"
-        echo ""
+        printf "${Yellow}===============================================================\n"
+        printf "${Green} POST-DEPLOYMENT STEPS (Bash)\n"
+        printf "${Yellow}===============================================================${NC}\n\n"
 
-        echo "🌐 Access your deployed Frontend application at:"
-        echo "   ${Blue}https://$webSiteDefaultHostname${NC}"
-        echo ""
+        printf  "Upload Team Configurations and index sample data:\n"
+        printf  "  👉 Run the following command in Bash:\n"
+        printf  "   ${Blue}bash infra/scripts/selecting_team_config_and_data.sh${NC}\n\n"
+
+        printf "🌐 Access your deployed Frontend application at:\n"
+        printf "   ${Blue}https://%s${NC}\n\n" "$webSiteDefaultHostname"
       shell: sh
       interactive: true
