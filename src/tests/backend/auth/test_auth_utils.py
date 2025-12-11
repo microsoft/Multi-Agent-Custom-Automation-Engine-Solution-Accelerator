@@ -11,23 +11,13 @@ import os
 import importlib.util
 from unittest.mock import patch, MagicMock
 
-# Add the backend directory to the Python path for imports
-backend_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'backend')
-backend_path = os.path.abspath(backend_path)
-sys.path.insert(0, backend_path)
+# Add the source root directory to the Python path for imports
+src_path = os.path.join(os.path.dirname(__file__), '..', '..', '..')
+src_path = os.path.abspath(src_path)
+sys.path.insert(0, src_path)
 
-# Import the functions to test
-try:
-    from auth.auth_utils import get_authenticated_user_details, get_tenantid
-except ImportError:
-    # Fallback for pytest execution
-    import importlib.util
-    auth_utils_path = os.path.join(backend_path, 'auth', 'auth_utils.py')
-    spec = importlib.util.spec_from_file_location("auth_utils", auth_utils_path)
-    auth_utils_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(auth_utils_module)
-    get_authenticated_user_details = auth_utils_module.get_authenticated_user_details
-    get_tenantid = auth_utils_module.get_tenantid
+# Import the functions to test - using absolute import path that coverage can track
+from backend.auth.auth_utils import get_authenticated_user_details, get_tenantid
 
 
 class TestGetAuthenticatedUserDetails:
@@ -223,7 +213,7 @@ class TestGetTenantId:
             assert result == ""
             
             # Verify that the exception was logged
-            mock_get_logger.assert_called_once_with('auth_utils')
+            mock_get_logger.assert_called_once_with('backend.auth.auth_utils')
             mock_logger.exception.assert_called_once()
             
             # Verify the exception argument is not None

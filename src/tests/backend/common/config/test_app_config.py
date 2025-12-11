@@ -17,11 +17,11 @@ from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
 from azure.cosmos import CosmosClient
 from azure.ai.projects.aio import AIProjectClient
 
-# Add the backend directory to the Python path for imports
+# Add the source root directory to the Python path for imports
 import sys
-backend_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'backend')
-backend_path = os.path.abspath(backend_path)
-sys.path.insert(0, backend_path)
+src_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', '..')
+src_path = os.path.abspath(src_path)
+sys.path.insert(0, src_path)
 
 # Set minimal environment variables before importing to avoid global instance creation error
 os.environ.setdefault("APPLICATIONINSIGHTS_CONNECTION_STRING", "test_connection_string")
@@ -35,17 +35,8 @@ os.environ.setdefault("AZURE_AI_RESOURCE_GROUP", "test-resource-group")
 os.environ.setdefault("AZURE_AI_PROJECT_NAME", "test-project")
 os.environ.setdefault("AZURE_AI_AGENT_ENDPOINT", "https://test.ai.azure.com")
 
-# Import the class to test
-try:
-    from common.config.app_config import AppConfig
-except ImportError:
-    # Fallback for pytest execution
-    import importlib.util
-    app_config_path = os.path.join(backend_path, 'common', 'config', 'app_config.py')
-    spec = importlib.util.spec_from_file_location("app_config", app_config_path)
-    app_config_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(app_config_module)
-    AppConfig = app_config_module.AppConfig
+# Import the class to test - using absolute import path that coverage can track
+from backend.common.config.app_config import AppConfig
 
 
 class TestAppConfigInitialization:
@@ -145,7 +136,7 @@ class TestAppConfigInitialization:
             config = AppConfig()
             assert hasattr(config, 'logger')
             assert isinstance(config.logger, logging.Logger)
-            assert config.logger.name == "common.config.app_config"
+            assert config.logger.name == "backend.common.config.app_config"
 
     def _get_minimal_env(self):
         """Helper method to get minimal required environment variables."""
@@ -261,7 +252,7 @@ class TestAppConfigCredentials:
             "AZURE_AI_AGENT_ENDPOINT": "https://test.ai.azure.com"
         }
 
-    @patch('common.config.app_config.DefaultAzureCredential')
+    @patch('backend.common.config.app_config.DefaultAzureCredential')
     def test_get_azure_credential_dev_environment(self, mock_default_credential):
         """Test get_azure_credential method in dev environment."""
         mock_credential = MagicMock()
@@ -274,7 +265,7 @@ class TestAppConfigCredentials:
             mock_default_credential.assert_called_once()
             assert result == mock_credential
 
-    @patch('common.config.app_config.ManagedIdentityCredential')
+    @patch('backend.common.config.app_config.ManagedIdentityCredential')
     def test_get_azure_credential_prod_environment(self, mock_managed_credential):
         """Test get_azure_credential method in production environment."""
         mock_credential = MagicMock()
@@ -291,7 +282,7 @@ class TestAppConfigCredentials:
             mock_managed_credential.assert_called_once_with(client_id="test-client-id")
             assert result == mock_credential
 
-    @patch('common.config.app_config.DefaultAzureCredential')
+    @patch('backend.common.config.app_config.DefaultAzureCredential')
     def test_get_azure_credentials_caching(self, mock_default_credential):
         """Test that get_azure_credentials caches the credential."""
         mock_credential = MagicMock()
@@ -309,7 +300,7 @@ class TestAppConfigCredentials:
             mock_default_credential.assert_called_once()
             assert result1 == result2 == mock_credential
 
-    @patch('common.config.app_config.DefaultAzureCredential')
+    @patch('backend.common.config.app_config.DefaultAzureCredential')
     def test_get_access_token_success(self, mock_default_credential):
         """Test successful access token retrieval."""
         mock_token = MagicMock()
@@ -329,7 +320,7 @@ class TestAppConfigCredentials:
             assert token.token == "test-access-token"
             mock_credential.get_token.assert_called_once_with(config.AZURE_COGNITIVE_SERVICES)
 
-    @patch('common.config.app_config.DefaultAzureCredential')
+    @patch('backend.common.config.app_config.DefaultAzureCredential')
     def test_get_access_token_failure(self, mock_default_credential):
         """Test access token retrieval failure."""
         mock_credential = MagicMock()
@@ -366,8 +357,8 @@ class TestAppConfigClientMethods:
             "COSMOSDB_DATABASE": "test-database"
         }
 
-    @patch('common.config.app_config.CosmosClient')
-    @patch('common.config.app_config.DefaultAzureCredential')
+    @patch('backend.common.config.app_config.CosmosClient')
+    @patch('backend.common.config.app_config.DefaultAzureCredential')
     def test_get_cosmos_database_client_success(self, mock_default_credential, mock_cosmos_client):
         """Test successful Cosmos DB client creation."""
         mock_credential = MagicMock()
@@ -390,8 +381,8 @@ class TestAppConfigClientMethods:
             mock_cosmos_instance.get_database_client.assert_called_once_with("test-database")
             assert result == mock_database_client
 
-    @patch('common.config.app_config.CosmosClient')
-    @patch('common.config.app_config.DefaultAzureCredential')
+    @patch('backend.common.config.app_config.CosmosClient')
+    @patch('backend.common.config.app_config.DefaultAzureCredential')
     def test_get_cosmos_database_client_caching(self, mock_default_credential, mock_cosmos_client):
         """Test that Cosmos DB client is cached."""
         mock_credential = MagicMock()
@@ -416,8 +407,8 @@ class TestAppConfigClientMethods:
             mock_cosmos_instance.get_database_client.assert_called_once()
             assert result1 == result2 == mock_database_client
 
-    @patch('common.config.app_config.CosmosClient')
-    @patch('common.config.app_config.DefaultAzureCredential')
+    @patch('backend.common.config.app_config.CosmosClient')
+    @patch('backend.common.config.app_config.DefaultAzureCredential')
     def test_get_cosmos_database_client_failure(self, mock_default_credential, mock_cosmos_client):
         """Test Cosmos DB client creation failure."""
         mock_credential = MagicMock()
@@ -434,8 +425,8 @@ class TestAppConfigClientMethods:
                 
                 mock_logger.assert_called_once()
 
-    @patch('common.config.app_config.AIProjectClient')
-    @patch('common.config.app_config.DefaultAzureCredential')
+    @patch('backend.common.config.app_config.AIProjectClient')
+    @patch('backend.common.config.app_config.DefaultAzureCredential')
     def test_get_ai_project_client_success(self, mock_default_credential, mock_ai_client):
         """Test successful AI Project client creation."""
         mock_credential = MagicMock()
@@ -455,8 +446,8 @@ class TestAppConfigClientMethods:
             )
             assert result == mock_ai_instance
 
-    @patch('common.config.app_config.AIProjectClient')
-    @patch('common.config.app_config.DefaultAzureCredential')
+    @patch('backend.common.config.app_config.AIProjectClient')
+    @patch('backend.common.config.app_config.DefaultAzureCredential')
     def test_get_ai_project_client_caching(self, mock_default_credential, mock_ai_client):
         """Test that AI Project client is cached."""
         mock_credential = MagicMock()
@@ -478,7 +469,7 @@ class TestAppConfigClientMethods:
             mock_ai_client.assert_called_once()
             assert result1 == result2 == mock_ai_instance
 
-    @patch('common.config.app_config.AIProjectClient')
+    @patch('backend.common.config.app_config.AIProjectClient')
     def test_get_ai_project_client_credential_failure(self, mock_ai_client):
         """Test AI Project client creation with credential failure."""
         with patch.dict(os.environ, self._get_minimal_env()):
@@ -489,8 +480,8 @@ class TestAppConfigClientMethods:
                 with pytest.raises(RuntimeError, match="Unable to acquire Azure credentials"):
                     config.get_ai_project_client()
 
-    @patch('common.config.app_config.AIProjectClient')
-    @patch('common.config.app_config.DefaultAzureCredential')
+    @patch('backend.common.config.app_config.AIProjectClient')
+    @patch('backend.common.config.app_config.DefaultAzureCredential')
     def test_get_ai_project_client_creation_failure(self, mock_default_credential, mock_ai_client):
         """Test AI Project client creation failure."""
         mock_credential = MagicMock()
@@ -608,9 +599,9 @@ class TestAppConfigIntegration:
             agents = config.get_agents()
             assert isinstance(agents, dict)
 
-    @patch('common.config.app_config.ManagedIdentityCredential')
-    @patch('common.config.app_config.CosmosClient')
-    @patch('common.config.app_config.AIProjectClient')
+    @patch('backend.common.config.app_config.ManagedIdentityCredential')
+    @patch('backend.common.config.app_config.CosmosClient')
+    @patch('backend.common.config.app_config.AIProjectClient')
     def test_production_environment_client_creation(self, mock_ai_client, mock_cosmos_client, mock_managed_credential):
         """Test client creation in production environment."""
         mock_credential = MagicMock()
