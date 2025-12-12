@@ -50,13 +50,25 @@ class BIABPage(BasePage):
     TECH_SUPPORT = "//span[normalize-space()='Technical Support']"
     HR_HELPER = "//span[normalize-space()='HR Helper']"
     CANCEL_PLAN = "//button[normalize-space()='Yes']"
-
+    UNABLE_TO_CREATE_PLAN = "//span[normalize-space()='Unable to create plan. Please try again.']"
+    CANCEL_BUTTON = "//button[normalize-space()='Cancel']"
+    HOME_INPUT_TITLE_WRAPPER = "//div[@class='home-input-title-wrapper']"
+    SOURCE_TEXT = "//p[contains(text(),'source')]"
+    RAI_VALIDATION = "//span[normalize-space()='Failed to submit clarification']"
 
 
     def __init__(self, page):
         """Initialize the BIABPage with a Playwright page instance."""
         super().__init__(page)
         self.page = page
+
+    def reload_home_page(self):
+        """Reload the home page URL."""
+        from config.constants import URL
+        logger.info("Reloading home page...")
+        self.page.goto(URL)
+        self.page.wait_for_load_state("networkidle")
+        logger.info("✓ Home page reloaded successfully")
 
     def validate_home_page(self):
         """Validate that the home page elements are visible."""
@@ -490,5 +502,48 @@ class BIABPage(BasePage):
         logger.info("Waiting for plan processing to complete...")
         self.page.locator(self.PROCESSING_PLAN).wait_for(state="hidden", timeout=200000)
         logger.info("✓ Plan processing completed")
+
+    def validate_source_text_not_visible(self):
+        """Validate that the source text element is not visible."""
+        logger.info("Validating that source text is not visible...")
+        expect(self.page.locator(self.SOURCE_TEXT)).not_to_be_visible()
+        logger.info("✓ Source text is not visible")
+
+    def input_rai_prompt_and_send(self, prompt_text):
+        """Input RAI prompt text and click send button."""
+        logger.info("Starting RAI prompt input process...")
+        
+        logger.info(f"Typing RAI prompt: {prompt_text}")
+        self.page.locator(self.PROMPT_INPUT).fill(prompt_text)
+        self.page.wait_for_timeout(1000)
+        logger.info("✓ RAI prompt text entered")
+        
+        logger.info("Clicking Send button...")
+        self.page.locator(self.SEND_BUTTON).click()
+        self.page.wait_for_timeout(1000)
+        logger.info("✓ Send button clicked")
+
+    def validate_rai_error_message(self):
+        """Validate that the RAI 'Unable to create plan' error message is visible."""
+        logger.info("Validating RAI 'Unable to create plan' message is visible...")
+        expect(self.page.locator(self.UNABLE_TO_CREATE_PLAN)).to_be_visible(timeout=10000)
+        logger.info("✓ RAI 'Unable to create plan' message is visible")
+
+    def validate_rai_clarification_error_message(self):
+        """Validate that the RAI 'Failed to submit clarification' error message is visible."""
+        logger.info("Validating RAI 'Failed to submit clarification' message is visible...")
+        expect(self.page.locator(self.RAI_VALIDATION)).to_be_visible(timeout=10000)
+        logger.info("✓ RAI 'Failed to submit clarification' message is visible")
+
+    def click_cancel_button(self):
+        """Click on the Cancel button."""
+        logger.info("Clicking on 'Cancel' button...")
+        self.page.locator(self.CANCEL_BUTTON).click()
+        self.page.wait_for_timeout(2000)
+        logger.info("✓ 'Cancel' button clicked")
+
+    
+
+    
 
     
