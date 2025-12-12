@@ -70,10 +70,10 @@ const HomeInput: React.FC<HomeInputProps> = ({ selectedTeam }) => {
   const location = useLocation(); // ✅ location.state used to control focus
   const { showToast, dismissToast } = useInlineToaster();
 
-  // Check if the selected team is the Legal Contract Review Team
-  const isLegalTeam = selectedTeam?.name
+  // Check if the selected team is the  Contract Review Team
+  const isContractReviewTeam = selectedTeam?.name
     ?.toLowerCase()
-    .includes("legal contract");
+    .includes("contract review");
 
   useEffect(() => {
     if (location.state?.focusInput) {
@@ -195,7 +195,7 @@ const HomeInput: React.FC<HomeInputProps> = ({ selectedTeam }) => {
           </div>
 
           {/* Legal Disclaimer for Legal Contract Review Team */}
-          {isLegalTeam && (
+          {isContractReviewTeam && (
             <div
               style={{
                 color: "var(--colorNeutralForeground3)",
