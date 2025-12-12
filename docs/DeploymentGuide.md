@@ -614,22 +614,22 @@ To debug the MCP server by adding the following launch.json entry:
 ```
 ## Known Issues
 
-**Unable to update/add environment variables in Azure Container App**
+### Unable to update/add environment variables in Azure Container App
 
 You may encounter issues when attempting to modify environment variables or container configuration in Azure Container Apps:
 
-**Affected Scenarios:**
+#### Affected Scenarios:
 - **App Authentication Setup:** When adding authentication-related environment variables (CRUD operations on env variables)
 - **Container Configuration:** When trying to edit ACR name, image, or tag information for Container Apps
 
-**Root Cause:**
+#### Root Cause:
 This is an ongoing issue in Azure that affects the Azure Portal's ability to update Container Apps configurations.
 
-**Workaround - Use Azure CLI:**
+#### Workaround - Use Azure CLI:
 
 Until this issue is resolved, use Azure CLI commands to add or update environment variables and container configurations:
 
-**For Environment Variables:**
+##### For Environment Variables:
 ```bash
 # Update environment variables
 az containerapp update \
@@ -638,7 +638,7 @@ az containerapp update \
   --set-env-vars "KEY1=value1" "KEY2=value2"
 ```
 
-**For Container Image Updates:**
+##### For Container Image Updates:
 ```bash
 # Update container image
 az containerapp update \
