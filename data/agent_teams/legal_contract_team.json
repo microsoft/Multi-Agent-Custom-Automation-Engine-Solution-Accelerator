@@ -1,7 +1,7 @@
 {
   "id": "1",
   "team_id": "team-legal-1",
-  "name": "Legal Contract Review Team",
+  "name": "Contract Review Team",
   "status": "visible",
   "created": "",
   "created_by": "",
@@ -60,7 +60,7 @@
   "starting_tasks": [
     {
       "id": "task-1",
-      "name": "NDA Contract Review",
+      "name": "Contract Review",
       "prompt": "Review Contoso's NDA. Provide a summary (parties, date, term, governing law), assess risks (High/Medium/Low with clause references), audit compliance against company policy, and suggest edits for any issues.",
       "created": "",
       "creator": "",
