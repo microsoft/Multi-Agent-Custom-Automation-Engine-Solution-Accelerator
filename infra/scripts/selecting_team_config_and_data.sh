@@ -21,13 +21,21 @@ backendUrl=""
 storageAccount=""
 blobContainerForRetailCustomer=""
 blobContainerForRetailOrder=""
-blobContainerForRFP=""
-blobContainerForLegalContract=""
+blobContainerForRFPSummary=""
+blobContainerForRFPRisk=""
+blobContainerForRFPCompliance=""
+blobContainerForContractSummary=""
+blobContainerForContractRisk=""
+blobContainerForContractCompliance=""
 aiSearch=""
 aiSearchIndexForRetailCustomer=""
 aiSearchIndexForRetailOrder=""
-aiSearchIndexForRFP=""
-aiSearchIndexForLegalContract=""
+aiSearchIndexForRFPSummary=""
+aiSearchIndexForRFPRisk=""
+aiSearchIndexForRFPCompliance=""
+aiSearchIndexForContractSummary=""
+aiSearchIndexForContractRisk=""
+aiSearchIndexForContractCompliance=""
 azSubscriptionId=""
 
 function test_azd_installed() {
@@ -51,13 +59,21 @@ function get_values_from_azd_env() {
     storageAccount=$(azd env get-value AZURE_STORAGE_ACCOUNT_NAME)
     blobContainerForRetailCustomer=$(azd env get-value AZURE_STORAGE_CONTAINER_NAME_RETAIL_CUSTOMER)
     blobContainerForRetailOrder=$(azd env get-value AZURE_STORAGE_CONTAINER_NAME_RETAIL_ORDER)
-    blobContainerForRFP=$(azd env get-value AZURE_STORAGE_CONTAINER_NAME_RFP)
-    blobContainerForLegalContract=$(azd env get-value AZURE_STORAGE_CONTAINER_NAME_LEGAL_CONTRACT)
+    blobContainerForRFPSummary=$(azd env get-value AZURE_STORAGE_CONTAINER_NAME_RFP_SUMMARY)
+    blobContainerForRFPRisk=$(azd env get-value AZURE_STORAGE_CONTAINER_NAME_RFP_RISK)
+    blobContainerForRFPCompliance=$(azd env get-value AZURE_STORAGE_CONTAINER_NAME_RFP_COMPLIANCE)
+    blobContainerForContractSummary=$(azd env get-value AZURE_STORAGE_CONTAINER_NAME_CONTRACT_SUMMARY)
+    blobContainerForContractRisk=$(azd env get-value AZURE_STORAGE_CONTAINER_NAME_CONTRACT_RISK)
+    blobContainerForContractCompliance=$(azd env get-value AZURE_STORAGE_CONTAINER_NAME_CONTRACT_COMPLIANCE)
     aiSearch=$(azd env get-value AZURE_AI_SEARCH_NAME)
     aiSearchIndexForRetailCustomer=$(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_RETAIL_CUSTOMER)
     aiSearchIndexForRetailOrder=$(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_RETAIL_ORDER)
-    aiSearchIndexForRFP=$(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_RFP)
-    aiSearchIndexForLegalContract=$(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_LEGAL_CONTRACT)
+    aiSearchIndexForRFPSummary=$(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_RFP_SUMMARY)
+    aiSearchIndexForRFPRisk=$(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_RFP_RISK)
+    aiSearchIndexForRFPCompliance=$(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_RFP_COMPLIANCE)
+    aiSearchIndexForContractSummary=$(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_SUMMARY)
+    aiSearchIndexForContractRisk=$(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_RISK)
+    aiSearchIndexForContractCompliance=$(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_COMPLIANCE)
     ResourceGroup=$(azd env get-value AZURE_RESOURCE_GROUP)
     
     # Validate that we got all required values
@@ -93,12 +109,20 @@ function get_values_from_az_deployment() {
     storageAccount=$(echo "$deploymentOutputs" | jq -r '.azurE_STORAGE_ACCOUNT_NAME.value')
     blobContainerForRetailCustomer=$(echo "$deploymentOutputs" | jq -r '.azurE_STORAGE_CONTAINER_NAME_RETAIL_CUSTOMER.value')
     blobContainerForRetailOrder=$(echo "$deploymentOutputs" | jq -r '.azurE_STORAGE_CONTAINER_NAME_RETAIL_ORDER.value')
-    blobContainerForRFP=$(echo "$deploymentOutputs" | jq -r '.azurE_STORAGE_CONTAINER_NAME_RFP.value')
-    blobContainerForLegalContract=$(echo "$deploymentOutputs" | jq -r '.azurE_STORAGE_CONTAINER_NAME_LEGAL_CONTRACT.value')
+    blobContainerForRFPSummary=$(echo "$deploymentOutputs" | jq -r '.azurE_STORAGE_CONTAINER_NAME_RFP_SUMMARY.value')
+    blobContainerForRFPRisk=$(echo "$deploymentOutputs" | jq -r '.azurE_STORAGE_CONTAINER_NAME_RFP_RISK.value')
+    blobContainerForRFPCompliance=$(echo "$deploymentOutputs" | jq -r '.azurE_STORAGE_CONTAINER_NAME_RFP_COMPLIANCE.value')
+    blobContainerForContractSummary=$(echo "$deploymentOutputs" | jq -r '.azurE_STORAGE_CONTAINER_NAME_CONTRACT_SUMMARY.value')
+    blobContainerForContractRisk=$(echo "$deploymentOutputs" | jq -r '.azurE_STORAGE_CONTAINER_NAME_CONTRACT_RISK.value')
+    blobContainerForContractCompliance=$(echo "$deploymentOutputs" | jq -r '.azurE_STORAGE_CONTAINER_NAME_CONTRACT_COMPLIANCE.value')
     aiSearchIndexForRetailCustomer=$(echo "$deploymentOutputs" | jq -r '.azurE_AI_SEARCH_INDEX_NAME_RETAIL_CUSTOMER.value')
     aiSearchIndexForRetailOrder=$(echo "$deploymentOutputs" | jq -r '.azurE_AI_SEARCH_INDEX_NAME_RETAIL_ORDER.value')
-    aiSearchIndexForRFP=$(echo "$deploymentOutputs" | jq -r '.azurE_AI_SEARCH_INDEX_NAME_RFP.value')
-    aiSearchIndexForLegalContract=$(echo "$deploymentOutputs" | jq -r '.azurE_AI_SEARCH_INDEX_NAME_LEGAL_CONTRACT.value')
+    aiSearchIndexForRFPSummary=$(echo "$deploymentOutputs" | jq -r '.azurE_AI_SEARCH_INDEX_NAME_RFP_SUMMARY.value')
+    aiSearchIndexForRFPRisk=$(echo "$deploymentOutputs" | jq -r '.azurE_AI_SEARCH_INDEX_NAME_RFP_RISK.value')
+    aiSearchIndexForRFPCompliance=$(echo "$deploymentOutputs" | jq -r '.azurE_AI_SEARCH_INDEX_NAME_RFP_COMPLIANCE.value')
+    aiSearchIndexForContractSummary=$(echo "$deploymentOutputs" | jq -r '.azurE_AI_SEARCH_INDEX_NAME_CONTRACT_SUMMARY.value')
+    aiSearchIndexForContractRisk=$(echo "$deploymentOutputs" | jq -r '.azurE_AI_SEARCH_INDEX_NAME_CONTRACT_RISK.value')
+    aiSearchIndexForContractCompliance=$(echo "$deploymentOutputs" | jq -r '.azurE_AI_SEARCH_INDEX_NAME_CONTRACT_COMPLIANCE.value')
     aiSearch=$(echo "$deploymentOutputs" | jq -r '.azurE_AI_SEARCH_NAME.value')
     backendUrl=$(echo "$deploymentOutputs" | jq -r '.backenD_URL.value')
     
@@ -212,7 +236,7 @@ echo "1. RFP Evaluation"
 echo "2. Retail Customer Satisfaction"
 echo "3. HR Employee Onboarding"
 echo "4. Marketing Press Release"
-echo "5. Legal Contract Review"
+echo "5. Contract Compliance Review"
 echo "6. All"
 echo "==============================================="
 echo ""
@@ -248,9 +272,9 @@ while [[ "$useCaseValid" != true ]]; do
         echo "Selected: Marketing Press Release"
         echo "Note: If you choose to install a single use case, installation of other use cases will require re-running this script."
     elif [[ "$useCaseSelection" == "5" ]]; then
-        selectedUseCase="Legal Contract Review"
+        selectedUseCase="Contract Compliance Review"
         useCaseValid=true
-        echo "Selected: Legal Contract Review"
+        echo "Selected: Contract Compliance Review"
         echo "Note: If you choose to install a single use case, installation of other use cases will require re-running this script."
     else
         useCaseValid=false
@@ -405,10 +429,24 @@ if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "all" || "$useCaseSel
         isTeamConfigFailed=true
     fi
 
-    directoryPath="data/datasets/rfp"
+    directoryPath="data/datasets/rfp/summary"
     # Upload sample files to blob storage
     echo "Uploading sample files to blob storage for RFP Evaluation..."
-    if ! az storage blob upload-batch --account-name "$storageAccount" --destination "$blobContainerForRFP" --source "$directoryPath" --auth-mode login --pattern "*" --overwrite --output none; then
+    if ! az storage blob upload-batch --account-name "$storageAccount" --destination "$blobContainerForRFPSummary" --source "$directoryPath" --auth-mode login --pattern "*" --overwrite --output none; then
+        echo "Error: Failed to upload files to blob storage."
+        isSampleDataFailed=true
+        exit 1
+    fi
+
+    directoryPath="data/datasets/rfp/risk"
+    if ! az storage blob upload-batch --account-name "$storageAccount" --destination "$blobContainerForRFPRisk" --source "$directoryPath" --auth-mode login --pattern "*" --overwrite --output none; then
+        echo "Error: Failed to upload files to blob storage."
+        isSampleDataFailed=true
+        exit 1
+    fi
+
+    directoryPath="data/datasets/rfp/compliance"
+    if ! az storage blob upload-batch --account-name "$storageAccount" --destination "$blobContainerForRFPCompliance" --source "$directoryPath" --auth-mode login --pattern "*" --overwrite --output none; then
         echo "Error: Failed to upload files to blob storage."
         isSampleDataFailed=true
         exit 1
@@ -417,32 +455,61 @@ if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "all" || "$useCaseSel
 
     # Run the Python script to index data
     echo "Running the python script to index data for RFP Evaluation"
-    if $pythonCmd infra/scripts/index_datasets.py "$storageAccount" "$blobContainerForRFP" "$aiSearch" "$aiSearchIndexForRFP"; then
-        echo "Python script to index data for RFP Evaluation successfully executed."
+    if $pythonCmd infra/scripts/index_datasets.py "$storageAccount" "$blobContainerForRFPSummary" "$aiSearch" "$aiSearchIndexForRFPSummary"; then
+        echo "Python script to index data for RFP Summary successfully executed."
     else
-        echo "Error: Indexing python script execution failed."
+        echo "Error: Indexing python script execution failed for RFP Summary."
         isSampleDataFailed=true
     fi
+
+    if $pythonCmd infra/scripts/index_datasets.py "$storageAccount" "$blobContainerForRFPRisk" "$aiSearch" "$aiSearchIndexForRFPRisk"; then
+        echo "Python script to index data for RFP Risk successfully executed."
+    else
+        echo "Error: Indexing python script execution failed for RFP Risk."
+        isSampleDataFailed=true
+    fi
+
+    if $pythonCmd infra/scripts/index_datasets.py "$storageAccount" "$blobContainerForRFPCompliance" "$aiSearch" "$aiSearchIndexForRFPCompliance"; then
+        echo "Python script to index data for RFP Compliance successfully executed."
+    else
+        echo "Error: Indexing python script execution failed for RFP Compliance."
+        isSampleDataFailed=true
+    fi
+    echo "Python script to index data for RFP Evaluation successfully executed."
 fi
 
-# Use Case 5 - Legal Contract Review
+# Use Case 5 - Contract Compliance Review
 if [[ "$useCaseSelection" == "5" || "$useCaseSelection" == "all" || "$useCaseSelection" == "6" ]]; then
-    echo "Uploading Team Configuration for Legal Contract..."
+    echo "Uploading Team Configuration for Contract Compliance Review..."
     directoryPath="data/agent_teams"
     teamId="00000000-0000-0000-0000-000000000005"
     
     if $pythonCmd infra/scripts/upload_team_config.py "$backendUrl" "$directoryPath" "$userPrincipalId" "$teamId"; then
-        echo "Uploaded Team Configuration for Legal Contract..."
+        echo "Uploaded Team Configuration for Contract Compliance Review..."
     else
-        echo "Error: Team configuration for Legal Contract upload failed."
+        echo "Error: Team configuration for Contract Compliance Review upload failed."
         ((failedTeamConfigs++))
         isTeamConfigFailed=true
     fi
 
-    directoryPath="data/datasets/legal_contract"
+    directoryPath="data/datasets/contract_compliance/summary"
     # Upload sample files to blob storage
-    echo "Uploading sample files to blob storage for Legal Contract..."
-    if ! az storage blob upload-batch --account-name "$storageAccount" --destination "$blobContainerForLegalContract" --source "$directoryPath" --auth-mode login --pattern "*" --overwrite --output none; then
+    echo "Uploading sample files to blob storage for Contract Compliance Review..."
+    if ! az storage blob upload-batch --account-name "$storageAccount" --destination "$blobContainerForContractSummary" --source "$directoryPath" --auth-mode login --pattern "*" --overwrite --output none; then
+        echo "Error: Failed to upload files to blob storage."
+        isSampleDataFailed=true
+        exit 1
+    fi
+
+    directoryPath="data/datasets/contract_compliance/risk"
+    if ! az storage blob upload-batch --account-name "$storageAccount" --destination "$blobContainerForContractRisk" --source "$directoryPath" --auth-mode login --pattern "*" --overwrite --output none; then
+        echo "Error: Failed to upload files to blob storage."
+        isSampleDataFailed=true
+        exit 1
+    fi
+
+    directoryPath="data/datasets/contract_compliance/compliance"
+    if ! az storage blob upload-batch --account-name "$storageAccount" --destination "$blobContainerForContractCompliance" --source "$directoryPath" --auth-mode login --pattern "*" --overwrite --output none; then
         echo "Error: Failed to upload files to blob storage."
         isSampleDataFailed=true
         exit 1
@@ -450,13 +517,28 @@ if [[ "$useCaseSelection" == "5" || "$useCaseSelection" == "all" || "$useCaseSel
     echo "Files uploaded successfully to blob storage."
 
     # Run the Python script to index data
-    echo "Running the python script to index data for Legal Contract"
-    if $pythonCmd infra/scripts/index_datasets.py "$storageAccount" "$blobContainerForLegalContract" "$aiSearch" "$aiSearchIndexForLegalContract"; then
-        echo "Python script to index data for Legal Contract successfully executed."
+    echo "Running the python script to index data for Contract Compliance Review"
+    if $pythonCmd infra/scripts/index_datasets.py "$storageAccount" "$blobContainerForContractSummary" "$aiSearch" "$aiSearchIndexForContractSummary"; then
+        echo "Python script to index data for Contract Summary successfully executed."
     else
-        echo "Error: Indexing python script execution failed."
+        echo "Error: Indexing python script execution failed for Contract Summary."
         isSampleDataFailed=true
     fi
+
+    if $pythonCmd infra/scripts/index_datasets.py "$storageAccount" "$blobContainerForContractRisk" "$aiSearch" "$aiSearchIndexForContractRisk"; then
+        echo "Python script to index data for Contract Risk successfully executed."
+    else
+        echo "Error: Indexing python script execution failed for Contract Risk."
+        isSampleDataFailed=true
+    fi
+
+    if $pythonCmd infra/scripts/index_datasets.py "$storageAccount" "$blobContainerForContractCompliance" "$aiSearch" "$aiSearchIndexForContractCompliance"; then
+        echo "Python script to index data for Contract Compliance successfully executed."
+    else
+        echo "Error: Indexing python script execution failed for Contract Compliance."
+        isSampleDataFailed=true
+    fi
+    echo "Python script to index data for Contract Compliance Review successfully executed."
 fi
 
 # Use Case 2 - Retail Customer Satisfaction
