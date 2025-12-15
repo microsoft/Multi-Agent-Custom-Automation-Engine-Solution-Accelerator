@@ -228,8 +228,6 @@ const PlanPage: React.FC = () => {
         }, 100);
     }, []);
 
-    const [isProcessing, setIsProcessing] = useState<boolean>(false);
-    const [showProcessingMessage, setShowProcessingMessage] = useState<boolean>(false);
 
     //WebsocketMessageType.PLAN_APPROVAL_REQUEST
     useEffect(() => {
@@ -427,8 +425,6 @@ const PlanPage: React.FC = () => {
             setAgentMessages(prev => [...prev, errorAgentMessage]);
             setShowProcessingPlanSpinner(false);
             setShowBufferingText(false);
-            setIsProcessing(false);
-            setShowProcessingMessage(false);
             setSubmittingChatDisableInput(false);
             scrollToBottom();
             showToast(errorContent, "error");
@@ -583,8 +579,6 @@ const PlanPage: React.FC = () => {
     const handleApprovePlan = useCallback(async () => {
         if (!planApprovalRequest) return;
 
-        setIsProcessing(true);
-        setShowProcessingMessage(true);
         setProcessingApproval(true);
         let id = showToast("Submitting Approval", "progress");
 
@@ -599,15 +593,11 @@ const PlanPage: React.FC = () => {
             dismissToast(id);
             setShowProcessingPlanSpinner(true);
             setShowApprovalButtons(false);
-            setIsProcessing(false);
-            setShowProcessingMessage(false);
 
         } catch (error) {
             dismissToast(id);
             showToast("Failed to submit approval", "error");
             console.error('❌ Failed to approve plan:', error);
-            setIsProcessing(false);
-            setShowProcessingMessage(false);
         } finally {
             setProcessingApproval(false);
         }
