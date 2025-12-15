@@ -1,5 +1,7 @@
 """Messages from the backend to the frontend via WebSocket (agent_framework variant)."""
 
+from __future__ import annotations
+
 import time
 from dataclasses import asdict, dataclass, field
 from enum import Enum

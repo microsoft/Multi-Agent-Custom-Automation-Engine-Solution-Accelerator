@@ -7,8 +7,8 @@ import pytest
 backend_path = Path(__file__).parent.parent.parent / "backend"
 sys.path.insert(0, str(backend_path))
 
-from af.models.models import MPlan, MStep
-from af.orchestration.human_approval_manager import \
+from src.backend.v4.models.models import MPlan, MStep
+from src.backend.v4.orchestration.human_approval_manager import \
     HumanApprovalMagenticManager
 
 #

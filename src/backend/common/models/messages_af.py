@@ -197,17 +197,17 @@ class TeamConfiguration(BaseDataModel):
     created: str
     created_by: str
     deployment_name: str
-    agents: List[TeamAgent] = Field(default_factory=list)
+    agents: List["TeamAgent"] = Field(default_factory=list)
     description: str = ""
     logo: str = ""
     plan: str = ""
-    starting_tasks: List[StartingTask] = Field(default_factory=list)
+    starting_tasks: List["StartingTask"] = Field(default_factory=list)
     user_id: str  # who uploaded this configuration
 
 
 class PlanWithSteps(Plan):
     """Plan model that includes the associated steps."""
-    steps: List[Step] = Field(default_factory=list)
+    steps: List["Step"] = Field(default_factory=list)
     total_steps: int = 0
     planned: int = 0
     awaiting_feedback: int = 0

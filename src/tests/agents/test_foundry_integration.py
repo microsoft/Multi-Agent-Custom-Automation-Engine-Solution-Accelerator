@@ -8,6 +8,33 @@ import sys
 from pathlib import Path
 
 import pytest
+from unittest.mock import Mock, patch
+import sys
+import types
+
+# Mock comprehensive azure AI modules before any imports
+mock_azure_ai_projects = types.ModuleType('azure.ai.projects')
+mock_azure_ai_projects_models = types.ModuleType('azure.ai.projects.models')
+mock_azure_ai_projects_aio = types.ModuleType('azure.ai.projects.aio')
+
+# Add required classes to models
+mock_azure_ai_projects_models.MCPTool = type('MCPTool', (), {})
+mock_azure_ai_projects_models.AgentRunStreamEventType = type('AgentRunStreamEventType', (), {})
+mock_azure_ai_projects_models.RunStepDeltaToolCallObject = type('RunStepDeltaToolCallObject', (), {})
+mock_azure_ai_projects_models.PromptAgentDefinition = type('PromptAgentDefinition', (), {})
+mock_azure_ai_projects_models.PromptAgentDefinitionText = type('PromptAgentDefinitionText', (), {})
+
+# Add AIProjectClient to aio
+mock_azure_ai_projects_aio.AIProjectClient = type('AIProjectClient', (), {})
+
+# Wire up the module structure
+mock_azure_ai_projects.models = mock_azure_ai_projects_models
+mock_azure_ai_projects.aio = mock_azure_ai_projects_aio
+
+# Set up sys.modules
+sys.modules['azure.ai.projects'] = mock_azure_ai_projects
+sys.modules['azure.ai.projects.models'] = mock_azure_ai_projects_models  
+sys.modules['azure.ai.projects.aio'] = mock_azure_ai_projects_aio
 
 # Add the backend path to sys.path so we can import v4 modules
 backend_path = Path(__file__).parent.parent.parent / "backend"

@@ -4,9 +4,9 @@ Human Resources MCP tools service.
 
 from typing import Any, Dict
 
-from core.factory import Domain, MCPToolBase
-from utils.date_utils import format_date_for_user
-from utils.formatters import format_error_response, format_success_response
+from src.mcp_server.core.factory import Domain, MCPToolBase
+from src.mcp_server.utils.date_utils import format_date_for_user
+from src.mcp_server.utils.formatters import format_error_response, format_success_response
 
 
 class HRService(MCPToolBase):

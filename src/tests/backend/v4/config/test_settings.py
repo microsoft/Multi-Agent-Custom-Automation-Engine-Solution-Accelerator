@@ -6,9 +6,15 @@ Comprehensive test cases covering all configuration classes with proper mocking.
 import asyncio
 import json
 import os
+import sys
+import types
 import unittest
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock, Mock, patch
+
+# REMOVED: agent_framework and fastapi sys.modules pollution
+# This pollution was causing isinstance() failures across test files
+# Each test should use @patch decorators for its specific mocking needs
 
 # Set up required environment variables before any imports
 os.environ.update({
@@ -547,7 +553,7 @@ class TestConnectionConfig(IsolatedAsyncioTestCase):
         
         connection.send_text.assert_called_once()
         sent_data = json.loads(connection.send_text.call_args[0][0])
-        self.assertEqual(sent_data['type'], WebsocketMessageType.SYSTEM_MESSAGE)
+        self.assertEqual(sent_data['type'], "system_message")  # Compare with actual enum value string
         self.assertEqual(sent_data['data'], message)
 
     async def test_send_status_update_async_no_user_id(self):

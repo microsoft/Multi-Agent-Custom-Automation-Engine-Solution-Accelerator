@@ -8,9 +8,62 @@ bullet-style plan text into MPlan objects with agent assignment and action extra
 import unittest
 from unittest.mock import patch
 import re
+import logging
+import uuid
+from pathlib import Path
+from typing import Iterable, List, Optional
+from pydantic import BaseModel, Field
+from enum import Enum
 
-from v4.models.models import MPlan, MStep
-from v4.orchestration.helper.plan_to_mplan_converter import PlanToMPlanConverter
+# ===== Mock v4.models.models classes =====
+class PlanStatus(str, Enum):
+    CREATED = "created"
+    QUEUED = "queued"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+class MStep(BaseModel):
+    """model of a step in a plan"""
+    agent: str = ""
+    action: str = ""
+
+class MPlan(BaseModel):
+    """model of a plan"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str = ""
+    team_id: str = ""
+    plan_id: str = ""
+    overall_status: PlanStatus = PlanStatus.CREATED
+    user_request: str = ""
+    team: List[str] = []
+    facts: str = ""
+    steps: List["MStep"] = []
+
+# ===== Load PlanToMPlanConverter with exec() =====
+backend_path = Path(__file__).parent.parent.parent.parent.parent.parent / "backend"
+converter_file_path = backend_path / "v4" / "orchestration" / "helper" / "plan_to_mplan_converter.py"
+with open(converter_file_path, "r", encoding="utf-8") as f:
+    converter_code = f.read()
+
+# Replace v4 imports
+converter_code = converter_code.replace("from v4.models.models import MPlan, MStep", "# MPlan, MStep")
+
+# Create namespace with all dependencies
+converter_namespace = {
+    'logging': logging,
+    're': re,
+    'Iterable': Iterable,
+    'List': List,
+    'Optional': Optional,
+    'MPlan': MPlan,
+    'MStep': MStep,
+}
+
+# Execute the code to get PlanToMPlanConverter class
+exec(converter_code, converter_namespace)
+PlanToMPlanConverter = converter_namespace['PlanToMPlanConverter']
 
 
 class TestPlanToMPlanConverter(unittest.TestCase):

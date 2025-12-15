@@ -4,6 +4,7 @@ import sys
 import os
 from unittest.mock import Mock, patch, MagicMock, call
 import pytest
+from pathlib import Path
 
 # Add the backend directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'backend'))
@@ -24,7 +25,83 @@ os.environ.setdefault('COSMOSDB_CONTAINER', 'test_container')
 os.environ.setdefault('AZURE_CLIENT_ID', 'test_client_id')
 os.environ.setdefault('AZURE_TENANT_ID', 'test_tenant_id')
 
-from common.utils.otlp_tracing import configure_oltp_tracing
+# Mock opentelemetry modules before loading otlp_tracing
+class MockTracerProvider:
+    """Mock TracerProvider class."""
+    def __init__(self, *args, **kwargs):
+        """Accept any arguments to match real TracerProvider signature."""
+        pass
+        
+    def add_span_processor(self, processor):
+        pass
+
+class MockOTLPSpanExporter:
+    """Mock OTLPSpanExporter class."""
+    def __init__(self, *args, **kwargs):
+        pass
+
+class MockBatchSpanProcessor:
+    """Mock BatchSpanProcessor class."""
+    def __init__(self, *args, **kwargs):
+        pass
+
+class MockResource:
+    """Mock Resource class."""
+    def __init__(self, attributes=None):
+        self.attributes = attributes or {}
+
+class MockTrace:
+    """Mock trace module."""
+    TracerProvider = MockTracerProvider
+    
+    @staticmethod
+    def set_tracer_provider(provider):
+        pass
+
+# Load otlp_tracing module with mocked dependencies
+otlp_tracing_path = Path(__file__).parent.parent.parent.parent.parent / "backend" / "common" / "utils" / "otlp_tracing.py"
+otlp_tracing_code = otlp_tracing_path.read_text()
+
+# Replace opentelemetry imports
+otlp_tracing_code = otlp_tracing_code.replace(
+    "from opentelemetry import trace",
+    "# from opentelemetry import trace"
+)
+otlp_tracing_code = otlp_tracing_code.replace(
+    "from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter",
+    "# from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter"
+)
+otlp_tracing_code = otlp_tracing_code.replace(
+    "from opentelemetry.sdk.resources import Resource",
+    "# from opentelemetry.sdk.resources import Resource"
+)
+otlp_tracing_code = otlp_tracing_code.replace(
+    "from opentelemetry.sdk.trace import TracerProvider",
+    "# from opentelemetry.sdk.trace import TracerProvider"
+)
+otlp_tracing_code = otlp_tracing_code.replace(
+    "from opentelemetry.sdk.trace.export import BatchSpanProcessor",
+    "# from opentelemetry.sdk.trace.export import BatchSpanProcessor"
+)
+
+# Create a module object FIRST, then exec into it
+import types
+otlp_tracing_module = types.ModuleType("common.utils.otlp_tracing")
+otlp_tracing_module.trace = MockTrace
+otlp_tracing_module.OTLPSpanExporter = MockOTLPSpanExporter
+otlp_tracing_module.Resource = MockResource
+otlp_tracing_module.TracerProvider = MockTracerProvider
+otlp_tracing_module.BatchSpanProcessor = MockBatchSpanProcessor
+otlp_tracing_module.__file__ = str(otlp_tracing_path)
+
+# Execute the modified code with the module's __dict__ as both globals and locals
+exec(otlp_tracing_code, otlp_tracing_module.__dict__)
+
+# REMOVED: common.utils.otlp_tracing sys.modules pollution
+# This pollution was causing isinstance() failures across test files
+
+# Extract the function we need
+configure_oltp_tracing = otlp_tracing_module.configure_oltp_tracing
 
 
 class TestConfigureOltpTracing:

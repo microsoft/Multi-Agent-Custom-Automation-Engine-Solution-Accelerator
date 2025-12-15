@@ -28,6 +28,7 @@ from v4.callbacks.response_handlers import (
     agent_response_callback,
     streaming_agent_response_callback,
 )
+from v4.callbacks.global_debug import DebugGlobalAccess
 from v4.config.settings import connection_config, orchestration_config
 from v4.models.messages import WebsocketMessageType
 from v4.orchestration.human_approval_manager import HumanApprovalMagenticManager
@@ -42,6 +43,8 @@ class OrchestrationManager:
     def __init__(self):
         self.user_id: Optional[str] = None
         self.logger = self.__class__.logger
+        # Register this manager instance for debug access
+        DebugGlobalAccess.add_manager(self)
 
     # ---------------------------
     # Orchestration construction

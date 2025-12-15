@@ -14,17 +14,27 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..
 os.environ.setdefault('APPLICATIONINSIGHTS_CONNECTION_STRING', 'test_connection_string')
 os.environ.setdefault('APP_ENV', 'dev')
 
-from common.database.database_base import DatabaseBase
-from common.models.messages_af import (
-    AgentMessageData,
-    BaseDataModel,
-    CurrentTeamAgent,
-    Plan,
-    Step,
-    TeamConfiguration,
-    UserCurrentTeam,
-)
-import v4.models.messages as messages
+# Mock problematic Azure and v4 imports before importing the modules
+with patch.dict('sys.modules', {
+    'azure.identity': Mock(),
+    'azure.ai.projects.aio': Mock(),
+    'azure.cosmos': Mock(),
+    'v4.common.services.team_service': Mock(),
+    'v4.common.services.agents_service': Mock(),
+    'v4.common': Mock(),
+    'v4': Mock(),
+}):
+    from common.database.database_base import DatabaseBase
+    from common.models.messages_af import (
+        AgentMessageData,
+        BaseDataModel,
+        CurrentTeamAgent,
+        Plan,
+        Step,
+        TeamConfiguration,
+        UserCurrentTeam,
+    )
+    import v4.models.messages as messages
 
 
 class TestDatabaseBaseAbstractClass:

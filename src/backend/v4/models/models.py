@@ -32,4 +32,4 @@ class MPlan(BaseModel):
     user_request: str = ""
     team: List[str] = []
     facts: str = ""
-    steps: List[MStep] = []
+    steps: List["MStep"] = []

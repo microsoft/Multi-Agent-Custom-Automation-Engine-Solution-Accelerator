@@ -1,5 +1,7 @@
 """CosmosDB implementation of the database interface."""
 
+from __future__ import annotations
+
 import datetime
 import logging
 from typing import Any, Dict, List, Optional, Type
