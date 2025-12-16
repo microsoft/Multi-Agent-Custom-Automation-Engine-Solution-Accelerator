@@ -14,6 +14,7 @@ from agent_framework import (
 from agent_framework_azure_ai import AzureAIAgentClient
 from azure.ai.agents.aio import AgentsClient
 from azure.identity.aio import DefaultAzureCredential
+from common.config.app_config import config
 from common.database.database_base import DatabaseBase
 from common.models.messages_af import CurrentTeamAgent, TeamConfiguration
 from common.utils.utils_agents import (
@@ -59,11 +60,15 @@ class MCPEnabledBase:
         self.agent_instructions: str | None = agent_instructions
         self.model_deployment_name: str | None = model_deployment_name
         self.logger = logging.getLogger(__name__)
+        # Initialize project_client for RAI agent reuse (used in resolve_agent_id)
+        self.project_client = None
 
     async def open(self) -> "MCPEnabledBase":
         if self._stack is not None:
             return self
         self._stack = AsyncExitStack()
+
+        print('Hi I am niraj from lifecycle')
 
         # Acquire credential
         self.creds = DefaultAzureCredential()
@@ -76,6 +81,16 @@ class MCPEnabledBase:
         )
         if self._stack:
             await self._stack.enter_async_context(self.client)
+        
+        # Initialize project_client for RAI agent reuse (Projects SDK)
+        # This is used by resolve_agent_id to retrieve agents created via Projects SDK
+        if not self.project_client:
+            try:
+                self.project_client = config.get_ai_project_client()
+                self.logger.info("Initialized project_client for RAI agent reuse.")
+            except Exception as ex:
+                self.logger.warning("Failed to initialize project_client: %s", ex)
+        
         # Prepare MCP
         await self._prepare_mcp_tool()
 
@@ -149,6 +164,55 @@ class MCPEnabledBase:
         )
         return chat_client
 
+    async def resolve_agent_id(self, agent_id: str) -> Optional[str]:
+        """Resolve agent ID via Projects SDK first, fallback to AgentsClient.
+        
+        RAI agents are created via Projects SDK (project_client), so we try that first.
+        If that fails, fall back to the endpoint-based AgentsClient.
+        
+        Returns:
+            Resolved agent ID if found, None otherwise.
+        """
+        # Try Projects SDK first (for RAI agents created via project_client)
+        if hasattr(self, "project_client") and self.project_client:
+            try:
+                agent = await self.project_client.agents.get_agent(agent_id)
+                if agent and agent.id:
+                    self.logger.info(
+                        "RAI.AgentReuseSuccess: Resolved agent via Projects SDK (agent_id=%s)",
+                        agent.id,
+                    )
+                    return agent.id
+            except Exception as ex:
+                self.logger.warning(
+                    "RAI.AgentReuseMiss: Projects SDK get_agent failed (agent_id=%s): %s. Reason=ProjectsGetFailed",
+                    agent_id,
+                    ex,
+                )
+
+        # Fallback to AgentsClient (endpoint-based)
+        if self.client:
+            try:
+                agent = await self.client.get_agent(agent_id=agent_id)
+                if agent and agent.id:
+                    self.logger.info(
+                        "RAI.AgentReuseSuccess: Resolved agent via AgentsClient (agent_id=%s)",
+                        agent.id,
+                    )
+                    return agent.id
+            except Exception as ex:
+                self.logger.warning(
+                    "RAI.AgentReuseMiss: AgentsClient get_agent failed (agent_id=%s): %s. Reason=EndpointGetFailed",
+                    agent_id,
+                    ex,
+                )
+
+        self.logger.error(
+            "RAI.AgentReuseMiss: Could not resolve agent_id=%s via any client. Reason=ClientMismatch",
+            agent_id,
+        )
+        return None
+
     def get_agent_id(self, chat_client) -> str:
         """Return the underlying agent ID."""
         if chat_client and chat_client.agent_id is not None:
@@ -159,6 +223,17 @@ class MCPEnabledBase:
             and self._agent.chat_client.agent_id is not None
         ):
             return self._agent.chat_client.agent_id  # type: ignore
+        
+        # This should not happen if server-side agent creation is working properly
+        if self.agent_name and "RAI" in self.agent_name.upper():
+            self.logger.error(
+                "RAI.AgentReuseMiss: No valid agent_id found for RAI agent. Reason=NoValidChatClient (This indicates server-side agent creation failed)"
+            )
+            raise RuntimeError(
+                f"RAI agent '{self.agent_name}' has no valid agent_id. Server-side agent creation may have failed."
+            )
+        
+        # For non-RAI agents, continue normal flow
         id = generate_assistant_id()
         self.logger.info("Generated new agent ID: %s", id)
         return id
@@ -171,21 +246,73 @@ class MCPEnabledBase:
                 self.memory_store, self.team_config, self.agent_name
             )
 
-            if agent_id:
-                agent = await self.client.get_agent(agent_id=agent_id)
-                if agent and agent.id is not None:
-                    chat_client = AzureAIAgentClient(
-                        project_endpoint=self.project_endpoint,
-                        agent_id=agent.id,
-                        model_deployment_name=self.model_deployment_name,
-                        async_credential=self.creds,
-                    )
+            if not agent_id:
+                self.logger.info(
+                    "RAI.AgentReuseMiss: No stored agent_id found in database. Reason=NoStoredId (agent_name=%s)",
+                    self.agent_name,
+                )
+                return None
 
-        except (
-            Exception
-        ) as ex:  # Consider narrowing this to specific exceptions if possible
-            self.logger.error("Failed to initialize Get database team agent: %s", ex)
+            # Use resolve_agent_id for dual-client fallback (Projects SDK → AgentsClient)
+            resolved_id = await self.resolve_agent_id(agent_id)
+            if not resolved_id:
+                self.logger.error(
+                    "RAI.AgentReuseMiss: Stored agent_id=%s could not be resolved via any client. Clearing stale DB entry.",
+                    agent_id,
+                )
+                # Clear the stale agent ID from database so we can create a fresh one
+                try:
+                    await self._clear_stale_agent_from_db(agent_id)
+                except Exception as clear_ex:
+                    self.logger.warning("Failed to clear stale agent from DB: %s", clear_ex)
+                return None
+
+            # Create AzureAIAgentClient with resolved agent ID
+            # For RAI agents created via Projects SDK, use project_client if available
+            if hasattr(self, "project_client") and self.project_client:
+                chat_client = AzureAIAgentClient(
+                    project_client=self.project_client,
+                    agent_id=resolved_id,
+                    async_credential=self.creds,
+                )
+                self.logger.info(
+                    "RAI.AgentReuseSuccess: Created AzureAIAgentClient with Projects SDK (agent_id=%s)",
+                    resolved_id,
+                )
+            else:
+                # Fallback to endpoint-based client
+                chat_client = AzureAIAgentClient(
+                    project_endpoint=self.project_endpoint,
+                    agent_id=resolved_id,
+                    model_deployment_name=self.model_deployment_name,
+                    async_credential=self.creds,
+                )
+                self.logger.info(
+                    "RAI.AgentReuseSuccess: Created AzureAIAgentClient with endpoint (agent_id=%s)",
+                    resolved_id,
+                )
+
+        except Exception as ex:
+            self.logger.error(
+                "RAI.AgentReuseMiss: Failed to retrieve database team agent: %s. Reason=Exception",
+                ex,
+            )
         return chat_client
+
+    async def _clear_stale_agent_from_db(self, stale_agent_id: str) -> None:
+        """Clear a stale agent ID from the database."""
+        try:
+            # Note: This is a placeholder - the actual implementation depends on your DB API
+            # You may need to call a delete method on memory_store
+            self.logger.info(
+                "RAI: Clearing stale agent_id=%s from database for agent_name=%s",
+                stale_agent_id,
+                self.agent_name,
+            )
+            # If your DatabaseBase has a delete method, call it here
+            # await self.memory_store.delete_team_agent(self.team_config.team_id, self.agent_name)
+        except Exception as ex:
+            self.logger.error("Failed to clear stale agent from database: %s", ex)
 
     async def save_database_team_agent(self) -> None:
         """Save current team agent to database."""
@@ -193,6 +320,25 @@ class MCPEnabledBase:
             if self._agent.id is None:
                 self.logger.error("Cannot save database team agent: agent_id is None")
                 return
+
+            # Check if agent already exists in DB to prevent overwriting during reuse
+            stored_id = await get_database_team_agent_id(
+                self.memory_store, self.team_config, self.agent_name
+            )
+            
+            if stored_id == self._agent.id:
+                self.logger.info(
+                    "RAI.AgentReuseSuccess: Agent ID unchanged (agent_id=%s); skipping save to prevent overwrite.",
+                    self._agent.id,
+                )
+                return
+            
+            if stored_id and stored_id != self._agent.id:
+                self.logger.warning(
+                    "RAI: Overwriting existing agent_id=%s with new agent_id=%s (This may indicate reuse failure)",
+                    stored_id,
+                    self._agent.id,
+                )
 
             currentAgent = CurrentTeamAgent(
                 team_id=self.team_config.team_id,
@@ -203,6 +349,11 @@ class MCPEnabledBase:
                 agent_instructions=self.agent_instructions,
             )
             await self.memory_store.add_team_agent(currentAgent)
+            self.logger.info(
+                "RAI: Saved agent to database (agent_id=%s, agent_name=%s)",
+                self._agent.id,
+                self.agent_name,
+            )
 
         except Exception as ex:
             self.logger.error("Failed to save save database: %s", ex)
