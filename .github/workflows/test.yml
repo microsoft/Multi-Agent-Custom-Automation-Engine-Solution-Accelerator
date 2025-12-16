@@ -11,10 +11,10 @@ on:
       - 'src/backend/**/*.py'
       - 'src/tests/**/*.py'
       - 'src/mcp_server/**/*.py'
+      - 'src/**/pyproject.toml'
       - 'pytest.ini'
       - 'conftest.py'
       - 'src/backend/requirements.txt'
-      - 'pyproject.toml'
       - '.github/workflows/test.yml'
   pull_request:
     types:
@@ -34,7 +34,7 @@ on:
       - 'pytest.ini'
       - 'conftest.py'
       - 'src/backend/requirements.txt'
-      - 'pyproject.toml'
+      - 'src/**/pyproject.toml'
       - '.github/workflows/test.yml'
 
 jobs:
