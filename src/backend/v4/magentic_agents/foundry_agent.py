@@ -126,7 +126,7 @@ class FoundryAgentTemplate(AzureAgentBase):
                 instructions=self.agent_instructions,
                 description=self.agent_description if self.agent_description else "",
             )
-            
+
             self.logger.info(
                 "RAI: Created server-side agent (agent_id=%s, name=%s)",
                 azure_agent.id,
