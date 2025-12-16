@@ -10,7 +10,7 @@ metadata description = '''This module contains the resources required to deploy 
 @description('Optional. A unique application/solution name for all resources in this deployment. This should be 3-16 characters long.')
 @minLength(3)
 @maxLength(16)
-param solutionName string = 'macae1'
+param solutionName string = 'Macae1'
 
 @maxLength(5)
 @description('Optional. A unique text value for the solution. This is used to ensure resource names are unique for global resources. Defaults to a 5-character substring of the unique string generated from the subscription ID, resource group name, and solution name.')
