@@ -91,7 +91,11 @@ jobs:
       - name: Run tests(1)
         id: test1
         run: |
-            xvfb-run pytest --headed --html=report/report.html --self-contained-html
+          if [ "${{ inputs.TEST_SUITE }}" == "GoldenPath-Testing" ]; then
+            xvfb-run pytest -m gp --html=report/report.html --self-contained-html
+          else
+            xvfb-run pytest --html=report/report.html --self-contained-html
+          fi
         working-directory: tests/e2e-test
         continue-on-error: true
 
@@ -104,7 +108,11 @@ jobs:
         id: test2
         if: ${{ steps.test1.outcome == 'failure' }}
         run: |
-            xvfb-run pytest --headed --html=report/report.html --self-contained-html
+          if [ "${{ inputs.TEST_SUITE }}" == "GoldenPath-Testing" ]; then
+            xvfb-run pytest -m gp --html=report/report.html --self-contained-html
+          else
+            xvfb-run pytest --html=report/report.html --self-contained-html
+          fi
         working-directory: tests/e2e-test
         continue-on-error: true
 
@@ -117,7 +125,11 @@ jobs:
         id: test3
         if: ${{ steps.test2.outcome == 'failure' }}
         run: |
-            xvfb-run pytest --headed --html=report/report.html --self-contained-html
+          if [ "${{ inputs.TEST_SUITE }}" == "GoldenPath-Testing" ]; then
+            xvfb-run pytest -m gp --html=report/report.html --self-contained-html
+          else
+            xvfb-run pytest --html=report/report.html --self-contained-html
+          fi
         working-directory: tests/e2e-test
 
       - name: Upload test report
