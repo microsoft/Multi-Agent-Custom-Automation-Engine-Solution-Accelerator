@@ -5,6 +5,7 @@ import uuid
 from typing import Optional
 
 import v4.models.messages as messages
+from v4.models.messages import WebsocketMessageType
 from auth.auth_utils import get_authenticated_user_details
 from common.database.database_factory import DatabaseFactory
 from common.models.messages_af import (
