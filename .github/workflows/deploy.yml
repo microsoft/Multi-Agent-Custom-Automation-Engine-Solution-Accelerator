@@ -13,6 +13,11 @@ on:
       - 'infra/scripts/**'
       - '.github/workflows/deploy.yml'
   pull_request:
+    types:
+      - opened
+      - ready_for_review
+      - reopened
+      - synchronize
     branches:
       - main
       - dev-v3
