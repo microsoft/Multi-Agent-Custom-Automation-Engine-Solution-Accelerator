@@ -68,8 +68,6 @@ class MCPEnabledBase:
             return self
         self._stack = AsyncExitStack()
 
-        print('Hi I am niraj from lifecycle')
-
         # Acquire credential
         self.creds = DefaultAzureCredential()
         if self._stack:
@@ -81,7 +79,7 @@ class MCPEnabledBase:
         )
         if self._stack:
             await self._stack.enter_async_context(self.client)
-        
+
         # Initialize project_client for RAI agent reuse (Projects SDK)
         # This is used by resolve_agent_id to retrieve agents created via Projects SDK
         if not self.project_client:
@@ -90,7 +88,7 @@ class MCPEnabledBase:
                 self.logger.info("Initialized project_client for RAI agent reuse.")
             except Exception as ex:
                 self.logger.warning("Failed to initialize project_client: %s", ex)
-        
+
         # Prepare MCP
         await self._prepare_mcp_tool()
 
@@ -166,10 +164,10 @@ class MCPEnabledBase:
 
     async def resolve_agent_id(self, agent_id: str) -> Optional[str]:
         """Resolve agent ID via Projects SDK first, fallback to AgentsClient.
-        
+
         RAI agents are created via Projects SDK (project_client), so we try that first.
         If that fails, fall back to the endpoint-based AgentsClient.
-        
+
         Returns:
             Resolved agent ID if found, None otherwise.
         """
@@ -223,7 +221,7 @@ class MCPEnabledBase:
             and self._agent.chat_client.agent_id is not None
         ):
             return self._agent.chat_client.agent_id  # type: ignore
-        
+
         # This should not happen if server-side agent creation is working properly
         if self.agent_name and "RAI" in self.agent_name.upper():
             self.logger.error(
@@ -232,7 +230,7 @@ class MCPEnabledBase:
             raise RuntimeError(
                 f"RAI agent '{self.agent_name}' has no valid agent_id. Server-side agent creation may have failed."
             )
-        
+
         # For non-RAI agents, continue normal flow
         id = generate_assistant_id()
         self.logger.info("Generated new agent ID: %s", id)
@@ -325,14 +323,14 @@ class MCPEnabledBase:
             stored_id = await get_database_team_agent_id(
                 self.memory_store, self.team_config, self.agent_name
             )
-            
+
             if stored_id == self._agent.id:
                 self.logger.info(
                     "RAI.AgentReuseSuccess: Agent ID unchanged (agent_id=%s); skipping save to prevent overwrite.",
                     self._agent.id,
                 )
                 return
-            
+
             if stored_id and stored_id != self._agent.id:
                 self.logger.warning(
                     "RAI: Overwriting existing agent_id=%s with new agent_id=%s (This may indicate reuse failure)",

@@ -114,7 +114,7 @@ class FoundryAgentTemplate(AzureAgentBase):
         """
         Create a server-side Azure AI agent for MCP/RAI path.
         This ensures the agent exists on the server and can be reused.
-        
+
         Returns:
             AzureAIAgentClient with server-created agent ID, or None on failure.
         """
@@ -132,7 +132,7 @@ class FoundryAgentTemplate(AzureAgentBase):
                 azure_agent.id,
                 self.agent_name,
             )
-            
+
             # Create client with server-generated agent ID
             chat_client = AzureAIAgentClient(
                 project_client=self.project_client,
@@ -140,7 +140,7 @@ class FoundryAgentTemplate(AzureAgentBase):
                 async_credential=self.creds,
             )
             return chat_client
-            
+
         except Exception as ex:
             self.logger.error(
                 "RAI: Failed to create server-side agent (name=%s): %s",
@@ -302,7 +302,7 @@ class FoundryAgentTemplate(AzureAgentBase):
                 # use MCP path
                 self.logger.info("Initializing agent in MCP mode.")
                 tools = await self._collect_tools()
-                
+
                 # For RAI agents (no chatClient), create server-side agent first
                 if not chatClient:
                     chat_client = await self._create_mcp_agent_on_server()
@@ -310,7 +310,7 @@ class FoundryAgentTemplate(AzureAgentBase):
                         raise RuntimeError("Failed to create RAI agent on server.")
                 else:
                     chat_client = chatClient
-                
+
                 self._agent = ChatAgent(
                     id=self.get_agent_id(chat_client),
                     chat_client=self.get_chat_client(chat_client),
