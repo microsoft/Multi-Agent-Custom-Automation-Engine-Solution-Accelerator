@@ -86,6 +86,19 @@ function get_values_from_azd_env() {
     return 0
 }
 
+# Helper function to extract value with fallback
+extract_value() {
+    local primary_key="$1"
+    local fallback_key="$2"
+    local result
+    
+    result=$(echo "$deploymentOutputs" | grep -A 3 "\"$primary_key\"" | grep '"value"' | sed 's/.*"value": *"\([^"]*\)".*/\1/')
+    if [ -z "$result" ]; then
+        result=$(echo "$deploymentOutputs" | grep -A 3 "\"$fallback_key\"" | grep '"value"' | sed 's/.*"value": *"\([^"]*\)".*/\1/')
+    fi
+    echo "$result"
+}
+
 function get_values_from_az_deployment() {
     echo "Getting values from Azure deployment outputs..."
     
@@ -105,26 +118,26 @@ function get_values_from_az_deployment() {
         return 1
     fi
     
-    # Extract specific outputs using jq
-    storageAccount=$(echo "$deploymentOutputs" | jq -r '.azurE_STORAGE_ACCOUNT_NAME.value')
-    blobContainerForRetailCustomer=$(echo "$deploymentOutputs" | jq -r '.azurE_STORAGE_CONTAINER_NAME_RETAIL_CUSTOMER.value')
-    blobContainerForRetailOrder=$(echo "$deploymentOutputs" | jq -r '.azurE_STORAGE_CONTAINER_NAME_RETAIL_ORDER.value')
-    blobContainerForRFPSummary=$(echo "$deploymentOutputs" | jq -r '.azurE_STORAGE_CONTAINER_NAME_RFP_SUMMARY.value')
-    blobContainerForRFPRisk=$(echo "$deploymentOutputs" | jq -r '.azurE_STORAGE_CONTAINER_NAME_RFP_RISK.value')
-    blobContainerForRFPCompliance=$(echo "$deploymentOutputs" | jq -r '.azurE_STORAGE_CONTAINER_NAME_RFP_COMPLIANCE.value')
-    blobContainerForContractSummary=$(echo "$deploymentOutputs" | jq -r '.azurE_STORAGE_CONTAINER_NAME_CONTRACT_SUMMARY.value')
-    blobContainerForContractRisk=$(echo "$deploymentOutputs" | jq -r '.azurE_STORAGE_CONTAINER_NAME_CONTRACT_RISK.value')
-    blobContainerForContractCompliance=$(echo "$deploymentOutputs" | jq -r '.azurE_STORAGE_CONTAINER_NAME_CONTRACT_COMPLIANCE.value')
-    aiSearchIndexForRetailCustomer=$(echo "$deploymentOutputs" | jq -r '.azurE_AI_SEARCH_INDEX_NAME_RETAIL_CUSTOMER.value')
-    aiSearchIndexForRetailOrder=$(echo "$deploymentOutputs" | jq -r '.azurE_AI_SEARCH_INDEX_NAME_RETAIL_ORDER.value')
-    aiSearchIndexForRFPSummary=$(echo "$deploymentOutputs" | jq -r '.azurE_AI_SEARCH_INDEX_NAME_RFP_SUMMARY.value')
-    aiSearchIndexForRFPRisk=$(echo "$deploymentOutputs" | jq -r '.azurE_AI_SEARCH_INDEX_NAME_RFP_RISK.value')
-    aiSearchIndexForRFPCompliance=$(echo "$deploymentOutputs" | jq -r '.azurE_AI_SEARCH_INDEX_NAME_RFP_COMPLIANCE.value')
-    aiSearchIndexForContractSummary=$(echo "$deploymentOutputs" | jq -r '.azurE_AI_SEARCH_INDEX_NAME_CONTRACT_SUMMARY.value')
-    aiSearchIndexForContractRisk=$(echo "$deploymentOutputs" | jq -r '.azurE_AI_SEARCH_INDEX_NAME_CONTRACT_RISK.value')
-    aiSearchIndexForContractCompliance=$(echo "$deploymentOutputs" | jq -r '.azurE_AI_SEARCH_INDEX_NAME_CONTRACT_COMPLIANCE.value')
-    aiSearch=$(echo "$deploymentOutputs" | jq -r '.azurE_AI_SEARCH_NAME.value')
-    backendUrl=$(echo "$deploymentOutputs" | jq -r '.backenD_URL.value')
+    # Extract all values using the helper function
+    storageAccount=$(extract_value "azurE_STORAGE_ACCOUNT_NAME" "azureStorageAccountName")
+    blobContainerForRetailCustomer=$(extract_value "azurE_STORAGE_CONTAINER_NAME_RETAIL_CUSTOMER" "azureStorageContainerNameRetailCustomer")
+    blobContainerForRetailOrder=$(extract_value "azurE_STORAGE_CONTAINER_NAME_RETAIL_ORDER" "azureStorageContainerNameRetailOrder")
+    blobContainerForRFPSummary=$(extract_value "azurE_STORAGE_CONTAINER_NAME_RFP_SUMMARY" "azureStorageContainerNameRfpSummary")
+    blobContainerForRFPRisk=$(extract_value "azurE_STORAGE_CONTAINER_NAME_RFP_RISK" "azureStorageContainerNameRfpRisk")
+    blobContainerForRFPCompliance=$(extract_value "azurE_STORAGE_CONTAINER_NAME_RFP_COMPLIANCE" "azureStorageContainerNameRfpCompliance")
+    blobContainerForContractSummary=$(extract_value "azurE_STORAGE_CONTAINER_NAME_CONTRACT_SUMMARY" "azureStorageContainerNameContractSummary")
+    blobContainerForContractRisk=$(extract_value "azurE_STORAGE_CONTAINER_NAME_CONTRACT_RISK" "azureStorageContainerNameContractRisk")
+    blobContainerForContractCompliance=$(extract_value "azurE_STORAGE_CONTAINER_NAME_CONTRACT_COMPLIANCE" "azureStorageContainerNameContractCompliance")
+    aiSearchIndexForRetailCustomer=$(extract_value "azurE_AI_SEARCH_INDEX_NAME_RETAIL_CUSTOMER" "azureAiSearchIndexNameRetailCustomer")
+    aiSearchIndexForRetailOrder=$(extract_value "azurE_AI_SEARCH_INDEX_NAME_RETAIL_ORDER" "azureAiSearchIndexNameRetailOrder")
+    aiSearchIndexForRFPSummary=$(extract_value "azurE_AI_SEARCH_INDEX_NAME_RFP_SUMMARY" "azureAiSearchIndexNameRfpSummary")
+    aiSearchIndexForRFPRisk=$(extract_value "azurE_AI_SEARCH_INDEX_NAME_RFP_RISK" "azureAiSearchIndexNameRfpRisk")
+    aiSearchIndexForRFPCompliance=$(extract_value "azurE_AI_SEARCH_INDEX_NAME_RFP_COMPLIANCE" "azureAiSearchIndexNameRfpCompliance")
+    aiSearchIndexForContractSummary=$(extract_value "azurE_AI_SEARCH_INDEX_NAME_CONTRACT_SUMMARY" "azureAiSearchIndexNameContractSummary")
+    aiSearchIndexForContractRisk=$(extract_value "azurE_AI_SEARCH_INDEX_NAME_CONTRACT_RISK" "azureAiSearchIndexNameContractRisk")
+    aiSearchIndexForContractCompliance=$(extract_value "azurE_AI_SEARCH_INDEX_NAME_CONTRACT_COMPLIANCE" "azureAiSearchIndexNameContractCompliance")
+    aiSearch=$(extract_value "azurE_AI_SEARCH_NAME" "azureAiSearchName")
+    backendUrl=$(extract_value "backenD_URL" "backendUrl")
     
     # Validate that we extracted all required values
     if [[ -z "$storageAccount" || -z "$aiSearch" || -z "$backendUrl" ]]; then

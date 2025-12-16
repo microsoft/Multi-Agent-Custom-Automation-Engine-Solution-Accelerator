@@ -76,6 +76,28 @@ function Get-ValuesFromAzdEnv {
     return $true
 }
 
+function Get-DeploymentValue {
+    param(
+        [object]$DeploymentOutputs,
+        [string]$PrimaryKey,
+        [string]$FallbackKey
+    )
+    
+    $value = $null
+    
+    # Try primary key first
+    if ($DeploymentOutputs.PSObject.Properties[$PrimaryKey]) {
+        $value = $DeploymentOutputs.$PrimaryKey.value
+    }
+    
+    # If primary key failed, try fallback key
+    if (-not $value -and $DeploymentOutputs.PSObject.Properties[$FallbackKey]) {
+        $value = $DeploymentOutputs.$FallbackKey.value
+    }
+    
+    return $value
+}
+
 function Get-ValuesFromAzDeployment {
     Write-Host "Getting values from Azure deployment outputs..."
     
@@ -95,30 +117,29 @@ function Get-ValuesFromAzDeployment {
         return $false
     }
     
-    # Extract specific outputs
-    $script:storageAccount = $deploymentOutputs.azurE_STORAGE_ACCOUNT_NAME.value
-    # $script:blobContainer = $deploymentOutputs.azurE_STORAGE_CONTAINER_NAME.value
-    $script:blobContainerForRetailCustomer = $deploymentOutputs.azurE_STORAGE_CONTAINER_NAME_RETAIL_CUSTOMER.value
-    $script:blobContainerForRetailOrder = $deploymentOutputs.azurE_STORAGE_CONTAINER_NAME_RETAIL_ORDER.value
-    $script:blobContainerForRFPSummary = $deploymentOutputs.azurE_STORAGE_CONTAINER_NAME_RFP_SUMMARY.value
-    $script:blobContainerForRFPRisk = $deploymentOutputs.azurE_STORAGE_CONTAINER_NAME_RFP_RISK.value
-    $script:blobContainerForRFPCompliance = $deploymentOutputs.azurE_STORAGE_CONTAINER_NAME_RFP_COMPLIANCE.value
-    $script:blobContainerForContractSummary = $deploymentOutputs.azurE_STORAGE_CONTAINER_NAME_CONTRACT_SUMMARY.value
-    $script:blobContainerForContractRisk = $deploymentOutputs.azurE_STORAGE_CONTAINER_NAME_CONTRACT_RISK.value
-    $script:blobContainerForContractCompliance = $deploymentOutputs.azurE_STORAGE_CONTAINER_NAME_CONTRACT_COMPLIANCE.value
-    $script:aiSearchIndexForRetailCustomer = $deploymentOutputs.azurE_AI_SEARCH_INDEX_NAME_RETAIL_CUSTOMER.value
-    $script:aiSearchIndexForRetailOrder = $deploymentOutputs.azurE_AI_SEARCH_INDEX_NAME_RETAIL_ORDER.value
-    $script:aiSearchIndexForRFPSummary = $deploymentOutputs.azurE_AI_SEARCH_INDEX_NAME_RFP_SUMMARY.value
-    $script:aiSearchIndexForRFPRisk = $deploymentOutputs.azurE_AI_SEARCH_INDEX_NAME_RFP_RISK.value
-    $script:aiSearchIndexForRFPCompliance = $deploymentOutputs.azurE_AI_SEARCH_INDEX_NAME_RFP_COMPLIANCE.value
-    $script:aiSearchIndexForContractSummary = $deploymentOutputs.azurE_AI_SEARCH_INDEX_NAME_CONTRACT_SUMMARY.value
-    $script:aiSearchIndexForContractRisk = $deploymentOutputs.azurE_AI_SEARCH_INDEX_NAME_CONTRACT_RISK.value
-    $script:aiSearchIndexForContractCompliance = $deploymentOutputs.azurE_AI_SEARCH_INDEX_NAME_CONTRACT_COMPLIANCE.value
-    $script:aiSearch = $deploymentOutputs.azurE_AI_SEARCH_NAME.value
-    $script:backendUrl = $deploymentOutputs.backenD_URL.value
+    # Extract specific outputs with fallback logic
+    $script:storageAccount = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_STORAGE_ACCOUNT_NAME" -FallbackKey "azureStorageAccountName"
+    $script:blobContainerForRetailCustomer = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_STORAGE_CONTAINER_NAME_RETAIL_CUSTOMER" -FallbackKey "azureStorageContainerNameRetailCustomer"
+    $script:blobContainerForRetailOrder = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_STORAGE_CONTAINER_NAME_RETAIL_ORDER" -FallbackKey "azureStorageContainerNameRetailOrder"
+    $script:blobContainerForRFPSummary = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_STORAGE_CONTAINER_NAME_RFP_SUMMARY" -FallbackKey "azureStorageContainerNameRfpSummary"
+    $script:blobContainerForRFPRisk = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_STORAGE_CONTAINER_NAME_RFP_RISK" -FallbackKey "azureStorageContainerNameRfpRisk"
+    $script:blobContainerForRFPCompliance = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_STORAGE_CONTAINER_NAME_RFP_COMPLIANCE" -FallbackKey "azureStorageContainerNameRfpCompliance"
+    $script:blobContainerForContractSummary = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_STORAGE_CONTAINER_NAME_CONTRACT_SUMMARY" -FallbackKey "azureStorageContainerNameContractSummary"
+    $script:blobContainerForContractRisk = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_STORAGE_CONTAINER_NAME_CONTRACT_RISK" -FallbackKey "azureStorageContainerNameContractRisk"
+    $script:blobContainerForContractCompliance = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_STORAGE_CONTAINER_NAME_CONTRACT_COMPLIANCE" -FallbackKey "azureStorageContainerNameContractCompliance"
+    $script:aiSearchIndexForRetailCustomer = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_INDEX_NAME_RETAIL_CUSTOMER" -FallbackKey "azureAiSearchIndexNameRetailCustomer"
+    $script:aiSearchIndexForRetailOrder = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_INDEX_NAME_RETAIL_ORDER" -FallbackKey "azureAiSearchIndexNameRetailOrder"
+    $script:aiSearchIndexForRFPSummary = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_INDEX_NAME_RFP_SUMMARY" -FallbackKey "azureAiSearchIndexNameRfpSummary"
+    $script:aiSearchIndexForRFPRisk = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_INDEX_NAME_RFP_RISK" -FallbackKey "azureAiSearchIndexNameRfpRisk"
+    $script:aiSearchIndexForRFPCompliance = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_INDEX_NAME_RFP_COMPLIANCE" -FallbackKey "azureAiSearchIndexNameRfpCompliance"
+    $script:aiSearchIndexForContractSummary = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_INDEX_NAME_CONTRACT_SUMMARY" -FallbackKey "azureAiSearchIndexNameContractSummary"
+    $script:aiSearchIndexForContractRisk = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_INDEX_NAME_CONTRACT_RISK" -FallbackKey "azureAiSearchIndexNameContractRisk"
+    $script:aiSearchIndexForContractCompliance = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_INDEX_NAME_CONTRACT_COMPLIANCE" -FallbackKey "azureAiSearchIndexNameContractCompliance"
+    $script:aiSearch = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_NAME" -FallbackKey "azureAiSearchName"
+    $script:backendUrl = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "backenD_URL" -FallbackKey "backendUrl"
     
     # Validate that we extracted all required values
-    if (-not $script:storageAccount -or -not $script:blobContainer -or -not $script:aiSearch -or -not $script:aiSearchIndex -or -not $script:backendUrl) {
+    if (-not $script:storageAccount -or -not $script:aiSearch -or -not $script:backendUrl) {
         Write-Host "Error: Could not extract all required values from deployment outputs."
         return $false
     }
