@@ -1598,9 +1598,6 @@ param storageContainerNameRetailOrder string = 'retail-dataset-order'
 param storageContainerNameRFPSummary string = 'rfp-summary-dataset'
 param storageContainerNameRFPRisk string = 'rfp-risk-dataset'
 param storageContainerNameRFPCompliance string = 'rfp-compliance-dataset'
-param storageContainerNameContractSummary string = 'contract-summary-dataset'
-param storageContainerNameContractRisk string = 'contract-risk-dataset'
-param storageContainerNameContractCompliance string = 'contract-compliance-dataset'
 module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
   name: take('avm.res.storage.storage-account.${storageAccountName}', 64)
   params: {
@@ -1678,18 +1675,7 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
           name: storageContainerNameRFPCompliance
           publicAccess: 'None'
         }
-        {
-          name: storageContainerNameContractSummary
-          publicAccess: 'None'
-        }
-        {
-          name: storageContainerNameContractRisk
-          publicAccess: 'None'
-        }
-        {
-          name: storageContainerNameContractCompliance
-          publicAccess: 'None'
-        }
+        
       ]
       deleteRetentionPolicyDays: 9
       deleteRetentionPolicyEnabled: true
@@ -1702,9 +1688,6 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
 
 var searchServiceName = 'srch-${solutionSuffix}'
 var aiSearchIndexName = 'sample-dataset-index'
-var aiSearchIndexNameForContractSummary = 'contract-summary-doc-index'
-var aiSearchIndexNameForContractRisk = 'contract-risk-doc-index'
-var aiSearchIndexNameForContractCompliance = 'contract-compliance-doc-index'
 var aiSearchIndexNameForRetailCustomer = 'macae-retail-customer-index'
 var aiSearchIndexNameForRetailOrder = 'macae-retail-order-index'
 var aiSearchIndexNameForRFPSummary = 'macae-rfp-summary-index'
@@ -1917,17 +1900,11 @@ output AZURE_STORAGE_CONTAINER_NAME_RETAIL_ORDER string = storageContainerNameRe
 output AZURE_STORAGE_CONTAINER_NAME_RFP_SUMMARY string = storageContainerNameRFPSummary
 output AZURE_STORAGE_CONTAINER_NAME_RFP_RISK string = storageContainerNameRFPRisk
 output AZURE_STORAGE_CONTAINER_NAME_RFP_COMPLIANCE string = storageContainerNameRFPCompliance
-output AZURE_STORAGE_CONTAINER_NAME_CONTRACT_SUMMARY string = storageContainerNameContractSummary
-output AZURE_STORAGE_CONTAINER_NAME_CONTRACT_RISK string = storageContainerNameContractRisk
-output AZURE_STORAGE_CONTAINER_NAME_CONTRACT_COMPLIANCE string = storageContainerNameContractCompliance
 output AZURE_AI_SEARCH_INDEX_NAME_RETAIL_CUSTOMER string = aiSearchIndexNameForRetailCustomer
 output AZURE_AI_SEARCH_INDEX_NAME_RETAIL_ORDER string = aiSearchIndexNameForRetailOrder
 output AZURE_AI_SEARCH_INDEX_NAME_RFP_SUMMARY string = aiSearchIndexNameForRFPSummary
 output AZURE_AI_SEARCH_INDEX_NAME_RFP_RISK string = aiSearchIndexNameForRFPRisk
 output AZURE_AI_SEARCH_INDEX_NAME_RFP_COMPLIANCE string = aiSearchIndexNameForRFPCompliance
-output AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_SUMMARY string = aiSearchIndexNameForContractSummary
-output AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_RISK string = aiSearchIndexNameForContractRisk
-output AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_COMPLIANCE string = aiSearchIndexNameForContractCompliance
 
 // Container Registry Outputs
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerRegistry.outputs.loginServer
