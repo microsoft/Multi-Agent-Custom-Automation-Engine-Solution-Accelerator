@@ -30,8 +30,8 @@ on:
       - 'infra/*.parameters.json'
       - 'infra/scripts/**'
       - '.github/workflows/deploy.yml'
-      - 'azure.yml'
-      - 'azure_custom.yml'
+      - 'azure.yaml'
+      - 'azure_custom.yaml'
   workflow_run:
     workflows: ["Build Docker and Optional Push v3"]
     types:
