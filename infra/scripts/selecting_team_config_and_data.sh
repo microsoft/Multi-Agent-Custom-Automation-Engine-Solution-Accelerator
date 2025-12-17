@@ -24,18 +24,14 @@ blobContainerForRetailOrder=""
 blobContainerForRFPSummary=""
 blobContainerForRFPRisk=""
 blobContainerForRFPCompliance=""
-blobContainerForContractSummary=""
-blobContainerForContractRisk=""
-blobContainerForContractCompliance=""
+
 aiSearch=""
 aiSearchIndexForRetailCustomer=""
 aiSearchIndexForRetailOrder=""
 aiSearchIndexForRFPSummary=""
 aiSearchIndexForRFPRisk=""
 aiSearchIndexForRFPCompliance=""
-aiSearchIndexForContractSummary=""
-aiSearchIndexForContractRisk=""
-aiSearchIndexForContractCompliance=""
+
 azSubscriptionId=""
 
 function test_azd_installed() {
@@ -62,18 +58,14 @@ function get_values_from_azd_env() {
     blobContainerForRFPSummary=$(azd env get-value AZURE_STORAGE_CONTAINER_NAME_RFP_SUMMARY)
     blobContainerForRFPRisk=$(azd env get-value AZURE_STORAGE_CONTAINER_NAME_RFP_RISK)
     blobContainerForRFPCompliance=$(azd env get-value AZURE_STORAGE_CONTAINER_NAME_RFP_COMPLIANCE)
-    blobContainerForContractSummary=$(azd env get-value AZURE_STORAGE_CONTAINER_NAME_CONTRACT_SUMMARY)
-    blobContainerForContractRisk=$(azd env get-value AZURE_STORAGE_CONTAINER_NAME_CONTRACT_RISK)
-    blobContainerForContractCompliance=$(azd env get-value AZURE_STORAGE_CONTAINER_NAME_CONTRACT_COMPLIANCE)
+
     aiSearch=$(azd env get-value AZURE_AI_SEARCH_NAME)
     aiSearchIndexForRetailCustomer=$(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_RETAIL_CUSTOMER)
     aiSearchIndexForRetailOrder=$(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_RETAIL_ORDER)
     aiSearchIndexForRFPSummary=$(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_RFP_SUMMARY)
     aiSearchIndexForRFPRisk=$(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_RFP_RISK)
     aiSearchIndexForRFPCompliance=$(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_RFP_COMPLIANCE)
-    aiSearchIndexForContractSummary=$(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_SUMMARY)
-    aiSearchIndexForContractRisk=$(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_RISK)
-    aiSearchIndexForContractCompliance=$(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_COMPLIANCE)
+
     ResourceGroup=$(azd env get-value AZURE_RESOURCE_GROUP)
     
     # Validate that we got all required values
@@ -125,17 +117,13 @@ function get_values_from_az_deployment() {
     blobContainerForRFPSummary=$(extract_value "azurE_STORAGE_CONTAINER_NAME_RFP_SUMMARY" "azureStorageContainerNameRfpSummary")
     blobContainerForRFPRisk=$(extract_value "azurE_STORAGE_CONTAINER_NAME_RFP_RISK" "azureStorageContainerNameRfpRisk")
     blobContainerForRFPCompliance=$(extract_value "azurE_STORAGE_CONTAINER_NAME_RFP_COMPLIANCE" "azureStorageContainerNameRfpCompliance")
-    blobContainerForContractSummary=$(extract_value "azurE_STORAGE_CONTAINER_NAME_CONTRACT_SUMMARY" "azureStorageContainerNameContractSummary")
-    blobContainerForContractRisk=$(extract_value "azurE_STORAGE_CONTAINER_NAME_CONTRACT_RISK" "azureStorageContainerNameContractRisk")
-    blobContainerForContractCompliance=$(extract_value "azurE_STORAGE_CONTAINER_NAME_CONTRACT_COMPLIANCE" "azureStorageContainerNameContractCompliance")
+
     aiSearchIndexForRetailCustomer=$(extract_value "azurE_AI_SEARCH_INDEX_NAME_RETAIL_CUSTOMER" "azureAiSearchIndexNameRetailCustomer")
     aiSearchIndexForRetailOrder=$(extract_value "azurE_AI_SEARCH_INDEX_NAME_RETAIL_ORDER" "azureAiSearchIndexNameRetailOrder")
     aiSearchIndexForRFPSummary=$(extract_value "azurE_AI_SEARCH_INDEX_NAME_RFP_SUMMARY" "azureAiSearchIndexNameRfpSummary")
     aiSearchIndexForRFPRisk=$(extract_value "azurE_AI_SEARCH_INDEX_NAME_RFP_RISK" "azureAiSearchIndexNameRfpRisk")
     aiSearchIndexForRFPCompliance=$(extract_value "azurE_AI_SEARCH_INDEX_NAME_RFP_COMPLIANCE" "azureAiSearchIndexNameRfpCompliance")
-    aiSearchIndexForContractSummary=$(extract_value "azurE_AI_SEARCH_INDEX_NAME_CONTRACT_SUMMARY" "azureAiSearchIndexNameContractSummary")
-    aiSearchIndexForContractRisk=$(extract_value "azurE_AI_SEARCH_INDEX_NAME_CONTRACT_RISK" "azureAiSearchIndexNameContractRisk")
-    aiSearchIndexForContractCompliance=$(extract_value "azurE_AI_SEARCH_INDEX_NAME_CONTRACT_COMPLIANCE" "azureAiSearchIndexNameContractCompliance")
+
     aiSearch=$(extract_value "azurE_AI_SEARCH_NAME" "azureAiSearchName")
     backendUrl=$(extract_value "backenD_URL" "backendUrl")
     
@@ -249,8 +237,7 @@ echo "1. RFP Evaluation"
 echo "2. Retail Customer Satisfaction"
 echo "3. HR Employee Onboarding"
 echo "4. Marketing Press Release"
-echo "5. Contract Compliance Review"
-echo "6. All"
+echo "5. All"
 echo "==============================================="
 echo ""
 
@@ -260,7 +247,7 @@ while [[ "$useCaseValid" != true ]]; do
     read -p "Please enter the number of the use case you would like to install: " useCaseSelection
     
     # Handle both numeric and text input for 'all'
-    if [[ "$useCaseSelection" == "all" || "$useCaseSelection" == "6" ]]; then
+    if [[ "$useCaseSelection" == "all" || "$useCaseSelection" == "5" ]]; then
         selectedUseCase="All"
         useCaseValid=true
         echo "Selected: All use cases will be installed."
@@ -284,14 +271,9 @@ while [[ "$useCaseValid" != true ]]; do
         useCaseValid=true
         echo "Selected: Marketing Press Release"
         echo "Note: If you choose to install a single use case, installation of other use cases will require re-running this script."
-    elif [[ "$useCaseSelection" == "5" ]]; then
-        selectedUseCase="Contract Compliance Review"
-        useCaseValid=true
-        echo "Selected: Contract Compliance Review"
-        echo "Note: If you choose to install a single use case, installation of other use cases will require re-running this script."
     else
         useCaseValid=false
-        echo -e "\033[31mInvalid selection. Please enter a number from 1-6.\033[0m"
+        echo -e "\033[31mInvalid selection. Please enter a number from 1-5.\033[0m"
     fi
 done
 
@@ -365,7 +347,7 @@ isSampleDataFailed=false
 failedTeamConfigs=0
 
 # Use Case 3 - HR Employee Onboarding
-if [[ "$useCaseSelection" == "3" || "$useCaseSelection" == "all" || "$useCaseSelection" == "6" ]]; then
+if [[ "$useCaseSelection" == "3" || "$useCaseSelection" == "all" || "$useCaseSelection" == "5" ]]; then
     echo "Uploading Team Configuration for HR Employee Onboarding..."
     directoryPath="data/agent_teams"
     teamId="00000000-0000-0000-0000-000000000001"
@@ -380,7 +362,7 @@ if [[ "$useCaseSelection" == "3" || "$useCaseSelection" == "all" || "$useCaseSel
 fi
 
 # Use Case 4 - Marketing Press Release
-if [[ "$useCaseSelection" == "4" || "$useCaseSelection" == "all" || "$useCaseSelection" == "6" ]]; then
+if [[ "$useCaseSelection" == "4" || "$useCaseSelection" == "all" || "$useCaseSelection" == "5" ]]; then
     echo "Uploading Team Configuration for Marketing Press Release..."
     directoryPath="data/agent_teams"
     teamId="00000000-0000-0000-0000-000000000002"
@@ -398,7 +380,7 @@ stIsPublicAccessDisabled=false
 srchIsPublicAccessDisabled=false
 
 # Enable public access for resources
-if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "2" || "$useCaseSelection" == "5" || "$useCaseSelection" == "all" || "$useCaseSelection" == "6" ]]; then
+if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "2" || "$useCaseSelection" == "5" || "$useCaseSelection" == "all" ]]; then
     if [[ -n "$ResourceGroup" ]]; then
         stPublicAccess=$(az storage account show --name "$storageAccount" --resource-group "$ResourceGroup" --query "publicNetworkAccess" -o tsv)
         if [[ "$stPublicAccess" == "Disabled" ]]; then
@@ -429,7 +411,7 @@ if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "2" || "$useCaseSelec
 fi
 
 # Use Case 1 - RFP Evaluation
-if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "all" || "$useCaseSelection" == "6" ]]; then
+if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "all" || "$useCaseSelection" == "5" ]]; then
     echo "Uploading Team Configuration for RFP Evaluation..."
     directoryPath="data/agent_teams"
     teamId="00000000-0000-0000-0000-000000000004"
@@ -491,71 +473,9 @@ if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "all" || "$useCaseSel
     echo "Python script to index data for RFP Evaluation successfully executed."
 fi
 
-# Use Case 5 - Contract Compliance Review
-if [[ "$useCaseSelection" == "5" || "$useCaseSelection" == "all" || "$useCaseSelection" == "6" ]]; then
-    echo "Uploading Team Configuration for Contract Compliance Review..."
-    directoryPath="data/agent_teams"
-    teamId="00000000-0000-0000-0000-000000000005"
-    
-    if $pythonCmd infra/scripts/upload_team_config.py "$backendUrl" "$directoryPath" "$userPrincipalId" "$teamId"; then
-        echo "Uploaded Team Configuration for Contract Compliance Review..."
-    else
-        echo "Error: Team configuration for Contract Compliance Review upload failed."
-        ((failedTeamConfigs++))
-        isTeamConfigFailed=true
-    fi
-
-    directoryPath="data/datasets/contract_compliance/summary"
-    # Upload sample files to blob storage
-    echo "Uploading sample files to blob storage for Contract Compliance Review..."
-    if ! az storage blob upload-batch --account-name "$storageAccount" --destination "$blobContainerForContractSummary" --source "$directoryPath" --auth-mode login --pattern "*" --overwrite --output none; then
-        echo "Error: Failed to upload files to blob storage."
-        isSampleDataFailed=true
-        exit 1
-    fi
-
-    directoryPath="data/datasets/contract_compliance/risk"
-    if ! az storage blob upload-batch --account-name "$storageAccount" --destination "$blobContainerForContractRisk" --source "$directoryPath" --auth-mode login --pattern "*" --overwrite --output none; then
-        echo "Error: Failed to upload files to blob storage."
-        isSampleDataFailed=true
-        exit 1
-    fi
-
-    directoryPath="data/datasets/contract_compliance/compliance"
-    if ! az storage blob upload-batch --account-name "$storageAccount" --destination "$blobContainerForContractCompliance" --source "$directoryPath" --auth-mode login --pattern "*" --overwrite --output none; then
-        echo "Error: Failed to upload files to blob storage."
-        isSampleDataFailed=true
-        exit 1
-    fi
-    echo "Files uploaded successfully to blob storage."
-
-    # Run the Python script to index data
-    echo "Running the python script to index data for Contract Compliance Review"
-    if $pythonCmd infra/scripts/index_datasets.py "$storageAccount" "$blobContainerForContractSummary" "$aiSearch" "$aiSearchIndexForContractSummary"; then
-        echo "Python script to index data for Contract Summary successfully executed."
-    else
-        echo "Error: Indexing python script execution failed for Contract Summary."
-        isSampleDataFailed=true
-    fi
-
-    if $pythonCmd infra/scripts/index_datasets.py "$storageAccount" "$blobContainerForContractRisk" "$aiSearch" "$aiSearchIndexForContractRisk"; then
-        echo "Python script to index data for Contract Risk successfully executed."
-    else
-        echo "Error: Indexing python script execution failed for Contract Risk."
-        isSampleDataFailed=true
-    fi
-
-    if $pythonCmd infra/scripts/index_datasets.py "$storageAccount" "$blobContainerForContractCompliance" "$aiSearch" "$aiSearchIndexForContractCompliance"; then
-        echo "Python script to index data for Contract Compliance successfully executed."
-    else
-        echo "Error: Indexing python script execution failed for Contract Compliance."
-        isSampleDataFailed=true
-    fi
-    echo "Python script to index data for Contract Compliance Review successfully executed."
-fi
 
 # Use Case 2 - Retail Customer Satisfaction
-if [[ "$useCaseSelection" == "2" || "$useCaseSelection" == "all" || "$useCaseSelection" == "6" ]]; then
+if [[ "$useCaseSelection" == "2" || "$useCaseSelection" == "all" || "$useCaseSelection" == "5" ]]; then
     echo "Uploading Team Configuration for Retail Customer Satisfaction..."
     directoryPath="data/agent_teams"
     teamId="00000000-0000-0000-0000-000000000003"
@@ -627,7 +547,7 @@ if [[ "$isTeamConfigFailed" == true || "$isSampleDataFailed" == true ]]; then
     echo "One or more tasks failed. Please check the error messages above."
     exit 1
 else
-    if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "2" || "$useCaseSelection" == "5" || "$useCaseSelection" == "all" || "$useCaseSelection" == "6" ]]; then
+    if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "2" || "$useCaseSelection" == "5" || "$useCaseSelection" == "all"  ]]; then
         echo ""
         echo "Team configuration upload and sample data processing completed successfully."
     else
