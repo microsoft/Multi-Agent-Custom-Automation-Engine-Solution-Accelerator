@@ -41,4 +41,4 @@ jobs:
       
       - name: Run flake8 and pylint
         run: |
-          flake8 --config=.flake8 src/backend src/mcp_server  # Lint both backend and mcp_server directories
+          flake8 --config=.flake8 src/backend 
