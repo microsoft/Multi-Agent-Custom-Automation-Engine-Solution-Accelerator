@@ -12,6 +12,8 @@ on:
       - 'infra/*.parameters.json'
       - 'infra/scripts/**'
       - '.github/workflows/deploy.yml'
+      - 'azure.yml'
+      - 'azure-custom.yml'
   pull_request:
     types:
       - opened
@@ -28,6 +30,8 @@ on:
       - 'infra/*.parameters.json'
       - 'infra/scripts/**'
       - '.github/workflows/deploy.yml'
+      - 'azure.yml'
+      - 'azure-custom.yml'
   workflow_run:
     workflows: ["Build Docker and Optional Push v3"]
     types:
