@@ -130,7 +130,7 @@ jobs:
               enablePrivateNetworking=true \
               enableScalability=true \
               createdBy="Pipeline" \
-              tags="{'SecurityControl':'Ignore','Purpose':'Deploying and Cleaning Up Resources for Validation','CreatedDate':'$current_date'}"
+              tags="{'Purpose':'Deploying and Cleaning Up Resources for Validation','CreatedDate':'$current_date'}"
               
 
       - name: Send Notification on Failure
