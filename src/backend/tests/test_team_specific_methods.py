@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
-from common.models.messages_kernel import StartingTask, TeamAgent, TeamConfiguration
+from common.models.messages_af import StartingTask, TeamAgent, TeamConfiguration
 
 
 async def test_team_specific_methods():

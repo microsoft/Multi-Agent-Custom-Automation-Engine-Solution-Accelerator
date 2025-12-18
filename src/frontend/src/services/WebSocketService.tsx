@@ -27,7 +27,7 @@ class WebSocketService {
         // Decide path addition
         let userId = getUserId();
         const hasApiSegment = /\/api(\/|$)/i.test(base);
-        const socketPath = hasApiSegment ? '/v3/socket' : '/api/v3/socket';
+        const socketPath = hasApiSegment ? '/v4/socket' : '/api/v4/socket';
         const url = `${base}${socketPath}${processId ? `/${processId}` : `/${planId}`}?user_id=${userId || ''}`;
         console.log("Constructed WebSocket URL:", url);
         return url;
@@ -91,6 +91,7 @@ class WebSocketService {
     }
 
     disconnect(): void {
+        console.log('WebSocketService: Disconnecting WebSocket');
         if (this.reconnectTimer) {
             clearTimeout(this.reconnectTimer);
             this.reconnectTimer = null;
@@ -104,21 +105,6 @@ class WebSocketService {
         this.isConnecting = false;
     }
 
-    subscribeToPlan(planId: string): void {
-        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            const message = { type: 'subscribe_plan', plan_id: planId };
-            this.ws.send(JSON.stringify(message));
-            this.planSubscriptions.add(planId);
-        }
-    }
-
-    unsubscribeFromPlan(planId: string): void {
-        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            const message = { type: 'unsubscribe_plan', plan_id: planId };
-            this.ws.send(JSON.stringify(message));
-            this.planSubscriptions.delete(planId);
-        }
-    }
 
     on(eventType: string, callback: (message: StreamMessage) => void): () => void {
         if (!this.listeners.has(eventType)) {
@@ -320,14 +306,14 @@ class WebSocketService {
             return;
         }
         try {
-            const v3Response = {
+            const v4Response = {
                 m_plan_id: response.plan_id,
                 approved: response.approved,
                 feedback: response.feedback || response.user_response || response.human_clarification || '',
             };
             const message = {
                 type: WebsocketMessageType.PLAN_APPROVAL_RESPONSE,
-                data: v3Response
+                data: v4Response
             };
             this.ws.send(JSON.stringify(message));
         } catch {

@@ -3,12 +3,12 @@ from pathlib import Path
 
 import pytest
 
-# Add the backend path to sys.path so we can import v3 modules
+# Add the backend path to sys.path so we can import v4 modules
 backend_path = Path(__file__).parent.parent.parent / "backend"
 sys.path.insert(0, str(backend_path))
 
-from v3.models.models import MPlan, MStep
-from v3.orchestration.human_approval_manager import \
+from af.models.models import MPlan, MStep
+from af.orchestration.human_approval_manager import \
     HumanApprovalMagenticManager
 
 #
@@ -33,7 +33,7 @@ class DummyContext:
 def _make_manager():
     """
     Create a HumanApprovalMagenticManager instance without calling its __init__
-    (avoids needing the full semantic kernel dependencies for this focused unit test).
+    (avoids needing the full agent framework  dependencies for this focused unit test).
     """
     return HumanApprovalMagenticManager.__new__(HumanApprovalMagenticManager)
 

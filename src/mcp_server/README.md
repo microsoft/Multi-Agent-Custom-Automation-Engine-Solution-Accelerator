@@ -17,7 +17,7 @@ A FastMCP-based Model Context Protocol (MCP) server for the Multi-Agent Custom A
 ## Architecture
 
 ```
-src/backend/v3/mcp_server/
+src/backend/v4/mcp_server/
 ├── core/                   # Core factory and base classes
 │   ├── __init__.py
 │   └── factory.py         # MCPToolFactory and base classes
@@ -75,7 +75,7 @@ src/backend/v3/mcp_server/
 1. **Clone and Navigate**:
 
    ```bash
-   cd src/backend/v3/mcp_server
+   cd src/backend/v4/mcp_server
    ```
 
 2. **Install Dependencies**:
@@ -110,15 +110,18 @@ src/backend/v3/mcp_server/
 ### Transport Options
 
 **1. STDIO Transport (default)**
+
 - 🔧 Perfect for: Local tools, command-line integrations, Claude Desktop
 - 🚀 Usage: `python mcp_server.py` or `python mcp_server.py --transport stdio`
 
 **2. HTTP (Streamable) Transport**
+
 - 🌐 Perfect for: Web-based deployments, microservices, remote access
 - 🚀 Usage: `python mcp_server.py --transport http --port 9000`
 - 🌐 URL: `http://127.0.0.1:9000/mcp/`
 
 **3. SSE Transport (deprecated)**
+
 - ⚠️ Legacy support only - use HTTP transport for new projects
 - 🚀 Usage: `python mcp_server.py --transport sse --port 9000`
 
@@ -257,7 +260,7 @@ async with client:
     # List available tools
     tools = await client.list_tools()
     print(f"Available tools: {[tool.name for tool in tools]}")
-    
+
     # Call a tool
     result = await client.call_tool("greet", {"name": "World"})
     print(result)
@@ -346,7 +349,7 @@ docker-compose logs mcp-server
 ## Server Arguments
 
 ```bash
-usage: mcp_server.py [-h] [--transport {stdio,http,streamable-http,sse}] 
+usage: mcp_server.py [-h] [--transport {stdio,http,streamable-http,sse}]
                      [--host HOST] [--port PORT] [--debug] [--no-auth]
 
 MACAE MCP Server

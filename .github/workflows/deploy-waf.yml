@@ -1,4 +1,4 @@
-name: Validate WAF Deployment v3
+name: Validate WAF Deployment v4
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
       GPT41_MINI_MIN_CAPACITY: 1
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Run Quota Check
         id: quota-check
