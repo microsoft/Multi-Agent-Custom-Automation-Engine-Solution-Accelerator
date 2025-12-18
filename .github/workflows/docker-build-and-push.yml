@@ -12,6 +12,13 @@ on:
       - 'src/backend/**'
       - 'src/mcp_server/**'
       - '.github/workflows/docker-build-and-push.yml'
+      - 'infra/main.bicep'
+      - 'infra/modules/**/*.bicep'
+      - 'infra/*.parameters.json'
+      - 'infra/scripts/**'
+      - '.github/workflows/deploy.yml'
+      - 'azure.yaml'
+      - 'azure_custom.yaml'
   pull_request:
     types:
       - opened
@@ -28,6 +35,13 @@ on:
       - 'src/backend/**'
       - 'src/mcp_server/**'
       - '.github/workflows/docker-build-and-push.yml'
+      - 'infra/main.bicep'
+      - 'infra/modules/**/*.bicep'
+      - 'infra/*.parameters.json'
+      - 'infra/scripts/**'
+      - '.github/workflows/deploy.yml'
+      - 'azure.yaml'
+      - 'azure_custom.yaml'
   workflow_dispatch:
 
 jobs:

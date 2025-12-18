@@ -1,37 +1,6 @@
 name: Validate Deployment v3
 
 on:
-  push:
-    branches:
-      - main
-      - dev-v3
-      - hotfix
-    paths:
-      - 'infra/main.bicep'
-      - 'infra/modules/**/*.bicep'
-      - 'infra/*.parameters.json'
-      - 'infra/scripts/**'
-      - '.github/workflows/deploy.yml'
-      - 'azure.yaml'
-      - 'azure_custom.yaml'
-  pull_request:
-    types:
-      - opened
-      - ready_for_review
-      - reopened
-      - synchronize
-    branches:
-      - main
-      - dev-v3
-      - hotfix
-    paths:
-      - 'infra/main.bicep'
-      - 'infra/modules/**/*.bicep'
-      - 'infra/*.parameters.json'
-      - 'infra/scripts/**'
-      - '.github/workflows/deploy.yml'
-      - 'azure.yaml'
-      - 'azure_custom.yaml'
   workflow_run:
     workflows: ["Build Docker and Optional Push v3"]
     types:

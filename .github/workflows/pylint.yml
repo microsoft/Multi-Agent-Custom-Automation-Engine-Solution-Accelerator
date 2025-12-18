@@ -8,13 +8,7 @@ on:
       - 'src/backend/requirements.txt'
       - '.flake8'
       - '.github/workflows/pylint.yml'
-  pull_request:
-    paths:
-      - 'src/backend/**/*.py'
-      - 'src/mcp_server/**/*.py'
-      - 'src/backend/requirements.txt'
-      - '.flake8'
-      - '.github/workflows/pylint.yml'
+
 
 jobs:
   build:
