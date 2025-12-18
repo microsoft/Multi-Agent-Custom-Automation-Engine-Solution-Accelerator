@@ -135,31 +135,31 @@ param virtualMachineAdminPassword string?
 // These parameters are changed for testing - please reset as part of publication
 
 @description('Optional. The Container Registry hostname where the docker images for the backend are located.')
-param backendContainerRegistryHostname string = 'macaev3tst1acr.azurecr.io'
+param backendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
 
 @description('Optional. The Container Image Name to deploy on the backend.')
-param backendContainerImageName string = 'macae-backend'
+param backendContainerImageName string = 'macaebackend'
 
 @description('Optional. The Container Image Tag to deploy on the backend.')
-param backendContainerImageTag string = 'v4tst2'
+param backendContainerImageTag string = 'latest_v4'
 
 @description('Optional. The Container Registry hostname where the docker images for the frontend are located.')
-param frontendContainerRegistryHostname string = 'macaev3tst1acr.azurecr.io'
+param frontendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
 
 @description('Optional. The Container Image Name to deploy on the frontend.')
-param frontendContainerImageName string = 'macae-frontend'
+param frontendContainerImageName string = 'macaefrontend'
 
 @description('Optional. The Container Image Tag to deploy on the frontend.')
-param frontendContainerImageTag string = 'v4tst2'
+param frontendContainerImageTag string = 'latest_v4'
 
 @description('Optional. The Container Registry hostname where the docker images for the MCP are located.')
-param MCPContainerRegistryHostname string = 'macaev3tst1acr.azurecr.io'
+param MCPContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
 
 @description('Optional. The Container Image Name to deploy on the MCP.')
-param MCPContainerImageName string = 'mcp_server'
+param MCPContainerImageName string = 'macaemcp'
 
 @description('Optional. The Container Image Tag to deploy on the MCP.')
-param MCPContainerImageTag string = 'v4tst1'
+param MCPContainerImageTag string = 'latest_v4'
 
 @description('Optional. Enable/Disable usage telemetry for module.')
 param enableTelemetry bool = true
