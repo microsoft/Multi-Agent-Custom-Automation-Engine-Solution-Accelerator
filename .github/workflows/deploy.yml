@@ -126,7 +126,7 @@ jobs:
           elif [[ "${{ env.BRANCH_NAME }}" == "hotfix" ]]; then
             IMAGE_TAG="hotfix"
           else
-            IMAGE_TAG="latest_v3"
+            IMAGE_TAG="latest_v4"
           fi
 
           # Generate current timestamp in desired format: YYYY-MM-DDTHH:MM:SS.SSSSSSSZ

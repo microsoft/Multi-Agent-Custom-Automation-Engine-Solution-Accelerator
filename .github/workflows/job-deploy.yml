@@ -266,13 +266,13 @@ jobs:
             echo "Current branch: $BRANCH_NAME"
             
             if [[ "$BRANCH_NAME" == "main" ]]; then
-              IMAGE_TAG="latest_v3"
-            elif [[ "$BRANCH_NAME" == "dev-v3" ]]; then
-              IMAGE_TAG="dev_v3"
+              IMAGE_TAG="latest_v4"
+            elif [[ "$BRANCH_NAME" == "dev-v4" ]]; then
+              IMAGE_TAG="dev_v4"
             elif [[ "$BRANCH_NAME" == "hotfix" ]]; then
               IMAGE_TAG="hotfix"
             else
-              IMAGE_TAG="latest_v3"
+              IMAGE_TAG="latest_v4"
             fi
             echo "Using existing Docker image tag: $IMAGE_TAG"
           fi
