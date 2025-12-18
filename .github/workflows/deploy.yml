@@ -192,7 +192,7 @@ jobs:
           echo "Backend URL: ${{ steps.get_backend_url.outputs.MACAE_URL_API }}"
           
           # Run upload team config script with parameters
-          bash infra/scripts/upload_team_config.sh \
+          bash infra/scripts/upload_team_config.py \
             "${{ steps.get_backend_url.outputs.MACAE_URL_API }}" \
             "data/agent_teams" \
             "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
