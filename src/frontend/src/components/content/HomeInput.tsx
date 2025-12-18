@@ -63,7 +63,6 @@ interface ExtendedQuickTask extends QuickTask {
 const HomeInput: React.FC<HomeInputProps> = ({ selectedTeam }) => {
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [input, setInput] = useState<string>("");
-  const [raiError, setRAIError] = useState<RAIErrorData | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const navigate = useNavigate();
@@ -79,7 +78,6 @@ const HomeInput: React.FC<HomeInputProps> = ({ selectedTeam }) => {
 
   const resetTextarea = () => {
     setInput("");
-    setRAIError(null); // Clear any RAI errors
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
       textareaRef.current.focus();
@@ -94,7 +92,6 @@ const HomeInput: React.FC<HomeInputProps> = ({ selectedTeam }) => {
   const handleSubmit = async () => {
     if (input.trim()) {
       setSubmitting(true);
-      setRAIError(null); // Clear any previous RAI errors
       let id = showToast("Creating a plan", "progress");
 
       try {
@@ -140,7 +137,6 @@ const HomeInput: React.FC<HomeInputProps> = ({ selectedTeam }) => {
 
   const handleQuickTaskClick = (task: ExtendedQuickTask) => {
     setInput(task.fullDescription);
-    setRAIError(null); // Clear any RAI errors when selecting a quick task
     if (textareaRef.current) {
       textareaRef.current.focus();
     }

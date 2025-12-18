@@ -85,8 +85,8 @@ class MCPEnabledBase:
         # Register agent (best effort)
         try:
             agent_registry.register_agent(self)
-        except Exception:
-            pass
+        except Exception as ex:
+            self.logger.debug("Failed to register agent in registry: %s", ex)
 
         return self
 
@@ -98,13 +98,13 @@ class MCPEnabledBase:
             if self._agent and hasattr(self._agent, "close"):
                 try:
                     await self._agent.close()  # AzureAIAgentClient has async close
-                except Exception:
-                    pass
+                except Exception as ex:
+                    self.logger.debug("Failed to close agent: %s", ex)
             # Unregister from registry if present
             try:
                 agent_registry.unregister_agent(self)
-            except Exception:
-                pass
+            except Exception as ex:
+                self.logger.debug("Failed to unregister agent from registry: %s", ex)
             await self._stack.aclose()
         finally:
             self._stack = None
@@ -309,27 +309,26 @@ class AzureAgentBase(MCPEnabledBase):
             if self._agent and hasattr(self._agent, "close"):
                 try:
                     await self._agent.close()
-                except Exception:
-                    pass
+                except Exception as ex:
+                    self.logger.debug("Failed to close agent in AzureAgentBase: %s", ex)
 
             # Unregister from registry
             try:
                 agent_registry.unregister_agent(self)
-            except Exception:
-                pass
+            except Exception as ex:
+                self.logger.debug("Failed to unregister agent from registry: %s", ex)
 
             # Close credential and project client
             if self.client:
                 try:
                     await self.client.close()
-                except Exception:
-                    pass
+                except Exception as ex:
+                    self.logger.debug("Failed to close Azure AI client: %s", ex)
             if self.creds:
                 try:
                     await self.creds.close()
-                except Exception:
-                    pass
-
+                except Exception as ex:
+                    self.logger.debug("Failed to close Azure credentials: %s", ex)
         finally:
             await super().close()
             self.client = None

@@ -41,9 +41,13 @@ async def get_config():
     auth_enabled = os.getenv("AUTH_ENABLED", "false")
     backend_url = backend_url + "/api"
 
+    # Escape the values for safe inclusion in HTML
+    escaped_backend_url = html.escape(backend_url)
+    escaped_auth_enabled = html.escape(auth_enabled)
+
     config = {
-        "API_URL": backend_url,
-        "ENABLE_AUTH": auth_enabled,
+        "API_URL": escaped_backend_url,
+        "ENABLE_AUTH": escaped_auth_enabled,
     }
     return config
 
