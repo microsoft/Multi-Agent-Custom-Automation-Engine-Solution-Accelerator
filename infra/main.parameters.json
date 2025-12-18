@@ -73,11 +73,6 @@
     },
     "MCPContainerRegistryHostname": {
       "value": "${AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT}"
-    },
-    "tags": {
-      "value": {
-        "SecurityControl": "${AZURE_TAG_SECURITY_CONTROL=Ignore}"
-      }
     }
   }
 }
