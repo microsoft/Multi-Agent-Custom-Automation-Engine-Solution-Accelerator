@@ -73,7 +73,7 @@ const HomeInput: React.FC<HomeInputProps> = ({ selectedTeam }) => {
   // Check if the selected team is the Contract Compliance Review Team
   const isLegalTeam = selectedTeam?.name
     ?.toLowerCase()
-    .includes("compliance contract");
+    .includes("ontract compliance");
 
   useEffect(() => {
     if (location.state?.focusInput) {
