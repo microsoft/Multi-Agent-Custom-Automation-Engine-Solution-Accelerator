@@ -399,6 +399,10 @@ azd init -t microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/
 
 7. When Deployment is complete, follow steps in [Set Up Authentication in Azure App Service](../docs/azure_app_service_auth_setup.md) to add app authentication to your web app running on Azure App Service
 
+9. After this if you have added the authentication you have to set AUTH_ENABLE environment varibale to `true` in the App service.
+
+![Auth enable true](./images/auth-enable-true.png)
+
 8. If you are done trying out the application, you can delete the resources by running `azd down`.
 
 
