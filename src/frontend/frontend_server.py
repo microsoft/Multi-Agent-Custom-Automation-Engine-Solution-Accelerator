@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from urllib.parse import urlparse
 
 # Load environment variables from .env file
 load_dotenv()
@@ -39,7 +40,22 @@ async def serve_index():
 async def get_config():
     backend_url = os.getenv("BACKEND_API_URL", "http://localhost:8000")
     auth_enabled = os.getenv("AUTH_ENABLED", "false")
+    
+    # Validate backend_url is a proper URL with scheme and netloc
+    try:
+        parsed = urlparse(backend_url)
+        if not (parsed.scheme in ["http", "https"] and parsed.netloc):
+            backend_url = "http://localhost:8000"
+    except Exception:
+        backend_url = "http://localhost:8000"
+    
     backend_url = backend_url + "/api"
+    
+    # Validate auth_enabled is a boolean string
+    if auth_enabled and auth_enabled.lower() in ["true", "false"]:
+        auth_enabled = auth_enabled.lower()
+    else:
+        auth_enabled = "false"
 
     config = {
         "API_URL": backend_url,
