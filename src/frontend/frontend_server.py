@@ -39,15 +39,19 @@ async def serve_index():
 async def get_config():
     backend_url = os.getenv("BACKEND_API_URL", "http://localhost:8000")
     auth_enabled = os.getenv("AUTH_ENABLED", "false")
+    
+    # Validate backend_url is a proper URL
+    if not backend_url.startswith(("http://", "https://")):
+        backend_url = "http://localhost:8000"
+    
     backend_url = backend_url + "/api"
-
-    # Escape the values for safe inclusion in HTML
-    escaped_backend_url = html.escape(backend_url)
-    escaped_auth_enabled = html.escape(auth_enabled)
+    
+    # Validate auth_enabled is a boolean string
+    auth_enabled = auth_enabled.lower() if auth_enabled.lower() in ["true", "false"] else "false"
 
     config = {
-        "API_URL": escaped_backend_url,
-        "ENABLE_AUTH": escaped_auth_enabled,
+        "API_URL": backend_url,
+        "ENABLE_AUTH": auth_enabled,
     }
     return config
 
