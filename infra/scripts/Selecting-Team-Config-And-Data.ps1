@@ -13,14 +13,18 @@ $blobContainerForRetailOrder = ""
 $blobContainerForRFPSummary = ""
 $blobContainerForRFPRisk = ""
 $blobContainerForRFPCompliance = ""
-
+$blobContainerForContractSummary = ""
+$blobContainerForContractRisk = ""
+$blobContainerForContractCompliance = ""
 $aiSearch = ""
 $aiSearchIndexForRetailCustomer = ""
 $aiSearchIndexForRetailOrder = ""
 $aiSearchIndexForRFPSummary = ""
 $aiSearchIndexForRFPRisk = ""
 $aiSearchIndexForRFPCompliance = ""
-
+$aiSearchIndexForContractSummary = ""
+$aiSearchIndexForContractRisk = ""
+$aiSearchIndexForContractCompliance = ""
 $azSubscriptionId = ""
 
 function Test-AzdInstalled {
@@ -48,14 +52,18 @@ function Get-ValuesFromAzdEnv {
     $script:blobContainerForRFPSummary = $(azd env get-value AZURE_STORAGE_CONTAINER_NAME_RFP_SUMMARY)
     $script:blobContainerForRFPRisk = $(azd env get-value AZURE_STORAGE_CONTAINER_NAME_RFP_RISK)
     $script:blobContainerForRFPCompliance = $(azd env get-value AZURE_STORAGE_CONTAINER_NAME_RFP_COMPLIANCE)
-
+    $script:blobContainerForContractSummary = $(azd env get-value AZURE_STORAGE_CONTAINER_NAME_CONTRACT_SUMMARY)
+    $script:blobContainerForContractRisk = $(azd env get-value AZURE_STORAGE_CONTAINER_NAME_CONTRACT_RISK)
+    $script:blobContainerForContractCompliance = $(azd env get-value AZURE_STORAGE_CONTAINER_NAME_CONTRACT_COMPLIANCE)
     $script:aiSearch = $(azd env get-value AZURE_AI_SEARCH_NAME)
     $script:aiSearchIndexForRetailCustomer = $(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_RETAIL_CUSTOMER)
     $script:aiSearchIndexForRetailOrder = $(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_RETAIL_ORDER)
     $script:aiSearchIndexForRFPSummary = $(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_RFP_SUMMARY)
     $script:aiSearchIndexForRFPRisk = $(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_RFP_RISK)
     $script:aiSearchIndexForRFPCompliance = $(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_RFP_COMPLIANCE)
-
+    $script:aiSearchIndexForContractSummary = $(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_SUMMARY)
+    $script:aiSearchIndexForContractRisk = $(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_RISK)
+    $script:aiSearchIndexForContractCompliance = $(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_COMPLIANCE)
     $script:ResourceGroup = $(azd env get-value AZURE_RESOURCE_GROUP)
     
     # Validate that we got all required values
@@ -116,13 +124,17 @@ function Get-ValuesFromAzDeployment {
     $script:blobContainerForRFPSummary = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_STORAGE_CONTAINER_NAME_RFP_SUMMARY" -FallbackKey "azureStorageContainerNameRfpSummary"
     $script:blobContainerForRFPRisk = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_STORAGE_CONTAINER_NAME_RFP_RISK" -FallbackKey "azureStorageContainerNameRfpRisk"
     $script:blobContainerForRFPCompliance = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_STORAGE_CONTAINER_NAME_RFP_COMPLIANCE" -FallbackKey "azureStorageContainerNameRfpCompliance"
-
+    $script:blobContainerForContractSummary = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_STORAGE_CONTAINER_NAME_CONTRACT_SUMMARY" -FallbackKey "azureStorageContainerNameContractSummary"
+    $script:blobContainerForContractRisk = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_STORAGE_CONTAINER_NAME_CONTRACT_RISK" -FallbackKey "azureStorageContainerNameContractRisk"
+    $script:blobContainerForContractCompliance = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_STORAGE_CONTAINER_NAME_CONTRACT_COMPLIANCE" -FallbackKey "azureStorageContainerNameContractCompliance"
     $script:aiSearchIndexForRetailCustomer = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_INDEX_NAME_RETAIL_CUSTOMER" -FallbackKey "azureAiSearchIndexNameRetailCustomer"
     $script:aiSearchIndexForRetailOrder = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_INDEX_NAME_RETAIL_ORDER" -FallbackKey "azureAiSearchIndexNameRetailOrder"
     $script:aiSearchIndexForRFPSummary = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_INDEX_NAME_RFP_SUMMARY" -FallbackKey "azureAiSearchIndexNameRfpSummary"
     $script:aiSearchIndexForRFPRisk = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_INDEX_NAME_RFP_RISK" -FallbackKey "azureAiSearchIndexNameRfpRisk"
     $script:aiSearchIndexForRFPCompliance = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_INDEX_NAME_RFP_COMPLIANCE" -FallbackKey "azureAiSearchIndexNameRfpCompliance"
-
+    $script:aiSearchIndexForContractSummary = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_INDEX_NAME_CONTRACT_SUMMARY" -FallbackKey "azureAiSearchIndexNameContractSummary"
+    $script:aiSearchIndexForContractRisk = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_INDEX_NAME_CONTRACT_RISK" -FallbackKey "azureAiSearchIndexNameContractRisk"
+    $script:aiSearchIndexForContractCompliance = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_INDEX_NAME_CONTRACT_COMPLIANCE" -FallbackKey "azureAiSearchIndexNameContractCompliance"
     $script:aiSearch = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_NAME" -FallbackKey "azureAiSearchName"
     $script:backendUrl = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "backenD_URL" -FallbackKey "backendUrl"
     
@@ -239,7 +251,8 @@ Write-Host "1. RFP Evaluation"
 Write-Host "2. Retail Customer Satisfaction"
 Write-Host "3. HR Employee Onboarding"
 Write-Host "4. Marketing Press Release"
-Write-Host "5. All"
+Write-Host "5. Contract Compliance Review"
+Write-Host "6. All"
 Write-Host "==============================================="
 Write-Host ""
 
@@ -248,7 +261,7 @@ do {
     $useCaseSelection = Read-Host "Please enter the number of the use case you would like to install."
     
     # Handle both numeric and text input for 'all'
-    if ($useCaseSelection -eq "all" -or $useCaseSelection -eq "5") {
+    if ($useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
         $selectedUseCase = "All"
         $useCaseValid = $true
         Write-Host "Selected: All use cases will be installed."
@@ -277,9 +290,15 @@ do {
         Write-Host "Selected: Marketing Press Release"
         Write-Host "Note: If you choose to install a single use case, installation of other use cases will require re-running this script."
     }
+    elseif ($useCaseSelection -eq "5") {
+        $selectedUseCase = "Contract Compliance Review"
+        $useCaseValid = $true
+        Write-Host "Selected: Contract Compliance Review"
+        Write-Host "Note: If you choose to install a single use case, installation of other use cases will require re-running this script."
+    }
     else {
         $useCaseValid = $false
-        Write-Host "Invalid selection. Please enter a number from 1-5." -ForegroundColor Red
+        Write-Host "Invalid selection. Please enter a number from 1-6." -ForegroundColor Red
     }
 } while (-not $useCaseValid)
 
@@ -364,7 +383,7 @@ $isSampleDataFailed = $false
 $failedTeamConfigs = 0
 
 # Use Case 3 -----=--
-if($useCaseSelection -eq "3" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "5") {
+if($useCaseSelection -eq "3" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
     Write-Host "Uploading Team Configuration for HR Employee Onboarding..."
     $directoryPath = "data/agent_teams"
     $teamId = "00000000-0000-0000-0000-000000000001"
@@ -383,7 +402,7 @@ if($useCaseSelection -eq "3" -or $useCaseSelection -eq "all" -or $useCaseSelecti
 }
 
 # Use Case 4 -----=--
-if($useCaseSelection -eq "4" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "5") {
+if($useCaseSelection -eq "4" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
     Write-Host "Uploading Team Configuration for Marketing Press Release..."
     $directoryPath = "data/agent_teams"
     $teamId = "00000000-0000-0000-0000-000000000002"
@@ -404,7 +423,7 @@ if($useCaseSelection -eq "4" -or $useCaseSelection -eq "all" -or $useCaseSelecti
 $stIsPublicAccessDisabled = $false
 $srchIsPublicAccessDisabled = $false
 # Enable public access for resources
-if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5"  -or $useCaseSelection -eq "all" ){
+if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5"  -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6"){
     if ($ResourceGroup) {
         $stPublicAccess = $(az storage account show --name $storageAccount --resource-group $ResourceGroup --query "publicNetworkAccess" -o tsv)
         if ($stPublicAccess -eq "Disabled") {
@@ -438,7 +457,7 @@ if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection 
 
 
 
-if($useCaseSelection -eq "1" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "5") {
+if($useCaseSelection -eq "1" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
     Write-Host "Uploading Team Configuration for RFP Evaluation..."
     $directoryPath = "data/agent_teams"
     $teamId = "00000000-0000-0000-0000-000000000004"
@@ -512,9 +531,80 @@ if($useCaseSelection -eq "1" -or $useCaseSelection -eq "all" -or $useCaseSelecti
 }
 
 
+if($useCaseSelection -eq "5" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
+    Write-Host "Uploading Team Configuration for Contract Compliance Review..."
+    $directoryPath = "data/agent_teams"
+    $teamId = "00000000-0000-0000-0000-000000000005"
+    try {
+        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $directoryPath, $userPrincipalId, $teamId -Wait -NoNewWindow -PassThru
+        if ($process.ExitCode -ne 0) {
+            Write-Host "Error: Team configuration for Contract Compliance Review upload failed."
+            $failedTeamConfigs += 1
+            $isTeamConfigFailed = $true
+        }
+    } catch {
+        Write-Host "Error: Uploading team configuration failed."
+        $isTeamConfigFailed = $true
+    }
+    Write-Host "Uploaded Team Configuration for Contract Compliance Review..."
 
+    $directoryPath = "data/datasets/contract_compliance/summary"
+    # Upload sample files to blob storage
+    Write-Host "Uploading sample files to blob storage for Contract Compliance Review..."
+    $result = az storage blob upload-batch --account-name $storageAccount --destination $blobContainerForContractSummary --source $directoryPath --auth-mode login --pattern "*" --overwrite --output none
 
-if($useCaseSelection -eq "2" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "5") {
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Error: Failed to upload files to blob storage."
+        $isSampleDataFailed = $true
+        exit 1
+    }
+
+    $directoryPath = "data/datasets/contract_compliance/risk"
+    $result = az storage blob upload-batch --account-name $storageAccount --destination $blobContainerForContractRisk --source $directoryPath --auth-mode login --pattern "*" --overwrite --output none
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Error: Failed to upload files to blob storage."
+        $isSampleDataFailed = $true
+        exit 1
+    }
+
+    $directoryPath = "data/datasets/contract_compliance/compliance"
+
+    $result = az storage blob upload-batch --account-name $storageAccount --destination $blobContainerForContractCompliance --source $directoryPath --auth-mode login --pattern "*" --overwrite --output none
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Error: Failed to upload files to blob storage."
+        $isSampleDataFailed = $true
+        exit 1
+    }
+    Write-Host "Files uploaded successfully to blob storage."
+
+    # Run the Python script to index data
+    Write-Host "Running the python script to index data for Contract Compliance Review"
+    $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/index_datasets.py", $storageAccount, $blobContainerForContractSummary , $aiSearch, $aiSearchIndexForContractSummary -Wait -NoNewWindow -PassThru
+
+    if ($process.ExitCode -ne 0) {
+        Write-Host "Error: Indexing python script execution failed."
+        $isSampleDataFailed = $true
+    }
+
+    $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/index_datasets.py", $storageAccount, $blobContainerForContractRisk , $aiSearch, $aiSearchIndexForContractRisk -Wait -NoNewWindow -PassThru
+
+    if ($process.ExitCode -ne 0) {
+        Write-Host "Error: Indexing python script execution failed."
+        $isSampleDataFailed = $true
+    }
+
+    $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/index_datasets.py", $storageAccount, $blobContainerForContractCompliance , $aiSearch, $aiSearchIndexForContractCompliance -Wait -NoNewWindow -PassThru
+
+    if ($process.ExitCode -ne 0) {
+        Write-Host "Error: Indexing python script execution failed."
+        $isSampleDataFailed = $true
+    }
+    Write-Host "Python script to index data for Contract Compliance Review successfully executed."
+}
+
+if($useCaseSelection -eq "2" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
     Write-Host "Uploading Team Configuration for Retail Customer Satisfaction..."
     $directoryPath = "data/agent_teams"
     $teamId = "00000000-0000-0000-0000-000000000003"
@@ -597,7 +687,7 @@ if ($isTeamConfigFailed -or $isSampleDataFailed) {
     Write-Host "`nOne or more tasks failed. Please check the error messages above."
     exit 1
 } else {
-    if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "all" ){
+    if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6"){
         Write-Host "`nTeam configuration upload and sample data processing completed successfully."
     }else {
         Write-Host "`nTeam configuration upload completed successfully."

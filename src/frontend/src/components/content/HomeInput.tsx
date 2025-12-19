@@ -70,6 +70,10 @@ const HomeInput: React.FC<HomeInputProps> = ({ selectedTeam }) => {
   const location = useLocation(); // ✅ location.state used to control focus
   const { showToast, dismissToast } = useInlineToaster();
 
+  // Check if the selected team is the Contract Compliance Review Team
+  const isLegalTeam = selectedTeam?.name
+    ?.toLowerCase()
+    .includes("contract compliance");
 
   useEffect(() => {
     if (location.state?.focusInput) {
@@ -190,7 +194,23 @@ const HomeInput: React.FC<HomeInputProps> = ({ selectedTeam }) => {
             <Title2>How can I help?</Title2>
           </div>
 
-          
+          {/* Legal Disclaimer for Contract Compliance Review Team */}
+          {isLegalTeam && (
+            <div
+              style={{
+                color: "var(--colorNeutralForeground3)",
+                marginTop: "8px",
+                paddingBottom: "8px",
+                textAlign: "center",
+              }}
+            >
+              <Caption1>
+                <strong>Disclaimer:</strong> This tool is not intended to give
+                legal advice; it is intended solely for the purpose of assessing
+                contract compliance against internal guidance and policy frameworks.
+              </Caption1>
+            </div>
+          )}
 
           {/* Show RAI error if present */}
           {/* {raiError && (
