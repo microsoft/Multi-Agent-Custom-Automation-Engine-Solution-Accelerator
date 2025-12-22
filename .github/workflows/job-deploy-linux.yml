@@ -177,7 +177,7 @@ jobs:
           set -e
           az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
 
-          # Set environment variables for team_config_and_data.sh
+          # Set environment variables for selecting_team_config_and_data.sh
           export AZURE_SUBSCRIPTION_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
           export AZURE_RESOURCE_GROUP="${{ inputs.RESOURCE_GROUP_NAME }}"
           export BACKEND_URL="${{ steps.get_output_linux.outputs.BACKEND_URL }}"
@@ -188,7 +188,7 @@ jobs:
           export AZURE_ENV_NAME="${{ steps.get_output_linux.outputs.AZURE_ENV_NAME }}"
           
           # Upload team configurations and index sample data in one step
-          bash infra/scripts/team_config_and_data.sh "${{ inputs.RESOURCE_GROUP_NAME }}"
+          bash infra/scripts/selecting_team_config_and_data.sh "${{ inputs.RESOURCE_GROUP_NAME }}"
 
       - name: Generate Deployment Summary
         if: always()
