@@ -27,7 +27,9 @@ export class TeamService {
         success: boolean;
         data?: {
             status: string;
-            team_id: string;
+            team_id?: string;
+            team?: any;
+            requires_team_upload?: boolean;
         };
         error?: string;
     }> {
