@@ -176,16 +176,6 @@ jobs:
           echo "MACAE_URL_API=https://${MACAE_URL_API}" >> $GITHUB_OUTPUT
           echo "CONTAINER_APP=${CONTAINER_APP_NAME}" >> $GITHUB_OUTPUT
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11.9'
-
-      - name: Install Python Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install requests
-
       - name: Run Post deployment scripts
         run: |
           set -e
@@ -194,7 +184,8 @@ jobs:
           echo "Running post-deployment script..."
           
           # Run PowerShell script with 'All' use case automatically selected
-          echo "5" | pwsh -File infra/scripts/Selecting-Team-Config-And-Data.ps1 -ResourceGroup "${{ env.RESOURCE_GROUP_NAME }}"
+          # Provide two inputs: '1' for keeping current subscription, '5' for All use cases
+          echo -e "1\n5" | pwsh -File infra/scripts/Selecting-Team-Config-And-Data.ps1 -ResourceGroup "${{ env.RESOURCE_GROUP_NAME }}"
 
           echo "=== Post-Deployment Script Completed Successfully ==="
 
