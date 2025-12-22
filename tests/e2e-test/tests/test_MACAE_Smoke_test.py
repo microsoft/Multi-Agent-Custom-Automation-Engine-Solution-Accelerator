@@ -41,7 +41,7 @@ def test_retail_customer_success_workflow(login_logout, request):
     biab_page = BIABPage(page)
     
     # Update test node ID for HTML report
-    request.node._nodeid = "(MACAE V3) Golden Path-test golden path demo script works properly"
+    request.node._nodeid = "(MACAE V4) Golden Path-test golden path demo script works properly"
     
     logger.info("=" * 80)
     logger.info("Starting Multi-Team Workflow Test")
@@ -334,7 +334,7 @@ def test_validate_source_text_not_visible(login_logout, request):
     biab_page = BIABPage(page)
     
     # Update test node ID for HTML report
-    request.node._nodeid = "(MACAE V3) Bug 23355: Bug - Agent output is showing citation sources that are not clickable or understandable"
+    request.node._nodeid = "(MACAE V4) Bug 23355: Bug - Agent output is showing citation sources that are not clickable or understandable"
     
     logger.info("=" * 80)
     logger.info("Starting Source Text Validation Test")
@@ -469,7 +469,7 @@ def test_rai_validation_unable_to_create_plan(login_logout, request):
     biab_page = BIABPage(page)
     
     # Update test node ID for HTML report
-    request.node._nodeid = "(MACAE V3)  - Test RAI prompts for all 3 default teams"
+    request.node._nodeid = "(MACAE V4)  - Test RAI prompts for all 3 default teams"
     
     logger.info("=" * 80)
     logger.info("Starting RAI Validation Test - Unable to Create Plan")
@@ -599,7 +599,7 @@ def test_rai_validation_in_clarification(login_logout, request):
     biab_page = BIABPage(page)
     
     # Update test node ID for HTML report
-    request.node._nodeid = "(MACAE V3)  - Test RAI prompt in user clarification step"
+    request.node._nodeid = "(MACAE V4)  - Test RAI prompt in user clarification step"
     
     logger.info("=" * 80)
     logger.info("Starting RAI Validation Test in Clarification Input")
@@ -733,7 +733,7 @@ def test_cancel_button_all_teams(login_logout, request):
     biab_page = BIABPage(page)
     
     # Update test node ID for HTML report
-    request.node._nodeid = "(MACAE V3)  - Test Cancel functionality in the Plan Approval step"
+    request.node._nodeid = "(MACAE V4)  - Test Cancel functionality in the Plan Approval step"
     
     logger.info("=" * 80)
     logger.info("Starting Cancel Button Validation Test - All Teams")
