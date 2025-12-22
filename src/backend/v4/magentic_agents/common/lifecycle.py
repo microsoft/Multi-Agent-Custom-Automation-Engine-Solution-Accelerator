@@ -153,10 +153,10 @@ class MCPEnabledBase:
 
     async def resolve_agent_id(self, agent_id: str) -> Optional[str]:
         """Resolve agent ID via Projects SDK first (for RAI agents), fallback to AgentsClient.
-        
+
         Args:
             agent_id: The agent ID to resolve
-            
+
         Returns:
             The resolved agent ID if found, None otherwise
         """
@@ -284,7 +284,7 @@ class MCPEnabledBase:
                     "RAI reuse: id unchanged (id=%s); skip save.", self._agent.id
                 )
                 return
-            
+
             currentAgent = CurrentTeamAgent(
                 team_id=self.team_config.team_id,
                 team_name=self.team_config.name,

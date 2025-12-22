@@ -43,7 +43,7 @@ class FoundryAgentTemplate(AzureAgentBase):
     ) -> None:
         # Get project_client before calling super().__init__
         project_client = config.get_ai_project_client()
-        
+
         super().__init__(
             mcp=mcp_config,
             model_deployment_name=model_deployment_name,
