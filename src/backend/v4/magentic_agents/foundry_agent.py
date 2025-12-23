@@ -299,9 +299,12 @@ class FoundryAgentTemplate(AzureAgentBase):
 
         messages = [ChatMessage(role=Role.USER, text=prompt)]
 
+        agent_saved = False
         async for update in self._agent.run_stream(messages):
-            if self._agent.chat_client.agent_id:
+            # Save agent ID only once on first update (agent ID won't change during streaming)
+            if not agent_saved and self._agent.chat_client.agent_id:
                 await self.save_database_team_agent()
+                agent_saved = True
             yield update
 
     # -------------------------
