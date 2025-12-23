@@ -119,7 +119,6 @@ async def init_team(
         memory_store = await DatabaseFactory.get_database(user_id=user_id)
         team_service = TeamService(memory_store)
 
-        # Find the first available team from 4 to 1, or use HR as fallback
         init_team_id = await find_first_available_team(team_service, user_id)
 
         # Get current team if user has one
