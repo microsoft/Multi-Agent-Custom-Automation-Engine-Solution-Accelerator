@@ -121,10 +121,10 @@ async def init_team(
 
         # Find the first available team from 4 to 1, or use HR as fallback
         init_team_id = await find_first_available_team(team_service, user_id)
-        
+
         # Get current team if user has one
         user_current_team = await memory_store.get_current_team(user_id=user_id)
-        
+
         # If no teams available and no current team, return empty state to allow custom team upload
         if not init_team_id and not user_current_team:
             print("No teams found in database. System ready for custom team upload.")
@@ -134,7 +134,7 @@ async def init_team(
                 "team": None,
                 "requires_team_upload": True,
             }
-        
+
         # Use current team if available, otherwise use found team
         if user_current_team:
             init_team_id = user_current_team.team_id
@@ -146,7 +146,7 @@ async def init_team(
             )
             if user_current_team:
                 init_team_id = user_current_team.team_id
-        
+
         # Verify the team exists and user has access to it
         team_configuration = await team_service.get_team_configuration(
             init_team_id, user_id
