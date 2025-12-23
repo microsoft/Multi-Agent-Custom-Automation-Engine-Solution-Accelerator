@@ -13,7 +13,7 @@ This document provides comprehensive steps to test the MACAE MCP Server deployed
 
 ```bash
 # Navigate to MCP server directory
-cd src/backend/v3/mcp_server
+cd src/backend/v4/mcp_server
 
 # Build and run in one command
 docker build -t macae-mcp-server . && docker run -d --name macae-mcp-server -p 9000:9000 macae-mcp-server python mcp_server.py --transport http --host 0.0.0.0 --port 9000
@@ -25,7 +25,7 @@ docker build -t macae-mcp-server . && docker run -d --name macae-mcp-server -p 9
 
 ```bash
 # Navigate to the MCP server directory
-cd c:\workstation\Microsoft\github\MACAE_ME\src\backend\v3\mcp_server
+cd c:\workstation\Microsoft\github\MACAE_ME\src\backend\v4\mcp_server
 
 # Build the Docker image
 docker build -t macae-mcp-server:latest .

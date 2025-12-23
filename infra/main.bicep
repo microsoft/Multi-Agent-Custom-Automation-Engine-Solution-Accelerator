@@ -67,11 +67,14 @@ param gpt4_1ModelVersion string = '2025-04-14'
 @description('Optional. Name of the GPT Reasoning model to deploy:')
 param gptReasoningModelName string = 'o4-mini'
 
-@description('Optional. Version of the GPT Reasoning model to deploy. Defaults to 2025-04-14.')
+@description('Optional. Version of the GPT Reasoning model to deploy. Defaults to 2025-04-16.')
 param gptReasoningModelVersion string = '2025-04-16'
 
-@description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2025-01-01-preview.')
+@description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2024-12-01-preview.')
 param azureopenaiVersion string = '2024-12-01-preview'
+
+@description('Optional. Version of the Azure AI Agent API version. Defaults to 2025-01-01-preview.')
+param azureAiAgentAPIVersion string = '2025-01-01-preview'
 
 @minLength(1)
 @allowed([
@@ -123,11 +126,11 @@ param enablePrivateNetworking bool = false
 
 @secure()
 @description('Optional. The user name for the administrator account of the virtual machine. Allows to customize credentials if `enablePrivateNetworking` is set to true.')
-param virtualMachineAdminUsername string = take(newGuid(), 20)
+param virtualMachineAdminUsername string?
 
 @description('Optional. The password for the administrator account of the virtual machine. Allows to customize credentials if `enablePrivateNetworking` is set to true.')
 @secure()
-param virtualMachineAdminPassword string = newGuid()
+param virtualMachineAdminPassword string?
 
 // These parameters are changed for testing - please reset as part of publication
 
@@ -138,7 +141,7 @@ param backendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
 param backendContainerImageName string = 'macaebackend'
 
 @description('Optional. The Container Image Tag to deploy on the backend.')
-param backendContainerImageTag string = 'latest_v3'
+param backendContainerImageTag string = 'latest_v4'
 
 @description('Optional. The Container Registry hostname where the docker images for the frontend are located.')
 param frontendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
@@ -147,7 +150,7 @@ param frontendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
 param frontendContainerImageName string = 'macaefrontend'
 
 @description('Optional. The Container Image Tag to deploy on the frontend.')
-param frontendContainerImageTag string = 'latest_v3'
+param frontendContainerImageTag string = 'latest_v4'
 
 @description('Optional. The Container Registry hostname where the docker images for the MCP are located.')
 param MCPContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
@@ -156,7 +159,7 @@ param MCPContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
 param MCPContainerImageName string = 'macaemcp'
 
 @description('Optional. The Container Image Tag to deploy on the MCP.')
-param MCPContainerImageTag string = 'latest_v3'
+param MCPContainerImageTag string = 'latest_v4'
 
 @description('Optional. Enable/Disable usage telemetry for module.')
 param enableTelemetry bool = true
@@ -216,7 +219,6 @@ var replicaLocation = replicaRegionPairs[location]
 // Resources      //
 // ============== //
 
-
 var allTags = union(
   {
     'azd-env-name': solutionName
@@ -224,8 +226,10 @@ var allTags = union(
   tags
 )
 @description('Tag, Created by user name')
-param createdBy string = contains(deployer(), 'userPrincipalName')? split(deployer().userPrincipalName, '@')[0]: deployer().objectId
-var deployerPrincipalType = contains(deployer(), 'userPrincipalName')? 'User' : 'ServicePrincipal'
+param createdBy string = contains(deployer(), 'userPrincipalName')
+  ? split(deployer().userPrincipalName, '@')[0]
+  : deployer().objectId
+var deployerPrincipalType = contains(deployer(), 'userPrincipalName') ? 'User' : 'ServicePrincipal'
 
 resource resourceGroupTags 'Microsoft.Resources/tags@2021-04-01' = {
   name: 'default'
@@ -240,7 +244,6 @@ resource resourceGroupTags 'Microsoft.Resources/tags@2021-04-01' = {
     }
   }
 }
-
 
 #disable-next-line no-deployments-resources
 resource avmTelemetry 'Microsoft.Resources/deployments@2024-03-01' = if (enableTelemetry) {
@@ -412,7 +415,7 @@ module bastionHost 'br/public:avm/res/network/bastion-host:0.7.0' = if (enablePr
     enableTelemetry: enableTelemetry
     tags: tags
     virtualNetworkResourceId: virtualNetwork!.?outputs.?resourceId
-    availabilityZones:[]
+    availabilityZones: []
     publicIPAddressObject: {
       name: 'pip-bas${solutionSuffix}'
       diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : null
@@ -597,7 +600,7 @@ module proximityPlacementGroup 'br/public:avm/res/compute/proximity-placement-gr
 
 var virtualMachineResourceName = 'vm-${solutionSuffix}'
 var virtualMachineAvailabilityZone = 1
-var virtualMachineSize = 'Standard_D2s_v3'
+var virtualMachineSize = 'Standard_D2s_v4'
 module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.17.0' = if (enablePrivateNetworking) {
   name: take('avm.res.compute.virtual-machine.${virtualMachineResourceName}', 64)
   params: {
@@ -608,8 +611,8 @@ module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.17.0' = if (e
     computerName: take(virtualMachineResourceName, 15)
     osType: 'Windows'
     vmSize: virtualMachineSize
-    adminUsername: virtualMachineAdminUsername
-    adminPassword: virtualMachineAdminPassword
+    adminUsername: virtualMachineAdminUsername ?? 'JumpboxAdminUser'
+    adminPassword: virtualMachineAdminPassword ?? 'JumpboxAdminP@ssw0rd1234!'
     patchMode: 'AutomaticByPlatform'
     bypassPlatformSafetyChecksOnUserSchedule: true
     maintenanceConfigurationResourceId: maintenanceConfiguration!.outputs.resourceId
@@ -1175,7 +1178,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
         'https://${webSiteResourceName}.azurewebsites.net'
         'http://${webSiteResourceName}.azurewebsites.net'
       ]
-      allowedMethods:[
+      allowedMethods: [
         'GET'
         'POST'
         'PUT'
@@ -1232,6 +1235,10 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
             value: aiFoundryAiServicesModelDeployment.name
           }
           {
+            name: 'AZURE_OPENAI_RAI_DEPLOYMENT_NAME'
+            value: aiFoundryAiServices4_1ModelDeployment.name
+          }
+          {
             name: 'AZURE_OPENAI_API_VERSION'
             value: azureopenaiVersion
           }
@@ -1259,10 +1266,10 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
             name: 'FRONTEND_SITE_NAME'
             value: 'https://${webSiteResourceName}.azurewebsites.net'
           }
-          {
-            name: 'AZURE_AI_AGENT_ENDPOINT'
-            value: aiFoundryAiProjectEndpoint
-          }
+          // {
+          //   name: 'AZURE_AI_AGENT_ENDPOINT'
+          //   value: aiFoundryAiProjectEndpoint
+          // }
           {
             name: 'AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME'
             value: aiFoundryAiServicesModelDeployment.name
@@ -1276,25 +1283,21 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
             value: aiSearchConnectionName
           }
           {
-            name: 'AZURE_AI_SEARCH_INDEX_NAME'
-            value: aiSearchIndexName
-          }
-          {
             name: 'AZURE_AI_SEARCH_ENDPOINT'
             value: searchService.outputs.endpoint
           }
           {
             name: 'AZURE_COGNITIVE_SERVICES'
-            value: 'https://cognitiveservices.azure.com/.default' 
+            value: 'https://cognitiveservices.azure.com/.default'
           }
           {
             name: 'AZURE_BING_CONNECTION_NAME'
-            value: 'binggrnd' 
+            value: 'binggrnd'
           }
           {
             name: 'BING_CONNECTION_NAME'
-            value: 'binggrnd' 
-          } 
+            value: 'binggrnd'
+          }
           {
             name: 'REASONING_MODEL_NAME'
             value: aiFoundryAiServicesReasoningModelDeployment.name
@@ -1305,11 +1308,11 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
           }
           {
             name: 'MCP_SERVER_NAME'
-            value: 'MacaeMcpServer' 
+            value: 'MacaeMcpServer'
           }
           {
             name: 'MCP_SERVER_DESCRIPTION'
-            value: 'MCP server with greeting, HR, and planning tools' 
+            value: 'MCP server with greeting, HR, and planning tools'
           }
           {
             name: 'AZURE_TENANT_ID'
@@ -1321,26 +1324,49 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
           }
           {
             name: 'SUPPORTED_MODELS'
-            value: '["o3","o4-mini","gpt-4.1","gpt-4.1-mini"]' 
-          } 
+            value: '["o3","o4-mini","gpt-4.1","gpt-4.1-mini"]'
+          }
           {
             name: 'AZURE_AI_SEARCH_API_KEY'
             secretRef: 'azure-ai-search-api-key'
-          } 
+          }
           {
             name: 'AZURE_STORAGE_BLOB_URL'
             value: avmStorageAccount.outputs.serviceEndpoints.blob
           }
           {
-            name: 'AZURE_STORAGE_CONTAINER_NAME'
-            value: storageContainerName
+            name: 'AZURE_AI_PROJECT_ENDPOINT'
+            value: aiFoundryAiProjectEndpoint
           }
           {
-            name: 'AZURE_AI_MODEL_DEPLOYMENT_NAME'
-            value: aiFoundryAiServicesModelDeployment.name
+            name: 'AZURE_AI_AGENT_ENDPOINT'
+            value: aiFoundryAiProjectEndpoint
+          }
+          {
+            name: 'AZURE_AI_AGENT_API_VERSION'
+            value: azureAiAgentAPIVersion
+          }
+          {
+            name: 'AZURE_AI_AGENT_PROJECT_CONNECTION_STRING'
+            value: '${aiFoundryAiServicesResourceName}.services.ai.azure.com;${aiFoundryAiServicesSubscriptionId};${aiFoundryAiServicesResourceGroupName};${aiFoundryAiProjectResourceName}'
+          }
+           {
+            name: 'AZURE_DEV_COLLECT_TELEMETRY'
+            value: 'no'
+          }
+          {
+            name: 'AZURE_BASIC_LOGGING_LEVEL'
+            value: 'INFO'
+          }
+          {
+            name: 'AZURE_PACKAGE_LOGGING_LEVEL'
+            value: 'WARNING'
+          }
+          {
+            name: 'AZURE_LOGGING_PACKAGES'
+            value: ''
           }
         ]
-        
       }
     ]
     secrets: [
@@ -1356,7 +1382,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
 // ========== MCP Container App Service ========== //
 // WAF best practices for container apps: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/azure-container-apps
 // PSRule for Container App: https://azure.github.io/PSRule.Rules.Azure/en/rules/resource/#container-app
-var containerAppMcpResourceName  = 'ca-mcp-${solutionSuffix}'
+var containerAppMcpResourceName = 'ca-mcp-${solutionSuffix}'
 module containerAppMcp 'br/public:avm/res/app/container-app:0.18.1' = {
   name: take('avm.res.app.container-app.${containerAppMcpResourceName}', 64)
   params: {
@@ -1465,7 +1491,7 @@ module webServerFarm 'br/public:avm/res/web/serverfarm:0.5.0' = {
     // WAF aligned configuration for Monitoring
     diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : null
     // WAF aligned configuration for Scalability
-    skuName: enableScalability || enableRedundancy ? 'P1v3' : 'B3'
+    skuName: enableScalability || enableRedundancy ? 'P1v4' : 'B3'
     skuCapacity: enableScalability ? 3 : 1
     // WAF aligned configuration for Redundancy
     zoneRedundant: enableRedundancy ? true : false
@@ -1500,9 +1526,6 @@ module webSite 'modules/web-sites.bicep' = {
           WEBSITES_CONTAINER_START_TIME_LIMIT: '1800' // 30 minutes, adjust as needed
           BACKEND_API_URL: 'https://${containerApp.outputs.fqdn}'
           AUTH_ENABLED: 'false'
-          AZURE_BASIC_LOGGING_LEVEL: 'INFO'
-          AZURE_PACKAGE_LOGGING_LEVEL: 'WARNING'
-          AZURE_LOGGING_PACKAGES: ''
         }
         // WAF aligned configuration for Monitoring
         applicationInsightResourceId: enableMonitoring ? applicationInsights!.outputs.resourceId : null
@@ -1518,11 +1541,18 @@ module webSite 'modules/web-sites.bicep' = {
   }
 }
 
-
 // ========== Storage Account ========== //
 
 var storageAccountName = replace('st${solutionSuffix}', '-', '')
 param storageContainerName string = 'sample-dataset'
+param storageContainerNameRetailCustomer string = 'retail-dataset-customer'
+param storageContainerNameRetailOrder string = 'retail-dataset-order'
+param storageContainerNameRFPSummary string = 'rfp-summary-dataset'
+param storageContainerNameRFPRisk string = 'rfp-risk-dataset'
+param storageContainerNameRFPCompliance string = 'rfp-compliance-dataset'
+param storageContainerNameContractSummary string = 'contract-summary-dataset'
+param storageContainerNameContractRisk string = 'contract-risk-dataset'
+param storageContainerNameContractCompliance string = 'contract-compliance-dataset'
 module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
   name: take('avm.res.storage.storage-account.${storageAccountName}', 64)
   params: {
@@ -1551,13 +1581,13 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
     // WAF aligned networking
     networkAcls: {
       bypass: 'AzureServices'
-      defaultAction: enablePrivateNetworking  ? 'Deny' : 'Allow'
+      defaultAction: enablePrivateNetworking ? 'Deny' : 'Allow'
     }
     allowBlobPublicAccess: false
-    publicNetworkAccess: enablePrivateNetworking  ? 'Disabled' : 'Enabled'
+    publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
 
     // Private endpoints for blob
-    privateEndpoints: enablePrivateNetworking 
+    privateEndpoints: enablePrivateNetworking
       ? [
           {
             name: 'pep-blob-${solutionSuffix}'
@@ -1581,7 +1611,35 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
       containerDeleteRetentionPolicyEnabled: true
       containers: [
         {
-          name: storageContainerName
+          name: storageContainerNameRetailCustomer
+          publicAccess: 'None'
+        }
+        {
+          name: storageContainerNameRetailOrder
+          publicAccess: 'None'
+        }
+        {
+          name: storageContainerNameRFPSummary
+          publicAccess: 'None'
+        }
+        {
+          name: storageContainerNameRFPRisk
+          publicAccess: 'None'
+        }
+        {
+          name: storageContainerNameRFPCompliance
+          publicAccess: 'None'
+        }
+        {
+          name: storageContainerNameContractSummary
+          publicAccess: 'None'
+        }
+        {
+          name: storageContainerNameContractRisk
+          publicAccess: 'None'
+        }
+        {
+          name: storageContainerNameContractCompliance
           publicAccess: 'None'
         }
       ]
@@ -1595,7 +1653,15 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
 // ========== Search Service ========== //
 
 var searchServiceName = 'srch-${solutionSuffix}'
-var aiSearchIndexName = 'sample-dataset-index'
+var aiSearchIndexNameForContractSummary = 'contract-summary-doc-index'
+var aiSearchIndexNameForContractRisk = 'contract-risk-doc-index'
+var aiSearchIndexNameForContractCompliance = 'contract-compliance-doc-index'
+var aiSearchIndexNameForRetailCustomer = 'macae-retail-customer-index'
+var aiSearchIndexNameForRetailOrder = 'macae-retail-order-index'
+var aiSearchIndexNameForRFPSummary = 'macae-rfp-summary-index'
+var aiSearchIndexNameForRFPRisk = 'macae-rfp-risk-index'
+var aiSearchIndexNameForRFPCompliance = 'macae-rfp-compliance-index'
+
 module searchService 'br/public:avm/res/search/search-service:0.11.1' = {
   name: take('avm.res.search.search-service.${solutionSuffix}', 64)
   params: {
@@ -1647,7 +1713,7 @@ module searchService 'br/public:avm/res/search/search-service:0.11.1' = {
 
     //Removing the Private endpoints as we are facing the issue with connecting to search service while comminicating with agents
 
-    privateEndpoints:[]
+    privateEndpoints: []
     // privateEndpoints: enablePrivateNetworking 
     //   ? [
     //       {
@@ -1688,7 +1754,6 @@ module aiSearchFoundryConnection 'modules/aifp-connections.bicep' = {
   ]
 }
 
-
 // ========== KeyVault ========== //
 var keyVaultName = 'kv-${solutionSuffix}'
 module keyvault 'br/public:avm/res/key-vault/vault:0.12.1' = {
@@ -1708,9 +1773,7 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.12.1' = {
     enableRbacAuthorization: true
     enableSoftDelete: true
     softDeleteRetentionInDays: 7
-    diagnosticSettings: enableMonitoring 
-      ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] 
-      : []
+    diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : []
     // WAF aligned configuration for Private Networking
     privateEndpoints: enablePrivateNetworking
       ? [
@@ -1718,7 +1781,9 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.12.1' = {
             name: 'pep-${keyVaultName}'
             customNetworkInterfaceName: 'nic-${keyVaultName}'
             privateDnsZoneGroup: {
-              privateDnsZoneGroupConfigs: [{ privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.keyVault]!.outputs.resourceId }]
+              privateDnsZoneGroupConfigs: [
+                { privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.keyVault]!.outputs.resourceId }
+              ]
             }
             service: 'vault'
             subnetResourceId: virtualNetwork!.outputs.backendSubnetResourceId
@@ -1728,9 +1793,9 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.12.1' = {
     // WAF aligned configuration for Role-based Access Control
     roleAssignments: [
       {
-         principalId: userAssignedIdentity.outputs.principalId
-         principalType: 'ServicePrincipal'
-         roleDefinitionIdOrName: 'Key Vault Administrator'
+        principalId: userAssignedIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
+        roleDefinitionIdOrName: 'Key Vault Administrator'
       }
     ]
     secrets: [
@@ -1755,10 +1820,8 @@ output webSiteDefaultHostname string = webSite.outputs.defaultHostname
 
 output AZURE_STORAGE_BLOB_URL string = avmStorageAccount.outputs.serviceEndpoints.blob
 output AZURE_STORAGE_ACCOUNT_NAME string = storageAccountName
-output AZURE_STORAGE_CONTAINER_NAME string = storageContainerName
 output AZURE_AI_SEARCH_ENDPOINT string = searchService.outputs.endpoint
 output AZURE_AI_SEARCH_NAME string = searchService.outputs.name
-output AZURE_AI_SEARCH_INDEX_NAME string = aiSearchIndexName
 
 output COSMOSDB_ENDPOINT string = 'https://${cosmosDbResourceName}.documents.azure.com:443/'
 output COSMOSDB_DATABASE string = cosmosDbDatabaseName
@@ -1766,23 +1829,25 @@ output COSMOSDB_CONTAINER string = cosmosDbDatabaseMemoryContainerName
 output AZURE_OPENAI_ENDPOINT string = 'https://${aiFoundryAiServicesResourceName}.openai.azure.com/'
 output AZURE_OPENAI_MODEL_NAME string = aiFoundryAiServicesModelDeployment.name
 output AZURE_OPENAI_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDeployment.name
+output AZURE_OPENAI_RAI_DEPLOYMENT_NAME string = aiFoundryAiServices4_1ModelDeployment.name
 output AZURE_OPENAI_API_VERSION string = azureopenaiVersion
 // output APPLICATIONINSIGHTS_INSTRUMENTATION_KEY string = applicationInsights.outputs.instrumentationKey
 // output AZURE_AI_PROJECT_ENDPOINT string = aiFoundryAiServices.outputs.aiProjectInfo.apiEndpoint
 output AZURE_AI_SUBSCRIPTION_ID string = subscription().subscriptionId
 output AZURE_AI_RESOURCE_GROUP string = resourceGroup().name
 output AZURE_AI_PROJECT_NAME string = aiFoundryAiProjectName
-output AZURE_AI_MODEL_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDeployment.name
 // output APPLICATIONINSIGHTS_CONNECTION_STRING string = applicationInsights.outputs.connectionString
 output AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDeployment.name
-output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiProjectEndpoint
+// output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiProjectEndpoint
 output APP_ENV string = 'Prod'
-output AI_FOUNDRY_RESOURCE_ID string = !useExistingAiFoundryAiProject ? aiFoundryAiServices.outputs.resourceId : existingAiFoundryAiProjectResourceId
+output AI_FOUNDRY_RESOURCE_ID string = !useExistingAiFoundryAiProject
+  ? aiFoundryAiServices.outputs.resourceId
+  : existingAiFoundryAiProjectResourceId
 output COSMOSDB_ACCOUNT_NAME string = cosmosDbResourceName
-output AZURE_SEARCH_ENDPOINT string =searchService.outputs.endpoint
-output AZURE_CLIENT_ID string  = userAssignedIdentity!.outputs.clientId
+output AZURE_SEARCH_ENDPOINT string = searchService.outputs.endpoint
+output AZURE_CLIENT_ID string = userAssignedIdentity!.outputs.clientId
 output AZURE_TENANT_ID string = tenant().tenantId
-output AZURE_AI_SEARCH_CONNECTION_NAME string  = aiSearchConnectionName
+output AZURE_AI_SEARCH_CONNECTION_NAME string = aiSearchConnectionName
 output AZURE_COGNITIVE_SERVICES string = 'https://cognitiveservices.azure.com/.default'
 output REASONING_MODEL_NAME string = aiFoundryAiServicesReasoningModelDeployment.name
 output MCP_SERVER_NAME string = 'MacaeMcpServer'
@@ -1790,3 +1855,27 @@ output MCP_SERVER_DESCRIPTION string = 'MCP server with greeting, HR, and planni
 output SUPPORTED_MODELS string = '["o3","o4-mini","gpt-4.1","gpt-4.1-mini"]'
 output AZURE_AI_SEARCH_API_KEY string = '<Deployed-Search-ApiKey>'
 output BACKEND_URL string = 'https://${containerApp.outputs.fqdn}'
+output AZURE_AI_PROJECT_ENDPOINT string = aiFoundryAiProjectEndpoint
+output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiProjectEndpoint
+output AZURE_AI_AGENT_API_VERSION string = azureAiAgentAPIVersion
+output AZURE_AI_AGENT_PROJECT_CONNECTION_STRING string = '${aiFoundryAiServicesResourceName}.services.ai.azure.com;${aiFoundryAiServicesSubscriptionId};${aiFoundryAiServicesResourceGroupName};${aiFoundryAiProjectResourceName}'
+output AZURE_DEV_COLLECT_TELEMETRY  string = 'no'
+
+
+output AZURE_STORAGE_CONTAINER_NAME_RETAIL_CUSTOMER string = storageContainerNameRetailCustomer
+output AZURE_STORAGE_CONTAINER_NAME_RETAIL_ORDER string = storageContainerNameRetailOrder
+output AZURE_STORAGE_CONTAINER_NAME_RFP_SUMMARY string = storageContainerNameRFPSummary
+output AZURE_STORAGE_CONTAINER_NAME_RFP_RISK string = storageContainerNameRFPRisk
+output AZURE_STORAGE_CONTAINER_NAME_RFP_COMPLIANCE string = storageContainerNameRFPCompliance
+output AZURE_STORAGE_CONTAINER_NAME_CONTRACT_SUMMARY string = storageContainerNameContractSummary
+output AZURE_STORAGE_CONTAINER_NAME_CONTRACT_RISK string = storageContainerNameContractRisk
+output AZURE_STORAGE_CONTAINER_NAME_CONTRACT_COMPLIANCE string = storageContainerNameContractCompliance
+output AZURE_AI_SEARCH_INDEX_NAME_RETAIL_CUSTOMER string = aiSearchIndexNameForRetailCustomer
+output AZURE_AI_SEARCH_INDEX_NAME_RETAIL_ORDER string = aiSearchIndexNameForRetailOrder
+output AZURE_AI_SEARCH_INDEX_NAME_RFP_SUMMARY string = aiSearchIndexNameForRFPSummary
+output AZURE_AI_SEARCH_INDEX_NAME_RFP_RISK string = aiSearchIndexNameForRFPRisk
+output AZURE_AI_SEARCH_INDEX_NAME_RFP_COMPLIANCE string = aiSearchIndexNameForRFPCompliance
+output AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_SUMMARY string = aiSearchIndexNameForContractSummary
+output AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_RISK string = aiSearchIndexNameForContractRisk
+output AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_COMPLIANCE string = aiSearchIndexNameForContractCompliance
+

@@ -1,4 +1,4 @@
-name: Deploy Steps - Windows v2
+name: Deploy Steps - Windows
 
 on:
   workflow_call:
@@ -128,10 +128,6 @@ jobs:
           } else {
             Write-Host "EXP DISABLED - Skipping EXP parameters"
           }
-
-          # Set tags for deployment  
-          echo "Setting deployment tags..."
-          azd env set AZURE_TAG_SECURITY_CONTROL="Ignore"
 
           # Deploy using azd up
           azd up --no-prompt

@@ -9,6 +9,7 @@ This document provides guidance on post-deployment steps after deploying the Mul
 ## Overview
 
 After deploying the infrastructure using AVM, you'll need to complete the application layer setup, which includes:
+
 - Configuring team agent configurations
 - Processing and uploading sample datasets
 - Setting up Azure AI Search indexes
@@ -25,14 +26,15 @@ Before starting the post-deployment process, ensure you have the following:
 
 2. **[Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli)** <small>(v2.50+)</small> - Command-line tool for managing Azure resources
 
-3. **[Python](https://www.python.org/downloads/)** <small>(v3.9+ recommended)</small> - Required for data processing scripts
+3. **[Python](https://www.python.org/downloads/)** <small>(v4.9+ recommended)</small> - Required for data processing scripts
 
 4. **[Git](https://git-scm.com/downloads/)** - Version control system for cloning the repository
 
 ### Azure Requirements
 
 5. **Azure Access** - One of the following roles on the subscription or resource group:
-   - `Contributor` 
+
+   - `Contributor`
    - `Owner`
 
 6. **Deployed Infrastructure** - A successful Multi-Agent Custom Automation Engine deployment from the [AVM repository](https://github.com/Azure/bicep-registry-modules/tree/main/avm/ptn/sa/multi-agent-custom-automation-engine)
@@ -56,6 +58,7 @@ First, clone this repository to access the post-deployment scripts:
 ```powershell
 git clone https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator.git
 ```
+
 ```powershell
 cd Multi-Agent-Custom-Automation-Engine-Solution-Accelerator
 ```
@@ -65,6 +68,7 @@ cd Multi-Agent-Custom-Automation-Engine-Solution-Accelerator
 The post-deployment process is automated through a single PowerShell or Bash script that completes the following tasks in approximately 5-10 minutes:
 
 #### What the Script Does:
+
 1. **Configure Team Agent Settings** - Upload HR, Marketing, and Retail team configurations
 2. **Process Sample Datasets** - Upload and index sample customer data, analytics, and business metrics
 3. **Set Up Azure AI Search** - Create and configure search indexes for agent data retrieval
@@ -77,27 +81,29 @@ The post-deployment process is automated through a single PowerShell or Bash scr
    **If you deployed using custom templates, ARM/Bicep deployments, or `az deployment group` commands:**
 
    - **For PowerShell (Windows/Linux/macOS):**
+
      ```powershell
-     .\infra\scripts\Team-Config-And-Data.ps1 -ResourceGroup "<your-resource-group-name>"
+     infra\scripts\Selecting-Team-Config-And-Data.ps1 -ResourceGroup "<your-resource-group-name>"
      ```
 
    - **For Bash (Linux/macOS/WSL):**
      ```bash
-     bash infra/scripts/team_config_and_data.sh "<your-resource-group-name>"
+     bash infra/scripts/selecting_team_config_and_data.sh --resource-group "<your-resource-group-name>"
      ```
-   
+
    **If you deployed using `azd up` command:**
 
    - **For PowerShell (Windows/Linux/macOS):**
+
      ```powershell
-     .\infra\scripts\Team-Config-And-Data.ps1
+     infra\scripts\Selecting-Team-Config-And-Data.ps1
      ```
 
    - **For Bash (Linux/macOS/WSL):**
      ```bash
-     bash infra/scripts/team_config_and_data.sh
+     bash infra/scripts/selecting_team_config_and_data.sh
      ```
-   
+
    > **Note**: Replace `<your-resource-group-name>` with the actual name of the resource group containing your deployed Azure resources.
 
    > **💡 Tip**: Since this guide is for AVM deployments, you'll most likely use the first command with the `-ResourceGroup` parameter.
@@ -110,6 +116,7 @@ During script execution, you'll be prompted for:
 - Select the appropriate Azure subscription
 
 #### Resource Validation
+
 - The script will automatically detect and validate your deployed Azure resources
 - Confirmation prompts will appear before making configuration changes
 

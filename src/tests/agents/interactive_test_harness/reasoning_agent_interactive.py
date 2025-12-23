@@ -10,8 +10,8 @@ from pathlib import Path
 backend_path = Path(__file__).parent.parent.parent.parent / "backend"
 sys.path.insert(0, str(backend_path))
 
-from v3.magentic_agents.models.agent_models import MCPConfig, SearchConfig
-from v3.magentic_agents.reasoning_agent import ReasoningAgentTemplate
+from af.magentic_agents.models.agent_models import MCPConfig, SearchConfig
+from af.magentic_agents.reasoning_agent import ReasoningAgentTemplate
 
 mcp_config = MCPConfig().from_env()
 search_config = SearchConfig().from_env()

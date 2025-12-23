@@ -1,7 +1,7 @@
 # File: test_message.py
 
 import uuid
-from src.backend.common.models.messages_kernel import (
+from src.backend.common.models.messages_af import (
     DataType,
     AgentType as BAgentType,   # map to your enum
     StepStatus,

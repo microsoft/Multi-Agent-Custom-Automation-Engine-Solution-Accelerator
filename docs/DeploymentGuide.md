@@ -181,21 +181,23 @@ Review the configuration options below. You can customize any settings that meet
 **To use production configuration:**
 
 **Prerequisite** — Enable the Microsoft.Compute/EncryptionAtHost feature for every subscription (and region, if required) where you plan to deploy VMs or VM scale sets with `encryptionAtHost: true`. Repeat the registration steps below for each target subscription (and for each region when applicable). This step is required for **WAF-aligned** (production) deployments.
+**Prerequisite** — Enable the Microsoft.Compute/EncryptionAtHost feature for every subscription (and region, if required) where you plan to deploy VMs or VM scale sets with `encryptionAtHost: true`. Repeat the registration steps below for each target subscription (and for each region when applicable). This step is required for **WAF-aligned** (production) deployments.
 
-  Steps to enable the feature:
-  1. Set the target subscription:
-     Run: <code>az account set --subscription "&lt;YourSubscriptionId&gt;"</code>
-  2. Register the feature (one time per subscription):
-     Run: <code>az feature register --name EncryptionAtHost --namespace Microsoft.Compute</code>
-  3. Wait until registration completes and shows "Registered":
-     Run: <code>az feature show --name EncryptionAtHost --namespace Microsoft.Compute --query properties.state -o tsv</code>
-  4. Refresh the provider (if required):
-     Run: <code>az provider register --namespace Microsoft.Compute</code>
-  5. Re-run the deployment after registration is complete.
+Steps to enable the feature:
 
-  Note: Feature registration can take several minutes. Ensure the feature is registered before attempting deployments that require encryptionAtHost.
+1. Set the target subscription:
+   Run: <code>az account set --subscription "&lt;YourSubscriptionId&gt;"</code>
+2. Register the feature (one time per subscription):
+   Run: <code>az feature register --name EncryptionAtHost --namespace Microsoft.Compute</code>
+3. Wait until registration completes and shows "Registered":
+   Run: <code>az feature show --name EncryptionAtHost --namespace Microsoft.Compute --query properties.state -o tsv</code>
+4. Refresh the provider (if required):
+   Run: <code>az provider register --namespace Microsoft.Compute</code>
+5. Re-run the deployment after registration is complete.
 
-  Reference: Azure Host Encryption — https://learn.microsoft.com/azure/virtual-machines/disks-enable-host-based-encryption-portal?tabs=azure-cli
+Note: Feature registration can take several minutes. Ensure the feature is registered before attempting deployments that require encryptionAtHost.
+
+Reference: Azure Host Encryption — https://learn.microsoft.com/azure/virtual-machines/disks-enable-host-based-encryption-portal?tabs=azure-cli
 
 Copy the contents from the production configuration file to your main parameters file:
 
@@ -337,22 +339,16 @@ After successful deployment:
     bash infra/scripts/process_sample_data.sh
     ```
 
-  - **For PowerShell (Windows):**
-    ```powershell
-    infra\scripts\Process-Sample-Data.ps1
-    ```
+- **For PowerShell (Windows):**
+  ```powershell
+  infra\scripts\Selecting-Team-Config-And-Data.ps1
+  ```
 
 3. **[Alternative]** To upload team configurations and index sample data in one step, run the appropriate command for your shell from the project root:
 
-  - **For Bash (Linux/macOS/WSL):**
-    ```bash
-    bash infra/scripts/team_config_and_data.sh
-    ```
+6. **[Optional]** Set up authentication for your web application by following the steps in [Set Up Authentication in Azure App Service](../docs/azure_app_service_auth_setup.md).
 
-  - **For PowerShell (Windows):**
-    ```powershell
-    infra\scripts\Team-Config-And-Data.ps1
-    ```
+7. When Deployment is complete, follow steps in [Set Up Authentication in Azure App Service](../docs/azure_app_service_auth_setup.md) to add app authentication to your web app running on Azure App Service
 
 
 ### 5.2 Configure Authentication (Optional)

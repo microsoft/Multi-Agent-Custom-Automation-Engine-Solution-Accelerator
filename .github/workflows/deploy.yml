@@ -1,13 +1,13 @@
-name: Validate Deployment v3
+name: Validate Deployment v4
 
 on:
   workflow_run:
-    workflows: ["Build Docker and Optional Push v3"]
+    workflows: ["Build Docker and Optional Push v4"]
     types:
       - completed
     branches:
       - main
-      - dev-v3
+      - dev-v4
       - hotfix
   schedule:
     - cron: "0 11,23 * * *" # Runs at 11:00 AM and 11:00 PM GMT
@@ -29,7 +29,7 @@ jobs:
       CONTAINER_APP: ${{steps.get_backend_url.outputs.CONTAINER_APP}}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Run Quota Check
         id: quota-check
@@ -120,9 +120,9 @@ jobs:
         id: deploy
         run: |
           if [[ "${{ env.BRANCH_NAME }}" == "main" ]]; then
-            IMAGE_TAG="latest_v3"
-          elif [[ "${{ env.BRANCH_NAME }}" == "dev-v3" ]]; then
-            IMAGE_TAG="dev_v3"
+            IMAGE_TAG="latest_v4"
+          elif [[ "${{ env.BRANCH_NAME }}" == "dev-v4" ]]; then
+            IMAGE_TAG="dev_v4"
           elif [[ "${{ env.BRANCH_NAME }}" == "hotfix" ]]; then
             IMAGE_TAG="hotfix"
           else
@@ -146,7 +146,7 @@ jobs:
               azureAiServiceLocation='${{ env.AZURE_LOCATION }}' \
               gptModelCapacity=50 \
               createdBy="Pipeline" \
-              tags="{'SecurityControl':'Ignore','Purpose':'Deploying and Cleaning Up Resources for Validation','CreatedDate':'$current_date'}" \
+              tags="{'Purpose':'Deploying and Cleaning Up Resources for Validation','CreatedDate':'$current_date'}" \
             --output json
 
       - name: Extract Web App and API App URLs

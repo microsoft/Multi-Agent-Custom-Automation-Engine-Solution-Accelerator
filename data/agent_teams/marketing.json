@@ -5,6 +5,7 @@
   "status": "visible",
   "created": "",
   "created_by": "",
+  "deployment_name": "gpt-4.1-mini",
   "agents": [
     {
       "input_key": "",

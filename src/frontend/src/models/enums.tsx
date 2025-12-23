@@ -252,11 +252,13 @@ export enum WebsocketMessageType {
     REPLAN_APPROVAL_RESPONSE = "replan_approval_response",
     USER_CLARIFICATION_REQUEST = "user_clarification_request",
     USER_CLARIFICATION_RESPONSE = "user_clarification_response",
-    FINAL_RESULT_MESSAGE = "final_result_message"
+    FINAL_RESULT_MESSAGE = "final_result_message",
+    ERROR_MESSAGE = 'error_message'
 }
 
 export enum AgentMessageType {
     HUMAN_AGENT = "Human_Agent",
     AI_AGENT = "AI_Agent",
+    SYSTEM_AGENT = "SYSTEM_AGENT"
 }
 

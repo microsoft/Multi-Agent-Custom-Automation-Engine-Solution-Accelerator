@@ -1,0 +1,230 @@
+# Copyright (c) Microsoft. All rights reserved.
+"""Factory for creating and managing magentic agents from JSON configurations."""
+
+import json
+import logging
+from types import SimpleNamespace
+from typing import List, Optional, Union
+
+from common.config.app_config import config
+from common.database.database_base import DatabaseBase
+from common.models.messages_af import TeamConfiguration
+from v4.common.services.team_service import TeamService
+from v4.magentic_agents.foundry_agent import FoundryAgentTemplate
+from v4.magentic_agents.models.agent_models import MCPConfig, SearchConfig
+# from v4.magentic_agents.models.agent_models import (BingConfig, MCPConfig,
+#                                                     SearchConfig)
+from v4.magentic_agents.proxy_agent import ProxyAgent
+
+
+class UnsupportedModelError(Exception):
+    """Raised when an unsupported model is specified."""
+
+
+class InvalidConfigurationError(Exception):
+    """Raised when agent configuration is invalid."""
+
+
+class MagenticAgentFactory:
+    """Factory for creating and managing magentic agents from JSON configurations."""
+
+    def __init__(self, team_service: Optional[TeamService] = None):
+        self.logger = logging.getLogger(__name__)
+        self._agent_list: List = []
+        self.team_service = team_service
+
+    # @staticmethod
+    # def parse_team_config(file_path: Union[str, Path]) -> SimpleNamespace:
+    #     """Parse JSON file into objects using SimpleNamespace."""
+    #     with open(file_path, 'r') as f:
+    #         data = json.load(f)
+    #     return json.loads(json.dumps(data), object_hook=lambda d: SimpleNamespace(**d))
+
+    # Ensure only an explicit boolean True in the source sets this flag.
+    def extract_use_reasoning(self, agent_obj):
+        # Support both dict and attribute-style objects
+        if isinstance(agent_obj, dict):
+            val = agent_obj.get("use_reasoning", False)
+        else:
+            val = getattr(agent_obj, "use_reasoning", False)
+
+        # Accept only the literal boolean True
+        return True if val is True else False
+
+    async def create_agent_from_config(
+        self,
+        user_id: str,
+        agent_obj: SimpleNamespace,
+        team_config: TeamConfiguration,
+        memory_store: DatabaseBase,
+    ) -> Union[FoundryAgentTemplate, ProxyAgent]:
+        """
+        Create an agent from configuration object.
+
+        Args:
+            user_id: User ID
+            agent_obj: Agent object from parsed JSON (SimpleNamespace)
+            team_model: Model name to determine which template to use
+
+        Returns:
+            Configured agent instance
+
+        Raises:
+            UnsupportedModelError: If model is not supported
+            InvalidConfigurationError: If configuration is invalid
+        """
+        # Get model from agent config, team model, or environment
+        deployment_name = getattr(agent_obj, "deployment_name", None)
+
+        if not deployment_name and agent_obj.name.lower() == "proxyagent":
+            self.logger.info("Creating ProxyAgent")
+            return ProxyAgent(user_id=user_id)
+
+        # Validate supported models
+        supported_models = json.loads(config.SUPPORTED_MODELS)
+
+        if deployment_name not in supported_models:
+            raise UnsupportedModelError(
+                f"Model '{deployment_name}' not supported. Supported: {supported_models}"
+            )
+
+        # Determine which template to use
+        # Usage
+        use_reasoning = self.extract_use_reasoning(agent_obj)
+
+        # Validate reasoning constraints
+        if use_reasoning:
+            if getattr(agent_obj, "use_bing", False) or getattr(
+                agent_obj, "coding_tools", False
+            ):
+                raise InvalidConfigurationError(
+                    f"Agent cannot use Bing search or coding tools. "
+                    f"Agent '{agent_obj.name}' has use_bing={getattr(agent_obj, 'use_bing', False)}, "
+                    f"coding_tools={getattr(agent_obj, 'coding_tools', False)}"
+                )
+
+        # Only create configs for explicitly requested capabilities
+        index_name = getattr(agent_obj, "index_name", None)
+        search_config = (
+            SearchConfig.from_env(index_name)
+            if getattr(agent_obj, "use_rag", False)
+            else None
+        )
+        mcp_config = (
+            MCPConfig.from_env() if getattr(agent_obj, "use_mcp", False) else None
+        )
+        # bing_config = BingConfig.from_env() if getattr(agent_obj, 'use_bing', False) else None
+
+        self.logger.info(
+            "Creating agent '%s' with model '%s' %s (Template: %s)",
+            agent_obj.name,
+            deployment_name,
+            index_name,
+            "Reasoning" if use_reasoning else "Foundry",
+        )
+
+        agent = FoundryAgentTemplate(
+            agent_name=agent_obj.name,
+            agent_description=getattr(agent_obj, "description", ""),
+            agent_instructions=getattr(agent_obj, "system_message", ""),
+            use_reasoning=use_reasoning,
+            model_deployment_name=deployment_name,
+            enable_code_interpreter=getattr(agent_obj, "coding_tools", False),
+            project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
+            mcp_config=mcp_config,
+            search_config=search_config,
+            team_service=self.team_service,
+            team_config=team_config,
+            memory_store=memory_store,
+        )
+
+        await agent.open()
+        self.logger.info(
+            "Successfully created and initialized agent '%s'", agent_obj.name
+        )
+        return agent
+
+    async def get_agents(
+        self,
+        user_id: str,
+        team_config_input: TeamConfiguration,
+        memory_store: DatabaseBase,
+    ) -> List:
+        """
+        Create and return a team of agents from JSON configuration.
+
+        Args:
+            user_id: User ID
+            team_config_input: team configuration object from cosmos db
+
+        Returns:
+            List of initialized agent instances
+        """
+        # self.logger.info(f"Loading team configuration from: {file_path}")
+
+        try:
+
+            initalized_agents = []
+
+            for i, agent_cfg in enumerate(team_config_input.agents, 1):
+                try:
+                    self.logger.info(
+                        "Creating agent %d/%d: %s",
+                        i,
+                        len(team_config_input.agents),
+                        agent_cfg.name
+                    )
+
+                    agent = await self.create_agent_from_config(
+                        user_id, agent_cfg, team_config_input, memory_store
+                    )
+                    initalized_agents.append(agent)
+                    self._agent_list.append(agent)  # Keep track for cleanup
+
+                    self.logger.info(
+                        "✅ Agent %d/%d created: %s",
+                        i,
+                        len(team_config_input.agents),
+                        agent_cfg.name
+                    )
+
+                except (UnsupportedModelError, InvalidConfigurationError) as e:
+                    self.logger.warning(f"Skipped agent {agent_cfg.name}: {e}")
+                    print(f"Skipped agent {agent_cfg.name}: {e}")
+                    continue
+                except Exception as e:
+                    self.logger.error(f"Failed to create agent {agent_cfg.name}: {e}")
+                    print(f"Failed to create agent {agent_cfg.name}: {e}")
+                    continue
+
+            self.logger.info(
+                "Successfully created %d/%d agents for team '%s'",
+                len(initalized_agents),
+                len(team_config_input.agents),
+                team_config_input.name
+            )
+            return initalized_agents
+
+        except Exception as e:
+            self.logger.error(f"Failed to load team configuration: {e}")
+            raise
+
+    @classmethod
+    async def cleanup_all_agents(cls, agent_list: List):
+        """Clean up all created agents."""
+        cls.logger = logging.getLogger(__name__)
+        cls.logger.info(f"Cleaning up {len(agent_list)} agents")
+
+        for agent in agent_list:
+            try:
+                await agent.close()
+            except Exception as ex:
+                name = getattr(
+                    agent,
+                    "agent_name",
+                    getattr(agent, "__class__", type("X", (object,), {})).__name__,
+                )
+                cls.logger.warning(f"Error closing agent {name}: {ex}")
+
+        agent_list.clear()
+        cls.logger.info("Agent cleanup completed")

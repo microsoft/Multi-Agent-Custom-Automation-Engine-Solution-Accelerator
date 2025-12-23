@@ -1,4 +1,4 @@
-name: Send Notification Job v2
+name: Send Notification Job
 
 on:
   workflow_call:
@@ -192,8 +192,8 @@ jobs:
           
           EMAIL_BODY=$(cat <<EOF
           {
-            "body": "<p>Dear Team,</p><p>The ${{ env.accelerator_name }} pipeline executed against the <strong>existing WebApp URL</strong> and testing process has completed successfully.</p><p><strong>Test Results:</strong><br>• Status: ✅ Passed<br>• Test Suite: ${TEST_SUITE_NAME}<br>${TEST_REPORT_URL:+• Test Report: <a href='${TEST_REPORT_URL}'>View Report</a>}<br>• Target URL: <a href='${EXISTING_URL}'>${EXISTING_URL}</a></p><p><strong>Deployment:</strong> Skipped</p><p><strong>Run URL:</strong> <a href='${RUN_URL}'>${RUN_URL}</a></p><p>Best regards,<br>Your Automation Team</p>",
-            "subject": "${{ env.accelerator_name }} Pipeline - Test Automation Passed (Existing URL)"
+            "body": "<p>Dear Team,</p><p>The ${{ env.accelerator_name }} pipeline executed against the <strong>specified target URL</strong> and testing process has completed successfully.</p><p><strong>Test Results:</strong><br>• Status: ✅ Passed<br>• Test Suite: ${TEST_SUITE_NAME}<br>${TEST_REPORT_URL:+• Test Report: <a href='${TEST_REPORT_URL}'>View Report</a>}<br>• Target URL: <a href='${EXISTING_URL}'>${EXISTING_URL}</a></p><p><strong>Deployment:</strong> Skipped</p><p><strong>Run URL:</strong> <a href='${RUN_URL}'>${RUN_URL}</a></p><p>Best regards,<br>Your Automation Team</p>",
+            "subject": "${{ env.accelerator_name }} Pipeline - Test Automation Passed "
           }
           EOF
           )
@@ -213,8 +213,8 @@ jobs:
           
           EMAIL_BODY=$(cat <<EOF
           {
-            "body": "<p>Dear Team,</p><p>The ${{ env.accelerator_name }} pipeline executed against the <strong>existing WebApp URL</strong> and the test automation has encountered issues and failed to complete successfully.</p><p><strong>Failure Details:</strong><br>• Target URL: <a href='${EXISTING_URL}'>${EXISTING_URL}</a><br>${TEST_REPORT_URL:+• Test Report: <a href='${TEST_REPORT_URL}'>View Report</a>}<br>• Test Suite: ${TEST_SUITE_NAME}<br>• Deployment: Skipped</p><p><strong>Run URL:</strong> <a href='${RUN_URL}'>${RUN_URL}</a></p><p>Best regards,<br>Your Automation Team</p>",
-            "subject": "${{ env.accelerator_name }} Pipeline - Test Automation Failed (Existing URL)"
+            "body": "<p>Dear Team,</p><p>The ${{ env.accelerator_name }} pipeline executed against the <strong>specified target URL</strong> and the test automation has encountered issues and failed to complete successfully.</p><p><strong>Failure Details:</strong><br>• Target URL: <a href='${EXISTING_URL}'>${EXISTING_URL}</a><br>${TEST_REPORT_URL:+• Test Report: <a href='${TEST_REPORT_URL}'>View Report</a>}<br>• Test Suite: ${TEST_SUITE_NAME}<br>• Deployment: Skipped</p><p><strong>Run URL:</strong> <a href='${RUN_URL}'>${RUN_URL}</a></p><p>Best regards,<br>Your Automation Team</p>",
+            "subject": "${{ env.accelerator_name }} Pipeline - Test Automation Failed "
           }
           EOF
           )

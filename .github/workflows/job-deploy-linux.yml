@@ -1,4 +1,4 @@
-name: Deploy Steps - Linux v2
+name: Deploy Steps - Linux
 
 on:
   workflow_call:
@@ -136,11 +136,7 @@ jobs:
           else
             echo "EXP DISABLED - Skipping EXP parameters"
           fi
-
-          # Set tags for deployment  
-          echo "Setting deployment tags..."
-          azd env set AZURE_TAG_SECURITY_CONTROL="Ignore"
-
+          
           azd up --no-prompt
           
           echo "✅ Deployment succeeded."

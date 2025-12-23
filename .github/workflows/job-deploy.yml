@@ -1,4 +1,4 @@
-name: Deploy Job v2
+name: Deploy Job
 
 on:
   workflow_call:
@@ -208,7 +208,7 @@ jobs:
             echo "RESOURCE_GROUP_NAME=${{ inputs.resource_group_name }}" >> $GITHUB_ENV
           else
             echo "Generating a unique resource group name..."
-            ACCL_NAME="macaev2"
+            ACCL_NAME="macaev4"
             SHORT_UUID=$(uuidgen | cut -d'-' -f1)
             UNIQUE_RG_NAME="arg-${ACCL_NAME}-${SHORT_UUID}"
             echo "RESOURCE_GROUP_NAME=${UNIQUE_RG_NAME}" >> $GITHUB_ENV
@@ -268,7 +268,7 @@ jobs:
             if [[ "$BRANCH_NAME" == "main" ]]; then
               IMAGE_TAG="latest_v3"
             elif [[ "$BRANCH_NAME" == "dev-v3" ]]; then
-              IMAGE_TAG="dev-v3"
+              IMAGE_TAG="dev_v3"
             elif [[ "$BRANCH_NAME" == "hotfix" ]]; then
               IMAGE_TAG="hotfix"
             else
@@ -329,7 +329,7 @@ jobs:
   deploy-linux:
     name: Deploy on Linux
     needs: azure-setup
-    if: inputs.runner_os == 'ubuntu-latest' && always() && needs.azure-setup.result == 'success'
+    if: inputs.runner_os == 'ubuntu-latest' && !cancelled() && needs.azure-setup.result == 'success'
     uses: ./.github/workflows/job-deploy-linux.yml
     with:
       ENV_NAME: ${{ needs.azure-setup.outputs.ENV_NAME }}
@@ -347,7 +347,7 @@ jobs:
   deploy-windows:
     name: Deploy on Windows
     needs: azure-setup
-    if: inputs.runner_os == 'windows-latest' && always() && needs.azure-setup.result == 'success'
+    if: inputs.runner_os == 'windows-latest' && !cancelled() && needs.azure-setup.result == 'success'
     uses: ./.github/workflows/job-deploy-windows.yml
     with:
       ENV_NAME: ${{ needs.azure-setup.outputs.ENV_NAME }}

@@ -20,13 +20,13 @@ import {
 
 // Constants for endpoints
 const API_ENDPOINTS = {
-    PROCESS_REQUEST: '/v3/process_request',
-    PLANS: '/v3/plans',
-    PLAN: '/v3/plan',
-    PLAN_APPROVAL: '/v3/plan_approval',
-    HUMAN_CLARIFICATION: '/v3/user_clarification',
+    PROCESS_REQUEST: '/v4/process_request',
+    PLANS: '/v4/plans',
+    PLAN: '/v4/plan',
+    PLAN_APPROVAL: '/v4/plan_approval',
+    HUMAN_CLARIFICATION: '/v4/user_clarification',
     USER_BROWSER_LANGUAGE: '/user_browser_language',
-    AGENT_MESSAGE: '/v3/agent_message',
+    AGENT_MESSAGE: '/v4/agent_message',
 };
 
 // Simple cache implementation
@@ -194,7 +194,7 @@ export class APIService {
         const requestKey = `approve-plan-${planApprovalData.m_plan_id}`;
 
         return this._requestTracker.trackRequest(requestKey, async () => {
-            console.log('📤 Approving plan via v3 API:', planApprovalData);
+            console.log('📤 Approving plan via v4 API:', planApprovalData);
 
             const response = await apiClient.post(API_ENDPOINTS.PLAN_APPROVAL, planApprovalData);
 
