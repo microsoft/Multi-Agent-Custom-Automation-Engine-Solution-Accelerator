@@ -301,7 +301,7 @@ class MCPEnabledBase:
             )
 
         except Exception as ex:
-            self.logger.error("Failed to save save database: %s", ex)
+            self.logger.error("Failed to save database: %s", ex)
 
     async def _prepare_mcp_tool(self) -> None:
         """Translate MCPConfig to a HostedMCPTool (agent_framework construct)."""
