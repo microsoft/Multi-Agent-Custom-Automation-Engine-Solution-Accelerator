@@ -289,7 +289,7 @@ class MCPEnabledBase:
                 team_id=self.team_config.team_id,
                 team_name=self.team_config.name,
                 agent_name=self.agent_name,
-                agent_foundry_id=self._agent.chat_client.agent_id,
+                agent_foundry_id=self._agent.id,
                 agent_description=self.agent_description,
                 agent_instructions=self.agent_instructions,
             )
