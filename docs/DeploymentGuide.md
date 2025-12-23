@@ -311,7 +311,7 @@ azd up
 After successful deployment:
 1. Open [Azure Portal](https://portal.azure.com/)
 2. Navigate to your resource group
-3. Find the Fronted App Service
+3. Find the Frontend App Service
 4. Copy the **Default domain**
 
 ⚠️ **Important:** Complete [Post-Deployment Steps](#step-5-post-deployment-configuration) before accessing the application.
@@ -320,35 +320,22 @@ After successful deployment:
 
 ### 5.1 Run Post Deployment Script
 
-1. Upload Team Configurations using command printed in the terminal. The command will look like one of the following. Run the appropriate command for your shell from the project root:
+1. You can upload Team Configurations using command printed in the terminal. The command will look like one of the following. Run the appropriate command for your shell from the project root:
 
   - **For Bash (Linux/macOS/WSL):**
     ```bash
-    bash infra/scripts/upload_team_config.sh
+    bash infra/scripts/selecting_team_config_and_data.sh
     ```
 
   - **For PowerShell (Windows):**
     ```powershell
-    infra\scripts\Upload-Team-Config.ps1
+    infra\scripts\Selecting-Team-Config-And-Data.ps1
     ```
 
-2. Index Sample Data into Search Service using command printed in the terminal. The command will look like one of the following. Run the appropriate command for your shell from the project root:
 
-  - **For Bash (Linux/macOS/WSL):**
-    ```bash
-    bash infra/scripts/process_sample_data.sh
-    ```
+2. **[Optional]** Set up authentication for your web application by following the steps in [Set Up Authentication in Azure App Service](../docs/azure_app_service_auth_setup.md).
 
-- **For PowerShell (Windows):**
-  ```powershell
-  infra\scripts\Selecting-Team-Config-And-Data.ps1
-  ```
-
-3. **[Alternative]** To upload team configurations and index sample data in one step, run the appropriate command for your shell from the project root:
-
-6. **[Optional]** Set up authentication for your web application by following the steps in [Set Up Authentication in Azure App Service](../docs/azure_app_service_auth_setup.md).
-
-7. When Deployment is complete, follow steps in [Set Up Authentication in Azure App Service](../docs/azure_app_service_auth_setup.md) to add app authentication to your web app running on Azure App Service
+3. When Deployment is complete, follow steps in [Set Up Authentication in Azure App Service](../docs/azure_app_service_auth_setup.md) to add app authentication to your web app running on Azure App Service
 
 
 ### 5.2 Configure Authentication (Optional)

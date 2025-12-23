@@ -37,7 +37,7 @@ Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/    ← Repository roo
 │   ├── frontend/                           ← cd src/frontend
 │   │   ├── node_modules/                   ← npm dependencies
 │   │   ├── .venv/                          ← Virtual environment
-│   │   ├── frontend_server.py              ← Fronted entry point
+│   │   ├── frontend_server.py              ← Frontend entry point
 │   ├── mcp_server/                         ← cd src/mcp_server
 │   │   ├── .venv/                          ← Virtual environment
 │   │   └── mcp_server.py                   ← MCP server Entry Point
@@ -289,10 +289,10 @@ Get All the values from the Backend container app from Azure portal
 
 - Go to your resource group
 - open the backend container
-- Go to Environment varibles of conrainers
+- Go to Environment variables of conrainers
 
 For reference, see the image below:
-![Environment_varibles_example](./images/Environment_varibles_example.png)
+![Environment_variables_example](./images/Environment_varibles_example.png)
 
 - Make sure to set APP_ENV to "**dev**"
    - Keep Below variables as it is from `.env.example`.
