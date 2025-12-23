@@ -41,6 +41,9 @@ class FoundryAgentTemplate(AzureAgentBase):
         team_config: TeamConfiguration | None = None,
         memory_store: DatabaseBase | None = None,
     ) -> None:
+        # Get project_client before calling super().__init__
+        project_client = config.get_ai_project_client()
+
         super().__init__(
             mcp=mcp_config,
             model_deployment_name=model_deployment_name,
@@ -51,12 +54,12 @@ class FoundryAgentTemplate(AzureAgentBase):
             agent_name=agent_name,
             agent_description=agent_description,
             agent_instructions=agent_instructions,
+            project_client=project_client,
         )
 
         self.enable_code_interpreter = enable_code_interpreter
         self.search = search_config
         self.logger = logging.getLogger(__name__)
-        self.project_client = config.get_ai_project_client()
 
         # Decide early whether Azure Search mode should be activated
         self._use_azure_search = self._is_azure_search_requested()
@@ -269,10 +272,7 @@ class FoundryAgentTemplate(AzureAgentBase):
                     temperature=temp,
                     model_id=self.model_deployment_name,
                 )
-
             self.logger.info("Initialized ChatAgent '%s'", self.agent_name)
-            if not chatClient:  # Only save if we didn't load from DB
-                await self.save_database_team_agent()
 
         except Exception as ex:
             self.logger.error("Failed to initialize ChatAgent: %s", ex)
@@ -299,7 +299,12 @@ class FoundryAgentTemplate(AzureAgentBase):
 
         messages = [ChatMessage(role=Role.USER, text=prompt)]
 
-        async for update in self._agent.run_stream(messages=messages):
+        agent_saved = False
+        async for update in self._agent.run_stream(messages):
+            # Save agent ID only once on first update (agent ID won't change during streaming)
+            if not agent_saved and self._agent.chat_client.agent_id:
+                await self.save_database_team_agent()
+                agent_saved = True
             yield update
 
     # -------------------------
