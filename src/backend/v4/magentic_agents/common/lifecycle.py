@@ -279,7 +279,7 @@ class MCPEnabledBase:
             stored_id = await get_database_team_agent_id(
                 self.memory_store, self.team_config, self.agent_name
             )
-            if stored_id == self._agent.id:
+            if stored_id == self._agent.chat_client.agent_id:
                 self.logger.info(
                     "RAI reuse: id unchanged (id=%s); skip save.", self._agent.id
                 )
@@ -289,7 +289,7 @@ class MCPEnabledBase:
                 team_id=self.team_config.team_id,
                 team_name=self.team_config.name,
                 agent_name=self.agent_name,
-                agent_foundry_id=self._agent.id,
+                agent_foundry_id=self._agent.chat_client.agent_id,
                 agent_description=self.agent_description,
                 agent_instructions=self.agent_instructions,
             )
