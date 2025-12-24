@@ -184,7 +184,8 @@ jobs:
           export AZURE_ENV_NAME="${{ steps.get_output_linux.outputs.AZURE_ENV_NAME }}"
           
           # Upload team configurations and index sample data in one step
-          bash infra/scripts/team_config_and_data.sh "${{ inputs.RESOURCE_GROUP_NAME }}"
+          # Automatically select "6" (All use cases) for non-interactive deployment
+          echo "6" | bash infra/scripts/selecting_team_config_and_data.sh
 
       - name: Generate Deployment Summary
         if: always()
