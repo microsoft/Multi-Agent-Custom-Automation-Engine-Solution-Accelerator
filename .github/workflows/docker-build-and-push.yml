@@ -7,6 +7,11 @@ on:
       - dev-v4
       - demo-v4
       - hotfix
+    paths:
+      - 'src/frontend/**'
+      - 'src/backend/**'
+      - 'src/mcp_server/**'
+      - '.github/workflows/docker-build-and-push.yml'
   pull_request:
     types:
       - opened
@@ -18,6 +23,11 @@ on:
       - dev-v4
       - demo-v4
       - hotfix
+    paths:
+      - 'src/frontend/**'
+      - 'src/backend/**'
+      - 'src/mcp_server/**'
+      - '.github/workflows/docker-build-and-push.yml'
   workflow_dispatch:
 
 jobs:
