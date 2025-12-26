@@ -31,7 +31,7 @@ env:
     MACAE_WEB_URL: ${{ inputs.MACAE_WEB_URL }}
     MACAE_URL_API: ${{ inputs.MACAE_URL_API }}
     MACAE_RG: ${{ inputs.MACAE_RG }}
-    accelerator_name: "MACAE v3"
+    accelerator_name: "MACAE v4"
 
 jobs:
   test:

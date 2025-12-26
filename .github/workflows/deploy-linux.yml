@@ -1,12 +1,12 @@
 name: Deploy-Test-Cleanup (v2) Linux
 on:
   workflow_run:
-    workflows: ["Build Docker and Optional Push v3"]
+    workflows: ["Build Docker and Optional Push v4"]
     types:
       - completed
     branches:
       - main
-      - dev-v3
+      - dev-v4
       - hotfix
   workflow_dispatch:
     inputs:
