@@ -23,7 +23,7 @@ param existingLogAnalyticsWorkspaceId string = ''
   azd: {
     type: 'location'
     usageName: [
-      'OpenAI.GlobalStandard.gpt-4o, 150'
+      'OpenAI.GlobalStandard.gpt-4o, 5'
     ]
   }
 })
@@ -42,7 +42,7 @@ param gptModelVersion string = '2024-08-06'
 param modelDeploymentType string = 'GlobalStandard'
 
 @description('Optional. AI model deployment token capacity.')
-param gptModelCapacity int = 150
+param gptModelCapacity int = 5
 
 @description('Set the image tag for the container images used in the solution. Default is "latest".')
 param imageTag string = 'latest'

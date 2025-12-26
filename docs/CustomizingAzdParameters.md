@@ -18,7 +18,7 @@ By default this template will use the environment name as the prefix to prevent 
 | `AZURE_ENV_MODEL_4_1_DEPLOYMENT_TYPE` | string | `GlobalStandard` | Defines the deployment type for the AI model (e.g., Standard, GlobalStandard).                     |
 | `AZURE_ENV_MODEL_4_1_NAME`          | string | `gpt-4.1`          | Specifies the name of the GPT model to be deployed.                                                |
 | `AZURE_ENV_MODEL_4_1_VERSION`       | string | `2025-04-14`      | Version of the GPT model to be used for deployment.                                                |
-| `AZURE_ENV_MODEL_4_1_CAPACITY`       | int | `150`      | Sets the GPT model capacity.                                                |
+| `AZURE_ENV_MODEL_4_1_CAPACITY`       | int | `5`      | Sets the GPT model capacity.                                                |
 | `AZURE_ENV_REASONING_MODEL_DEPLOYMENT_TYPE` | string | `GlobalStandard` | Defines the deployment type for the AI model (e.g., Standard, GlobalStandard).                     |
 | `AZURE_ENV_REASONING_MODEL_NAME`          | string | `o4-mini`          | Specifies the name of the reasoning GPT model to be deployed.                                                |
 | `AZURE_ENV_REASONING_MODEL_VERSION`       | string | `2025-04-16`      | Version of the reasoning GPT model to be used for deployment.                                                |

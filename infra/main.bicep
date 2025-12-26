@@ -40,9 +40,9 @@ var deployingUserPrincipalId = deployerInfo.objectId
   azd: {
     type: 'location'
     usageName: [
-      'OpenAI.GlobalStandard.gpt4.1, 150'
-      'OpenAI.GlobalStandard.o4-mini, 50'
-      'OpenAI.GlobalStandard.gpt4.1-mini, 50'
+      'OpenAI.GlobalStandard.gpt4.1, 5'
+      'OpenAI.GlobalStandard.o4-mini, 1'
+      'OpenAI.GlobalStandard.gpt4.1-mini, 1'
     ]
   }
 })
@@ -100,14 +100,14 @@ param gptModelDeploymentType string = 'GlobalStandard'
 @description('Optional. GPT model deployment type. Defaults to GlobalStandard.')
 param gptReasoningModelDeploymentType string = 'GlobalStandard'
 
-@description('Optional. AI model deployment token capacity. Defaults to 50 for optimal performance.')
-param gptModelCapacity int = 50
+@description('Optional. AI model deployment token capacity. Defaults to 1 for optimal performance.')
+param gptModelCapacity int = 1
 
 @description('Optional. AI model deployment token capacity. Defaults to 150 for optimal performance.')
-param gpt4_1ModelCapacity int = 150
+param gpt4_1ModelCapacity int = 5
 
-@description('Optional. AI model deployment token capacity. Defaults to 50 for optimal performance.')
-param gptReasoningModelCapacity int = 50
+@description('Optional. AI model deployment token capacity. Defaults to 1 for optimal performance.')
+param gptReasoningModelCapacity int = 1
 
 @description('Optional. The tags to apply to all deployed Azure resources.')
 param tags resourceInput<'Microsoft.Resources/resourceGroups@2025-04-01'>.tags = {}
