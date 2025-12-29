@@ -119,33 +119,47 @@ async def init_team(
         memory_store = await DatabaseFactory.get_database(user_id=user_id)
         team_service = TeamService(memory_store)
 
-        # Find the first available team from 4 to 1, or use HR as fallback
         init_team_id = await find_first_available_team(team_service, user_id)
-        if not init_team_id:
-            init_team_id = "00000000-0000-0000-0000-000000000001"  # HR fallback
-            print("No available teams found, using HR fallback")
-        else:
-            print(f"Using first available team: {init_team_id}")
 
+        # Get current team if user has one
         user_current_team = await memory_store.get_current_team(user_id=user_id)
-        if not user_current_team:
-            print("User has no current team, setting to default:", init_team_id)
+
+        # If no teams available and no current team, return empty state to allow custom team upload
+        if not init_team_id and not user_current_team:
+            print("No teams found in database. System ready for custom team upload.")
+            return {
+                "status": "No teams configured. Please upload a team configuration to get started.",
+                "team_id": None,
+                "team": None,
+                "requires_team_upload": True,
+            }
+
+        # Use current team if available, otherwise use found team
+        if user_current_team:
+            init_team_id = user_current_team.team_id
+            print(f"Using user's current team: {init_team_id}")
+        elif init_team_id:
+            print(f"Using first available team: {init_team_id}")
             user_current_team = await team_service.handle_team_selection(
                 user_id=user_id, team_id=init_team_id
             )
             if user_current_team:
                 init_team_id = user_current_team.team_id
-        else:
-            init_team_id = user_current_team.team_id
+
         # Verify the team exists and user has access to it
         team_configuration = await team_service.get_team_configuration(
             init_team_id, user_id
         )
         if team_configuration is None:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Team configuration '{init_team_id}' not found or access denied",
-            )
+            # If team doesn't exist, clear current team and return empty state
+            await memory_store.delete_current_team(user_id)
+            print(f"Team configuration '{init_team_id}' not found. Cleared current team.")
+            return {
+                "status": "Current team configuration not found. Please select or upload a team configuration.",
+                "team_id": None,
+                "team": None,
+                "requires_team_upload": True,
+            }
 
         # Set as current team in memory
         team_config.set_current_team(

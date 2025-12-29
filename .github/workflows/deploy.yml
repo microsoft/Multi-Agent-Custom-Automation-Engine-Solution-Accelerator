@@ -126,7 +126,7 @@ jobs:
           elif [[ "${{ env.BRANCH_NAME }}" == "hotfix" ]]; then
             IMAGE_TAG="hotfix"
           else
-            IMAGE_TAG="latest_v3"
+            IMAGE_TAG="latest_v4"
           fi
 
           # Generate current timestamp in desired format: YYYY-MM-DDTHH:MM:SS.SSSSSSSZ
@@ -183,28 +183,9 @@ jobs:
 
           echo "Running post-deployment script..."
           
-          # Extract required resource names from the deployment
-          STORAGE_ACCOUNT=$(az resource list --resource-group ${{ env.RESOURCE_GROUP_NAME }} --resource-type "Microsoft.Storage/storageAccounts" --query "[0].name" -o tsv)
-          AI_SEARCH=$(az resource list --resource-group ${{ env.RESOURCE_GROUP_NAME }} --resource-type "Microsoft.Search/searchServices" --query "[0].name" -o tsv)
-          
-          echo "Found Storage Account: $STORAGE_ACCOUNT"
-          echo "Found AI Search Service: $AI_SEARCH"
-          echo "Backend URL: ${{ steps.get_backend_url.outputs.MACAE_URL_API }}"
-          
-          # Run upload team config script with parameters
-          bash infra/scripts/upload_team_config.sh \
-            "${{ steps.get_backend_url.outputs.MACAE_URL_API }}" \
-            "data/agent_teams" \
-            "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-          
-          # Run process sample data script with parameters
-          bash infra/scripts/process_sample_data.sh \
-            "$STORAGE_ACCOUNT" \
-            "sample-dataset" \
-            "$AI_SEARCH" \
-            "sample-dataset-index" \
-            "${{ env.RESOURCE_GROUP_NAME }}" \
-            "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          # Run PowerShell script with 'All' use case automatically selected
+          # Provide two inputs: '1' for keeping current subscription, '5' for All use cases
+          echo -e "1\n5" | pwsh -File infra/scripts/Selecting-Team-Config-And-Data.ps1 -ResourceGroup "${{ env.RESOURCE_GROUP_NAME }}"
 
           echo "=== Post-Deployment Script Completed Successfully ==="
 

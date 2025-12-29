@@ -1,6 +1,14 @@
 name: PyLint
 
-on: [push]
+on: 
+  push:
+    paths:
+      - 'src/backend/**/*.py'
+      - 'src/mcp_server/**/*.py'
+      - 'src/backend/requirements.txt'
+      - '.flake8'
+      - '.github/workflows/pylint.yml'
+
 
 jobs:
   build:
@@ -24,4 +32,4 @@ jobs:
       
       - name: Run flake8 and pylint
         run: |
-          flake8 --config=.flake8 src/backend  # Specify the directory to lint
+          flake8 --config=.flake8 src/backend 
