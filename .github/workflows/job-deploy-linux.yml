@@ -184,10 +184,9 @@ jobs:
           export AZURE_ENV_NAME="${{ steps.get_output_linux.outputs.AZURE_ENV_NAME }}"
           
           # Upload team configurations and index sample data in one step
-          # Run PowerShell script with 'All' use case automatically selected
-          # Provide two inputs: '1' for keeping current subscription, '5' for All use cases
-          echo -e "1\n5" | pwsh -File infra/scripts/Selecting-Team-Config-And-Data.ps1 -ResourceGroup "${{ env.RESOURCE_GROUP_NAME }}"
-          
+          # Automatically select "6" (All use cases) for non-interactive deployment
+          echo "6" | bash infra/scripts/selecting_team_config_and_data.sh
+
       - name: Generate Deployment Summary
         if: always()
         shell: bash
