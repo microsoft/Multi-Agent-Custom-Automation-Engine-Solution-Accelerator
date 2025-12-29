@@ -17,9 +17,11 @@ logging.basicConfig(level=logging.INFO)
 
 async def find_first_available_team(team_service: TeamService, user_id: str) -> str:
     """
-    Check teams in priority order (4 to 1) and return the first available team ID.
-    Priority: RFP (4) -> Retail (3) -> Marketing (2) -> HR (1)
+    Check teams in priority order and return the first available team ID.
+    First tries default teams in priority order, then falls back to any available team.
+    Priority: RFP (4) -> Retail (3) -> Marketing (2) -> HR (1) -> Any available team
     """
+    # Standard team priority order
     team_priority_order = [
         "00000000-0000-0000-0000-000000000004",  # RFP
         "00000000-0000-0000-0000-000000000003",  # Retail
@@ -27,17 +29,28 @@ async def find_first_available_team(team_service: TeamService, user_id: str) -> 
         "00000000-0000-0000-0000-000000000001",  # HR
     ]
 
+    # First, check standard teams in priority order
     for team_id in team_priority_order:
         try:
             team_config = await team_service.get_team_configuration(team_id, user_id)
             if team_config is not None:
-                print(f"Found available team: {team_id}")
+                print(f"Found available standard team: {team_id}")
                 return team_id
         except Exception as e:
             print(f"Error checking team {team_id}: {str(e)}")
             continue
 
-    print("No teams found in priority order")
+    # If no standard teams found, check for any available teams
+    try:
+        all_teams = await team_service.get_all_team_configurations()
+        if all_teams:
+            first_team = all_teams[0]
+            print(f"Found available custom team: {first_team.team_id}")
+            return first_team.team_id
+    except Exception as e:
+        print(f"Error checking for any available teams: {str(e)}")
+
+    print("No teams found in database")
     return None
 
 
