@@ -6,7 +6,7 @@ import uuid
 from typing import List, Optional
 
 # agent_framework imports
-from agent_framework_azure_ai import AzureAIAgentClient
+from agent_framework.azure import AzureAIClient
 from agent_framework import (
     ChatMessage,
     WorkflowOutputEvent,
@@ -58,7 +58,7 @@ class OrchestrationManager:
         Initialize a Magentic workflow with:
           - Provided agents (participants)
           - HumanApprovalMagenticManager as orchestrator manager
-          - AzureAIAgentClient as the underlying chat client
+          - AzureAIClient as the underlying chat client
           - Event-based callbacks for streaming and final responses
         - Uses same deployment, endpoint, and credentials
         - Applies same execution settings (temperature, max_tokens)
@@ -75,20 +75,22 @@ class OrchestrationManager:
         agent_name = team_config.name if team_config.name else "OrchestratorAgent"
 
         try:
-            chat_client = AzureAIAgentClient(
-                project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
-                model_deployment_name=team_config.deployment_name,
+            # CRITICAL: Use async project client with async credentials to avoid 401 errors
+            project_client = config.get_ai_project_client()
+            
+            chat_client = AzureAIClient(
+                project_client=project_client,
                 agent_name=agent_name,
-                async_credential=credential,
+                use_latest_version=True
             )
 
             cls.logger.info(
-                "Created AzureAIAgentClient for orchestration with model '%s' at endpoint '%s'",
+                "Created AzureAIClient for orchestration with model '%s' at endpoint '%s'",
                 team_config.deployment_name,
                 config.AZURE_AI_PROJECT_ENDPOINT,
             )
         except Exception as e:
-            cls.logger.error("Failed to create AzureAIAgentClient: %s", e)
+            cls.logger.error("Failed to create AzureAIClient: %s", e)
             raise
 
         # Create HumanApprovalMagenticManager with the chat client

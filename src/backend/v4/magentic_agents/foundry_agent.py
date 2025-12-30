@@ -5,9 +5,14 @@ from typing import List, Optional
 
 from agent_framework import (ChatAgent, ChatMessage, HostedCodeInterpreterTool,
                              Role)
-from agent_framework_azure_ai import \
-    AzureAIAgentClient  # Provided by agent_framework
-from azure.ai.projects.models import ConnectionType
+from agent_framework.azure import \
+    AzureAIClient  # Provided by agent_framework (updated for v2)
+from azure.ai.projects.models import (
+    ConnectionType,
+    PromptAgentDefinition,
+    FunctionTool,
+    AzureAISearchAgentTool
+)
 from common.config.app_config import config
 from common.database.database_base import DatabaseBase
 from common.models.messages_af import TeamConfiguration
@@ -65,9 +70,6 @@ class FoundryAgentTemplate(AzureAgentBase):
         self._use_azure_search = self._is_azure_search_requested()
         self.use_reasoning = use_reasoning
 
-        # Placeholder for server-created Azure AI agent id (if Azure Search path)
-        self._azure_server_agent_id: Optional[str] = None
-
     # -------------------------
     # Mode detection
     # -------------------------
@@ -111,9 +113,9 @@ class FoundryAgentTemplate(AzureAgentBase):
     # -------------------------
     # Azure Search helper
     # -------------------------
-    async def _create_azure_search_enabled_client(self, chatClient=None) -> Optional[AzureAIAgentClient]:
+    async def _create_azure_search_enabled_client(self, chatClient=None) -> Optional[AzureAIClient]:
         """
-        Create a server-side Azure AI agent with Azure AI Search raw tool.
+        Create a server-side Azure AI agent with Azure AI Search raw tool using Foundry SDK v2.
 
         Requirements:
           - An Azure AI Project Connection (type=AZURE_AI_SEARCH) that contains either:
@@ -123,7 +125,7 @@ class FoundryAgentTemplate(AzureAgentBase):
 
 
         Returns:
-            AzureAIAgentClient | None
+            AzureAIClient | None
         """
         if chatClient:
             return chatClient
@@ -175,40 +177,55 @@ class FoundryAgentTemplate(AzureAgentBase):
             self.logger.error("Failed to enumerate connections: %s", ex)
             return None
 
-        # Create agent with raw tool
+        # Create agent with Azure AI Search tool using Foundry SDK v2
         try:
-            azure_agent = await self.client.create_agent(
-                model=self.model_deployment_name,
-                name=self.agent_name,
-                instructions=(
-                    f"{self.agent_instructions} "
-                    "Always use the Azure AI Search tool and configured index for knowledge retrieval."
-                ),
-                tools=[{"type": "azure_ai_search"}],
-                tool_resources={
-                    "azure_ai_search": {
-                        "indexes": [
-                            {
-                                "index_connection_id": resolved_connection_id,
-                                "index_name": index_name,
-                                "query_type": query_type,
-                            }
-                        ]
-                    }
-                },
+            # Create Azure AI Search tool definition
+            search_tool = AzureAISearchAgentTool(
+                type="azure_ai_search",
+                azure_ai_search={
+                    "indexes": [
+                        {
+                            "project_connection_id": resolved_connection_id,
+                            "index_name": index_name,
+                            "query_type": query_type,
+                            "top_k": 5
+                        }
+                    ]
+                }
             )
-            self._azure_server_agent_id = azure_agent.id
+
+            # Create agent using create_version with PromptAgentDefinition
+            azure_agent = await self.project_client.agents.create_version(
+                agent_name=self.agent_name,
+                definition=PromptAgentDefinition(
+                    model=self.model_deployment_name,
+                    instructions=(
+                        f"{self.agent_instructions} "
+                        "Always use the Azure AI Search tool and configured index for knowledge retrieval."
+                    ),
+                    tools=[search_tool]
+                )
+            )
+            async for agent in self.project_client.agents.list():
+                print(f"  Agent: {agent.name}")
+
+            async for version in self.project_client.agents.list_versions(agent_name=azure_agent.name):
+                print(f"  Version: {version}")
+           
             self.logger.info(
-                "Created Azure server agent with Azure AI Search tool (agent_id=%s, index=%s, query_type=%s).",
-                azure_agent.id,
+                "Created Azure server agent with Azure AI Search tool (agent_name=%s, index=%s, query_type=%s).",
+                self.agent_name,
                 index_name,
                 query_type,
             )
 
-            chat_client = AzureAIAgentClient(
+            # Use AzureAIClient with both project_client and async_credential
+            # The async_credential is needed for inference/streaming operations
+            chat_client = AzureAIClient(
                 project_client=self.project_client,
-                agent_id=azure_agent.id,
-                async_credential=self.creds,
+                #async_credential=self.creds if hasattr(self, 'creds') and self.creds else None,
+                agent_name=self.agent_name,
+                use_latest_version=True,
             )
             return chat_client
         except Exception as ex:
@@ -225,6 +242,8 @@ class FoundryAgentTemplate(AzureAgentBase):
     # -------------------------
     async def _after_open(self) -> None:
         """Initialize ChatAgent after connections are established."""
+        # Note: self.project_client is already set with async credentials in open()
+        
         if self.use_reasoning:
             self.logger.info("Initializing agent in Reasoning mode.")
             temp = None
@@ -247,31 +266,50 @@ class FoundryAgentTemplate(AzureAgentBase):
                     )
 
                 # In Azure Search raw tool path, tools/tool_choice are handled server-side.
+                # NOTE: Following Microsoft reference pattern - ChatAgent used directly, not in context
+                self._tools_for_invoke = None
+                self._tool_choice = "required"
+                
+                # Create ChatAgent following reference pattern
                 self._agent = ChatAgent(
-                    id=self.get_agent_id(chat_client),
                     chat_client=self.get_chat_client(chat_client),
-                    instructions=self.agent_instructions,
-                    name=self.agent_name,
-                    description=self.agent_description,
-                    tool_choice="required",  # Force usage
-                    temperature=temp,
-                    model_id=self.model_deployment_name,
+                    tool_choice="required",
+                    store=True,
                 )
             else:
                 # use MCP path
                 self.logger.info("Initializing agent in MCP mode.")
+                
                 tools = await self._collect_tools()
-                self._agent = ChatAgent(
-                    id=self.get_agent_id(chatClient),
-                    chat_client=self.get_chat_client(chatClient),
-                    instructions=self.agent_instructions,
-                    name=self.agent_name,
-                    description=self.agent_description,
-                    tools=tools if tools else None,
-                    tool_choice="auto" if tools else "none",
-                    temperature=temp,
-                    model_id=self.model_deployment_name,
-                )
+                # NOTE: Following Microsoft reference pattern - ChatAgent used directly
+                self._tools_for_invoke = tools if tools else None
+                self._tool_choice = "auto" if tools else "none"
+                
+                self._agent =  AzureAIClient(
+                    project_client=self.project_client,
+                    use_latest_version=True).create_agent(
+                        name=self.agent_name,
+                        instructions=self.agent_instructions,
+                        tools=tools if tools else None
+                    )
+                print("mcp based agent: ",self.agent_name)
+                # Create ChatAgent following reference pattern  
+                # self._agent = ChatAgent(
+                #     chat_client=self.get_chat_client(chatClient),
+                #     instructions=self.agent_instructions,
+                #     name=self.agent_name,
+                #     description=self.agent_description,
+                #     tools=tools if tools else None,
+                #     tool_choice="auto" if tools else "none",
+                #     temperature=temp,
+                #     model_id=self.model_deployment_name,
+                # )
+                async for agent in self.project_client.agents.list():
+                    print(f"  Agent: {agent.name}")
+
+                async for version in self.project_client.agents.list_versions(agent_name=self.agent_name):
+                    print(f"  Version: {version}")
+
             self.logger.info("Initialized ChatAgent '%s'", self.agent_name)
 
         except Exception as ex:
@@ -300,9 +338,10 @@ class FoundryAgentTemplate(AzureAgentBase):
         messages = [ChatMessage(role=Role.USER, text=prompt)]
 
         agent_saved = False
+        print("invoke stream...", self._agent.name)
         async for update in self._agent.run_stream(messages):
-            # Save agent ID only once on first update (agent ID won't change during streaming)
-            if not agent_saved and self._agent.chat_client.agent_id:
+            # Save agent only once on first update (using agent name)
+            if not agent_saved and self._agent.id:
                 await self.save_database_team_agent()
                 agent_saved = True
             yield update
@@ -315,21 +354,22 @@ class FoundryAgentTemplate(AzureAgentBase):
         try:
             if (
                 self._use_azure_search
-                and self._azure_server_agent_id
+                and self.agent_name
                 and hasattr(self, "project_client")
             ):
                 try:
+                    # In SDK v2, delete by agent name
                     await self.project_client.agents.delete_agent(
-                        self._azure_server_agent_id
+                        name=self.agent_name
                     )
                     self.logger.info(
-                        "Deleted Azure server agent (id=%s) during close.",
-                        self._azure_server_agent_id,
+                        "Deleted Azure server agent (name=%s) during close.",
+                        self.agent_name,
                     )
                 except Exception as ex:
                     self.logger.warning(
-                        "Failed to delete Azure server agent (id=%s): %s",
-                        self._azure_server_agent_id,
+                        "Failed to delete Azure server agent (name=%s): %s",
+                        self.agent_name,
                         ex,
                     )
         finally:
