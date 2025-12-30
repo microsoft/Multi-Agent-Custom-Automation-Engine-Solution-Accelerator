@@ -2,11 +2,9 @@
 Marketing MCP tools service.
 """
 
-from typing import Any, Dict
 
 from core.factory import Domain, MCPToolBase
-from utils.date_utils import format_date_for_user
-from utils.formatters import format_error_response, format_success_response
+from utils.formatters import format_success_response
 
 
 class MarketingService(MCPToolBase):

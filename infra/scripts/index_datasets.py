@@ -118,7 +118,7 @@ try:
 
     print("Creating or updating Azure Search index...")
     search_index_client = SearchIndexClient(endpoint=ai_search_endpoint, credential=credential)
-    index_result = search_index_client.create_or_update_index(index=index)
+    search_index_client.create_or_update_index(index=index)
     print(f"Index '{ai_search_index_name}' created or updated successfully.")
 except Exception as e:
     print(f"Error creating/updating index: {e}")
@@ -163,7 +163,9 @@ try:
     print("Uploading documents to the index...")
     search_client = SearchClient(endpoint=ai_search_endpoint, index_name=ai_search_index_name, credential=credential)
     result = search_client.upload_documents(documents=data_list)
-    print(f"Uploaded {len(data_list)} documents.")
+    successes = sum(1 for r in result if getattr(r, "succeeded", False))
+    failures = len(data_list) - successes
+    print(f"Uploaded documents. Requested: {len(data_list)}, Succeeded: {successes}, Failed: {failures}")
 except Exception as e:
     print(f"Error uploading documents: {e}")
     sys.exit(1)

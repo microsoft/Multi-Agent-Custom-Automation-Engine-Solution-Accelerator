@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   Button,
   Dialog,
@@ -9,9 +9,7 @@ import {
   DialogBody,
   Text,
   Spinner,
-  Card,
   Body1,
-  Body2,
   Caption1,
   Badge,
   Input,
@@ -22,7 +20,6 @@ import {
   Tooltip,
   DialogOpenChangeEvent,
   DialogOpenChangeData,
-  TabValue,
   SelectTabEvent,
   SelectTabData,
   InputOnChangeData
@@ -712,7 +709,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
               <Button
                 appearance="primary"
                 onClick={handleContinue}
-                disabled={!tempSelectedTeam || selectionLoading}
+                disabled={selectionLoading}
                 className={styles.continueButton}
               >
                 {selectionLoading ? 'Selecting...' : 'Continue'}

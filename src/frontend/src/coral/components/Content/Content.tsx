@@ -1,4 +1,4 @@
-import React, { useState, ReactNode, ReactElement } from "react";
+import React, { ReactNode, ReactElement } from "react";
 import PanelToolbar from "../Panels/PanelLeftToolbar.js"; // Import to identify toolbar
 
 interface ContentProps {

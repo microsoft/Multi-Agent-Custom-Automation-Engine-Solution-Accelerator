@@ -2,7 +2,6 @@
 Human Resources MCP tools service.
 """
 
-from typing import Any, Dict
 
 from core.factory import Domain, MCPToolBase
 from utils.date_utils import format_date_for_user

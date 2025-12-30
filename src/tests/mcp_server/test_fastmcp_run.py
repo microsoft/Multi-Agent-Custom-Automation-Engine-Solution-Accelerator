@@ -5,7 +5,6 @@ This simulates what `fastmcp run mcp_server.py -t streamable-http -l DEBUG` woul
 """
 
 import sys
-import os
 from pathlib import Path
 
 # Add current directory to path
@@ -61,7 +60,7 @@ def test_fastmcp_compatibility():
         # Create a client that connects to our server instance
         if hasattr(mcp_server, "mcp") and mcp_server.mcp is not None:
             # This simulates how fastmcp run would use the server
-            client = Client(mcp_server.mcp)
+            Client(mcp_server.mcp)
             print("✅ FastMCP Client can connect to our server instance")
             return True
         else:

@@ -1,6 +1,6 @@
-import { getApiUrl, getUserId, headerBuilder } from '../api/config';
+import { getApiUrl, getUserId } from '../api/config';
 import { PlanDataService } from './PlanDataService';
-import { MPlanData, ParsedPlanApprovalRequest, StreamingPlanUpdate, StreamMessage, WebsocketMessageType } from '../models';
+import { ParsedPlanApprovalRequest, StreamingPlanUpdate, StreamMessage, WebsocketMessageType } from '../models';
 
 
 class WebSocketService {
