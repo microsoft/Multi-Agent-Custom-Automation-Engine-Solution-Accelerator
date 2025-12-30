@@ -80,6 +80,7 @@ class OrchestrationManager:
             
             chat_client = AzureAIClient(
                 project_client=project_client,
+                async_credential=credential,
                 agent_name=agent_name,
                 use_latest_version=True
             )

@@ -5,9 +5,10 @@ from typing import Optional
 
 from azure.ai.projects.aio import AIProjectClient
 from azure.cosmos import CosmosClient
-from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
+from azure.identity import DefaultAzureCredential, ManagedIdentityCredential, AzureCliCredential
 from azure.identity.aio import DefaultAzureCredential as AioDefaultAzureCredential
 from azure.identity.aio import ManagedIdentityCredential as AioManagedIdentityCredential
+from azure.identity.aio import AzureCliCredential as AioAzureCliCredential
 from dotenv import load_dotenv
 
 
@@ -115,17 +116,17 @@ class AppConfig:
         """
         Returns an Azure credential based on the application environment.
 
-        If the environment is 'dev', it uses DefaultAzureCredential.
+        If the environment is 'dev', it uses AzureCliCredential for proper token scoping.
         Otherwise, it uses ManagedIdentityCredential.
 
         Args:
             client_id (str, optional): The client ID for the Managed Identity Credential.
 
         Returns:
-            Credential object: Either DefaultAzureCredential or ManagedIdentityCredential.
+            Credential object: Either AzureCliCredential or ManagedIdentityCredential.
         """
         if self.APP_ENV == "dev":
-            return DefaultAzureCredential()  # CodeQL [SM05139]: DefaultAzureCredential is safe here
+            return AzureCliCredential()  # Use AzureCliCredential for dev to properly scope tokens for https://ai.azure.com
         else:
             return ManagedIdentityCredential(client_id=client_id)
 
@@ -136,10 +137,10 @@ class AppConfig:
             client_id (str, optional): The client ID for the Managed Identity Credential.
         
         Returns:
-            Async credential object: Either AioDefaultAzureCredential or AioManagedIdentityCredential.
+            Async credential object: Either AioAzureCliCredential or AioManagedIdentityCredential.
         """
         if self.APP_ENV == "dev":
-            return AioDefaultAzureCredential()  # CodeQL [SM05139]: DefaultAzureCredential is safe here
+            return AioAzureCliCredential()  # Use AzureCliCredential for dev to properly scope tokens for https://ai.azure.com
         else:
             return AioManagedIdentityCredential(client_id=client_id)
 
@@ -252,7 +253,7 @@ class AppConfig:
 
             endpoint = self.AZURE_AI_AGENT_ENDPOINT
             self._ai_project_client = AIProjectClient(
-                endpoint=endpoint, credential=AioDefaultAzureCredential()
+                endpoint=endpoint, credential=self.get_azure_credential(self.AZURE_CLIENT_ID)
             )
 
             return self._ai_project_client

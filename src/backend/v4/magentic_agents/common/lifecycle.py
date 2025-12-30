@@ -13,7 +13,7 @@ from agent_framework import (
 
 from agent_framework.azure import AzureAIClient
 from azure.ai.agents.aio import AgentsClient
-from azure.identity.aio import DefaultAzureCredential
+from azure.identity.aio import AzureCliCredential
 from common.database.database_base import DatabaseBase
 from common.models.messages_af import CurrentTeamAgent, TeamConfiguration
 from common.utils.utils_agents import (
@@ -68,14 +68,26 @@ class MCPEnabledBase:
             return self
         self._stack = AsyncExitStack()
 
-        # Acquire credential
-        self.creds = DefaultAzureCredential()
+        # Acquire async credential - using AzureCliCredential for dev environment
+        # following Microsoft reference pattern from agent-framework samples
+        self.creds = AzureCliCredential()
         if self._stack:
             await self._stack.enter_async_context(self.creds)
-        # Create AgentsClient
+        
+        # Create project_client with async credentials if not already set
+        if not self.project_client:
+            from azure.ai.projects.aio import AIProjectClient
+            self.project_client = AIProjectClient(
+                endpoint=config.AZURE_AI_AGENT_ENDPOINT,
+                credential=self.creds
+            )
+            if self._stack:
+                await self._stack.enter_async_context(self.project_client)
+        
+        # Create AgentsClient with same async credential
         self.client = AzureAIClient(
                 project_client=self.project_client,
-                #async_credential=self.creds if hasattr(self, 'creds') and self.creds else None,
+                async_credential=self.creds,
                 agent_name=self.agent_name,
                 use_latest_version=True,
             )
@@ -145,7 +157,7 @@ class MCPEnabledBase:
         if self.project_client and self.agent_name and self.creds:
             chat_client = AzureAIClient(
                 project_client=self.project_client,
-                #async_credential=self.creds,
+                async_credential=self.creds,
                 agent_name=self.agent_name,
                 use_latest_version=True,
             )
@@ -253,7 +265,7 @@ class MCPEnabledBase:
             if self.agent_name == "RAIAgent" and self.project_client and self.creds:
                 chat_client = AzureAIClient(
                     project_client=self.project_client,
-                    #async_credential=self.creds,
+                    async_credential=self.creds,
                     agent_name=self.agent_name,
                     use_latest_version=True,
                 )
@@ -264,7 +276,7 @@ class MCPEnabledBase:
             elif self.project_client and self.creds:
                 chat_client = AzureAIClient(
                     project_client=self.project_client,
-                    #async_credential=self.creds,
+                    async_credential=self.creds,
                     agent_name=self.agent_name,
                     use_latest_version=True,
                 )

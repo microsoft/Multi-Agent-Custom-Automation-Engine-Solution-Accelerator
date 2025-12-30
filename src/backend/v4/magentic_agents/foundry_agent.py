@@ -46,8 +46,8 @@ class FoundryAgentTemplate(AzureAgentBase):
         team_config: TeamConfiguration | None = None,
         memory_store: DatabaseBase | None = None,
     ) -> None:
-        # Get project_client before calling super().__init__
-        project_client = config.get_ai_project_client()
+        # Defer project_client creation until async open() to use async credentials
+        project_client = None  # Will be created in parent's open() method
 
         super().__init__(
             mcp=mcp_config,
@@ -223,7 +223,7 @@ class FoundryAgentTemplate(AzureAgentBase):
             # The async_credential is needed for inference/streaming operations
             chat_client = AzureAIClient(
                 project_client=self.project_client,
-                #async_credential=self.creds if hasattr(self, 'creds') and self.creds else None,
+                async_credential=self.creds if hasattr(self, 'creds') and self.creds else None,
                 agent_name=self.agent_name,
                 use_latest_version=True,
             )
@@ -281,34 +281,52 @@ class FoundryAgentTemplate(AzureAgentBase):
                 self.logger.info("Initializing agent in MCP mode.")
                 
                 tools = await self._collect_tools()
-                # NOTE: Following Microsoft reference pattern - ChatAgent used directly
                 self._tools_for_invoke = tools if tools else None
                 self._tool_choice = "auto" if tools else "none"
                 
-                self._agent =  AzureAIClient(
-                    project_client=self.project_client,
-                    use_latest_version=True).create_agent(
-                        name=self.agent_name,
+                # Convert agent_framework tools to Foundry FunctionTool format
+                foundry_tools = []
+                for tool in (tools or []):
+                    if hasattr(tool, 'to_function_tool'):
+                        foundry_tools.append(tool.to_function_tool())
+                    elif hasattr(tool, 'function'):
+                        # For MCP tools or other function-based tools
+                        foundry_tools.append(FunctionTool(function=tool.function))
+                
+                # Create Azure agent version with tools
+                azure_agent = await self.project_client.agents.create_version(
+                    agent_name=self.agent_name,
+                    definition=PromptAgentDefinition(
+                        model=self.model_deployment_name,
                         instructions=self.agent_instructions,
-                        tools=tools if tools else None
+                        tools=foundry_tools if foundry_tools else None
                     )
-                print("mcp based agent: ",self.agent_name)
-                # Create ChatAgent following reference pattern  
-                # self._agent = ChatAgent(
-                #     chat_client=self.get_chat_client(chatClient),
-                #     instructions=self.agent_instructions,
-                #     name=self.agent_name,
-                #     description=self.agent_description,
-                #     tools=tools if tools else None,
-                #     tool_choice="auto" if tools else "none",
-                #     temperature=temp,
-                #     model_id=self.model_deployment_name,
-                # )
+                )
+                
+                self.logger.info(
+                    "Created Azure agent version (agent_name=%s) with %d tools.",
+                    self.agent_name,
+                    len(foundry_tools)
+                )
+                
+                # Use AzureAIClient with the created agent
+                chat_client = AzureAIClient(
+                    project_client=self.project_client,
+                    async_credential=self.creds if hasattr(self, 'creds') and self.creds else None,
+                    agent_name=self.agent_name,
+                    use_latest_version=True,
+                )
+                
+                # Create ChatAgent with the Azure-backed client
+                self._agent = ChatAgent(
+                    chat_client=self.get_chat_client(chat_client),
+                    tools=self._tools_for_invoke,
+                    tool_choice=self._tool_choice,
+                    store=True,
+                )
+
                 async for agent in self.project_client.agents.list():
                     print(f"  Agent: {agent.name}")
-
-                async for version in self.project_client.agents.list_versions(agent_name=self.agent_name):
-                    print(f"  Version: {version}")
 
             self.logger.info("Initialized ChatAgent '%s'", self.agent_name)
 
@@ -338,7 +356,7 @@ class FoundryAgentTemplate(AzureAgentBase):
         messages = [ChatMessage(role=Role.USER, text=prompt)]
 
         agent_saved = False
-        print("invoke stream...", self._agent.name)
+        print(f"invoke stream... agent_name={self.agent_name}")
         async for update in self._agent.run_stream(messages):
             # Save agent only once on first update (using agent name)
             if not agent_saved and self._agent.id:
