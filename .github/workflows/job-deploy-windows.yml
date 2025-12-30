@@ -179,8 +179,9 @@ jobs:
           $env:AZURE_AI_SEARCH_INDEX_NAME = "sample-dataset-index"
           $env:AZURE_ENV_NAME = "${{ steps.get_output_windows.outputs.AZURE_ENV_NAME }}"
 
-          # Run the script (PowerShell version)
-          & infra\scripts\Team-Config-And-Data.ps1 "${{ inputs.RESOURCE_GROUP_NAME }}"
+          # Upload team configurations and index sample data in one step
+          # Automatically select "6" (All use cases) for non-interactive deployment
+          bash -c "echo 6 | pwsh -File infra/scripts/Selecting-Team-Config-And-Data.ps1"
 
       - name: Generate Deployment Summary
         if: always()
