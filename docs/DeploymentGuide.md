@@ -181,7 +181,6 @@ Review the configuration options below. You can customize any settings that meet
 **To use production configuration:**
 
 **Prerequisite** — Enable the Microsoft.Compute/EncryptionAtHost feature for every subscription (and region, if required) where you plan to deploy VMs or VM scale sets with `encryptionAtHost: true`. Repeat the registration steps below for each target subscription (and for each region when applicable). This step is required for **WAF-aligned** (production) deployments.
-**Prerequisite** — Enable the Microsoft.Compute/EncryptionAtHost feature for every subscription (and region, if required) where you plan to deploy VMs or VM scale sets with `encryptionAtHost: true`. Repeat the registration steps below for each target subscription (and for each region when applicable). This step is required for **WAF-aligned** (production) deployments.
 
 Steps to enable the feature:
 
@@ -343,15 +342,15 @@ After successful deployment:
 1. Follow [App Authentication Configuration](./azure_app_service_auth_setup.md)
 2. Wait up to 10 minutes for authentication changes to take effect
 
-### 5.2 Verify Deployment
+### 5.3 Verify Deployment
 
 1. Access your application using the URL from Step 4.3
 2. Confirm the application loads successfully
 <!-- 3. Verify you can sign in with your authenticated account -->
 
-### 5.3 Test the Application
+### 5.4 Test the Application
 
-Follow the detailed to test the Multi agent functionality:
+Follow the detailed workflow to test the Multi Agent functionality:
 
 📖 **Detailed Instructions:** See the complete [Sample Workflow](./SampleQuestions.md) guide for step-by-step testing procedures.
 
@@ -464,6 +463,13 @@ azd env get-values
 - **Separate configurations:** Each environment can have different parameter settings
 - **Clean up unused environments:** Use `azd down` to remove environments you no longer need
 
+## Next Steps
+
+Now that your deployment is complete and tested, explore these resources to enhance your experience:
+
+📚 **Learn More:**
+- [Local Development Setup](./LocalDevelopmentSetup.md) - Set up your local development environment
+- [Sample Questions](./SampleQuestions.md) - Explore sample questions and workflows
 
 ## Need Help?
 

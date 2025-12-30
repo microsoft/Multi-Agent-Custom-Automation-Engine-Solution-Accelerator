@@ -400,12 +400,9 @@ The UI is located under `src/frontend`.
 cd src/frontend
 ```
 
-
-
-### 6.3. Install UI Dependencies
+### 6.2. Install UI Dependencies
 
 ```bash
-
 python -m venv .venv
 
 # Activate virtual environment
@@ -417,18 +414,17 @@ source .venv/bin/activate  # Linux/WSL2
 pip install -r requirements.txt
 ```
 
-
 ```bash
 npm install
 ```
 
-### 6.4. Build the UI
+### 6.3. Build the UI
 
 ```bash
 npm run build
 ```
 
-### 6.5. Start Development Server
+### 6.4. Start Development Server
 
 ```bash
 python frontend_server.py
@@ -551,12 +547,10 @@ Before using the application, confirm all three services are running in separate
 Once all services are running (as confirmed in Step 7), you can:
 
 1. **Access the Application**: Open `http://localhost:3000` in your browser to explore the frontend UI
-2. **Try a Sample Workflow**: Follow [SampleWorkflow.md](SampleQuestions.md) for a guided walkthrough of the Multi agent process.
-3. **Explore the Codebase**: Start with `src/app_kernel.py` to understand the code base
+2. **Try a Sample Workflow**: Follow [SampleQuestions.md](SampleQuestions.md) for a guided walkthrough of the Multi agent process
+3. **Explore the Codebase**: Start with `src/backend/app.py` to understand the agent architecture
 
 
 ## Related Documentation
 
 - [Deployment Guide](DeploymentGuide.md) - Production deployment instructions
-
-
