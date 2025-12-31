@@ -6,10 +6,12 @@ To help you get started, here are some **Sample Prompts** you can ask in the app
 ## **Teams** 
 Select the Team option from the top-left section, then click Continue after choosing the desired team.
 
-By default, three teams are available after running the post-deployment scripts:
+By default, five teams are available after running the post-deployment scripts:
 - Retail
 - HR
 - Marketing
+- RFP
+- Contract Compliance
   
 ![Application](images/samplequestion_1.png)
 
@@ -71,6 +73,48 @@ _Sample operation:_
 - Task: Click on **"Approve Task Plan"** Button.
   > _Note: Average response time is around 01 minute 15 seconds._ <br>
   > _Observe: It goes into "Thinking Process", "Processing your plan" and "coordinating with AI Agents"_ <br>
+  > _Review the output._
+
+### **RFP Analysis Scenario**
+If you select the RFP team, follow the prompts below.
+
+>**Agents Used:** Rfp Summary, Rfp Risk, Rfp Compliance
+
+The RFP Analysis Scenario allows users to explore and analyze Request for Proposal (RFP) and contract documents. Key tasks include:
+
+_Sample operation:_
+
+- Task: Switch to the **"RFP Team"** from the top left section and click **"Continue"** button.
+- Task: From the Quick Tasks, select **"RFP Document Summary"** and submit it.
+  
+  > _Note: Average response time is 10–15 minutes._ <br>
+  > _Observe: It will trigger the "Generating Plan Action" and give the Proposed Plan with 5 or more Steps_
+</br>
+
+- Task: Click on **"Approve Task Plan"** Button.
+  > _Note: Average response time is around 01 minute._ <br>
+  > _Observe: It goes into "Thinking Process", "Processing your plan" and "coordinating with AI Agents"._ <br>
+  > _Review the output._
+
+### **Contract Compliance Review Scenario**
+If you select the Contract Compliance Review team, follow the prompts below.
+
+>**Agents Used:** Contract Summary, Contract Risk, Contract Compliance
+
+The Contract Compliance Review Scenario allows users to explore and analyze NDA and contract documents for compliance and risk assessment. Key tasks include:
+
+_Sample operation:_
+
+- Task: Switch to the **"Contract Compliance Review Team"** from the top left section and click **"Continue"** button.
+- Task: From the Quick Tasks, select **"NDA Contract Review"** and submit it.
+  
+  > _Note: Average response time is 10–15 minutes._ <br>
+  > _Observe: It will trigger the "Generating Plan Action" and give the Proposed Plan with 4 or more Steps_
+</br>
+
+- Task: Click on **"Approve Task Plan"** Button.
+  > _Note: Average response time is around 01 minute._ <br>
+  > _Observe: It goes into "Thinking Process", "Processing your plan" and "coordinating with AI Agents"._ <br>
   > _Review the output._
 
   
