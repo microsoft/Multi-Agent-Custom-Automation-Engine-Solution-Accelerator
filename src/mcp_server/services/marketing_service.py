@@ -4,8 +4,6 @@ Marketing MCP tools service.
 
 
 from core.factory import Domain, MCPToolBase
-from utils.formatters import format_success_response
-
 
 class MarketingService(MCPToolBase):
     """Marketing tools for employee onboarding and management."""

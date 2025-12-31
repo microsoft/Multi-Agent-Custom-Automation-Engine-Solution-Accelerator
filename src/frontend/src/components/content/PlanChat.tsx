@@ -1,6 +1,4 @@
 import React from "react";
-import { 
-} from "@fluentui/react-icons";
 import { PlanChatProps, MPlanData } from "../../models/plan";
 import InlineToaster from "../toast/InlineToaster";
 import { AgentMessageData } from "@/models";

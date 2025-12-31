@@ -47,7 +47,6 @@ class SearchConfig:
     @classmethod
     def from_env(cls, index_name: str) -> "SearchConfig":
         connection_name = config.AZURE_AI_SEARCH_CONNECTION_NAME
-        index_name = index_name
         endpoint = config.AZURE_AI_SEARCH_ENDPOINT
 
         # Raise exception if any required environment variable is missing
@@ -58,5 +57,6 @@ class SearchConfig:
 
         return cls(
             connection_name=connection_name,
-            endpoint=endpoint
+            endpoint=endpoint,
+            index_name=index_name
         )

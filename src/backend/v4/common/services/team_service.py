@@ -481,6 +481,12 @@ class TeamService:
                     error_msg = "Team configuration references search indexes but no Azure Search endpoint is configured"
                     self.logger.warning(error_msg)
                     return False, [error_msg]
+                else:
+                    # No search endpoint and nothing to validate; skip further validation
+                    self.logger.info(
+                        "No Azure Search endpoint configured and no search indexes or RAG agents to validate - skipping search validation"
+                    )
+                    return True, []
 
             if not index_names:
                 self.logger.info(

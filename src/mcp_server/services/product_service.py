@@ -4,8 +4,6 @@ Product MCP tools service.
 
 
 from core.factory import Domain, MCPToolBase
-from utils.formatters import format_success_response
-
 
 class ProductService(MCPToolBase):
     """Product tools for employee onboarding and management."""

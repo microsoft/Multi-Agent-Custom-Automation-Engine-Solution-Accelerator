@@ -21,7 +21,7 @@ const PanelRightToolbar: React.FC<PanelRightToolbarProps> = ({
     const onDismiss = () => {
         if (handleDismiss) {
             handleDismiss();
-        }else {
+        } else {
             eventBus.emit("setActivePanel", null); // Close the current panel
         }
     };
