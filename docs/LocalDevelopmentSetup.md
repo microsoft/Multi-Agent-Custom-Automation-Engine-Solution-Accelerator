@@ -33,7 +33,7 @@ Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/    ← Repository roo
 │   ├── backend/                            ← cd src/backend
 │   │   ├── .venv/                          ← Virtual environment
 │   │   └── .env                            ← Backend config file
-│   │   └── app_kernel.py                   ← Backend Entry Point
+│   │   └── app.py                          ← Backend Entry Point
 │   ├── frontend/                           ← cd src/frontend
 │   │   ├── node_modules/                   ← npm dependencies
 │   │   ├── .venv/                          ← Virtual environment
@@ -330,7 +330,7 @@ py -3.12 -m uv sync
 ### 4.4. Run the Backend
 
 ```bash
-python app_kernel.py
+python app.py
 ```
 
 The Backend API will start at:
@@ -508,7 +508,7 @@ Before using the application, confirm all three services are running in separate
 
 | Terminal | Service | Command | Expected Output | URL |
 |----------|---------|---------|-----------------|-----|
-| **Terminal 1** | Backend | `python app_kernel.py` | `INFO: Application startup complete.`  | http://localhost:8000 |
+| **Terminal 1** | Backend | `python app.py` | `INFO: Application startup complete.`  | http://localhost:8000 |
 | **Terminal 2** | MCP Server | `python mcp_server.py --transport streamable-http --host 0.0.0.0 --port 9000` | `INFO: Uvicorn running on http://0.0.0.0:9000 (Press CTRL+C to quit)` | http://localhost:9000 |
 | **Terminal 3** | Frontend | `python frontend_server.py` | `Local: http://localhost:3000/` | http://localhost:3000 |
 

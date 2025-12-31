@@ -332,9 +332,9 @@ After successful deployment:
     ```
 
 
-2. **[Optional]** Set up authentication for your web application by following the steps in [Set Up Authentication in Azure App Service](../docs/azure_app_service_auth_setup.md).
+2. After executing the above script, the system will present available use case scenarios for selection. You can choose individual scenarios or deploy all use cases simultaneously. Upon selection, the corresponding datasets and configuration files for the chosen use case(s) will be uploaded to your Azure environment.
 
-3. When Deployment is complete, follow steps in [Set Up Authentication in Azure App Service](../docs/azure_app_service_auth_setup.md) to add app authentication to your web app running on Azure App Service
+![Usecase selection](./images/Usecase_selection.png)
 
 
 ### 5.2 Configure Authentication (Optional)
