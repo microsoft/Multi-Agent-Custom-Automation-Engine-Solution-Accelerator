@@ -289,7 +289,7 @@ Get All the values from the Backend container app from Azure portal
 
 - Go to your resource group
 - open the backend container
-- Go to Environment variables of conrainers
+- Go to Environment variables of containers
 
 For reference, see the image below:
 ![Environment_variables_example](./images/Environment_varibles_example.png)
