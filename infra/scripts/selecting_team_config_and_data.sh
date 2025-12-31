@@ -149,6 +149,70 @@ function get_values_from_az_deployment() {
     return 0
 }
 
+function get_values_using_solution_suffix() {
+    echo "Getting values from resource naming convention using solution suffix..."
+    
+    # Get the solution suffix from resource group tags
+    solutionSuffix=$(az group show --name "$ResourceGroup" --query "tags.SolutionSuffix" -o tsv)
+    if [[ -z "$solutionSuffix" ]]; then
+        echo "Error: Could not find SolutionSuffix tag in resource group."
+        return 1
+    fi
+    
+    echo "Found solution suffix: $solutionSuffix"
+    
+    # Reconstruct resource names using same naming convention as Bicep
+    storageAccount=$(echo "st${solutionSuffix}" | tr -d '-')  # Remove dashes like Bicep does
+    aiSearch="srch-${solutionSuffix}"
+    containerAppName="ca-${solutionSuffix}"
+    
+    # Query dynamic value (backend URL) from Container App
+    echo "Querying backend URL from Container App..."
+    backendFqdn=$(az containerapp show \
+      --name "$containerAppName" \
+      --resource-group "$ResourceGroup" \
+      --query "properties.configuration.ingress.fqdn" \
+      -o tsv 2>/dev/null)
+    
+    if [[ -z "$backendFqdn" ]]; then
+        echo "Error: Could not get Container App FQDN. Container App may not be deployed yet."
+        return 1
+    fi
+    
+    backendUrl="https://${backendFqdn}"
+    
+    # Hardcoded container names (These don't follow the suffix pattern in Bicep, hence need to be changed here if changed in Bicep)
+    blobContainerForRetailCustomer="retail-dataset-customer"
+    blobContainerForRetailOrder="retail-dataset-order"
+    blobContainerForRFPSummary="rfp-summary-dataset"
+    blobContainerForRFPRisk="rfp-risk-dataset"
+    blobContainerForRFPCompliance="rfp-compliance-dataset"
+    blobContainerForContractSummary="contract-summary-dataset"
+    blobContainerForContractRisk="contract-risk-dataset"
+    blobContainerForContractCompliance="contract-compliance-dataset"
+    
+    # Hardcoded index names (These don't follow the suffix pattern in Bicep, hence need to be changed here if changed in Bicep)
+    aiSearchIndexForRetailCustomer="macae-retail-customer-index"
+    aiSearchIndexForRetailOrder="macae-retail-order-index"
+    aiSearchIndexForRFPSummary="macae-rfp-summary-index"
+    aiSearchIndexForRFPRisk="macae-rfp-risk-index"
+    aiSearchIndexForRFPCompliance="macae-rfp-compliance-index"
+    aiSearchIndexForContractSummary="contract-summary-doc-index"
+    aiSearchIndexForContractRisk="contract-risk-doc-index"
+    aiSearchIndexForContractCompliance="contract-compliance-doc-index"
+    
+    directoryPath="data/agent_teams"
+    
+    # Validate that we got all critical values
+    if [[ -z "$storageAccount" || -z "$aiSearch" || -z "$backendUrl" ]]; then
+        echo "Error: Failed to reconstruct all required resource names."
+        return 1
+    fi
+    
+    echo "Successfully reconstructed values from resource naming convention."
+    return 0
+}
+
 # Authenticate with Azure
 if az account show &> /dev/null; then
     echo "Already authenticated with Azure."
@@ -231,12 +295,23 @@ if [[ -z "$ResourceGroup" ]]; then
         exit 1
     fi
 else
-    # Resource group provided - use deployment outputs
+    # Resource group provided - use deployment outputs, then fallback to naming convention
     echo "Resource group provided: $ResourceGroup"
     
     if ! get_values_from_az_deployment; then
-        echo "Failed to get values from deployment outputs."
-        exit 1
+        echo ""
+        echo "Warning: Could not retrieve values from deployment outputs (deployment may be deleted)."
+        echo "Attempting fallback method: reconstructing values from resource naming convention..."
+        echo ""
+        
+        if ! get_values_using_solution_suffix; then
+            echo ""
+            echo "Error: Both methods failed to retrieve configuration values."
+            echo "Please ensure:"
+            echo "  1. The deployment exists and has a DeploymentName tag, OR"
+            echo "  2. The resource group has a SolutionSuffix tag"
+            exit 1
+        fi
     fi
 fi
 
