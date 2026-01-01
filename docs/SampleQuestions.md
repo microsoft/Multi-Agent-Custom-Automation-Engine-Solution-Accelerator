@@ -78,7 +78,7 @@ _Sample operation:_
 ### **RFP Analysis Scenario**
 If you select the RFP team, follow the prompts below.
 
->**Agents Used:** Rfp Summary, Rfp Risk, Rfp Compliance
+>**Agents Used:** RFP Summary, RFP Risk, RFP Compliance
 
 The RFP Analysis Scenario allows users to explore and analyze Request for Proposal (RFP) and contract documents. Key tasks include:
 
