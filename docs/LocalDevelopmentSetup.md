@@ -82,8 +82,6 @@ winget install OpenJS.NodeJS.LTS
 py -3.12 -m pip install uv
 ```
 
-**Note**: On Windows, use `py -3.12 -m uv` instead of `uv` for all commands to ensure you're using Python 3.12.
-
 #### Option 2: Windows with WSL2 (Recommended)
 
 ```bash
@@ -219,41 +217,86 @@ To run the application locally, your Azure account needs the following role assi
 
 The **main.bicep** deployment includes the assignment of the appropriate roles to AOAI, Storage account, Search service and Cosmos services. If you want to use resource group which is not deployed by you for local debugging—you will need to add your own credentials to access the Cosmos Storage account, Search service and AOAI services. You can add these permissions using the following commands:
 
-#### Get Principal Id
+#### Get Your AAD User Object ID (Principal ID)
+
+Your Azure AD User Object ID (also called Principal ID) is required for the role assignments below. Choose either method to obtain it:
+
+**Method 1: Using Azure CLI (Recommended)**
 ```bash
 az ad signed-in-user show --query id -o tsv
 ```
 
+**Method 2: Using Azure Portal**
+1. Go to [Azure Portal](https://portal.azure.com)
+2. Open **Microsoft Entra ID** (or search "Entra")
+3. In the left menu, select **Users**
+4. Select your account
+5. Under **Identity**, copy the **Object ID**
+
+> **Note:** The `<aad-user-object-id>` and `<principal-id>` in the commands below refer to the same ID obtained from either method above.
+
+#### Get Your AAD User Principal Name (UPN)
+
+Your Azure AD User Principal Name (UPN) is your sign-in email address and is required for some role assignments. Choose either method to obtain it:
+
+**Method 1: Using Azure CLI (Recommended)**
+```bash
+az ad signed-in-user show --query userPrincipalName -o tsv
+```
+
+**Method 2: Using Azure Portal**
+1. Go to [Azure Portal](https://portal.azure.com)
+2. Open **Microsoft Entra ID** (or search "Entra")
+3. In the left menu, select **Users**
+4. Select your account
+5. Copy the **User principal name** (typically your email address, e.g., user@domain.com)
+
+> **Note:** The `<aad-user-upn>` in the commands below refers to your User Principal Name obtained from either method above.
+
 #### Cosmos DB Access
+
 ```bash
 # Assign Cosmos DB Built-in Data Contributor role
 az cosmosdb sql role assignment create --resource-group <solution-accelerator-rg> --account-name <cosmos-db-account-name> --role-definition-name "Cosmos DB Built-in Data Contributor" --principal-id <aad-user-object-id> --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.DocumentDB/databaseAccounts/<cosmos-db-account-name>
 ```
 
-#### AI Foundry access
+#### AI Foundry Access
+
+**To get your AI Foundry Project Resource ID:**
+1. Go to [Azure Portal](https://portal.azure.com)
+2. Navigate to your AI Foundry Project resource
+3. In the **Project details** section, find and copy the **Project resource ID**
+4. The format should be: `/subscriptions/<subscription-id>/resourceGroups/<rg-name>/providers/Microsoft.CognitiveServices/accounts/<foundry-account-name>/projects/<foundry-project-name>`
+
+> **Note:** For AI Foundry, you need the complete project resource ID path (not just the account name). Use the full path shown in the Project resource ID field.
+
+**Assign the required roles:**
 
 ```bash
-az role assignment create --assignee <aad-user-upn> --role "Azure AI User" --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.CognitiveServices/accounts/<azure-ai-foundry-name>
+# Azure AI User role
+az role assignment create --assignee <aad-user-upn> --role "Azure AI User" --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.CognitiveServices/accounts/<foundry-account-name>/projects/<foundry-project-name>
 ```
 
 ```bash
-az role assignment create --assignee <aad-user-upn> --role " Azure AI Developer " --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.CognitiveServices/accounts/<azure-ai-foundry-name> 
+# Azure AI Developer role
+az role assignment create --assignee <aad-user-upn> --role "Azure AI Developer" --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.CognitiveServices/accounts/<foundry-account-name>/projects/<foundry-project-name>
 ```
 
 ```bash
-az role assignment create --assignee <aad-user-upn> --role " Cognitive Services OpenAI User " --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.CognitiveServices/accounts/<azure-ai-foundry-name> 
+# Cognitive Services OpenAI User role
+az role assignment create --assignee <aad-user-upn> --role "Cognitive Services OpenAI User" --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.CognitiveServices/accounts/<foundry-account-name>/projects/<foundry-project-name>
 ```
 
 #### Search Service Access
 
- ```bash
-az role assignment create --assignee <aad-user-upn> --role "Search Index Data Contributor" --scope /subscriptions/ <subscription-id> /resourceGroups/ <solution-accelerator-rg> /providers/Microsoft.Search/searchServices/<Search-service-name> 
+```bash
+az role assignment create --assignee <aad-user-upn> --role "Search Index Data Contributor" --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.Search/searchServices/<search-service-name>
 ```
 
 #### Storage Account Access
 
 ```bash
-az role assignment create --assignee <aad-user-upn> --role "Storage Blob Data Contributor" --scope /subscriptions/ <subscription-id> /resourceGroups/ <solution-accelerator-rg> /providers/Microsoft.Storage/storageAccounts/<storage-account-name> 
+az role assignment create --assignee <aad-user-upn> --role "Storage Blob Data Contributor" --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.Storage/storageAccounts/<storage-account-name>
 ```
 
 
@@ -282,7 +325,7 @@ New-Item .env  # Windows PowerShell
 
 Add the following to the `.env` file:
 
-- Copy all the values from `.env.example` (CTRL + A) and (CTRL +C)
+- Copy all the values from `.env.sample` (CTRL + A) and (CTRL +C)
 - Paste all copied value to `.env` (CTRL + V)
 
 Get All the values from the Backend container app from Azure portal
@@ -295,9 +338,9 @@ For reference, see the image below:
 ![Environment_variables_example](./images/Environment_varibles_example.png)
 
 - Make sure to set APP_ENV to "**dev**"
-   - Keep Below variables as it is from `.env.example`.
+   - Keep Below variables as it is from `.env.sample`:
      - `BACKEND_API_URL=http://localhost:8000`
-     - `FRONTEND_SITE_NAME=http://127.0.0.1:3000` 
+     - `FRONTEND_SITE_NAME=*` 
      - `MCP_SERVER_ENDPOINT=http://localhost:9000/mcp`
 
 ### 4.3. Install Backend Dependencies
