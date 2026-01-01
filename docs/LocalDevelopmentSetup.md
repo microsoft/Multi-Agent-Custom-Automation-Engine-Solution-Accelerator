@@ -235,7 +235,7 @@ az ad signed-in-user show --query id -o tsv
 
 > **Note:** The `<aad-user-object-id>` and `<principal-id>` in the commands below refer to the same ID obtained from either method above.
 
-#### Get Your AAD User Principal Name (UPN)
+#### Get Your Azure AD User Principal Name (UPN)
 
 Your Azure AD User Principal Name (UPN) is your sign-in email address and is required for some role assignments. Choose either method to obtain it:
 
