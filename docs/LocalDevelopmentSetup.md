@@ -314,7 +314,7 @@ cd src/backend
 
 ### 4.2. Configure Backend Environment Variables
 
-Create a `.env` file in the `src/backend` directory:
+**Step 1: Create the `.env` file**
 
 ```bash
 # Create .env file
@@ -323,25 +323,34 @@ touch .env  # Linux
 New-Item .env  # Windows PowerShell
 ```
 
-Add the following to the `.env` file:
+**Step 2: Copy the template**
 
-- Copy all the values from `.env.sample` (CTRL + A) and (CTRL +C)
-- Paste all copied value to `.env` (CTRL + V)
+1. Open the `.env.sample` file
+2. Select all content (CTRL + A)
+3. Copy (CTRL + C)
+4. Open the new `.env` file
+5. Paste (CTRL + V)
 
-Get All the values from the Backend container app from Azure portal
+**Step 3: Get Azure values and update `.env`**
 
-- Go to your resource group
-- open the backend container
-- Go to Environment variables of containers
+1. Open [Azure Portal](https://portal.azure.com)
+2. Navigate to your **Resource Group**
+3. Open the **Backend Container App**
+4. Click **Environment variables** in the left menu
+5. Copy each value from Azure and update the corresponding variable in your `.env` file
 
-For reference, see the image below:
+For reference:
 ![Environment_variables_example](./images/Environment_varibles_example.png)
 
-- Make sure to set APP_ENV to "**dev**"
-   - Keep Below variables as it is from `.env.sample`:
-     - `BACKEND_API_URL=http://localhost:8000`
-     - `FRONTEND_SITE_NAME=*` 
-     - `MCP_SERVER_ENDPOINT=http://localhost:9000/mcp`
+**Step 4: Update local development settings**
+
+In your `.env` file, make these changes:
+
+- Set `APP_ENV=dev`
+- Keep these local URLs (do NOT change them):
+  - `BACKEND_API_URL=http://localhost:8000`
+  - `FRONTEND_SITE_NAME=*`
+  - `MCP_SERVER_ENDPOINT=http://localhost:9000/mcp`
 
 ### 4.3. Install Backend Dependencies
 
