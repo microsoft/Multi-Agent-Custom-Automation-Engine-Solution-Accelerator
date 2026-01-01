@@ -97,7 +97,7 @@ _Sample operation:_
   > _Review the output._
 
 ### **Contract Compliance Review Scenario**
-If you select the Contract Compliance Review team, follow the prompts below.
+If you select the Contract Compliance team, follow the prompts below.
 
 >**Agents Used:** Contract Summary, Contract Risk, Contract Compliance
 
