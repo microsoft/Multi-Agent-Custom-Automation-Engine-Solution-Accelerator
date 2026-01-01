@@ -480,11 +480,11 @@ if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "2" || "$useCaseSelec
             stIsPublicAccessDisabled=true
             echo "Enabling public access for storage account: $storageAccount"
             az storage account update --name "$storageAccount" --public-network-access enabled --default-action Allow --output none
-            sleep 60
             if [[ $? -ne 0 ]]; then
                 echo "Error: Failed to enable public access for storage account."
                 exit 1
             fi
+            sleep 60
         else
             echo "Public access is already enabled for storage account: $storageAccount"
         fi
@@ -494,11 +494,11 @@ if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "2" || "$useCaseSelec
             srchIsPublicAccessDisabled=true
             echo "Enabling public access for search service: $aiSearch"
             az search service update --name "$aiSearch" --resource-group "$ResourceGroup" --public-network-access enabled --output none
-            sleep 60
             if [[ $? -ne 0 ]]; then
                 echo "Error: Failed to enable public access for search service."
                 exit 1
             fi
+            sleep 60
         else
             echo "Public access is already enabled for search service: $aiSearch"
         fi
