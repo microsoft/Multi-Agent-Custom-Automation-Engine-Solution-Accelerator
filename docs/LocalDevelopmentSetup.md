@@ -217,7 +217,7 @@ To run the application locally, your Azure account needs the following role assi
 
 The **main.bicep** deployment includes the assignment of the appropriate roles to AOAI, Storage account, Search service and Cosmos services. If you want to use resource group which is not deployed by you for local debugging—you will need to add your own credentials to access the Cosmos Storage account, Search service and AOAI services. You can add these permissions using the following commands:
 
-#### Get Your AAD User Object ID (Principal ID)
+#### Get Your Microsoft Entra ID User Object ID (Principal ID)
 
 Your Azure AD User Object ID (also called Principal ID) is required for the role assignments below. Choose either method to obtain it:
 
