@@ -505,6 +505,7 @@ if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection 
             $stIsPublicAccessDisabled = $true
             Write-Host "Enabling public access for storage account: $storageAccount"
             az storage account update --name $storageAccount --public-network-access enabled --default-action Allow --output none
+            Start-Sleep -Seconds 60
             if ($LASTEXITCODE -ne 0) {
                 Write-Host "Error: Failed to enable public access for storage account."
                 exit 1
@@ -519,6 +520,7 @@ if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection 
             $srchIsPublicAccessDisabled = $true
             Write-Host "Enabling public access for search service: $aiSearch"
             az search service update --name $aiSearch --resource-group $ResourceGroup --public-network-access enabled --output none
+            Start-Sleep -Seconds 60
             if ($LASTEXITCODE -ne 0) {
                 Write-Host "Error: Failed to enable public access for search service."
                 exit 1
