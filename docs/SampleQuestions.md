@@ -6,7 +6,7 @@ To help you get started, here are some **Sample Prompts** you can ask in the app
 ## **Teams** 
 Select the Team option from the top-left section, then click Continue after choosing the desired team.
 
-By default, five teams are available after running the post-deployment scripts:
+> _Note: Five teams are available only if all teams are selected during post-deployment; otherwise, only selected teams are visible._
 - Retail
 - HR
 - Marketing
