@@ -132,7 +132,14 @@ Select one of the following options to deploy the Multi Agent Custom Automation 
 5. When prompted in the VS Code Web terminal, choose one of the available options shown below:
 
    ![VS Code Initial Prompt](./images/vscodeweb_intialize.png)
-6. Proceed to [Step 3: Configure Deployment Settings](#step-3-configure-deployment-settings)
+   
+6. **Authenticate with Azure** (VS Code Web requires device code authentication):
+   ```shell
+   az login --use-device-code
+   ```
+   > **Note:** In VS Code Web environment, the regular `az login` command may fail. Use the `--use-device-code` flag to authenticate via device code flow. Follow the prompts in the terminal to complete authentication.
+
+7. Proceed to [Step 3: Configure Deployment Settings](#step-3-configure-deployment-settings)
 
 </details>
 
@@ -278,6 +285,8 @@ To optimize costs and integrate with your existing Azure infrastructure, you can
 azd auth login
 ```
 
+> **Note for VS Code Web Users:** If you're using VS Code Web and have already authenticated using `az login --use-device-code` in Option C, you may skip this step or proceed with `azd auth login` if prompted.
+
 **For specific tenants:**
 ```shell
 azd auth login --tenant-id <tenant-id>
@@ -350,7 +359,7 @@ After successful deployment:
 
 1. Access your application using the URL from Step 4.3
 2. Confirm the application loads successfully
-<!--3. Verify you can sign in with your authenticated account -->
+<!-- 3. Verify you can sign in with your authenticated account -->
 
 ### 5.4 Test the Application
 
