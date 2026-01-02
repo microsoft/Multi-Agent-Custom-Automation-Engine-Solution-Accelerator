@@ -87,8 +87,14 @@ class MCPEnabledBase:
         # Register agent (best effort)
         try:
             agent_registry.register_agent(self)
-        except Exception:
-            pass
+        except Exception as exc:
+            # Best-effort registration; log and continue without failing open()
+            self.logger.warning(
+                "Failed to register agent %s in agent_registry: %s",
+                type(self).__name__,
+                exc,
+                exc_info=True,
+            )
 
         return self
 
@@ -100,13 +106,25 @@ class MCPEnabledBase:
             if self._agent and hasattr(self._agent, "close"):
                 try:
                     await self._agent.close()  # AzureAIAgentClient has async close
-                except Exception:
-                    pass
+                except Exception as exc:
+                    # Best-effort close; log failure but continue teardown
+                    self.logger.warning(
+                        "Error while closing underlying agent %s: %s",
+                        type(self._agent).__name__ if self._agent else "Unknown",
+                        exc,
+                        exc_info=True,
+                    )
             # Unregister from registry if present
             try:
                 agent_registry.unregister_agent(self)
-            except Exception:
-                pass
+            except Exception as exc:
+                # Best-effort unregister; log and continue teardown
+                self.logger.warning(
+                    "Failed to unregister agent %s from agent_registry: %s",
+                    type(self).__name__,
+                    exc,
+                    exc_info=True,
+                )
             await self._stack.aclose()
         finally:
             self._stack = None
@@ -407,26 +425,26 @@ class AzureAgentBase(MCPEnabledBase):
             if self._agent and hasattr(self._agent, "close"):
                 try:
                     await self._agent.close()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logging.warning("Failed to close underlying agent %r: %s", self._agent, exc, exc_info=True)
 
             # Unregister from registry
             try:
                 agent_registry.unregister_agent(self)
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.warning("Failed to unregister agent %r from registry: %s", self, exc, exc_info=True)
 
             # Close credential and project client
             if self.client:
                 try:
                     await self.client.close()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logging.warning("Failed to close Azure AgentsClient %r: %s", self.client, exc, exc_info=True)
             if self.creds:
                 try:
                     await self.creds.close()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logging.warning("Failed to close credentials %r: %s", self.creds, exc, exc_info=True)
 
         finally:
             await super().close()

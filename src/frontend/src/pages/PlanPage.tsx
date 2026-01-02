@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useRef, useState, useMemo } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Spinner, Text } from "@fluentui/react-components";
 import { PlanDataService } from "../services/PlanDataService";
-import { ProcessedPlanData, WebsocketMessageType, MPlanData, AgentMessageData, AgentMessageType, ParsedUserClarification, AgentType, PlanStatus, FinalMessage, TeamConfig } from "../models";
+import { ProcessedPlanData, WebsocketMessageType, MPlanData, AgentMessageData, AgentMessageType, ParsedUserClarification, AgentType, PlanStatus, TeamConfig } from "../models";
 import PlanChat from "../components/content/PlanChat";
 import PlanPanelRight from "../components/content/PlanPanelRight";
 import PlanPanelLeft from "../components/content/PlanPanelLeft";
@@ -14,8 +14,6 @@ import {
     useInlineToaster,
 } from "../components/toast/InlineToaster";
 import Octo from "../coral/imports/Octopus.png";
-import PanelRightToggles from "../coral/components/Header/PanelRightToggles";
-import { TaskListSquareLtr } from "../coral/imports/bundleicons";
 import LoadingMessage, { loadingMessages } from "../coral/components/LoadingMessage";
 import webSocketService from "../services/WebSocketService";
 import { APIService } from "../api/apiService";
@@ -70,8 +68,6 @@ const PlanPage: React.FC = () => {
         });
         return formattedLines.join('\n');
     }, []);
-    // Plan approval state - track when plan is approved
-    const [planApproved, setPlanApproved] = useState<boolean>(false);
 
     // Plan cancellation dialog state
     const [showCancellationDialog, setShowCancellationDialog] = useState<boolean>(false);
@@ -81,7 +77,7 @@ const PlanPage: React.FC = () => {
     const [loadingMessage, setLoadingMessage] = useState<string>(loadingMessages[0]);
 
     // Plan cancellation alert hook
-    const { isPlanActive, handleNavigationWithConfirmation } = usePlanCancellationAlert({
+    const { isPlanActive } = usePlanCancellationAlert({
         planData,
         planApprovalRequest,
         onNavigate: pendingNavigation || (() => { })
@@ -347,7 +343,7 @@ const PlanPage: React.FC = () => {
                 steps: [],   // intentionally always empty
                 next_steps: [],  // intentionally always empty
                 content: "🎉🎉 " + (finalMessage.data?.content || ''),
-                raw_data: finalMessage || '',
+                raw_data: finalMessage,
             } as AgentMessageData;
 
 
@@ -498,9 +494,6 @@ const PlanPage: React.FC = () => {
 
             const handlePlanApprovalResponse = (message: StreamMessage) => {
                 console.log('✅ Plan approval response received:', message);
-                if (message.data && message.data.approved) {
-                    setPlanApproved(true);
-                }
             };
 
             const handlePlanApprovalRequest = (message: StreamMessage) => {
@@ -795,7 +788,6 @@ const PlanPage: React.FC = () => {
                                 input={input}
                                 streamingMessages={streamingMessages}
                                 wsConnected={wsConnected}
-                                onPlanApproval={(approved) => setPlanApproved(approved)}
                                 planApprovalRequest={planApprovalRequest}
                                 waitingForPlan={waitingForPlan}
                                 messagesContainerRef={messagesContainerRef}

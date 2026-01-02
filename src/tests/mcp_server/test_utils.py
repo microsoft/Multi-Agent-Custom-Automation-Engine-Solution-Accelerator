@@ -2,7 +2,6 @@
 Tests for utility functions.
 """
 
-import pytest
 from datetime import datetime
 from src.mcp_server.utils.date_utils import (
     format_date_for_user,

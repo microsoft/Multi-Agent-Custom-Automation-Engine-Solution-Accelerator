@@ -5,7 +5,7 @@ import { HomePage, PlanPage } from './pages';
 import { useWebSocket } from './hooks/useWebSocket';
 
 function App() {
-    const { isConnected, isConnecting, error } = useWebSocket();
+    useWebSocket();
     
   return (
     <Router>

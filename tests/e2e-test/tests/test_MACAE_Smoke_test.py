@@ -104,7 +104,6 @@ def test_retail_customer_success_workflow(login_logout, request):
             logger.warning(f"STEP 5 FAILED: {str(step5_error)}")
             logger.warning("Initiating retry logic: Step 7 (New Task) → Retry Steps 3, 4, 5")
             logger.warning("⚠" * 80)
-            step5_retry_attempted = True
             
             # Perform Step 7: Click New Task
             logger.info("\n" + "=" * 80)

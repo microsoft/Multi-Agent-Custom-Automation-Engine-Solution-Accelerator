@@ -20,8 +20,7 @@ import InlineToaster, { useInlineToaster } from "../components/toast/InlineToast
  * Accessible via the route "/"
  */
 const HomePage: React.FC = () => {
-    const navigate = useNavigate();
-    const { showToast, dismissToast } = useInlineToaster();
+    const { showToast } = useInlineToaster();
     const [selectedTeam, setSelectedTeam] = useState<TeamConfig | null>(null);
     const [isLoadingTeam, setIsLoadingTeam] = useState<boolean>(true);
     const [reloadLeftList, setReloadLeftList] = useState<boolean>(true);
@@ -123,7 +122,7 @@ const HomePage: React.FC = () => {
                     if (initializedTeam) {
                         setSelectedTeam(initializedTeam);
                         TeamService.storageTeam(initializedTeam);
-                        setReloadLeftList(true)
+                        setReloadLeftList(true);
                         console.log('Team loaded successfully handleTeamSelect:', initializedTeam.name);
                         console.log('Team agents handleTeamSelect:', initializedTeam.agents?.length || 0);
 

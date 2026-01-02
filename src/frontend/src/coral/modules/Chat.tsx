@@ -6,7 +6,6 @@ import {
   Body1,
   Button,
   Tag,
-  Tooltip as FluentTooltip,
   ToolbarDivider,
 } from "@fluentui/react-components";
 import { Copy, Send } from "../imports/bundleicons";
@@ -47,7 +46,6 @@ const Chat: React.FC<ChatProps> = ({
   const [isTyping, setIsTyping] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [inputHeight, setInputHeight] = useState(0);
-  const [currentConversationId, setCurrentConversationId] = useState<string | undefined>(undefined);
 
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputContainerRef = useRef<HTMLDivElement>(null);
@@ -171,7 +169,6 @@ const Chat: React.FC<ChatProps> = ({
         // await chatService.clearChatHistory(userId);
       }
       setMessages([]);
-      setCurrentConversationId(undefined);
     } catch (err) {
       console.log("Failed to clear chat history:", err);
     }

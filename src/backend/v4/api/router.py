@@ -78,7 +78,11 @@ async def start_comms(
                 message = await websocket.receive_text()
                 logging.debug(f"Received WebSocket message from {user_id}: {message}")
             except asyncio.TimeoutError:
-                pass
+                # Ignore timeouts to keep the WebSocket connection open, but avoid a tight loop.
+                logging.debug(
+                    f"WebSocket receive timeout for user {user_id}, process {process_id}"
+                )
+                await asyncio.sleep(0.1)
             except WebSocketDisconnect:
                 track_event_if_configured(
                     "WebSocketDisconnect",

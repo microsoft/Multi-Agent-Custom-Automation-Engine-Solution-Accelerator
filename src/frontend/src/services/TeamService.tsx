@@ -166,7 +166,7 @@ export class TeamService {
      */
     static async deleteTeam(teamId: string): Promise<boolean> {
         try {
-            const response = await apiClient.delete(`/v4/team_configs/${teamId}`);
+            await apiClient.delete(`/v4/team_configs/${teamId}`);
             return true;
         } catch (error: any) {
             return false;

@@ -87,7 +87,15 @@ def mock_dependencies(monkeypatch):
 def test_input_task_invalid_json():
     """Test the case where the input JSON is invalid."""
     headers = {"Authorization": "Bearer mock-token"}
+    invalid_json = "{invalid: json"  # deliberately malformed JSON
     response = client.post("/input_task", data=invalid_json, headers=headers)
+
+    # Assert that the API responds with a client error for invalid JSON
+    assert response.status_code == 400
+    # Optionally, check that an error message is present in the response body
+    # Adjust these assertions to match the actual error schema if needed
+    body = response.json()
+    assert "error" in body or "detail" in body
 
 
 def test_process_request_endpoint_success():
