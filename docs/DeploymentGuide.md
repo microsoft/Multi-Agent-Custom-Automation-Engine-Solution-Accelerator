@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide walks you through deploying the Multi Agent Custom Automation Engine Solution Accelerator to Azure. The deployment process takes approximately 10-15 minutes for the default Development/Testing configuration and includes both infrastructure provisioning and application setup.
+This guide walks you through deploying the Multi Agent Custom Automation Engine Solution Accelerator to Azure. The deployment process takes approximately 9-10 minutes for the default Development/Testing configuration and includes both infrastructure provisioning and application setup.
 
 🆘 **Need Help?** If you encounter any issues during deployment, check our [Troubleshooting Guide](./TroubleShootingSteps.md) for solutions to common problems.
 
@@ -52,6 +52,7 @@ Ensure you have access to an [Azure subscription](https://azure.microsoft.com/fr
 - [Azure Cosmos DB](https://learn.microsoft.com/en-us/azure/cosmos-db/)
 - [Azure Key Vault](https://learn.microsoft.com/en-us/azure/key-vault/)
 - [Azure Blob Storage](https://learn.microsoft.com/en-us/azure/storage/blobs/)
+- [Azure Queue Storage](https://learn.microsoft.com/en-us/azure/storage/queues/)
 - [GPT Model Capacity](https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models)
 
 **Recommended Regions:** East US, East US2, Australia East, Japan East, UK South, France Central
@@ -64,9 +65,10 @@ Ensure you have access to an [Azure subscription](https://azure.microsoft.com/fr
 
 📖 **Follow:** [Quota Check Instructions](./quota_check.md) to ensure sufficient capacity.
 
-<!-- **Recommended Configuration:**
-- **Default:** 200k tokens (minimum)
-- **Optimal:** 500k tokens (recommended for best performance) -->
+**Default Quota Configuration:**
+- **GPT-4.1:** 150k tokens
+- **4o-mini:** 50k tokens
+- **GPT-4.1-mini:** 50k tokens
 
 > **Note:** When you run `azd up`, the deployment will automatically show you regions with available quota, so this pre-check is optional but helpful for planning purposes. You can customize these settings later in [Step 3.3: Advanced Configuration](#33-advanced-configuration-optional).
 
@@ -130,7 +132,14 @@ Select one of the following options to deploy the Multi Agent Custom Automation 
 5. When prompted in the VS Code Web terminal, choose one of the available options shown below:
 
    ![VS Code Initial Prompt](./images/vscodeweb_intialize.png)
-6. Proceed to [Step 3: Configure Deployment Settings](#step-3-configure-deployment-settings)
+   
+6. **Authenticate with Azure** (VS Code Web requires device code authentication):
+   ```shell
+   az login --use-device-code
+   ```
+   > **Note:** In VS Code Web environment, the regular `az login` command may fail. Use the `--use-device-code` flag to authenticate via device code flow. Follow the prompts in the terminal to complete authentication.
+
+7. Proceed to [Step 3: Configure Deployment Settings](#step-3-configure-deployment-settings)
 
 </details>
 
@@ -225,7 +234,7 @@ azd env set AZURE_ENV_VM_ADMIN_PASSWORD <your-password>
 
 You can customize various deployment settings before running `azd up`, including Azure regions, AI model configurations (deployment type, version, capacity), container registry settings, and resource names.
 
-📖 **Complete Guide:** See [Parameter Customization Guide](../docs/CustomizingAzdParameters.md) for the full list of available parameters and their usage.
+📖 **Complete Guide:** See [Parameter Customization Guide](./CustomizingAzdParameters.md) for the full list of available parameters and their usage.
 
 </details>
 
@@ -268,21 +277,25 @@ To optimize costs and integrate with your existing Azure infrastructure, you can
 
 💡 **Before You Start:** If you encounter any issues during deployment, check our [Troubleshooting Guide](./TroubleShootingSteps.md) for common solutions.
 
+⚠️ **Critical: Redeployment Warning** - If you have previously run `azd up` in this folder (i.e., a `.azure` folder exists), you must [create a fresh environment](#creating-a-new-environment) to avoid conflicts and deployment failures.
+
 ### 4.1 Authenticate with Azure
 
 ```shell
 azd auth login
 ```
 
+> **Note for VS Code Web Users:** If you're using VS Code Web and have already authenticated using `az login --use-device-code` in Option C, you may skip this step or proceed with `azd auth login` if prompted.
+
 **For specific tenants:**
 ```shell
 azd auth login --tenant-id <tenant-id>
 ```
 
-> **Finding Tenant ID:** 
-   > 1. Open the [Azure Portal](https://portal.azure.com/).
-   > 2. Navigate to **Microsoft Entra ID** from the left-hand menu.
-   > 3. Under the **Overview** section, locate the **Tenant ID** field. Copy the value displayed.
+**Finding Tenant ID:**
+1. Open the [Azure Portal](https://portal.azure.com/)
+2. Navigate to **Microsoft Entra ID** from the left-hand menu
+3. Under the **Overview** section, locate the **Tenant ID** field. Copy the value displayed
 
 ### 4.2 Start Deployment
 
@@ -291,7 +304,7 @@ azd up
 ```
 
 **During deployment, you'll be prompted for:**
-1. **Environment name** (e.g., "macae1") - Must be 3-16 characters long, alphanumeric only
+1. **Environment name** (e.g., "macaedev") - Must be 3-16 characters long, alphanumeric only
 2. **Azure subscription** selection
 3. **Azure AI Foundry deployment region** - Select a region with available model quota for AI operations
 4. **Primary location** - Select the region where your infrastructure resources will be deployed
@@ -350,14 +363,24 @@ After successful deployment:
 
 ### 5.4 Test the Application
 
-Follow the detailed workflow to test the Multi Agent functionality:
+**Quick Test Steps:**
 
-📖 **Detailed Instructions:** See the complete [Sample Workflow](./SampleQuestions.md) guide for step-by-step testing procedures.
+1. **Access the application** using the URL from Step 4.3
+2. **Sign in** with your authenticated account
+3. **Select a use case** from the available scenarios you uploaded in Step 5.1
+4. **Ask a sample question** relevant to the selected use case
+5. **Verify the response** includes appropriate multi-agent collaboration
+6. **Check the logs** in Azure Portal to confirm backend processing
+
+📖 **Detailed Instructions:** See the complete [Sample Workflow](./SampleQuestions.md) guide for step-by-step testing procedures and sample questions for each use case.
 
 
 ## Step 6: Clean Up (Optional)
 
 ### Remove All Resources
+
+To purge resources and clean up after deployment, use the `azd down` command or follow the Delete Resource Group Guide for manual cleanup through Azure Portal.
+
 ```shell
 azd down
 ```
@@ -470,15 +493,15 @@ Now that your deployment is complete and tested, explore these resources to enha
 📚 **Learn More:**
 - [Local Development Setup](./LocalDevelopmentSetup.md) - Set up your local development environment
 - [Sample Questions](./SampleQuestions.md) - Explore sample questions and workflows
+- [MCP Server Documentation](./mcp_server.md) - Learn about Model Context Protocol server integration
+- [Customizing Parameters](./CustomizingAzdParameters.md) - Advanced configuration options
+- [Azure Account Setup](./AzureAccountSetUp.md) - Detailed Azure subscription configuration
 
 ## Need Help?
 
 - 🐛 **Issues:** Check [Troubleshooting Guide](./TroubleShootingSteps.md)
 - 💬 **Support:** Review [Support Guidelines](../SUPPORT.md)
 - 🔧 **Development:** See [Contributing Guide](../CONTRIBUTING.md)
-
----
-
 
 ## Advanced: Deploy Local Changes
 
