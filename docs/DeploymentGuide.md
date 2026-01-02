@@ -67,7 +67,7 @@ Ensure you have access to an [Azure subscription](https://azure.microsoft.com/fr
 
 **Default Quota Configuration:**
 - **GPT-4.1:** 150k tokens
-- **GPT-4o-mini:** 50k tokens
+- **4o-mini:** 50k tokens
 - **GPT-4.1-mini:** 50k tokens
 
 > **Note:** When you run `azd up`, the deployment will automatically show you regions with available quota, so this pre-check is optional but helpful for planning purposes. You can customize these settings later in [Step 3.3: Advanced Configuration](#33-advanced-configuration-optional).
