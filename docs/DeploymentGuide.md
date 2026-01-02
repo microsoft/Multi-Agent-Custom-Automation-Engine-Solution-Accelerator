@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide walks you through deploying the Multi Agent Custom Automation Engine Solution Accelerator to Azure. The deployment process takes approximately 4-6 minutes for the default Development/Testing configuration and includes both infrastructure provisioning and application setup.
+This guide walks you through deploying the Multi Agent Custom Automation Engine Solution Accelerator to Azure. The deployment process takes approximately 9-10 minutes for the default Development/Testing configuration and includes both infrastructure provisioning and application setup.
 
 🆘 **Need Help?** If you encounter any issues during deployment, check our [Troubleshooting Guide](./TroubleShootingSteps.md) for solutions to common problems.
 
@@ -233,7 +233,7 @@ You can customize various deployment settings before running `azd up`, including
 <details>
   <summary><b>[Optional] Quota Recommendations</b></summary>
 
-By default, the **GPT model capacity** in deployment is set to **140k tokens**.
+By default, the **GPT model capacity** in deployment is set to **150k tokens**.
 
 To adjust quota settings, follow these [steps](./AzureGPTQuotaSettings.md).
 
@@ -300,7 +300,7 @@ azd up
 4. **Primary location** - Select the region where your infrastructure resources will be deployed
 5. **Resource group** selection (create new or use existing)
 
-**Expected Duration:** 4-6 minutes for default configuration
+**Expected Duration:** 9-10 minutes for default configuration
 
 - **Upon successful completion**, you will see a success message indicating that all resources have been deployed, along with the application URL and next steps for uploading team configurations and sample data.
 
