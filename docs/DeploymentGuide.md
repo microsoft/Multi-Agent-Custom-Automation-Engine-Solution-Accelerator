@@ -350,7 +350,7 @@ After successful deployment:
 
 1. Access your application using the URL from Step 4.3
 2. Confirm the application loads successfully
-3. Verify you can sign in with your authenticated account
+<!--3. Verify you can sign in with your authenticated account -->
 
 ### 5.4 Test the Application
 
