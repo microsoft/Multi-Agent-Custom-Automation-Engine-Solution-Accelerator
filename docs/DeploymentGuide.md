@@ -314,8 +314,8 @@ azd up
 After successful deployment:
 1. Open [Azure Portal](https://portal.azure.com/)
 2. Navigate to your resource group
-3. Find the Container App
-4. Copy the **Application URI**
+3. Find the Frontend App Service
+4. Copy the **Default domain**
 
 ⚠️ **Important:** Complete [Post-Deployment Steps](#step-5-post-deployment-configuration) before accessing the application.
 
