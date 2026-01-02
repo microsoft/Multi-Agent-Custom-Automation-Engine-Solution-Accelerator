@@ -1,13 +1,16 @@
 import asyncio
 import json
 import logging
+import os
 import uuid
 from typing import Optional
+from datetime import datetime
 
 import v4.models.messages as messages
 from v4.models.messages import WebsocketMessageType
 from auth.auth_utils import get_authenticated_user_details
 from common.database.database_factory import DatabaseFactory
+from common.utils.github_excel_generator import GitHubExcelGenerator
 from common.models.messages_af import (
     InputTask,
     Plan,
@@ -1420,3 +1423,115 @@ async def get_plan_by_id(
     except Exception as e:
         logging.error(f"Error retrieving plan: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error occurred")
+
+
+@app_v4.get("/generate_branch_report")
+async def generate_branch_report(
+    request: Request,
+    owner: str = Query(..., description="Repository owner (username or organization)"),
+    repo: str = Query(..., description="Repository name"),
+):
+    """
+    Generate an Excel report with branch information including branch name, PR status, and creator.
+
+    ---
+    tags:
+      - Reports
+    parameters:
+      - name: owner
+        in: query
+        type: string
+        required: true
+        description: Repository owner (username or organization)
+      - name: repo
+        in: query
+        type: string
+        required: true
+        description: Repository name
+      - name: user_principal_id
+        in: header
+        type: string
+        required: true
+        description: User ID extracted from the authentication header
+    responses:
+      200:
+        description: Excel file generated successfully
+        content:
+          application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+            schema:
+              type: string
+              format: binary
+      400:
+        description: Missing or invalid parameters
+      401:
+        description: Missing or invalid user information
+      500:
+        description: Internal server error
+    """
+    from fastapi.responses import FileResponse
+    
+    # Validate user authentication
+    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    user_id = authenticated_user["user_principal_id"]
+    if not user_id:
+        raise HTTPException(
+            status_code=401, detail="Missing or invalid user information"
+        )
+
+    try:
+        # Initialize the GitHub Excel Generator
+        generator = GitHubExcelGenerator()
+        
+        # Create output directory if it doesn't exist
+        output_dir = "/tmp/reports"
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Generate filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"branch_report_{owner}_{repo}_{timestamp}.xlsx"
+        output_path = os.path.join(output_dir, filename)
+        
+        # Generate the report
+        success = generator.generate_report(owner, repo, output_path)
+        
+        if not success:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to generate branch report. Please check GitHub token and repository access."
+            )
+        
+        # Track the event
+        track_event_if_configured(
+            "Branch report generated",
+            {
+                "status": "success",
+                "owner": owner,
+                "repo": repo,
+                "user_id": user_id,
+                "filename": filename,
+            },
+        )
+        
+        # Return the file
+        return FileResponse(
+            path=output_path,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            filename=filename,
+            background=None,  # Don't delete the file immediately to ensure download completes
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error generating branch report: {str(e)}")
+        track_event_if_configured(
+            "Branch report generation error",
+            {
+                "status": "error",
+                "owner": owner,
+                "repo": repo,
+                "user_id": user_id,
+                "error": str(e),
+            },
+        )
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
