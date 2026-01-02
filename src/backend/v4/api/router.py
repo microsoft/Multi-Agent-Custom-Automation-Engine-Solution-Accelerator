@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import os
+import tempfile
 import uuid
 from typing import Optional
 from datetime import datetime
@@ -35,6 +36,7 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
+from fastapi.responses import FileResponse
 from v4.common.services.plan_service import PlanService
 from v4.common.services.team_service import TeamService
 from v4.config.settings import (
@@ -1469,7 +1471,6 @@ async def generate_branch_report(
       500:
         description: Internal server error
     """
-    from fastapi.responses import FileResponse
     
     # Validate user authentication
     authenticated_user = get_authenticated_user_details(request_headers=request.headers)
@@ -1480,8 +1481,8 @@ async def generate_branch_report(
         )
 
     try:
-        # Create output directory if it doesn't exist
-        output_dir = "/tmp/reports"
+        # Create output directory if it doesn't exist (platform-independent)
+        output_dir = os.path.join(tempfile.gettempdir(), "reports")
         os.makedirs(output_dir, exist_ok=True)
         
         # Generate filename with timestamp

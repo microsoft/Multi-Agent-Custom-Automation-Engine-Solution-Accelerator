@@ -32,8 +32,9 @@ class BranchReportService:
             List of branch dictionaries
         """
         try:
-            # This would use the actual github_tools in production
-            # For now, returning empty list as placeholder
+            # TODO: Integrate with actual GitHub MCP tools when available
+            # This is a placeholder that returns empty data
+            # In production, this would call github_tools.list_branches(owner, repo)
             logger.info(f"Fetching branches for {owner}/{repo}")
             return []
         except Exception as e:
@@ -54,8 +55,9 @@ class BranchReportService:
             List of pull request dictionaries
         """
         try:
-            # This would use the actual github_tools in production
-            # For now, returning empty list as placeholder
+            # TODO: Integrate with actual GitHub MCP tools when available
+            # This is a placeholder that returns empty data
+            # In production, this would call github_tools.list_pull_requests(owner, repo)
             logger.info(f"Fetching pull requests for {owner}/{repo}")
             return []
         except Exception as e:
