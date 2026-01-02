@@ -709,7 +709,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
               <Button
                 appearance="primary"
                 onClick={handleContinue}
-                disabled={selectionLoading}
+                disabled={!tempSelectedTeam || selectionLoading}
                 className={styles.continueButton}
               >
                 {selectionLoading ? 'Selecting...' : 'Continue'}
