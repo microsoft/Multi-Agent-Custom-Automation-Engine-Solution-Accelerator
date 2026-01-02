@@ -1430,6 +1430,7 @@ async def get_plan_by_id(
 
 @app_v4.get("/generate_branch_report")
 async def generate_branch_report(
+    background_tasks: BackgroundTasks,
     request: Request,
     owner: str = Query(..., description="Repository owner (username or organization)"),
     repo: str = Query(..., description="Repository name"),
@@ -1513,12 +1514,26 @@ async def generate_branch_report(
             },
         )
         
+        # Create a background task to clean up the file after a delay
+        async def cleanup_file():
+            """Delete the temporary file after a delay to ensure download completes."""
+            import asyncio
+            await asyncio.sleep(300)  # Wait 5 minutes before cleanup
+            try:
+                if os.path.exists(output_path):
+                    os.remove(output_path)
+                    logger.info(f"Cleaned up temporary file: {output_path}")
+            except Exception as cleanup_error:
+                logger.warning(f"Failed to cleanup temporary file {output_path}: {cleanup_error}")
+        
+        # Schedule the cleanup task
+        background_tasks.add_task(cleanup_file)
+        
         # Return the file
         return FileResponse(
             path=output_path,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             filename=filename,
-            background=None,  # Don't delete the file immediately to ensure download completes
         )
 
     except HTTPException:

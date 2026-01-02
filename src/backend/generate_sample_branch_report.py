@@ -7,6 +7,7 @@ This script demonstrates the branch report functionality using sample data.
 
 import sys
 import os
+import tempfile
 from datetime import datetime
 
 # Add the parent directory to the path
@@ -50,9 +51,9 @@ def create_sample_report():
     # Format the data
     branch_data = generator.format_branch_data(branches, prs)
     
-    # Generate output filename
+    # Generate output filename (platform-independent)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_file = f"/tmp/sample_branch_report_{timestamp}.xlsx"
+    output_file = os.path.join(tempfile.gettempdir(), f"sample_branch_report_{timestamp}.xlsx")
     
     # Generate Excel file
     print(f"Generating sample branch report...")
