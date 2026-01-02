@@ -11,6 +11,7 @@ from v4.models.messages import WebsocketMessageType
 from auth.auth_utils import get_authenticated_user_details
 from common.database.database_factory import DatabaseFactory
 from common.utils.github_excel_generator import GitHubExcelGenerator
+from v4.common.services.branch_report_service import BranchReportService
 from common.models.messages_af import (
     InputTask,
     Plan,
@@ -1479,9 +1480,6 @@ async def generate_branch_report(
         )
 
     try:
-        # Initialize the GitHub Excel Generator
-        generator = GitHubExcelGenerator()
-        
         # Create output directory if it doesn't exist
         output_dir = "/tmp/reports"
         os.makedirs(output_dir, exist_ok=True)
@@ -1491,13 +1489,15 @@ async def generate_branch_report(
         filename = f"branch_report_{owner}_{repo}_{timestamp}.xlsx"
         output_path = os.path.join(output_dir, filename)
         
-        # Generate the report
-        success = generator.generate_report(owner, repo, output_path)
+        # Generate the report using the service
+        success, error_message = await BranchReportService.generate_branch_report(
+            owner, repo, output_path
+        )
         
         if not success:
             raise HTTPException(
                 status_code=500,
-                detail="Failed to generate branch report. Please check GitHub token and repository access."
+                detail=error_message or "Failed to generate branch report"
             )
         
         # Track the event

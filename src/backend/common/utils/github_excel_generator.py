@@ -25,18 +25,23 @@ class GitHubExcelGenerator:
 
         Args:
             github_token: GitHub personal access token. If not provided, will attempt
-                         to read from GITHUB_TOKEN environment variable.
+                         to read from GITHUB_TOKEN environment variable. If still not
+                         available, will use unauthenticated access (lower rate limits).
         """
         self.token = github_token or os.getenv("GITHUB_TOKEN")
         self.github_client = None
-        if self.token:
-            try:
+        
+        try:
+            if self.token:
                 self.github_client = Github(self.token)
-                logger.info("GitHub client initialized successfully")
-            except Exception as e:
-                logger.error(f"Failed to initialize GitHub client: {e}")
-        else:
-            logger.warning("No GitHub token provided. Some features may not work.")
+                logger.info("GitHub client initialized with authentication")
+            else:
+                # Use unauthenticated access for public repositories
+                self.github_client = Github()
+                logger.info("GitHub client initialized without authentication (rate limits apply)")
+        except Exception as e:
+            logger.error(f"Failed to initialize GitHub client: {e}")
+            raise
 
     def get_branch_info(self, owner: str, repo: str) -> List[Dict]:
         """
