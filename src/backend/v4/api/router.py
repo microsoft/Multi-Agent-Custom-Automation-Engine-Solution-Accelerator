@@ -11,7 +11,6 @@ import v4.models.messages as messages
 from v4.models.messages import WebsocketMessageType
 from auth.auth_utils import get_authenticated_user_details
 from common.database.database_factory import DatabaseFactory
-from common.utils.github_excel_generator import GitHubExcelGenerator
 from v4.common.services.branch_report_service import BranchReportService
 from common.models.messages_af import (
     InputTask,
@@ -1517,7 +1516,6 @@ async def generate_branch_report(
         # Create a background task to clean up the file after a delay
         async def cleanup_file():
             """Delete the temporary file after a delay to ensure download completes."""
-            import asyncio
             await asyncio.sleep(300)  # Wait 5 minutes before cleanup
             try:
                 if os.path.exists(output_path):
