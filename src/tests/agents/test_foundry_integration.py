@@ -15,7 +15,7 @@ sys.path.insert(0, str(backend_path))
 
 # Now import from the v4 package
 from src.backend.v4.magentic_agents.foundry_agent import FoundryAgentTemplate
-from src.backend.v4.magentic_agents.models.agent_models import (BingConfig, MCPConfig,
+from src.backend.v4.magentic_agents.models.agent_models import (MCPConfig,
                                                     SearchConfig)
 
 
