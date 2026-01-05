@@ -7,13 +7,6 @@ import React, {
 } from "react";
 import PanelToolbar from "./PanelLeftToolbar.js";
 import PanelFooter from "./PanelFooter"; // 👈 new
-import {
-  Avatar,
-  Body1,
-  Body1Strong,
-  Caption1,
-} from "@fluentui/react-components";
-import Human from "../../imports/human.png";
 
 interface PanelLeftProps {
   panelWidth?: number;

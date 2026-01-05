@@ -42,7 +42,6 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
   const navigate = useNavigate();
   const { planId } = useParams<{ planId: string }>();
 
-  const [inProgressTasks, setInProgressTasks] = useState<Task[]>([]);
   const [completedTasks, setCompletedTasks] = useState<Task[]>([]);
   const [plans, setPlans] = useState<Plan[] | null>(null);
   const [plansLoading, setPlansLoading] = useState<boolean>(false);
@@ -102,7 +101,6 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
     if (plans) {
       const { inProgress, completed } =
         TaskService.transformPlansToTasks(plans);
-      setInProgressTasks(inProgress);
       setCompletedTasks(completed);
     }
   }, [plans]);

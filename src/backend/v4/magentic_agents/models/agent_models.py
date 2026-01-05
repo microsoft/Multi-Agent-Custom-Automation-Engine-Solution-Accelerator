@@ -36,24 +36,6 @@ class MCPConfig:
         )
 
 
-# @dataclass(slots=True)
-# class BingConfig:
-#     """Configuration for connecting to Bing Search."""
-#     connection_name: str = "Bing"
-
-#     @classmethod
-#     def from_env(cls) -> "BingConfig":
-#         connection_name = config.BING_CONNECTION_NAME
-
-#         # Raise exception if required environment variable is missing
-#         if not connection_name:
-#             raise ValueError(f"{cls.__name__} Missing required environment variables")
-
-#         return cls(
-#             connection_name=connection_name,
-#         )
-
-
 @dataclass(slots=True)
 class SearchConfig:
     """Configuration for connecting to Azure AI Search."""
@@ -65,7 +47,6 @@ class SearchConfig:
     @classmethod
     def from_env(cls, index_name: str) -> "SearchConfig":
         connection_name = config.AZURE_AI_SEARCH_CONNECTION_NAME
-        index_name = index_name
         endpoint = config.AZURE_AI_SEARCH_ENDPOINT
 
         # Raise exception if any required environment variable is missing
@@ -76,6 +57,6 @@ class SearchConfig:
 
         return cls(
             connection_name=connection_name,
-            index_name=index_name,
-            endpoint=endpoint
+            endpoint=endpoint,
+            index_name=index_name
         )

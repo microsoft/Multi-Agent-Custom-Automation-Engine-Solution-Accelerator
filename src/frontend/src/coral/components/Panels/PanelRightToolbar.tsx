@@ -16,9 +16,14 @@ const PanelRightToolbar: React.FC<PanelRightToolbarProps> = ({
     panelIcon,
     //   panelType = "first", // Default value set here
     children,
+    handleDismiss,
 }) => {
-    const handleDismiss = () => {
-        eventBus.emit("setActivePanel", null); // Close the current panel
+    const onDismiss = () => {
+        if (handleDismiss) {
+            handleDismiss();
+        } else {
+            eventBus.emit("setActivePanel", null); // Close the current panel
+        }
     };
 
     return (
@@ -76,12 +81,12 @@ const PanelRightToolbar: React.FC<PanelRightToolbarProps> = ({
                 }}
             >
                 {children}
-                {/* <Button
+                <Button
                     appearance="subtle"
                     icon={<Dismiss />}
-                    onClick={handleDismiss} // Handle dismiss logic
+                    onClick={onDismiss} // Handle dismiss logic
                     aria-label="Close panel"
-                /> */}
+                />
             </div>
         </div>
     );

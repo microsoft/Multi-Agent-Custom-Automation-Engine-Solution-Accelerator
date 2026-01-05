@@ -1,8 +1,5 @@
-import React, { useState } from "react";
-import { Toolbar, ToolbarDivider, Avatar } from "@fluentui/react-components";
-import eventBus from "../eventbus";
-import PanelRightToggles from "./PanelRightToggles"; // Import PanelRightToggles
-
+import React from "react";
+import { Toolbar } from "@fluentui/react-components";
 
 interface HeaderToolsProps {
     children?: React.ReactNode;

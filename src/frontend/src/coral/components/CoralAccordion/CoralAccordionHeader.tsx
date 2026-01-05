@@ -1,6 +1,6 @@
 import React from "react";
 import { Body1 } from "@fluentui/react-components";
-import { ChevronDown20Regular, ChevronUp20Regular } from "@fluentui/react-icons";
+import { ChevronUp20Regular } from "@fluentui/react-icons";
 import { useCoralAccordion } from "./CoralAccordionContext";
 
 type Props = {
