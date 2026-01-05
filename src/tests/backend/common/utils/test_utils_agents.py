@@ -6,14 +6,38 @@ This module tests the utility functions for agent ID generation and database ope
 
 import logging
 import string
+import sys
 import unittest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
+# Mock external dependencies at module level 
+sys.modules['azure'] = Mock()
+sys.modules['azure.core'] = Mock()
+sys.modules['azure.core.exceptions'] = Mock()
+sys.modules['azure.cosmos'] = Mock()
+sys.modules['azure.cosmos.aio'] = Mock()
+sys.modules['v4'] = Mock()
+sys.modules['v4.models'] = Mock()
+sys.modules['v4.models.messages'] = Mock()
+sys.modules['azure.ai'] = Mock()
+sys.modules['azure.ai.projects'] = Mock()
+sys.modules['azure.ai.projects.aio'] = Mock()
+sys.modules['azure.identity'] = Mock()
+sys.modules['azure.identity.aio'] = Mock()
+sys.modules['azure.keyvault'] = Mock()
+sys.modules['azure.keyvault.secrets'] = Mock()
+sys.modules['azure.keyvault.secrets.aio'] = Mock()
+sys.modules['common'] = Mock()
+sys.modules['common.database'] = Mock()
+sys.modules['common.database.database_base'] = Mock()
+sys.modules['common.models'] = Mock()
+sys.modules['common.models.messages_af'] = Mock()
 
 import pytest
 
-from common.database.database_base import DatabaseBase
-from common.models.messages_af import CurrentTeamAgent, DataType, TeamConfiguration
-from common.utils.utils_agents import (
+from backend.common.database.database_base import DatabaseBase
+from backend.common.models.messages_af import CurrentTeamAgent, DataType, TeamConfiguration
+from backend.common.utils.utils_agents import (
     generate_assistant_id,
     get_database_team_agent_id,
 )
@@ -98,7 +122,7 @@ class TestGenerateAssistantId(unittest.TestCase):
         
         self.assertTrue(result_chars.issubset(valid_chars))
 
-    @patch('common.utils.utils_agents.secrets.choice')
+    @patch('backend.common.utils.utils_agents.secrets.choice')
     def test_generate_assistant_id_uses_secrets(self, mock_choice):
         """Test that generate_assistant_id uses secrets module for randomness."""
         mock_choice.return_value = 'a'
@@ -261,7 +285,7 @@ class TestGetDatabaseTeamAgentId(unittest.IsolatedAsyncioTestCase):
         agent_name = "test_agent"
         
         # Execute with logging capture
-        with patch('common.utils.utils_agents.logging.error') as mock_logging:
+        with patch('backend.common.utils.utils_agents.logging.error') as mock_logging:
             result = await get_database_team_agent_id(
                 memory_store=mock_memory_store,
                 team_config=team_config,
@@ -308,7 +332,7 @@ class TestGetDatabaseTeamAgentId(unittest.IsolatedAsyncioTestCase):
                 agent_name = "test_agent"
                 
                 # Execute with logging capture
-                with patch('common.utils.utils_agents.logging.error') as mock_logging:
+                with patch('backend.common.utils.utils_agents.logging.error') as mock_logging:
                     result = await get_database_team_agent_id(
                         memory_store=mock_memory_store,
                         team_config=team_config,

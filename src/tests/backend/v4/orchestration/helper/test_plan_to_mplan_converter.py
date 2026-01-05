@@ -5,12 +5,22 @@ This module tests the PlanToMPlanConverter class and its functionality for conve
 bullet-style plan text into MPlan objects with agent assignment and action extraction.
 """
 
+import os
+import sys
 import unittest
-from unittest.mock import patch
 import re
 
-from v4.models.models import MPlan, MStep
-from v4.orchestration.helper.plan_to_mplan_converter import PlanToMPlanConverter
+# Set up environment variables (removed manual path modification as pytest config handles it)
+os.environ.update({
+    'APPLICATIONINSIGHTS_CONNECTION_STRING': 'InstrumentationKey=test-key',
+    'AZURE_AI_SUBSCRIPTION_ID': 'test-subscription',
+    'AZURE_AI_RESOURCE_GROUP': 'test-rg',
+    'AZURE_AI_PROJECT_NAME': 'test-project',
+})
+
+# Import the models and converter directly
+from backend.v4.models.models import MPlan, MStep, PlanStatus
+from backend.v4.orchestration.helper.plan_to_mplan_converter import PlanToMPlanConverter
 
 
 class TestPlanToMPlanConverter(unittest.TestCase):

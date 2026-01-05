@@ -5,6 +5,19 @@ import os
 from unittest.mock import Mock, patch, MagicMock, call
 import pytest
 
+# Mock external dependencies at module level
+sys.modules['opentelemetry'] = Mock()
+sys.modules['opentelemetry.trace'] = Mock()
+sys.modules['opentelemetry.exporter'] = Mock()
+sys.modules['opentelemetry.exporter.otlp'] = Mock()
+sys.modules['opentelemetry.exporter.otlp.proto'] = Mock()
+sys.modules['opentelemetry.exporter.otlp.proto.grpc'] = Mock()
+sys.modules['opentelemetry.exporter.otlp.proto.grpc.trace_exporter'] = Mock()
+sys.modules['opentelemetry.sdk'] = Mock()
+sys.modules['opentelemetry.sdk.resources'] = Mock()
+sys.modules['opentelemetry.sdk.trace'] = Mock()
+sys.modules['opentelemetry.sdk.trace.export'] = Mock()
+
 # Add the backend directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'backend'))
 
@@ -24,7 +37,7 @@ os.environ.setdefault('COSMOSDB_CONTAINER', 'test_container')
 os.environ.setdefault('AZURE_CLIENT_ID', 'test_client_id')
 os.environ.setdefault('AZURE_TENANT_ID', 'test_tenant_id')
 
-from common.utils.otlp_tracing import configure_oltp_tracing
+from backend.common.utils.otlp_tracing import configure_oltp_tracing
 
 
 class TestConfigureOltpTracing:
@@ -40,11 +53,11 @@ class TestConfigureOltpTracing:
         # Clean up any global state changes
         pass
     
-    @patch('common.utils.otlp_tracing.trace')
-    @patch('common.utils.otlp_tracing.TracerProvider')
-    @patch('common.utils.otlp_tracing.BatchSpanProcessor')
-    @patch('common.utils.otlp_tracing.OTLPSpanExporter')
-    @patch('common.utils.otlp_tracing.Resource')
+    @patch('backend.common.utils.otlp_tracing.trace')
+    @patch('backend.common.utils.otlp_tracing.TracerProvider')
+    @patch('backend.common.utils.otlp_tracing.BatchSpanProcessor')
+    @patch('backend.common.utils.otlp_tracing.OTLPSpanExporter')
+    @patch('backend.common.utils.otlp_tracing.Resource')
     def test_configure_oltp_tracing_default_parameters(
         self, mock_resource, mock_exporter, mock_processor, mock_tracer_provider_class, mock_trace
     ):
@@ -86,11 +99,11 @@ class TestConfigureOltpTracing:
         # Verify return value
         assert result is mock_tracer_provider_instance
     
-    @patch('common.utils.otlp_tracing.trace')
-    @patch('common.utils.otlp_tracing.TracerProvider')
-    @patch('common.utils.otlp_tracing.BatchSpanProcessor')
-    @patch('common.utils.otlp_tracing.OTLPSpanExporter')
-    @patch('common.utils.otlp_tracing.Resource')
+    @patch('backend.common.utils.otlp_tracing.trace')
+    @patch('backend.common.utils.otlp_tracing.TracerProvider')
+    @patch('backend.common.utils.otlp_tracing.BatchSpanProcessor')
+    @patch('backend.common.utils.otlp_tracing.OTLPSpanExporter')
+    @patch('backend.common.utils.otlp_tracing.Resource')
     def test_configure_oltp_tracing_with_endpoint_parameter(
         self, mock_resource, mock_exporter, mock_processor, mock_tracer_provider_class, mock_trace
     ):
@@ -123,11 +136,11 @@ class TestConfigureOltpTracing:
         # Verify return value
         assert result is mock_tracer_provider_instance
     
-    @patch('common.utils.otlp_tracing.trace')
-    @patch('common.utils.otlp_tracing.TracerProvider')
-    @patch('common.utils.otlp_tracing.BatchSpanProcessor')
-    @patch('common.utils.otlp_tracing.OTLPSpanExporter')
-    @patch('common.utils.otlp_tracing.Resource')
+    @patch('backend.common.utils.otlp_tracing.trace')
+    @patch('backend.common.utils.otlp_tracing.TracerProvider')
+    @patch('backend.common.utils.otlp_tracing.BatchSpanProcessor')
+    @patch('backend.common.utils.otlp_tracing.OTLPSpanExporter')
+    @patch('backend.common.utils.otlp_tracing.Resource')
     def test_configure_oltp_tracing_with_none_endpoint(
         self, mock_resource, mock_exporter, mock_processor, mock_tracer_provider_class, mock_trace
     ):
@@ -159,11 +172,11 @@ class TestConfigureOltpTracing:
         # Verify return value
         assert result is mock_tracer_provider_instance
     
-    @patch('common.utils.otlp_tracing.trace')
-    @patch('common.utils.otlp_tracing.TracerProvider')
-    @patch('common.utils.otlp_tracing.BatchSpanProcessor')
-    @patch('common.utils.otlp_tracing.OTLPSpanExporter')
-    @patch('common.utils.otlp_tracing.Resource')
+    @patch('backend.common.utils.otlp_tracing.trace')
+    @patch('backend.common.utils.otlp_tracing.TracerProvider')
+    @patch('backend.common.utils.otlp_tracing.BatchSpanProcessor')
+    @patch('backend.common.utils.otlp_tracing.OTLPSpanExporter')
+    @patch('backend.common.utils.otlp_tracing.Resource')
     def test_configure_oltp_tracing_multiple_calls(
         self, mock_resource, mock_exporter, mock_processor, mock_tracer_provider_class, mock_trace
     ):
@@ -215,11 +228,11 @@ class TestConfigureOltpTracingErrorHandling:
         """Cleanup after each test method."""
         pass
     
-    @patch('common.utils.otlp_tracing.trace')
-    @patch('common.utils.otlp_tracing.TracerProvider')
-    @patch('common.utils.otlp_tracing.BatchSpanProcessor')
-    @patch('common.utils.otlp_tracing.OTLPSpanExporter')
-    @patch('common.utils.otlp_tracing.Resource')
+    @patch('backend.common.utils.otlp_tracing.trace')
+    @patch('backend.common.utils.otlp_tracing.TracerProvider')
+    @patch('backend.common.utils.otlp_tracing.BatchSpanProcessor')
+    @patch('backend.common.utils.otlp_tracing.OTLPSpanExporter')
+    @patch('backend.common.utils.otlp_tracing.Resource')
     def test_configure_oltp_tracing_resource_creation_error(
         self, mock_resource, mock_exporter, mock_processor, mock_tracer_provider_class, mock_trace
     ):
@@ -237,11 +250,11 @@ class TestConfigureOltpTracingErrorHandling:
         mock_processor.assert_not_called()
         mock_trace.set_tracer_provider.assert_not_called()
     
-    @patch('common.utils.otlp_tracing.trace')
-    @patch('common.utils.otlp_tracing.TracerProvider')
-    @patch('common.utils.otlp_tracing.BatchSpanProcessor')
-    @patch('common.utils.otlp_tracing.OTLPSpanExporter')
-    @patch('common.utils.otlp_tracing.Resource')
+    @patch('backend.common.utils.otlp_tracing.trace')
+    @patch('backend.common.utils.otlp_tracing.TracerProvider')
+    @patch('backend.common.utils.otlp_tracing.BatchSpanProcessor')
+    @patch('backend.common.utils.otlp_tracing.OTLPSpanExporter')
+    @patch('backend.common.utils.otlp_tracing.Resource')
     def test_configure_oltp_tracing_tracer_provider_creation_error(
         self, mock_resource, mock_exporter, mock_processor, mock_tracer_provider_class, mock_trace
     ):
@@ -261,11 +274,11 @@ class TestConfigureOltpTracingErrorHandling:
         mock_processor.assert_not_called()
         mock_trace.set_tracer_provider.assert_not_called()
     
-    @patch('common.utils.otlp_tracing.trace')
-    @patch('common.utils.otlp_tracing.TracerProvider')
-    @patch('common.utils.otlp_tracing.BatchSpanProcessor')
-    @patch('common.utils.otlp_tracing.OTLPSpanExporter')
-    @patch('common.utils.otlp_tracing.Resource')
+    @patch('backend.common.utils.otlp_tracing.trace')
+    @patch('backend.common.utils.otlp_tracing.TracerProvider')
+    @patch('backend.common.utils.otlp_tracing.BatchSpanProcessor')
+    @patch('backend.common.utils.otlp_tracing.OTLPSpanExporter')
+    @patch('backend.common.utils.otlp_tracing.Resource')
     def test_configure_oltp_tracing_exporter_creation_error(
         self, mock_resource, mock_exporter, mock_processor, mock_tracer_provider_class, mock_trace
     ):
@@ -293,11 +306,11 @@ class TestConfigureOltpTracingErrorHandling:
         mock_tracer_provider_instance.add_span_processor.assert_not_called()
         mock_trace.set_tracer_provider.assert_not_called()
     
-    @patch('common.utils.otlp_tracing.trace')
-    @patch('common.utils.otlp_tracing.TracerProvider')
-    @patch('common.utils.otlp_tracing.BatchSpanProcessor')
-    @patch('common.utils.otlp_tracing.OTLPSpanExporter')
-    @patch('common.utils.otlp_tracing.Resource')
+    @patch('backend.common.utils.otlp_tracing.trace')
+    @patch('backend.common.utils.otlp_tracing.TracerProvider')
+    @patch('backend.common.utils.otlp_tracing.BatchSpanProcessor')
+    @patch('backend.common.utils.otlp_tracing.OTLPSpanExporter')
+    @patch('backend.common.utils.otlp_tracing.Resource')
     def test_configure_oltp_tracing_processor_creation_error(
         self, mock_resource, mock_exporter, mock_processor, mock_tracer_provider_class, mock_trace
     ):
@@ -328,11 +341,11 @@ class TestConfigureOltpTracingErrorHandling:
         mock_tracer_provider_instance.add_span_processor.assert_not_called()
         mock_trace.set_tracer_provider.assert_not_called()
     
-    @patch('common.utils.otlp_tracing.trace')
-    @patch('common.utils.otlp_tracing.TracerProvider')
-    @patch('common.utils.otlp_tracing.BatchSpanProcessor')
-    @patch('common.utils.otlp_tracing.OTLPSpanExporter')
-    @patch('common.utils.otlp_tracing.Resource')
+    @patch('backend.common.utils.otlp_tracing.trace')
+    @patch('backend.common.utils.otlp_tracing.TracerProvider')
+    @patch('backend.common.utils.otlp_tracing.BatchSpanProcessor')
+    @patch('backend.common.utils.otlp_tracing.OTLPSpanExporter')
+    @patch('backend.common.utils.otlp_tracing.Resource')
     def test_configure_oltp_tracing_add_span_processor_error(
         self, mock_resource, mock_exporter, mock_processor, mock_tracer_provider_class, mock_trace
     ):
@@ -365,11 +378,11 @@ class TestConfigureOltpTracingErrorHandling:
         # Verify set_tracer_provider was not called
         mock_trace.set_tracer_provider.assert_not_called()
     
-    @patch('common.utils.otlp_tracing.trace')
-    @patch('common.utils.otlp_tracing.TracerProvider')
-    @patch('common.utils.otlp_tracing.BatchSpanProcessor')
-    @patch('common.utils.otlp_tracing.OTLPSpanExporter')
-    @patch('common.utils.otlp_tracing.Resource')
+    @patch('backend.common.utils.otlp_tracing.trace')
+    @patch('backend.common.utils.otlp_tracing.TracerProvider')
+    @patch('backend.common.utils.otlp_tracing.BatchSpanProcessor')
+    @patch('backend.common.utils.otlp_tracing.OTLPSpanExporter')
+    @patch('backend.common.utils.otlp_tracing.Resource')
     def test_configure_oltp_tracing_set_tracer_provider_error(
         self, mock_resource, mock_exporter, mock_processor, mock_tracer_provider_class, mock_trace
     ):
@@ -413,11 +426,11 @@ class TestConfigureOltpTracingIntegration:
         """Cleanup after each test method."""
         pass
     
-    @patch('common.utils.otlp_tracing.trace')
-    @patch('common.utils.otlp_tracing.TracerProvider')
-    @patch('common.utils.otlp_tracing.BatchSpanProcessor')
-    @patch('common.utils.otlp_tracing.OTLPSpanExporter')
-    @patch('common.utils.otlp_tracing.Resource')
+    @patch('backend.common.utils.otlp_tracing.trace')
+    @patch('backend.common.utils.otlp_tracing.TracerProvider')
+    @patch('backend.common.utils.otlp_tracing.BatchSpanProcessor')
+    @patch('backend.common.utils.otlp_tracing.OTLPSpanExporter')
+    @patch('backend.common.utils.otlp_tracing.Resource')
     def test_configure_oltp_tracing_service_name_configuration(
         self, mock_resource, mock_exporter, mock_processor, mock_tracer_provider_class, mock_trace
     ):
@@ -447,11 +460,11 @@ class TestConfigureOltpTracingIntegration:
         # Verify return value
         assert result is mock_tracer_provider_instance
     
-    @patch('common.utils.otlp_tracing.trace')
-    @patch('common.utils.otlp_tracing.TracerProvider')
-    @patch('common.utils.otlp_tracing.BatchSpanProcessor')
-    @patch('common.utils.otlp_tracing.OTLPSpanExporter')
-    @patch('common.utils.otlp_tracing.Resource')
+    @patch('backend.common.utils.otlp_tracing.trace')
+    @patch('backend.common.utils.otlp_tracing.TracerProvider')
+    @patch('backend.common.utils.otlp_tracing.BatchSpanProcessor')
+    @patch('backend.common.utils.otlp_tracing.OTLPSpanExporter')
+    @patch('backend.common.utils.otlp_tracing.Resource')
     def test_configure_oltp_tracing_call_sequence(
         self, mock_resource, mock_exporter, mock_processor, mock_tracer_provider_class, mock_trace
     ):
@@ -503,11 +516,11 @@ class TestConfigureOltpTracingParameterHandling:
         """Cleanup after each test method."""
         pass
     
-    @patch('common.utils.otlp_tracing.trace')
-    @patch('common.utils.otlp_tracing.TracerProvider')
-    @patch('common.utils.otlp_tracing.BatchSpanProcessor')
-    @patch('common.utils.otlp_tracing.OTLPSpanExporter')
-    @patch('common.utils.otlp_tracing.Resource')
+    @patch('backend.common.utils.otlp_tracing.trace')
+    @patch('backend.common.utils.otlp_tracing.TracerProvider')
+    @patch('backend.common.utils.otlp_tracing.BatchSpanProcessor')
+    @patch('backend.common.utils.otlp_tracing.OTLPSpanExporter')
+    @patch('backend.common.utils.otlp_tracing.Resource')
     def test_configure_oltp_tracing_with_empty_string_endpoint(
         self, mock_resource, mock_exporter, mock_processor, mock_tracer_provider_class, mock_trace
     ):
@@ -538,11 +551,11 @@ class TestConfigureOltpTracingParameterHandling:
         
         assert result is mock_tracer_provider_instance
     
-    @patch('common.utils.otlp_tracing.trace')
-    @patch('common.utils.otlp_tracing.TracerProvider')
-    @patch('common.utils.otlp_tracing.BatchSpanProcessor')
-    @patch('common.utils.otlp_tracing.OTLPSpanExporter')
-    @patch('common.utils.otlp_tracing.Resource')
+    @patch('backend.common.utils.otlp_tracing.trace')
+    @patch('backend.common.utils.otlp_tracing.TracerProvider')
+    @patch('backend.common.utils.otlp_tracing.BatchSpanProcessor')
+    @patch('backend.common.utils.otlp_tracing.OTLPSpanExporter')
+    @patch('backend.common.utils.otlp_tracing.Resource')
     def test_configure_oltp_tracing_function_signature(
         self, mock_resource, mock_exporter, mock_processor, mock_tracer_provider_class, mock_trace
     ):

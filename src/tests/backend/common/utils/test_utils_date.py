@@ -9,18 +9,89 @@ import json
 import locale
 import logging
 import unittest
+import sys
+import os
 from datetime import datetime
 from typing import Optional
 from unittest.mock import Mock, patch
 
 import pytest
-from dateutil import parser
 
-from common.utils.utils_date import (
+# Add the backend directory to the Python path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'backend'))
+
+# Set required environment variables for testing
+os.environ.setdefault('APPLICATIONINSIGHTS_CONNECTION_STRING', 'test_connection_string')
+os.environ.setdefault('APP_ENV', 'dev')
+
+# Only mock external problematic dependencies - do NOT mock internal common.* modules
+sys.modules['dateutil'] = Mock()
+sys.modules['dateutil.parser'] = Mock()
+sys.modules['regex'] = Mock()
+
+# Only mock external problematic dependencies - do NOT mock internal common.* modules
+# Mock the external dependencies but not in a way that breaks real function
+sys.modules['dateutil'] = Mock()
+sys.modules['dateutil.parser'] = Mock()
+sys.modules['regex'] = Mock()
+
+# Import the REAL modules using backend.* paths for proper coverage tracking
+from backend.common.utils.utils_date import (
     DateTimeEncoder,
     format_date_for_user,
     format_dates_in_messages,
 )
+
+# Now patch the parser in the actual module to work correctly
+import backend.common.utils.utils_date as utils_date_module
+
+# Create proper mock for dateutil.parser that returns real datetime objects
+parser_mock = Mock()
+def mock_parse(date_str):
+    from datetime import datetime
+    import re
+    
+    # US format: Jul 30, 2025 or Dec 25, 2023 or December 25, 2023
+    us_pattern = r'([A-Za-z]{3,9}) (\d{1,2}), (\d{4})'
+    us_match = re.match(us_pattern, date_str.strip())
+    if us_match:
+        month_name, day, year = us_match.groups()
+        month_map = {
+            'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+            'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12,
+            'January': 1, 'February': 2, 'March': 3, 'April': 4, 'June': 6,
+            'July': 7, 'August': 8, 'September': 9, 'October': 10, 'November': 11, 'December': 12
+        }
+        if month_name in month_map:
+            return datetime(int(year), month_map[month_name], int(day))
+    
+    # Indian format: 30 Jul 2025 or 25 Dec 2023 or 25 December 2023
+    indian_pattern = r'(\d{1,2}) ([A-Za-z]{3,9}) (\d{4})'
+    indian_match = re.match(indian_pattern, date_str.strip())
+    if indian_match:
+        day, month_name, year = indian_match.groups()
+        month_map = {
+            'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+            'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12,
+            'January': 1, 'February': 2, 'March': 3, 'April': 4, 'June': 6,
+            'July': 7, 'August': 8, 'September': 9, 'October': 10, 'November': 11, 'December': 12
+        }
+        if month_name in month_map:
+            return datetime(int(year), month_map[month_name], int(day))
+    
+    raise ValueError(f"Unable to parse date: {date_str}")
+
+parser_mock.parse = mock_parse
+
+# Patch the parser in the actual utils_date module
+utils_date_module.parser = parser_mock
+
+# Also patch the regex module to use real regex
+import re as real_re
+utils_date_module.re = real_re
+
+# Import dateutil.parser after mocking to avoid import errors
+from dateutil import parser
 
 
 class TestFormatDateForUser(unittest.TestCase):
@@ -81,7 +152,7 @@ class TestFormatDateForUser(unittest.TestCase):
                 result = format_date_for_user(invalid_date)
                 self.assertEqual(result, invalid_date)
 
-    @patch('common.utils.utils_date.locale.setlocale')
+    @patch('backend.common.utils.utils_date.locale.setlocale')
     def test_format_date_for_user_with_user_locale(self, mock_setlocale):
         """Test format_date_for_user with specific user locale."""
         # Mock locale setting to avoid system dependency
@@ -94,13 +165,13 @@ class TestFormatDateForUser(unittest.TestCase):
         # Should still format the date
         self.assertNotEqual(result, "2023-12-25")
 
-    @patch('common.utils.utils_date.locale.setlocale')
+    @patch('backend.common.utils.utils_date.locale.setlocale')
     def test_format_date_for_user_locale_setting_fails(self, mock_setlocale):
         """Test format_date_for_user when locale setting fails."""
         # Make setlocale raise an exception
         mock_setlocale.side_effect = locale.Error("Unsupported locale")
         
-        with patch('common.utils.utils_date.logging.warning') as mock_warning:
+        with patch('backend.common.utils.utils_date.logging.warning') as mock_warning:
             result = format_date_for_user("2023-12-25", "invalid_locale")
             
             # Should return original date when locale fails
@@ -112,7 +183,7 @@ class TestFormatDateForUser(unittest.TestCase):
         # Test with invalid date format that will cause strptime to fail
         invalid_date = "invalid-date-format"
         
-        with patch('common.utils.utils_date.logging.warning') as mock_warning:
+        with patch('backend.common.utils.utils_date.logging.warning') as mock_warning:
             result = format_date_for_user(invalid_date)
             
             self.assertEqual(result, invalid_date)
@@ -124,7 +195,7 @@ class TestFormatDateForUser(unittest.TestCase):
         # Should work with default locale
         self.assertNotEqual(result, "2023-12-25")
 
-    @patch('common.utils.utils_date.logging.warning')
+    @patch('backend.common.utils.utils_date.logging.warning')
     def test_format_date_for_user_logging_on_error(self, mock_warning):
         """Test that logging.warning is called on formatting errors."""
         invalid_date = "invalid-date-string"
@@ -354,7 +425,7 @@ class TestFormatDatesInMessages(unittest.TestCase):
         """Test format_dates_in_messages when date parsing fails."""
         test_string = "Invalid date: Jul 32, 2025"  # Invalid day
         
-        with patch('common.utils.utils_date.parser.parse') as mock_parse:
+        with patch('backend.common.utils.utils_date.parser.parse') as mock_parse:
             mock_parse.side_effect = Exception("Parse error")
             result = format_dates_in_messages(test_string, "en-US")
             
@@ -388,11 +459,10 @@ class TestFormatDatesInMessages(unittest.TestCase):
         test_string = "Event on Jul 30, 2025"
         result = format_dates_in_messages(test_string)
         
-        # Default target_locale is "en-US", which uses default format (Indian format)
-        # But the regex might not match this exact pattern, so check if it changed or stayed same
+        # Default target_locale is "en-US", so US format should stay the same
         self.assertIsInstance(result, str)
-        # The function should process the string (even if no change occurs)
-        self.assertTrue(len(result) >= len(test_string))
+        # The function should process the string but date format should remain the same
+        self.assertIn("Jul 30, 2025", result)
 
     def test_format_dates_in_messages_edge_case_inputs(self):
         """Test format_dates_in_messages with edge case inputs."""

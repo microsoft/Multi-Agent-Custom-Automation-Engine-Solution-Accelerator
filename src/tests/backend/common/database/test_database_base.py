@@ -14,8 +14,14 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..
 os.environ.setdefault('APPLICATIONINSIGHTS_CONNECTION_STRING', 'test_connection_string')
 os.environ.setdefault('APP_ENV', 'dev')
 
-from common.database.database_base import DatabaseBase
-from common.models.messages_af import (
+# Only mock external problematic dependencies - do NOT mock internal common.* modules
+sys.modules['v4'] = Mock()
+sys.modules['v4.models'] = Mock()
+sys.modules['v4.models.messages'] = Mock()
+
+# Import the REAL modules using backend.* paths for proper coverage tracking
+from backend.common.database.database_base import DatabaseBase
+from backend.common.models.messages_af import (
     AgentMessageData,
     BaseDataModel,
     CurrentTeamAgent,
@@ -632,6 +638,114 @@ class TestDatabaseBaseTypeHints:
         
         # Should have annotations for parameters
         assert len(annotations) > 0
+
+
+class TestConcreteImplementation:
+    """Test concrete implementation exercises key abstract methods."""
+    
+    @pytest.mark.asyncio
+    async def test_abstract_method_signatures(self):
+        """Test abstract method signatures are defined correctly."""
+        # Test that abstract methods exist and have correct signatures
+        abstract_methods = [
+            'initialize', 'close', 'add_item', 'update_item', 'get_item_by_id',
+            'query_items', 'delete_item', 'add_plan', 'update_plan', 'get_plan_by_plan_id',
+            'get_plan', 'get_all_plans', 'get_all_plans_by_team_id', 'get_all_plans_by_team_id_status',
+            'add_step', 'update_step', 'get_steps_by_plan', 'get_step', 'add_team',
+            'update_team', 'get_team', 'get_team_by_id', 'get_all_teams', 'delete_team',
+            'get_data_by_type', 'get_all_items', 'get_steps_for_plan', 'get_current_team',
+            'delete_current_team', 'set_current_team', 'update_current_team',
+            'delete_plan_by_plan_id', 'add_mplan', 'update_mplan', 'get_mplan',
+            'add_agent_message', 'update_agent_message', 'get_agent_messages',
+            'add_team_agent', 'delete_team_agent', 'get_team_agent'
+        ]
+        
+        for method_name in abstract_methods:
+            assert hasattr(DatabaseBase, method_name), f"Method {method_name} not found"
+            method = getattr(DatabaseBase, method_name)
+            assert getattr(method, '__isabstractmethod__', False), f"Method {method_name} is not abstract"
+    
+    @pytest.mark.asyncio
+    async def test_context_manager_methods(self):
+        """Test context manager methods exist."""
+        # Test that context manager methods exist
+        assert hasattr(DatabaseBase, '__aenter__')
+        assert hasattr(DatabaseBase, '__aexit__')
+        
+        # Check they are not abstract
+        aenter_method = getattr(DatabaseBase, '__aenter__')
+        aexit_method = getattr(DatabaseBase, '__aexit__')
+        
+        assert not getattr(aenter_method, '__isabstractmethod__', False)
+        assert not getattr(aexit_method, '__isabstractmethod__', False)
+    
+    @pytest.mark.asyncio 
+    async def test_context_manager_implementation(self):
+        """Test context manager implementation by creating minimal concrete class."""
+        
+        class MinimalDatabase(DatabaseBase):
+            """Minimal implementation to test context manager."""
+            def __init__(self):
+                self.initialized = False
+                
+            async def initialize(self) -> None:
+                self.initialized = True
+                
+            async def close(self) -> None:
+                self.initialized = False
+                
+            # Implement all abstract methods with minimal stubs
+            async def add_item(self, item): pass
+            async def update_item(self, item): pass  
+            async def get_item_by_id(self, item_id, partition_key, model_class): return None
+            async def query_items(self, query, parameters, model_class): return []
+            async def delete_item(self, item_id, partition_key): pass
+            async def add_plan(self, plan): pass
+            async def update_plan(self, plan): pass
+            async def get_plan_by_plan_id(self, plan_id): return None
+            async def get_plan(self, plan_id): return None
+            async def get_all_plans(self): return []
+            async def get_all_plans_by_team_id(self, team_id): return []
+            async def get_all_plans_by_team_id_status(self, team_id, status): return []
+            async def add_step(self, step): pass
+            async def update_step(self, step): pass
+            async def get_steps_by_plan(self, plan_id): return []
+            async def get_step(self, step_id, session_id): return None
+            async def add_team(self, team): pass
+            async def update_team(self, team): pass
+            async def get_team(self, team_id): return None
+            async def get_team_by_id(self, team_id): return None
+            async def get_all_teams(self): return []
+            async def delete_team(self, team_id): return True
+            async def get_data_by_type(self, data_type): return []
+            async def get_all_items(self): return []
+            async def get_steps_for_plan(self, plan_id): return []
+            async def get_current_team(self, user_id): return None
+            async def delete_current_team(self, user_id): return None
+            async def set_current_team(self, current_team): pass
+            async def update_current_team(self, current_team): pass
+            async def delete_plan_by_plan_id(self, plan_id): return True
+            async def add_mplan(self, mplan): pass
+            async def update_mplan(self, mplan): pass
+            async def get_mplan(self, plan_id): return None
+            async def add_agent_message(self, message): pass
+            async def update_agent_message(self, message): pass
+            async def get_agent_messages(self, plan_id): return None
+            async def add_team_agent(self, team_agent): pass
+            async def delete_team_agent(self, team_id, agent_name): pass
+            async def get_team_agent(self, team_id, agent_name): return None
+        
+        # Test context manager functionality
+        db = MinimalDatabase()
+        assert not db.initialized
+        
+        # Test context manager entry and exit
+        async with db as db_context:
+            assert db_context is db
+            assert db.initialized
+        
+        # After exiting context, should be closed
+        assert not db.initialized
 
 
 if __name__ == "__main__":

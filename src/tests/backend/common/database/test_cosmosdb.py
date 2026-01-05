@@ -16,8 +16,23 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..
 os.environ.setdefault('APPLICATIONINSIGHTS_CONNECTION_STRING', 'test_connection_string')
 os.environ.setdefault('APP_ENV', 'dev')
 
-from common.database.cosmosdb import CosmosDBClient
-from common.models.messages_af import (
+# Only mock external problematic dependencies - do NOT mock internal common.* modules
+sys.modules['azure'] = Mock()
+sys.modules['azure.cosmos'] = Mock()
+sys.modules['azure.cosmos.aio'] = Mock()
+sys.modules['azure.cosmos.aio._database'] = Mock()
+sys.modules['azure.core'] = Mock()
+sys.modules['azure.core.exceptions'] = Mock()
+sys.modules['azure.identity'] = Mock()
+sys.modules['azure.identity.aio'] = Mock()
+# Mock v4 modules that cosmosdb.py tries to import
+sys.modules['v4'] = Mock()
+sys.modules['v4.models'] = Mock()
+sys.modules['v4.models.messages'] = Mock()
+
+# Import the REAL modules using backend.* paths for proper coverage tracking
+from backend.common.database.cosmosdb import CosmosDBClient
+from backend.common.models.messages_af import (
     AgentMessage,
     AgentMessageData,
     BaseDataModel,
@@ -102,7 +117,7 @@ class TestCosmosDBClientInitializationProcess:
         mock_database = Mock()
         mock_container = Mock()
         
-        with patch('common.database.cosmosdb.CosmosClient', return_value=mock_client):
+        with patch('backend.common.database.cosmosdb.CosmosClient', return_value=mock_client):
             mock_client.get_database_client.return_value = mock_database
             client._get_container = AsyncMock(return_value=mock_container)
             
@@ -116,7 +131,7 @@ class TestCosmosDBClientInitializationProcess:
     @pytest.mark.asyncio
     async def test_initialize_failure(self, client):
         """Test initialization failure handling."""
-        with patch('common.database.cosmosdb.CosmosClient', side_effect=Exception("Connection failed")):
+        with patch('backend.common.database.cosmosdb.CosmosClient', side_effect=Exception("Connection failed")):
             with pytest.raises(Exception, match="Connection failed"):
                 await client.initialize()
     
@@ -126,7 +141,7 @@ class TestCosmosDBClientInitializationProcess:
         client._initialized = True
         mock_client = AsyncMock()
         
-        with patch('common.database.cosmosdb.CosmosClient', return_value=mock_client) as mock_cosmos:
+        with patch('backend.common.database.cosmosdb.CosmosClient', return_value=mock_client) as mock_cosmos:
             await client.initialize()
             
             # Should not create new client if already initialized
@@ -1001,7 +1016,7 @@ class TestCosmosDBMiscellaneousOperations:
     @pytest.mark.asyncio
     async def test_add_mplan(self, client):
         """Test adding an mplan."""
-        mock_mplan = Mock(spec=messages.MPlan)
+        mock_mplan = Mock()
         
         await client.add_mplan(mock_mplan)
         
@@ -1010,7 +1025,7 @@ class TestCosmosDBMiscellaneousOperations:
     @pytest.mark.asyncio
     async def test_update_mplan(self, client):
         """Test updating an mplan."""
-        mock_mplan = Mock(spec=messages.MPlan)
+        mock_mplan = Mock()
         
         await client.update_mplan(mock_mplan)
         
@@ -1019,7 +1034,7 @@ class TestCosmosDBMiscellaneousOperations:
     @pytest.mark.asyncio
     async def test_get_mplan(self, client):
         """Test getting an mplan by plan ID."""
-        mock_mplan = Mock(spec=messages.MPlan)
+        mock_mplan = Mock()
         client.query_items.return_value = [mock_mplan]
         
         result = await client.get_mplan("test_plan_id")

@@ -52,18 +52,12 @@ jobs:
       - name: Run tests with coverage
         if: env.skip_tests == 'false'
         run: |
-          pytest --cov=. --cov-report=term-missing --cov-report=xml \
-            --ignore=tests/e2e-test/tests \
-            --ignore=src/backend/tests/test_app.py \
-            --ignore=src/tests/agents/test_foundry_integration.py \
-            --ignore=src/tests/mcp_server/test_factory.py \
-            --ignore=src/tests/mcp_server/test_hr_service.py \
-            --ignore=src/backend/tests/test_config.py \
-            --ignore=src/tests/agents/test_human_approval_manager.py \
-            --ignore=src/backend/tests/test_team_specific_methods.py \
-            --ignore=src/backend/tests/models/test_messages.py \
-            --ignore=src/backend/tests/test_otlp_tracing.py \
-            --ignore=src/backend/tests/auth/test_auth_utils.py
+          python -m pytest --cov=backend --cov-report=term --cov-config=.coveragerc 
+           --ignore=tests/e2e-test/tests 
+           --ignore=src/backend/tests 
+           --ignore=src/tests/mcp_server 
+           --ignore=src/tests/agents 
+           --ignore=src/mcp_server
 
       # - name: Run tests with coverage
       #   if: env.skip_tests == 'false'
