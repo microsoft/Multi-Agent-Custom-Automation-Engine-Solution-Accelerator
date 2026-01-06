@@ -348,15 +348,15 @@ jobs:
           echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| **Job Status** | ${{ job.status == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| **Resource Group** | \`$INPUT_RESOURCE_GROUP_NAME\` |" >> $GITHUB_STEP_SUMMARY
-          config_type="Non-WAF + Non-EXP"
+          CONFIG_TYPE="Non-WAF + Non-EXP"
           if [[ "$INPUT_WAF_ENABLED" == "true" && "$INPUT_EXP" == "true" ]]; then
-            config_type="WAF + EXP"
+            CONFIG_TYPE="WAF + EXP"
           elif [[ "$INPUT_WAF_ENABLED" == "true" && "$INPUT_EXP" != "true" ]]; then
-            config_type="WAF + Non-EXP"
+            CONFIG_TYPE="WAF + Non-EXP"
           elif [[ "$INPUT_WAF_ENABLED" != "true" && "$INPUT_EXP" == "true" ]]; then
-            config_type="Non-WAF + EXP"
+            CONFIG_TYPE="Non-WAF + EXP"
           fi
-          echo "| **Configuration Type** | \`$config_type\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Configuration Type** | \`$CONFIG_TYPE\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Azure Region (Infrastructure)** | \`$INPUT_AZURE_LOCATION\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Azure OpenAI Region** | \`$INPUT_AZURE_ENV_OPENAI_LOCATION\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Docker Image Tag** | \`$INPUT_IMAGE_TAG\` |" >> $GITHUB_STEP_SUMMARY
