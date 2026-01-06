@@ -117,29 +117,6 @@ jobs:
       QUOTA_FAILED: ${{ steps.quota_failure_output.outputs.QUOTA_FAILED }}
       
     steps:
-      - name: Validate and Auto-Configure EXP
-        shell: bash
-        env:
-          INPUT_EXP: ${{ inputs.EXP }}
-          INPUT_LOG_ANALYTICS_WORKSPACE_ID: ${{ inputs.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID }}
-          INPUT_AI_PROJECT_RESOURCE_ID: ${{ inputs.AZURE_EXISTING_AI_PROJECT_RESOURCE_ID }}
-        run: |
-          echo "🔍 Validating EXP configuration..."
-          
-          if [[ "$INPUT_EXP" != "true" ]]; then
-            if [[ -n "$INPUT_LOG_ANALYTICS_WORKSPACE_ID" ]] || [[ -n "$INPUT_AI_PROJECT_RESOURCE_ID" ]]; then
-              echo "🔧 AUTO-ENABLING EXP: EXP parameter values were provided but EXP was not explicitly enabled."
-              echo ""
-              echo "You provided values for:"
-              [[ -n "$INPUT_LOG_ANALYTICS_WORKSPACE_ID" ]] && echo "  - Azure Log Analytics Workspace ID: '$INPUT_LOG_ANALYTICS_WORKSPACE_ID'"
-              [[ -n "$INPUT_AI_PROJECT_RESOURCE_ID" ]] && echo "  - Azure AI Project Resource ID: '$INPUT_AI_PROJECT_RESOURCE_ID'"
-              echo ""
-              echo "✅ Automatically enabling EXP to use these values."
-              echo "EXP=true" >> $GITHUB_ENV
-              echo "📌 EXP has been automatically enabled for this deployment."
-            fi
-          fi
-
       - name: Validate Workflow Input Parameters
         shell: bash
         env:
@@ -273,6 +250,28 @@ jobs:
           
           echo ""
           echo "✅ All input parameters validated successfully!"
+
+      - name: Validate and Auto-Configure EXP
+        shell: bash
+        env:
+          INPUT_EXP: ${{ inputs.EXP }}
+          INPUT_LOG_ANALYTICS_WORKSPACE_ID: ${{ inputs.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID }}
+          INPUT_AI_PROJECT_RESOURCE_ID: ${{ inputs.AZURE_EXISTING_AI_PROJECT_RESOURCE_ID }}
+        run: |
+          echo "🔍 Validating EXP configuration..."
+          
+          if [[ "$INPUT_EXP" != "true" ]]; then
+            if [[ -n "$INPUT_LOG_ANALYTICS_WORKSPACE_ID" ]] || [[ -n "$INPUT_AI_PROJECT_RESOURCE_ID" ]]; then
+              echo "🔧 AUTO-ENABLING EXP: EXP parameter values were provided but EXP was not explicitly enabled."
+              echo ""
+              echo "You provided values for:"
+              [[ -n "$INPUT_LOG_ANALYTICS_WORKSPACE_ID" ]] && echo "  - Azure Log Analytics Workspace ID: '$INPUT_LOG_ANALYTICS_WORKSPACE_ID'"
+              [[ -n "$INPUT_AI_PROJECT_RESOURCE_ID" ]] && echo "  - Azure AI Project Resource ID: '$INPUT_AI_PROJECT_RESOURCE_ID'"
+              echo ""
+              echo "✅ Automatically enabling EXP to use these values."
+              echo "EXP=true" >> $GITHUB_ENV
+            fi
+          fi
           
       - name: Checkout Code
         uses: actions/checkout@v4
