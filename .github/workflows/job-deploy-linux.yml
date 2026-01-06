@@ -344,7 +344,6 @@ jobs:
           INPUT_AZURE_LOCATION: ${{ inputs.AZURE_LOCATION }}
           INPUT_AZURE_ENV_OPENAI_LOCATION: ${{ inputs.AZURE_ENV_OPENAI_LOCATION }}
           INPUT_IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
-          JOB_STATUS: ${{ job.status }}
         run: |
           echo "## 🚀 Deploy Job Summary (Linux)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
