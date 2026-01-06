@@ -111,9 +111,11 @@ jobs:
       - name: Send Deployment Failure Notification
         if: inputs.deploy_result == 'failure' && inputs.QUOTA_FAILED != 'true'
         shell: bash
+        env:
+          INPUT_RESOURCE_GROUP_NAME: ${{ inputs.RESOURCE_GROUP_NAME }}
         run: |
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          RESOURCE_GROUP="${{ inputs.RESOURCE_GROUP_NAME }}"
+          RESOURCE_GROUP="$INPUT_RESOURCE_GROUP_NAME"
           
           EMAIL_BODY=$(cat <<EOF
           {
@@ -130,14 +132,20 @@ jobs:
       - name: Send Success Notification
         if: inputs.deploy_result == 'success' && (inputs.e2e_test_result == 'skipped' || inputs.TEST_SUCCESS == 'true')
         shell: bash
+        env:
+          INPUT_E2E_TEST_RESULT: ${{ inputs.e2e_test_result }}
+          INPUT_CONTAINER_WEB_APPURL: ${{ inputs.CONTAINER_WEB_APPURL }}
+          INPUT_EXISTING_WEBAPP_URL: ${{ inputs.existing_webapp_url }}
+          INPUT_RESOURCE_GROUP_NAME: ${{ inputs.RESOURCE_GROUP_NAME }}
+          INPUT_TEST_REPORT_URL: ${{ inputs.TEST_REPORT_URL }}
         run: |
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          WEBAPP_URL="${{ inputs.CONTAINER_WEB_APPURL || inputs.existing_webapp_url }}"
-          RESOURCE_GROUP="${{ inputs.RESOURCE_GROUP_NAME }}"
-          TEST_REPORT_URL="${{ inputs.TEST_REPORT_URL }}"
+          WEBAPP_URL="${INPUT_CONTAINER_WEB_APPURL:-$INPUT_EXISTING_WEBAPP_URL}"
+          RESOURCE_GROUP="$INPUT_RESOURCE_GROUP_NAME"
+          TEST_REPORT_URL="$INPUT_TEST_REPORT_URL"
           TEST_SUITE_NAME="${{ steps.test_suite.outputs.TEST_SUITE_NAME }}"
           
-          if [ "${{ inputs.e2e_test_result }}" = "skipped" ]; then
+          if [ "$INPUT_E2E_TEST_RESULT" = "skipped" ]; then
             EMAIL_BODY=$(cat <<EOF
           {
             "body": "<p>Dear Team,</p><p>We would like to inform you that the ${{ env.accelerator_name }} deployment has completed successfully.</p><p><strong>Deployment Details:</strong><br>• Resource Group: ${RESOURCE_GROUP}<br>• Web App URL: <a href='${WEBAPP_URL}'>${WEBAPP_URL}</a><br>• E2E Tests: Skipped (as configured)</p><p><strong>Configuration:</strong><br>• WAF Enabled: ${{ env.WAF_ENABLED }}<br>• EXP Enabled: ${{ env.EXP }}</p><p><strong>Run URL:</strong> <a href='${RUN_URL}'>${RUN_URL}</a></p><p>Best regards,<br>Your Automation Team</p>",
@@ -162,11 +170,16 @@ jobs:
       - name: Send Test Failure Notification
         if: inputs.deploy_result == 'success' && inputs.e2e_test_result != 'skipped' && inputs.TEST_SUCCESS != 'true'
         shell: bash
+        env:
+          INPUT_TEST_REPORT_URL: ${{ inputs.TEST_REPORT_URL }}
+          INPUT_CONTAINER_WEB_APPURL: ${{ inputs.CONTAINER_WEB_APPURL }}
+          INPUT_EXISTING_WEBAPP_URL: ${{ inputs.existing_webapp_url }}
+          INPUT_RESOURCE_GROUP_NAME: ${{ inputs.RESOURCE_GROUP_NAME }}
         run: |
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          TEST_REPORT_URL="${{ inputs.TEST_REPORT_URL }}"
-          WEBAPP_URL="${{ inputs.CONTAINER_WEB_APPURL || inputs.existing_webapp_url }}"
-          RESOURCE_GROUP="${{ inputs.RESOURCE_GROUP_NAME }}"
+          TEST_REPORT_URL="$INPUT_TEST_REPORT_URL"
+          WEBAPP_URL="${INPUT_CONTAINER_WEB_APPURL:-$INPUT_EXISTING_WEBAPP_URL}"
+          RESOURCE_GROUP="$INPUT_RESOURCE_GROUP_NAME"
           TEST_SUITE_NAME="${{ steps.test_suite.outputs.TEST_SUITE_NAME }}"
           
           EMAIL_BODY=$(cat <<EOF
@@ -184,10 +197,13 @@ jobs:
       - name: Send Existing URL Success Notification
         if: inputs.deploy_result == 'skipped' && inputs.existing_webapp_url != '' && inputs.e2e_test_result == 'success' && (inputs.TEST_SUCCESS == 'true' || inputs.TEST_SUCCESS == '')
         shell: bash
+        env:
+          INPUT_EXISTING_WEBAPP_URL: ${{ inputs.existing_webapp_url }}
+          INPUT_TEST_REPORT_URL: ${{ inputs.TEST_REPORT_URL }}
         run: |
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          EXISTING_URL="${{ inputs.existing_webapp_url }}"
-          TEST_REPORT_URL="${{ inputs.TEST_REPORT_URL }}"
+          EXISTING_URL="$INPUT_EXISTING_WEBAPP_URL"
+          TEST_REPORT_URL="$INPUT_TEST_REPORT_URL"
           TEST_SUITE_NAME="${{ steps.test_suite.outputs.TEST_SUITE_NAME }}"
           
           EMAIL_BODY=$(cat <<EOF
@@ -205,10 +221,13 @@ jobs:
       - name: Send Existing URL Test Failure Notification
         if: inputs.deploy_result == 'skipped' && inputs.existing_webapp_url != '' && inputs.e2e_test_result == 'failure'
         shell: bash
+        env:
+          INPUT_EXISTING_WEBAPP_URL: ${{ inputs.existing_webapp_url }}
+          INPUT_TEST_REPORT_URL: ${{ inputs.TEST_REPORT_URL }}
         run: |
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          EXISTING_URL="${{ inputs.existing_webapp_url }}"
-          TEST_REPORT_URL="${{ inputs.TEST_REPORT_URL }}"
+          EXISTING_URL="$INPUT_EXISTING_WEBAPP_URL"
+          TEST_REPORT_URL="$INPUT_TEST_REPORT_URL"
           TEST_SUITE_NAME="${{ steps.test_suite.outputs.TEST_SUITE_NAME }}"
           
           EMAIL_BODY=$(cat <<EOF

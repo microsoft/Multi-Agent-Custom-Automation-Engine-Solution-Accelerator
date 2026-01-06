@@ -54,10 +54,145 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
       
+      - name: Validate Workflow Input Parameters
+        shell: bash
+        env:
+          INPUT_ENV_NAME: ${{ inputs.ENV_NAME }}
+          INPUT_AZURE_ENV_OPENAI_LOCATION: ${{ inputs.AZURE_ENV_OPENAI_LOCATION }}
+          INPUT_AZURE_LOCATION: ${{ inputs.AZURE_LOCATION }}
+          INPUT_RESOURCE_GROUP_NAME: ${{ inputs.RESOURCE_GROUP_NAME }}
+          INPUT_IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
+          INPUT_BUILD_DOCKER_IMAGE: ${{ inputs.BUILD_DOCKER_IMAGE }}
+          INPUT_EXP: ${{ inputs.EXP }}
+          INPUT_WAF_ENABLED: ${{ inputs.WAF_ENABLED }}
+          INPUT_AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID: ${{ inputs.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID }}
+          INPUT_AZURE_EXISTING_AI_PROJECT_RESOURCE_ID: ${{ inputs.AZURE_EXISTING_AI_PROJECT_RESOURCE_ID }}
+        run: |
+          echo "🔍 Validating workflow input parameters..."
+          VALIDATION_FAILED=false
+          
+          # Validate ENV_NAME (required, alphanumeric and hyphens)
+          if [[ -z "$INPUT_ENV_NAME" ]]; then
+            echo "❌ ERROR: ENV_NAME is required but not provided"
+            VALIDATION_FAILED=true
+          elif [[ ! "$INPUT_ENV_NAME" =~ ^[a-zA-Z0-9-]+$ ]]; then
+            echo "❌ ERROR: ENV_NAME '$INPUT_ENV_NAME' is invalid. Must contain only alphanumerics and hyphens"
+            VALIDATION_FAILED=true
+          else
+            echo "✅ ENV_NAME: '$INPUT_ENV_NAME' is valid"
+          fi
+          
+          # Validate AZURE_ENV_OPENAI_LOCATION (required, Azure region format)
+          if [[ -z "$INPUT_AZURE_ENV_OPENAI_LOCATION" ]]; then
+            echo "❌ ERROR: AZURE_ENV_OPENAI_LOCATION is required but not provided"
+            VALIDATION_FAILED=true
+          elif [[ ! "$INPUT_AZURE_ENV_OPENAI_LOCATION" =~ ^[a-z0-9]+$ ]]; then
+            echo "❌ ERROR: AZURE_ENV_OPENAI_LOCATION '$INPUT_AZURE_ENV_OPENAI_LOCATION' is invalid. Must contain only lowercase letters and numbers"
+            VALIDATION_FAILED=true
+          else
+            echo "✅ AZURE_ENV_OPENAI_LOCATION: '$INPUT_AZURE_ENV_OPENAI_LOCATION' is valid"
+          fi
+          
+          # Validate AZURE_LOCATION (required, Azure region format)
+          if [[ -z "$INPUT_AZURE_LOCATION" ]]; then
+            echo "❌ ERROR: AZURE_LOCATION is required but not provided"
+            VALIDATION_FAILED=true
+          elif [[ ! "$INPUT_AZURE_LOCATION" =~ ^[a-z0-9]+$ ]]; then
+            echo "❌ ERROR: AZURE_LOCATION '$INPUT_AZURE_LOCATION' is invalid. Must contain only lowercase letters and numbers"
+            VALIDATION_FAILED=true
+          else
+            echo "✅ AZURE_LOCATION: '$INPUT_AZURE_LOCATION' is valid"
+          fi
+          
+          # Validate RESOURCE_GROUP_NAME (required, Azure naming convention)
+          if [[ -z "$INPUT_RESOURCE_GROUP_NAME" ]]; then
+            echo "❌ ERROR: RESOURCE_GROUP_NAME is required but not provided"
+            VALIDATION_FAILED=true
+          elif [[ ! "$INPUT_RESOURCE_GROUP_NAME" =~ ^[a-zA-Z0-9._\(\)-]+$ ]] || [[ "$INPUT_RESOURCE_GROUP_NAME" =~ \.$ ]]; then
+            echo "❌ ERROR: RESOURCE_GROUP_NAME '$INPUT_RESOURCE_GROUP_NAME' is invalid. Must contain only alphanumerics, periods, underscores, hyphens, and parentheses. Cannot end with period."
+            VALIDATION_FAILED=true
+          elif [[ ${#INPUT_RESOURCE_GROUP_NAME} -gt 90 ]]; then
+            echo "❌ ERROR: RESOURCE_GROUP_NAME '$INPUT_RESOURCE_GROUP_NAME' exceeds 90 characters"
+            VALIDATION_FAILED=true
+          else
+            echo "✅ RESOURCE_GROUP_NAME: '$INPUT_RESOURCE_GROUP_NAME' is valid"
+          fi
+          
+          # Validate IMAGE_TAG (required, Docker tag pattern)
+          if [[ -z "$INPUT_IMAGE_TAG" ]]; then
+            echo "❌ ERROR: IMAGE_TAG is required but not provided"
+            VALIDATION_FAILED=true
+          elif [[ ! "$INPUT_IMAGE_TAG" =~ ^[a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}$ ]]; then
+            echo "❌ ERROR: IMAGE_TAG '$INPUT_IMAGE_TAG' is invalid. Must start with alphanumeric or underscore, max 128 characters"
+            VALIDATION_FAILED=true
+          else
+            echo "✅ IMAGE_TAG: '$INPUT_IMAGE_TAG' is valid"
+          fi
+          
+          # Validate BUILD_DOCKER_IMAGE (required, must be 'true' or 'false')
+          if [[ "$INPUT_BUILD_DOCKER_IMAGE" != "true" && "$INPUT_BUILD_DOCKER_IMAGE" != "false" ]]; then
+            echo "❌ ERROR: BUILD_DOCKER_IMAGE must be 'true' or 'false', got: '$INPUT_BUILD_DOCKER_IMAGE'"
+            VALIDATION_FAILED=true
+          else
+            echo "✅ BUILD_DOCKER_IMAGE: '$INPUT_BUILD_DOCKER_IMAGE' is valid"
+          fi
+          
+          # Validate EXP (required, must be 'true' or 'false')
+          if [[ "$INPUT_EXP" != "true" && "$INPUT_EXP" != "false" ]]; then
+            echo "❌ ERROR: EXP must be 'true' or 'false', got: '$INPUT_EXP'"
+            VALIDATION_FAILED=true
+          else
+            echo "✅ EXP: '$INPUT_EXP' is valid"
+          fi
+          
+          # Validate WAF_ENABLED (must be 'true' or 'false')
+          if [[ "$INPUT_WAF_ENABLED" != "true" && "$INPUT_WAF_ENABLED" != "false" ]]; then
+            echo "❌ ERROR: WAF_ENABLED must be 'true' or 'false', got: '$INPUT_WAF_ENABLED'"
+            VALIDATION_FAILED=true
+          else
+            echo "✅ WAF_ENABLED: '$INPUT_WAF_ENABLED' is valid"
+          fi
+          
+          # Validate AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID (optional, if provided must be valid Resource ID)
+          if [[ -n "$INPUT_AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID" ]]; then
+            if [[ ! "$INPUT_AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID" =~ ^/subscriptions/[a-fA-F0-9-]+/resourceGroups/[^/]+/providers/microsoft\.operationalinsights/workspaces/[^/]+$ ]]; then
+              echo "❌ ERROR: AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID is invalid. Must be a valid Azure Resource ID format:"
+              echo "   /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.OperationalInsights/workspaces/{workspaceName}"
+              echo "   Got: '$INPUT_AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID'"
+              VALIDATION_FAILED=true
+            else
+              echo "✅ AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID: Valid Resource ID format"
+            fi
+          fi
+          
+          # Validate AZURE_EXISTING_AI_PROJECT_RESOURCE_ID (optional, if provided must be valid Resource ID)
+          if [[ -n "$INPUT_AZURE_EXISTING_AI_PROJECT_RESOURCE_ID" ]]; then
+            if [[ ! "$INPUT_AZURE_EXISTING_AI_PROJECT_RESOURCE_ID" =~ ^/subscriptions/[a-fA-F0-9-]+/resourceGroups/[^/]+/providers/(Microsoft\.MachineLearningServices/(workspaces|projects)/[^/]+|Microsoft\.CognitiveServices/accounts/[^/]+/projects/[^/]+)$ ]]; then
+              echo "❌ ERROR: AZURE_EXISTING_AI_PROJECT_RESOURCE_ID is invalid. Must be a valid Azure Resource ID format:"
+              echo "   /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CognitiveServices/accounts/{accountName}/projects/{projectName}"
+              echo "   Got: '$INPUT_AZURE_EXISTING_AI_PROJECT_RESOURCE_ID'"
+              VALIDATION_FAILED=true
+            else
+              echo "✅ AZURE_EXISTING_AI_PROJECT_RESOURCE_ID: Valid Resource ID format"
+            fi
+          fi
+          
+          # Fail workflow if any validation failed
+          if [[ "$VALIDATION_FAILED" == "true" ]]; then
+            echo ""
+            echo "❌ Parameter validation failed. Please correct the errors above and try again."
+            exit 1
+          fi
+          
+          echo ""
+          echo "✅ All input parameters validated successfully!"
+      
       - name: Configure Parameters Based on WAF Setting
         shell: bash
+        env:
+          INPUT_WAF_ENABLED: ${{ inputs.WAF_ENABLED }}
         run: |
-          if [[ "${{ inputs.WAF_ENABLED }}" == "true" ]]; then
+          if [[ "$INPUT_WAF_ENABLED" == "true" ]]; then
             cp infra/main.waf.parameters.json infra/main.parameters.json
             echo "✅ Successfully copied WAF parameters to main parameters file"
           else
@@ -87,26 +222,36 @@ jobs:
       - name: Deploy using azd up and extract values (Linux)
         id: get_output_linux
         shell: bash
+        env:
+          INPUT_ENV_NAME: ${{ inputs.ENV_NAME }}
+          INPUT_AZURE_ENV_OPENAI_LOCATION: ${{ inputs.AZURE_ENV_OPENAI_LOCATION }}
+          INPUT_AZURE_LOCATION: ${{ inputs.AZURE_LOCATION }}
+          INPUT_RESOURCE_GROUP_NAME: ${{ inputs.RESOURCE_GROUP_NAME }}
+          INPUT_IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
+          INPUT_BUILD_DOCKER_IMAGE: ${{ inputs.BUILD_DOCKER_IMAGE }}
+          INPUT_EXP: ${{ inputs.EXP }}
+          INPUT_AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID: ${{ inputs.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID }}
+          INPUT_AZURE_EXISTING_AI_PROJECT_RESOURCE_ID: ${{ inputs.AZURE_EXISTING_AI_PROJECT_RESOURCE_ID }}
         run: |
           set -e          
           # Install azd (Azure Developer CLI)
           curl -fsSL https://aka.ms/install-azd.sh | bash
 
           echo "Creating environment..."
-          azd env new ${{ inputs.ENV_NAME }} --no-prompt
-          echo "Environment created: ${{ inputs.ENV_NAME }}"
+          azd env new $INPUT_ENV_NAME --no-prompt
+          echo "Environment created: $INPUT_ENV_NAME"
 
           echo "Setting default subscription..."
           azd config set defaults.subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         
           # Set additional parameters
           azd env set AZURE_SUBSCRIPTION_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-          azd env set AZURE_ENV_OPENAI_LOCATION="${{ inputs.AZURE_ENV_OPENAI_LOCATION }}"
-          azd env set AZURE_LOCATION="${{ inputs.AZURE_LOCATION }}"
-          azd env set AZURE_RESOURCE_GROUP="${{ inputs.RESOURCE_GROUP_NAME }}"
-          azd env set AZURE_ENV_IMAGE_TAG="${{ inputs.IMAGE_TAG }}"
+          azd env set AZURE_ENV_OPENAI_LOCATION="$INPUT_AZURE_ENV_OPENAI_LOCATION"
+          azd env set AZURE_LOCATION="$INPUT_AZURE_LOCATION"
+          azd env set AZURE_RESOURCE_GROUP="$INPUT_RESOURCE_GROUP_NAME"
+          azd env set AZURE_ENV_IMAGE_TAG="$INPUT_IMAGE_TAG"
           
-          if [[ "${{ inputs.BUILD_DOCKER_IMAGE }}" == "true" ]]; then
+          if [[ "$INPUT_BUILD_DOCKER_IMAGE" == "true" ]]; then
             ACR_NAME=$(echo "${{ secrets.ACR_TEST_LOGIN_SERVER }}")
             azd env set AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT="$ACR_NAME"
             echo "Set ACR name to: $ACR_NAME"
@@ -114,17 +259,17 @@ jobs:
             echo "Skipping ACR name configuration (using existing image)"
           fi
 
-          if [[ "${{ inputs.EXP }}" == "true" ]]; then
+          if [[ "$INPUT_EXP" == "true" ]]; then
             echo "✅ EXP ENABLED - Setting EXP parameters..."
             
-            if [[ -n "${{ inputs.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID }}" ]]; then
-              EXP_LOG_ANALYTICS_ID="${{ inputs.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID }}"
+            if [[ -n "$INPUT_AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID" ]]; then
+              EXP_LOG_ANALYTICS_ID="$INPUT_AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID"
             else
               EXP_LOG_ANALYTICS_ID="${{ secrets.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID }}"
             fi
             
-            if [[ -n "${{ inputs.AZURE_EXISTING_AI_PROJECT_RESOURCE_ID }}" ]]; then
-              EXP_AI_PROJECT_ID="${{ inputs.AZURE_EXISTING_AI_PROJECT_RESOURCE_ID }}"
+            if [[ -n "$INPUT_AZURE_EXISTING_AI_PROJECT_RESOURCE_ID" ]]; then
+              EXP_AI_PROJECT_ID="$INPUT_AZURE_EXISTING_AI_PROJECT_RESOURCE_ID"
             else
               EXP_AI_PROJECT_ID="${{ secrets.AZURE_ENV_FOUNDRY_PROJECT_ID }}"
             fi
@@ -169,13 +314,15 @@ jobs:
           echo "WEBAPP_URL=$WEBAPP_URL" >> $GITHUB_OUTPUT
 
       - name: Run Post deployment scripts
+        env:
+          INPUT_RESOURCE_GROUP_NAME: ${{ inputs.RESOURCE_GROUP_NAME }}
         run: |
           set -e
           az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
 
           # Set environment variables for selecting_team_config_and_data.sh
           export AZURE_SUBSCRIPTION_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-          export AZURE_RESOURCE_GROUP="${{ inputs.RESOURCE_GROUP_NAME }}"
+          export AZURE_RESOURCE_GROUP="$INPUT_RESOURCE_GROUP_NAME"
           export BACKEND_URL="${{ steps.get_output_linux.outputs.BACKEND_URL }}"
           export AZURE_STORAGE_ACCOUNT_NAME="${{ steps.get_output_linux.outputs.AZURE_STORAGE_ACCOUNT_NAME }}"
           export AZURE_STORAGE_CONTAINER_NAME="sample-dataset"
@@ -190,17 +337,34 @@ jobs:
       - name: Generate Deployment Summary
         if: always()
         shell: bash
+        env:
+          INPUT_RESOURCE_GROUP_NAME: ${{ inputs.RESOURCE_GROUP_NAME }}
+          INPUT_WAF_ENABLED: ${{ inputs.WAF_ENABLED }}
+          INPUT_EXP: ${{ inputs.EXP }}
+          INPUT_AZURE_LOCATION: ${{ inputs.AZURE_LOCATION }}
+          INPUT_AZURE_ENV_OPENAI_LOCATION: ${{ inputs.AZURE_ENV_OPENAI_LOCATION }}
+          INPUT_IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
         run: |
           echo "## 🚀 Deploy Job Summary (Linux)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| **Job Status** | ${{ job.status == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Resource Group** | \`${{ inputs.RESOURCE_GROUP_NAME }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Configuration Type** | \`${{ inputs.WAF_ENABLED == 'true' && inputs.EXP == 'true' && 'WAF + EXP' || inputs.WAF_ENABLED == 'true' && inputs.EXP != 'true' && 'WAF + Non-EXP' || inputs.WAF_ENABLED != 'true' && inputs.EXP == 'true' && 'Non-WAF + EXP' || 'Non-WAF + Non-EXP' }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Azure Region (Infrastructure)** | \`${{ inputs.AZURE_LOCATION }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Azure OpenAI Region** | \`${{ inputs.AZURE_ENV_OPENAI_LOCATION }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Docker Image Tag** | \`${{ inputs.IMAGE_TAG }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Resource Group** | \`$INPUT_RESOURCE_GROUP_NAME\` |" >> $GITHUB_STEP_SUMMARY
+          CONFIG_TYPE=""
+          if [[ "$INPUT_WAF_ENABLED" == "true" && "$INPUT_EXP" == "true" ]]; then
+            CONFIG_TYPE="WAF + EXP"
+          elif [[ "$INPUT_WAF_ENABLED" == "true" && "$INPUT_EXP" != "true" ]]; then
+            CONFIG_TYPE="WAF + Non-EXP"
+          elif [[ "$INPUT_WAF_ENABLED" != "true" && "$INPUT_EXP" == "true" ]]; then
+            CONFIG_TYPE="Non-WAF + EXP"
+          else
+            CONFIG_TYPE="Non-WAF + Non-EXP"
+          fi
+          echo "| **Configuration Type** | \`$CONFIG_TYPE\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Azure Region (Infrastructure)** | \`$INPUT_AZURE_LOCATION\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Azure OpenAI Region** | \`$INPUT_AZURE_ENV_OPENAI_LOCATION\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Docker Image Tag** | \`$INPUT_IMAGE_TAG\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [[ "${{ job.status }}" == "success" ]]; then
             echo "### ✅ Deployment Details" >> $GITHUB_STEP_SUMMARY
