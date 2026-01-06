@@ -206,7 +206,7 @@ jobs:
           
           # Validate run_e2e_tests (specific allowed values)
           if [[ -n "$INPUT_RUN_E2E_TESTS" ]]; then
-            ALLOWED_VALUES=("None" "GoldenPath-Testing" "Smoke-Testing" "")
+            ALLOWED_VALUES=("None" "GoldenPath-Testing" "Smoke-Testing")
             if [[ ! " ${ALLOWED_VALUES[@]} " =~ " ${INPUT_RUN_E2E_TESTS} " ]]; then
               echo "❌ ERROR: run_e2e_tests '$INPUT_RUN_E2E_TESTS' is invalid. Allowed values: ${ALLOWED_VALUES[*]}"
               VALIDATION_FAILED=true
@@ -217,7 +217,7 @@ jobs:
           
           # Validate AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID (Azure Resource ID format)
           if [[ -n "$INPUT_AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID" ]]; then
-            if [[ ! "$INPUT_AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID" =~ ^/subscriptions/[a-fA-F0-9-]+/resourceGroups/[^/]+/providers/Microsoft\.(OperationalInsights|Insights)/workspaces/[^/]+$ ]]; then
+            if [[ ! "$INPUT_AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID" =~ ^/[Ss]ubscriptions/[a-fA-F0-9-]+/[Rr]esource[Gg]roups/[^/]+/[Pp]roviders/[Mm]icrosoft\.([Oo]perational[Ii]nsights|[Ii]nsights)/[Ww]orkspaces/[^/]+$ ]]; then
               echo "❌ ERROR: AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID is invalid. Must be a valid Azure Resource ID format:"
               echo "   /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.OperationalInsights/workspaces/{workspaceName}"
               echo "   Got: '$INPUT_AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID'"
@@ -229,9 +229,9 @@ jobs:
           
           # Validate AZURE_EXISTING_AI_PROJECT_RESOURCE_ID (Azure Resource ID format)
           if [[ -n "$INPUT_AZURE_EXISTING_AI_PROJECT_RESOURCE_ID" ]]; then
-            if [[ ! "$INPUT_AZURE_EXISTING_AI_PROJECT_RESOURCE_ID" =~ ^/subscriptions/[a-fA-F0-9-]+/resourceGroups/[^/]+/providers/Microsoft\.MachineLearningServices/(workspaces|projects)/[^/]+$ ]]; then
+            if [[ ! "$INPUT_AZURE_EXISTING_AI_PROJECT_RESOURCE_ID" =~ ^/subscriptions/[a-fA-F0-9-]+/resourceGroups/[^/]+/providers/(Microsoft\.MachineLearningServices/(workspaces|projects)/[^/]+|Microsoft\.CognitiveServices/accounts/[^/]+/projects/[^/]+)$ ]]; then
               echo "❌ ERROR: AZURE_EXISTING_AI_PROJECT_RESOURCE_ID is invalid. Must be a valid Azure Resource ID format:"
-              echo "   /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.MachineLearningServices/workspaces/{workspaceName}"
+              echo "   /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CognitiveServices/accounts/{accountName}/projects/{projectName}"
               echo "   Got: '$INPUT_AZURE_EXISTING_AI_PROJECT_RESOURCE_ID'"
               VALIDATION_FAILED=true
             else

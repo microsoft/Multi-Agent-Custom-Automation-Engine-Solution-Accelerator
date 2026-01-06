@@ -154,8 +154,9 @@ jobs:
           
           # Validate AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID (optional, if provided must be valid Resource ID)
           if [[ -n "$INPUT_AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID" ]]; then
-            if [[ ! "$INPUT_AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID" =~ ^/subscriptions/[a-fA-F0-9-]+/resourceGroups/[^/]+/providers/Microsoft\.(OperationalInsights|Insights)/workspaces/[^/]+$ ]]; then
-              echo "❌ ERROR: AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID is invalid. Must be a valid Azure Resource ID format"
+            if [[ ! "$INPUT_AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID" =~ ^/[Ss]ubscriptions/[a-fA-F0-9-]+/[Rr]esource[Gg]roups/[^/]+/[Pp]roviders/[Mm]icrosoft\.([Oo]perational[Ii]nsights|[Ii]nsights)/[Ww]orkspaces/[^/]+$ ]]; then
+              echo "❌ ERROR: AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID is invalid. Must be a valid Azure Resource ID format:"
+              echo "   /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.OperationalInsights/workspaces/{workspaceName}"
               echo "   Got: '$INPUT_AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID'"
               VALIDATION_FAILED=true
             else
@@ -165,8 +166,9 @@ jobs:
           
           # Validate AZURE_EXISTING_AI_PROJECT_RESOURCE_ID (optional, if provided must be valid Resource ID)
           if [[ -n "$INPUT_AZURE_EXISTING_AI_PROJECT_RESOURCE_ID" ]]; then
-            if [[ ! "$INPUT_AZURE_EXISTING_AI_PROJECT_RESOURCE_ID" =~ ^/subscriptions/[a-fA-F0-9-]+/resourceGroups/[^/]+/providers/Microsoft\.MachineLearningServices/(workspaces|projects)/[^/]+$ ]]; then
-              echo "❌ ERROR: AZURE_EXISTING_AI_PROJECT_RESOURCE_ID is invalid. Must be a valid Azure Resource ID format"
+            if [[ ! "$INPUT_AZURE_EXISTING_AI_PROJECT_RESOURCE_ID" =~ ^/subscriptions/[a-fA-F0-9-]+/resourceGroups/[^/]+/providers/(Microsoft\.MachineLearningServices/(workspaces|projects)/[^/]+|Microsoft\.CognitiveServices/accounts/[^/]+/projects/[^/]+)$ ]]; then
+              echo "❌ ERROR: AZURE_EXISTING_AI_PROJECT_RESOURCE_ID is invalid. Must be a valid Azure Resource ID format:"
+              echo "   /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CognitiveServices/accounts/{accountName}/projects/{projectName}"
               echo "   Got: '$INPUT_AZURE_EXISTING_AI_PROJECT_RESOURCE_ID'"
               VALIDATION_FAILED=true
             else
@@ -346,7 +348,15 @@ jobs:
           echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| **Job Status** | ${{ job.status == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| **Resource Group** | \`$INPUT_RESOURCE_GROUP_NAME\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Configuration Type** | \`${{ inputs.WAF_ENABLED == 'true' && inputs.EXP == 'true' && 'WAF + EXP' || inputs.WAF_ENABLED == 'true' && inputs.EXP != 'true' && 'WAF + Non-EXP' || inputs.WAF_ENABLED != 'true' && inputs.EXP == 'true' && 'Non-WAF + EXP' || 'Non-WAF + Non-EXP' }}\` |" >> $GITHUB_STEP_SUMMARY
+          config_type="Non-WAF + Non-EXP"
+          if [[ "$INPUT_WAF_ENABLED" == "true" && "$INPUT_EXP" == "true" ]]; then
+            config_type="WAF + EXP"
+          elif [[ "$INPUT_WAF_ENABLED" == "true" && "$INPUT_EXP" != "true" ]]; then
+            config_type="WAF + Non-EXP"
+          elif [[ "$INPUT_WAF_ENABLED" != "true" && "$INPUT_EXP" == "true" ]]; then
+            config_type="Non-WAF + EXP"
+          fi
+          echo "| **Configuration Type** | \`$config_type\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Azure Region (Infrastructure)** | \`$INPUT_AZURE_LOCATION\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Azure OpenAI Region** | \`$INPUT_AZURE_ENV_OPENAI_LOCATION\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Docker Image Tag** | \`$INPUT_IMAGE_TAG\` |" >> $GITHUB_STEP_SUMMARY
