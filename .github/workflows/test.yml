@@ -15,11 +15,11 @@ on:
       - synchronize
     branches:
       - main
-      - main
       - dev
       - demo
       - hotfix
       - dev-v4
+      - macae-v4-unittestcases-kd
 
 jobs:
   test:
