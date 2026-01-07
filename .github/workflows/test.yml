@@ -19,6 +19,7 @@ on:
       - dev
       - demo
       - hotfix
+      - dev-v4
 
 jobs:
   test:
