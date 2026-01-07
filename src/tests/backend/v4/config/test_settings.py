@@ -139,23 +139,22 @@ class TestAzureConfig(unittest.TestCase):
             temperature=0.1
         )
 
-    @unittest.skip("Skip ad_token_provider test - coverage achieved")
     @patch('backend.v4.config.settings.config')
-    @patch('azure.identity.DefaultAzureCredential')
-    def test_ad_token_provider(self, mock_credential_class, mock_config):
+    def test_ad_token_provider(self, mock_config):
         """Test AD token provider."""
         # Mock the credential and token
         mock_credential = Mock()
         mock_token = Mock()
         mock_token.token = "test-token-123"
         mock_credential.get_token.return_value = mock_token
-        mock_credential_class.return_value = mock_credential
+        mock_config.get_azure_credentials.return_value = mock_credential
+        mock_config.AZURE_COGNITIVE_SERVICES = "https://cognitiveservices.azure.com/.default"
         
-        config = AzureConfig()
-        token = config.ad_token_provider()
+        azure_config = AzureConfig()
+        token = azure_config.ad_token_provider()
         
         self.assertEqual(token, "test-token-123")
-        mock_credential.get_token.assert_called_once()
+        mock_credential.get_token.assert_called_once_with(mock_config.AZURE_COGNITIVE_SERVICES)
 
 class TestAzureConfigAsync(IsolatedAsyncioTestCase):
     """Async test cases for AzureConfig class."""
@@ -585,7 +584,6 @@ class TestConnectionConfig(IsolatedAsyncioTestCase):
             # Connection should still be removed
             self.assertNotIn(process_id, config.connections)
 
-    @unittest.skip("Mock comparison issue - test passes but assertion logic complex")
     async def test_send_status_update_async_success(self):
         """Test sending status update successfully."""
         config = ConnectionConfig()
@@ -600,7 +598,7 @@ class TestConnectionConfig(IsolatedAsyncioTestCase):
         
         connection.send_text.assert_called_once()
         sent_data = json.loads(connection.send_text.call_args[0][0])
-        self.assertEqual(sent_data['type'], 'system_message')  # Use the actual value we set up
+        self.assertEqual(sent_data['type'], 'system_message')
         self.assertEqual(sent_data['data'], message)
 
     async def test_send_status_update_async_no_user_id(self):

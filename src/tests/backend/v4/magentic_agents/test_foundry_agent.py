@@ -523,126 +523,52 @@ class TestFoundryAgentTemplate:
         mock_logger.error.assert_called_with("Failed to enumerate connections: %s", mock_project_client.connections.list.side_effect)
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Mock framework corruption - AttributeError: _mock_methods")
-    @patch('backend.v4.magentic_agents.foundry_agent.logging.getLogger')
-    @patch('backend.v4.magentic_agents.foundry_agent.AzureAIAgentClient')
-    @patch('backend.v4.magentic_agents.foundry_agent.config')
-    @patch('backend.v4.magentic_agents.foundry_agent.AzureAgentBase.__init__', return_value=None)  # Mock base class init
-    async def test_create_azure_search_enabled_client_success(self, mock_base_init, mock_config, mock_azure_client_class, mock_get_logger, mock_search_config):
+    @pytest.mark.skip(reason="Mock framework corruption - FoundryAgentTemplate class is contaminated by Mock patches during import. Refactoring would require isolating the class definition or using integration tests instead.")
+    async def test_create_azure_search_enabled_client_success(self, mock_search_config, monkeypatch):
         """Test _create_azure_search_enabled_client successful creation."""
         mock_search_config.index_name = "test-index"
         mock_search_config.search_query_type = "simple"
         
-        # Mock connection - use simple object to avoid Mock corruption
+        # Track calls manually to avoid mock corruption
+        create_agent_calls = []
+        azure_client_calls = []
+        
         class MockConnection:
             type = "AZURE_AI_SEARCH"
             name = "TestConnection"
             id = "connection-123"
-        
-        mock_connection = MockConnection()
-        
-        # Mock project client - use simple object to avoid Mock corruption
-        class MockAgents:
-            async def create_agent(self, **kwargs):
-                return MockAgent()
-        
-        class MockProjectClient:
-            def __init__(self):
-                self.connections = self
-                self.agents = MockAgents()
-            
-            async def list(self):
-                yield mock_connection
         
         class MockAgent:
             id = "agent-123"
         
-        mock_project_client = MockProjectClient()
-        
-        mock_config.get_ai_project_client.return_value = mock_project_client
-        
-        # Mock Azure AI Agent Client
-        mock_chat_client = Mock()
-        mock_azure_client_class.return_value = mock_chat_client
-        
-        # Create agent with minimal setup to avoid inheritance issues
-        agent = FoundryAgentTemplate.__new__(FoundryAgentTemplate)
-        agent.search = mock_search_config
-        mock_logger = Mock()
-        mock_get_logger.return_value = mock_logger
-        agent.logger = mock_logger
-        agent.creds = Mock()
-        agent.project_client = mock_project_client
-        agent._azure_server_agent_id = None
-        
-        result = await agent._create_azure_search_enabled_client(None)
-        
-        assert result == mock_chat_client
-        assert agent._azure_server_agent_id == "agent-123"
-        
-        # Verify agent creation was called with correct parameters
-        mock_project_client.agents.create_agent.assert_called_once_with(
-            model="test-model",
-            name="TestAgent",
-            instructions="Test Instructions Always use the Azure AI Search tool and configured index for knowledge retrieval.",
-            tools=[{"type": "azure_ai_search"}],
-            tool_resources={
-                "azure_ai_search": {
-                    "indexes": [
-                        {
-                            "index_connection_id": "connection-123",
-                            "index_name": "test-index",
-                            "query_type": "simple",
-                        }
-                    ]
-                }
-            }
-        )
-
-    @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Mock framework corruption - AttributeError: _mock_methods")
-    @patch('backend.v4.magentic_agents.foundry_agent.logging.getLogger')
-    @patch('backend.v4.magentic_agents.foundry_agent.AzureAIAgentClient')
-    @patch('backend.v4.magentic_agents.foundry_agent.config')
-    @patch('backend.v4.magentic_agents.foundry_agent.AzureAgentBase.__init__', return_value=None)  # Mock base class init
-    async def test_create_azure_search_enabled_client_agent_creation_error(self, mock_base_init, mock_config, mock_azure_client_class, mock_get_logger, mock_search_config):
-        """Test _create_azure_search_enabled_client when agent creation fails."""
-        
-        # Configure search config mock
-        mock_search_config.connection_name = "TestConnection"
-        mock_search_config.index_name = "test-index"
-        mock_search_config.search_query_type = "simple"
-        
-        # Mock connection - use simple object to avoid Mock corruption
-        class MockConnection:
-            type = "AZURE_AI_SEARCH"
-            name = "TestConnection"
-            id = "connection-123"
-        
-        mock_connection = MockConnection()
-        
-        # Mock project client - use simple object with defined exceptions
         class MockAgents:
             async def create_agent(self, **kwargs):
-                raise Exception("Agent creation failed")
+                create_agent_calls.append(kwargs)
+                return MockAgent()
+        
+        class MockConnections:
+            async def list(self):
+                yield MockConnection()
         
         class MockProjectClient:
             def __init__(self):
-                self.connections = self
+                self.connections = MockConnections()
                 self.agents = MockAgents()
+        
+        class MockChatClient:
+            pass
+        
+        class MockAzureAIAgentClient:
+            def __init__(self, *args, **kwargs):
+                azure_client_calls.append((args, kwargs))
+                self.client = MockChatClient()
             
-            async def list(self):
-                yield mock_connection
+            def __enter__(self):
+                return self.client
+            
+            def __exit__(self, *args):
+                pass
         
-        mock_project_client = MockProjectClient()
-        
-        mock_config.get_ai_project_client.return_value = mock_project_client
-        
-        # Create agent with minimal setup to avoid inheritance issues
-        agent = FoundryAgentTemplate.__new__(FoundryAgentTemplate)
-        agent.search = mock_search_config
-        
-        # Use simple logger object to avoid Mock corruption
         class SimpleLogger:
             def info(self, msg, *args):
                 pass
@@ -651,20 +577,100 @@ class TestFoundryAgentTemplate:
             def error(self, msg, *args):
                 pass
         
-        agent.logger = SimpleLogger()
-        
-        # Use simple credentials object
         class SimpleCreds:
             pass
         
+        # Patch the imports
+        monkeypatch.setattr('backend.v4.magentic_agents.foundry_agent.AzureAIAgentClient', MockAzureAIAgentClient)
+        
+        # Create agent with minimal setup
+        agent = FoundryAgentTemplate.__new__(FoundryAgentTemplate)
+        agent.search = mock_search_config
+        agent.logger = SimpleLogger()
         agent.creds = SimpleCreds()
-        agent.project_client = mock_project_client
+        agent.project_client = MockProjectClient()
+        agent._azure_server_agent_id = None
+        agent.model = "test-model"
+        agent.name = "TestAgent"
+        agent.instructions = "Test Instructions"
+        
+        result = await agent._create_azure_search_enabled_client()
+        
+        assert isinstance(result, MockChatClient)
+        assert agent._azure_server_agent_id == "agent-123"
+        
+        # Verify agent creation was called with correct parameters
+        assert len(create_agent_calls) == 1
+        call_kwargs = create_agent_calls[0]
+        assert call_kwargs["model"] == "test-model"
+        assert call_kwargs["name"] == "TestAgent"
+        assert "Always use the Azure AI Search tool" in call_kwargs["instructions"]
+        assert call_kwargs["tools"] == [{"type": "azure_ai_search"}]
+        assert "azure_ai_search" in call_kwargs["tool_resources"]
+        assert call_kwargs["tool_resources"]["azure_ai_search"]["indexes"][0]["index_connection_id"] == "connection-123"
+        assert call_kwargs["tool_resources"]["azure_ai_search"]["indexes"][0]["index_name"] == "test-index"
+        assert call_kwargs["tool_resources"]["azure_ai_search"]["indexes"][0]["query_type"] == "simple"
+
+    @pytest.mark.asyncio
+    @pytest.mark.skip(reason="Mock framework corruption - FoundryAgentTemplate class is contaminated by Mock patches during import. Refactoring would require isolating the class definition or using integration tests instead.")
+    async def test_create_azure_search_enabled_client_agent_creation_error(self, mock_search_config):
+        """Test _create_azure_search_enabled_client when agent creation fails."""
+        
+        # Configure search config mock
+        mock_search_config.connection_name = "TestConnection"
+        mock_search_config.index_name = "test-index"
+        mock_search_config.search_query_type = "simple"
+        
+        # Track logger calls
+        error_calls = []
+        
+        class MockConnection:
+            type = "AZURE_AI_SEARCH"
+            name = "TestConnection"
+            id = "connection-123"
+        
+        class MockAgents:
+            async def create_agent(self, **kwargs):
+                raise Exception("Agent creation failed")
+        
+        class MockConnections:
+            async def list(self):
+                yield MockConnection()
+        
+        class MockProjectClient:
+            def __init__(self):
+                self.connections = MockConnections()
+                self.agents = MockAgents()
+        
+        # Track logger calls
+        class SimpleLogger:
+            def info(self, msg, *args):
+                pass
+            def warning(self, msg, *args):
+                pass
+            def error(self, msg, *args):
+                error_calls.append((msg, args))
+        
+        class SimpleCreds:
+            pass
+        
+        # Create agent with minimal setup
+        agent = FoundryAgentTemplate.__new__(FoundryAgentTemplate)
+        agent.search = mock_search_config
+        agent.model = "test-model"
+        agent.name = "TestAgent"
+        agent.instructions = "Test Instructions"
+        agent.logger = SimpleLogger()
+        agent.creds = SimpleCreds()
+        agent.project_client = MockProjectClient()
         agent._azure_server_agent_id = None
         
-        result = await agent._create_azure_search_enabled_client(None)
+        result = await agent._create_azure_search_enabled_client()
         
         assert result is None
-        # Verify error was logged (removed specific assertion due to mock corruption issues)
+        # Verify error was logged
+        assert len(error_calls) > 0
+        assert any("Agent creation failed" in str(call) or "Failed to create" in str(call[0]) for call in error_calls)
 
     @pytest.mark.asyncio
     @patch('backend.v4.magentic_agents.foundry_agent.ChatAgent')
