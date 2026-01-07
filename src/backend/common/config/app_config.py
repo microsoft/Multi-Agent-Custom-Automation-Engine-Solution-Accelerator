@@ -126,7 +126,7 @@ class AppConfig:
             Credential object: Either AzureCliCredential or ManagedIdentityCredential.
         """
         if self.APP_ENV == "dev":
-            return AzureCliCredential()  # Use AzureCliCredential for dev to properly scope tokens for https://ai.azure.com
+            return DefaultAzureCredential()  # Use AzureCliCredential for dev to properly scope tokens for https://ai.azure.com
         else:
             return ManagedIdentityCredential(client_id=client_id)
 

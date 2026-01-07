@@ -27,6 +27,7 @@ from agent_framework import (
     AgentThread,
 )
 
+from common.utils.agent_name_sanitizer import AgentNameSanitizer
 from v4.config.settings import connection_config, orchestration_config
 from v4.models.messages import (
     UserClarificationRequest,
@@ -57,6 +58,8 @@ class ProxyAgent(BaseAgent):
         timeout_seconds: int | None = None,
         **kwargs: Any,
     ):
+        # Sanitize agent name for consistency
+        name = AgentNameSanitizer.sanitize(name)
         super().__init__(
             name=name,
             description=description,

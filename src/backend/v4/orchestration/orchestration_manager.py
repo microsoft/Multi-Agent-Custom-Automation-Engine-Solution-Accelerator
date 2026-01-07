@@ -17,9 +17,11 @@ from agent_framework import (
     MagenticAgentMessageEvent,
     MagenticFinalResultEvent,
 )
+from azure.ai.projects.models import PromptAgentDefinition
 
 from common.config.app_config import config
 from common.models.messages_af import TeamConfiguration
+from common.utils.agent_name_sanitizer import AgentNameSanitizer
 
 from common.database.database_base import DatabaseBase
 
@@ -31,6 +33,7 @@ from v4.callbacks.response_handlers import (
 from v4.config.settings import connection_config, orchestration_config
 from v4.models.messages import WebsocketMessageType
 from v4.orchestration.human_approval_manager import HumanApprovalMagenticManager
+from v4.orchestration.workaround_client import WorkaroundChatAgent
 from v4.magentic_agents.magentic_agent_factory import MagenticAgentFactory
 
 
@@ -72,17 +75,22 @@ class OrchestrationManager:
 
         # Create Azure AI Agent client for orchestration using config
         # This replaces AzureChatCompletion from SK
-        agent_name = team_config.name if team_config.name else "OrchestratorAgent"
+        # IMPORTANT: Sanitize agent name to meet Azure AI requirements 
+        # (alphanumeric start/end, hyphens allowed in middle, max 63 chars)
+        raw_agent_name = team_config.name if team_config.name else "OrchestratorAgent"
+        agent_name = AgentNameSanitizer.sanitize(raw_agent_name, "OrchestratorAgent")
 
         try:
-            # CRITICAL: Use async project client with async credentials to avoid 401 errors
+            # CRITICAL: Use project client and credential parameters following reference pattern
+            # This matches the pattern from create_workflow.py reference implementation
             project_client = config.get_ai_project_client()
             
             chat_client = AzureAIClient(
                 project_client=project_client,
-                async_credential=credential,
+                credential=credential,
                 agent_name=agent_name,
-                use_latest_version=True
+                use_latest_version=True,
+                model_deployment_name=team_config.deployment_name
             )
 
             cls.logger.info(
@@ -95,6 +103,7 @@ class OrchestrationManager:
             raise
 
         # Create HumanApprovalMagenticManager with the chat client
+        # Following reference pattern: create Azure AI agent first, then use client with agent
         # Execution settings (temperature=0.1, max_tokens=4000) are configured via
         # orchestration_config.create_execution_settings() which matches old SK version
         try:

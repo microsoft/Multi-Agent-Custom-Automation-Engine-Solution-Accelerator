@@ -16,6 +16,7 @@ from azure.ai.projects.models import (
 from common.config.app_config import config
 from common.database.database_base import DatabaseBase
 from common.models.messages_af import TeamConfiguration
+from common.utils.agent_name_sanitizer import AgentNameSanitizer
 from v4.common.services.team_service import TeamService
 from v4.config.agent_registry import agent_registry
 from v4.magentic_agents.common.lifecycle import AzureAgentBase
@@ -46,8 +47,11 @@ class FoundryAgentTemplate(AzureAgentBase):
         team_config: TeamConfiguration | None = None,
         memory_store: DatabaseBase | None = None,
     ) -> None:
+        # Sanitize agent name to comply with Azure requirements
+        agent_name = AgentNameSanitizer.sanitize(agent_name, "DefaultAgent")
+        
         # Defer project_client creation until async open() to use async credentials
-        project_client = None  # Will be created in parent's open() method
+        project_client = config.get_ai_project_client()  # Will be created in parent's open() method
 
         super().__init__(
             mcp=mcp_config,
@@ -206,11 +210,11 @@ class FoundryAgentTemplate(AzureAgentBase):
                     tools=[search_tool]
                 )
             )
-            async for agent in self.project_client.agents.list():
-                print(f"  Agent: {agent.name}")
-
-            async for version in self.project_client.agents.list_versions(agent_name=azure_agent.name):
-                print(f"  Version: {version}")
+            # NOTE: Debug agent listing disabled as agents.list() method doesn't exist in current framework
+            # async for agent in self.project_client.agents.list():
+            #     print(f"  Agent: {agent.name}")
+            # async for version in self.project_client.agents.list_versions(agent_name=azure_agent.name):
+            #     print(f"  Version: {version}")
            
             self.logger.info(
                 "Created Azure server agent with Azure AI Search tool (agent_name=%s, index=%s, query_type=%s).",
@@ -219,13 +223,15 @@ class FoundryAgentTemplate(AzureAgentBase):
                 query_type,
             )
 
-            # Use AzureAIClient with both project_client and async_credential
-            # The async_credential is needed for inference/streaming operations
+            # Use AzureAIClient with correct credential parameter following reference pattern
+            # Each agent gets its own client instance with unique agent_name for proper conversation/thread handling
+            credential = config.get_azure_credential(client_id=config.AZURE_CLIENT_ID)
             chat_client = AzureAIClient(
                 project_client=self.project_client,
-                async_credential=self.creds if hasattr(self, 'creds') and self.creds else None,
+                credential=credential,
                 agent_name=self.agent_name,
                 use_latest_version=True,
+                model_deployment_name=self.model_deployment_name
             )
             return chat_client
         except Exception as ex:
@@ -275,6 +281,7 @@ class FoundryAgentTemplate(AzureAgentBase):
                     chat_client=self.get_chat_client(chat_client),
                     tool_choice="required",
                     store=True,
+                    model_id=self.model_deployment_name,  # Add model_id to prevent validation error
                 )
             else:
                 # use MCP path
@@ -309,24 +316,29 @@ class FoundryAgentTemplate(AzureAgentBase):
                     len(foundry_tools)
                 )
                 
-                # Use AzureAIClient with the created agent
+                # Use AzureAIClient with the created agent following reference pattern
+                # Each agent gets its own client instance with unique agent_name for proper conversation/thread handling
+                credential = config.get_azure_credential(client_id=config.AZURE_CLIENT_ID)
                 chat_client = AzureAIClient(
                     project_client=self.project_client,
-                    async_credential=self.creds if hasattr(self, 'creds') and self.creds else None,
+                    credential=credential,
                     agent_name=self.agent_name,
                     use_latest_version=True,
+                    model_deployment_name=self.model_deployment_name,
                 )
                 
                 # Create ChatAgent with the Azure-backed client
                 self._agent = ChatAgent(
-                    chat_client=self.get_chat_client(chat_client),
+                    chat_client=chat_client,
                     tools=self._tools_for_invoke,
                     tool_choice=self._tool_choice,
                     store=True,
+                    model_id=self.model_deployment_name,  # Add model_id to prevent validation error
                 )
 
-                async for agent in self.project_client.agents.list():
-                    print(f"  Agent: {agent.name}")
+                # NOTE: Debug agent listing disabled as agents.list() method doesn't exist in current framework
+                # async for agent in self.project_client.agents.list():
+                #     print(f"  Agent: {agent.name}")
 
             self.logger.info("Initialized ChatAgent '%s'", self.agent_name)
 

@@ -9,6 +9,7 @@ from typing import List, Optional, Union
 from common.config.app_config import config
 from common.database.database_base import DatabaseBase
 from common.models.messages_af import TeamConfiguration
+from common.utils.agent_name_sanitizer import AgentNameSanitizer
 from v4.common.services.team_service import TeamService
 from v4.magentic_agents.foundry_agent import FoundryAgentTemplate
 from v4.magentic_agents.models.agent_models import MCPConfig, SearchConfig
@@ -124,7 +125,7 @@ class MagenticAgentFactory:
         )
 
         agent = FoundryAgentTemplate(
-            agent_name=agent_obj.name,
+            agent_name=AgentNameSanitizer.sanitize(agent_obj.name),
             agent_description=getattr(agent_obj, "description", ""),
             agent_instructions=getattr(agent_obj, "system_message", ""),
             use_reasoning=use_reasoning,

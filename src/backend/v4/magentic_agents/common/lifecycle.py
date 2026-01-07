@@ -16,6 +16,7 @@ from azure.ai.agents.aio import AgentsClient
 from azure.identity.aio import AzureCliCredential
 from common.database.database_base import DatabaseBase
 from common.models.messages_af import CurrentTeamAgent, TeamConfiguration
+from common.utils.agent_name_sanitizer import AgentNameSanitizer
 from common.utils.utils_agents import (
     generate_assistant_id,
     get_database_team_agent_id,
@@ -46,6 +47,10 @@ class MCPEnabledBase:
         model_deployment_name: str | None = None,
         project_client=None,
     ) -> None:
+        # Sanitize agent name to comply with Azure requirements
+        if agent_name:
+            agent_name = AgentNameSanitizer.sanitize(agent_name)
+        
         self._stack: AsyncExitStack | None = None
         self.mcp_cfg: MCPConfig | None = mcp
         self.mcp_tool: HostedMCPTool | None = None
@@ -87,9 +92,10 @@ class MCPEnabledBase:
         # Create AgentsClient with same async credential
         self.client = AzureAIClient(
                 project_client=self.project_client,
-                async_credential=self.creds,
+                #async_credential=self.creds,
                 agent_name=self.agent_name,
                 use_latest_version=True,
+                model_deployment_name=self.model_deployment_name
             )
         if self._stack:
             await self._stack.enter_async_context(self.client)
@@ -157,9 +163,10 @@ class MCPEnabledBase:
         if self.project_client and self.agent_name and self.creds:
             chat_client = AzureAIClient(
                 project_client=self.project_client,
-                async_credential=self.creds,
+                #async_credential=self.creds,
                 agent_name=self.agent_name,
                 use_latest_version=True,
+                model_deployment_name=self.model_deployment_name
             )
             self.logger.info(
                 "Created new AzureAIClient for get chat client with agent_name=%s",
@@ -265,9 +272,10 @@ class MCPEnabledBase:
             if self.agent_name == "RAIAgent" and self.project_client and self.creds:
                 chat_client = AzureAIClient(
                     project_client=self.project_client,
-                    async_credential=self.creds,
+                    #async_credential=self.creds,
                     agent_name=self.agent_name,
                     use_latest_version=True,
+                    model_deployment_name=self.model_deployment_name
                 )
                 self.logger.info(
                     "RAI.AgentReuseSuccess: Created AzureAIClient via Projects SDK (id=%s)",
@@ -276,9 +284,10 @@ class MCPEnabledBase:
             elif self.project_client and self.creds:
                 chat_client = AzureAIClient(
                     project_client=self.project_client,
-                    async_credential=self.creds,
+                    #async_credential=self.creds,
                     agent_name=self.agent_name,
                     use_latest_version=True,
+                    model_deployment_name=self.model_deployment_name
                 )
                 self.logger.info(
                     "Created AzureAIClient via endpoint (id=%s)", resolved
