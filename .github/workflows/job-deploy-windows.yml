@@ -328,7 +328,7 @@ jobs:
 
           # Upload team configurations and index sample data in one step
           # Automatically select "6" (All use cases) for non-interactive deployment
-          bash -c "echo 6 | pwsh -File infra/scripts/Selecting-Team-Config-And-Data.ps1"
+          & infra/scripts/Selecting-Team-Config-And-Data.ps1 -UseCaseSelection "6"
 
       - name: Generate Deployment Summary
         if: always()

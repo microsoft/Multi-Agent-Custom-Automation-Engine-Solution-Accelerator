@@ -1,7 +1,8 @@
 #Requires -Version 7.0
 
 param(
-    [string]$ResourceGroup
+    [string]$ResourceGroup,
+    [string]$UseCaseSelection
 )
 
 # Variables
@@ -258,7 +259,13 @@ Write-Host ""
 
 # Prompt user for use case selection
 do {
-    $useCaseSelection = Read-Host "Please enter the number of the use case you would like to install."
+    # Use parameter value if provided, otherwise prompt user
+    if ([string]::IsNullOrEmpty($UseCaseSelection)) {
+        $useCaseSelection = Read-Host "Please enter the number of the use case you would like to install."
+    } else {
+        $useCaseSelection = $UseCaseSelection
+        Write-Host "Using provided use case selection: $useCaseSelection"
+    }
     
     # Handle both numeric and text input for 'all'
     if ($useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {

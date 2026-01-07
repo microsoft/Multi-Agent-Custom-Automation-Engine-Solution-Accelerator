@@ -2,10 +2,15 @@
 
 # Parse command line arguments
 ResourceGroup=""
+UseCaseSelection=""
 while [[ $# -gt 0 ]]; do
     case $1 in
         --resource-group)
             ResourceGroup="$2"
+            shift 2
+            ;;
+        --use-case-selection)
+            UseCaseSelection="$2"
             shift 2
             ;;
         *)
@@ -257,7 +262,13 @@ echo ""
 # Prompt user for use case selection
 useCaseValid=false
 while [[ "$useCaseValid" != true ]]; do
-    read -p "Please enter the number of the use case you would like to install: " useCaseSelection
+    # Use parameter value if provided, otherwise prompt user
+    if [[ -z "$UseCaseSelection" ]]; then
+        read -p "Please enter the number of the use case you would like to install: " useCaseSelection
+    else
+        useCaseSelection="$UseCaseSelection"
+        echo "Using provided use case selection: $useCaseSelection"
+    fi
     
     # Handle both numeric and text input for 'all'
     if [[ "$useCaseSelection" == "all" || "$useCaseSelection" == "6" ]]; then
