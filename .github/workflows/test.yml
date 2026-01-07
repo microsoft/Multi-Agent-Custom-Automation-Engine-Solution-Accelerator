@@ -8,6 +8,7 @@ on:
       - demo
       - hotfix
       - dev-v4
+      - macae-v4-unittestcases-kd
   pull_request:
     types:
       - opened
