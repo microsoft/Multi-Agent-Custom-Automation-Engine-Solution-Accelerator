@@ -5,14 +5,7 @@ Unit tests for backend.app module.
 import pytest
 import sys
 import os
-import platform
 from unittest.mock import patch, MagicMock, AsyncMock, Mock
-
-# Skip on Linux due to platform-specific Mock/issubclass issues
-skip_on_linux = pytest.mark.skipif(
-    platform.system() == "Linux",
-    reason="Skipping on Linux due to Mock/issubclass compatibility issues"
-)
 
 # Add src to path
 src_path = os.path.join(os.path.dirname(__file__), '..', '..', '..')
@@ -39,39 +32,69 @@ os.environ.setdefault("APP_ENV", "dev")
 os.environ.setdefault("AZURE_OPENAI_RAI_DEPLOYMENT_NAME", "test-rai-deployment")
 
 
-@pytest.fixture(autouse=True)
-def setup_environment(monkeypatch):
-    """Set up environment variables and mocks."""
-    # Mock router BEFORE any imports
-    mock_router = MagicMock()
-    mock_router.routes = []
-    sys.modules['backend.v4.api.router'] = MagicMock(app_v4=mock_router)
+@pytest.fixture(scope="module", autouse=True)
+def setup_mocks():
+    """Set up mocks for backend.app imports."""
+    # Save original modules
+    original_router = sys.modules.get('backend.v4.api.router')
+    original_agent_registry = sys.modules.get('backend.v4.config.agent_registry')
     
-    # Mock middleware
-    sys.modules['backend.middleware.health_check'] = MagicMock()
+    # Create APIRouter mock that doesn't trigger isinstance/issubclass
+    from fastapi import APIRouter
+    mock_app_v4 = APIRouter()
+    mock_app_v4.routes = []
+    
+    # Mock the router module
+    class MockRouterModule:
+        app_v4 = mock_app_v4
+    
+    sys.modules['backend.v4.api.router'] = MockRouterModule()
     
     # Mock agent registry
-    mock_agent_registry = MagicMock()
-    mock_agent_registry.cleanup_all_agents = AsyncMock()
-    sys.modules['backend.v4.config.agent_registry'] = MagicMock(agent_registry=mock_agent_registry)
+    class MockAgentRegistry:
+        async def cleanup_all_agents(self):
+            pass
     
-    # Mock Azure monitor
+    class MockAgentRegistryModule:
+        agent_registry = MockAgentRegistry()
+    
+    sys.modules['backend.v4.config.agent_registry'] = MockAgentRegistryModule()
+    
+    # Mock Azure monitor and import
     with patch('azure.monitor.opentelemetry.configure_azure_monitor'):
-        yield
+        # Now import backend.app
+        import backend.app
+        globals()['app'] = backend.app.app
+        globals()['lifespan'] = backend.app.lifespan
+        globals()['user_browser_language_endpoint'] = backend.app.user_browser_language_endpoint
+    
+    yield
+    
+    # Cleanup - restore original modules
+    if original_router is not None:
+        sys.modules['backend.v4.api.router'] = original_router
+    elif 'backend.v4.api.router' in sys.modules:
+        del sys.modules['backend.v4.api.router']
+    
+    if original_agent_registry is not None:
+        sys.modules['backend.v4.config.agent_registry'] = original_agent_registry
+    elif 'backend.v4.config.agent_registry' in sys.modules:
+        del sys.modules['backend.v4.config.agent_registry']
+    
+    # Remove backend.app from cache so it can be reimported fresh
+    if 'backend.app' in sys.modules:
+        del sys.modules['backend.app']
 
 
-@skip_on_linux
-def test_app_initialization(setup_environment):
+def test_app_initialization():
     """Test that FastAPI app initializes correctly."""
     from backend.app import app
     assert app is not None
     assert hasattr(app, 'routes')
 
 
-@skip_on_linux
-def test_app_has_cors_middleware(setup_environment):
+def test_app_has_cors_middleware():
     """Test that CORS middleware is configured."""
-    from backend.app import app
     from starlette.middleware.cors import CORSMiddleware
     # Check if CORS middleware is in the middleware stack
     has_cors = any(
@@ -81,10 +104,9 @@ def test_app_has_cors_middleware(setup_environment):
     assert has_cors, "CORS middleware not found in app.user_middleware"
 
 
-@skip_on_linux
-def test_user_browser_language_endpoint(setup_environment):
+def test_user_browser_language_endpoint():
     """Test the user browser language endpoint exists."""
-    from backend.app import app, user_browser_language_endpoint
+    from backend.app import user_browser_language_endpoint
     from backend.common.models.messages_af import UserLanguage
     
     # Verify endpoint function exists and is callable
@@ -95,8 +117,7 @@ def test_user_browser_language_endpoint(setup_environment):
     assert test_lang.language == "en-US"
 
 
-@skip_on_linux
-def test_user_browser_language_endpoint_different_languages(setup_environment):
+def test_user_browser_language_endpoint_different_languages():
     """Test UserLanguage model with different languages."""
     from backend.common.models.messages_af import UserLanguage
     
@@ -106,45 +127,37 @@ def test_user_browser_language_endpoint_different_languages(setup_environment):
         assert test_lang.language == lang
 
 
-@skip_on_linux
 @pytest.mark.asyncio
-async def test_lifespan_context(setup_environment):
+async def test_lifespan_context():
     """Test the lifespan context manager."""
-    from backend.app import lifespan, app
+    from backend.app import lifespan
     
     async with lifespan(app):
         pass
 
 
-@skip_on_linux
-def test_app_includes_v4_router(setup_environment):
+def test_app_includes_v4_router():
     """Test that V4 router is included."""
-    from backend.app import app
     assert len(app.routes) > 0
 
 
-@skip_on_linux
-def test_logging_configured(setup_environment):
+def test_logging_configured():
     """Test that logging is configured."""
     import logging
-    from backend.app import app
     
     logger = logging.getLogger("backend")
     assert logger is not None
 
 
-@skip_on_linux
-def test_fastapi_app_configuration(setup_environment):
+def test_fastapi_app_configuration():
     """Test FastAPI app is properly configured."""
-    from backend.app import app
     
     # Verify app has lifespan
     assert app.router.lifespan_context is not None
 
 
-@skip_on_linux
 @pytest.mark.asyncio
-async def test_user_browser_language_endpoint_function(setup_environment):
+async def test_user_browser_language_endpoint_function():
     """Test the user_browser_language_endpoint function directly."""
     from backend.app import user_browser_language_endpoint
     from backend.common.models.messages_af import UserLanguage
@@ -161,15 +174,20 @@ async def test_user_browser_language_endpoint_function(setup_environment):
     assert result == {"status": "Language received successfully"}
 
 
-@skip_on_linux
 @pytest.mark.asyncio
-async def test_lifespan_exception_handling(setup_environment):
+async def test_lifespan_exception_handling():
     """Test lifespan context manager exception handling during cleanup."""
-    from backend.app import lifespan, app
+    from backend.app import lifespan
     from backend.v4.config.agent_registry import agent_registry
     
+    # Save original method
+    original_cleanup = agent_registry.cleanup_all_agents
+    
     # Make cleanup raise an exception
-    agent_registry.cleanup_all_agents.side_effect = Exception("Test cleanup error")
+    async def mock_cleanup():
+        raise Exception("Test cleanup error")
+    
+    agent_registry.cleanup_all_agents = mock_cleanup
     
     # Should not raise, exception should be caught
     try:
@@ -177,14 +195,15 @@ async def test_lifespan_exception_handling(setup_environment):
             pass
     except Exception:
         pytest.fail("Lifespan should handle cleanup exceptions gracefully")
+    finally:
+        # Restore original method
+        agent_registry.cleanup_all_agents = original_cleanup
 
 
-@skip_on_linux
-def test_applicationinsights_not_configured(setup_environment):
+def test_applicationinsights_not_configured():
     """Test that app handles missing Application Insights gracefully."""
     # This test checks that the app can start even without AppInsights
     # The warning log on line 59 was already executed during module import
-    from backend.app import app
     assert app is not None
 
 
