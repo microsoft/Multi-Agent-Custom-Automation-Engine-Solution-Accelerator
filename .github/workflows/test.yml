@@ -54,14 +54,8 @@ jobs:
         if: env.skip_tests == 'false'
         run: |
           python -m pytest src/tests/backend/test_app.py --cov=backend.app --cov-report= --cov-config=.coveragerc -q > /dev/null 2>&1
-          pytest_output=$(python -m pytest src/tests/backend --cov=backend --cov-append --cov-report= --cov-config=.coveragerc --ignore=src/tests/backend/test_app.py -q 2>&1 | tail -1)
+          python -m pytest src/tests/backend --cov=backend --cov-append --cov-report= --cov-config=.coveragerc --ignore=src/tests/backend/test_app.py 
           python -m coverage report --rcfile=.coveragerc
-          echo "$pytest_output"
-
-      # - name: Run tests with coverage
-      #   if: env.skip_tests == 'false'
-      #   run: |
-      #     pytest --cov=. --cov-report=term-missing --cov-report=xml --ignore=tests/e2e-test/tests
           
       - name: Skip coverage report if no tests
         if: env.skip_tests == 'true'
