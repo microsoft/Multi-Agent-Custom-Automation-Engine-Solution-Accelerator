@@ -50,10 +50,15 @@ jobs:
             echo "skip_tests=false" >> $GITHUB_ENV
           fi
 
+      - name: Run app.py tests separately (requires isolation due to mocking)
+        if: env.skip_tests == 'false'
+        run: |
+          python -m pytest src/tests/backend/test_app.py --cov=backend.app --cov-report=term --cov-config=.coveragerc
+
       - name: Run tests with coverage
         if: env.skip_tests == 'false'
         run: |
-          python -m pytest src/tests/backend --cov=backend --cov-report=term --cov-config=.coveragerc
+          python -m pytest src/tests/backend --cov=backend --cov-report=term --cov-config=.coveragerc --ignore=src/tests/backend/test_app.py
 
       # - name: Run tests with coverage
       #   if: env.skip_tests == 'false'
