@@ -202,18 +202,9 @@ jobs:
           else
             echo "🔧 Configuring Non-WAF deployment - using default main.parameters.json..."
           fi
-      
-      - name: Setup Azure CLI
-        shell: bash
-        run: |
-          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
 
-      - name: Setup Azure Developer CLI (Linux)
-        if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          curl -fsSL https://aka.ms/install-azd.sh | sudo bash
-          azd version
+      - name: Install azd
+        uses: Azure/setup-azd@v2
           
       - name: Login to AZD
         id: login-azure
@@ -238,8 +229,6 @@ jobs:
           INPUT_AZURE_EXISTING_AI_PROJECT_RESOURCE_ID: ${{ inputs.AZURE_EXISTING_AI_PROJECT_RESOURCE_ID }}
         run: |
           set -e          
-          # Install azd (Azure Developer CLI)
-          curl -fsSL https://aka.ms/install-azd.sh | bash
 
           echo "Creating environment..."
           azd env new $INPUT_ENV_NAME --no-prompt
