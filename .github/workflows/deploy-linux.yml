@@ -1,4 +1,8 @@
 name: Deploy-Test-Cleanup (v2) Linux
+
+permissions:
+  contents: read
+  actions: read
 on:
   workflow_run:
     workflows: ["Build Docker and Optional Push v4"]
