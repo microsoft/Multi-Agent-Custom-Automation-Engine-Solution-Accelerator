@@ -1,5 +1,9 @@
 name: Deploy Steps - Windows
 
+permissions:
+  contents: read
+  actions: read
+
 on:
   workflow_call:
     inputs:
@@ -307,28 +311,24 @@ jobs:
           "WEBAPP_URL=$WEBAPP_URL" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Run Post deployment scripts
-        shell: pwsh
+        shell: bash
         env:
           INPUT_RESOURCE_GROUP_NAME: ${{ inputs.RESOURCE_GROUP_NAME }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_RESOURCE_GROUP: ${{ inputs.RESOURCE_GROUP_NAME }}
+          BACKEND_URL: ${{ steps.get_output_windows.outputs.BACKEND_URL }}
+          AZURE_STORAGE_ACCOUNT_NAME: ${{ steps.get_output_windows.outputs.AZURE_STORAGE_ACCOUNT_NAME }}
+          AZURE_STORAGE_CONTAINER_NAME: sample-dataset
+          AZURE_AI_SEARCH_NAME: ${{ steps.get_output_windows.outputs.AZURE_AI_SEARCH_NAME }}
+          AZURE_AI_SEARCH_INDEX_NAME: sample-dataset-index
+          AZURE_ENV_NAME: ${{ steps.get_output_windows.outputs.AZURE_ENV_NAME }}
         run: |
-          Set-StrictMode -Version Latest
-          $ErrorActionPreference = "Stop"
-
+          set -e
           az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-
-          # Set environment variables for team_config_and_data.ps1
-          $env:AZURE_SUBSCRIPTION_ID = "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-          $env:AZURE_RESOURCE_GROUP = "$env:INPUT_RESOURCE_GROUP_NAME"
-          $env:BACKEND_URL = "${{ steps.get_output_windows.outputs.BACKEND_URL }}"
-          $env:AZURE_STORAGE_ACCOUNT_NAME = "${{ steps.get_output_windows.outputs.AZURE_STORAGE_ACCOUNT_NAME }}"
-          $env:AZURE_STORAGE_CONTAINER_NAME = "sample-dataset"
-          $env:AZURE_AI_SEARCH_NAME = "${{ steps.get_output_windows.outputs.AZURE_AI_SEARCH_NAME }}"
-          $env:AZURE_AI_SEARCH_INDEX_NAME = "sample-dataset-index"
-          $env:AZURE_ENV_NAME = "${{ steps.get_output_windows.outputs.AZURE_ENV_NAME }}"
-
+          
           # Upload team configurations and index sample data in one step
           # Automatically select "6" (All use cases) for non-interactive deployment
-          bash -c "echo 6 | pwsh -File infra/scripts/Selecting-Team-Config-And-Data.ps1"
+          echo "6" | bash infra/scripts/selecting_team_config_and_data.sh
 
       - name: Generate Deployment Summary
         if: always()

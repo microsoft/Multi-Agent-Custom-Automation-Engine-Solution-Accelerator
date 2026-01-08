@@ -1,5 +1,9 @@
 name: Deploy Steps - Linux
 
+permissions:
+  contents: read
+  actions: read
+
 on:
   workflow_call:
     inputs:
@@ -316,19 +320,17 @@ jobs:
       - name: Run Post deployment scripts
         env:
           INPUT_RESOURCE_GROUP_NAME: ${{ inputs.RESOURCE_GROUP_NAME }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_RESOURCE_GROUP: ${{ inputs.RESOURCE_GROUP_NAME }}
+          BACKEND_URL: ${{ steps.get_output_linux.outputs.BACKEND_URL }}
+          AZURE_STORAGE_ACCOUNT_NAME: ${{ steps.get_output_linux.outputs.AZURE_STORAGE_ACCOUNT_NAME }}
+          AZURE_STORAGE_CONTAINER_NAME: sample-dataset
+          AZURE_AI_SEARCH_NAME: ${{ steps.get_output_linux.outputs.AZURE_AI_SEARCH_NAME }}
+          AZURE_AI_SEARCH_INDEX_NAME: sample-dataset-index
+          AZURE_ENV_NAME: ${{ steps.get_output_linux.outputs.AZURE_ENV_NAME }}
         run: |
           set -e
           az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-
-          # Set environment variables for selecting_team_config_and_data.sh
-          export AZURE_SUBSCRIPTION_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-          export AZURE_RESOURCE_GROUP="$INPUT_RESOURCE_GROUP_NAME"
-          export BACKEND_URL="${{ steps.get_output_linux.outputs.BACKEND_URL }}"
-          export AZURE_STORAGE_ACCOUNT_NAME="${{ steps.get_output_linux.outputs.AZURE_STORAGE_ACCOUNT_NAME }}"
-          export AZURE_STORAGE_CONTAINER_NAME="sample-dataset"
-          export AZURE_AI_SEARCH_NAME="${{ steps.get_output_linux.outputs.AZURE_AI_SEARCH_NAME }}"
-          export AZURE_AI_SEARCH_INDEX_NAME="sample-dataset-index"
-          export AZURE_ENV_NAME="${{ steps.get_output_linux.outputs.AZURE_ENV_NAME }}"
           
           # Upload team configurations and index sample data in one step
           # Automatically select "6" (All use cases) for non-interactive deployment
