@@ -63,7 +63,7 @@ jobs:
         if: ${{ github.ref_name == 'main' || github.ref_name == 'dev-v4'|| github.ref_name == 'demo-v4' || github.ref_name == 'hotfix' }}
         uses: azure/docker-login@v2
         with:
-          login-server: ${{ secrets.ACR_LOGIN_SERVER }}
+          login-server: ${{ secrets.ACR_LOGIN_SERVER || 'acrlogin.azurecr.io' }}
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
@@ -74,7 +74,7 @@ jobs:
       - name: Get registry
         id: registry
         run: |
-          echo "ext_registry=${{ secrets.ACR_LOGIN_SERVER }}" >> $GITHUB_OUTPUT
+          echo "ext_registry=${{ secrets.ACR_LOGIN_SERVER || 'acrlogin.azurecr.io' }}" >> $GITHUB_OUTPUT
 
       - name: Determine Tag Name Based on Branch
         id: determine_tag
