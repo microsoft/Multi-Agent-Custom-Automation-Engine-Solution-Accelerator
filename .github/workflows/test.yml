@@ -53,12 +53,12 @@ jobs:
       - name: Run app.py tests separately (requires isolation due to mocking)
         if: env.skip_tests == 'false'
         run: |
-          python -m pytest src/tests/backend/test_app.py --cov=backend.app --cov-report= --cov-config=.coveragerc
+          python -m pytest src/tests/backend/test_app.py --cov=backend.app --cov-report= --cov-config=.coveragerc -q
 
       - name: Run all other backend tests with coverage
         if: env.skip_tests == 'false'
         run: |
-          python -m pytest src/tests/backend --cov=backend --cov-append --cov-report= --cov-config=.coveragerc --ignore=src/tests/backend/test_app.py
+          python -m pytest src/tests/backend --cov=backend --cov-append --cov-report= --cov-config=.coveragerc --ignore=src/tests/backend/test_app.py -q
       
       - name: Generate combined coverage report
         if: env.skip_tests == 'false'
