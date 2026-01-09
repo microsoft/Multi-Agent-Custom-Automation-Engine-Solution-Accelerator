@@ -119,7 +119,7 @@ cleanup_on_exit() {
 }
 
 # Set up trap to ensure cleanup happens on exit
-trap cleanup_on_exit EXIT INT TERM
+trap cleanup_on_exit EXIT TERM
 
 function test_azd_installed() {
     if command -v azd &> /dev/null; then
