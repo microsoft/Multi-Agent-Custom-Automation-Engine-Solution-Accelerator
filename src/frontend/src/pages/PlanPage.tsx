@@ -719,7 +719,7 @@ const PlanPage: React.FC = () => {
         if (planData?.team) {
             setSelectedTeam(planData.team);
         }
-    }, [planData]);
+    }, [planData, setSelectedTeam]);
 
     if (errorLoading) {
         return (

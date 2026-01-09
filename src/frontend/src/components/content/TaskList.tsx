@@ -85,7 +85,7 @@ const TaskList: React.FC<TaskListProps> = ({
             Completed
           </AccordionHeader>
           <AccordionPanel>
-            {(loading && isLoadingTeam)
+            {(loading || isLoadingTeam)
               ? Array.from({ length: 5 }, (_, i) =>
                 renderSkeleton(`completed-${i}`)
               )
