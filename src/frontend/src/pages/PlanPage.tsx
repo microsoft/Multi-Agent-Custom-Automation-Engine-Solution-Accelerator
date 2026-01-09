@@ -715,6 +715,12 @@ const PlanPage: React.FC = () => {
         initializePlanLoading();
     }, [planId, loadPlanData, resetPlanVariables, setErrorLoading]);
 
+    useEffect(() => {
+        if (planData?.team) {
+            setSelectedTeam(planData.team);
+        }
+    }, [planData]);
+
     if (errorLoading) {
         return (
             <CoralShellColumn>
