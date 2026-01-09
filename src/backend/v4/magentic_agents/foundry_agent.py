@@ -164,7 +164,7 @@ class FoundryAgentTemplate(AzureAgentBase):
                     "No Azure AI Search connection resolved. " "connection_name=%s",
                     desired_connection_name,
                 )
-            #  return None
+                return None
 
             self.logger.info(
                 "Using Azure AI Search connection (id=%s, requested_name=%s).",

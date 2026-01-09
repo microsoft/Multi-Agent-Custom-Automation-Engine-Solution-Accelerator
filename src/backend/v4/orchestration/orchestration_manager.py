@@ -138,7 +138,7 @@ class OrchestrationManager:
             .with_standard_manager(
                 manager=manager,
                 max_round_count=orchestration_config.max_rounds,
-                max_stall_count=0,
+                max_stall_count=3,
             )
             .with_checkpointing(storage)
         )
