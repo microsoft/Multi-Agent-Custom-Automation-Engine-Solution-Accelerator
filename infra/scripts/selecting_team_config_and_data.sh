@@ -113,7 +113,6 @@ cleanup_on_exit() {
     if [ $exit_code -ne 0 ]; then
         echo ""
         echo "Script failed with exit code: $exit_code"
-        echo "Performing cleanup..."
     fi
     restore_network_access
     exit $exit_code

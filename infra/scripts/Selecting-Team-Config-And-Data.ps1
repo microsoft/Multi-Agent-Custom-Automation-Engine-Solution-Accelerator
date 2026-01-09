@@ -803,6 +803,6 @@ if ($isTeamConfigFailed -or $isSampleDataFailed) {
 
 } finally {
     # Cleanup: Restore network access
-    Write-Host "Performing cleanup..."
+    Write-Host ""
     Restore-NetworkAccess
 }
