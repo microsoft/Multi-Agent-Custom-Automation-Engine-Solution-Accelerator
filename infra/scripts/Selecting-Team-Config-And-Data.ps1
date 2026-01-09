@@ -26,6 +26,72 @@ $aiSearchIndexForContractSummary = ""
 $aiSearchIndexForContractRisk = ""
 $aiSearchIndexForContractCompliance = ""
 $azSubscriptionId = ""
+$stIsPublicAccessDisabled = $false
+$srchIsPublicAccessDisabled = $false
+
+# Cleanup function to restore network access
+function Restore-NetworkAccess {
+    if ($script:ResourceGroup -and $script:storageAccount -and $script:aiSearch) {
+        # Check resource group tag
+        $rgTypeTag = (az group show --name $script:ResourceGroup --query "tags.Type" -o tsv 2>$null)
+        
+        if ($rgTypeTag -eq "WAF") {
+            if ($script:stIsPublicAccessDisabled -eq $true -or $script:srchIsPublicAccessDisabled -eq $true) {
+                Write-Host "=== Restoring network access settings ==="
+            }
+            
+            if ($script:stIsPublicAccessDisabled -eq $true) {
+                $currentAccess = $(az storage account show --name $script:storageAccount --resource-group $script:ResourceGroup --query "publicNetworkAccess" -o tsv 2>$null)
+                if ($currentAccess -eq "Enabled") {
+                    Write-Host "Disabling public access for Storage Account: $($script:storageAccount)"
+                    az storage account update --name $script:storageAccount --public-network-access disabled --default-action Deny --output none 2>$null
+                    Write-Host "✓ Storage Account public access disabled"
+                } else {
+                    Write-Host "✓ Storage Account access unchanged (already at desired state)"
+                }
+            } else {
+                if ($script:ResourceGroup) {
+                    $checkTag = (az group show --name $script:ResourceGroup --query "tags.Type" -o tsv 2>$null)
+                    if ($checkTag -eq "WAF") {
+                        if ($script:stIsPublicAccessDisabled -eq $false -and $script:srchIsPublicAccessDisabled -eq $false) {
+                            Write-Host "=== Restoring network access settings ==="
+                        }
+                        Write-Host "✓ Storage Account access unchanged (already at desired state)"
+                    }
+                }
+            }
+            
+            if ($script:srchIsPublicAccessDisabled -eq $true) {
+                $currentAccess = $(az search service show --name $script:aiSearch --resource-group $script:ResourceGroup --query "publicNetworkAccess" -o tsv 2>$null)
+                if ($currentAccess -eq "Enabled") {
+                    Write-Host "Disabling public access for AI Search Service: $($script:aiSearch)"
+                    az search service update --name $script:aiSearch --resource-group $script:ResourceGroup --public-network-access disabled --output none 2>$null
+                    Write-Host "✓ AI Search Service public access disabled"
+                } else {
+                    Write-Host "✓ AI Search Service access unchanged (already at desired state)"
+                }
+            } else {
+                if ($script:ResourceGroup) {
+                    $checkTag = (az group show --name $script:ResourceGroup --query "tags.Type" -o tsv 2>$null)
+                    if ($checkTag -eq "WAF") {
+                        Write-Host "✓ AI Search Service access unchanged (already at desired state)"
+                    }
+                }
+            }
+            
+            if ($script:stIsPublicAccessDisabled -eq $true -or $script:srchIsPublicAccessDisabled -eq $true) {
+                Write-Host "=========================================="
+            } else {
+                if ($script:ResourceGroup) {
+                    $checkTag = (az group show --name $script:ResourceGroup --query "tags.Type" -o tsv 2>$null)
+                    if ($checkTag -eq "WAF") {
+                        Write-Host "=========================================="
+                    }
+                }
+            }
+        }
+    }
+}
 
 function Test-AzdInstalled {
     try {
@@ -148,6 +214,8 @@ function Get-ValuesFromAzDeployment {
     return $true
 }
 
+# Main script execution with cleanup handling
+try {
 # Authenticate with Azure
 try {
     $null = az account show 2>$null
@@ -425,32 +493,90 @@ $srchIsPublicAccessDisabled = $false
 # Enable public access for resources
 if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5"  -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6"){
     if ($ResourceGroup) {
-        $stPublicAccess = $(az storage account show --name $storageAccount --resource-group $ResourceGroup --query "publicNetworkAccess" -o tsv)
-        if ($stPublicAccess -eq "Disabled") {
-            $stIsPublicAccessDisabled = $true
-            Write-Host "Enabling public access for storage account: $storageAccount"
-            az storage account update --name $storageAccount --public-network-access enabled --default-action Allow --output none
-            if ($LASTEXITCODE -ne 0) {
-                Write-Host "Error: Failed to enable public access for storage account."
-                exit 1
+        # Check if resource group has Type=WAF tag
+        $rgTypeTag = (az group show --name $ResourceGroup --query "tags.Type" -o tsv 2>$null)
+        
+        if ($rgTypeTag -eq "WAF") {
+            Write-Host ""
+            Write-Host "=== Temporarily enabling public network access for services ==="
+            $stPublicAccess = $(az storage account show --name $storageAccount --resource-group $ResourceGroup --query "publicNetworkAccess" -o tsv)
+            if ($stPublicAccess -eq "Disabled") {
+                $stIsPublicAccessDisabled = $true
+                Write-Host "Enabling public access for Storage Account: $storageAccount"
+                az storage account update --name $storageAccount --public-network-access enabled --default-action Allow --output none
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Host "Error: Failed to enable public access for storage account."
+                    exit 1
+                }
+                
+                # Wait 30 seconds for the change to propagate
+                Write-Host "Waiting 30 seconds for public access to be enabled..."
+                Start-Sleep -Seconds 30
+                
+                # Verify public access is enabled in a loop
+                Write-Host "Verifying public access is enabled..."
+                $maxRetries = 10
+                $retryCount = 0
+                while ($retryCount -lt $maxRetries) {
+                    $currentAccess = $(az storage account show --name $storageAccount --resource-group $ResourceGroup --query "publicNetworkAccess" -o tsv)
+                    if ($currentAccess -eq "Enabled") {
+                        Write-Host "✓ Storage Account public access enabled successfully"
+                        break
+                    } else {
+                        Write-Host "Public access not yet enabled (attempt $($retryCount + 1)/$maxRetries). Waiting 5 seconds..."
+                        Start-Sleep -Seconds 5
+                        $retryCount++
+                    }
+                }
+                
+                if ($retryCount -eq $maxRetries) {
+                    Write-Host "Warning: Public access verification timed out for storage account."
+                }
+            } else {
+                Write-Host "✓ Storage Account public access already enabled"
             }
-        }
-        else {
-            Write-Host "Public access is already enabled for storage account: $storageAccount"
         }
 
-        $srchPublicAccess = $(az search service show --name $aiSearch --resource-group $ResourceGroup --query "publicNetworkAccess" -o tsv)
-        if ($srchPublicAccess -eq "Disabled") {
-            $srchIsPublicAccessDisabled = $true
-            Write-Host "Enabling public access for search service: $aiSearch"
-            az search service update --name $aiSearch --resource-group $ResourceGroup --public-network-access enabled --output none
-            if ($LASTEXITCODE -ne 0) {
-                Write-Host "Error: Failed to enable public access for search service."
-                exit 1
+        if ($rgTypeTag -eq "WAF") {
+            $srchPublicAccess = $(az search service show --name $aiSearch --resource-group $ResourceGroup --query "publicNetworkAccess" -o tsv)
+            if ($srchPublicAccess -eq "Disabled") {
+                $srchIsPublicAccessDisabled = $true
+                Write-Host "Enabling public access for AI Search Service: $aiSearch"
+                az search service update --name $aiSearch --resource-group $ResourceGroup --public-network-access enabled --output none
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Host "Error: Failed to enable public access for search service."
+                    exit 1
+                }
+                Write-Host "Public access enabled"
+                
+                # Wait 30 seconds for the change to propagate
+                Write-Host "Waiting 30 seconds for public access to be enabled..."
+                Start-Sleep -Seconds 30
+                
+                # Verify public access is enabled in a loop
+                Write-Host "Verifying public access is enabled..."
+                $maxRetries = 10
+                $retryCount = 0
+                while ($retryCount -lt $maxRetries) {
+                    $currentAccess = $(az search service show --name $aiSearch --resource-group $ResourceGroup --query "publicNetworkAccess" -o tsv)
+                    if ($currentAccess -eq "Enabled") {
+                        Write-Host "✓ AI Search Service public access enabled successfully"
+                        break
+                    } else {
+                        Write-Host "Public access not yet enabled (attempt $($retryCount + 1)/$maxRetries). Waiting 5 seconds..."
+                        Start-Sleep -Seconds 5
+                        $retryCount++
+                    }
+                }
+                
+                if ($retryCount -eq $maxRetries) {
+                    Write-Host "Warning: Public access verification timed out for search service."
+                }
+            } else {
+                Write-Host "✓ AI Search Service public access already enabled"
             }
-        }
-        else {
-            Write-Host "Public access is already enabled for search service: $AiSearch"
+            Write-Host "==========================================================="
+            Write-Host ""
         }
     }
 }
@@ -661,26 +787,6 @@ if($useCaseSelection -eq "2" -or $useCaseSelection -eq "all" -or $useCaseSelecti
     Write-Host "Python script to index data for Retail Customer Satisfaction successfully executed."
 }
 
-
-#disable public access for resources
-if ($stIsPublicAccessDisabled) {
-    Write-Host "Disabling public access for storage account: $StorageAccount"
-    az storage account update --name $StorageAccount --public-network-access disabled --default-action Deny --output none
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Error: Failed to disable public access for storage account."
-        exit 1
-    }
-}
-
-if ($srchIsPublicAccessDisabled) {
-    Write-Host "Disabling public access for search service: $AiSearch"
-    az search service update --name $AiSearch --resource-group $ResourceGroup --public-network-access disabled --output none
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Error: Failed to disable public access for search service."
-        exit 1
-    }
-}
-
 Write-Host "Script executed successfully. Sample Data Processed Successfully."
 
 if ($isTeamConfigFailed -or $isSampleDataFailed) {
@@ -693,4 +799,10 @@ if ($isTeamConfigFailed -or $isSampleDataFailed) {
         Write-Host "`nTeam configuration upload completed successfully."
     }
     
+}
+
+} finally {
+    # Cleanup: Restore network access
+    Write-Host "Performing cleanup..."
+    Restore-NetworkAccess
 }
