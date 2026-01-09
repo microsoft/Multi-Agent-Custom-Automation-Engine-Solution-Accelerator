@@ -202,7 +202,7 @@ jobs:
             echo "🔧 Configuring Non-WAF deployment - using default main.parameters.json..."
           fi
 
-      - name: Setup Azure Developer CLI (Windows)
+      - name: Install azd
         uses: Azure/setup-azd@v2
 
       - name: Login to AZD
