@@ -22,6 +22,7 @@ const TaskList: React.FC<TaskListProps> = ({
   onTaskSelect,
   loading,
   selectedTaskId,
+  isLoadingTeam
 }) => {
   const renderTaskItem = (task: Task) => {
     const isActive = task.id === selectedTaskId;
@@ -84,7 +85,7 @@ const TaskList: React.FC<TaskListProps> = ({
             Completed
           </AccordionHeader>
           <AccordionPanel>
-            {loading
+            {(loading || isLoadingTeam)
               ? Array.from({ length: 5 }, (_, i) =>
                 renderSkeleton(`completed-${i}`)
               )

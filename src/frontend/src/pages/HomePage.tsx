@@ -200,6 +200,7 @@ const HomePage: React.FC = () => {
                         onTeamUpload={handleTeamUpload}
                         isHomePage={true}
                         selectedTeam={selectedTeam}
+                        isLoadingTeam={isLoadingTeam}
                     />
                     <Content>
                         <ContentToolbar

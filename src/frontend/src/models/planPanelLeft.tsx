@@ -9,4 +9,5 @@ export interface PlanPanelLefProps {
     isHomePage: boolean;
     selectedTeam?: TeamConfig | null;
     onNavigationWithAlert?: (navigationFn: () => void) => void;
+    isLoadingTeam?: boolean;
 }
