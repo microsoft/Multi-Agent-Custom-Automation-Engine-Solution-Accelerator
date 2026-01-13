@@ -1,5 +1,6 @@
 fastapi
-uvicorn
+uvicorn[standard]
+# uvicorn removed and added above to allow websocket support
 jinja2
 azure-identity
 python-dotenv

@@ -1,49 +1,87 @@
 # app.py
-import asyncio
 import logging
-import uuid
-from typing import List, Optional
-from middleware.health_check import HealthCheckMiddleware
-from autogen_core.base import AgentId
-from fastapi import Depends, FastAPI, HTTPException, Query, Request
-from fastapi.responses import RedirectResponse
-from fastapi.staticfiles import StaticFiles
-from auth.auth_utils import get_authenticated_user_details
-from config import Config
-from context.cosmos_memory import CosmosBufferedChatCompletionContext
-from models.messages import (
-    BaseDataModel,
-    HumanFeedback,
-    HumanClarification,
-    InputTask,
-    Plan,
-    Session,
-    Step,
-    AgentMessage,
-    PlanWithSteps,
-)
-from utils import initialize_runtime_and_context, retrieve_all_agent_tools, rai_success
-import asyncio
+
+from contextlib import asynccontextmanager
+
+
+from azure.monitor.opentelemetry import configure_azure_monitor
+from common.config.app_config import config
+from common.models.messages_af import UserLanguage
+
+# FastAPI imports
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Local imports
+from middleware.health_check import HealthCheckMiddleware
+from v4.api.router import app_v4
 
-# Suppress INFO logs from 'azure.core.pipeline.policies.http_logging_policy'
-logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(
-    logging.WARNING
-)
-logging.getLogger("azure.identity.aio._internal").setLevel(logging.WARNING)
+# Azure monitoring
+
+
+from v4.config.agent_registry import agent_registry
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage FastAPI application lifecycle - startup and shutdown."""
+    logger = logging.getLogger(__name__)
+
+    # Startup
+    logger.info("🚀 Starting MACAE application...")
+    yield
+
+    # Shutdown
+    logger.info("🛑 Shutting down MACAE application...")
+    try:
+        # Clean up all agents from Azure AI Foundry when container stops
+        await agent_registry.cleanup_all_agents()
+        logger.info("✅ Agent cleanup completed successfully")
+
+    except ImportError as ie:
+        logger.error(f"❌ Could not import agent_registry: {ie}")
+    except Exception as e:
+        logger.error(f"❌ Error during shutdown cleanup: {e}")
+
+    logger.info("👋 MACAE application shutdown complete")
+
+
+# Check if the Application Insights Instrumentation Key is set in the environment variables
+connection_string = config.APPLICATIONINSIGHTS_CONNECTION_STRING
+if connection_string:
+    # Configure Application Insights if the Instrumentation Key is found
+    configure_azure_monitor(connection_string=connection_string)
+    logging.info(
+        "Application Insights configured with the provided Instrumentation Key"
+    )
+else:
+    # Log a warning if the Instrumentation Key is not found
+    logging.warning(
+        "No Application Insights Instrumentation Key found. Skipping configuration"
+    )
+
+# Configure logging levels from environment variables
+logging.basicConfig(level=getattr(logging, config.AZURE_BASIC_LOGGING_LEVEL.upper(), logging.INFO))
+
+# Configure Azure package logging levels
+azure_level = getattr(logging, config.AZURE_PACKAGE_LOGGING_LEVEL.upper(), logging.WARNING)
+# Parse comma-separated logging packages
+if config.AZURE_LOGGING_PACKAGES:
+    packages = [pkg.strip() for pkg in config.AZURE_LOGGING_PACKAGES.split(",") if pkg.strip()]
+    for logger_name in packages:
+        logging.getLogger(logger_name).setLevel(azure_level)
+
+logging.getLogger("opentelemetry.sdk").setLevel(logging.ERROR)
 
 # Initialize the FastAPI app
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
-frontend_url = Config.FRONTEND_SITE_NAME
+frontend_url = config.FRONTEND_SITE_NAME
 
 # Add this near the top of your app.py, after initializing the app
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[frontend_url],  # Add your frontend server URL
+    allow_origins=["*"],  # Allow all origins for development; restrict in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -51,298 +89,52 @@ app.add_middleware(
 
 # Configure health check
 app.add_middleware(HealthCheckMiddleware, password="", checks={})
+# v4 endpoints
+app.include_router(app_v4)
 logging.info("Added health check middleware")
 
 
-@app.post("/input_task")
-async def input_task_endpoint(input_task: InputTask, request: Request):
+@app.post("/api/user_browser_language")
+async def user_browser_language_endpoint(user_language: UserLanguage, request: Request):
     """
-    Endpoint to receive the initial input task from the user.
+    Receive the user's browser language.
 
-    Args:
-        input_task (InputTask): The input task containing the session ID and description.
-
-    Returns:
-        dict: Status message, session ID, and plan ID.
+    ---
+    tags:
+      - User
+    parameters:
+      - name: language
+        in: query
+        type: string
+        required: true
+        description: The user's browser language
+    responses:
+      200:
+        description: Language received successfully
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              description: Confirmation message
     """
+    config.set_user_local_browser_language(user_language.language)
 
-    if not rai_success(input_task.description):
-        print("RAI failed")
-        return {
-            "status": "Plan not created",
-        }
-    authenticated_user = get_authenticated_user_details(
-    request_headers=request.headers
-    )
-    user_id = authenticated_user["user_principal_id"]
+    # Log the received language for the user
+    logging.info(f"Received browser language '{user_language}' for user ")
 
-    if not user_id:
-        raise HTTPException(status_code=400, detail="no user")
-    if not input_task.session_id:
-        input_task.session_id = str(uuid.uuid4())
+    return {"status": "Language received successfully"}
 
-    # Initialize runtime and context
-    runtime, _ = await initialize_runtime_and_context(input_task.session_id,user_id)
-
-    # Send the InputTask message to the GroupChatManager
-    group_chat_manager_id = AgentId("group_chat_manager", input_task.session_id)
-    plan: Plan = await runtime.send_message(input_task, group_chat_manager_id)
-    return {
-        "status": f"Plan created:\n {plan.summary}",
-        "session_id": input_task.session_id,
-        "plan_id": plan.id,
-        "description": input_task.description,
-    }
-
-
-@app.post("/human_feedback")
-async def human_feedback_endpoint(human_feedback: HumanFeedback, request: Request):
-    """
-    Endpoint to receive human feedback on a step.
-
-    Args:
-        human_feedback (HumanFeedback): The human feedback message.
-
-        class HumanFeedback(BaseModel):
-            step_id: str
-            plan_id: str
-            session_id: str
-            approved: bool
-            human_feedback: Optional[str] = None
-            updated_action: Optional[str] = None
-
-    Returns:
-        dict: Status message and session ID.
-    """
-    authenticated_user = get_authenticated_user_details(
-        request_headers=request.headers
-    )
-    user_id = authenticated_user["user_principal_id"]
-    if not user_id:
-        raise HTTPException(status_code=400, detail="no user")
-    # Initialize runtime and context
-    runtime, _ = await initialize_runtime_and_context(human_feedback.session_id, user_id)
-
-    # Send the HumanFeedback message to the HumanAgent
-    human_agent_id = AgentId("human_agent", human_feedback.session_id)
-    await runtime.send_message(human_feedback, human_agent_id)
-    return {
-        "status": "Feedback received",
-        "session_id": human_feedback.session_id,
-        "step_id": human_feedback.step_id,
-    }
-
-
-@app.post("/human_clarification_on_plan")
-async def human_clarification_endpoint(human_clarification: HumanClarification, request: Request):
-    """
-    Endpoint to receive human clarification on the plan.
-
-    Args:
-        human_clarification (HumanClarification): The human clarification message.
-
-        class HumanFeedback(BaseModel):
-            plan_id: str
-            session_id: str
-            human_clarification: str
-
-    Returns:
-        dict: Status message and session ID.
-    """
-    authenticated_user = get_authenticated_user_details(
-        request_headers=request.headers
-    )
-    user_id = authenticated_user["user_principal_id"]
-    if not user_id:
-        raise HTTPException(status_code=400, detail="no user")
-    # Initialize runtime and context
-    runtime, _ = await initialize_runtime_and_context(human_clarification.session_id, user_id)
-
-    # Send the HumanFeedback message to the HumanAgent
-    planner_agent_id = AgentId("planner_agent", human_clarification.session_id)
-    await runtime.send_message(human_clarification, planner_agent_id)
-    return {
-        "status": "Clarification received",
-        "session_id": human_clarification.session_id,
-    }
-
-
-@app.post("/approve_step_or_steps")
-async def approve_step_endpoint(human_feedback: HumanFeedback, request: Request) -> dict[str, str]:
-    """
-    Endpoint to approve a step if step_id is provided, otherwise approve all the steps.
-    """
-    authenticated_user = get_authenticated_user_details(
-        request_headers=request.headers
-    )
-    user_id = authenticated_user["user_principal_id"]
-    if not user_id:
-        raise HTTPException(status_code=400, detail="no user")
-    # Initialize runtime and context
-    runtime, _ = await initialize_runtime_and_context(user_id=user_id)
-
-    # Send the HumanFeedback approval to the GroupChatManager to action
-
-    group_chat_manager_id = AgentId("group_chat_manager", human_feedback.session_id)
-
-    await runtime.send_message(
-        human_feedback,
-        group_chat_manager_id,
-    )
-    # Return a status message
-    if human_feedback.step_id:
-        return {
-            "status": f"Step {human_feedback.step_id} - Approval:{human_feedback.approved}."
-        }
-    else:
-        return {"status": "All steps approved"}
-
-
-@app.get("/plans", response_model=List[PlanWithSteps])
-async def get_plans(request: Request, session_id: Optional[str] = Query(None)) -> List[PlanWithSteps]:
-    """
-    Endpoint to retrieve plans. If session_id is provided, retrieve the plan for that session.
-    Otherwise, retrieve all plans.
-
-    Args:
-        session_id (Optional[str]): The session ID.
-
-    Returns:
-        List[Plan]: The list of plans.
-    """
-    authenticated_user = get_authenticated_user_details(
-        request_headers=request.headers
-    )
-    user_id = authenticated_user["user_principal_id"]
-    if not user_id:
-        raise HTTPException(status_code=400, detail="no user")
-    
-    cosmos = CosmosBufferedChatCompletionContext(session_id or "", user_id)
-
-    if session_id:
-        plan = await cosmos.get_plan_by_session(session_id=session_id)
-        if not plan:
-            raise HTTPException(status_code=404, detail="Plan not found")
-
-        steps = await cosmos.get_steps_by_plan(plan_id=plan.id)
-        plan_with_steps = PlanWithSteps(**plan.model_dump(), steps=steps)
-        plan_with_steps.update_step_counts()
-        return [plan_with_steps]
-
-    all_plans = await cosmos.get_all_plans()
-    # Fetch steps for all plans concurrently
-    steps_for_all_plans = await asyncio.gather(
-        *[cosmos.get_steps_by_plan(plan_id=plan.id) for plan in all_plans]
-    )
-    # Create list of PlanWithSteps and update step counts
-    list_of_plans_with_steps = []
-    for plan, steps in zip(all_plans, steps_for_all_plans):
-        plan_with_steps = PlanWithSteps(**plan.model_dump(), steps=steps)
-        plan_with_steps.update_step_counts()
-        list_of_plans_with_steps.append(plan_with_steps)
-
-    return list_of_plans_with_steps
-
-
-@app.get("/steps/{plan_id}", response_model=List[Step])
-async def get_steps_by_plan(plan_id: str, request: Request) -> List[Step]:
-    """
-    Endpoint to retrieve steps for a specific plan.
-
-    Args:
-        plan_id (str): The plan ID.
-
-    Returns:
-        List[Step]: The list of steps.
-    """
-    authenticated_user = get_authenticated_user_details(
-        request_headers=request.headers
-    )
-    user_id = authenticated_user["user_principal_id"]
-    if not user_id:
-        raise HTTPException(status_code=400, detail="no user")
-    cosmos = CosmosBufferedChatCompletionContext("", user_id)
-    steps = await cosmos.get_steps_by_plan(plan_id=plan_id)
-    return steps
-
-
-@app.get("/agent_messages/{session_id}", response_model=List[AgentMessage])
-async def get_agent_messages(session_id: str, request: Request) -> List[AgentMessage]:
-    """
-    Endpoint to retrieve agent messages for a specific session.
-
-    Args:
-        session_id (str): The session ID.
-
-    Returns:
-        List[AgentMessage]: The list of agent messages.
-    """
-    authenticated_user = get_authenticated_user_details(
-        request_headers=request.headers
-    )
-    user_id = authenticated_user["user_principal_id"]
-    if not user_id:
-        raise HTTPException(status_code=400, detail="no user")
-    cosmos = CosmosBufferedChatCompletionContext(session_id, user_id)
-    agent_messages = await cosmos.get_data_by_type("agent_message")
-    return agent_messages
-
-
-@app.delete("/messages")
-async def delete_all_messages(request: Request) -> dict[str, str]:
-    """
-    Endpoint to delete all messages across sessions.
-
-    Returns:
-        dict: Confirmation of deletion.
-    """
-    authenticated_user = get_authenticated_user_details(
-        request_headers=request.headers
-    )
-    user_id = authenticated_user["user_principal_id"]
-    if not user_id:
-        raise HTTPException(status_code=400, detail="no user")
-    cosmos = CosmosBufferedChatCompletionContext(session_id="", user_id=user_id)
-    logging.info("Deleting all plans")
-    await cosmos.delete_all_messages("plan")
-    logging.info("Deleting all sessions")
-    await cosmos.delete_all_messages("session")
-    logging.info("Deleting all steps")
-    await cosmos.delete_all_messages("step")
-    logging.info("Deleting all agent_messages")
-    await cosmos.delete_all_messages("agent_message")
-    return {"status": "All messages deleted"}
-
-
-@app.get("/messages")
-async def get_all_messages(request: Request):
-    """
-    Endpoint to retrieve all messages.
-
-    Returns:
-        List[dict]: The list of message dictionaries.
-    """
-    authenticated_user = get_authenticated_user_details(
-        request_headers=request.headers
-    )
-    user_id = authenticated_user["user_principal_id"]
-    if not user_id:
-        raise HTTPException(status_code=400, detail="no user")
-    cosmos = CosmosBufferedChatCompletionContext(session_id="", user_id=user_id)
-    message_list = await cosmos.get_all_messages()
-    return message_list
-
-
-@app.get("/api/agent-tools")
-async def get_agent_tools():
-    return retrieve_all_agent_tools()
-
-
-# Serve the frontend from the backend
-# app.mount("/", StaticFiles(directory="wwwroot"), name="wwwroot")
 
 # Run the app
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run(
+        "app:app",
+        host="127.0.0.1",
+        port=8000,
+        reload=True,
+        log_level="info",
+        access_log=False,
+    )

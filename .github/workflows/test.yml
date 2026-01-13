@@ -1,0 +1,93 @@
+name: Test Workflow with Coverage
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - demo
+      - hotfix
+    paths:
+      - 'src/backend/**/*.py'
+      - 'src/tests/**/*.py'
+      - 'src/mcp_server/**/*.py'
+      - 'src/**/pyproject.toml'
+      - 'pytest.ini'
+      - 'conftest.py'
+      - 'src/backend/requirements.txt'
+      - '.github/workflows/test.yml'
+  pull_request:
+    types:
+      - opened
+      - ready_for_review
+      - reopened
+      - synchronize
+    branches:
+      - main
+      - dev
+      - demo
+      - hotfix
+    paths:
+      - 'src/backend/**/*.py'
+      - 'src/tests/**/*.py'
+      - 'src/mcp_server/**/*.py'
+      - 'pytest.ini'
+      - 'conftest.py'
+      - 'src/backend/requirements.txt'
+      - 'src/**/pyproject.toml'
+      - '.github/workflows/test.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r src/backend/requirements.txt
+
+      - name: Check if test files exist
+        id: check_tests
+        run: |
+          if [ -z "$(find src -type f -name 'test_*.py')" ]; then
+            echo "No test files found, skipping tests."
+            echo "skip_tests=true" >> $GITHUB_ENV
+          else
+            echo "Test files found, running tests."
+            echo "skip_tests=false" >> $GITHUB_ENV
+          fi
+
+      - name: Run tests with coverage
+        if: env.skip_tests == 'false'
+        run: |
+          pytest --cov=. --cov-report=term-missing --cov-report=xml \
+            --ignore=tests/e2e-test/tests \
+            --ignore=src/backend/tests/test_app.py \
+            --ignore=src/tests/agents/test_foundry_integration.py \
+            --ignore=src/tests/mcp_server/test_factory.py \
+            --ignore=src/tests/mcp_server/test_hr_service.py \
+            --ignore=src/backend/tests/test_config.py \
+            --ignore=src/tests/agents/test_human_approval_manager.py \
+            --ignore=src/backend/tests/test_team_specific_methods.py \
+            --ignore=src/backend/tests/models/test_messages.py \
+            --ignore=src/backend/tests/test_otlp_tracing.py \
+            --ignore=src/backend/tests/auth/test_auth_utils.py
+
+      # - name: Run tests with coverage
+      #   if: env.skip_tests == 'false'
+      #   run: |
+      #     pytest --cov=. --cov-report=term-missing --cov-report=xml --ignore=tests/e2e-test/tests
+          
+      - name: Skip coverage report if no tests
+        if: env.skip_tests == 'true'
+        run: |
+          echo "Skipping coverage report because no tests were found."

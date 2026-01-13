@@ -21,7 +21,7 @@ jobs:
       #   run: |
       #     curl -fsSL ${{ vars.AUTOGEN_WHL_URL }} -o agnext-biab-02/autogen_core-0.3.dev0-py3-none-any.whl
       - name: Log in to the Container registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
