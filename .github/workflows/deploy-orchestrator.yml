@@ -78,7 +78,7 @@ jobs:
     secrets: inherit
 
   deploy:
-    if: "!cancelled() && (inputs.trigger_type != 'workflow_dispatch' || inputs.existing_webapp_url == '' || inputs.existing_webapp_url == null)"
+    if: "!cancelled() && (needs.docker-build.result == 'success' || needs.docker-build.result == 'skipped') && (inputs.trigger_type != 'workflow_dispatch' || inputs.existing_webapp_url == '' || inputs.existing_webapp_url == null)"    
     needs: docker-build
     uses: ./.github/workflows/job-deploy.yml
     with:

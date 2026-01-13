@@ -77,6 +77,153 @@ jobs:
     env:
       accelerator_name: "MACAE V4"
     steps:
+      - name: Validate Workflow Input Parameters
+        shell: bash
+        env:
+          INPUT_TRIGGER_TYPE: ${{ inputs.trigger_type }}
+          INPUT_WAF_ENABLED: ${{ inputs.waf_enabled }}
+          INPUT_EXP: ${{ inputs.EXP }}
+          INPUT_RUN_E2E_TESTS: ${{ inputs.run_e2e_tests }}
+          INPUT_EXISTING_WEBAPP_URL: ${{ inputs.existing_webapp_url }}
+          INPUT_DEPLOY_RESULT: ${{ inputs.deploy_result }}
+          INPUT_E2E_TEST_RESULT: ${{ inputs.e2e_test_result }}
+          INPUT_CONTAINER_WEB_APPURL: ${{ inputs.CONTAINER_WEB_APPURL }}
+          INPUT_RESOURCE_GROUP_NAME: ${{ inputs.RESOURCE_GROUP_NAME }}
+          INPUT_QUOTA_FAILED: ${{ inputs.QUOTA_FAILED }}
+          INPUT_TEST_SUCCESS: ${{ inputs.TEST_SUCCESS }}
+          INPUT_TEST_REPORT_URL: ${{ inputs.TEST_REPORT_URL }}
+        run: |
+          echo "🔍 Validating workflow input parameters..."
+          VALIDATION_FAILED=false
+          
+          # Validate trigger_type (required)
+          if [[ -z "$INPUT_TRIGGER_TYPE" ]]; then
+            echo "❌ ERROR: trigger_type is required but not provided"
+            VALIDATION_FAILED=true
+          else
+            echo "✅ trigger_type: '$INPUT_TRIGGER_TYPE' is valid"
+          fi
+          
+          # Validate waf_enabled (boolean)
+          if [[ "$INPUT_WAF_ENABLED" != "true" && "$INPUT_WAF_ENABLED" != "false" ]]; then
+            echo "❌ ERROR: waf_enabled must be 'true' or 'false', got: '$INPUT_WAF_ENABLED'"
+            VALIDATION_FAILED=true
+          else
+            echo "✅ waf_enabled: '$INPUT_WAF_ENABLED' is valid"
+          fi
+          
+          # Validate EXP (boolean)
+          if [[ "$INPUT_EXP" != "true" && "$INPUT_EXP" != "false" ]]; then
+            echo "❌ ERROR: EXP must be 'true' or 'false', got: '$INPUT_EXP'"
+            VALIDATION_FAILED=true
+          else
+            echo "✅ EXP: '$INPUT_EXP' is valid"
+          fi
+          
+          # Validate run_e2e_tests (specific allowed values)
+          if [[ -n "$INPUT_RUN_E2E_TESTS" ]]; then
+            ALLOWED_VALUES=("None" "GoldenPath-Testing" "Smoke-Testing")
+            if [[ ! " ${ALLOWED_VALUES[@]} " =~ " ${INPUT_RUN_E2E_TESTS} " ]]; then
+              echo "❌ ERROR: run_e2e_tests '$INPUT_RUN_E2E_TESTS' is invalid. Allowed values: ${ALLOWED_VALUES[*]}"
+              VALIDATION_FAILED=true
+            else
+              echo "✅ run_e2e_tests: '$INPUT_RUN_E2E_TESTS' is valid"
+            fi
+          fi
+          
+          # Validate existing_webapp_url (must start with https if provided)
+          if [[ -n "$INPUT_EXISTING_WEBAPP_URL" ]]; then
+            if [[ ! "$INPUT_EXISTING_WEBAPP_URL" =~ ^https:// ]]; then
+              echo "❌ ERROR: existing_webapp_url must start with 'https://', got: '$INPUT_EXISTING_WEBAPP_URL'"
+              VALIDATION_FAILED=true
+            else
+              echo "✅ existing_webapp_url: '$INPUT_EXISTING_WEBAPP_URL' is valid"
+            fi
+          fi
+          
+          # Validate deploy_result (must be specific values if provided)
+          if [[ -n "$INPUT_DEPLOY_RESULT" ]]; then
+            ALLOWED_DEPLOY_RESULTS=("success" "failure" "skipped")
+            if [[ ! " ${ALLOWED_DEPLOY_RESULTS[@]} " =~ " ${INPUT_DEPLOY_RESULT} " ]]; then
+              echo "❌ ERROR: deploy_result '$INPUT_DEPLOY_RESULT' is invalid. Allowed values: ${ALLOWED_DEPLOY_RESULTS[*]}"
+              VALIDATION_FAILED=true
+            else
+              echo "✅ deploy_result: '$INPUT_DEPLOY_RESULT' is valid"
+            fi
+          fi
+          
+          # Validate e2e_test_result (must be specific values if provided)
+          if [[ -n "$INPUT_E2E_TEST_RESULT" ]]; then
+            ALLOWED_TEST_RESULTS=("success" "failure" "skipped")
+            if [[ ! " ${ALLOWED_TEST_RESULTS[@]} " =~ " ${INPUT_E2E_TEST_RESULT} " ]]; then
+              echo "❌ ERROR: e2e_test_result '$INPUT_E2E_TEST_RESULT' is invalid. Allowed values: ${ALLOWED_TEST_RESULTS[*]}"
+              VALIDATION_FAILED=true
+            else
+              echo "✅ e2e_test_result: '$INPUT_E2E_TEST_RESULT' is valid"
+            fi
+          fi
+          
+          # Validate CONTAINER_WEB_APPURL (must start with https if provided)
+          if [[ -n "$INPUT_CONTAINER_WEB_APPURL" ]]; then
+            if [[ ! "$INPUT_CONTAINER_WEB_APPURL" =~ ^https:// ]]; then
+              echo "❌ ERROR: CONTAINER_WEB_APPURL must start with 'https://', got: '$INPUT_CONTAINER_WEB_APPURL'"
+              VALIDATION_FAILED=true
+            else
+              echo "✅ CONTAINER_WEB_APPURL: '$INPUT_CONTAINER_WEB_APPURL' is valid"
+            fi
+          fi
+          
+          # Validate RESOURCE_GROUP_NAME (Azure resource group naming convention if provided)
+          if [[ -n "$INPUT_RESOURCE_GROUP_NAME" ]]; then
+            if [[ ! "$INPUT_RESOURCE_GROUP_NAME" =~ ^[a-zA-Z0-9._\(\)-]+$ ]] || [[ "$INPUT_RESOURCE_GROUP_NAME" =~ \.$ ]]; then
+              echo "❌ ERROR: RESOURCE_GROUP_NAME '$INPUT_RESOURCE_GROUP_NAME' is invalid. Must contain only alphanumerics, periods, underscores, hyphens, and parentheses. Cannot end with period."
+              VALIDATION_FAILED=true
+            elif [[ ${#INPUT_RESOURCE_GROUP_NAME} -gt 90 ]]; then
+              echo "❌ ERROR: RESOURCE_GROUP_NAME '$INPUT_RESOURCE_GROUP_NAME' exceeds 90 characters"
+              VALIDATION_FAILED=true
+            else
+              echo "✅ RESOURCE_GROUP_NAME: '$INPUT_RESOURCE_GROUP_NAME' is valid"
+            fi
+          fi
+          
+          # Validate QUOTA_FAILED (must be 'true', 'false', or empty string)
+          if [[ "$INPUT_QUOTA_FAILED" != "true" && "$INPUT_QUOTA_FAILED" != "false" && "$INPUT_QUOTA_FAILED" != "" ]]; then
+            echo "❌ ERROR: QUOTA_FAILED must be 'true', 'false', or empty string, got: '$INPUT_QUOTA_FAILED'"
+            VALIDATION_FAILED=true
+          else
+            echo "✅ QUOTA_FAILED: '$INPUT_QUOTA_FAILED' is valid"
+          fi
+          
+          # Validate TEST_SUCCESS (must be 'true' or 'false' or empty)
+          if [[ -n "$INPUT_TEST_SUCCESS" ]]; then
+            if [[ "$INPUT_TEST_SUCCESS" != "true" && "$INPUT_TEST_SUCCESS" != "false" ]]; then
+              echo "❌ ERROR: TEST_SUCCESS must be 'true', 'false', or empty, got: '$INPUT_TEST_SUCCESS'"
+              VALIDATION_FAILED=true
+            else
+              echo "✅ TEST_SUCCESS: '$INPUT_TEST_SUCCESS' is valid"
+            fi
+          fi
+          
+          # Validate TEST_REPORT_URL (must start with https if provided)
+          if [[ -n "$INPUT_TEST_REPORT_URL" ]]; then
+            if [[ ! "$INPUT_TEST_REPORT_URL" =~ ^https:// ]]; then
+              echo "❌ ERROR: TEST_REPORT_URL must start with 'https://', got: '$INPUT_TEST_REPORT_URL'"
+              VALIDATION_FAILED=true
+            else
+              echo "✅ TEST_REPORT_URL: '$INPUT_TEST_REPORT_URL' is valid"
+            fi
+          fi
+          
+          # Fail workflow if any validation failed
+          if [[ "$VALIDATION_FAILED" == "true" ]]; then
+            echo ""
+            echo "❌ Parameter validation failed. Please correct the errors above and try again."
+            exit 1
+          fi
+          
+          echo ""
+          echo "✅ All input parameters validated successfully!"
+
       - name: Determine Test Suite Display Name
         id: test_suite
         shell: bash
