@@ -4,11 +4,8 @@ on:
   push:
     branches:
       - main
-      - dev
-      - demo
-      - hotfix
+      - demo-v4
       - dev-v4
-      - macae-v4-unittestcases-kd
   pull_request:
     types:
       - opened
@@ -17,9 +14,8 @@ on:
       - synchronize
     branches:
       - main
-      - dev
-      - demo
-      - hotfix
+      - demo-v4
+      - dev-v4
 
 jobs:
   test:
@@ -54,9 +50,19 @@ jobs:
         if: env.skip_tests == 'false'
         run: |
           python -m pytest src/tests/backend/test_app.py --cov=backend.app --cov-report= --cov-config=.coveragerc -q > /dev/null 2>&1
-          python -m pytest src/tests/backend --cov=backend --cov-append --cov-report= --cov-config=.coveragerc --ignore=src/tests/backend/test_app.py 2>&1 | tee /tmp/pytest_output.txt
+          python -m pytest src/tests/backend --cov=backend --cov-append --cov-report=xml --cov-report= --cov-config=.coveragerc --ignore=src/tests/backend/test_app.py 2>&1 | tee /tmp/pytest_output.txt
           python -m coverage report --rcfile=.coveragerc
           tail -1 /tmp/pytest_output.txt
+          
+          # Check coverage threshold
+          if [ -f coverage.xml ]; then
+            COVERAGE=$(python -c "import xml.etree.ElementTree as ET; tree = ET.parse('coverage.xml'); root = tree.getroot(); print(float(root.attrib['line-rate']) * 100)")
+            echo "Coverage: $COVERAGE%"
+            if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+              echo "Coverage is below 80%, failing the job."
+              exit 1
+            fi
+          fi
           
       - name: Skip coverage report if no tests
         if: env.skip_tests == 'true'
