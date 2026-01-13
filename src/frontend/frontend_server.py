@@ -1,63 +1,68 @@
 import os
-import uvicorn
 
+import uvicorn
+from dotenv import load_dotenv
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, PlainTextResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-# Resolve wwwroot path relative to this script
-WWWROOT_PATH = os.path.join(os.path.dirname(__file__), 'wwwroot')
-
-# Debugging information
-print(f"Current Working Directory: {os.getcwd()}")
-print(f"Absolute path to wwwroot: {WWWROOT_PATH}")
-if not os.path.exists(WWWROOT_PATH):
-    raise FileNotFoundError(f"wwwroot directory not found at path: {WWWROOT_PATH}")
-print(f"Files in wwwroot: {os.listdir(WWWROOT_PATH)}")
+# Load environment variables from .env file
+load_dotenv()
 
 app = FastAPI()
 
-import html
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-@app.get("/config.js", response_class=PlainTextResponse)
-def get_config():
-    backend_url = html.escape(os.getenv("BACKEND_API_URL", "http://localhost:8000"))
-    return f'const BACKEND_API_URL = "{backend_url}";'
+# Build paths
+BUILD_DIR = os.path.join(os.path.dirname(__file__), "build")
+INDEX_HTML = os.path.join(BUILD_DIR, "index.html")
+
+# Serve static files from build directory
+app.mount(
+    "/assets", StaticFiles(directory=os.path.join(BUILD_DIR, "assets")), name="assets"
+)
 
 
-# Redirect root to app.html
 @app.get("/")
-async def index_redirect():
-    return RedirectResponse(url="/app.html?v=home")
+async def serve_index():
+    return FileResponse(INDEX_HTML)
 
 
-# Mount static files
-app.mount("/", StaticFiles(directory=WWWROOT_PATH, html=True), name="static")
+@app.get("/config")
+async def get_config():
+    backend_url = os.getenv("BACKEND_API_URL", "http://localhost:8000")
+    auth_enabled = os.getenv("AUTH_ENABLED", "false")
+    backend_url = backend_url + "/api"
 
-
-# Debugging route
-@app.get("/debug")
-async def debug_route():
-    return {
-        "message": "Frontend debug route working",
-        "wwwroot_path": WWWROOT_PATH,
-        "files": os.listdir(WWWROOT_PATH),
+    config = {
+        "API_URL": backend_url,
+        "ENABLE_AUTH": auth_enabled,
     }
+    return config
 
 
-# Catch-all route for SPA
 @app.get("/{full_path:path}")
-async def catch_all(full_path: str):
-    print(f"Requested path: {full_path}")
-    app_html_path = os.path.join(WWWROOT_PATH, "app.html")
+async def serve_app(full_path: str):
+    # Remediation: normalize and check containment before serving
+    file_path = os.path.normpath(os.path.join(BUILD_DIR, full_path))
+    # Block traversal and dotfiles
+    if (
+        not file_path.startswith(BUILD_DIR)
+        or ".." in full_path
+        or "/." in full_path
+        or "\\." in full_path
+    ):
+        return FileResponse(INDEX_HTML)
+    if os.path.isfile(file_path):
+        return FileResponse(file_path)
+    return FileResponse(INDEX_HTML)
 
-    if os.path.exists(app_html_path):
-        return FileResponse(app_html_path)
-    else:
-        return HTMLResponse(
-            content=f"app.html not found. Current path: {app_html_path}",
-            status_code=404,
-        )
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=3000)
+    uvicorn.run(app, host="127.0.0.1", port=3000, access_log=False, log_level="info")

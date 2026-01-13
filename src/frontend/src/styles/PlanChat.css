@@ -1,0 +1,246 @@
+/* PlanChat Component Styles - Enhanced for Light/Dark Mode Support */
+
+.plan-chat-message-content {
+    display: flex;
+    flex-direction: column;
+    white-space: pre-wrap;
+    width: 100%;
+}
+
+.plan-chat-scroll-button {
+    background-color: var(--colorNeutralBackground1);
+    border: 1px solid var(--colorNeutralStroke2);
+    backdrop-filter: saturate(180%) blur(16px);
+    color: var(--colorNeutralForeground1);
+    transition: all 0.2s ease;
+}
+
+.plan-chat-scroll-button:hover {
+    background-color: var(--colorNeutralBackground1Hover);
+    border-color: var(--colorNeutralStroke1Hover);
+    box-shadow: var(--shadow8);
+}
+
+.plan-chat-input-container {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    /* background-color: var(--colorNeutralBackground1); */
+    border-top: 1px solid var(--colorNeutralStroke2);
+    padding: 12px 0;
+}
+
+.plan-chat-input-wrapper {
+    display: flex;
+    width: 100%;
+    max-width: 768px;
+    margin: 0px 16px;
+}
+
+/* Plan Chat Header */
+.plan-chat-header {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 8px;
+}
+
+.plan-chat-speaker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--colorNeutralForeground2);
+}
+
+.speaker-name {
+  font-weight: 600;
+  color: var(--colorNeutralForeground1);
+}
+
+/* WebSocket Connection Status */
+.connection-status {
+  display: flex;
+  justify-content: center;
+  padding: 8px 16px;
+  margin-bottom: 8px;
+}
+
+/* Enhanced Streaming message animations */
+@keyframes pulse {
+  0% { opacity: 0.7; }
+  50% { opacity: 1; }
+  100% { opacity: 0.7; }
+}
+
+.streaming-message {
+  animation: pulse 2s infinite;
+  border-left: 3px solid var(--colorBrandBackground);
+  padding-left: 12px;
+}
+
+/* Approval Request Specific Styles */
+.approval-request {
+  background-color: var(--colorNeutralBackground1);
+  border: 1px solid var(--colorNeutralStroke2);
+  border-radius: 12px;
+  box-shadow: var(--shadow8);
+  transition: box-shadow 0.2s ease;
+}
+
+.approval-request:hover {
+  box-shadow: var(--shadow16);
+}
+
+/* Step Cards */
+.step-card {
+  background-color: var(--colorNeutralBackground1);
+  border: 1px solid var(--colorNeutralStroke3);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  transition: all 0.2s ease;
+}
+
+.step-card:hover {
+  background-color: var(--colorNeutralBackground1Hover);
+  border-color: var(--colorNeutralStroke2);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow4);
+}
+
+.step-card:nth-child(even) {
+  background-color: var(--colorNeutralBackground2);
+}
+
+.step-card:nth-child(even):hover {
+  background-color: var(--colorNeutralBackground2Hover);
+}
+
+/* Step Number Badge */
+.step-number {
+  min-width: 32px;
+  height: 32px;
+  border-radius: 16px;
+  background-color: var(--colorBrandBackground);
+  color: var(--colorNeutralForegroundInverted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  margin-right: 16px;
+  flex-shrink: 0;
+  box-shadow: var(--shadow4);
+  transition: all 0.2s ease;
+}
+
+.step-number:hover {
+  background-color: var(--colorBrandBackgroundHover);
+  transform: scale(1.05);
+}
+
+/* Summary Box */
+.summary-box {
+  background-color: var(--colorNeutralBackground2);
+  border: 1px solid var(--colorNeutralStroke2);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+/* Important Notes Box */
+.notes-box {
+  background-color: var(--colorPaletteYellowBackground1);
+  border: 1px solid var(--colorPaletteYellowBorder1);
+  border-left: 4px solid var(--colorPaletteYellowBorder2);
+  border-radius: 8px;
+  padding: 16px;
+  color: var(--colorNeutralForeground1);
+}
+
+/* Action Footer */
+.action-footer {
+  border-top: 1px solid var(--colorNeutralStroke2);
+  padding: 16px 0;
+  margin-top: 24px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .plan-chat-input-wrapper {
+    margin: 0px 8px;
+  }
+  
+  .step-card {
+    padding: 8px;
+  }
+  
+  .step-number {
+    min-width: 28px;
+    height: 28px;
+    font-size: 12px;
+    margin-right: 12px;
+  }
+  
+  .summary-box, .notes-box {
+    padding: 12px;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .approval-request {
+    border-width: 2px;
+  }
+  
+  .step-card {
+    border-width: 2px;
+  }
+  
+  .step-number {
+    border: 2px solid var(--colorNeutralForegroundInverted);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .streaming-message {
+    animation: none;
+  }
+  
+  .step-card, .step-number {
+    transition: none;
+  }
+  
+  .step-card:hover {
+    transform: none;
+  }
+  
+  .step-number:hover {
+    transform: none;
+  }
+}
+
+/* Focus styles for accessibility */
+.step-card:focus-within {
+  outline: 2px solid var(--colorStrokeFocus2);
+  outline-offset: 2px;
+}
+
+/* Dark mode specific adjustments */
+@media (prefers-color-scheme: dark) {
+  .approval-request {
+    background-color: var(--colorNeutralBackground1);
+    box-shadow: var(--shadow28);
+  }
+  
+  .step-card {
+    background-color: var(--colorNeutralBackground2);
+  }
+  
+  .notes-box {
+    background-color: var(--colorPaletteYellowBackground2);
+    color: var(--colorNeutralForeground1);
+  }
+}

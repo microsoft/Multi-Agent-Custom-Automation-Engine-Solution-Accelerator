@@ -1,0 +1,125 @@
+name: Build Docker and Optional Push v4
+
+on:
+  push:
+    branches:
+      - main
+      - dev-v4
+      - demo-v4
+      - hotfix
+    paths:
+      - 'src/frontend/**'
+      - 'src/backend/**'
+      - 'src/mcp_server/**'
+      - '.github/workflows/docker-build-and-push.yml'
+      - 'infra/main.bicep'
+      - 'infra/modules/**/*.bicep'
+      - 'infra/*.parameters.json'
+      - 'infra/scripts/**'
+      - '.github/workflows/deploy.yml'
+      - 'azure.yaml'
+      - 'azure_custom.yaml'
+  pull_request:
+    types:
+      - opened
+      - ready_for_review
+      - reopened
+      - synchronize
+    branches:
+      - main
+      - dev-v4
+      - demo-v4
+      - hotfix
+    paths:
+      - 'src/frontend/**'
+      - 'src/backend/**'
+      - 'src/mcp_server/**'
+      - '.github/workflows/docker-build-and-push.yml'
+      - 'infra/main.bicep'
+      - 'infra/modules/**/*.bicep'
+      - 'infra/*.parameters.json'
+      - 'infra/scripts/**'
+      - '.github/workflows/deploy.yml'
+      - 'azure.yaml'
+      - 'azure_custom.yaml'
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Log in to Azure Container Registry
+        if: ${{ github.ref_name == 'main' || github.ref_name == 'dev-v4'|| github.ref_name == 'demo-v4' || github.ref_name == 'hotfix' }}
+        uses: azure/docker-login@v2
+        with:
+          login-server: ${{ secrets.ACR_LOGIN_SERVER || 'acrlogin.azurecr.io' }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+      
+      - name: Get registry
+        id: registry
+        run: |
+          echo "ext_registry=${{ secrets.ACR_LOGIN_SERVER || 'acrlogin.azurecr.io'}}" >> $GITHUB_OUTPUT
+
+      - name: Determine Tag Name Based on Branch
+        id: determine_tag
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "TAG=latest_v4" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == "refs/heads/dev-v4" ]]; then
+            echo "TAG=dev_v4" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == "refs/heads/demo-v4" ]]; then
+            echo "TAG=demo_v4" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == "refs/heads/hotfix" ]]; then
+            echo "TAG=hotfix" >> $GITHUB_ENV
+          else
+            echo "TAG=pullrequest-ignore" >> $GITHUB_ENV
+          fi
+
+      - name: Set Historical Tag
+        run: |
+          DATE_TAG=$(date +'%Y-%m-%d')
+          RUN_ID=${{ github.run_number }}
+          # Create historical tag using TAG, DATE_TAG, and RUN_ID
+          echo "HISTORICAL_TAG=${{ env.TAG }}_${DATE_TAG}_${RUN_ID}" >> $GITHUB_ENV
+
+      - name: Build and optionally push Backend Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./src/backend
+          file: ./src/backend/Dockerfile
+          push: ${{ env.TAG != 'pullrequest-ignore' }}
+          tags: |
+            ${{ steps.registry.outputs.ext_registry }}/macaebackend:${{ env.TAG }}
+            ${{ steps.registry.outputs.ext_registry }}/macaebackend:${{ env.HISTORICAL_TAG }}
+  
+      - name: Build and optionally push Frontend Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./src/frontend
+          file: ./src/frontend/Dockerfile
+          push: ${{ env.TAG != 'pullrequest-ignore' }}
+          tags: |
+            ${{ steps.registry.outputs.ext_registry }}/macaefrontend:${{ env.TAG }}
+            ${{ steps.registry.outputs.ext_registry }}/macaefrontend:${{ env.HISTORICAL_TAG }}
+      
+      - name: Build and optionally push MCP Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./src/mcp_server
+          file: ./src/mcp_server/Dockerfile
+          push: ${{ env.TAG != 'pullrequest-ignore' }}
+          tags: |
+            ${{ steps.registry.outputs.ext_registry }}/macaemcp:${{ env.TAG }}
+            ${{ steps.registry.outputs.ext_registry }}/macaemcp:${{ env.HISTORICAL_TAG }}

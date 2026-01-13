@@ -18,11 +18,15 @@ def get_authenticated_user_details(request_headers):
         raw_user_object = {k: v for k, v in request_headers.items()}
 
     normalized_headers = {k.lower(): v for k, v in raw_user_object.items()}
-    user_object["user_principal_id"] = normalized_headers.get("x-ms-client-principal-id")
+    user_object["user_principal_id"] = normalized_headers.get(
+        "x-ms-client-principal-id"
+    )
     user_object["user_name"] = normalized_headers.get("x-ms-client-principal-name")
     user_object["auth_provider"] = normalized_headers.get("x-ms-client-principal-idp")
     user_object["auth_token"] = normalized_headers.get("x-ms-token-aad-id-token")
-    user_object["client_principal_b64"] = normalized_headers.get("x-ms-client-principal")
+    user_object["client_principal_b64"] = normalized_headers.get(
+        "x-ms-client-principal"
+    )
     user_object["aad_id_token"] = normalized_headers.get("x-ms-token-aad-id-token")
 
     return user_object

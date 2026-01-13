@@ -2,6 +2,8 @@ fastapi
 uvicorn
 autogen-agentchat==0.7.5
 azure-cosmos
+azure-monitor-opentelemetry
+azure-monitor-events-extension
 azure-identity
 python-dotenv
 python-multipart
@@ -11,4 +13,21 @@ opentelemetry-exporter-otlp-proto-grpc
 opentelemetry-instrumentation-fastapi
 opentelemetry-instrumentation-openai
 opentelemetry-exporter-otlp-proto-http
+
+semantic-kernel[azure]==1.32.2
+azure-ai-projects==1.0.0b11
+openai==1.84.0 
+azure-ai-inference==1.0.0b9 
+azure-search-documents 
+azure-ai-evaluation
+
 opentelemetry-exporter-otlp-proto-grpc
+
+# Date and internationalization
+babel>=2.9.0
+
+# Testing tools
+pytest>=8.2,<9  # Compatible version for pytest-asyncio
+pytest-asyncio==0.24.0
+pytest-cov==5.0.0
+

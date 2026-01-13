@@ -1,0 +1,30 @@
+name: validate template property for telemetry
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'azure.yaml'
+
+jobs:
+  validate-template-property:
+    name: validate-template-property
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for required metadata template line
+        run: |
+          if grep -E '^\s*#\s*template:\s*multi-agent-custom-automation-engine-solution-accelerator@1\.0' azure.yaml; then
+            echo "ERROR: 'template' line is commented out in azure.yaml! Please uncomment template line."
+            exit 1
+          fi
+
+          if ! grep -E '^\s*template:\s*multi-agent-custom-automation-engine-solution-accelerator@1\.0' azure.yaml; then
+            echo "ERROR: Required 'template' line is missing in azure.yaml! Please add template line for telemetry."
+            exit 1
+          fi
+          echo "template line is present and not commented."

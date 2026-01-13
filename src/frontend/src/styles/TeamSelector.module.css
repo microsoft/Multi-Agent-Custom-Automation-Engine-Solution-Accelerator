@@ -1,0 +1,734 @@
+/* Team Selector Dialog Styles */
+.dialogSurface {
+  background-color: var(--colorNeutralBackground1) !important;
+  border-radius: 12px !important;
+  padding: 0 !important;
+  border: 1px solid var(--colorNeutralStroke1) !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  max-width: 800px;
+  width: 90vw;
+  min-width: 500px;
+}
+
+.dialogContent {
+  padding: 0;
+  width: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+.dialogTitle {
+  color: var(--colorNeutralForeground1) !important;
+  padding: 24px 24px 16px 24px !important;
+  font-size: 20px !important;
+  font-weight: 600 !important;
+  margin: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  border-bottom: none !important;
+}
+
+.closeButton {
+  color: var(--colorNeutralForeground2) !important;
+  background-color: transparent !important;
+  border: none !important;
+  min-width: 32px !important;
+  height: 32px !important;
+  border-radius: 4px !important;
+  flex-shrink: 0;
+}
+
+.closeButton:hover {
+  background-color: var(--colorNeutralBackground3) !important;
+  color: var(--colorNeutralForeground1) !important;
+}
+
+.dialogBody {
+  color: var(--colorNeutralForeground1) !important;
+  padding: 0 24px 24px 24px !important;
+  background-color: var(--colorNeutralBackground1) !important;
+  width: 100% !important;
+  margin: 0 !important;
+  display: block !important;
+  overflow: hidden !important;
+  gap: unset !important;
+  max-height: unset !important;
+  grid-template-rows: unset !important;
+  grid-template-columns: unset !important;
+}
+
+.dialogActions {
+  padding: 16px 24px;
+  background-color: var(--colorNeutralBackground1);
+  border-top: none !important;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Tab Container */
+.tabContainer {
+  margin-bottom: 16px;
+  width: 100%;
+}
+
+.tabContentContainer {
+  overflow: hidden;
+  width: 100%;
+  margin-top: 0 !important;
+}
+
+.teamsTabContent {
+  width: 100%;
+}
+
+.uploadTabContent {
+  width: 100%;
+}
+
+.uploadSuccessMessage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  text-align: center;
+  gap: 16px;
+  min-height: 150px;
+  background-color: var(--colorNeutralBackground1);
+  border-radius: 8px;
+  margin: 16px 0;
+  border: 1px solid var(--colorNeutralStroke2);
+  position: relative;
+  animation: successFadeIn 0.6s ease-out;
+  box-shadow: var(--shadow16);
+}
+
+.successIcon {
+  color: #10b981 !important;
+  font-size: 72px !important;
+  width: 48px !important;
+  height: 48px !important;
+  margin-bottom: 4px;
+  animation: successIconBounce 0.8s ease-out;
+  filter: drop-shadow(0 6px 12px rgba(16, 185, 129, 0.25));
+}
+
+.successText {
+  color: var(--colorNeutralForeground1) !important;
+  font-size: 16px !important;
+  font-weight: 400 !important;
+  line-height: 1.4;
+  margin: 0;
+  max-width: 350px;
+  word-wrap: break-word;
+  /* animation: textSlideUp 0.8s ease-out 0.3s both; */
+}
+
+
+.successActions {
+  display: flex;
+  gap: 12px;
+  margin-top: 32px;
+  justify-content: center;
+}
+
+.successActions .continueButton {
+  padding: 12px 32px !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+  min-width: 200px;
+  box-shadow: 0 4px 12px rgba(0, 120, 212, 0.25) !important;
+}
+
+
+  .continueButton {
+  padding: 12px 24px;
+  background-color: var(--colorBrandBackground) !important;
+  color:  white!important;
+  border-color: var(--colorBrandStroke1) !important;
+  border-radius: var(--Button-Container, 4px);
+}
+
+.successActions .continueButton:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 16px rgba(0, 120, 212, 0.35) !important;
+}
+
+.dropZoneSuccessContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 80px;
+}
+
+.dropZoneSuccessContent .successIcon {
+  color: #10b981 !important;
+  font-size: 48px !important;
+  width: 48px !important;
+  height: 48px !important;
+  animation: successIconBounce 0.8s ease-out;
+  filter: drop-shadow(0 4px 8px rgba(16, 185, 129, 0.25));
+}
+
+.dropZoneSuccessContent .successText {
+  color: var(--colorNeutralForeground1) !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  line-height: 1.4;
+  margin: 0;
+  text-align: center;
+}
+
+.tabList {
+  gap: 12px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  margin-bottom: 0 !important;
+  background-color: var(--colorNeutralBackground1) !important;
+  border-bottom: none !important;
+  padding-bottom: 0 !important;
+  box-shadow: none !important;
+}
+
+.tab {
+  color: var(--colorNeutralForeground2) !important;
+  font-weight: 400 !important;
+  margin: -10px !important;
+  /* border: none !important; */
+  /* border-bottom: 2px solid transparent !important; */
+  background: transparent !important;
+}
+
+.tab:hover {
+  background: transparent !important;
+  color: var(--colorNeutralForeground1) !important;
+}
+
+.tabSelected {
+ color: var(--colorBrandForeground1) !important;
+  font-weight: 600 !important;
+  border-bottom: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+.tabSelected:hover {
+  background: transparent !important;
+}
+
+/* Search Input */
+.searchContainer {
+  margin: 16px 0;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.searchInput {
+  width: 100%;
+   background-color: var(--colorNeutralBackground3) !important;
+  border: 1px solid var(--colorNeutralStroke1) !important;
+  color: var(--colorNeutralForeground1) !important;
+  pointer-events: auto !important; /* Add this line */
+  z-index: 1 !important; /* Add this line */
+}
+
+.searchInput:focus {
+  outline: 2px solid var(--colorBrandStroke1) !important;
+  border-color: var(--colorBrandStroke1) !important;
+}
+
+/* Loading Container */
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  padding: 32px;
+  width: 100%;
+}
+
+/* Teams Container */
+.teamsContainer {
+  width: 100%;
+}
+
+.radioGroup {
+  width: 100%;
+}
+
+.teamsList {
+  max-height: 400px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
+  margin-right: -8px;
+  width: calc(100% + 8px);
+  box-sizing: border-box;
+}
+
+/* Error Message */
+.errorMessage {
+  color: var(--colorPaletteRedForeground1);
+  background-color: var(--colorPaletteRedBackground1);
+  border: 1px solid var(--colorPaletteRedBorder1);
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.errorText {
+  color: var(--colorPaletteRedForeground1);
+  white-space: pre-line;
+}
+
+/* No Teams Container */
+.noTeamsContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 16px;
+  text-align: center;
+}
+
+.noTeamsText {
+  color: var(--colorNeutralForeground3);
+  margin-bottom: 8px;
+}
+
+.noTeamsSubtext {
+  color: var(--colorNeutralForeground3);
+}
+
+/* Team Card - 4 Column Layout: Radio | Team Info | Agent Tags | Three-dots */
+.teamCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px 16px;
+  border: 1px solid var(--colorNeutralStroke2);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  background-color: var(--colorNeutralBackground1);
+  transition: all 0.2s ease;
+}
+
+.teamCard:hover {
+  background-color: var(--colorNeutralBackground2);
+  border-color: var(--colorNeutralStroke1);
+}
+
+.teamCardSelected {
+  background-color: var(--colorBrandBackground2);
+  border-color: var(--colorBrandStroke1);
+}
+
+/* Radio Button Column */
+.teamRadio {
+  margin: 0 !important;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+/* Team Content Column - Name and Description only */
+.teamContent {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.teamName {
+  font-weight: 600 !important;
+  color: var(--colorNeutralForeground1) !important;
+  margin: 0 !important;
+  font-size: 16px !important;
+  line-height: 1.3;
+}
+
+.teamDescription {
+  color: var(--colorNeutralForeground2) !important;
+  margin: 0 !important;
+  font-size: 14px !important;
+  line-height: 1.4;
+}
+
+/* Agent Tags Column - On the RIGHT of team info */
+.agentTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  /* align-items: flex-start; */
+  flex-shrink: 0;
+  max-width: 200px;
+  padding: 4px 8px;
+  /* justify-content: flex-end; */
+}
+
+.agentBadge {
+  background-color: var(--colorNeutralBackground3) !important;
+  color: var(--colorNeutralForeground2) !important;
+  border: 1px solid var(--colorNeutralStroke2) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  padding: 4px 8px !important;
+  border-radius: 4px !important;
+}
+
+/* Override FluentUI Badge padding specifically */
+.agentTags .agentBadge,
+.agentTags .agentBadge[class*="r1iycov"] {
+  padding: 6px 12px !important;
+  height: auto !important;
+  min-height: auto !important;
+}
+
+/* Delete Button Column */
+.deleteButton {
+  color: var(--colorNeutralForeground2) !important;
+  background-color: transparent !important;
+  min-width: 32px !important;
+  height: 32px !important;
+  border: none !important;
+  border-radius: 4px !important;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.deleteButton:hover {
+  background-color: var(--colorPaletteRedBackground2) !important;
+  color: var(--colorPaletteRedForeground1) !important;
+}
+.deleteButtonDisabled {
+  color: var(--colorNeutralForeground4) !important;
+  background-color: transparent !important;
+  cursor: not-allowed !important;
+  opacity: 0.6 !important;
+}
+
+.deleteButtonDisabled:hover {
+  background-color: transparent !important;
+  color: var(--colorNeutralForeground4) !important;
+  opacity: 0.6 !important;
+}
+
+/* Ensure tooltips appear above other dialog content */
+:global(.fui-Tooltip) {
+  z-index: 9999 !important;
+}
+/* Team Selector Button */
+.teamSelectorButton {
+  width: 100%;
+  height: auto;
+  min-height: 44px;
+  padding: 12px 16px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--colorNeutralForeground1);
+  text-align: left;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.teamSelectorContent {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1;
+}
+
+.currentTeamLabel {
+  color: var(--colorNeutralForeground2);
+  font-size: 11px;
+  margin-bottom: 2px;
+}
+
+.currentTeamName {
+  color: var(--colorNeutralForeground1);
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.chevronIcon {
+  color: var(--colorNeutralForeground2);
+}
+
+/* Upload Tab */
+.uploadContainer {
+  width: 100%;
+}
+
+.uploadMessage {
+  color: var(--colorPaletteGreenForeground1);
+  margin-bottom: 16px;
+  padding: 12px;
+  background-color: var(--colorPaletteGreenBackground1);
+  border: 1px solid var(--colorPaletteGreenBorder1);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dropZone {
+  border: 2px dashed var(--colorNeutralStroke1);
+  border-radius: 8px;
+  padding: 40px 20px;
+  text-align: center;
+  background-color: var(--colorNeutralBackground1);
+  margin-bottom: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dropZone:hover,
+.dropZoneHover {
+  border-color: var(--colorBrandStroke1);
+  background-color: var(--colorBrandBackground2);
+}
+
+.dropZoneContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.uploadIcon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--colorNeutralForeground3);
+}
+
+.uploadTitle {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--colorNeutralForeground1);
+  margin-bottom: 4px;
+}
+
+.uploadSubtitle {
+  font-size: 14px;
+  color: var(--colorNeutralForeground2);
+}
+
+.browseLink {
+  color: var(--colorBrandForeground1);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.requirementsBox {
+  background-color: var(--colorNeutralBackground2);
+  padding: 16px;
+  border-radius: 8px;
+}
+
+.requirementsTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--colorNeutralForeground1);
+  display: block;
+  margin-bottom: 12px;
+}
+
+.requirementsList {
+  margin: 0;
+  padding-left: 20px;
+  list-style: disc;
+}
+
+.requirementsItem {
+  margin-bottom: 8px;
+}
+
+.requirementsText {
+  font-size: 13px;
+  color: var(--colorNeutralForeground2);
+}
+
+.requirementsStrong {
+  color: var(--colorNeutralForeground1);
+}
+
+/* Button Styles */
+.continueButton {
+  padding: 12px 24px;
+}
+
+.cancelButton {
+  padding: 8px 16px;
+  margin-right: 12px;
+  min-width: 80px;
+}
+
+/* Delete Confirmation Dialog */
+.deleteDialogSurface {
+  background-color: var(--colorNeutralBackground1);
+  max-width: 500px;
+  width: 90vw;
+  border-radius: 12px;
+  border: 1px solid var(--colorNeutralStroke1);
+  box-shadow: var(--shadow64);
+}
+
+.deleteDialogContent {
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: visible;
+  gap: 0;
+  max-height: none;
+  padding: 32px;
+  /* Explicitly override any grid layout */
+  grid-template-rows: unset !important;
+  grid-template-columns: unset !important;
+}
+
+.deleteDialogBody {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px;
+  padding: 0;
+  margin-bottom: 24px;
+  /* Explicitly override any grid layout */
+  grid-template-rows: unset !important;
+  grid-template-columns: unset !important;
+}
+
+.deleteDialogTitle {
+  margin: 0;
+  padding: 0;
+  color: var(--colorNeutralForeground1);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-bottom: 16px;
+}
+
+.deleteConfirmText {
+  color: var(--colorNeutralForeground2);
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+  display: block;
+}
+
+.deleteDialogActions {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 0;
+  background-color: var(--colorNeutralBackground1);
+  border-top: none;
+  /* Explicitly override any grid layout */
+  grid-template-rows: unset !important;
+  grid-template-columns: unset !important;
+}
+
+.deleteConfirmButton {
+  background-color: var(--colorStatusDangerBackground1);
+  color: var(--colorStatusDangerForeground1) !important;
+  /* border: 1px solid var(--colorStatusDangerBackground1); */
+  padding: 10px 20px;
+  min-width: 160px;
+  border-radius: 6px;
+  /* Typography - Web/Body 1 Strong */
+  font-family: var(--Typography-Font-family-Base, "Segoe UI");
+  font-size: var(--Typography-Body-1-Strong-Font-size, 14px);
+  font-style: normal;
+  font-weight: 600;
+  line-height: var(--Typography-Body-1-Strong-Line-height, 20px);
+}
+
+/* .deleteConfirmButton:hover {
+  background-color: var(--colorStatusDangerBackground2);
+  border-color: var(--colorStatusDangerBackground2);
+  color: white !important; 
+} */
+
+.deleteConfirmButton:disabled {
+  background-color: var(--colorNeutralBackground3);
+  color: var(--colorNeutralForeground4);
+  border-color: var(--colorNeutralStroke2);
+  cursor: not-allowed;
+}
+
+/* Delete Icon */
+.deleteIcon {
+  fill: var(--colorStatusDangerForeground1) !important;
+  color: var(--colorStatusDangerForeground1) !important;
+}
+
+/* .deleteConfirmButton:hover .deleteIcon {
+  fill: white !important;
+  color: white !important;
+} */
+
+
+/* Legacy styles - can be removed */
+.teamItem {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  border: 1px solid var(--colorNeutralStroke1);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  justify-content: space-between;
+  background-color: var(--colorNeutralBackground1);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  width: 100%;
+  overflow: hidden;
+}
+
+.teamItem:hover {
+  border-color: var(--colorBrandStroke1);
+  background-color: var(--colorBrandBackground2);
+}
+
+.teamItemSelected {
+  background-color: var(--colorBrandBackground2);
+  border-color: var(--colorBrandStroke1);
+}
+
+.teamInfo {
+  flex: 2;
+  margin-left: 16px;
+}
+
+.teamBadges {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+  align-items: center;
+  margin-left: 16px;
+  margin-right: 12px;
+}
+
+.deleteButton {
+  color: var(--colorPaletteRedForeground1);
+  margin-left: 12px;
+  min-width: 32px;
+}

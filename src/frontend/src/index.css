@@ -1,0 +1,111 @@
+body, html, :root {
+    min-height: 100vh;
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+}
+
+
+/* Hide raw JSON errors  */
+body > div[style*="position: fixed"]:contains('"error_type"'),
+body > div[style*="bottom: 0"]:contains('RAI_VALIDATION_FAILED'),
+pre:contains('"message":'),
+.error-raw,
+.json-error {
+  display: none !important;
+}
+
+/* Hide any pre-formatted JSON that might contain error messages */
+pre {
+  white-space: pre-wrap;
+}
+
+pre:has-text('error_type'),
+pre:has-text('RAI_VALIDATION_FAILED') {
+  display: none !important;
+}
+
+/* Global Custom Scrollbar */
+::-webkit-scrollbar {
+    overflow-y: auto; /* Ensure scrollable content */
+    scrollbar-width: thin; /* For Firefox */
+    scrollbar-color: rgba(100, 100, 100, 0.7) transparent; /* For Firefox */
+  }
+  
+  /* Webkit-based browsers */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background-color: rgba(100, 100, 100, 0.7);
+    border-radius: 3px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(100, 100, 100, 1);
+  }
+  
+  ::-webkit-scrollbar-track {
+    /* background: red; */
+  }
+  
+  * {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+
+  .chart-container canvas {
+    --chartBarColor: var(--colorBrandBackground);
+    --chartHoverColor: var(--colorBrandBackgroundHover);
+    --chartBorderColor: var(--colorBrandForeground1);
+    --chartLineColor: var(--colorBrandForeground1);
+    --chartPointColor: var(--colorBrandBackground);
+    --chartPointBorderColor: var(--colorBrandForeground1);
+}
+
+
+/* Delete dialog layout override */
+.fui-Dialog__content[data-testid="delete-dialog"] {
+  display: flex !important;
+  flex-direction: column !important;
+  grid-template-columns: none !important;
+  grid-template-rows: none !important;
+  grid-template: none !important;
+}
+
+.fui-Dialog__content[data-testid="delete-dialog"] .fui-DialogBody {
+  display: flex !important;
+  flex-direction: column !important;
+  grid-template-columns: none !important;
+  grid-template-rows: none !important;
+  grid-template: none !important;
+}
+
+/* Alternative approach - target all dialog content that contains delete buttons */
+/* .fui-Dialog__content:has(button[data-testid="delete-team-confirm"]) {
+  display: flex !important;
+  flex-direction: column !important;
+  grid-template-columns: none !important;
+  grid-template-rows: none !important;
+}
+
+.fui-Dialog__content:has(button[data-testid="delete-team-confirm"]) .fui-DialogBody {
+  display: flex !important;
+  flex-direction: column !important;
+  grid-template-columns: none !important;
+  grid-template-rows: none !important;
+} */
+
+/* Delete button red color override */
+.delete-team-button,
+.delete-team-button .fui-Button__icon {
+  color: #d13438 !important;
+  background-color: transparent !important;
+}
+
+.delete-team-button:hover,
+.delete-team-button:hover .fui-Button__icon {
+  background-color: #fdf2f2 !important;
+  color: #a4262c !important;
+}

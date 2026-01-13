@@ -1,0 +1,49 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "macae-mcp-server"
+description = "FastMCP-based Model Context Protocol (MCP) server for the MACAE solution accelerator"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+  { name = "Microsoft MACAE Team" }
+]
+dynamic = ["version"]
+
+# Core runtime dependencies (kept in sync with requirements.txt)
+dependencies = [
+  "fastmcp==2.13.0",
+  "uvicorn[standard]==0.38.0",
+  "python-dotenv==1.1.1",
+  "azure-identity==1.19.0",
+  "pydantic==2.11.7",
+  "pydantic-settings==2.6.1",
+  "python-multipart==0.0.18",
+  "httpx==0.28.1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest==8.3.4",
+  "pytest-asyncio==0.24.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator"
+Repository = "https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator"
+
+# Version is sourced from the package __init__.py
+[tool.hatch.version]
+path = "__init__.py"
+
+# Hatch build configuration. Since this folder is itself the package root,
+# include everything under it (no src/ layout).
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+include = ["**/*", "README.md"]
+
+[project.scripts]
+mcp-server = "mcp_server:main"

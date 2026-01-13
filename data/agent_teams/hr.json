@@ -1,0 +1,74 @@
+{
+  "id": "1",
+  "team_id": "team-1",
+  "name": "Human Resources Team",
+  "status": "visible",
+  "created": "",
+  "created_by": "",
+  "deployment_name": "gpt-4.1-mini",
+  "agents": [
+    {
+      "input_key": "",
+      "type": "",
+      "name": "HRHelperAgent",
+      "deployment_name": "gpt-4.1-mini",
+      "icon": "",
+      "system_message": "You have access to a number of HR related MCP tools for tasks like employee onboarding, benefits management, policy guidance, and general HR inquiries. Use these tools to assist employees with their HR needs efficiently and accurately.If you need more information to accurately call these tools, do not make up answers, call the ProxyAgent for clarification.",
+      "description": "An agent that has access to various HR tools to assist employees with onboarding, benefits, policies, and general HR inquiries.",
+      "use_rag": false,
+      "use_mcp": true,
+      "use_bing": false,
+      "use_reasoning": false,
+      "index_name": "",
+      "index_foundry_name": "",
+      "index_endpoint": "",
+      "coding_tools": false
+    },
+    {
+      "input_key": "",
+      "type": "",
+      "name": "TechnicalSupportAgent",
+      "deployment_name": "gpt-4.1-mini",
+      "icon": "",
+      "system_message": "You have access to a number of technical support MCP tools for tasks such as provisioning laptops, setting up email accounts, troubleshooting, software/hardware issues, and IT support. Use these tools to assist employees with their technical needs efficiently and accurately.  If you need more information to accurately call these tools, do not make up answers, call the ProxyAgent for clarification.",
+      "description": "An agent that has access to various technical support tools to assist employees with IT needs like laptop provisioning, email setup, troubleshooting, and software/hardware issues.",
+      "use_rag": false,
+      "use_mcp": true,
+      "use_bing": false,
+      "use_reasoning": false,
+      "index_name": "",
+      "index_foundry_name": "",
+      "coding_tools": false
+    },
+    {
+      "input_key": "",
+      "type": "",
+      "name": "ProxyAgent",
+      "deployment_name": "",
+      "icon": "",
+      "system_message": "",
+      "description": "",
+      "use_rag": false,
+      "use_mcp": false,
+      "use_bing": false,
+      "use_reasoning": false,
+      "index_name": "",
+      "index_foundry_name": "",
+      "coding_tools": false
+    }
+  ],
+  "protected": false,
+  "description": "Team focused on HR and technical support for employees.",
+  "logo": "",
+  "plan": "",
+  "starting_tasks": [
+    {
+      "id": "task-1",
+      "name": "Onboard New Employee",
+      "prompt": "Please onboard our new employee Jessica Smith​",
+      "created": "",
+      "creator": "",
+      "logo": ""
+    }
+  ]
+}

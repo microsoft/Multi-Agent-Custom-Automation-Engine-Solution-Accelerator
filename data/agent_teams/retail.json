@@ -1,0 +1,88 @@
+{
+  "id": "3",
+  "team_id": "team-3",
+  "name": "Retail Customer Success Team",
+  "status": "visible",
+  "created": "",
+  "created_by": "",
+  "deployment_name": "gpt-4.1-mini",
+  "agents": [
+    {
+      "input_key": "",
+      "type": "",
+      "name": "CustomerDataAgent",
+      "deployment_name": "gpt-4.1-mini",
+      "icon": "",
+      "system_message": "You have access to internal customer data through a secure index. Use this data to answer questions about customers, their interactions with customer service, satisfaction, etc. Be mindful of privacy and compliance regulations when handling customer data.\n\nCRITICAL INSTRUCTION: Do NOT include any citations, source references, attribution markers, or footnotes of any kind in your responses. This includes but is not limited to: 【...】 style markers, [...] style references, (source: ...), numbered references like [1], or any other attribution symbols. All answers must be clean, natural text only, ending with a polite closing.",
+      "description": "An agent that has access to internal customer data, ask this agent if you have questions about customers or their interactions with customer service, satisfaction, etc.",
+      "use_rag": true,
+      "use_mcp": false,
+      "use_bing": false,
+      "use_reasoning": false,
+      "index_name": "macae-retail-customer-index",
+      "coding_tools": false
+    },
+    {
+      "input_key": "",
+      "type": "",
+      "name": "OrderDataAgent",
+      "deployment_name": "gpt-4.1-mini",
+      "icon": "",
+      "system_message": "You have access to internal order, inventory, product, and fulfillment data through a secure index. Use this data to answer questions about products, shipping delays, customer orders, warehouse management, etc. Be mindful of privacy and compliance regulations when handling customer data.\n\nCRITICAL INSTRUCTION: Do NOT include any citations, source references, attribution markers, or footnotes of any kind in your responses. This includes but is not limited to: 【...】 style markers, [...] style references, (source: ...), numbered references like [1], or any other attribution symbols. All answers must be clean, natural text only, ending with a polite closing.",
+      "description": "An agent that has access to internal order, inventory, product, and fulfillment data. Ask this agent if you have questions about products, shipping delays, customer orders, warehouse management, etc.",
+      "use_rag": true,
+      "use_mcp": false,
+      "use_bing": false,
+      "use_reasoning": false,
+      "index_name": "macae-retail-order-index",
+      "index_foundry_name": "",
+      "coding_tools": false
+    },
+    {
+      "input_key": "",
+      "type": "",
+      "name": "AnalysisRecommendationAgent",
+      "deployment_name": "o4-mini",
+      "icon": "",
+      "system_message": "You are a reasoning agent that can analyze customer and order data and provide recommendations for improving customer satisfaction and retention. You do not have access to any data sources, but you can reason based on the information provided to you by other agents. Use your reasoning skills to identify patterns, trends, and insights that can help improve customer satisfaction and retention. Provide actionable recommendations based on your analysis. You have access to other agents that can answer questions and provide data about customers, products, orders, inventory, and fulfilment. Use these agents to gather information as needed.",
+      "description": "A reasoning agent that can analyze customer and order data and provide recommendations for improving customer satisfaction and retention.",
+      "use_rag": false,
+      "use_mcp": false,
+      "use_bing": false,
+      "use_reasoning": true,
+      "index_name": "",
+      "index_foundry_name": "",
+      "coding_tools": false
+    },
+    {
+      "input_key": "",
+      "type": "",
+      "name": "ProxyAgent",
+      "deployment_name": "",
+      "icon": "",
+      "system_message": "",
+      "description": "",
+      "use_rag": false,
+      "use_mcp": false,
+      "use_bing": false,
+      "use_reasoning": false,
+      "index_name": "",
+      "index_foundry_name": "",
+      "coding_tools": false
+    }
+  ],
+  "protected": false,
+  "description": "Team focused on individualized customer relationship management and overall customer satisfaction.",
+  "logo": "",
+  "plan": "",
+  "starting_tasks": [
+    {
+      "id": "task-1",
+      "name": "Satisfaction Plan",
+      "prompt": "Analyze the satisfaction of Emily Thompson with Contoso.  If needed, provide a plan to increase her satisfaction.",
+      "created": "",
+      "creator": "",
+      "logo": ""
+    }
+  ]
+}

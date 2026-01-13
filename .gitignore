@@ -6,6 +6,7 @@ __pycache__/
 # C extensions
 *.so
 .env
+.env_*
 appsettings.json
 # Distribution / packaging
 .Python
@@ -125,6 +126,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
+scriptenv
 env/
 venv/
 ENV/
@@ -335,7 +337,7 @@ PublishScripts/
 !**/packages/build/
 # Uncomment if necessary however generally it will be regenerated when needed
 #!**/packages/repositories.config
-# NuGet v3's project.json files produces more ignorable files
+# NuGet v4's project.json files produces more ignorable files
 *.nuget.props
 *.nuget.targets
 
@@ -456,4 +458,10 @@ __pycache__/
 *.xsd.cs
 
 *.whl
-!autogen_core-0.3.dev0-py3-none-any.whl
+.azure
+.github/copilot-instructions.md
+# Ignore sample code folder
+data/sample_code/
+# Bicep local files
+*.local*.bicepparam
+*.local*.parameters.json

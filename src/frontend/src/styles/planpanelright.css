@@ -1,0 +1,272 @@
+/* PlanPanelRight styles */
+.plan-panel-right {
+  width: 280px;
+  height: 100vh;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-left: 1px solid var(--colorNeutralStroke1);
+  /* backgroundColor: var(--colorNeutralBackground1); */
+}
+
+.plan-panel-right__no-data {
+  width: 280px;
+  height: 100vh;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-left: 1px solid var(--colorNeutralStroke1);
+  color: var(--colorNeutralForeground3);
+  font-size: 14px;
+  font-style: italic;
+}
+
+.plan-section {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--colorNeutralStroke1);
+}
+
+.plan-section__title {
+  margin-bottom: 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--colorNeutralForeground1);
+}
+
+.plan-section__empty {
+  text-align: center;
+  color: var(--colorNeutralForeground3);
+  font-size: 14px;
+  font-style: italic;
+  padding: 20px;
+}
+
+.plan-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.plan-step {
+  display: flex;
+  flex-direction: column;
+}
+
+.plan-step__heading {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--colorNeutralForeground1);
+  margin-bottom: 4px;
+}
+
+.plan-step__content {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.plan-step__arrow {
+  font-size: 16px;
+  color: var(--colorNeutralForeground2);
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.plan-step__text {
+  font-size: 14px;
+  color: var(--colorNeutralForeground1);
+  line-height: 1.4;
+}
+
+.agents-section {
+  flex: 1;
+  overflow: auto;
+}
+
+.agents-section__title {
+  margin-bottom: 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--colorNeutralForeground1);
+}
+
+.agents-section__empty {
+  text-align: center;
+  color: var(--colorNeutralForeground3);
+  font-size: 14px;
+  font-style: italic;
+  padding: 20px;
+}
+
+.agents-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.agent-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.agent-item__icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: var(--colorNeutralBackground3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.agent-item__info {
+  flex: 1;
+}
+
+.agent-item__name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--colorNeutralForeground1);
+}
+
+/* Media query for 1920x1080 and smaller screens */
+@media screen and (max-width: 1920px) and (max-height: 1080px) {
+  .plan-section {
+    /* Reduce bottom margin and padding to make it more compact */
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    /* Increase the height limit for better readability */
+    max-height: 550px;
+    overflow-y: auto;
+  }
+
+  .plan-section__title {
+    /* Keep title spacing reasonable */
+    margin-bottom: 14px;
+    font-size: 14px;
+  }
+
+  .plan-steps {
+    /* Keep reasonable gap between steps */
+    gap: 7px;
+  }
+
+  .plan-step__heading {
+    /* Keep headings readable */
+    font-size: 14px;
+    margin-bottom: 3px;
+  }
+
+  .plan-step__text {
+    /* Keep text readable */
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  .plan-step__content {
+    /* Keep reasonable spacing in step content */
+    gap: 7px;
+    margin-bottom: 3px;
+  }
+
+  .plan-section__empty {
+    /* Keep empty state readable */
+    padding: 16px;
+    font-size: 14px;
+  }
+
+  .agents-section {
+    /* Give more space to agents section but not too much */
+    flex: 1.3;
+    /* Ensure it can scroll if needed */
+    overflow-y: auto;
+    /* Add some top spacing */
+    padding-top: 4px;
+  }
+
+  .agents-section__title {
+    /* Keep title spacing */
+    margin-bottom: 15px;
+    font-size: 14px;
+  }
+
+  .agents-list {
+    /* Keep reasonable gap between agents */
+    gap: 11px;
+  }
+
+  .agent-item {
+    /* Keep agent items readable */
+    padding: 7px 0;
+    gap: 11px;
+  }
+
+  .agent-item__icon {
+    /* Keep icons at good size */
+    width: 30px;
+    height: 30px;
+  }
+
+  .agent-item__name {
+    /* Keep font readable */
+    font-size: 14px;
+  }
+}
+
+/* Additional breakpoint for even smaller screens (laptops) */
+@media screen and (max-width: 1366px) and (max-height: 768px) {
+  .plan-section {
+    /* More compact for smaller screens but still readable */
+    max-height: 350px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+  }
+
+  .plan-section__title {
+    margin-bottom: 12px;
+    font-size: 13px;
+  }
+
+  .plan-steps {
+    gap: 6px;
+  }
+
+  .plan-step__heading {
+    font-size: 13px;
+  }
+
+  .plan-step__text {
+    font-size: 13px;
+    line-height: 1.3;
+  }
+
+  .agents-section {
+    flex: 1.5;
+  }
+
+  .agents-section__title {
+    margin-bottom: 13px;
+    font-size: 13px;
+  }
+
+  .agent-item {
+    padding: 6px 0;
+    gap: 9px;
+  }
+
+  .agent-item__icon {
+    width: 26px;
+    height: 26px;
+  }
+
+  .agent-item__name {
+    font-size: 13px;
+  }
+}
