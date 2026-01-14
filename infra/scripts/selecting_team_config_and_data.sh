@@ -815,7 +815,6 @@ if [[ "$useCaseSelection" == "2" || "$useCaseSelection" == "all" || "$useCaseSel
     echo "Python script to index data for Retail Customer Satisfaction successfully executed."
 fi
 
-echo "Script executed successfully. Sample Data Processed Successfully."
 
 if [[ "$isTeamConfigFailed" == true || "$isSampleDataFailed" == true ]]; then
     echo ""

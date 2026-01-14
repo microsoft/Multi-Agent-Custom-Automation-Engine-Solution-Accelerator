@@ -383,6 +383,7 @@ if (-not $ResourceGroup) {
             exit 1
         }
     }
+}
 
 # Interactive Use Case Selection
 Write-Host ""
@@ -865,7 +866,6 @@ if ($isTeamConfigFailed -or $isSampleDataFailed) {
     Write-Host "`nOne or more tasks failed. Please check the error messages above."
     exit 1
 } else {
-    Write-Host "`nScript executed successfully. Sample Data Processed Successfully."
     if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6"){
         Write-Host "`nTeam configuration upload and sample data processing completed successfully."
     }else {
