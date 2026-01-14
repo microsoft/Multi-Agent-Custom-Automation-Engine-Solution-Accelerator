@@ -1,4 +1,4 @@
-import React, { useState, cloneElement, isValidElement } from "react";
+import React, { useState, isValidElement } from "react";
 import { CoralAccordionContext } from "./CoralAccordionContext";
 
 type CoralAccordionItemProps = {

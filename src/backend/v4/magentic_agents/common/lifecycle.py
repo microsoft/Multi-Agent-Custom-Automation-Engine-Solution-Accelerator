@@ -43,6 +43,7 @@ class MCPEnabledBase:
         agent_description: str | None = None,
         agent_instructions: str | None = None,
         model_deployment_name: str | None = None,
+        project_client=None,
     ) -> None:
         self._stack: AsyncExitStack | None = None
         self.mcp_cfg: MCPConfig | None = mcp
@@ -58,6 +59,7 @@ class MCPEnabledBase:
         self.agent_description: str | None = agent_description
         self.agent_instructions: str | None = agent_instructions
         self.model_deployment_name: str | None = model_deployment_name
+        self.project_client = project_client
         self.logger = logging.getLogger(__name__)
 
     async def open(self) -> "MCPEnabledBase":
@@ -85,8 +87,14 @@ class MCPEnabledBase:
         # Register agent (best effort)
         try:
             agent_registry.register_agent(self)
-        except Exception:
-            pass
+        except Exception as exc:
+            # Best-effort registration; log and continue without failing open()
+            self.logger.warning(
+                "Failed to register agent %s in agent_registry: %s",
+                type(self).__name__,
+                exc,
+                exc_info=True,
+            )
 
         return self
 
@@ -98,13 +106,25 @@ class MCPEnabledBase:
             if self._agent and hasattr(self._agent, "close"):
                 try:
                     await self._agent.close()  # AzureAIAgentClient has async close
-                except Exception:
-                    pass
+                except Exception as exc:
+                    # Best-effort close; log failure but continue teardown
+                    self.logger.warning(
+                        "Error while closing underlying agent %s: %s",
+                        type(self._agent).__name__ if self._agent else "Unknown",
+                        exc,
+                        exc_info=True,
+                    )
             # Unregister from registry if present
             try:
                 agent_registry.unregister_agent(self)
-            except Exception:
-                pass
+            except Exception as exc:
+                # Best-effort unregister; log and continue teardown
+                self.logger.warning(
+                    "Failed to unregister agent %s from agent_registry: %s",
+                    type(self).__name__,
+                    exc,
+                    exc_info=True,
+                )
             await self._stack.aclose()
         finally:
             self._stack = None
@@ -149,6 +169,55 @@ class MCPEnabledBase:
         )
         return chat_client
 
+    async def resolve_agent_id(self, agent_id: str) -> Optional[str]:
+        """Resolve agent ID via Projects SDK first (for RAI agents), fallback to AgentsClient.
+
+        Args:
+            agent_id: The agent ID to resolve
+
+        Returns:
+            The resolved agent ID if found, None otherwise
+        """
+        # Try Projects SDK first (RAI agents were created via project_client)
+        try:
+            if self.project_client:
+                agent = await self.project_client.agents.get_agent(agent_id)
+                if agent and agent.id:
+                    self.logger.info(
+                        "RAI.AgentReuseSuccess: Resolved agent via Projects SDK (id=%s)",
+                        agent.id,
+                    )
+                    return agent.id
+        except Exception as ex:
+            self.logger.warning(
+                "RAI.AgentReuseMiss: Projects SDK get_agent failed (reason=ProjectsGetFailed, id=%s): %s",
+                agent_id,
+                ex,
+            )
+
+        # Fallback via AgentsClient (endpoint)
+        try:
+            if self.client:
+                agent = await self.client.get_agent(agent_id=agent_id)
+                if agent and agent.id:
+                    self.logger.info(
+                        "RAI.AgentReuseSuccess: Resolved agent via AgentsClient (id=%s)",
+                        agent.id,
+                    )
+                    return agent.id
+        except Exception as ex:
+            self.logger.warning(
+                "RAI.AgentReuseMiss: AgentsClient get_agent failed (reason=EndpointGetFailed, id=%s): %s",
+                agent_id,
+                ex,
+            )
+
+        self.logger.error(
+            "RAI.AgentReuseMiss: Agent ID not resolvable via any client (reason=ClientMismatch, id=%s)",
+            agent_id,
+        )
+        return None
+
     def get_agent_id(self, chat_client) -> str:
         """Return the underlying agent ID."""
         if chat_client and chat_client.agent_id is not None:
@@ -171,41 +240,86 @@ class MCPEnabledBase:
                 self.memory_store, self.team_config, self.agent_name
             )
 
-            if agent_id:
-                agent = await self.client.get_agent(agent_id=agent_id)
-                if agent and agent.id is not None:
-                    chat_client = AzureAIAgentClient(
-                        project_endpoint=self.project_endpoint,
-                        agent_id=agent.id,
-                        model_deployment_name=self.model_deployment_name,
-                        async_credential=self.creds,
-                    )
+            if not agent_id:
+                self.logger.info(
+                    "RAI reuse: no stored agent id (agent_name=%s)", self.agent_name
+                )
+                return None
 
-        except (
-            Exception
-        ) as ex:  # Consider narrowing this to specific exceptions if possible
-            self.logger.error("Failed to initialize Get database team agent: %s", ex)
+            # Use resolve_agent_id to try Projects SDK first, then AgentsClient
+            resolved = await self.resolve_agent_id(agent_id)
+            if not resolved:
+                self.logger.error(
+                    "RAI.AgentReuseMiss: stored id %s not resolvable (agent_name=%s)",
+                    agent_id,
+                    self.agent_name,
+                )
+                return None
+
+            # Create client with resolved ID, preferring project_client for RAI agents
+            if self.agent_name == "RAIAgent" and self.project_client:
+                chat_client = AzureAIAgentClient(
+                    project_client=self.project_client,
+                    agent_id=resolved,
+                    async_credential=self.creds,
+                )
+                self.logger.info(
+                    "RAI.AgentReuseSuccess: Created AzureAIAgentClient via Projects SDK (id=%s)",
+                    resolved,
+                )
+            else:
+                chat_client = AzureAIAgentClient(
+                    project_endpoint=self.project_endpoint,
+                    agent_id=resolved,
+                    model_deployment_name=self.model_deployment_name,
+                    async_credential=self.creds,
+                )
+                self.logger.info(
+                    "Created AzureAIAgentClient via endpoint (id=%s)", resolved
+                )
+
+        except Exception as ex:
+            self.logger.error(
+                "Failed to initialize Get database team agent (agent_name=%s): %s",
+                self.agent_name,
+                ex,
+            )
         return chat_client
 
     async def save_database_team_agent(self) -> None:
-        """Save current team agent to database."""
+        """Save current team agent to database (only if truly new or changed)."""
         try:
             if self._agent.id is None:
                 self.logger.error("Cannot save database team agent: agent_id is None")
+                return
+
+            # Check if stored ID matches current ID
+            stored_id = await get_database_team_agent_id(
+                self.memory_store, self.team_config, self.agent_name
+            )
+            if stored_id == self._agent.chat_client.agent_id:
+                self.logger.info(
+                    "RAI reuse: id unchanged (id=%s); skip save.", self._agent.id
+                )
                 return
 
             currentAgent = CurrentTeamAgent(
                 team_id=self.team_config.team_id,
                 team_name=self.team_config.name,
                 agent_name=self.agent_name,
-                agent_foundry_id=self._agent.id,
+                agent_foundry_id=self._agent.chat_client.agent_id,
                 agent_description=self.agent_description,
                 agent_instructions=self.agent_instructions,
             )
             await self.memory_store.add_team_agent(currentAgent)
+            self.logger.info(
+                "Saved team agent to database (agent_name=%s, id=%s)",
+                self.agent_name,
+                self._agent.id,
+            )
 
         except Exception as ex:
-            self.logger.error("Failed to save save database: %s", ex)
+            self.logger.error("Failed to save database: %s", ex)
 
     async def _prepare_mcp_tool(self) -> None:
         """Translate MCPConfig to a HostedMCPTool (agent_framework construct)."""
@@ -243,6 +357,7 @@ class AzureAgentBase(MCPEnabledBase):
         agent_name: str | None = None,
         agent_description: str | None = None,
         agent_instructions: str | None = None,
+        project_client=None,
     ) -> None:
         super().__init__(
             mcp=mcp,
@@ -254,6 +369,7 @@ class AzureAgentBase(MCPEnabledBase):
             agent_description=agent_description,
             agent_instructions=agent_instructions,
             model_deployment_name=model_deployment_name,
+            project_client=project_client,
         )
 
         self._created_ephemeral: bool = (
@@ -309,26 +425,26 @@ class AzureAgentBase(MCPEnabledBase):
             if self._agent and hasattr(self._agent, "close"):
                 try:
                     await self._agent.close()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logging.warning("Failed to close underlying agent %r: %s", self._agent, exc, exc_info=True)
 
             # Unregister from registry
             try:
                 agent_registry.unregister_agent(self)
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.warning("Failed to unregister agent %r from registry: %s", self, exc, exc_info=True)
 
             # Close credential and project client
             if self.client:
                 try:
                     await self.client.close()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logging.warning("Failed to close Azure AgentsClient %r: %s", self.client, exc, exc_info=True)
             if self.creds:
                 try:
                     await self.creds.close()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logging.warning("Failed to close credentials %r: %s", self.creds, exc, exc_info=True)
 
         finally:
             await super().close()

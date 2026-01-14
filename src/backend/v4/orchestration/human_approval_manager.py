@@ -44,6 +44,7 @@ class HumanApprovalMagenticManager(StandardMagenticManager):
         """
 
         plan_append = """
+
 IMPORTANT: Never ask the user for information or clarification until all agents on the team have been asked first.
 
 EXAMPLE: If the user request involves product information, first ask all agents on the team to provide the information.

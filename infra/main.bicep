@@ -126,40 +126,40 @@ param enablePrivateNetworking bool = false
 
 @secure()
 @description('Optional. The user name for the administrator account of the virtual machine. Allows to customize credentials if `enablePrivateNetworking` is set to true.')
-param virtualMachineAdminUsername string = take(newGuid(), 20)
+param virtualMachineAdminUsername string?
 
 @description('Optional. The password for the administrator account of the virtual machine. Allows to customize credentials if `enablePrivateNetworking` is set to true.')
 @secure()
-param virtualMachineAdminPassword string = newGuid()
+param virtualMachineAdminPassword string?
 
 // These parameters are changed for testing - please reset as part of publication
 
 @description('Optional. The Container Registry hostname where the docker images for the backend are located.')
-param backendContainerRegistryHostname string = 'macaev3tst1acr.azurecr.io'
+param backendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
 
 @description('Optional. The Container Image Name to deploy on the backend.')
-param backendContainerImageName string = 'macae-backend'
+param backendContainerImageName string = 'macaebackend'
 
 @description('Optional. The Container Image Tag to deploy on the backend.')
-param backendContainerImageTag string = 'v4tst2'
+param backendContainerImageTag string = 'latest_v4'
 
 @description('Optional. The Container Registry hostname where the docker images for the frontend are located.')
-param frontendContainerRegistryHostname string = 'macaev3tst1acr.azurecr.io'
+param frontendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
 
 @description('Optional. The Container Image Name to deploy on the frontend.')
-param frontendContainerImageName string = 'macae-frontend'
+param frontendContainerImageName string = 'macaefrontend'
 
 @description('Optional. The Container Image Tag to deploy on the frontend.')
-param frontendContainerImageTag string = 'v4tst2'
+param frontendContainerImageTag string = 'latest_v4'
 
 @description('Optional. The Container Registry hostname where the docker images for the MCP are located.')
-param MCPContainerRegistryHostname string = 'macaev3tst1acr.azurecr.io'
+param MCPContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
 
 @description('Optional. The Container Image Name to deploy on the MCP.')
-param MCPContainerImageName string = 'mcp_server'
+param MCPContainerImageName string = 'macaemcp'
 
 @description('Optional. The Container Image Tag to deploy on the MCP.')
-param MCPContainerImageTag string = 'v4tst1'
+param MCPContainerImageTag string = 'latest_v4'
 
 @description('Optional. Enable/Disable usage telemetry for module.')
 param enableTelemetry bool = true
@@ -235,6 +235,7 @@ resource resourceGroupTags 'Microsoft.Resources/tags@2021-04-01' = {
   name: 'default'
   properties: {
     tags: {
+      ...resourceGroup().tags
       ...allTags
       TemplateName: 'MACAE'
       Type: enablePrivateNetworking ? 'WAF' : 'Non-WAF'
@@ -610,8 +611,8 @@ module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.17.0' = if (e
     computerName: take(virtualMachineResourceName, 15)
     osType: 'Windows'
     vmSize: virtualMachineSize
-    adminUsername: virtualMachineAdminUsername
-    adminPassword: virtualMachineAdminPassword
+    adminUsername: virtualMachineAdminUsername ?? 'JumpboxAdminUser'
+    adminPassword: virtualMachineAdminPassword ?? 'JumpboxAdminP@ssw0rd1234!'
     patchMode: 'AutomaticByPlatform'
     bypassPlatformSafetyChecksOnUserSchedule: true
     maintenanceConfigurationResourceId: maintenanceConfiguration!.outputs.resourceId
@@ -1353,6 +1354,18 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
             name: 'AZURE_DEV_COLLECT_TELEMETRY'
             value: 'no'
           }
+          {
+            name: 'AZURE_BASIC_LOGGING_LEVEL'
+            value: 'INFO'
+          }
+          {
+            name: 'AZURE_PACKAGE_LOGGING_LEVEL'
+            value: 'WARNING'
+          }
+          {
+            name: 'AZURE_LOGGING_PACKAGES'
+            value: ''
+          }
         ]
       }
     ]
@@ -1534,8 +1547,12 @@ var storageAccountName = replace('st${solutionSuffix}', '-', '')
 param storageContainerName string = 'sample-dataset'
 param storageContainerNameRetailCustomer string = 'retail-dataset-customer'
 param storageContainerNameRetailOrder string = 'retail-dataset-order'
-param storageContainerNameRFP string = 'rfp-dataset'
-param storageContainerNameLegalContract string = 'legal-contract-dataset'
+param storageContainerNameRFPSummary string = 'rfp-summary-dataset'
+param storageContainerNameRFPRisk string = 'rfp-risk-dataset'
+param storageContainerNameRFPCompliance string = 'rfp-compliance-dataset'
+param storageContainerNameContractSummary string = 'contract-summary-dataset'
+param storageContainerNameContractRisk string = 'contract-risk-dataset'
+param storageContainerNameContractCompliance string = 'contract-compliance-dataset'
 module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
   name: take('avm.res.storage.storage-account.${storageAccountName}', 64)
   params: {
@@ -1602,11 +1619,27 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
           publicAccess: 'None'
         }
         {
-          name: storageContainerNameRFP
+          name: storageContainerNameRFPSummary
           publicAccess: 'None'
         }
-         {
-          name: storageContainerNameLegalContract
+        {
+          name: storageContainerNameRFPRisk
+          publicAccess: 'None'
+        }
+        {
+          name: storageContainerNameRFPCompliance
+          publicAccess: 'None'
+        }
+        {
+          name: storageContainerNameContractSummary
+          publicAccess: 'None'
+        }
+        {
+          name: storageContainerNameContractRisk
+          publicAccess: 'None'
+        }
+        {
+          name: storageContainerNameContractCompliance
           publicAccess: 'None'
         }
       ]
@@ -1620,10 +1653,15 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
 // ========== Search Service ========== //
 
 var searchServiceName = 'srch-${solutionSuffix}'
-var aiSearchIndexNameForLegalContract = 'legal-doc-index'
+var aiSearchIndexNameForContractSummary = 'contract-summary-doc-index'
+var aiSearchIndexNameForContractRisk = 'contract-risk-doc-index'
+var aiSearchIndexNameForContractCompliance = 'contract-compliance-doc-index'
 var aiSearchIndexNameForRetailCustomer = 'macae-retail-customer-index'
 var aiSearchIndexNameForRetailOrder = 'macae-retail-order-index'
-var aiSearchIndexNameForRFP = 'macae-rfp-index'
+var aiSearchIndexNameForRFPSummary = 'macae-rfp-summary-index'
+var aiSearchIndexNameForRFPRisk = 'macae-rfp-risk-index'
+var aiSearchIndexNameForRFPCompliance = 'macae-rfp-compliance-index'
+
 module searchService 'br/public:avm/res/search/search-service:0.11.1' = {
   name: take('avm.res.search.search-service.${solutionSuffix}', 64)
   params: {
@@ -1826,10 +1864,18 @@ output AZURE_DEV_COLLECT_TELEMETRY  string = 'no'
 
 output AZURE_STORAGE_CONTAINER_NAME_RETAIL_CUSTOMER string = storageContainerNameRetailCustomer
 output AZURE_STORAGE_CONTAINER_NAME_RETAIL_ORDER string = storageContainerNameRetailOrder
-output AZURE_STORAGE_CONTAINER_NAME_RFP string = storageContainerNameRFP
-output AZURE_STORAGE_CONTAINER_NAME_LEGAL_CONTRACT string = storageContainerNameLegalContract
+output AZURE_STORAGE_CONTAINER_NAME_RFP_SUMMARY string = storageContainerNameRFPSummary
+output AZURE_STORAGE_CONTAINER_NAME_RFP_RISK string = storageContainerNameRFPRisk
+output AZURE_STORAGE_CONTAINER_NAME_RFP_COMPLIANCE string = storageContainerNameRFPCompliance
+output AZURE_STORAGE_CONTAINER_NAME_CONTRACT_SUMMARY string = storageContainerNameContractSummary
+output AZURE_STORAGE_CONTAINER_NAME_CONTRACT_RISK string = storageContainerNameContractRisk
+output AZURE_STORAGE_CONTAINER_NAME_CONTRACT_COMPLIANCE string = storageContainerNameContractCompliance
 output AZURE_AI_SEARCH_INDEX_NAME_RETAIL_CUSTOMER string = aiSearchIndexNameForRetailCustomer
 output AZURE_AI_SEARCH_INDEX_NAME_RETAIL_ORDER string = aiSearchIndexNameForRetailOrder
-output AZURE_AI_SEARCH_INDEX_NAME_RFP string = aiSearchIndexNameForRFP
-output AZURE_AI_SEARCH_INDEX_NAME_LEGAL_CONTRACT string = aiSearchIndexNameForLegalContract
+output AZURE_AI_SEARCH_INDEX_NAME_RFP_SUMMARY string = aiSearchIndexNameForRFPSummary
+output AZURE_AI_SEARCH_INDEX_NAME_RFP_RISK string = aiSearchIndexNameForRFPRisk
+output AZURE_AI_SEARCH_INDEX_NAME_RFP_COMPLIANCE string = aiSearchIndexNameForRFPCompliance
+output AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_SUMMARY string = aiSearchIndexNameForContractSummary
+output AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_RISK string = aiSearchIndexNameForContractRisk
+output AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_COMPLIANCE string = aiSearchIndexNameForContractCompliance
 

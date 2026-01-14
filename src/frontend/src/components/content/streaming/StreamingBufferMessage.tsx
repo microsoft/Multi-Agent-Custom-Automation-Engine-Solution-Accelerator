@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
     Button,
 } from '@fluentui/react-components';
-import { ChevronRightRegular, ChevronDownRegular, CheckmarkCircle20Regular, ArrowTurnDownRightRegular } from '@fluentui/react-icons';
+import { CheckmarkCircle20Regular, ArrowTurnDownRightRegular } from '@fluentui/react-icons';
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypePrism from "rehype-prism";

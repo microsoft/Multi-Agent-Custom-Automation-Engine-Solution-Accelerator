@@ -2,9 +2,7 @@ import {
   Body1Strong,
   Button,
   Caption1,
-  Title2,
-  MessageBar,
-  MessageBarBody,
+  Title2
 } from "@fluentui/react-components";
 
 import React, { useRef, useEffect, useState } from "react";
@@ -17,7 +15,6 @@ import "./../../styles/HomeInput.css";
 import { HomeInputProps, iconMap, QuickTask } from "../../models/homeInput";
 import { TaskService } from "../../services/TaskService";
 import { NewTaskService } from "../../services/NewTaskService";
-import { RAIErrorCard, RAIErrorData } from "../errors";
 
 import ChatInput from "@/coral/modules/ChatInput";
 import InlineToaster, { useInlineToaster } from "../toast/InlineToaster";
@@ -63,17 +60,16 @@ interface ExtendedQuickTask extends QuickTask {
 const HomeInput: React.FC<HomeInputProps> = ({ selectedTeam }) => {
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [input, setInput] = useState<string>("");
-  const [raiError, setRAIError] = useState<RAIErrorData | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const navigate = useNavigate();
   const location = useLocation(); // ✅ location.state used to control focus
   const { showToast, dismissToast } = useInlineToaster();
 
-  // Check if the selected team is the Legal Contract Review Team
+  // Check if the selected team is the Contract Compliance Review Team
   const isLegalTeam = selectedTeam?.name
     ?.toLowerCase()
-    .includes("legal contract");
+    .includes("contract compliance");
 
   useEffect(() => {
     if (location.state?.focusInput) {
@@ -83,7 +79,6 @@ const HomeInput: React.FC<HomeInputProps> = ({ selectedTeam }) => {
 
   const resetTextarea = () => {
     setInput("");
-    setRAIError(null); // Clear any RAI errors
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
       textareaRef.current.focus();
@@ -98,7 +93,6 @@ const HomeInput: React.FC<HomeInputProps> = ({ selectedTeam }) => {
   const handleSubmit = async () => {
     if (input.trim()) {
       setSubmitting(true);
-      setRAIError(null); // Clear any previous RAI errors
       let id = showToast("Creating a plan", "progress");
 
       try {
@@ -144,7 +138,6 @@ const HomeInput: React.FC<HomeInputProps> = ({ selectedTeam }) => {
 
   const handleQuickTaskClick = (task: ExtendedQuickTask) => {
     setInput(task.fullDescription);
-    setRAIError(null); // Clear any RAI errors when selecting a quick task
     if (textareaRef.current) {
       textareaRef.current.focus();
     }
@@ -194,7 +187,7 @@ const HomeInput: React.FC<HomeInputProps> = ({ selectedTeam }) => {
             <Title2>How can I help?</Title2>
           </div>
 
-          {/* Legal Disclaimer for Legal Contract Review Team */}
+          {/* Legal Disclaimer for Contract Compliance Review Team */}
           {isLegalTeam && (
             <div
               style={{
@@ -207,7 +200,7 @@ const HomeInput: React.FC<HomeInputProps> = ({ selectedTeam }) => {
               <Caption1>
                 <strong>Disclaimer:</strong> This tool is not intended to give
                 legal advice; it is intended solely for the purpose of assessing
-                contracts against internal guidance and policy frameworks.
+                contract compliance against internal guidance and policy frameworks.
               </Caption1>
             </div>
           )}

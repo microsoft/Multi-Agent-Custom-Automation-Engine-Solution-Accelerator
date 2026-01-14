@@ -15,6 +15,9 @@ The Multi-Agent Custom Automation Engine solution accelerator allows users to sp
 </div>
 <br/>
 
+**Note:** With any AI solutions you create using these templates, you are responsible for assessing all associated risks and for complying with all applicable laws and safety standards. Learn more in the transparency documents for [Agent Service](https://learn.microsoft.com/en-us/azure/ai-foundry/responsible-ai/agents/transparency-note) and [Agent Framework](https://github.com/microsoft/agent-framework/blob/main/TRANSPARENCY_FAQ.md).
+<br/>
+
 <h2><img src="./docs/images/readme/solution-overview.png" width="48" />
 Solution overview
 </h2>
@@ -72,8 +75,8 @@ Follow the quick deploy steps on the deployment guide to deploy this solution to
 [Click here to launch the deployment guide](./docs/DeploymentGuide.md)
 <br/><br/>
 
-| [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) | [![Open in Dev Containers](https://img.shields.io/static/v1?style=for-the-badge&label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) |
-|---|---|
+| [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) | [![Open in Dev Containers](https://img.shields.io/static/v1?style=for-the-badge&label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) | [![Open in Visual Studio Code Web](https://img.shields.io/static/v1?style=for-the-badge&label=Visual%20Studio%20Code%20(Web)&message=Open&color=blue&logo=visualstudiocode&logoColor=white)](https://vscode.dev/azure/?vscode-azure-exp=foundry&agentPayload=eyJiYXNlVXJsIjogImh0dHBzOi8vcmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbS9taWNyb3NvZnQvTXVsdGktQWdlbnQtQ3VzdG9tLUF1dG9tYXRpb24tRW5naW5lLVNvbHV0aW9uLUFjY2VsZXJhdG9yL3JlZnMvaGVhZHMvbWFpbi9pbmZyYS92c2NvZGVfd2ViIiwgImluZGV4VXJsIjogIi9pbmRleC5qc29uIiwgInZhcmlhYmxlcyI6IHsiYWdlbnRJZCI6ICIiLCAiY29ubmVjdGlvblN0cmluZyI6ICIiLCAidGhyZWFkSWQiOiAiIiwgInVzZXJNZXNzYWdlIjogIiIsICJwbGF5Z3JvdW5kTmFtZSI6ICIiLCAibG9jYXRpb24iOiAiIiwgInN1YnNjcmlwdGlvbklkIjogIiIsICJyZXNvdXJjZUlkIjogIiIsICJwcm9qZWN0UmVzb3VyY2VJZCI6ICIiLCAiZW5kcG9pbnQiOiAiIn0sICJjb2RlUm91dGUiOiBbImFpLXByb2plY3RzLXNkayIsICJweXRob24iLCAiZGVmYXVsdC1henVyZS1hdXRoIiwgImVuZHBvaW50Il19) | 
+|---|---|---|
  
 <br/>
 
@@ -155,7 +158,7 @@ By using the *Multi-Agent Custom Automation Engine* solution accelerator, users 
 | Onboarding Employee | HR Manager | Traditional onboarding involves multiple disconnected steps—HR paperwork, IT setup, compliance training—which often require manual coordination and lead to delays. Manual steps slow collaboration and increase overhead, reducing efficiency and employee experience. | Designed to streamline the complex process of bringing new hires into an organization using a modular, agentic architecture. |
 | Retail Remediation | Customer Success Manager | This approach is seeking a smarter way to manage workflows and ensure customer satisfaction. Challenges include difficulty engaging the right agents, inefficiencies from manual processes, fragmented data, and limited security controls. | Using the Multi-Agent Custom Automation Engine, the Customer Success Manager recruits intelligent agents to analyze satisfaction and recommend steps for remediation. The platform’s modular design and reasoning capabilities allow for analyzing dependencies, planning transitions, and reducing manual rework. |
 | RFP Reviewer  | VP of Finance  | Reviewing RFPs manually under tight deadlines is challenging. Compliance checks and risk assessments slow progress, leaving critical gaps and delaying decisions. | Multi-Agent RFP Reviewer is an intelligent platform addresses these issues by deploying AI agents to review RFPs, identify risks, recommend remediation, and execute actions seamlessly - transforming a labor-intensive process into a fast, accurate, and compliant workflow. |
-| Legal Contract Reviewer | Legal Counsel  | Reviewing Legal Contracts manually under tight deadlines is challenging. Compliance checks and risk assessments slow progress, leaving critical gaps and delaying decisions. | Multi-Agent Legal Contract Reviewer is an intelligent platform addresses these issues by deploying AI agents to review Legal Contracts, identify risks, recommend remediation, and execute actions seamlessly - transforming a labor-intensive process into a fast, accurate, and compliant workflow. |
+| Contract Compliance Reviewer | Compliance Counsel  | Reviewing Contracts for compliance manually under tight deadlines is challenging. Compliance checks and risk assessments slow progress, leaving critical gaps and delaying decisions. | Multi-Agent Contract Compliance Reviewer is an intelligent platform addresses these issues by deploying AI agents to review Contracts, identify risks, recommend remediation, and execute actions seamlessly - transforming a labor-intensive process into a fast, accurate, and compliant workflow. |
 
 </details>
 
@@ -203,6 +206,17 @@ Please refer to [Transparency FAQ](./docs/TRANSPARENCY_FAQ.md) for responsible A
 <br/>
 
 ## Disclaimers
+This release is an artificial intelligence (AI) system that generates text based on user input. The text generated by this system may include ungrounded content, meaning that it is not verified by any reliable source or based on any factual data. The data included in this release is synthetic, meaning that it is artificially created by the system and may contain factual errors or inconsistencies. Users of this release are responsible for determining the accuracy, validity, and suitability of any content generated by the system for their intended purposes. Users should not rely on the system output as a source of truth or as a substitute for human judgment or expertise.
+
+This release only supports English language input and output. Users should not attempt to use the system with any other language or format. The system output may not be compatible with any translation tools or services, and may lose its meaning or coherence if translated.
+
+This release does not reflect the opinions, views, or values of Microsoft Corporation or any of its affiliates, subsidiaries, or partners. The system output is solely based on the system's own logic and algorithms, and does not represent any endorsement, recommendation, or advice from Microsoft or any other entity. Microsoft disclaims any liability or responsibility for any damages, losses, or harms arising from the use of this release or its output by any user or third party.
+
+This release does not provide any financial advice, legal advice and is not designed to replace the role of qualified client advisors in appropriately advising clients. Users should not use the system output for any financial decisions, legal guidance or transactions, and should consult with a professional financial  advisor and or legal advisor as appropriate before taking any action based on the system output. Microsoft is not a financial institution or a fiduciary, and does not offer any financial products or services through this release or its output.
+
+This release is intended as a proof of concept only, and is not a finished or polished product. It is not intended for commercial use or distribution, and is subject to change or discontinuation without notice. Any planned deployment of this release or its output should include comprehensive testing and evaluation to ensure it is fit for purpose and meets the user's requirements and expectations. Microsoft does not guarantee the quality, performance, reliability, or availability of this release or its output, and does not provide any warranty or support for it.
+
+This Software requires the use of third-party components which are governed by separate proprietary or open-source licenses as identified below, and you must comply with the terms of each applicable license in order to use the Software. You acknowledge and agree that this license does not grant you a license or other right to use any such third-party proprietary or open-source components.
 
 To the extent that the Software includes components or code used in or derived from Microsoft products or services, including without limitation Microsoft Azure Services (collectively, "Microsoft Products and Services"), you must also comply with the Product Terms applicable to such Microsoft Products and Services. You acknowledge and agree that the license governing the Software does not grant you a license or other right to use Microsoft Products and Services. Nothing in the license or this ReadMe file will serve to supersede, amend, terminate or modify any terms in the Product Terms for any Microsoft Products and Services. 
 

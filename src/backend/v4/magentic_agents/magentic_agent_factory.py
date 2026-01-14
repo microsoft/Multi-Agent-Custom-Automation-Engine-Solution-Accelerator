@@ -33,13 +33,6 @@ class MagenticAgentFactory:
         self._agent_list: List = []
         self.team_service = team_service
 
-    # @staticmethod
-    # def parse_team_config(file_path: Union[str, Path]) -> SimpleNamespace:
-    #     """Parse JSON file into objects using SimpleNamespace."""
-    #     with open(file_path, 'r') as f:
-    #         data = json.load(f)
-    #     return json.loads(json.dumps(data), object_hook=lambda d: SimpleNamespace(**d))
-
     # Ensure only an explicit boolean True in the source sets this flag.
     def extract_use_reasoning(self, agent_obj):
         # Support both dict and attribute-style objects

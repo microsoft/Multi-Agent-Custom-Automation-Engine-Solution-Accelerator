@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useRef, useState, useMemo } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Spinner, Text } from "@fluentui/react-components";
 import { PlanDataService } from "../services/PlanDataService";
-import { ProcessedPlanData, WebsocketMessageType, MPlanData, AgentMessageData, AgentMessageType, ParsedUserClarification, AgentType, PlanStatus, FinalMessage, TeamConfig } from "../models";
+import { ProcessedPlanData, WebsocketMessageType, MPlanData, AgentMessageData, AgentMessageType, ParsedUserClarification, AgentType, PlanStatus, TeamConfig } from "../models";
 import PlanChat from "../components/content/PlanChat";
 import PlanPanelRight from "../components/content/PlanPanelRight";
 import PlanPanelLeft from "../components/content/PlanPanelLeft";
@@ -14,15 +14,12 @@ import {
     useInlineToaster,
 } from "../components/toast/InlineToaster";
 import Octo from "../coral/imports/Octopus.png";
-import PanelRightToggles from "../coral/components/Header/PanelRightToggles";
-import { TaskListSquareLtr } from "../coral/imports/bundleicons";
 import LoadingMessage, { loadingMessages } from "../coral/components/LoadingMessage";
 import webSocketService from "../services/WebSocketService";
 import { APIService } from "../api/apiService";
 import { StreamMessage, StreamingPlanUpdate } from "../models";
 import { usePlanCancellationAlert } from "../hooks/usePlanCancellationAlert";
 import PlanCancellationDialog from "../components/common/PlanCancellationDialog";
-
 import "../styles/PlanPage.css"
 
 // Create API service instance
@@ -57,9 +54,20 @@ const PlanPage: React.FC = () => {
     const [streamingMessageBuffer, setStreamingMessageBuffer] = useState<string>("");
     const [showBufferingText, setShowBufferingText] = useState<boolean>(false);
     const [agentMessages, setAgentMessages] = useState<AgentMessageData[]>([]);
-
-    // Plan approval state - track when plan is approved
-    const [planApproved, setPlanApproved] = useState<boolean>(false);
+    const formatErrorMessage = useCallback((content: string): string => {
+        // Split content by newlines and add proper indentation
+        const lines = content.split('\n');
+        const formattedLines = lines.map((line, index) => {
+            if (index === 0) {
+                return `⚠️ ${line}`;
+            } else if (line.trim() === '') {
+                return ''; // Preserve blank lines
+            } else {
+                return `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${line}`;
+            }
+        });
+        return formattedLines.join('\n');
+    }, []);
 
     // Plan cancellation dialog state
     const [showCancellationDialog, setShowCancellationDialog] = useState<boolean>(false);
@@ -69,7 +77,7 @@ const PlanPage: React.FC = () => {
     const [loadingMessage, setLoadingMessage] = useState<string>(loadingMessages[0]);
 
     // Plan cancellation alert hook
-    const { isPlanActive, handleNavigationWithConfirmation } = usePlanCancellationAlert({
+    const { isPlanActive } = usePlanCancellationAlert({
         planData,
         planApprovalRequest,
         onNavigate: pendingNavigation || (() => { })
@@ -217,6 +225,7 @@ const PlanPage: React.FC = () => {
         }, 100);
     }, []);
 
+
     //WebsocketMessageType.PLAN_APPROVAL_REQUEST
     useEffect(() => {
         const unsubscribe = webSocketService.on(WebsocketMessageType.PLAN_APPROVAL_REQUEST, (approvalRequest: any) => {
@@ -261,6 +270,7 @@ const PlanPage: React.FC = () => {
     //(WebsocketMessageType.AGENT_MESSAGE_STREAMING
     useEffect(() => {
         const unsubscribe = webSocketService.on(WebsocketMessageType.AGENT_MESSAGE_STREAMING, (streamingMessage: any) => {
+            
             //console.log('📋 Streaming Message', streamingMessage);
             // if is final true clear buffer and add final message to agent messages
             const line = PlanDataService.simplifyHumanClarification(streamingMessage.data.content);
@@ -333,7 +343,7 @@ const PlanPage: React.FC = () => {
                 steps: [],   // intentionally always empty
                 next_steps: [],  // intentionally always empty
                 content: "🎉🎉 " + (finalMessage.data?.content || ''),
-                raw_data: finalMessage || '',
+                raw_data: finalMessage,
             } as AgentMessageData;
 
 
@@ -365,6 +375,61 @@ const PlanPage: React.FC = () => {
 
         return () => unsubscribe();
     }, [scrollToBottom, planData, processAgentMessage, streamingMessageBuffer, setSelectedTeam]);
+
+    // WebsocketMessageType.ERROR_MESSAGE
+    useEffect(() => {
+        const unsubscribe = webSocketService.on(WebsocketMessageType.ERROR_MESSAGE, (errorMessage: any) => {
+            console.log('❌ Received ERROR_MESSAGE:', errorMessage);
+            console.log('❌ Error message data:', errorMessage?.data);
+            
+            // Try multiple ways to extract the error message
+            let errorContent = "An unexpected error occurred. Please try again later.";
+            
+            // Check for double-nested data structure
+            if (errorMessage?.data?.data?.content) {
+                const content = errorMessage.data.data.content.trim();
+                if (content.length > 0) {
+                    errorContent = content;
+                }
+            } else if (errorMessage?.data?.content) {
+                const content = errorMessage.data.content.trim();
+                if (content.length > 0) {
+                    errorContent = content;
+                }
+            } else if (errorMessage?.content) {
+                const content = errorMessage.content.trim();
+                if (content.length > 0) {
+                    errorContent = content;
+                }
+            } else if (typeof errorMessage === 'string') {
+                const content = errorMessage.trim();
+                if (content.length > 0) {
+                    errorContent = content;
+                }
+            }
+
+            console.log('❌ Final error content to display:', errorContent);
+
+            const errorAgentMessage: AgentMessageData = {
+                agent: 'system',
+                agent_type: AgentMessageType.SYSTEM_AGENT,
+                timestamp: Date.now(),
+                steps: [],
+                next_steps: [],
+                content: formatErrorMessage(errorContent),
+                raw_data: errorMessage || '',
+            };
+
+            setAgentMessages(prev => [...prev, errorAgentMessage]);
+            setShowProcessingPlanSpinner(false);
+            setShowBufferingText(false);
+            setSubmittingChatDisableInput(false);
+            scrollToBottom();
+            showToast(errorContent, "error");
+        });
+
+        return () => unsubscribe();
+    }, [scrollToBottom, showToast, formatErrorMessage]);
 
     //WebsocketMessageType.AGENT_MESSAGE
     useEffect(() => {
@@ -429,9 +494,6 @@ const PlanPage: React.FC = () => {
 
             const handlePlanApprovalResponse = (message: StreamMessage) => {
                 console.log('✅ Plan approval response received:', message);
-                if (message.data && message.data.approved) {
-                    setPlanApproved(true);
-                }
             };
 
             const handlePlanApprovalRequest = (message: StreamMessage) => {
@@ -514,6 +576,7 @@ const PlanPage: React.FC = () => {
 
         setProcessingApproval(true);
         let id = showToast("Submitting Approval", "progress");
+
         try {
             await apiService.approvePlan({
                 m_plan_id: planApprovalRequest.id,
@@ -521,7 +584,7 @@ const PlanPage: React.FC = () => {
                 approved: true,
                 feedback: 'Plan approved by user'
             });
-
+            
             dismissToast(id);
             setShowProcessingPlanSpinner(true);
             setShowApprovalButtons(false);
@@ -652,6 +715,12 @@ const PlanPage: React.FC = () => {
         initializePlanLoading();
     }, [planId, loadPlanData, resetPlanVariables, setErrorLoading]);
 
+    useEffect(() => {
+        if (planData?.team) {
+            setSelectedTeam(planData.team);
+        }
+    }, [planData, setSelectedTeam]);
+
     if (errorLoading) {
         return (
             <CoralShellColumn>
@@ -707,6 +776,7 @@ const PlanPage: React.FC = () => {
                         </>
                     ) : (
                         <>
+                            
                             <ContentToolbar
                                 panelTitle="Multi-Agent Planner"
                             >
@@ -714,7 +784,7 @@ const PlanPage: React.FC = () => {
                                     <TaskListSquareLtr />
                                 </PanelRightToggles> */}
                             </ContentToolbar>
-
+                            
                             <PlanChat
                                 planData={planData}
                                 OnChatSubmit={handleOnchatSubmit}
@@ -724,7 +794,6 @@ const PlanPage: React.FC = () => {
                                 input={input}
                                 streamingMessages={streamingMessages}
                                 wsConnected={wsConnected}
-                                onPlanApproval={(approved) => setPlanApproved(approved)}
                                 planApprovalRequest={planApprovalRequest}
                                 waitingForPlan={waitingForPlan}
                                 messagesContainerRef={messagesContainerRef}

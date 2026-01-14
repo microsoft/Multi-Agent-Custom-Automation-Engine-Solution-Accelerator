@@ -5,6 +5,7 @@ import uuid
 from typing import Optional
 
 import v4.models.messages as messages
+from v4.models.messages import WebsocketMessageType
 from auth.auth_utils import get_authenticated_user_details
 from common.database.database_factory import DatabaseFactory
 from common.models.messages_af import (
@@ -77,7 +78,11 @@ async def start_comms(
                 message = await websocket.receive_text()
                 logging.debug(f"Received WebSocket message from {user_id}: {message}")
             except asyncio.TimeoutError:
-                pass
+                # Ignore timeouts to keep the WebSocket connection open, but avoid a tight loop.
+                logging.debug(
+                    f"WebSocket receive timeout for user {user_id}, process {process_id}"
+                )
+                await asyncio.sleep(0.1)
             except WebSocketDisconnect:
                 track_event_if_configured(
                     "WebSocketDisconnect",
@@ -118,33 +123,47 @@ async def init_team(
         memory_store = await DatabaseFactory.get_database(user_id=user_id)
         team_service = TeamService(memory_store)
 
-        # Find the first available team from 4 to 1, or use HR as fallback
         init_team_id = await find_first_available_team(team_service, user_id)
-        if not init_team_id:
-            init_team_id = "00000000-0000-0000-0000-000000000001"  # HR fallback
-            print("No available teams found, using HR fallback")
-        else:
-            print(f"Using first available team: {init_team_id}")
 
+        # Get current team if user has one
         user_current_team = await memory_store.get_current_team(user_id=user_id)
-        if not user_current_team:
-            print("User has no current team, setting to default:", init_team_id)
+
+        # If no teams available and no current team, return empty state to allow custom team upload
+        if not init_team_id and not user_current_team:
+            print("No teams found in database. System ready for custom team upload.")
+            return {
+                "status": "No teams configured. Please upload a team configuration to get started.",
+                "team_id": None,
+                "team": None,
+                "requires_team_upload": True,
+            }
+
+        # Use current team if available, otherwise use found team
+        if user_current_team:
+            init_team_id = user_current_team.team_id
+            print(f"Using user's current team: {init_team_id}")
+        elif init_team_id:
+            print(f"Using first available team: {init_team_id}")
             user_current_team = await team_service.handle_team_selection(
                 user_id=user_id, team_id=init_team_id
             )
             if user_current_team:
                 init_team_id = user_current_team.team_id
-        else:
-            init_team_id = user_current_team.team_id
+
         # Verify the team exists and user has access to it
         team_configuration = await team_service.get_team_configuration(
             init_team_id, user_id
         )
         if team_configuration is None:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Team configuration '{init_team_id}' not found or access denied",
-            )
+            # If team doesn't exist, clear current team and return empty state
+            await memory_store.delete_current_team(user_id)
+            print(f"Team configuration '{init_team_id}' not found. Cleared current team.")
+            return {
+                "status": "Current team configuration not found. Please select or upload a team configuration.",
+                "team_id": None,
+                "team": None,
+                "requires_team_upload": True,
+            }
 
         # Set as current team in memory
         team_config.set_current_team(
@@ -342,7 +361,6 @@ async def plan_approval(
 ):
     """
     Endpoint to receive plan approval or rejection from the user.
-
     ---
     tags:
       - Plans
@@ -389,7 +407,6 @@ async def plan_approval(
       500:
         description: Internal server error
     """
-
     authenticated_user = get_authenticated_user_details(request_headers=request.headers)
     user_id = authenticated_user["user_principal_id"]
     if not user_id:
@@ -406,23 +423,44 @@ async def plan_approval(
                 orchestration_config.set_approval_result(
                     human_feedback.m_plan_id, human_feedback.approved
                 )
-                # orchestration_config.plans[human_feedback.m_plan_id][
-                #     "plan_id"
-                # ] = human_feedback.plan_id
                 print("Plan approval received:", human_feedback)
-                # print(
-                #     "Updated orchestration config:",
-                #     orchestration_config.plans[human_feedback.m_plan_id],
-                # )
+
                 try:
                     result = await PlanService.handle_plan_approval(
                         human_feedback, user_id
                     )
                     print("Plan approval processed:", result)
+
                 except ValueError as ve:
-                    print(f"ValueError processing plan approval: {ve}")
-                except Exception as e:
-                    print(f"Error processing plan approval: {e}")
+                    logger.error(f"ValueError processing plan approval: {ve}")
+                    await connection_config.send_status_update_async(
+                        {
+                            "type": WebsocketMessageType.ERROR_MESSAGE,
+                            "data": {
+                                "content": "Approval failed due to invalid input.",
+                                "status": "error",
+                                "timestamp": asyncio.get_event_loop().time(),
+                            },
+                        },
+                        user_id,
+                        message_type=WebsocketMessageType.ERROR_MESSAGE,
+                    )
+
+                except Exception:
+                    logger.error("Error processing plan approval", exc_info=True)
+                    await connection_config.send_status_update_async(
+                        {
+                            "type": WebsocketMessageType.ERROR_MESSAGE,
+                            "data": {
+                                "content": "An unexpected error occurred while processing the approval.",
+                                "status": "error",
+                                "timestamp": asyncio.get_event_loop().time(),
+                            },
+                        },
+                        user_id,
+                        message_type=WebsocketMessageType.ERROR_MESSAGE,
+                    )
+
                 track_event_if_configured(
                     "PlanApprovalReceived",
                     {
@@ -444,7 +482,23 @@ async def plan_approval(
                     status_code=404, detail="No active plan found for approval"
                 )
     except Exception as e:
-        logging.error("Error processing plan approval: %s", e)
+        logging.error(f"Error processing plan approval: {e}")
+        try:
+            await connection_config.send_status_update_async(
+                {
+                    "type": WebsocketMessageType.ERROR_MESSAGE,
+                    "data": {
+                        "content": "An error occurred while processing your approval request.",
+                        "status": "error",
+                        "timestamp": asyncio.get_event_loop().time(),
+                    },
+                },
+                user_id,
+                message_type=WebsocketMessageType.ERROR_MESSAGE,
+            )
+        except Exception as ws_error:
+            # Don't let WebSocket send failure break the HTTP response
+            logging.warning(f"Failed to send WebSocket error: {ws_error}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -780,10 +834,12 @@ async def upload_team_config(
         )
 
         # Validate search indexes
+        logger.info(f"🔍 Validating search indexes for user: {user_id}")
         search_valid, search_errors = await team_service.validate_team_search_indexes(
             json_data
         )
         if not search_valid:
+            logger.warning(f"❌ Search validation failed for user {user_id}: {search_errors}")
             error_message = (
                 f"Search index validation failed:\n\n{chr(10).join([f'• {error}' for error in search_errors])}\n\n"
                 f"Please ensure all referenced search indexes exist in your Azure AI Search service."
@@ -799,6 +855,7 @@ async def upload_team_config(
             )
             raise HTTPException(status_code=400, detail=error_message)
 
+        logger.info(f"✅ Search validation passed for user: {user_id}")
         track_event_if_configured(
             "Team configuration search validation passed",
             {"status": "passed", "user_id": user_id, "filename": file.filename},

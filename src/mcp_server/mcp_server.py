@@ -5,13 +5,9 @@ MACAE MCP Server - FastMCP server with organized tools and services.
 import argparse
 import logging
 ###
-import sys
-from pathlib import Path
-from typing import Optional
 
 from config.settings import config
 from core.factory import MCPToolFactory
-from fastmcp import FastMCP
 from fastmcp.server.auth.providers.jwt import JWTVerifier
 from services.hr_service import HRService
 from services.marketing_service import MarketingService

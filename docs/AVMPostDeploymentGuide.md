@@ -76,37 +76,20 @@ The post-deployment process is automated through a single PowerShell or Bash scr
 
 #### Execute the Script:
 
-1. **Choose the appropriate command based on your deployment method and OS:**
-
-   **If you deployed using custom templates, ARM/Bicep deployments, or `az deployment group` commands:**
+1. **Run the appropriate command based on your OS:**
 
    - **For PowerShell (Windows/Linux/macOS):**
 
      ```powershell
-     .\infra\scripts\Team-Config-And-Data.ps1 -ResourceGroup "<your-resource-group-name>"
+     infra\scripts\Selecting-Team-Config-And-Data.ps1 -ResourceGroup "<your-resource-group-name>"
      ```
 
    - **For Bash (Linux/macOS/WSL):**
      ```bash
-     bash infra/scripts/team_config_and_data.sh "<your-resource-group-name>"
-     ```
-
-   **If you deployed using `azd up` command:**
-
-   - **For PowerShell (Windows/Linux/macOS):**
-
-     ```powershell
-     .\infra\scripts\Team-Config-And-Data.ps1
-     ```
-
-   - **For Bash (Linux/macOS/WSL):**
-     ```bash
-     bash infra/scripts/team_config_and_data.sh
+     bash infra/scripts/selecting_team_config_and_data.sh --resource-group "<your-resource-group-name>"
      ```
 
    > **Note**: Replace `<your-resource-group-name>` with the actual name of the resource group containing your deployed Azure resources.
-
-   > **💡 Tip**: Since this guide is for AVM deployments, you'll most likely use the first command with the `-ResourceGroup` parameter.
 
 ### Step 3: Provide Required Information
 

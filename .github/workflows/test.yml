@@ -6,6 +6,15 @@ on:
       - main
       - demo-v4
       - dev-v4
+    paths:
+      - 'src/backend/**/*.py'
+      - 'src/tests/**/*.py'
+      - 'src/mcp_server/**/*.py'
+      - 'src/**/pyproject.toml'
+      - 'pytest.ini'
+      - 'conftest.py'
+      - 'src/backend/requirements.txt'
+      - '.github/workflows/test.yml'
   pull_request:
     types:
       - opened
@@ -16,6 +25,15 @@ on:
       - main
       - demo-v4
       - dev-v4
+    paths:
+      - 'src/backend/**/*.py'
+      - 'src/tests/**/*.py'
+      - 'src/mcp_server/**/*.py'
+      - 'pytest.ini'
+      - 'conftest.py'
+      - 'src/backend/requirements.txt'
+      - 'src/**/pyproject.toml'
+      - '.github/workflows/test.yml'
 
 jobs:
   test:
