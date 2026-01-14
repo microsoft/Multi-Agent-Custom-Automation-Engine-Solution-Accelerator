@@ -6,7 +6,6 @@ on:
       - main
       - demo-v4
       - dev-v4
-      - macae-v4-unittestcases-kd
   pull_request:
     types:
       - opened
