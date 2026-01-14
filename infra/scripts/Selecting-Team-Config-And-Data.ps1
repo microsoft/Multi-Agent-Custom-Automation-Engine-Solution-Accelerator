@@ -214,6 +214,70 @@ function Get-ValuesFromAzDeployment {
     return $true
 }
 
+function Get-ValuesUsingSolutionSuffix {
+    Write-Host "Getting values from resource naming convention using solution suffix..."
+    
+    # Get the solution suffix from resource group tags
+    $solutionSuffix = az group show --name $ResourceGroup --query "tags.SolutionSuffix" -o tsv
+    if (-not $solutionSuffix) {
+        Write-Host "Error: Could not find SolutionSuffix tag in resource group."
+        return $false
+    }
+    
+    Write-Host "Found solution suffix: $solutionSuffix"
+    
+    # Reconstruct resource names using same naming convention as Bicep
+    $script:storageAccount = "st$solutionSuffix" -replace '-', ''  # Remove dashes like Bicep does
+    $script:aiSearch = "srch-$solutionSuffix"
+    $containerAppName = "ca-$solutionSuffix"
+    
+    # Query dynamic value (backend URL) from Container App
+    Write-Host "Querying backend URL from Container App..."
+    $backendFqdn = az containerapp show `
+      --name $containerAppName `
+      --resource-group $ResourceGroup `
+      --query "properties.configuration.ingress.fqdn" `
+      -o tsv 2>$null
+    
+    if (-not $backendFqdn) {
+        Write-Host "Error: Could not get Container App FQDN. Container App may not be deployed yet."
+        return $false
+    }
+    
+    $script:backendUrl = "https://$backendFqdn"
+    
+    # Hardcoded container names (These don't follow the suffix pattern in Bicep, hence need to be changed here if changed in Bicep)
+    $script:blobContainerForRetailCustomer = "retail-dataset-customer"
+    $script:blobContainerForRetailOrder = "retail-dataset-order"
+    $script:blobContainerForRFPSummary = "rfp-summary-dataset"
+    $script:blobContainerForRFPRisk = "rfp-risk-dataset"
+    $script:blobContainerForRFPCompliance = "rfp-compliance-dataset"
+    $script:blobContainerForContractSummary = "contract-summary-dataset"
+    $script:blobContainerForContractRisk = "contract-risk-dataset"
+    $script:blobContainerForContractCompliance = "contract-compliance-dataset"
+    
+    # Hardcoded index names (These don't follow the suffix pattern in Bicep, hence need to be changed here if changed in Bicep)
+    $script:aiSearchIndexForRetailCustomer = "macae-retail-customer-index"
+    $script:aiSearchIndexForRetailOrder = "macae-retail-order-index"
+    $script:aiSearchIndexForRFPSummary = "macae-rfp-summary-index"
+    $script:aiSearchIndexForRFPRisk = "macae-rfp-risk-index"
+    $script:aiSearchIndexForRFPCompliance = "macae-rfp-compliance-index"
+    $script:aiSearchIndexForContractSummary = "contract-summary-doc-index"
+    $script:aiSearchIndexForContractRisk = "contract-risk-doc-index"
+    $script:aiSearchIndexForContractCompliance = "contract-compliance-doc-index"
+    
+    $script:directoryPath = "data/agent_teams"
+    
+    # Validate that we got all critical values
+    if (-not $script:storageAccount -or -not $script:aiSearch -or -not $script:backendUrl) {
+        Write-Host "Error: Failed to reconstruct all required resource names."
+        return $false
+    }
+    
+    Write-Host "Successfully reconstructed values from resource naming convention."
+    return $true
+}
+
 # Main script execution with cleanup handling
 try {
 # Authenticate with Azure
@@ -301,14 +365,24 @@ if (-not $ResourceGroup) {
         exit 1
     }
 } else {
-    # Resource group provided - use deployment outputs
+    # Resource group provided - try deployment outputs first, then fallback to naming convention
     Write-Host "Resource group provided: $ResourceGroup"
     
     if (-not (Get-ValuesFromAzDeployment)) {
-        Write-Host "Failed to get values from deployment outputs."
-        exit 1
+        Write-Host ""
+        Write-Host "Warning: Could not retrieve values from deployment outputs (deployment may be deleted)."
+        Write-Host "Attempting fallback method: reconstructing values from resource naming convention..."
+        Write-Host ""
+        
+        if (-not (Get-ValuesUsingSolutionSuffix)) {
+            Write-Host ""
+            Write-Host "Error: Both methods failed to retrieve configuration values."
+            Write-Host "Please ensure:"
+            Write-Host "  1. The deployment exists and has a DeploymentName tag, OR"
+            Write-Host "  2. The resource group has a SolutionSuffix tag"
+            exit 1
+        }
     }
-}
 
 # Interactive Use Case Selection
 Write-Host ""
@@ -787,12 +861,11 @@ if($useCaseSelection -eq "2" -or $useCaseSelection -eq "all" -or $useCaseSelecti
     Write-Host "Python script to index data for Retail Customer Satisfaction successfully executed."
 }
 
-Write-Host "Script executed successfully. Sample Data Processed Successfully."
-
 if ($isTeamConfigFailed -or $isSampleDataFailed) {
     Write-Host "`nOne or more tasks failed. Please check the error messages above."
     exit 1
 } else {
+    Write-Host "`nScript executed successfully. Sample Data Processed Successfully."
     if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6"){
         Write-Host "`nTeam configuration upload and sample data processing completed successfully."
     }else {
