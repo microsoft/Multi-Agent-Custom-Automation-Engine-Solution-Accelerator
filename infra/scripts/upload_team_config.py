@@ -100,13 +100,18 @@ for filename, team_id in files_to_process:
                                 uploaded_count += 1
                             else:
                                 print(f"Upload failed for {filename}. Response: {resp_json}")
+                                sys.exit(1)
                         except Exception as e:
                             print(f"Error parsing response for {filename}: {str(e)}")
+                            sys.exit(1)
                     else:
                         print(f"Failed to upload {filename}. Status code: {response.status_code}, Response: {response.text}")
+                        sys.exit(1)
             except Exception as e:
                 print(f"Error processing {filename}: {str(e)}")
+                sys.exit(1)
         else:
             print(f"File not found: {filename}")
-
+            sys.exit(1)
+ 
 print(f"Completed uploading team configurations")
