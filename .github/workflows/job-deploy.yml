@@ -425,7 +425,7 @@ jobs:
             if [[ "$BRANCH_NAME" == "main" ]]; then
               IMAGE_TAG="latest_v4"
             elif [[ "$BRANCH_NAME" == "dev-v4" ]]; then
-              IMAGE_TAG="dev-v4"
+              IMAGE_TAG="dev_v4"
             elif [[ "$BRANCH_NAME" == "hotfix" ]]; then
               IMAGE_TAG="hotfix"
             else
