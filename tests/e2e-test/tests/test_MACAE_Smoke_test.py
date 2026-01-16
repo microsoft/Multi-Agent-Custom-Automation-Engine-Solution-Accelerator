@@ -846,3 +846,708 @@ def test_cancel_button_all_teams(login_logout, request):
         logger.error(f"Execution time before failure: {total_duration:.2f}s")
         logger.error("=" * 80)
         raise
+
+
+@pytest.mark.cancel
+def test_cancel_functionality_all_teams(login_logout, request):
+    """
+    Test Case ID 29007: Test Cancel functionality in the Plan Approval step.
+    
+    Tests the cancel button across all 5 teams:
+    - Human Resources Team
+    - Product Marketing Team
+    - Retail Customer Success Team
+    - RFP Team
+    - Contract Compliance Review Team
+    """
+    page = login_logout
+    biab_page = BIABPage(page)
+    
+    request.node._nodeid = "(MACAE V4) Test Cancel functionality in the Plan Approval step"
+    
+    logger.info("=" * 80)
+    logger.info("Starting Cancel Functionality Test for All Teams")
+    logger.info("=" * 80)
+    
+    start_time = time.time()
+    
+    try:
+        # Reload home page before starting test
+        biab_page.reload_home_page()
+        
+        # Step 1-2: Validate Home Page
+        logger.info("\n" + "=" * 80)
+        logger.info("STEP 1-2: Validating Home Page and Authentication")
+        logger.info("=" * 80)
+        step1_start = time.time()
+        biab_page.validate_home_page()
+        step1_end = time.time()
+        logger.info(f"Steps 1-2 completed in {step1_end - step1_start:.2f} seconds")
+        
+        # Step 3-5: Test Cancel - Human Resources Team
+        logger.info("\n" + "=" * 80)
+        logger.info("STEPS 3-5: Testing Cancel Button - Human Resources Team")
+        logger.info("=" * 80)
+        step2_start = time.time()
+        
+        logger.info("Selecting Human Resources Team...")
+        biab_page.select_human_resources_team()
+        
+        logger.info("Selecting Quick Task and Creating Plan...")
+        biab_page.select_quick_task_and_create_plan()
+        
+        logger.info("Clicking Cancel button...")
+        biab_page.click_cancel_button()
+        
+        logger.info("Validating redirect to Home Screen...")
+        biab_page.validate_home_input_visible()
+        
+        step2_end = time.time()
+        logger.info(f"Steps 3-5 (HR Team Cancel) completed in {step2_end - step2_start:.2f} seconds")
+        
+        # Step 6-8: Test Cancel - Product Marketing Team
+        logger.info("\n" + "=" * 80)
+        logger.info("STEPS 6-8: Testing Cancel Button - Product Marketing Team")
+        logger.info("=" * 80)
+        step3_start = time.time()
+        
+        logger.info("Selecting Product Marketing Team...")
+        biab_page.select_product_marketing_team()
+        
+        logger.info("Selecting Quick Task and Creating Plan...")
+        biab_page.select_quick_task_and_create_plan()
+        
+        logger.info("Clicking Cancel button...")
+        biab_page.click_cancel_button()
+        
+        logger.info("Validating redirect to Home Screen...")
+        biab_page.validate_home_input_visible()
+        
+        step3_end = time.time()
+        logger.info(f"Steps 6-8 (Product Marketing Cancel) completed in {step3_end - step3_start:.2f} seconds")
+        
+        # Step 9-11: Test Cancel - Retail Customer Success Team
+        logger.info("\n" + "=" * 80)
+        logger.info("STEPS 9-11: Testing Cancel Button - Retail Customer Success Team")
+        logger.info("=" * 80)
+        step4_start = time.time()
+        
+        logger.info("Selecting Retail Customer Success Team...")
+        biab_page.select_retail_customer_success_team()
+        
+        logger.info("Selecting Quick Task and Creating Plan...")
+        biab_page.select_quick_task_and_create_plan()
+        
+        logger.info("Clicking Cancel button...")
+        biab_page.click_cancel_button()
+        
+        logger.info("Validating redirect to Home Screen...")
+        biab_page.validate_home_input_visible()
+        
+        step4_end = time.time()
+        logger.info(f"Steps 9-11 (Retail Team Cancel) completed in {step4_end - step4_start:.2f} seconds")
+        
+        # Step 12-14: Test Cancel - RFP Team
+        logger.info("\n" + "=" * 80)
+        logger.info("STEPS 12-14: Testing Cancel Button - RFP Team")
+        logger.info("=" * 80)
+        step5_start = time.time()
+        
+        logger.info("Selecting RFP Team...")
+        biab_page.select_rfp_team()
+        
+        logger.info("Selecting Quick Task and Creating Plan...")
+        biab_page.select_quick_task_and_create_plan()
+        
+        logger.info("Clicking Cancel button...")
+        biab_page.click_cancel_button()
+        
+        logger.info("Validating redirect to Home Screen...")
+        biab_page.validate_home_input_visible()
+        
+        step5_end = time.time()
+        logger.info(f"Steps 12-14 (RFP Team Cancel) completed in {step5_end - step5_start:.2f} seconds")
+        
+        # Step 15-17: Test Cancel - Contract Compliance Review Team
+        logger.info("\n" + "=" * 80)
+        logger.info("STEPS 15-17: Testing Cancel Button - Contract Compliance Review Team")
+        logger.info("=" * 80)
+        step6_start = time.time()
+        
+        logger.info("Selecting Contract Compliance Review Team...")
+        biab_page.select_contract_compliance_team()
+        
+        logger.info("Selecting Quick Task and Creating Plan...")
+        biab_page.select_quick_task_and_create_plan()
+        
+        logger.info("Clicking Cancel button...")
+        biab_page.click_cancel_button()
+        
+        logger.info("Validating redirect to Home Screen...")
+        biab_page.validate_home_input_visible()
+        
+        step6_end = time.time()
+        logger.info(f"Steps 15-17 (Contract Compliance Cancel) completed in {step6_end - step6_start:.2f} seconds")
+        
+        end_time = time.time()
+        total_duration = end_time - start_time
+        
+        logger.info("\n" + "=" * 80)
+        logger.info("TEST EXECUTION SUMMARY")
+        logger.info("=" * 80)
+        logger.info(f"Steps 1-2 (Home Page Validation): {step1_end - step1_start:.2f}s")
+        logger.info(f"Steps 3-5 (HR Team Cancel): {step2_end - step2_start:.2f}s")
+        logger.info(f"Steps 6-8 (Product Marketing Cancel): {step3_end - step3_start:.2f}s")
+        logger.info(f"Steps 9-11 (Retail Team Cancel): {step4_end - step4_start:.2f}s")
+        logger.info(f"Steps 12-14 (RFP Team Cancel): {step5_end - step5_start:.2f}s")
+        logger.info(f"Steps 15-17 (Contract Compliance Cancel): {step6_end - step6_start:.2f}s")
+        logger.info(f"Total Execution Time: {total_duration:.2f}s")
+        logger.info("=" * 80)
+        logger.info("✓ Cancel Functionality Test PASSED")
+        logger.info("=" * 80)
+        
+    except Exception as e:
+        end_time = time.time()
+        total_duration = end_time - start_time
+        logger.error("\n" + "=" * 80)
+        logger.error("TEST EXECUTION FAILED")
+        logger.error("=" * 80)
+        logger.error(f"Error: {str(e)}")
+        logger.error(f"Execution time before failure: {total_duration:.2f}s")
+        logger.error("=" * 80)
+        raise
+
+
+@pytest.mark.rai
+def test_rai_prompt_in_clarification(login_logout, request):
+    """
+    Test Case ID 29009: Test RAI prompt in user clarification step.
+    
+    Validates that harmful/RAI prompts are blocked during the clarification step.
+    """
+    page = login_logout
+    biab_page = BIABPage(page)
+    
+    request.node._nodeid = "(MACAE V4) Test RAI prompt in user clarification step"
+    
+    logger.info("=" * 80)
+    logger.info("Starting RAI Prompt in Clarification Test")
+    logger.info("=" * 80)
+    
+    start_time = time.time()
+    
+    try:
+        # Reload home page
+        biab_page.reload_home_page()
+        
+        # Steps 1-2: Validate Home Page
+        logger.info("\n" + "=" * 80)
+        logger.info("STEPS 1-2: Validating Home Page and Authentication")
+        logger.info("=" * 80)
+        step1_start = time.time()
+        biab_page.validate_home_page()
+        step1_end = time.time()
+        logger.info(f"Steps 1-2 completed in {step1_end - step1_start:.2f} seconds")
+        
+        # Step 3: Select HR Team
+        logger.info("\n" + "=" * 80)
+        logger.info("STEP 3: Selecting Human Resources Team")
+        logger.info("=" * 80)
+        step2_start = time.time()
+        biab_page.select_human_resources_team()
+        step2_end = time.time()
+        logger.info(f"Step 3 completed in {step2_end - step2_start:.2f} seconds")
+        
+        # Step 4: Select Quick Task
+        logger.info("\n" + "=" * 80)
+        logger.info("STEP 4: Selecting Quick Task and Creating Plan")
+        logger.info("=" * 80)
+        step3_start = time.time()
+        biab_page.select_quick_task_and_create_plan()
+        step3_end = time.time()
+        logger.info(f"Step 4 completed in {step3_end - step3_start:.2f} seconds")
+        
+        # Step 5: Approve Task Plan
+        logger.info("\n" + "=" * 80)
+        logger.info("STEP 5: Approving Task Plan")
+        logger.info("=" * 80)
+        step4_start = time.time()
+        biab_page.approve_task_plan()
+        step4_end = time.time()
+        logger.info(f"Step 5 completed in {step4_end - step4_start:.2f} seconds")
+        
+        # Step 6: Input RAI prompt in clarification
+        logger.info("\n" + "=" * 80)
+        logger.info("STEP 6: Inputting RAI Prompt in Clarification")
+        logger.info("=" * 80)
+        step5_start = time.time()
+        
+        logger.info(f"Entering RAI prompt: {rai_prompt}")
+        biab_page.input_rai_clarification_and_send(rai_prompt)
+        
+        logger.info("Validating RAI error message...")
+        biab_page.validate_rai_clarification_error_message()
+        
+        step5_end = time.time()
+        logger.info(f"Step 6 completed in {step5_end - step5_start:.2f} seconds")
+        
+        end_time = time.time()
+        total_duration = end_time - start_time
+        
+        logger.info("\n" + "=" * 80)
+        logger.info("TEST EXECUTION SUMMARY")
+        logger.info("=" * 80)
+        logger.info(f"Steps 1-2 (Home Page Validation): {step1_end - step1_start:.2f}s")
+        logger.info(f"Step 3 (HR Team Selection): {step2_end - step2_start:.2f}s")
+        logger.info(f"Step 4 (Quick Task Selection): {step3_end - step3_start:.2f}s")
+        logger.info(f"Step 5 (Approve Task Plan): {step4_end - step4_start:.2f}s")
+        logger.info(f"Step 6 (RAI Prompt in Clarification): {step5_end - step5_start:.2f}s")
+        logger.info(f"Total Execution Time: {total_duration:.2f}s")
+        logger.info("=" * 80)
+        logger.info("✓ RAI Prompt in Clarification Test PASSED")
+        logger.info("=" * 80)
+        
+    except Exception as e:
+        end_time = time.time()
+        total_duration = end_time - start_time
+        logger.error("\n" + "=" * 80)
+        logger.error("TEST EXECUTION FAILED")
+        logger.error("=" * 80)
+        logger.error(f"Error: {str(e)}")
+        logger.error(f"Execution time before failure: {total_duration:.2f}s")
+        logger.error("=" * 80)
+        raise
+
+
+@pytest.mark.rai
+def test_rai_prompts_all_teams(login_logout, request):
+    """
+    Test Case ID 29011: Test RAI prompts for all 5 default teams.
+    
+    Validates that RAI prompts are blocked at initial task input for all teams.
+    """
+    page = login_logout
+    biab_page = BIABPage(page)
+    
+    request.node._nodeid = "(MACAE V4) Test RAI prompts for all 5 default teams"
+    
+    logger.info("=" * 80)
+    logger.info("Starting RAI Prompts for All Teams Test")
+    logger.info("=" * 80)
+    
+    start_time = time.time()
+    
+    try:
+        # Reload home page
+        biab_page.reload_home_page()
+        
+        # Steps 1-2: Validate Home Page
+        logger.info("\n" + "=" * 80)
+        logger.info("STEPS 1-2: Validating Home Page and Authentication")
+        logger.info("=" * 80)
+        step1_start = time.time()
+        biab_page.validate_home_page()
+        step1_end = time.time()
+        logger.info(f"Steps 1-2 completed in {step1_end - step1_start:.2f} seconds")
+        
+        # Steps 3-4: Test RAI - Human Resources Team
+        logger.info("\n" + "=" * 80)
+        logger.info("STEPS 3-4: Testing RAI Prompt - Human Resources Team")
+        logger.info("=" * 80)
+        step2_start = time.time()
+        
+        biab_page.select_human_resources_team()
+        biab_page.input_rai_prompt_and_send(rai_prompt)
+        biab_page.validate_rai_error_message()
+        
+        step2_end = time.time()
+        logger.info(f"Steps 3-4 (HR Team RAI) completed in {step2_end - step2_start:.2f} seconds")
+        
+        # Steps 5-6: Test RAI - Product Marketing Team
+        logger.info("\n" + "=" * 80)
+        logger.info("STEPS 5-6: Testing RAI Prompt - Product Marketing Team")
+        logger.info("=" * 80)
+        step3_start = time.time()
+        
+        biab_page.select_product_marketing_team()
+        biab_page.input_rai_prompt_and_send(rai_prompt)
+        biab_page.validate_rai_error_message()
+        
+        step3_end = time.time()
+        logger.info(f"Steps 5-6 (Product Marketing RAI) completed in {step3_end - step3_start:.2f} seconds")
+        
+        # Steps 7-8: Test RAI - Retail Customer Success Team
+        logger.info("\n" + "=" * 80)
+        logger.info("STEPS 7-8: Testing RAI Prompt - Retail Customer Success Team")
+        logger.info("=" * 80)
+        step4_start = time.time()
+        
+        biab_page.select_retail_customer_success_team()
+        biab_page.input_rai_prompt_and_send(rai_prompt)
+        biab_page.validate_rai_error_message()
+        
+        step4_end = time.time()
+        logger.info(f"Steps 7-8 (Retail Team RAI) completed in {step4_end - step4_start:.2f} seconds")
+        
+        # Steps 9-10: Test RAI - RFP Team
+        logger.info("\n" + "=" * 80)
+        logger.info("STEPS 9-10: Testing RAI Prompt - RFP Team")
+        logger.info("=" * 80)
+        step5_start = time.time()
+        
+        biab_page.select_rfp_team()
+        biab_page.input_rai_prompt_and_send(rai_prompt)
+        biab_page.validate_rai_error_message()
+        
+        step5_end = time.time()
+        logger.info(f"Steps 9-10 (RFP Team RAI) completed in {step5_end - step5_start:.2f} seconds")
+        
+        # Steps 11-12: Test RAI - Contract Compliance Review Team
+        logger.info("\n" + "=" * 80)
+        logger.info("STEPS 11-12: Testing RAI Prompt - Contract Compliance Review Team")
+        logger.info("=" * 80)
+        step6_start = time.time()
+        
+        biab_page.select_contract_compliance_team()
+        biab_page.input_rai_prompt_and_send(rai_prompt)
+        biab_page.validate_rai_error_message()
+        
+        step6_end = time.time()
+        logger.info(f"Steps 11-12 (Contract Compliance RAI) completed in {step6_end - step6_start:.2f} seconds")
+        
+        end_time = time.time()
+        total_duration = end_time - start_time
+        
+        logger.info("\n" + "=" * 80)
+        logger.info("TEST EXECUTION SUMMARY")
+        logger.info("=" * 80)
+        logger.info(f"Steps 1-2 (Home Page Validation): {step1_end - step1_start:.2f}s")
+        logger.info(f"Steps 3-4 (HR Team RAI): {step2_end - step2_start:.2f}s")
+        logger.info(f"Steps 5-6 (Product Marketing RAI): {step3_end - step3_start:.2f}s")
+        logger.info(f"Steps 7-8 (Retail Team RAI): {step4_end - step4_start:.2f}s")
+        logger.info(f"Steps 9-10 (RFP Team RAI): {step5_end - step5_start:.2f}s")
+        logger.info(f"Steps 11-12 (Contract Compliance RAI): {step6_end - step6_start:.2f}s")
+        logger.info(f"Total Execution Time: {total_duration:.2f}s")
+        logger.info("=" * 80)
+        logger.info("✓ RAI Prompts for All Teams Test PASSED")
+        logger.info("=" * 80)
+        
+    except Exception as e:
+        end_time = time.time()
+        total_duration = end_time - start_time
+        logger.error("\n" + "=" * 80)
+        logger.error("TEST EXECUTION FAILED")
+        logger.error("=" * 80)
+        logger.error(f"Error: {str(e)}")
+        logger.error(f"Execution time before failure: {total_duration:.2f}s")
+        logger.error("=" * 80)
+        raise
+
+
+@pytest.mark.input_validation
+def test_chat_input_validation(login_logout, request):
+    """
+    Test Case ID 29014: Validate chat input handling for Empty/only-spaces and Excessively long queries.
+    
+    Tests edge cases for chat input validation.
+    """
+    page = login_logout
+    biab_page = BIABPage(page)
+    
+    request.node._nodeid = "(MACAE V4) Validate chat input handling"
+    
+    logger.info("=" * 80)
+    logger.info("Starting Chat Input Validation Test")
+    logger.info("=" * 80)
+    
+    start_time = time.time()
+    
+    try:
+        # Step 1: Go to application URL
+        logger.info("\n" + "=" * 80)
+        logger.info("STEP 1: Opening Application URL")
+        logger.info("=" * 80)
+        step1_start = time.time()
+        biab_page.reload_home_page()
+        step1_end = time.time()
+        logger.info(f"Step 1 completed in {step1_end - step1_start:.2f} seconds")
+        
+        # Step 2: Select HR Team
+        logger.info("\n" + "=" * 80)
+        logger.info("STEP 2: Selecting Human Resources Team")
+        logger.info("=" * 80)
+        step2_start = time.time()
+        biab_page.select_human_resources_team()
+        step2_end = time.time()
+        logger.info(f"Step 2 completed in {step2_end - step2_start:.2f} seconds")
+        
+        # Step 3: Test empty input
+        logger.info("\n" + "=" * 80)
+        logger.info("STEP 3: Testing Empty Input")
+        logger.info("=" * 80)
+        step3_start = time.time()
+        
+        biab_page.input_text_only("")
+        biab_page.validate_send_button_disabled()
+        
+        step3_end = time.time()
+        logger.info(f"Step 3 completed in {step3_end - step3_start:.2f} seconds")
+        
+        # Step 4: Test spaces-only input
+        logger.info("\n" + "=" * 80)
+        logger.info("STEP 4: Testing Spaces-Only Input")
+        logger.info("=" * 80)
+        step4_start = time.time()
+        
+        biab_page.input_text_only("     ")
+        biab_page.validate_send_button_disabled()
+        
+        step4_end = time.time()
+        logger.info(f"Step 4 completed in {step4_end - step4_start:.2f} seconds")
+        
+        # Step 5: Test excessively long query
+        logger.info("\n" + "=" * 80)
+        logger.info("STEP 5: Testing Excessively Long Query")
+        logger.info("=" * 80)
+        step5_start = time.time()
+        
+        # Create a long query (>5000 characters)
+        long_query = "a" * 5001
+        biab_page.input_rai_prompt_and_send(long_query)
+        biab_page.validate_rai_error_message()
+        
+        step5_end = time.time()
+        logger.info(f"Step 5 completed in {step5_end - step5_start:.2f} seconds")
+        
+        # Step 6: Test valid short query
+        logger.info("\n" + "=" * 80)
+        logger.info("STEP 6: Testing Valid Short Query")
+        logger.info("=" * 80)
+        step6_start = time.time()
+        
+        biab_page.input_prompt_and_send(prompt_question1)
+        logger.info("✓ Valid query processed successfully")
+        
+        step6_end = time.time()
+        logger.info(f"Step 6 completed in {step6_end - step6_start:.2f} seconds")
+        
+        end_time = time.time()
+        total_duration = end_time - start_time
+        
+        logger.info("\n" + "=" * 80)
+        logger.info("TEST EXECUTION SUMMARY")
+        logger.info("=" * 80)
+        logger.info(f"Step 1 (Open Application): {step1_end - step1_start:.2f}s")
+        logger.info(f"Step 2 (Select HR Team): {step2_end - step2_start:.2f}s")
+        logger.info(f"Step 3 (Empty Input Test): {step3_end - step3_start:.2f}s")
+        logger.info(f"Step 4 (Spaces-Only Test): {step4_end - step4_start:.2f}s")
+        logger.info(f"Step 5 (Long Query Test): {step5_end - step5_start:.2f}s")
+        logger.info(f"Step 6 (Valid Query Test): {step6_end - step6_start:.2f}s")
+        logger.info(f"Total Execution Time: {total_duration:.2f}s")
+        logger.info("=" * 80)
+        logger.info("✓ Chat Input Validation Test PASSED")
+        logger.info("=" * 80)
+        
+    except Exception as e:
+        end_time = time.time()
+        total_duration = end_time - start_time
+        logger.error("\n" + "=" * 80)
+        logger.error("TEST EXECUTION FAILED")
+        logger.error("=" * 80)
+        logger.error(f"Error: {str(e)}")
+        logger.error(f"Execution time before failure: {total_duration:.2f}s")
+        logger.error("=" * 80)
+        raise
+
+
+@pytest.mark.duplicate_teams
+def test_duplicate_team_entries(login_logout, request):
+    """
+    Test Case ID 29016: Validate Duplicated Team Entries in Team Selection List.
+    
+    Validates that no duplicate team entries appear in the team selection list.
+    """
+    page = login_logout
+    biab_page = BIABPage(page)
+    
+    request.node._nodeid = "(MACAE V4) Validate Duplicated Team Entries"
+    
+    logger.info("=" * 80)
+    logger.info("Starting Duplicate Team Entries Test")
+    logger.info("=" * 80)
+    
+    start_time = time.time()
+    
+    try:
+        # Step 1: Open application
+        logger.info("\n" + "=" * 80)
+        logger.info("STEP 1: Opening Application")
+        logger.info("=" * 80)
+        step1_start = time.time()
+        biab_page.reload_home_page()
+        step1_end = time.time()
+        logger.info(f"Step 1 completed in {step1_end - step1_start:.2f} seconds")
+        
+        # Step 2-5: Validate unique team entries
+        logger.info("\n" + "=" * 80)
+        logger.info("STEPS 2-5: Validating Unique Team Entries")
+        logger.info("=" * 80)
+        step2_start = time.time()
+        
+        # Open team selection
+        biab_page.open_team_selection()
+        
+        # Check for duplicate teams
+        teams_to_check = [
+            "Product Marketing Team",
+            "Human Resources Team",
+            "Retail Customer Success Team",
+            "RFP Team",
+            "Contract Compliance Review Team"
+        ]
+        
+        duplicate_found = False
+        for team in teams_to_check:
+            count = biab_page.get_team_list_count(team)
+            if count > 1:
+                logger.error(f"❌ Duplicate entries found for '{team}': {count} entries")
+                duplicate_found = True
+            else:
+                logger.info(f"✓ '{team}' has unique entry: {count} entry")
+        
+        if duplicate_found:
+            raise AssertionError("Duplicate team entries found in team selection list")
+        
+        step2_end = time.time()
+        logger.info(f"Steps 2-5 completed in {step2_end - step2_start:.2f} seconds")
+        
+        end_time = time.time()
+        total_duration = end_time - start_time
+        
+        logger.info("\n" + "=" * 80)
+        logger.info("TEST EXECUTION SUMMARY")
+        logger.info("=" * 80)
+        logger.info(f"Step 1 (Open Application): {step1_end - step1_start:.2f}s")
+        logger.info(f"Steps 2-5 (Validate Unique Teams): {step2_end - step2_start:.2f}s")
+        logger.info(f"Total Execution Time: {total_duration:.2f}s")
+        logger.info("=" * 80)
+        logger.info("✓ Duplicate Team Entries Test PASSED - All teams are unique")
+        logger.info("=" * 80)
+        
+    except Exception as e:
+        end_time = time.time()
+        total_duration = end_time - start_time
+        logger.error("\n" + "=" * 80)
+        logger.error("TEST EXECUTION FAILED")
+        logger.error("=" * 80)
+        logger.error(f"Error: {str(e)}")
+        logger.error(f"Execution time before failure: {total_duration:.2f}s")
+        logger.error("=" * 80)
+        raise
+
+
+@pytest.mark.cross_team
+def test_cross_team_agent_validation(login_logout, request):
+    """
+    Test Case ID 29986: Multi-agent cross team error.
+    
+    Validates that agents don't mix between teams - ensures agents are specific to their teams.
+    """
+    page = login_logout
+    biab_page = BIABPage(page)
+    
+    request.node._nodeid = "(MACAE V4) Multi-agent cross team error"
+    
+    logger.info("=" * 80)
+    logger.info("Starting Cross Team Agent Validation Test")
+    logger.info("=" * 80)
+    
+    start_time = time.time()
+    
+    try:
+        # Step 1: Open application
+        logger.info("\n" + "=" * 80)
+        logger.info("STEP 1: Opening Application")
+        logger.info("=" * 80)
+        step1_start = time.time()
+        biab_page.reload_home_page()
+        step1_end = time.time()
+        logger.info(f"Step 1 completed in {step1_end - step1_start:.2f} seconds")
+        
+        # Step 2: Perform RFP use case
+        logger.info("\n" + "=" * 80)
+        logger.info("STEP 2: Performing RFP Use Case")
+        logger.info("=" * 80)
+        step2_start = time.time()
+        
+        biab_page.select_rfp_team()
+        biab_page.select_quick_task_and_create_plan()
+        biab_page.approve_task_plan()
+        
+        step2_end = time.time()
+        logger.info(f"Step 2 completed in {step2_end - step2_start:.2f} seconds")
+        
+        # Step 3: Switch to HR team
+        logger.info("\n" + "=" * 80)
+        logger.info("STEP 3: Switching to HR Team")
+        logger.info("=" * 80)
+        step3_start = time.time()
+        
+        biab_page.click_new_task()
+        biab_page.select_human_resources_team()
+        
+        step3_end = time.time()
+        logger.info(f"Step 3 completed in {step3_end - step3_start:.2f} seconds")
+        
+        # Step 4: Click on quick task
+        logger.info("\n" + "=" * 80)
+        logger.info("STEP 4: Clicking Quick Task for HR")
+        logger.info("=" * 80)
+        step4_start = time.time()
+        
+        biab_page.select_quick_task_and_create_plan()
+        
+        step4_end = time.time()
+        logger.info(f"Step 4 completed in {step4_end - step4_start:.2f} seconds")
+        
+        # Steps 5-6: Validate HR agents only (not RFP agents)
+        logger.info("\n" + "=" * 80)
+        logger.info("STEPS 5-6: Validating HR Agents Only")
+        logger.info("=" * 80)
+        step5_start = time.time()
+        
+        # Validate HR agents are present
+        biab_page.validate_hr_agents()
+        
+        logger.info("✓ HR-specific agents validated successfully")
+        logger.info("✓ No cross-contamination from RFP team detected")
+        
+        step5_end = time.time()
+        logger.info(f"Steps 5-6 completed in {step5_end - step5_start:.2f} seconds")
+        
+        end_time = time.time()
+        total_duration = end_time - start_time
+        
+        logger.info("\n" + "=" * 80)
+        logger.info("TEST EXECUTION SUMMARY")
+        logger.info("=" * 80)
+        logger.info(f"Step 1 (Open Application): {step1_end - step1_start:.2f}s")
+        logger.info(f"Step 2 (RFP Use Case): {step2_end - step2_start:.2f}s")
+        logger.info(f"Step 3 (Switch to HR): {step3_end - step3_start:.2f}s")
+        logger.info(f"Step 4 (HR Quick Task): {step4_end - step4_start:.2f}s")
+        logger.info(f"Steps 5-6 (Validate HR Agents): {step5_end - step5_start:.2f}s")
+        logger.info(f"Total Execution Time: {total_duration:.2f}s")
+        logger.info("=" * 80)
+        logger.info("✓ Cross Team Agent Validation Test PASSED")
+        logger.info("=" * 80)
+        
+    except Exception as e:
+        end_time = time.time()
+        total_duration = end_time - start_time
+        logger.error("\n" + "=" * 80)
+        logger.error("TEST EXECUTION FAILED")
+        logger.error("=" * 80)
+        logger.error(f"Error: {str(e)}")
+        logger.error(f"Execution time before failure: {total_duration:.2f}s")
+        logger.error("=" * 80)
+        raise
