@@ -175,6 +175,25 @@ class FoundryAgentTemplate(AzureAgentBase):
             self.logger.error("Failed to enumerate connections: %s", ex)
             return None
 
+        # Build search query guidance to ensure consistent, effective queries
+        search_query_guidance = """
+
+IMPORTANT - Azure AI Search Query Guidelines:
+When searching for documents, ALWAYS use multiple comma-separated search terms to maximize retrieval success.
+Include variations, synonyms, and related terms in your search query.
+
+Examples of GOOD search queries:
+- Instead of: "NDA summary" 
+  Use: "NDA summary, NDA document, non-disclosure agreement, Contoso NDA, contract summary, NDA overview"
+- Instead of: "risk assessment"
+  Use: "risk assessment, NDA risks, contract risks, liability risks, compliance risks, risk analysis"
+- Instead of: "compliance requirements"
+  Use: "compliance requirements, NDA compliance, policy requirements, legal requirements, regulatory compliance"
+
+ALWAYS search with at least 4-6 related terms to ensure you find relevant documents.
+If your first search returns no results, try broader or alternative terms.
+"""
+
         # Create agent with raw tool
         try:
             azure_agent = await self.client.create_agent(
@@ -183,6 +202,7 @@ class FoundryAgentTemplate(AzureAgentBase):
                 instructions=(
                     f"{self.agent_instructions} "
                     "Always use the Azure AI Search tool and configured index for knowledge retrieval."
+                    f"{search_query_guidance}"
                 ),
                 tools=[{"type": "azure_ai_search"}],
                 tool_resources={
