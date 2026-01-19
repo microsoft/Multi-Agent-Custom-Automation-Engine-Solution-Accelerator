@@ -37,6 +37,89 @@ aiSearchIndexForContractSummary=""
 aiSearchIndexForContractRisk=""
 aiSearchIndexForContractCompliance=""
 azSubscriptionId=""
+stIsPublicAccessDisabled=false
+srchIsPublicAccessDisabled=false
+
+# Cleanup function to restore network access
+restore_network_access() {
+    if [[ -n "$ResourceGroup" && -n "$storageAccount" && -n "$aiSearch" ]]; then
+        # Check resource group tag
+        local rgTypeTag=$(az group show --name "$ResourceGroup" --query "tags.Type" -o tsv 2>/dev/null)
+        
+        if [[ "$rgTypeTag" == "WAF" ]]; then
+            if [[ "$stIsPublicAccessDisabled" == true || "$srchIsPublicAccessDisabled" == true ]]; then
+                echo "=== Restoring network access settings ==="
+            fi
+            
+            if [[ "$stIsPublicAccessDisabled" == true ]]; then
+                currentAccess=$(az storage account show --name "$storageAccount" --resource-group "$ResourceGroup" --query "publicNetworkAccess" -o tsv 2>/dev/null)
+                if [[ "$currentAccess" == "Enabled" ]]; then
+                    echo "Disabling public access for Storage Account: $storageAccount"
+                    az storage account update --name "$storageAccount" --public-network-access disabled --default-action Deny --output none 2>/dev/null
+                    echo "✓ Storage Account public access disabled"
+                else
+                    echo "✓ Storage Account access unchanged (already at desired state)"
+                fi
+            else
+                if [[ -n "$ResourceGroup" ]]; then
+                    local checkTag=$(az group show --name "$ResourceGroup" --query "tags.Type" -o tsv 2>/dev/null)
+                    if [[ "$checkTag" == "WAF" ]]; then
+                        if [[ "$stIsPublicAccessDisabled" == false && "$srchIsPublicAccessDisabled" == false ]]; then
+                            if [[ "$stIsPublicAccessDisabled" == false ]]; then
+                                echo "=== Restoring network access settings ==="
+                            fi
+                        fi
+                        echo "✓ Storage Account access unchanged (already at desired state)"
+                    fi
+                fi
+            fi
+            
+            if [[ "$srchIsPublicAccessDisabled" == true ]]; then
+                currentAccess=$(az search service show --name "$aiSearch" --resource-group "$ResourceGroup" --query "publicNetworkAccess" -o tsv 2>/dev/null)
+                if [[ "$currentAccess" == "Enabled" ]]; then
+                    echo "Disabling public access for AI Search Service: $aiSearch"
+                    az search service update --name "$aiSearch" --resource-group "$ResourceGroup" --public-network-access disabled --output none 2>/dev/null
+                    echo "✓ AI Search Service public access disabled"
+                else
+                    echo "✓ AI Search Service access unchanged (already at desired state)"
+                fi
+            else
+                if [[ -n "$ResourceGroup" ]]; then
+                    local checkTag=$(az group show --name "$ResourceGroup" --query "tags.Type" -o tsv 2>/dev/null)
+                    if [[ "$checkTag" == "WAF" ]]; then
+                        echo "✓ AI Search Service access unchanged (already at desired state)"
+                    fi
+                fi
+            fi
+            
+            if [[ "$stIsPublicAccessDisabled" == true || "$srchIsPublicAccessDisabled" == true ]]; then
+                echo "=========================================="
+            else
+                if [[ -n "$ResourceGroup" ]]; then
+                    local checkTag=$(az group show --name "$ResourceGroup" --query "tags.Type" -o tsv 2>/dev/null)
+                    if [[ "$checkTag" == "WAF" ]]; then
+                        echo "=========================================="
+                    fi
+                fi
+            fi
+        fi
+    fi
+}
+
+# Cleanup on exit handler
+cleanup_on_exit() {
+    exit_code=$?
+    echo ""
+    if [ $exit_code -ne 0 ]; then
+        echo ""
+        echo "Script failed with exit code: $exit_code"
+    fi
+    restore_network_access
+    exit $exit_code
+}
+
+# Set up trap to ensure cleanup happens on exit
+trap cleanup_on_exit EXIT TERM
 
 function test_azd_installed() {
     if command -v azd &> /dev/null; then
@@ -149,6 +232,70 @@ function get_values_from_az_deployment() {
     return 0
 }
 
+function get_values_using_solution_suffix() {
+    echo "Getting values from resource naming convention using solution suffix..."
+    
+    # Get the solution suffix from resource group tags
+    solutionSuffix=$(az group show --name "$ResourceGroup" --query "tags.SolutionSuffix" -o tsv)
+    if [[ -z "$solutionSuffix" ]]; then
+        echo "Error: Could not find SolutionSuffix tag in resource group."
+        return 1
+    fi
+    
+    echo "Found solution suffix: $solutionSuffix"
+    
+    # Reconstruct resource names using same naming convention as Bicep
+    storageAccount=$(echo "st${solutionSuffix}" | tr -d '-')  # Remove dashes like Bicep does
+    aiSearch="srch-${solutionSuffix}"
+    containerAppName="ca-${solutionSuffix}"
+    
+    # Query dynamic value (backend URL) from Container App
+    echo "Querying backend URL from Container App..."
+    backendFqdn=$(az containerapp show \
+      --name "$containerAppName" \
+      --resource-group "$ResourceGroup" \
+      --query "properties.configuration.ingress.fqdn" \
+      -o tsv 2>/dev/null)
+    
+    if [[ -z "$backendFqdn" ]]; then
+        echo "Error: Could not get Container App FQDN. Container App may not be deployed yet."
+        return 1
+    fi
+    
+    backendUrl="https://${backendFqdn}"
+    
+    # Hardcoded container names (These don't follow the suffix pattern in Bicep, hence need to be changed here if changed in Bicep)
+    blobContainerForRetailCustomer="retail-dataset-customer"
+    blobContainerForRetailOrder="retail-dataset-order"
+    blobContainerForRFPSummary="rfp-summary-dataset"
+    blobContainerForRFPRisk="rfp-risk-dataset"
+    blobContainerForRFPCompliance="rfp-compliance-dataset"
+    blobContainerForContractSummary="contract-summary-dataset"
+    blobContainerForContractRisk="contract-risk-dataset"
+    blobContainerForContractCompliance="contract-compliance-dataset"
+    
+    # Hardcoded index names (These don't follow the suffix pattern in Bicep, hence need to be changed here if changed in Bicep)
+    aiSearchIndexForRetailCustomer="macae-retail-customer-index"
+    aiSearchIndexForRetailOrder="macae-retail-order-index"
+    aiSearchIndexForRFPSummary="macae-rfp-summary-index"
+    aiSearchIndexForRFPRisk="macae-rfp-risk-index"
+    aiSearchIndexForRFPCompliance="macae-rfp-compliance-index"
+    aiSearchIndexForContractSummary="contract-summary-doc-index"
+    aiSearchIndexForContractRisk="contract-risk-doc-index"
+    aiSearchIndexForContractCompliance="contract-compliance-doc-index"
+    
+    directoryPath="data/agent_teams"
+    
+    # Validate that we got all critical values
+    if [[ -z "$storageAccount" || -z "$aiSearch" || -z "$backendUrl" ]]; then
+        echo "Error: Failed to reconstruct all required resource names."
+        return 1
+    fi
+    
+    echo "Successfully reconstructed values from resource naming convention."
+    return 0
+}
+
 # Authenticate with Azure
 if az account show &> /dev/null; then
     echo "Already authenticated with Azure."
@@ -231,12 +378,23 @@ if [[ -z "$ResourceGroup" ]]; then
         exit 1
     fi
 else
-    # Resource group provided - use deployment outputs
+    # Resource group provided - use deployment outputs, then fallback to naming convention
     echo "Resource group provided: $ResourceGroup"
     
     if ! get_values_from_az_deployment; then
-        echo "Failed to get values from deployment outputs."
-        exit 1
+        echo ""
+        echo "Warning: Could not retrieve values from deployment outputs (deployment may be deleted)."
+        echo "Attempting fallback method: reconstructing values from resource naming convention..."
+        echo ""
+        
+        if ! get_values_using_solution_suffix; then
+            echo ""
+            echo "Error: Both methods failed to retrieve configuration values."
+            echo "Please ensure:"
+            echo "  1. The deployment exists and has a DeploymentName tag, OR"
+            echo "  2. The resource group has a SolutionSuffix tag"
+            exit 1
+        fi
     fi
 fi
 
@@ -394,36 +552,92 @@ if [[ "$useCaseSelection" == "4" || "$useCaseSelection" == "all" || "$useCaseSel
     fi
 fi
 
-stIsPublicAccessDisabled=false
-srchIsPublicAccessDisabled=false
-
 # Enable public access for resources
 if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "2" || "$useCaseSelection" == "5" || "$useCaseSelection" == "all" || "$useCaseSelection" == "6" ]]; then
     if [[ -n "$ResourceGroup" ]]; then
-        stPublicAccess=$(az storage account show --name "$storageAccount" --resource-group "$ResourceGroup" --query "publicNetworkAccess" -o tsv)
-        if [[ "$stPublicAccess" == "Disabled" ]]; then
-            stIsPublicAccessDisabled=true
-            echo "Enabling public access for storage account: $storageAccount"
-            az storage account update --name "$storageAccount" --public-network-access enabled --default-action Allow --output none
-            if [[ $? -ne 0 ]]; then
-                echo "Error: Failed to enable public access for storage account."
-                exit 1
+        # Check if resource group has Type=WAF tag
+        rgTypeTag=$(az group show --name "$ResourceGroup" --query "tags.Type" -o tsv 2>/dev/null)
+        
+        if [[ "$rgTypeTag" == "WAF" ]]; then
+            echo ""
+            echo "=== Temporarily enabling public network access for services ==="
+            stPublicAccess=$(az storage account show --name "$storageAccount" --resource-group "$ResourceGroup" --query "publicNetworkAccess" -o tsv)
+            if [[ "$stPublicAccess" == "Disabled" ]]; then
+                stIsPublicAccessDisabled=true
+                echo "Enabling public access for Storage Account: $storageAccount"
+                az storage account update --name "$storageAccount" --public-network-access enabled --default-action Allow --output none
+                if [[ $? -ne 0 ]]; then
+                    echo "Error: Failed to enable public access for storage account."
+                    exit 1
+                fi
+                
+                # Wait 30 seconds for the change to propagate
+                echo "Waiting 30 seconds for public access to be enabled..."
+                sleep 30
+                
+                # Verify public access is enabled in a loop
+                echo "Verifying public access is enabled..."
+                maxRetries=5
+                retryCount=0
+                while [[ $retryCount -lt $maxRetries ]]; do
+                    currentAccess=$(az storage account show --name "$storageAccount" --resource-group "$ResourceGroup" --query "publicNetworkAccess" -o tsv)
+                    if [[ "$currentAccess" == "Enabled" ]]; then
+                        echo "✓ Storage Account public access enabled successfully"
+                        break
+                    else
+                        echo "Public access not yet enabled (attempt $((retryCount + 1))/$maxRetries). Waiting 5 seconds..."
+                        sleep 5
+                        ((retryCount++))
+                    fi
+                done
+                
+                if [[ $retryCount -eq $maxRetries ]]; then
+                    echo "Warning: Public access verification timed out for storage account."
+                fi
+            else
+                echo "✓ Storage Account public access already enabled"
             fi
-        else
-            echo "Public access is already enabled for storage account: $storageAccount"
         fi
 
-        srchPublicAccess=$(az search service show --name "$aiSearch" --resource-group "$ResourceGroup" --query "publicNetworkAccess" -o tsv)
-        if [[ "$srchPublicAccess" == "Disabled" ]]; then
-            srchIsPublicAccessDisabled=true
-            echo "Enabling public access for search service: $aiSearch"
-            az search service update --name "$aiSearch" --resource-group "$ResourceGroup" --public-network-access enabled --output none
-            if [[ $? -ne 0 ]]; then
-                echo "Error: Failed to enable public access for search service."
-                exit 1
+        if [[ "$rgTypeTag" == "WAF" ]]; then
+            srchPublicAccess=$(az search service show --name "$aiSearch" --resource-group "$ResourceGroup" --query "publicNetworkAccess" -o tsv)
+            if [[ "$srchPublicAccess" == "Disabled" ]]; then
+                srchIsPublicAccessDisabled=true
+                echo "Enabling public access for AI Search Service: $aiSearch"
+                az search service update --name "$aiSearch" --resource-group "$ResourceGroup" --public-network-access enabled --output none
+                if [[ $? -ne 0 ]]; then
+                    echo "Error: Failed to enable public access for search service."
+                    exit 1
+                fi
+                
+                # Wait 30 seconds for the change to propagate
+                echo "Waiting 30 seconds for public access to be enabled..."
+                sleep 30
+                
+                # Verify public access is enabled in a loop
+                echo "Verifying public access is enabled..."
+                maxRetries=5
+                retryCount=0
+                while [[ $retryCount -lt $maxRetries ]]; do
+                    currentAccess=$(az search service show --name "$aiSearch" --resource-group "$ResourceGroup" --query "publicNetworkAccess" -o tsv)
+                    if [[ "$currentAccess" == "Enabled" ]]; then
+                        echo "✓ AI Search Service public access enabled successfully"
+                        break
+                    else
+                        echo "Public access not yet enabled (attempt $((retryCount + 1))/$maxRetries). Waiting 5 seconds..."
+                        sleep 5
+                        ((retryCount++))
+                    fi
+                done
+                
+                if [[ $retryCount -eq $maxRetries ]]; then
+                    echo "Warning: Public access verification timed out for search service."
+                fi
+            else
+                echo "✓ AI Search Service public access already enabled"
             fi
-        else
-            echo "Public access is already enabled for search service: $aiSearch"
+            echo "==========================================================="
+            echo ""
         fi
     fi
 fi
@@ -601,26 +815,6 @@ if [[ "$useCaseSelection" == "2" || "$useCaseSelection" == "all" || "$useCaseSel
     echo "Python script to index data for Retail Customer Satisfaction successfully executed."
 fi
 
-# Disable public access for resources
-if [[ "$stIsPublicAccessDisabled" == true ]]; then
-    echo "Disabling public access for storage account: $storageAccount"
-    az storage account update --name "$storageAccount" --public-network-access disabled --default-action Deny --output none
-    if [[ $? -ne 0 ]]; then
-        echo "Error: Failed to disable public access for storage account."
-        exit 1
-    fi
-fi
-
-if [[ "$srchIsPublicAccessDisabled" == true ]]; then
-    echo "Disabling public access for search service: $aiSearch"
-    az search service update --name "$aiSearch" --resource-group "$ResourceGroup" --public-network-access disabled --output none
-    if [[ $? -ne 0 ]]; then
-        echo "Error: Failed to disable public access for search service."
-        exit 1
-    fi
-fi
-
-echo "Script executed successfully. Sample Data Processed Successfully."
 
 if [[ "$isTeamConfigFailed" == true || "$isSampleDataFailed" == true ]]; then
     echo ""
