@@ -134,7 +134,8 @@ class FoundryAgentTemplate(AzureAgentBase):
 
         desired_connection_name = getattr(self.search, "connection_name", None)
         index_name = getattr(self.search, "index_name", "")
-        query_type = getattr(self.search, "search_query_type", "simple")
+        # Use semantic search for better natural language understanding and document retrieval
+        query_type = getattr(self.search, "search_query_type", "semantic")
 
         if not index_name:
             self.logger.error(
