@@ -856,7 +856,7 @@ class TestFoundryAgentTemplate:
         mock_logger = Mock()
         mock_get_logger.return_value = mock_logger
         
-        mock_agent = AsyncMock()
+        mock_inner_agent = AsyncMock()
         mock_update1 = Mock()
         mock_update2 = Mock()
         
@@ -864,22 +864,19 @@ class TestFoundryAgentTemplate:
         async def mock_run_stream(messages):
             yield mock_update1
             yield mock_update2
-        mock_agent.run_stream = mock_run_stream
+        mock_inner_agent.run_stream = mock_run_stream
+        mock_inner_agent.chat_client = Mock()
+        mock_inner_agent.chat_client.agent_id = "test-agent-id"
         
         mock_message = Mock()
         mock_chat_message_class.return_value = mock_message
         mock_role.USER = "user"
         
-        agent = FoundryAgentTemplate(
-            agent_name="TestAgent",
-            agent_description="Test Description",
-            agent_instructions="Test Instructions",
-            use_reasoning=False,
-            model_deployment_name="test-model",
-            project_endpoint="https://test.project.azure.com/"
-        )
-        
-        agent._agent = mock_agent
+        # Create a mock agent instance to avoid __init__ issues with AzureAgentBase
+        agent = Mock(spec=FoundryAgentTemplate)
+        agent._agent = mock_inner_agent
+        agent.save_database_team_agent = AsyncMock()
+        agent.invoke = FoundryAgentTemplate.invoke.__get__(agent, FoundryAgentTemplate)
         
         updates = []
         async for update in agent.invoke("Test prompt"):
@@ -887,6 +884,7 @@ class TestFoundryAgentTemplate:
         
         assert updates == [mock_update1, mock_update2]
         mock_chat_message_class.assert_called_once_with(role=mock_role.USER, text="Test prompt")
+        agent.save_database_team_agent.assert_called_once()
 
     @pytest.mark.asyncio
     @patch('backend.v4.magentic_agents.foundry_agent.config')

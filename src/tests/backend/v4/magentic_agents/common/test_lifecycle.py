@@ -454,6 +454,8 @@ class TestMCPEnabledBase:
         
         mock_agent = Mock()
         mock_agent.id = "agent-123"
+        mock_agent.chat_client = Mock()
+        mock_agent.chat_client.agent_id = "agent-123"
         base._agent = mock_agent
         
         with patch('backend.v4.magentic_agents.common.lifecycle.CurrentTeamAgent') as mock_team_agent_class:

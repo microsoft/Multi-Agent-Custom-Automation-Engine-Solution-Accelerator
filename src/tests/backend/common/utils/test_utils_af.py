@@ -246,7 +246,7 @@ class TestCreateRAIAgent:
         
         assert call_args[1]['agent_name'] == "RAIAgent"
         assert call_args[1]['agent_description'] == "A comprehensive research assistant for integration testing"
-        assert "Please evaluate the user input for safety and appropriateness" in call_args[1]['agent_instructions']
+        assert "You are RAIAgent, a strict safety classifier for professional workplace use" in call_args[1]['agent_instructions']
         assert call_args[1]['use_reasoning'] is False
         assert call_args[1]['model_deployment_name'] == "test_rai_deployment"
         assert call_args[1]['enable_code_interpreter'] is False
