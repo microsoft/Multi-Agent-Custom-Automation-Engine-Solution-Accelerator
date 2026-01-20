@@ -1351,10 +1351,6 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
             name: 'AZURE_AI_AGENT_PROJECT_CONNECTION_STRING'
             value: '${aiFoundryAiServicesResourceName}.services.ai.azure.com;${aiFoundryAiServicesSubscriptionId};${aiFoundryAiServicesResourceGroupName};${aiFoundryAiProjectResourceName}'
           }
-           {
-            name: 'AZURE_DEV_COLLECT_TELEMETRY'
-            value: 'no'
-          }
           {
             name: 'AZURE_BASIC_LOGGING_LEVEL'
             value: 'INFO'
@@ -1860,7 +1856,6 @@ output AZURE_AI_PROJECT_ENDPOINT string = aiFoundryAiProjectEndpoint
 output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiProjectEndpoint
 output AZURE_AI_AGENT_API_VERSION string = azureAiAgentAPIVersion
 output AZURE_AI_AGENT_PROJECT_CONNECTION_STRING string = '${aiFoundryAiServicesResourceName}.services.ai.azure.com;${aiFoundryAiServicesSubscriptionId};${aiFoundryAiServicesResourceGroupName};${aiFoundryAiProjectResourceName}'
-output AZURE_DEV_COLLECT_TELEMETRY  string = 'no'
 
 
 output AZURE_STORAGE_CONTAINER_NAME_RETAIL_CUSTOMER string = storageContainerNameRetailCustomer
