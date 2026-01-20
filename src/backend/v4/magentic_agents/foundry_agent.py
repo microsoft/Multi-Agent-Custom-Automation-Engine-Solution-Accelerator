@@ -176,24 +176,97 @@ class FoundryAgentTemplate(AzureAgentBase):
             self.logger.error("Failed to enumerate connections: %s", ex)
             return None
 
-        # Build search query guidance to ensure consistent, effective queries
-        search_query_guidance = """
+        # Build search query guidance based on scenario (Contract vs RFP) and agent type (summary/risk/compliance)
+        index_name_lower = index_name.lower()
+        
+        # Detect scenario and agent type from index name
+        is_contract = "contract" in index_name_lower
+        is_rfp = "rfp" in index_name_lower
+        is_summary = "summary" in index_name_lower
+        is_risk = "risk" in index_name_lower
+        is_compliance = "compliance" in index_name_lower
+        
+        if is_contract and is_summary:
+            # Contract Summary Agent
+            search_query_guidance = """
 
 IMPORTANT - Azure AI Search Query Guidelines:
 When searching for documents, ALWAYS use multiple comma-separated search terms to maximize retrieval success.
-Include variations, synonyms, and related terms in your search query.
 
-Examples of GOOD search queries:
+Example of a GOOD search query:
 - Instead of: "NDA summary" 
-  Use: "NDA summary, NDA document, non-disclosure agreement, Contoso NDA, contract summary, NDA overview"
-- Instead of: "risk assessment"
-  Use: "risk assessment, NDA risks, contract risks, liability risks, compliance risks, risk analysis"
-- Instead of: "compliance requirements"
-  Use: "compliance requirements, NDA compliance, policy requirements, legal requirements, regulatory compliance"
+  Use: "Contoso NDA, non-disclosure agreement, NDA summary, Contoso agreement, confidentiality obligations, term, governing law, parties involved, effective date, notable clauses, NDA key points, Contoso contract summary, NDA restrictions, NDA termination, NDA obligations"
 
-ALWAYS search with at least 4-6 related terms to ensure you find relevant documents.
-If your first search returns no results, try broader or alternative terms.
+ALWAYS search with at least 6-8 related terms. Include company names (Contoso), document types (NDA, contract, agreement), and topic variations.
 """
+        elif is_contract and is_risk:
+            # Contract Risk Agent
+            search_query_guidance = """
+
+IMPORTANT - Azure AI Search Query Guidelines:
+When searching for documents, ALWAYS use multiple comma-separated search terms to maximize retrieval success.
+
+Example of a GOOD search query:
+- Instead of: "NDA risks" 
+  Use: "Contoso NDA risk assessment, Contoso NDA risks, NDA clauses, NDA liability, NDA confidentiality, NDA jurisdiction, NDA termination, NDA data handling, NDA dispute resolution, NDA definitions, risk analysis, legal risks, compliance risks, Contoso contract risks"
+
+ALWAYS search with at least 6-8 related terms. Include company names (Contoso), document types (NDA, contract), and risk-related terms.
+"""
+        elif is_contract and is_compliance:
+            # Contract Compliance Agent
+            search_query_guidance = """
+
+IMPORTANT - Azure AI Search Query Guidelines:
+When searching for documents, ALWAYS use multiple comma-separated search terms to maximize retrieval success.
+
+Example of a GOOD search query:
+- Instead of: "NDA compliance" 
+  Use: "Contoso NDA, NDA compliance, NDA policy, NDA audit, NDA gaps, NDA violations, NDA corrective actions, NDA internal policy, NDA legal requirements, NDA clauses, Confidentiality clause, Termination clause, Governing Law clause, Non-Assignment clause, Entire Agreement clause, NDA liability protections, NDA dispute resolution, NDA data protection obligations"
+
+ALWAYS search with at least 6-8 related terms. Include company names (Contoso), document types (NDA, contract), and compliance-related terms.
+"""
+        elif is_rfp and is_summary:
+            # RFP Summary Agent
+            search_query_guidance = """
+
+IMPORTANT - Azure AI Search Query Guidelines:
+When searching for documents, ALWAYS use multiple comma-separated search terms to maximize retrieval success.
+
+Example of a GOOD search query:
+- Instead of: "RFP summary" 
+  Use: "Woodgrove Bank RFP, Contoso response, objectives, technical solution, pricing, timeline, compliance, regulatory requirements, proposal summary, contract terms, deliverables, evaluation criteria, RFP overview, RFP document, proposal details"
+
+ALWAYS search with at least 6-8 related terms. Include company names (Woodgrove Bank, Contoso), document types (RFP, proposal, response), and topic variations.
+"""
+        elif is_rfp and is_risk:
+            # RFP Risk Agent
+            search_query_guidance = """
+
+IMPORTANT - Azure AI Search Query Guidelines:
+When searching for documents, ALWAYS use multiple comma-separated search terms to maximize retrieval success.
+
+Example of a GOOD search query:
+- Instead of: "RFP risks" 
+  Use: "Woodgrove Bank RFP response, Contoso RFP response, RFP risks, proposal risks, risk assessment, risk analysis, RFP risk evaluation, proposal concerns, financial risks, technical risks, compliance risks, delivery risks, contract risks, liability risks"
+
+ALWAYS search with at least 6-8 related terms. Include company names (Woodgrove Bank, Contoso), document types (RFP, proposal), and risk-related terms.
+"""
+        elif is_rfp and is_compliance:
+            # RFP Compliance Agent
+            search_query_guidance = """
+
+IMPORTANT - Azure AI Search Query Guidelines:
+When searching for documents, ALWAYS use multiple comma-separated search terms to maximize retrieval success.
+
+Example of a GOOD search query:
+- Instead of: "RFP compliance" 
+  Use: "Woodgrove Bank RFP response, Contoso RFP response, banking regulations compliance, internal policy alignment, contract best practices, compliance gaps analysis, Woodgrove Bank proposal, Contoso proposal compliance, regulatory adherence banking RFP"
+
+ALWAYS search with at least 6-8 related terms. Include company names (Woodgrove Bank, Contoso), document types (RFP, proposal), and compliance-related terms.
+"""
+        else:
+            # No specific guidance for other scenarios
+            search_query_guidance = ""
 
         # Create agent with raw tool
         try:
