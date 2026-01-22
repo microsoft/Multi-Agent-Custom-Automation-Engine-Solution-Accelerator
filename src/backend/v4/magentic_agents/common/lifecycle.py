@@ -413,13 +413,6 @@ class AzureAgentBase(MCPEnabledBase):
         optionally delete the agent definition here.
         """
         try:
-            # Example optional clean up of an agent id:
-            # if self._agent and isinstance(self._agent, AzureAIAgentClient) and self._agent._should_delete_agent:
-            #     try:
-            #         if self.client and self._agent.agent_id:
-            #             await self.client.agents.delete_agent(self._agent.agent_id)
-            #     except Exception:
-            #         pass
 
             # Close underlying client via base close
             if self._agent and hasattr(self._agent, "close"):
