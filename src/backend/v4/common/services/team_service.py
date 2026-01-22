@@ -207,7 +207,6 @@ class TeamService:
             if team_config is None:
                 return None
 
-
             return team_config
 
         except (KeyError, TypeError, ValueError) as e:
