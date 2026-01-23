@@ -4,8 +4,10 @@ This module provides client wrappers for all external API integrations
 used in the lead generation pipeline.
 """
 
+from .firecrawl import FirecrawlClient
 from .google_maps import GoogleMapsClient
 
 __all__ = [
+    "FirecrawlClient",
     "GoogleMapsClient",
 ]
