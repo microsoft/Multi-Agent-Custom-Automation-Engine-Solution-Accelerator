@@ -3,7 +3,7 @@
   "spec": "002-auto-voice-receptionist-lead-gen",
   "state": "building",
   "subtasks": {
-    "completed": 27,
+    "completed": 30,
     "total": 45,
     "in_progress": 1,
     "failed": 0
@@ -18,8 +18,8 @@
     "max": 1
   },
   "session": {
-    "number": 28,
+    "number": 31,
     "started_at": "2026-01-23T01:07:47.760541"
   },
-  "last_update": "2026-01-23T02:44:13.170896"
+  "last_update": "2026-01-23T02:51:12.969949"
 }
