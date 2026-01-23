@@ -18,8 +18,20 @@ from .campaign import Campaign, CampaignStatus
 from .dossier import Dossier
 from .deployment import Deployment, DeploymentStatus
 
+# Import database utilities
+from .database import (
+    DatabaseManager,
+    get_db_session,
+    get_db,
+    init_database,
+    close_database,
+    create_test_engine,
+)
+
 __all__ = [
+    # Base class
     "Base",
+    # Models
     "Lead",
     "LeadStatus",
     "Campaign",
@@ -27,4 +39,11 @@ __all__ = [
     "Dossier",
     "Deployment",
     "DeploymentStatus",
+    # Database utilities
+    "DatabaseManager",
+    "get_db_session",
+    "get_db",
+    "init_database",
+    "close_database",
+    "create_test_engine",
 ]
