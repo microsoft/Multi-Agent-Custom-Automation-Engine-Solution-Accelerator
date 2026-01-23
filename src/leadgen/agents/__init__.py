@@ -15,11 +15,13 @@ if TYPE_CHECKING:
     from .scraper_agent import scraper_agent
     from .research_agent import research_agent
     from .voice_assembler_agent import voice_assembler_agent
+    from .frontend_deployer_agent import frontend_deployer_agent
 
 __all__ = [
     "scraper_agent",
     "research_agent",
     "voice_assembler_agent",
+    "frontend_deployer_agent",
 ]
 
 
@@ -34,4 +36,7 @@ def __getattr__(name: str):
     if name == "voice_assembler_agent":
         from .voice_assembler_agent import voice_assembler_agent
         return voice_assembler_agent
+    if name == "frontend_deployer_agent":
+        from .frontend_deployer_agent import frontend_deployer_agent
+        return frontend_deployer_agent
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
