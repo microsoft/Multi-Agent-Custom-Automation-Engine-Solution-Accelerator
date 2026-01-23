@@ -6,7 +6,7 @@ import {
   DismissCircle20Regular,
   Dismiss20Regular,
 } from "@fluentui/react-icons";
-import { Body1, Button, Spinner } from "@fluentui/react-components";
+import { Body1, Button, Spinner, Tooltip } from "@fluentui/react-components";
 
 // Toast type
 export type ToastIntent = "info" | "success" | "warning" | "error" | "progress";
@@ -163,6 +163,12 @@ const InlineToaster: React.FC = () => {
           </Body1>
 
           {(toast.dismissible || toast.intent === "progress") && (
+            <Tooltip
+                        content="Close"
+                        relationship="label"
+                        positioning="above"
+                        withArrow
+                      >
             <Button
               onClick={() =>
                 _setToasts?.((prev) => prev.filter((t) => t.id !== toast.id))
@@ -185,6 +191,7 @@ const InlineToaster: React.FC = () => {
               
               
             </Button>
+            </Tooltip>
           )}
         </div>
       ))}
