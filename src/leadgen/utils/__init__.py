@@ -34,6 +34,21 @@ from .dossier_template import (
     Competitor,
 )
 
+from .voice_personality import (
+    generate_personality,
+    generate_personality_prompt,
+    generate_personality_from_dossier,
+    get_available_tones,
+    get_available_speeds,
+    get_supported_industries,
+    VoicePersonalityConfig,
+    VoicePersonalityTone,
+    VoiceSpeed,
+    BusinessContext,
+    PersonalityTemplate,
+    INDUSTRY_CONVERSATION_HINTS,
+)
+
 __all__ = [
     # Revenue heuristics
     "estimate_revenue",
@@ -58,4 +73,17 @@ __all__ = [
     "PainPoint",
     "GotchaQA",
     "Competitor",
+    # Voice personality
+    "generate_personality",
+    "generate_personality_prompt",
+    "generate_personality_from_dossier",
+    "get_available_tones",
+    "get_available_speeds",
+    "get_supported_industries",
+    "VoicePersonalityConfig",
+    "VoicePersonalityTone",
+    "VoiceSpeed",
+    "BusinessContext",
+    "PersonalityTemplate",
+    "INDUSTRY_CONVERSATION_HINTS",
 ]
