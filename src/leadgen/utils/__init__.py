@@ -49,6 +49,23 @@ from .voice_personality import (
     INDUSTRY_CONVERSATION_HINTS,
 )
 
+from .branding_injector import (
+    inject_branding,
+    inject_branding_from_lead,
+    branding_config_from_lead,
+    validate_branding_config,
+    get_industry_colors,
+    get_industry_tagline,
+    format_env_file,
+    format_vercel_env_json,
+    merge_branding_configs,
+    BrandingConfig,
+    BrandingValidationResult,
+    INDUSTRY_COLORS,
+    INDUSTRY_TAGLINES,
+    DEFAULT_BRANDING,
+)
+
 __all__ = [
     # Revenue heuristics
     "estimate_revenue",
@@ -86,4 +103,19 @@ __all__ = [
     "BusinessContext",
     "PersonalityTemplate",
     "INDUSTRY_CONVERSATION_HINTS",
+    # Branding injector
+    "inject_branding",
+    "inject_branding_from_lead",
+    "branding_config_from_lead",
+    "validate_branding_config",
+    "get_industry_colors",
+    "get_industry_tagline",
+    "format_env_file",
+    "format_vercel_env_json",
+    "merge_branding_configs",
+    "BrandingConfig",
+    "BrandingValidationResult",
+    "INDUSTRY_COLORS",
+    "INDUSTRY_TAGLINES",
+    "DEFAULT_BRANDING",
 ]
