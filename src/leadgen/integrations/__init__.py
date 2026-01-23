@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 _ApolloClient = None
 _FirecrawlClient = None
 _GoogleMapsClient = None
+_VectorStoreManager = None
 
 
 def _get_apollo_client():
@@ -41,11 +42,21 @@ def _get_googlemaps_client():
     return _GoogleMapsClient
 
 
+def _get_vector_store_manager():
+    """Lazy load VectorStoreManager."""
+    global _VectorStoreManager
+    if _VectorStoreManager is None:
+        from .openai_vectors import VectorStoreManager as _VSM
+        _VectorStoreManager = _VSM
+    return _VectorStoreManager
+
+
 # For type checking, use actual imports
 if TYPE_CHECKING:
     from .apollo import ApolloClient
     from .firecrawl import FirecrawlClient
     from .google_maps import GoogleMapsClient
+    from .openai_vectors import VectorStoreManager
 
 
 def __getattr__(name: str):
@@ -56,6 +67,8 @@ def __getattr__(name: str):
         return _get_firecrawl_client()
     elif name == "GoogleMapsClient":
         return _get_googlemaps_client()
+    elif name == "VectorStoreManager":
+        return _get_vector_store_manager()
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
@@ -63,4 +76,5 @@ __all__ = [
     "ApolloClient",
     "FirecrawlClient",
     "GoogleMapsClient",
+    "VectorStoreManager",
 ]
