@@ -15,6 +15,7 @@ _GoogleMapsClient = None
 _VectorStoreManager = None
 _TwilioVoiceClient = None
 _SendGridClient = None
+_VercelDeployer = None
 
 
 def _get_apollo_client():
@@ -71,6 +72,15 @@ def _get_sendgrid_client():
     return _SendGridClient
 
 
+def _get_vercel_deployer():
+    """Lazy load VercelDeployer."""
+    global _VercelDeployer
+    if _VercelDeployer is None:
+        from .vercel import VercelDeployer as _VD
+        _VercelDeployer = _VD
+    return _VercelDeployer
+
+
 # For type checking, use actual imports
 if TYPE_CHECKING:
     from .apollo import ApolloClient
@@ -79,6 +89,7 @@ if TYPE_CHECKING:
     from .openai_vectors import VectorStoreManager
     from .twilio_voice import TwilioVoiceClient
     from .sendgrid import SendGridClient
+    from .vercel import VercelDeployer
 
 
 def __getattr__(name: str):
@@ -95,6 +106,8 @@ def __getattr__(name: str):
         return _get_twilio_voice_client()
     elif name == "SendGridClient":
         return _get_sendgrid_client()
+    elif name == "VercelDeployer":
+        return _get_vercel_deployer()
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
@@ -105,4 +118,5 @@ __all__ = [
     "VectorStoreManager",
     "TwilioVoiceClient",
     "SendGridClient",
+    "VercelDeployer",
 ]
