@@ -17,7 +17,7 @@ from agent_framework.azure import AzureOpenAIChatClient
 # from agent_framework_azure_ai import AzureOpenAIChatClient
 from agent_framework import ChatOptions
 
-from backend.v4.models.messages import MPlan, WebsocketMessageType
+from v4.models.messages import MPlan, WebsocketMessageType
 
 logger = logging.getLogger(__name__)
 
