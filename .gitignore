@@ -17,6 +17,7 @@ downloads/
 eggs/
 .eggs/
 lib/
+!src/demo-frontend/lib/
 lib64/
 parts/
 sdist/
@@ -465,3 +466,6 @@ data/sample_code/
 # Bicep local files
 *.local*.bicepparam
 *.local*.parameters.json
+
+# Auto Claude data directory
+.auto-claude/

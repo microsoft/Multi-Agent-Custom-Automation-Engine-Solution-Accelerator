@@ -1,0 +1,337 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * Global CSS for Demo Frontend
+ *
+ * CSS variables are dynamically injected based on prospect branding.
+ * Default values are provided for local development.
+ */
+
+:root {
+  /* Primary brand colors (injected dynamically) */
+  --color-primary: #2563eb;
+  --color-primary-dark: #1d4ed8;
+  --color-secondary: #64748b;
+  --color-accent: #10b981;
+
+  /* Base colors */
+  --background: #ffffff;
+  --foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --border: #e2e8f0;
+  --ring: var(--color-primary);
+
+  /* Card colors */
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+
+  /* Popover colors */
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+
+  /* Success/Error/Warning states */
+  --success: #10b981;
+  --success-foreground: #ffffff;
+  --error: #ef4444;
+  --error-foreground: #ffffff;
+  --warning: #f59e0b;
+  --warning-foreground: #ffffff;
+  --info: #3b82f6;
+  --info-foreground: #ffffff;
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  /* Border radius */
+  --radius: 0.5rem;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+/* Dark mode support (optional, can be enabled per prospect) */
+@media (prefers-color-scheme: dark) {
+  :root.dark-mode {
+    --background: #0f172a;
+    --foreground: #f8fafc;
+    --muted: #1e293b;
+    --muted-foreground: #94a3b8;
+    --border: #334155;
+    --card: #1e293b;
+    --card-foreground: #f8fafc;
+    --popover: #1e293b;
+    --popover-foreground: #f8fafc;
+  }
+}
+
+/* Base styles */
+html {
+  font-family: var(--font-sans);
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Typography defaults */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+/* Link defaults */
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color 150ms ease-in-out;
+}
+
+a:hover {
+  color: var(--color-primary-dark);
+}
+
+/* Focus styles for accessibility */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Custom utility classes */
+@layer utilities {
+  /* Brand-specific text colors */
+  .text-brand {
+    color: var(--color-primary);
+  }
+
+  .text-brand-dark {
+    color: var(--color-primary-dark);
+  }
+
+  /* Brand-specific background colors */
+  .bg-brand {
+    background-color: var(--color-primary);
+  }
+
+  .bg-brand-dark {
+    background-color: var(--color-primary-dark);
+  }
+
+  /* Brand-specific border colors */
+  .border-brand {
+    border-color: var(--color-primary);
+  }
+
+  /* Gradient backgrounds using brand colors */
+  .bg-gradient-brand {
+    background: linear-gradient(
+      135deg,
+      var(--color-primary) 0%,
+      var(--color-primary-dark) 100%
+    );
+  }
+
+  /* Card styling */
+  .card {
+    background-color: var(--card);
+    color: var(--card-foreground);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* Status badge styles */
+  .badge-success {
+    background-color: var(--success);
+    color: var(--success-foreground);
+  }
+
+  .badge-error {
+    background-color: var(--error);
+    color: var(--error-foreground);
+  }
+
+  .badge-warning {
+    background-color: var(--warning);
+    color: var(--warning-foreground);
+  }
+
+  .badge-info {
+    background-color: var(--info);
+    color: var(--info-foreground);
+  }
+
+  /* Smooth scroll for internal links */
+  .scroll-smooth {
+    scroll-behavior: smooth;
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Component-specific styles */
+@layer components {
+  /* Primary button style */
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-lg;
+    @apply font-medium text-white;
+    @apply bg-brand hover:bg-brand-dark;
+    @apply transition-colors duration-150;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Secondary button style */
+  .btn-secondary {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-lg;
+    @apply font-medium;
+    @apply bg-muted text-foreground;
+    @apply hover:bg-muted/80;
+    @apply transition-colors duration-150;
+    @apply border border-border;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Outline button style */
+  .btn-outline {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-lg;
+    @apply font-medium text-brand;
+    @apply bg-transparent border border-brand;
+    @apply hover:bg-brand hover:text-white;
+    @apply transition-colors duration-150;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Input field style */
+  .input-field {
+    @apply w-full px-3 py-2 rounded-lg;
+    @apply border border-border;
+    @apply bg-background text-foreground;
+    @apply placeholder:text-muted-foreground;
+    @apply focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Card with hover effect */
+  .card-hover {
+    @apply card transition-all duration-200;
+    @apply hover:shadow-md hover:border-brand/20;
+  }
+
+  /* Avatar circle */
+  .avatar {
+    @apply inline-flex items-center justify-center rounded-full;
+    @apply bg-brand text-white font-medium;
+  }
+
+  /* Loading spinner */
+  .spinner {
+    @apply inline-block animate-spin rounded-full;
+    @apply border-2 border-solid border-current border-r-transparent;
+    @apply motion-reduce:animate-[spin_1.5s_linear_infinite];
+  }
+}
+
+/* Animation keyframes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(-5%);
+    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+  }
+  50% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  }
+}
+
+/* Animation utility classes */
+@layer utilities {
+  .animate-fadeIn {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  .animate-slideUp {
+    animation: slideUp 0.3s ease-out;
+  }
+
+  .animate-slideDown {
+    animation: slideDown 0.3s ease-out;
+  }
+
+  .animate-pulse-slow {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}
+
+/* Print styles */
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
