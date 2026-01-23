@@ -1,0 +1,44 @@
+{
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true
+  },
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Read(./**)",
+      "Write(./**)",
+      "Edit(./**)",
+      "Glob(./**)",
+      "Grep(./**)",
+      "Read(/Users/chris/ai/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/.auto-claude/worktrees/tasks/002-auto-voice-receptionist-lead-gen/**)",
+      "Write(/Users/chris/ai/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/.auto-claude/worktrees/tasks/002-auto-voice-receptionist-lead-gen/**)",
+      "Edit(/Users/chris/ai/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/.auto-claude/worktrees/tasks/002-auto-voice-receptionist-lead-gen/**)",
+      "Glob(/Users/chris/ai/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/.auto-claude/worktrees/tasks/002-auto-voice-receptionist-lead-gen/**)",
+      "Grep(/Users/chris/ai/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/.auto-claude/worktrees/tasks/002-auto-voice-receptionist-lead-gen/**)",
+      "Read(/Users/chris/ai/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/.auto-claude/worktrees/tasks/002-auto-voice-receptionist-lead-gen/.auto-claude/specs/002-auto-voice-receptionist-lead-gen/**)",
+      "Write(/Users/chris/ai/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/.auto-claude/worktrees/tasks/002-auto-voice-receptionist-lead-gen/.auto-claude/specs/002-auto-voice-receptionist-lead-gen/**)",
+      "Edit(/Users/chris/ai/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/.auto-claude/worktrees/tasks/002-auto-voice-receptionist-lead-gen/.auto-claude/specs/002-auto-voice-receptionist-lead-gen/**)",
+      "Read(/Users/chris/ai/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/.auto-claude/**)",
+      "Write(/Users/chris/ai/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/.auto-claude/**)",
+      "Edit(/Users/chris/ai/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/.auto-claude/**)",
+      "Glob(/Users/chris/ai/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/.auto-claude/**)",
+      "Grep(/Users/chris/ai/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/.auto-claude/**)",
+      "Read(/Users/chris/ai/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/.worktrees/**)",
+      "Write(/Users/chris/ai/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/.worktrees/**)",
+      "Edit(/Users/chris/ai/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/.worktrees/**)",
+      "Glob(/Users/chris/ai/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/.worktrees/**)",
+      "Grep(/Users/chris/ai/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/.worktrees/**)",
+      "Bash(*)",
+      "WebFetch(*)",
+      "WebSearch(*)",
+      "mcp__context7__resolve-library-id(*)",
+      "mcp__context7__get-library-docs(*)",
+      "mcp__graphiti-memory__search_nodes(*)",
+      "mcp__graphiti-memory__search_facts(*)",
+      "mcp__graphiti-memory__add_episode(*)",
+      "mcp__graphiti-memory__get_episodes(*)",
+      "mcp__graphiti-memory__get_entity_edge(*)"
+    ]
+  }
+}
