@@ -86,6 +86,24 @@ from .email_templates import (
     HUMOROUS_OPENERS,
 )
 
+from .daily_report import (
+    generate_daily_report,
+    generate_daily_report_from_stats,
+    calculate_domain_health_score,
+    generate_alerts,
+    generate_recommendations,
+    aggregate_metrics,
+    get_health_status_description,
+    DailyReport,
+    EmailMetricsSnapshot,
+    BounceAnalysis,
+    CampaignSummary,
+    DomainHealthStatus,
+    ReportPeriod,
+    HEALTH_WEIGHTS,
+    BENCHMARKS,
+)
+
 __all__ = [
     # Revenue heuristics
     "estimate_revenue",
@@ -156,4 +174,20 @@ __all__ = [
     "INDUSTRY_SUBJECTS",
     "INDUSTRY_PAIN_HOOKS",
     "HUMOROUS_OPENERS",
+    # Daily report
+    "generate_daily_report",
+    "generate_daily_report_from_stats",
+    "calculate_domain_health_score",
+    "generate_alerts",
+    "generate_recommendations",
+    "aggregate_metrics",
+    "get_health_status_description",
+    "DailyReport",
+    "EmailMetricsSnapshot",
+    "BounceAnalysis",
+    "CampaignSummary",
+    "DomainHealthStatus",
+    "ReportPeriod",
+    "HEALTH_WEIGHTS",
+    "BENCHMARKS",
 ]
