@@ -14,9 +14,12 @@ class Base(AsyncAttrs, DeclarativeBase):
 
 # Import models to register them with Base metadata
 from .lead import Lead, LeadStatus
+from .campaign import Campaign, CampaignStatus
 
 __all__ = [
     "Base",
     "Lead",
     "LeadStatus",
+    "Campaign",
+    "CampaignStatus",
 ]
