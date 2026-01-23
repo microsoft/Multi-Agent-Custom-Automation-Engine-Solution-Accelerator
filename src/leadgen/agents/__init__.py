@@ -13,9 +13,11 @@ from typing import TYPE_CHECKING
 # Lazy imports to avoid circular dependencies and improve startup time
 if TYPE_CHECKING:
     from .scraper_agent import scraper_agent
+    from .research_agent import research_agent
 
 __all__ = [
     "scraper_agent",
+    "research_agent",
 ]
 
 
@@ -24,4 +26,7 @@ def __getattr__(name: str):
     if name == "scraper_agent":
         from .scraper_agent import scraper_agent
         return scraper_agent
+    if name == "research_agent":
+        from .research_agent import research_agent
+        return research_agent
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
