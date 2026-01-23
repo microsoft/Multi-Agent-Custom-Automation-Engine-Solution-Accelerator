@@ -1,0 +1,26 @@
+# FastAPI and server
+fastapi
+uvicorn
+websockets
+
+# Twilio integration
+twilio
+
+# OpenAI for Realtime API
+openai>=1.84.0
+
+# Environment and utilities
+python-dotenv
+
+# Azure identity (for managed identity support)
+azure-identity
+
+# Observability
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-instrumentation-fastapi
+
+# Testing tools
+pytest>=8.2,<9
+pytest-asyncio==0.24.0
+pytest-cov==5.0.0
