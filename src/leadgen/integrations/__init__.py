@@ -14,6 +14,7 @@ _FirecrawlClient = None
 _GoogleMapsClient = None
 _VectorStoreManager = None
 _TwilioVoiceClient = None
+_SendGridClient = None
 
 
 def _get_apollo_client():
@@ -61,6 +62,15 @@ def _get_twilio_voice_client():
     return _TwilioVoiceClient
 
 
+def _get_sendgrid_client():
+    """Lazy load SendGridClient."""
+    global _SendGridClient
+    if _SendGridClient is None:
+        from .sendgrid import SendGridClient as _SGC
+        _SendGridClient = _SGC
+    return _SendGridClient
+
+
 # For type checking, use actual imports
 if TYPE_CHECKING:
     from .apollo import ApolloClient
@@ -68,6 +78,7 @@ if TYPE_CHECKING:
     from .google_maps import GoogleMapsClient
     from .openai_vectors import VectorStoreManager
     from .twilio_voice import TwilioVoiceClient
+    from .sendgrid import SendGridClient
 
 
 def __getattr__(name: str):
@@ -82,6 +93,8 @@ def __getattr__(name: str):
         return _get_vector_store_manager()
     elif name == "TwilioVoiceClient":
         return _get_twilio_voice_client()
+    elif name == "SendGridClient":
+        return _get_sendgrid_client()
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
@@ -91,4 +104,5 @@ __all__ = [
     "GoogleMapsClient",
     "VectorStoreManager",
     "TwilioVoiceClient",
+    "SendGridClient",
 ]
