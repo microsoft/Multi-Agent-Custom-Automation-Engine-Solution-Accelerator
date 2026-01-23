@@ -7,7 +7,7 @@ from enum import Enum
 from typing import Optional
 
 from sqlalchemy import String, Text, Numeric, DateTime, Enum as SQLEnum
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from . import Base
 
@@ -121,6 +121,14 @@ class Lead(Base):
         nullable=False,
         default=datetime.utcnow,
         onupdate=datetime.utcnow
+    )
+
+    # Relationship to Dossier model (one-to-one)
+    dossier: Mapped[Optional["Dossier"]] = relationship(
+        "Dossier",
+        back_populates="lead",
+        uselist=False,
+        lazy="selectin"
     )
 
     def __repr__(self) -> str:
