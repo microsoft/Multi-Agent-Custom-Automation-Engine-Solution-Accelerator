@@ -1,6 +1,6 @@
 import ChatInput from "@/coral/modules/ChatInput";
 import { PlanChatProps } from "@/models";
-import { Button } from "@fluentui/react-components";
+import { Button, Tooltip } from "@fluentui/react-components";
 import { Send } from "@/coral/imports/bundleicons";
 
 interface SimplifiedPlanChatProps extends PlanChatProps {
@@ -51,6 +51,12 @@ const PlanChatBody: React.FC<SimplifiedPlanChatProps> = ({
                     boxSizing: 'border-box',
                 }}
             >
+                <Tooltip
+                    content="Send"
+                    relationship="label"
+                    positioning="above"
+                    withArrow
+                >
                 <Button
                     appearance="subtle"
                     className="home-input-send-button"
@@ -69,6 +75,7 @@ const PlanChatBody: React.FC<SimplifiedPlanChatProps> = ({
                         flexShrink: 0,
                     }}
                 />
+                </Tooltip>
             </ChatInput>
         </div>
     );

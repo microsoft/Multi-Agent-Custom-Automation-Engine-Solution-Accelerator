@@ -2,7 +2,8 @@ import {
   Body1Strong,
   Button,
   Caption1,
-  Title2
+  Title2,
+  Tooltip
 } from "@fluentui/react-components";
 
 import React, { useRef, useEffect, useState } from "react";
@@ -227,13 +228,19 @@ const HomeInput: React.FC<HomeInputProps> = ({ selectedTeam }) => {
             onEnter={handleSubmit}
             disabledChat={submitting}
           >
+            <Tooltip
+            content="Send"
+            relationship="label"
+            positioning="above"
+            withArrow
+          >
             <Button
               appearance="subtle"
               className="home-input-send-button"
               onClick={handleSubmit}
               disabled={submitting}
               icon={<Send />}
-            />
+            /></Tooltip>
           </ChatInput>
 
           <InlineToaster />
