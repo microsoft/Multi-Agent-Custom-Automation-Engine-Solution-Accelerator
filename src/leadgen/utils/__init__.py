@@ -17,7 +17,25 @@ from .revenue_heuristics import (
     MAX_QUALIFIED_REVENUE,
 )
 
+from .dossier_template import (
+    generate_dossier,
+    generate_dossier_from_dict,
+    validate_dossier_sections,
+    is_dossier_valid,
+    get_default_pain_points,
+    generate_gotcha_qas_from_data,
+    DossierData,
+    DossierStatus,
+    CompanyOverview,
+    Service,
+    TeamMember,
+    PainPoint,
+    GotchaQA,
+    Competitor,
+)
+
 __all__ = [
+    # Revenue heuristics
     "estimate_revenue",
     "get_industry_multiplier",
     "calculate_review_score",
@@ -25,4 +43,19 @@ __all__ = [
     "INDUSTRY_MULTIPLIERS",
     "MIN_QUALIFIED_REVENUE",
     "MAX_QUALIFIED_REVENUE",
+    # Dossier template
+    "generate_dossier",
+    "generate_dossier_from_dict",
+    "validate_dossier_sections",
+    "is_dossier_valid",
+    "get_default_pain_points",
+    "generate_gotcha_qas_from_data",
+    "DossierData",
+    "DossierStatus",
+    "CompanyOverview",
+    "Service",
+    "TeamMember",
+    "PainPoint",
+    "GotchaQA",
+    "Competitor",
 ]
