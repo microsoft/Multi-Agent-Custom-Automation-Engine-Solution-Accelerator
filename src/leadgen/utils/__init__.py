@@ -66,6 +66,26 @@ from .branding_injector import (
     DEFAULT_BRANDING,
 )
 
+from .email_templates import (
+    generate_cold_email,
+    generate_cold_email_from_dict,
+    generate_subject,
+    get_available_styles,
+    get_available_variants,
+    get_industry_subjects,
+    validate_template,
+    is_template_valid,
+    EmailTemplate,
+    GeneratedEmail,
+    EmailStyle,
+    EmailVariant,
+    CANSpamFooter,
+    PersonalizationToken,
+    INDUSTRY_SUBJECTS,
+    INDUSTRY_PAIN_HOOKS,
+    HUMOROUS_OPENERS,
+)
+
 __all__ = [
     # Revenue heuristics
     "estimate_revenue",
@@ -118,4 +138,22 @@ __all__ = [
     "INDUSTRY_COLORS",
     "INDUSTRY_TAGLINES",
     "DEFAULT_BRANDING",
+    # Email templates
+    "generate_cold_email",
+    "generate_cold_email_from_dict",
+    "generate_subject",
+    "get_available_styles",
+    "get_available_variants",
+    "get_industry_subjects",
+    "validate_template",
+    "is_template_valid",
+    "EmailTemplate",
+    "GeneratedEmail",
+    "EmailStyle",
+    "EmailVariant",
+    "CANSpamFooter",
+    "PersonalizationToken",
+    "INDUSTRY_SUBJECTS",
+    "INDUSTRY_PAIN_HOOKS",
+    "HUMOROUS_OPENERS",
 ]
