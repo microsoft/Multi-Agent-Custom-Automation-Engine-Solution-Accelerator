@@ -49,6 +49,8 @@ from fastapi.responses import PlainTextResponse, Response
 from twilio.request_validator import RequestValidator
 from twilio.twiml.voice_response import Connect, Say, Stream, VoiceResponse
 
+from audio_proxy import ProxyConfig, TwilioOpenAIProxy, create_proxy_from_config
+
 # Configure logging
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
 logging.basicConfig(
@@ -451,6 +453,7 @@ async def handle_call_status(
 async def voice_websocket(
     websocket: WebSocket,
     lead_id: str,
+    system_prompt: Optional[str] = Query(None),
 ) -> None:
     """WebSocket endpoint for Twilio Media Streams.
 
@@ -458,9 +461,16 @@ async def voice_websocket(
     to OpenAI's Realtime API, then streams the AI response audio back
     to Twilio.
 
+    The TwilioOpenAIProxy handles:
+    - Audio format conversion (Twilio mulaw 8kHz <-> OpenAI PCM 24kHz)
+    - Bidirectional WebSocket message routing
+    - Session management with OpenAI Realtime API
+    - Automatic turn detection and response generation
+
     Args:
         websocket: WebSocket connection from Twilio.
         lead_id: Lead ID for personalization and context.
+        system_prompt: Optional custom system prompt for the AI.
 
     Note:
         The actual audio proxy implementation is in audio_proxy.py.
@@ -474,72 +484,43 @@ async def voice_websocket(
 
     # Track WebSocket connection for associated call
     call_sid = None
-    stream_sid = None
+
+    # Check if OpenAI is configured
+    if not config.is_configured:
+        logger.warning("OpenAI not configured - falling back to basic handler")
+        await _handle_basic_websocket(websocket, lead_id)
+        return
+
+    # Create the audio proxy
+    proxy_config = ProxyConfig(
+        openai_api_key=config.openai_api_key,
+        openai_realtime_url=config.openai_realtime_url,
+        openai_model=config.openai_realtime_model,
+        voice=config.default_voice,
+        system_prompt=system_prompt or config.default_greeting,
+    )
+
+    def on_transcript(role: str, text: str) -> None:
+        """Handle transcript updates from the proxy."""
+        logger.debug("Transcript [%s]: %s", role, text[:50] if len(text) > 50 else text)
+
+    proxy = TwilioOpenAIProxy(proxy_config, on_transcript=on_transcript)
 
     try:
-        while True:
-            # Receive message from Twilio
-            message = await websocket.receive_text()
-            data = json.loads(message)
+        # Start the proxy - this runs until the connection closes
+        await proxy.connect(lead_id, websocket, system_prompt)
 
-            event_type = data.get("event")
+        # Get call_sid from proxy session for cleanup
+        if proxy.session:
+            call_sid = proxy.session.call_sid
 
-            if event_type == "connected":
-                # Initial connection event
-                logger.info("Twilio stream connected for lead: %s", lead_id)
-
-            elif event_type == "start":
-                # Stream start event with metadata
-                start_data = data.get("start", {})
-                stream_sid = start_data.get("streamSid")
-                call_sid = start_data.get("callSid")
-
-                # Extract custom parameters
-                custom_params = start_data.get("customParameters", {})
-                logger.info(
-                    "Stream started: stream_sid=%s, call_sid=%s, params=%s",
-                    stream_sid,
-                    call_sid,
-                    custom_params,
-                )
-
-                # Update call tracking
-                if call_sid and call_sid in active_calls:
-                    active_calls[call_sid].websocket_connected = True
-
-            elif event_type == "media":
-                # Audio data from Twilio (mulaw 8kHz)
-                # The actual audio processing is handled by audio_proxy.py
-                # For now, we just log receipt
-                media = data.get("media", {})
-                payload = media.get("payload")  # Base64 encoded audio
-
-                # In full implementation, forward to OpenAI Realtime API
-                # and receive response audio to send back
-                pass
-
-            elif event_type == "mark":
-                # Playback completion marker
-                mark_name = data.get("mark", {}).get("name")
-                logger.debug("Playback mark received: %s", mark_name)
-
-            elif event_type == "stop":
-                # Stream ending
-                logger.info(
-                    "Stream stopped: stream_sid=%s, lead_id=%s",
-                    stream_sid,
-                    lead_id,
-                )
-                break
-
-            else:
-                logger.debug("Unknown event type: %s", event_type)
+    except ConnectionError as e:
+        logger.error("Proxy connection failed for lead %s: %s", lead_id, e)
+        # Fall back to basic handler on connection failure
+        await _handle_basic_websocket(websocket, lead_id)
 
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected for lead: %s", lead_id)
-
-    except json.JSONDecodeError as e:
-        logger.error("Invalid JSON from Twilio: %s", e)
 
     except Exception as e:
         logger.error(
@@ -554,6 +535,84 @@ async def voice_websocket(
         if call_sid and call_sid in active_calls:
             active_calls[call_sid].websocket_connected = False
         logger.info("WebSocket handler completed for lead: %s", lead_id)
+
+
+async def _handle_basic_websocket(websocket: WebSocket, lead_id: str) -> None:
+    """Basic WebSocket handler when OpenAI proxy is not available.
+
+    This fallback handler logs Twilio events but doesn't proxy to OpenAI.
+    Useful for testing Twilio integration without OpenAI credentials.
+
+    Args:
+        websocket: WebSocket connection from Twilio.
+        lead_id: Lead ID for context.
+    """
+    call_sid = None
+    stream_sid = None
+
+    try:
+        while True:
+            message = await websocket.receive_text()
+            data = json.loads(message)
+
+            event_type = data.get("event")
+
+            if event_type == "connected":
+                logger.info("Twilio stream connected for lead: %s (basic mode)", lead_id)
+
+            elif event_type == "start":
+                start_data = data.get("start", {})
+                stream_sid = start_data.get("streamSid")
+                call_sid = start_data.get("callSid")
+
+                custom_params = start_data.get("customParameters", {})
+                logger.info(
+                    "Stream started (basic mode): stream_sid=%s, call_sid=%s, params=%s",
+                    stream_sid,
+                    call_sid,
+                    custom_params,
+                )
+
+                if call_sid and call_sid in active_calls:
+                    active_calls[call_sid].websocket_connected = True
+
+            elif event_type == "media":
+                # In basic mode, we don't process audio
+                pass
+
+            elif event_type == "mark":
+                mark_name = data.get("mark", {}).get("name")
+                logger.debug("Playback mark received (basic mode): %s", mark_name)
+
+            elif event_type == "stop":
+                logger.info(
+                    "Stream stopped (basic mode): stream_sid=%s, lead_id=%s",
+                    stream_sid,
+                    lead_id,
+                )
+                break
+
+            else:
+                logger.debug("Unknown event type (basic mode): %s", event_type)
+
+    except WebSocketDisconnect:
+        logger.info("WebSocket disconnected for lead (basic mode): %s", lead_id)
+
+    except json.JSONDecodeError as e:
+        logger.error("Invalid JSON from Twilio (basic mode): %s", e)
+
+    except Exception as e:
+        logger.error(
+            "WebSocket error for lead %s (basic mode): %s",
+            lead_id,
+            str(e),
+            exc_info=True,
+        )
+
+    finally:
+        if call_sid and call_sid in active_calls:
+            active_calls[call_sid].websocket_connected = False
+        logger.info("Basic WebSocket handler completed for lead: %s", lead_id)
 
 
 @app.get("/calls")
