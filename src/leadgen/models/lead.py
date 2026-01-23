@@ -131,6 +131,14 @@ class Lead(Base):
         lazy="selectin"
     )
 
+    # Relationship to Deployment model (one-to-one)
+    deployment: Mapped[Optional["Deployment"]] = relationship(
+        "Deployment",
+        back_populates="lead",
+        uselist=False,
+        lazy="selectin"
+    )
+
     def __repr__(self) -> str:
         """Return string representation of the lead."""
         return f"<Lead(id={self.id!r}, name={self.name!r}, status={self.status.value!r})>"

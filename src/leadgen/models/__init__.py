@@ -16,6 +16,7 @@ class Base(AsyncAttrs, DeclarativeBase):
 from .lead import Lead, LeadStatus
 from .campaign import Campaign, CampaignStatus
 from .dossier import Dossier
+from .deployment import Deployment, DeploymentStatus
 
 __all__ = [
     "Base",
@@ -24,4 +25,6 @@ __all__ = [
     "Campaign",
     "CampaignStatus",
     "Dossier",
+    "Deployment",
+    "DeploymentStatus",
 ]
