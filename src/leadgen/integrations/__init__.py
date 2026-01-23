@@ -13,6 +13,7 @@ _ApolloClient = None
 _FirecrawlClient = None
 _GoogleMapsClient = None
 _VectorStoreManager = None
+_TwilioVoiceClient = None
 
 
 def _get_apollo_client():
@@ -51,12 +52,22 @@ def _get_vector_store_manager():
     return _VectorStoreManager
 
 
+def _get_twilio_voice_client():
+    """Lazy load TwilioVoiceClient."""
+    global _TwilioVoiceClient
+    if _TwilioVoiceClient is None:
+        from .twilio_voice import TwilioVoiceClient as _TVC
+        _TwilioVoiceClient = _TVC
+    return _TwilioVoiceClient
+
+
 # For type checking, use actual imports
 if TYPE_CHECKING:
     from .apollo import ApolloClient
     from .firecrawl import FirecrawlClient
     from .google_maps import GoogleMapsClient
     from .openai_vectors import VectorStoreManager
+    from .twilio_voice import TwilioVoiceClient
 
 
 def __getattr__(name: str):
@@ -69,6 +80,8 @@ def __getattr__(name: str):
         return _get_googlemaps_client()
     elif name == "VectorStoreManager":
         return _get_vector_store_manager()
+    elif name == "TwilioVoiceClient":
+        return _get_twilio_voice_client()
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
@@ -77,4 +90,5 @@ __all__ = [
     "FirecrawlClient",
     "GoogleMapsClient",
     "VectorStoreManager",
+    "TwilioVoiceClient",
 ]
