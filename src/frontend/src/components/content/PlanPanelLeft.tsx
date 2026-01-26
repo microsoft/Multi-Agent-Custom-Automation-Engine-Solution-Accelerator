@@ -26,7 +26,6 @@ import { getUserInfoGlobal } from "@/api/config";
 import TeamSelector from "../common/TeamSelector";
 import { TeamConfig } from "../../models/Team";
 import TeamSelected from "../common/TeamSelected";
-import TeamService from "@/services/TeamService";
 
 const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
   reloadTasks,
@@ -100,7 +99,7 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
   }, [loadPlansData, setUserInfo, reloadTasks]);
   useEffect(() => {
     if (plans) {
-      const { inProgress, completed } =
+      const { completed } =
         TaskService.transformPlansToTasks(plans);
       setCompletedTasks(completed);
     }

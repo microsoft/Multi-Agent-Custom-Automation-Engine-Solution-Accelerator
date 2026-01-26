@@ -704,18 +704,16 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
           </DialogContent>
 
 
-          {tempSelectedTeam && (
-            <div className={styles.dialogActions}>
-              <Button
-                appearance="primary"
-                onClick={handleContinue}
-                disabled={!tempSelectedTeam || selectionLoading}
-                className={styles.continueButton}
-              >
-                {selectionLoading ? 'Selecting...' : 'Continue'}
-              </Button>
-            </div>
-          )}
+          <div className={styles.dialogActions}>
+            <Button
+              appearance="primary"
+              onClick={handleContinue}
+              disabled={!tempSelectedTeam || selectionLoading}
+              className={styles.continueButton}
+            >
+              {selectionLoading ? 'Selecting...' : 'Continue'}
+            </Button>
+          </div>
         </DialogSurface>
       </Dialog>
 

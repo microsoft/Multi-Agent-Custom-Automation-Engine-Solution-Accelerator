@@ -501,6 +501,8 @@ async def plan_approval(
             logging.warning(f"Failed to send WebSocket error: {ws_error}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
+    return None
+
 
 @app_v4.post("/user_clarification")
 async def user_clarification(
@@ -638,6 +640,8 @@ async def user_clarification(
             raise HTTPException(
                 status_code=404, detail="No active plan found for clarification"
             )
+
+    return None
 
 
 @app_v4.post("/agent_message")
