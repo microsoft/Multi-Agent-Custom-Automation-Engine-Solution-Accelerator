@@ -1,7 +1,16 @@
 from azure.identity import AzureCliCredential
 from azure.search.documents import SearchClient
 from azure.search.documents.indexes import SearchIndexClient
-from azure.search.documents.indexes.models import SearchIndex, SimpleField, SearchableField, SearchFieldDataType
+from azure.search.documents.indexes.models import (
+    SearchIndex, 
+    SimpleField, 
+    SearchableField, 
+    SearchFieldDataType,
+    SemanticConfiguration,
+    SemanticField,
+    SemanticPrioritizedFields,
+    SemanticSearch
+)
 from azure.storage.blob import BlobServiceClient
 import sys
 
@@ -114,12 +123,28 @@ try:
         SearchableField(name="content", type=SearchFieldDataType.String, searchable=True),
         SearchableField(name="title", type=SearchFieldDataType.String, searchable=True, filterable=True)
     ]
-    index = SearchIndex(name=ai_search_index_name, fields=index_fields)
+    
+    # Configure semantic search for better natural language understanding
+    semantic_config = SemanticConfiguration(
+        name="default",
+        prioritized_fields=SemanticPrioritizedFields(
+            title_field=SemanticField(field_name="title"),
+            content_fields=[SemanticField(field_name="content")]
+        )
+    )
+    
+    semantic_search = SemanticSearch(configurations=[semantic_config])
+    
+    index = SearchIndex(
+        name=ai_search_index_name, 
+        fields=index_fields,
+        semantic_search=semantic_search
+    )
 
-    print("Creating or updating Azure Search index...")
+    print("Creating or updating Azure Search index with semantic configuration...")
     search_index_client = SearchIndexClient(endpoint=ai_search_endpoint, credential=credential)
     search_index_client.create_or_update_index(index=index)
-    print(f"Index '{ai_search_index_name}' created or updated successfully.")
+    print(f"Index '{ai_search_index_name}' created or updated successfully with semantic search enabled.")
 except Exception as e:
     print(f"Error creating/updating index: {e}")
     sys.exit(1)
