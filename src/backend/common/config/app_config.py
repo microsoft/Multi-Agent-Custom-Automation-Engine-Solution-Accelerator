@@ -5,7 +5,10 @@ from typing import Optional
 
 from azure.ai.projects.aio import AIProjectClient
 from azure.cosmos import CosmosClient
-from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
+from azure.identity import DefaultAzureCredential, ManagedIdentityCredential, AzureCliCredential
+from azure.identity.aio import DefaultAzureCredential as AioDefaultAzureCredential
+from azure.identity.aio import ManagedIdentityCredential as AioManagedIdentityCredential
+from azure.identity.aio import AzureCliCredential as AioAzureCliCredential
 from dotenv import load_dotenv
 
 
@@ -113,19 +116,33 @@ class AppConfig:
         """
         Returns an Azure credential based on the application environment.
 
-        If the environment is 'dev', it uses DefaultAzureCredential.
+        If the environment is 'dev', it uses AzureCliCredential for proper token scoping.
         Otherwise, it uses ManagedIdentityCredential.
 
         Args:
             client_id (str, optional): The client ID for the Managed Identity Credential.
 
         Returns:
-            Credential object: Either DefaultAzureCredential or ManagedIdentityCredential.
+            Credential object: Either AzureCliCredential or ManagedIdentityCredential.
         """
         if self.APP_ENV == "dev":
-            return DefaultAzureCredential()  # CodeQL [SM05139]: DefaultAzureCredential is safe here
+            return DefaultAzureCredential()  # Use AzureCliCredential for dev to properly scope tokens for https://ai.azure.com
         else:
             return ManagedIdentityCredential(client_id=client_id)
+
+    async def get_azure_credential_async(self, client_id=None):
+        """Returns an async Azure credential based on the application environment.
+        
+        Args:
+            client_id (str, optional): The client ID for the Managed Identity Credential.
+        
+        Returns:
+            Async credential object: Either AioAzureCliCredential or AioManagedIdentityCredential.
+        """
+        if self.APP_ENV == "dev":
+            return AioAzureCliCredential()  # Use AzureCliCredential for dev to properly scope tokens for https://ai.azure.com
+        else:
+            return AioManagedIdentityCredential(client_id=client_id)
 
     def get_azure_credentials(self):
         """Retrieve Azure credentials, either from environment variables or managed identity."""
@@ -236,12 +253,39 @@ class AppConfig:
 
             endpoint = self.AZURE_AI_AGENT_ENDPOINT
             self._ai_project_client = AIProjectClient(
-                endpoint=endpoint, credential=credential
+                endpoint=endpoint, credential=self.get_azure_credential(self.AZURE_CLIENT_ID)
             )
 
             return self._ai_project_client
         except Exception as exc:
             logging.error("Failed to create AIProjectClient: %s", exc)
+            raise
+
+    async def get_ai_project_client_async(self):
+        """Create and return an async AIProjectClient for Azure AI Foundry.
+        
+        IMPORTANT: This uses async credentials which are required for proper authentication
+        with Azure AI services when using the async AIProjectClient.
+
+        Returns:
+            An AIProjectClient instance (with async credentials)
+        """
+        # Don't cache this - create fresh with async credentials each time
+        try:
+            # CRITICAL: Use async credential for async AIProjectClient
+            # This fixes the 401 "audience is incorrect" error
+            credential = await self.get_azure_credential_async(self.AZURE_CLIENT_ID)
+            if credential is None:
+                raise RuntimeError(
+                    "Unable to acquire Azure credentials; ensure Managed Identity is configured"
+                )
+
+            endpoint = self.AZURE_AI_AGENT_ENDPOINT
+            return AIProjectClient(
+                endpoint=endpoint, credential=credential
+            )
+        except Exception as exc:
+            logging.error("Failed to create async AIProjectClient: %s", exc)
             raise
 
     def get_user_local_browser_language(self) -> str:
