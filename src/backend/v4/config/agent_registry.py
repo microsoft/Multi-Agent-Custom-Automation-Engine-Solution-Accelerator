@@ -7,6 +7,8 @@ import threading
 from typing import List, Dict, Any, Optional
 from weakref import WeakSet
 
+from common.utils.agent_name_sanitizer import AgentNameSanitizer
+
 
 class AgentRegistry:
     """Global registry for tracking and managing all agent instances across the application."""
@@ -67,6 +69,7 @@ class AgentRegistry:
         # Log agent details for debugging
         for i, agent in enumerate(all_agents):
             agent_name = getattr(agent, 'agent_name', getattr(agent, 'name', type(agent).__name__))
+            agent_name = AgentNameSanitizer.sanitize(agent_name)
             agent_type = type(agent).__name__
             has_close = hasattr(agent, 'close')
             self.logger.info(f"Agent {i + 1}: {agent_name} (Type: {agent_type}, Has close(): {has_close})")
@@ -78,6 +81,7 @@ class AgentRegistry:
                 cleanup_tasks.append(self._safe_close_agent(agent))
             else:
                 agent_name = getattr(agent, 'agent_name', getattr(agent, 'name', type(agent).__name__))
+                agent_name = AgentNameSanitizer.sanitize(agent_name)
                 self.logger.warning(f"⚠️ Agent {agent_name} has no close() method - just unregistering from registry")
                 self.unregister_agent(agent)
 
@@ -106,6 +110,7 @@ class AgentRegistry:
         """Safely close an agent with error handling."""
         try:
             agent_name = getattr(agent, 'agent_name', getattr(agent, 'name', type(agent).__name__))
+            agent_name = AgentNameSanitizer.sanitize(agent_name)
             self.logger.info(f"Closing agent: {agent_name}")
 
             # Call the agent's close method - it should handle Azure deletion and registry cleanup
@@ -118,6 +123,7 @@ class AgentRegistry:
 
         except Exception as e:
             agent_name = getattr(agent, 'agent_name', getattr(agent, 'name', type(agent).__name__))
+            agent_name = AgentNameSanitizer.sanitize(agent_name)
             self.logger.error(f"Failed to close agent {agent_name}: {e}")
 
     def get_registry_status(self) -> Dict[str, Any]:

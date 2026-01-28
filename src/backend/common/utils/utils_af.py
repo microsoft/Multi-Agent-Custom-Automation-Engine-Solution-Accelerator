@@ -6,6 +6,7 @@ from common.config.app_config import config
 
 from common.database.database_base import DatabaseBase
 from common.models.messages_af import TeamConfiguration
+from common.utils.agent_name_sanitizer import AgentNameSanitizer
 from v4.common.services.team_service import TeamService
 from v4.config.agent_registry import agent_registry
 from v4.magentic_agents.foundry_agent import (
@@ -58,7 +59,7 @@ async def create_RAI_agent(
     team: TeamConfiguration, memory_store: DatabaseBase
 ) -> FoundryAgentTemplate:
     """Create and initialize a FoundryAgentTemplate for Responsible AI (RAI) checks."""
-    agent_name = "RAIAgent"
+    agent_name = AgentNameSanitizer.sanitize("RAIAgent")
     agent_description = "A comprehensive research assistant for integration testing"
     agent_instructions = (
         "You are RAIAgent, a strict safety classifier for professional workplace use. "

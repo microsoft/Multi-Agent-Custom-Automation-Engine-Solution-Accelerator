@@ -13,6 +13,7 @@ from agent_framework import ChatMessage
 
 from agent_framework._workflows._magentic import AgentRunResponseUpdate  # Streaming update type from workflows
 
+from common.utils.agent_name_sanitizer import AgentNameSanitizer
 from v4.config.settings import connection_config
 from v4.models.messages import (
     AgentMessage,
@@ -74,6 +75,7 @@ def agent_response_callback(
     Final (non-streaming) agent response callback using agent_framework ChatMessage.
     """
     agent_name = getattr(message, "author_name", None) or agent_id or "Unknown Agent"
+    agent_name = AgentNameSanitizer.sanitize(agent_name)
     role = getattr(message, "role", "assistant")
 
     # FIX: Properly extract text from ChatMessage

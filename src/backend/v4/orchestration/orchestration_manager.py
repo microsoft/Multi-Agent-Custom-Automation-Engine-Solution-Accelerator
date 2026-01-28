@@ -6,7 +6,7 @@ import uuid
 from typing import List, Optional
 
 # agent_framework imports
-from agent_framework_azure_ai import AzureAIAgentClient
+from agent_framework.azure import AzureAIClient
 from agent_framework import (
     ChatMessage,
     WorkflowOutputEvent,
@@ -23,6 +23,7 @@ from common.models.messages_af import TeamConfiguration
 
 from common.database.database_base import DatabaseBase
 
+from common.utils.agent_name_sanitizer import AgentNameSanitizer
 from v4.common.services.team_service import TeamService
 from v4.callbacks.response_handlers import (
     agent_response_callback,
@@ -58,7 +59,7 @@ class OrchestrationManager:
         Initialize a Magentic workflow with:
           - Provided agents (participants)
           - HumanApprovalMagenticManager as orchestrator manager
-          - AzureAIAgentClient as the underlying chat client
+          - AzureAIClient as the underlying chat client
           - Event-based callbacks for streaming and final responses
         - Uses same deployment, endpoint, and credentials
         - Applies same execution settings (temperature, max_tokens)
@@ -73,22 +74,24 @@ class OrchestrationManager:
         # Create Azure AI Agent client for orchestration using config
         # This replaces AzureChatCompletion from SK
         agent_name = team_config.name if team_config.name else "OrchestratorAgent"
-
+        agent_name = AgentNameSanitizer.sanitize(agent_name)
         try:
-            chat_client = AzureAIAgentClient(
-                project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
-                model_deployment_name=team_config.deployment_name,
+            project_client = config.get_ai_project_client()
+            chat_client = AzureAIClient(
+                project_client=project_client,
+                # credential=credential,
                 agent_name=agent_name,
-                async_credential=credential,
+                use_latest_version=True,
+                # model_deployment_name=team_config.deployment_name
             )
 
             cls.logger.info(
-                "Created AzureAIAgentClient for orchestration with model '%s' at endpoint '%s'",
+                "Created AzureAIClient for orchestration with model '%s' at endpoint '%s'",
                 team_config.deployment_name,
                 config.AZURE_AI_PROJECT_ENDPOINT,
             )
         except Exception as e:
-            cls.logger.error("Failed to create AzureAIAgentClient: %s", e)
+            cls.logger.error("Failed to create AzureAIClient: %s", e)
             raise
 
         # Create HumanApprovalMagenticManager with the chat client
@@ -179,6 +182,7 @@ class OrchestrationManager:
                     agent_name = getattr(
                         agent, "agent_name", getattr(agent, "name", "")
                     )
+                    agent_name = AgentNameSanitizer.sanitize(agent_name)
                     if agent_name != "ProxyAgent":
                         close_coro = getattr(agent, "close", None)
                         if callable(close_coro):
