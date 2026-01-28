@@ -44,16 +44,20 @@ on:
       - 'azure_custom.yaml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
 
       - name: Log in to Azure Container Registry
         if: ${{ github.ref_name == 'main' || github.ref_name == 'dev-v4'|| github.ref_name == 'demo-v4' || github.ref_name == 'hotfix' }}
@@ -70,7 +74,7 @@ jobs:
       - name: Get registry
         id: registry
         run: |
-          echo "ext_registry=${{ secrets.ACR_LOGIN_SERVER || 'acrlogin.azurecr.io'}}" >> $GITHUB_OUTPUT
+          echo "ext_registry=${{ secrets.ACR_LOGIN_SERVER || 'acrlogin.azurecr.io' }}" >> $GITHUB_OUTPUT
 
       - name: Determine Tag Name Based on Branch
         id: determine_tag

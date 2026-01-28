@@ -1,5 +1,8 @@
 name: Validate Deployment v4
 
+permissions:
+  contents: read
+  actions: read
 on:
   workflow_run:
     workflows: ["Build Docker and Optional Push v4"]
@@ -33,16 +36,16 @@ jobs:
 
       - name: Run Quota Check
         id: quota-check
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          GPT_MIN_CAPACITY: ${{ env.GPT_MIN_CAPACITY }}
+          O4_MINI_MIN_CAPACITY: ${{ env.O4_MINI_MIN_CAPACITY }}
+          GPT41_MINI_MIN_CAPACITY: ${{ env.GPT41_MINI_MIN_CAPACITY }}
+          AZURE_REGIONS: ${{ vars.AZURE_REGIONS }}
         run: |
-          export AZURE_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }}
-          export AZURE_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}
-          export AZURE_CLIENT_SECRET=${{ secrets.AZURE_CLIENT_SECRET }}
-          export AZURE_SUBSCRIPTION_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-          export GPT_MIN_CAPACITY="150"
-          export O4_MINI_MIN_CAPACITY="50"
-          export GPT41_MINI_MIN_CAPACITY="50"
-          export AZURE_REGIONS="${{ vars.AZURE_REGIONS }}"
-
           chmod +x infra/scripts/checkquota.sh
           if ! infra/scripts/checkquota.sh; then
             # If quota check fails due to insufficient quota, set the flag
@@ -75,11 +78,6 @@ jobs:
         run: |
           echo "Selected Region: $VALID_REGION"
           echo "AZURE_LOCATION=$VALID_REGION" >> $GITHUB_ENV
-
-      - name: Setup Azure CLI
-        run: |
-          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-          az --version  # Verify installation
 
       - name: Login to Azure
         run: |
@@ -217,10 +215,6 @@ jobs:
     env:
       RESOURCE_GROUP_NAME: ${{ needs.deploy.outputs.RESOURCE_GROUP_NAME }}
     steps:
-      - name: Setup Azure CLI
-        run: |
-          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-          az --version
       - name: Login to Azure
         run: |
           az login --service-principal -u ${{ secrets.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_TENANT_ID }}

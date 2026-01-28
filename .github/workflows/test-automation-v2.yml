@@ -1,4 +1,4 @@
-name: Test Automation Content Processing-v2
+name: Test Automation Macae v4
 
 on:
     workflow_call:
@@ -31,6 +31,7 @@ env:
     MACAE_WEB_URL: ${{ inputs.MACAE_WEB_URL }}
     MACAE_URL_API: ${{ inputs.MACAE_URL_API }}
     MACAE_RG: ${{ inputs.MACAE_RG }}
+    TEST_SUITE: ${{ inputs.TEST_SUITE }}
     accelerator_name: "MACAE v4"
 
 jobs:
@@ -91,7 +92,7 @@ jobs:
       - name: Run tests(1)
         id: test1
         run: |
-          if [ "${{ inputs.TEST_SUITE }}" == "GoldenPath-Testing" ]; then
+          if [ "${{ env.TEST_SUITE }}" == "GoldenPath-Testing" ]; then
             xvfb-run pytest -m gp --html=report/report.html --self-contained-html
           else
             xvfb-run pytest --html=report/report.html --self-contained-html
@@ -108,7 +109,7 @@ jobs:
         id: test2
         if: ${{ steps.test1.outcome == 'failure' }}
         run: |
-          if [ "${{ inputs.TEST_SUITE }}" == "GoldenPath-Testing" ]; then
+          if [ "${{ env.TEST_SUITE }}" == "GoldenPath-Testing" ]; then
             xvfb-run pytest -m gp --html=report/report.html --self-contained-html
           else
             xvfb-run pytest --html=report/report.html --self-contained-html
@@ -125,7 +126,7 @@ jobs:
         id: test3
         if: ${{ steps.test2.outcome == 'failure' }}
         run: |
-          if [ "${{ inputs.TEST_SUITE }}" == "GoldenPath-Testing" ]; then
+          if [ "${{ env.TEST_SUITE }}" == "GoldenPath-Testing" ]; then
             xvfb-run pytest -m gp --html=report/report.html --self-contained-html
           else
             xvfb-run pytest --html=report/report.html --self-contained-html
@@ -144,7 +145,7 @@ jobs:
         if: always()
         run: |
           # Determine test suite type for title
-          if [ "${{ inputs.TEST_SUITE }}" == "GoldenPath-Testing" ]; then
+          if [ "${{ env.TEST_SUITE }}" == "GoldenPath-Testing" ]; then
             echo "## 🧪 E2E Test Job Summary : Golden Path Testing" >> $GITHUB_STEP_SUMMARY
           else
             echo "## 🧪 E2E Test Job Summary : Smoke Testing" >> $GITHUB_STEP_SUMMARY
@@ -161,8 +162,8 @@ jobs:
             echo "| **Job Status** | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
           fi
           
-          echo "| **Target URL** | [${{ inputs.MACAE_WEB_URL }}](${{ inputs.MACAE_WEB_URL }}) |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Test Suite** | \`${{ inputs.TEST_SUITE }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Target URL** | [${{ env.MACAE_WEB_URL }}](${{ env.MACAE_WEB_URL }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Test Suite** | \`${{ env.TEST_SUITE }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Test Report** | [Download Artifact](${{ steps.upload_report.outputs.artifact-url }}) |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           

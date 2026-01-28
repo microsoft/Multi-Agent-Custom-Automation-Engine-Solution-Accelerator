@@ -1,6 +1,8 @@
 {
     "name": "Multi Agent Custom Automation Engine Solution Accelerator",
-    "image": "mcr.microsoft.com/devcontainers/python:3.11-bullseye",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },    
     "features": {
         "ghcr.io/devcontainers/features/docker-in-docker:2": {"version": "latest"},
         "ghcr.io/azure/azure-dev/azd:latest": {},
