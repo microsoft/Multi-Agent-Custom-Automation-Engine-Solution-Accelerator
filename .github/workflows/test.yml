@@ -67,7 +67,7 @@ jobs:
       - name: Run tests with coverage
         if: env.skip_tests == 'false'
         run: |
-          if python -m pytest src/tests/backend/test_app.py --cov=backend --cov-config=.coveragerc && \
+          if python -m pytest src/tests/backend/test_app.py --cov=backend --cov-config=.coveragerc -q > /dev/null 2>&1 && \
              python -m pytest src/tests/backend --cov=backend --cov-append --cov-report=term --cov-report=xml --cov-config=.coveragerc --ignore=src/tests/backend/test_app.py; then
             echo "Tests completed, checking coverage."
             if [ -f coverage.xml ]; then
