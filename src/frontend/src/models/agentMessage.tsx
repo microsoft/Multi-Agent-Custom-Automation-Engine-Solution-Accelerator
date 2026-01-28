@@ -1,6 +1,5 @@
-import { Agent } from 'http';
 import { BaseModel } from './plan';
-import { AgentMessageType, AgentType, WebsocketMessageType } from './enums';
+import { AgentMessageType, WebsocketMessageType } from './enums';
 
 /**
  * Represents a message from an agent

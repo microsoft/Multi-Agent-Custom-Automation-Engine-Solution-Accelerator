@@ -2,10 +2,9 @@
 Configuration settings for the MCP server.
 """
 
-import os
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 from pydantic_settings import BaseSettings
 
 

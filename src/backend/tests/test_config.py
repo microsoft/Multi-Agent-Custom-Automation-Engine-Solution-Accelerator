@@ -33,7 +33,7 @@ MOCK_ENV_VARS = {
 
 # Import the current config objects/functions under the mocked env
 with patch.dict(os.environ, MOCK_ENV_VARS, clear=False):
-    # New codebase: config lives in app_config/config_kernel
+    # New codebase: config lives in app_config/config_af
     from src.backend.common.config.app_config import config as app_config
 
 # Provide thin wrappers so the old test names still work

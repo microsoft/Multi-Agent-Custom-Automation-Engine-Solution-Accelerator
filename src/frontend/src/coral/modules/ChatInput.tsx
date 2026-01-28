@@ -1,16 +1,11 @@
 import React, {
   useRef,
   useState,
-  useEffect,
   forwardRef,
   useImperativeHandle,
   useLayoutEffect,
 } from "react";
-import {
-  Tag,
-  Tooltip as FluentTooltip,
-  Caption1,
-} from "@fluentui/react-components";
+import { Caption1 } from "@fluentui/react-components";
 import HeaderTools from "../components/Header/HeaderTools";
 
 // ✅ Props definition

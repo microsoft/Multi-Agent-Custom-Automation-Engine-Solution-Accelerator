@@ -41,9 +41,9 @@ with patch("azure.monitor.opentelemetry.configure_azure_monitor", MagicMock()):
     try:
         from src.backend.app import app  # preferred if file exists
     except ModuleNotFoundError:
-        # fallback to app_kernel which exists in this repo
+        # fallback to app which exists in this repo
         import importlib
-        mod = importlib.import_module("src.backend.app_kernel")
+        mod = importlib.import_module("src.backend.app")
         app = getattr(mod, "app", None)
         if app is None:
             create_app = getattr(mod, "create_app", None)
@@ -78,7 +78,7 @@ def mock_dependencies(monkeypatch):
         lambda headers: {"user_principal_id": "mock-user-id"},
     )
     monkeypatch.setattr(
-        "src.backend.utils_kernel.retrieve_all_agent_tools",
+        "src.backend.utils_af.retrieve_all_agent_tools",
         lambda: [{"agent": "test_agent", "function": "test_function"}],
         raising=False,  # allow creating the attr if it doesn't exist
     )
@@ -87,7 +87,15 @@ def mock_dependencies(monkeypatch):
 def test_input_task_invalid_json():
     """Test the case where the input JSON is invalid."""
     headers = {"Authorization": "Bearer mock-token"}
+    invalid_json = "{invalid: json"  # deliberately malformed JSON
     response = client.post("/input_task", data=invalid_json, headers=headers)
+
+    # Assert that the API responds with a client error for invalid JSON
+    assert response.status_code == 400
+    # Optionally, check that an error message is present in the response body
+    # Adjust these assertions to match the actual error schema if needed
+    body = response.json()
+    assert "error" in body or "detail" in body
 
 
 def test_process_request_endpoint_success():
@@ -95,9 +103,9 @@ def test_process_request_endpoint_success():
     headers = {"Authorization": "Bearer mock-token"}
     
     # Mock the RAI success function
-    with patch("app_kernel.rai_success", return_value=True), \
-         patch("app_kernel.initialize_runtime_and_context") as mock_init, \
-         patch("app_kernel.track_event_if_configured") as mock_track:
+    with patch("app.rai_success", return_value=True), \
+         patch("app.initialize_runtime_and_context") as mock_init, \
+         patch("app.track_event_if_configured") as mock_track:
         
         # Mock memory store
         mock_memory_store = MagicMock()
@@ -132,8 +140,8 @@ def test_process_request_endpoint_rai_failure():
     headers = {"Authorization": "Bearer mock-token"}
     
     # Mock the RAI failure
-    with patch("app_kernel.rai_success", return_value=False), \
-         patch("app_kernel.track_event_if_configured") as mock_track:
+    with patch("app.rai_success", return_value=False), \
+         patch("app.track_event_if_configured") as mock_track:
         
         test_input = {
             "session_id": "test-session-123",
@@ -154,8 +162,8 @@ def test_process_request_endpoint_harmful_content():
     headers = {"Authorization": "Bearer mock-token"}
     
     # Mock the RAI failure for harmful content
-    with patch("app_kernel.rai_success", return_value=False), \
-         patch("app_kernel.track_event_if_configured") as mock_track:
+    with patch("app.rai_success", return_value=False), \
+         patch("app.track_event_if_configured") as mock_track:
         
         test_input = {
             "session_id": "test-session-456",
@@ -180,8 +188,8 @@ def test_process_request_endpoint_real_rai_check():
     headers = {"Authorization": "Bearer mock-token"}
     
     # Don't mock RAI - let it run the real check
-    with patch("app_kernel.initialize_runtime_and_context") as mock_init, \
-         patch("app_kernel.track_event_if_configured") as mock_track:
+    with patch("app.initialize_runtime_and_context") as mock_init, \
+         patch("app.track_event_if_configured") as mock_track:
         
         # Mock memory store
         mock_memory_store = MagicMock()

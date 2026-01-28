@@ -17,7 +17,7 @@ A FastMCP-based Model Context Protocol (MCP) server for the Multi-Agent Custom A
 ## Architecture
 
 ```
-src/backend/v3/mcp_server/
+src/backend/v4/mcp_server/
 ├── core/                   # Core factory and base classes
 │   ├── __init__.py
 │   └── factory.py         # MCPToolFactory and base classes
@@ -75,7 +75,7 @@ src/backend/v3/mcp_server/
 1. **Clone and Navigate**:
 
    ```bash
-   cd src/backend/v3/mcp_server
+   cd src/backend/v4/mcp_server
    ```
 
 2. **Install Dependencies**:

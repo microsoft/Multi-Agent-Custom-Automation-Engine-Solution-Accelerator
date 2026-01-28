@@ -1,12 +1,24 @@
-name: Build Docker and Optional Push v3
+name: Build Docker and Optional Push v4
 
 on:
   push:
     branches:
       - main
-      - dev-v3
-      - demo-v3
+      - dev-v4
+      - demo-v4
       - hotfix
+    paths:
+      - 'src/frontend/**'
+      - 'src/backend/**'
+      - 'src/mcp_server/**'
+      - '.github/workflows/docker-build-and-push.yml'
+      - 'infra/main.bicep'
+      - 'infra/modules/**/*.bicep'
+      - 'infra/*.parameters.json'
+      - 'infra/scripts/**'
+      - '.github/workflows/deploy.yml'
+      - 'azure.yaml'
+      - 'azure_custom.yaml'
   pull_request:
     types:
       - opened
@@ -15,10 +27,26 @@ on:
       - synchronize
     branches:
       - main
-      - dev-v3
-      - demo-v3
+      - dev-v4
+      - demo-v4
       - hotfix
+    paths:
+      - 'src/frontend/**'
+      - 'src/backend/**'
+      - 'src/mcp_server/**'
+      - '.github/workflows/docker-build-and-push.yml'
+      - 'infra/main.bicep'
+      - 'infra/modules/**/*.bicep'
+      - 'infra/*.parameters.json'
+      - 'infra/scripts/**'
+      - '.github/workflows/deploy.yml'
+      - 'azure.yaml'
+      - 'azure_custom.yaml'
   workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
 
 jobs:
   build-and-push:
@@ -26,13 +54,13 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
 
       - name: Log in to Azure Container Registry
-        if: ${{ github.ref_name == 'main' || github.ref_name == 'dev-v3'|| github.ref_name == 'demo-v3' || github.ref_name == 'hotfix' }}
+        if: ${{ github.ref_name == 'main' || github.ref_name == 'dev-v4'|| github.ref_name == 'demo-v4' || github.ref_name == 'hotfix' }}
         uses: azure/docker-login@v2
         with:
           login-server: ${{ secrets.ACR_LOGIN_SERVER || 'acrlogin.azurecr.io' }}
@@ -46,17 +74,17 @@ jobs:
       - name: Get registry
         id: registry
         run: |
-          echo "ext_registry=${{ secrets.ACR_LOGIN_SERVER || 'acrlogin.azurecr.io'}}" >> $GITHUB_OUTPUT
+          echo "ext_registry=${{ secrets.ACR_LOGIN_SERVER || 'acrlogin.azurecr.io' }}" >> $GITHUB_OUTPUT
 
       - name: Determine Tag Name Based on Branch
         id: determine_tag
         run: |
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "TAG=latest_v3" >> $GITHUB_ENV
-          elif [[ "${{ github.ref }}" == "refs/heads/dev-v3" ]]; then
-            echo "TAG=dev_v3" >> $GITHUB_ENV
-          elif [[ "${{ github.ref }}" == "refs/heads/demo-v3" ]]; then
-            echo "TAG=demo_v3" >> $GITHUB_ENV
+            echo "TAG=latest_v4" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == "refs/heads/dev-v4" ]]; then
+            echo "TAG=dev_v4" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == "refs/heads/demo-v4" ]]; then
+            echo "TAG=demo_v4" >> $GITHUB_ENV
           elif [[ "${{ github.ref }}" == "refs/heads/hotfix" ]]; then
             echo "TAG=hotfix" >> $GITHUB_ENV
           else

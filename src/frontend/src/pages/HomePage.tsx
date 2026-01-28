@@ -20,8 +20,7 @@ import InlineToaster, { useInlineToaster } from "../components/toast/InlineToast
  * Accessible via the route "/"
  */
 const HomePage: React.FC = () => {
-    const navigate = useNavigate();
-    const { showToast, dismissToast } = useInlineToaster();
+    const { showToast } = useInlineToaster();
     const [selectedTeam, setSelectedTeam] = useState<TeamConfig | null>(null);
     const [isLoadingTeam, setIsLoadingTeam] = useState<boolean>(true);
     const [reloadLeftList, setReloadLeftList] = useState<boolean>(true);
@@ -35,6 +34,7 @@ const HomePage: React.FC = () => {
                 // Call the backend init_team endpoint (takes ~20 seconds)
                 const initResponse = await TeamService.initializeTeam();
 
+                // Handle successful team initialization
                 if (initResponse.data?.status === 'Request started successfully' && initResponse.data?.team_id) {
                     console.log('Team initialization completed:', initResponse.data?.team_id);
 
@@ -54,12 +54,10 @@ const HomePage: React.FC = () => {
                             "success"
                         );
                     } else {
-                        // Fallback: if we can't find the specific team, use HR team or first available
+                        // Fallback: if we can't find the specific team, use first available
                         console.log('Specific team not found, using default selection logic');
-                        const hrTeam = teams.find(team => team.name === "Human Resources Team");
-                        const defaultTeam = hrTeam || teams[0];
-
-                        if (defaultTeam) {
+                        if (teams.length > 0) {
+                            const defaultTeam = teams[0];
                             setSelectedTeam(defaultTeam);
                             TeamService.storageTeam(defaultTeam);
                             showToast(
@@ -68,15 +66,23 @@ const HomePage: React.FC = () => {
                             );
                         }
                     }
-
+                }
+                // Handle case when no teams are configured
+                else if (initResponse.data?.requires_team_upload) {
+                    console.log('No teams configured. User needs to upload a team configuration.');
+                    setSelectedTeam(null);
+                    showToast(
+                        "Welcome! Please upload a team configuration file to get started.",
+                        "info"
+                    );
                 }
 
             } catch (error) {
                 console.error('Error initializing team from backend:', error);
-                showToast("Team initialization failed", "warning");
+                showToast("Team initialization failed. You can still upload a custom team configuration.", "info");
 
-                // Fallback to the old client-side method
-
+                // Don't block the user - allow them to upload custom teams
+                setSelectedTeam(null);
             } finally {
                 setIsLoadingTeam(false);
             }
@@ -116,7 +122,7 @@ const HomePage: React.FC = () => {
                     if (initializedTeam) {
                         setSelectedTeam(initializedTeam);
                         TeamService.storageTeam(initializedTeam);
-                        setReloadLeftList(true)
+                        setReloadLeftList(true);
                         console.log('Team loaded successfully handleTeamSelect:', initializedTeam.name);
                         console.log('Team agents handleTeamSelect:', initializedTeam.agents?.length || 0);
 
@@ -125,12 +131,19 @@ const HomePage: React.FC = () => {
                             "success"
                         );
                     }
-
+                } else if (initResponse.data?.requires_team_upload) {
+                    // Handle case when no teams are available
+                    setSelectedTeam(null);
+                    showToast(
+                        "No teams are configured. Please upload a team configuration to continue.",
+                        "info"
+                    );
                 } else {
                     throw new Error('Invalid response from init_team endpoint');
                 }
             } catch (error) {
                 console.error('Error setting current team:', error);
+                showToast("Error switching team. Please try again.", "warning");
             } finally {
                 setIsLoadingTeam(false);
             }
@@ -187,6 +200,7 @@ const HomePage: React.FC = () => {
                         onTeamUpload={handleTeamUpload}
                         isHomePage={true}
                         selectedTeam={selectedTeam}
+                        isLoadingTeam={isLoadingTeam}
                     />
                     <Content>
                         <ContentToolbar

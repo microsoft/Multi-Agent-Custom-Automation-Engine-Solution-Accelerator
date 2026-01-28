@@ -9,13 +9,13 @@ from pathlib import Path
 
 import pytest
 
-# Add the backend path to sys.path so we can import v3 modules
+# Add the backend path to sys.path so we can import v4 modules
 backend_path = Path(__file__).parent.parent.parent / "backend"
 sys.path.insert(0, str(backend_path))
 
-# Now import from the v3 package
-from src.backend.v3.magentic_agents.foundry_agent import FoundryAgentTemplate
-from src.backend.v3.magentic_agents.models.agent_models import (BingConfig, MCPConfig,
+# Now import from the v4 package
+from src.backend.v4.magentic_agents.foundry_agent import FoundryAgentTemplate
+from src.backend.v4.magentic_agents.models.agent_models import (MCPConfig,
                                                     SearchConfig)
 
 
@@ -27,7 +27,7 @@ class TestFoundryAgentIntegration:
         # These will return None if env vars are missing, which is expected behavior
         mcp_config = MCPConfig.from_env()
         #bing_config = BingConfig.from_env()
-        search_config = SearchConfig.from_env()
+        search_config = SearchConfig.from_env("SEARCH")
         
         return {
             'mcp_config': mcp_config,

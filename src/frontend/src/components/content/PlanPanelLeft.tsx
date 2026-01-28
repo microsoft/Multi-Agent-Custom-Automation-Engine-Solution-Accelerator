@@ -36,13 +36,13 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
   onTeamUpload,
   isHomePage,
   selectedTeam: parentSelectedTeam,
-  onNavigationWithAlert
+  onNavigationWithAlert,
+  isLoadingTeam
 }) => {
   const { dispatchToast } = useToastController("toast");
   const navigate = useNavigate();
   const { planId } = useParams<{ planId: string }>();
 
-  const [inProgressTasks, setInProgressTasks] = useState<Task[]>([]);
   const [completedTasks, setCompletedTasks] = useState<Task[]>([]);
   const [plans, setPlans] = useState<Plan[] | null>(null);
   const [plansLoading, setPlansLoading] = useState<boolean>(false);
@@ -102,7 +102,6 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
     if (plans) {
       const { inProgress, completed } =
         TaskService.transformPlansToTasks(plans);
-      setInProgressTasks(inProgress);
       setCompletedTasks(completed);
     }
   }, [plans]);
@@ -220,7 +219,7 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
 
           {!isHomePage && (
             <TeamSelected
-              selectedTeam={TeamService.getStoredTeam()}
+              selectedTeam={selectedTeam}
             />
           )}
 
@@ -249,6 +248,7 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
           onTaskSelect={handleTaskSelect}
           loading={plansLoading}
           selectedTaskId={selectedTaskId ?? undefined}
+          isLoadingTeam={isLoadingTeam}
         />
 
         <PanelFooter>
