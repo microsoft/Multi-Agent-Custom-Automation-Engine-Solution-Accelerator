@@ -481,13 +481,21 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
             />
           </Tooltip>
         ) : (
-          <Button
-            icon={<DeleteRegular />}
-            appearance="subtle"
-            size="small"
-            onClick={(e: React.MouseEvent) => handleDeleteTeam(team, e)}
-            className={styles.deleteButton}
-          />
+          <Tooltip
+            content="Delete"
+            relationship="label"
+            positioning="above"
+            withArrow
+            mountNode={document.querySelector('[role="dialog"]') || undefined}
+          >
+            <Button
+              icon={<DeleteRegular />}
+              appearance="subtle"
+              size="small"
+              onClick={(e: React.MouseEvent) => handleDeleteTeam(team, e)}
+              className={styles.deleteButton}
+            />
+          </Tooltip>
         )}
       </div>
     );
@@ -516,13 +524,20 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
         <DialogSurface className={styles.dialogSurface}>
           <DialogTitle className={styles.dialogTitle}>
             <span>Select a Team</span>
-            <Button
-              icon={<Dismiss20Regular />}
-              appearance="subtle"
-              size="small"
-              onClick={handleCancel}
-              className={styles.closeButton}
-            />
+            <Tooltip
+              content="Close"
+              relationship="label"
+              positioning="below"
+              withArrow
+            >
+              <Button
+                icon={<Dismiss20Regular />}
+                appearance="subtle"
+                size="small"
+                onClick={handleCancel}
+                className={styles.closeButton}
+              />
+            </Tooltip>
           </DialogTitle>
           <DialogContent className={styles.dialogContent}>
             <DialogBody className={styles.dialogBody}>
