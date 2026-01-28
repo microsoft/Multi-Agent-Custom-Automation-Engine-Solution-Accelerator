@@ -6,7 +6,8 @@ import uuid
 from typing import List, Optional
 
 # agent_framework imports
-from agent_framework_azure_ai import AzureAIAgentClient
+# V2 API: Use AzureAIClient for cleaner Azure AI Projects integration
+from agent_framework.azure import AzureAIClient
 from agent_framework import (
     ChatMessage,
     WorkflowOutputEvent,
@@ -58,7 +59,7 @@ class OrchestrationManager:
         Initialize a Magentic workflow with:
           - Provided agents (participants)
           - HumanApprovalMagenticManager as orchestrator manager
-          - AzureAIAgentClient as the underlying chat client
+          - AzureAIClient as the underlying chat client (V2 API)
           - Event-based callbacks for streaming and final responses
         - Uses same deployment, endpoint, and credentials
         - Applies same execution settings (temperature, max_tokens)
@@ -74,21 +75,25 @@ class OrchestrationManager:
         # This replaces AzureChatCompletion from SK
         agent_name = team_config.name if team_config.name else "OrchestratorAgent"
 
+        # Get project_client from config for V2 API
+        project_client = config.get_ai_project_client()
+
         try:
-            chat_client = AzureAIAgentClient(
-                project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
-                model_deployment_name=team_config.deployment_name,
-                agent_name=agent_name,
+            # V2 API: Use AzureAIClient for cleaner Azure AI Projects integration
+            chat_client = AzureAIClient(
+                project_client=config.AZURE_AI_PROJECT_ENDPOINT,
                 async_credential=credential,
+                agent_name=agent_name,
+                model_deployment_name=team_config.deployment_name,
             )
 
             cls.logger.info(
-                "Created AzureAIAgentClient for orchestration with model '%s' at endpoint '%s'",
+                "Created AzureAIClient (V2 API) for orchestration with model '%s' at endpoint '%s'",
                 team_config.deployment_name,
                 config.AZURE_AI_PROJECT_ENDPOINT,
             )
         except Exception as e:
-            cls.logger.error("Failed to create AzureAIAgentClient: %s", e)
+            cls.logger.error("Failed to create AzureAIClient: %s", e)
             raise
 
         # Create HumanApprovalMagenticManager with the chat client

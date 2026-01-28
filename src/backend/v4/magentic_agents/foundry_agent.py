@@ -5,8 +5,8 @@ from typing import List, Optional
 
 from agent_framework import (ChatAgent, ChatMessage, HostedCodeInterpreterTool,
                              Role)
-from agent_framework_azure_ai import \
-    AzureAIAgentClient  # Provided by agent_framework
+# V2 API: Use AzureAIClient for cleaner Azure AI Projects integration
+from agent_framework.azure import AzureAIClient
 from azure.ai.projects.models import ConnectionType
 from common.config.app_config import config
 from common.database.database_base import DatabaseBase
@@ -111,7 +111,7 @@ class FoundryAgentTemplate(AzureAgentBase):
     # -------------------------
     # Azure Search helper
     # -------------------------
-    async def _create_azure_search_enabled_client(self, chatClient=None) -> Optional[AzureAIAgentClient]:
+    async def _create_azure_search_enabled_client(self, chatClient=None) -> Optional[AzureAIClient]:
         """
         Create a server-side Azure AI agent with Azure AI Search raw tool.
 
@@ -123,7 +123,7 @@ class FoundryAgentTemplate(AzureAgentBase):
 
 
         Returns:
-            AzureAIAgentClient | None
+            AzureAIClient | None
         """
         if chatClient:
             return chatClient
@@ -205,10 +205,11 @@ class FoundryAgentTemplate(AzureAgentBase):
                 query_type,
             )
 
-            chat_client = AzureAIAgentClient(
+            chat_client = AzureAIClient(
                 project_client=self.project_client,
-                agent_id=azure_agent.id,
                 async_credential=self.creds,
+                agent_name=self.agent_name,
+                model_deployment_name=self.model_deployment_name,
             )
             return chat_client
         except Exception as ex:
@@ -301,8 +302,8 @@ class FoundryAgentTemplate(AzureAgentBase):
 
         agent_saved = False
         async for update in self._agent.run_stream(messages):
-            # Save agent ID only once on first update (agent ID won't change during streaming)
-            if not agent_saved and self._agent.chat_client.agent_id:
+            # Save agent name only once on first update (agent name won't change during streaming)
+            if not agent_saved and self._agent.chat_client.agent_name:
                 await self.save_database_team_agent()
                 agent_saved = True
             yield update

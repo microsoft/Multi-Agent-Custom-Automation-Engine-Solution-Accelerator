@@ -1,6 +1,6 @@
 # app.py
 import logging
-
+import os
 from contextlib import asynccontextmanager
 
 
@@ -20,6 +20,22 @@ from v4.api.router import app_v4
 
 
 from v4.config.agent_registry import agent_registry
+
+# Configure logging to write to both console and file
+log_file_path = os.path.join(os.path.dirname(__file__), "app_logs.txt")
+file_handler = logging.FileHandler(log_file_path, mode='a', encoding='utf-8')
+file_handler.setFormatter(logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+))
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+))
+
+# Get the root logger and add handlers
+root_logger = logging.getLogger()
+root_logger.addHandler(file_handler)
+root_logger.addHandler(console_handler)
 
 
 @asynccontextmanager

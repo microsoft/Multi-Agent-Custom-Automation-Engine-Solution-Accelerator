@@ -1,0 +1,727 @@
+2026-01-27 17:14:29,630 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: Projects SDK get_agent failed (reason=ProjectsGetFailed, id=asst_gV1U70ZMAgL9Yre69whvNtfj): 'AgentsOperations' object has no attribute 'get_agent'
+2026-01-27 17:14:29,630 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: Projects SDK get_agent failed (reason=ProjectsGetFailed, id=asst_gV1U70ZMAgL9Yre69whvNtfj): 'AgentsOperations' object has no attribute 'get_agent'
+2026-01-27 17:14:35,450 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000022279D422D0>
+2026-01-27 17:14:35,450 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000022279D422D0>
+2026-01-27 17:14:37,468 - root - ERROR - Error streaming agent response: <class 'agent_framework_azure_ai._client.AzureAIClient'> service failed to complete the prompt: Error code: 401 - {'error': {'code': '401', 'message': 'Access denied due to invalid subscription key or wrong API endpoint. Make sure to provide a valid key for an active subscription and use a correct regional API endpoint for your resource.'}}
+2026-01-27 17:14:37,468 - root - ERROR - Error streaming agent response: <class 'agent_framework_azure_ai._client.AzureAIClient'> service failed to complete the prompt: Error code: 401 - {'error': {'code': '401', 'message': 'Access denied due to invalid subscription key or wrong API endpoint. Make sure to provide a valid key for an active subscription and use a correct regional API endpoint for your resource.'}}
+2026-01-27 17:14:37,484 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 17:14:37,484 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 17:14:38,987 - asyncio - ERROR - Future exception was never retrieved
+future: <Future finished exception=ClientConnectionError('Connection lost: SSL shutdown timed out')>
+TimeoutError: SSL shutdown timed out
+
+The above exception was the direct cause of the following exception:
+
+aiohttp.client_exceptions.ClientConnectionError: Connection lost: SSL shutdown timed out
+2026-01-27 17:14:38,987 - asyncio - ERROR - Future exception was never retrieved
+future: <Future finished exception=ClientConnectionError('Connection lost: SSL shutdown timed out')>
+TimeoutError: SSL shutdown timed out
+
+The above exception was the direct cause of the following exception:
+
+aiohttp.client_exceptions.ClientConnectionError: Connection lost: SSL shutdown timed out
+2026-01-27 17:14:38,987 - asyncio - ERROR - Future exception was never retrieved
+future: <Future finished exception=ClientConnectionError('Connection lost: SSL shutdown timed out')>
+TimeoutError: SSL shutdown timed out
+
+The above exception was the direct cause of the following exception:
+
+aiohttp.client_exceptions.ClientConnectionError: Connection lost: SSL shutdown timed out
+2026-01-27 17:14:38,987 - asyncio - ERROR - Future exception was never retrieved
+future: <Future finished exception=ClientConnectionError('Connection lost: SSL shutdown timed out')>
+TimeoutError: SSL shutdown timed out
+
+The above exception was the direct cause of the following exception:
+
+aiohttp.client_exceptions.ClientConnectionError: Connection lost: SSL shutdown timed out
+2026-01-27 17:14:38,987 - asyncio - ERROR - Future exception was never retrieved
+future: <Future finished exception=ClientConnectionError('Connection lost: SSL shutdown timed out')>
+TimeoutError: SSL shutdown timed out
+
+The above exception was the direct cause of the following exception:
+
+aiohttp.client_exceptions.ClientConnectionError: Connection lost: SSL shutdown timed out
+2026-01-27 17:14:38,987 - asyncio - ERROR - Future exception was never retrieved
+future: <Future finished exception=ClientConnectionError('Connection lost: SSL shutdown timed out')>
+TimeoutError: SSL shutdown timed out
+
+The above exception was the direct cause of the following exception:
+
+aiohttp.client_exceptions.ClientConnectionError: Connection lost: SSL shutdown timed out
+2026-01-27 17:23:23,978 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000022279B78290>
+2026-01-27 17:23:23,978 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000022279B78290>
+2026-01-27 17:23:23,980 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000022279BE0810>
+2026-01-27 17:23:23,980 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000022279BE0810>
+2026-01-27 17:23:30,184 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:23:30,248 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:23:30,248 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:24:35,265 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:24:35,342 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:24:35,342 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:25:15,105 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:25:15,162 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:25:15,162 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:25:27,557 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:25:27,625 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:25:27,625 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:27:45,220 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:27:45,331 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:27:45,331 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:28:11,586 - root - ERROR - Error streaming agent response: <class 'agent_framework_azure_ai._client.AzureAIClient'> service failed to complete the prompt: Error code: 401 - {'error': {'code': '401', 'message': 'Access denied due to invalid subscription key or wrong API endpoint. Make sure to provide a valid key for an active subscription and use a correct regional API endpoint for your resource.'}}
+2026-01-27 17:28:11,586 - root - ERROR - Error streaming agent response: <class 'agent_framework_azure_ai._client.AzureAIClient'> service failed to complete the prompt: Error code: 401 - {'error': {'code': '401', 'message': 'Access denied due to invalid subscription key or wrong API endpoint. Make sure to provide a valid key for an active subscription and use a correct regional API endpoint for your resource.'}}
+2026-01-27 17:28:11,586 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 17:28:11,586 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 17:44:09,356 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000002864244F550>
+2026-01-27 17:44:09,356 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000002864244F550>
+2026-01-27 17:44:09,357 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000002864244DE10>
+2026-01-27 17:44:09,357 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000002864244DE10>
+2026-01-27 17:44:14,121 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:44:14,173 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:44:14,173 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:50:24,491 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:50:34,064 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:50:34,127 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:50:34,127 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:50:55,948 - root - ERROR - Error streaming agent response: <class 'agent_framework_azure_ai._client.AzureAIClient'> service failed to complete the prompt: Error code: 401 - {'error': {'code': '401', 'message': 'Access denied due to invalid subscription key or wrong API endpoint. Make sure to provide a valid key for an active subscription and use a correct regional API endpoint for your resource.'}}
+2026-01-27 17:50:55,948 - root - ERROR - Error streaming agent response: <class 'agent_framework_azure_ai._client.AzureAIClient'> service failed to complete the prompt: Error code: 401 - {'error': {'code': '401', 'message': 'Access denied due to invalid subscription key or wrong API endpoint. Make sure to provide a valid key for an active subscription and use a correct regional API endpoint for your resource.'}}
+2026-01-27 17:50:55,952 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 17:50:55,952 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 17:57:18,462 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001CADD005290>
+2026-01-27 17:57:18,462 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001CADD005290>
+2026-01-27 17:57:18,462 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001CADD1D7750>
+2026-01-27 17:57:18,462 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001CADD1D7750>
+2026-01-27 17:57:24,200 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:57:24,742 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:57:24,742 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:58:01,815 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:58:01,887 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:58:01,887 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:58:27,936 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:58:28,025 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:58:28,025 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:58:54,451 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:58:54,540 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:58:54,540 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:59:13,358 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:59:13,424 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 17:59:13,424 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 18:21:27,118 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 18:21:27,266 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 18:21:27,266 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 18:25:40,406 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001D8562796D0>
+2026-01-27 18:25:40,406 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001D8562796D0>
+2026-01-27 18:25:40,409 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x000001D8560F02F0>, 728012.89)])']
+connector: <aiohttp.connector.TCPConnector object at 0x000001D85627B190>
+2026-01-27 18:25:40,409 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x000001D8560F02F0>, 728012.89)])']
+connector: <aiohttp.connector.TCPConnector object at 0x000001D85627B190>
+2026-01-27 18:25:40,411 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001D856294DD0>
+2026-01-27 18:25:40,411 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001D856294DD0>
+2026-01-27 18:25:40,412 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x000001D8560F2F90>, 728009.015)])']
+connector: <aiohttp.connector.TCPConnector object at 0x000001D85636B6D0>
+2026-01-27 18:25:40,412 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x000001D8560F2F90>, 728009.015)])']
+connector: <aiohttp.connector.TCPConnector object at 0x000001D85636B6D0>
+2026-01-27 18:25:40,413 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001D8560AAF90>
+2026-01-27 18:25:40,413 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001D8560AAF90>
+2026-01-27 18:25:40,414 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001D8525204D0>
+2026-01-27 18:25:40,414 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001D8525204D0>
+2026-01-27 18:25:40,416 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x000001D8560F3620>, 728004.484)])']
+connector: <aiohttp.connector.TCPConnector object at 0x000001D8560E8A10>
+2026-01-27 18:25:40,416 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x000001D8560F3620>, 728004.484)])']
+connector: <aiohttp.connector.TCPConnector object at 0x000001D8560E8A10>
+2026-01-27 18:25:40,417 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001D85392D210>
+2026-01-27 18:25:40,417 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001D85392D210>
+2026-01-27 18:26:10,435 - asyncio - ERROR - Future exception was never retrieved
+future: <Future finished exception=ClientConnectionError('Connection lost: SSL shutdown timed out')>
+TimeoutError: SSL shutdown timed out
+
+The above exception was the direct cause of the following exception:
+
+aiohttp.client_exceptions.ClientConnectionError: Connection lost: SSL shutdown timed out
+2026-01-27 18:26:10,435 - asyncio - ERROR - Future exception was never retrieved
+future: <Future finished exception=ClientConnectionError('Connection lost: SSL shutdown timed out')>
+TimeoutError: SSL shutdown timed out
+
+The above exception was the direct cause of the following exception:
+
+aiohttp.client_exceptions.ClientConnectionError: Connection lost: SSL shutdown timed out
+2026-01-27 18:26:10,436 - asyncio - ERROR - Future exception was never retrieved
+future: <Future finished exception=ClientConnectionError('Connection lost: SSL shutdown timed out')>
+TimeoutError: SSL shutdown timed out
+
+The above exception was the direct cause of the following exception:
+
+aiohttp.client_exceptions.ClientConnectionError: Connection lost: SSL shutdown timed out
+2026-01-27 18:26:10,436 - asyncio - ERROR - Future exception was never retrieved
+future: <Future finished exception=ClientConnectionError('Connection lost: SSL shutdown timed out')>
+TimeoutError: SSL shutdown timed out
+
+The above exception was the direct cause of the following exception:
+
+aiohttp.client_exceptions.ClientConnectionError: Connection lost: SSL shutdown timed out
+2026-01-27 18:26:10,437 - asyncio - ERROR - Future exception was never retrieved
+future: <Future finished exception=ClientConnectionError('Connection lost: SSL shutdown timed out')>
+TimeoutError: SSL shutdown timed out
+
+The above exception was the direct cause of the following exception:
+
+aiohttp.client_exceptions.ClientConnectionError: Connection lost: SSL shutdown timed out
+2026-01-27 18:26:10,437 - asyncio - ERROR - Future exception was never retrieved
+future: <Future finished exception=ClientConnectionError('Connection lost: SSL shutdown timed out')>
+TimeoutError: SSL shutdown timed out
+
+The above exception was the direct cause of the following exception:
+
+aiohttp.client_exceptions.ClientConnectionError: Connection lost: SSL shutdown timed out
+2026-01-27 18:35:19,123 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001D8560AAD10>
+2026-01-27 18:35:19,123 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001D8560AAD10>
+2026-01-27 18:35:19,266 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001D8560B4890>
+2026-01-27 18:35:19,266 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001D8560B4890>
+2026-01-27 18:35:26,994 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 18:35:27,083 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 18:35:27,083 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 18:35:53,447 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 18:35:53,540 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 18:35:53,540 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 18:38:10,896 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 18:38:10,981 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 18:38:10,981 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 18:38:56,362 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000002C08D26B750>
+2026-01-27 18:38:56,362 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000002C08D26B750>
+2026-01-27 18:38:56,363 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x000002C08C2CC280>, 728808.843)])']
+connector: <aiohttp.connector.TCPConnector object at 0x000002C08D2699D0>
+2026-01-27 18:38:56,363 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x000002C08C2CC280>, 728808.843)])']
+connector: <aiohttp.connector.TCPConnector object at 0x000002C08D2699D0>
+2026-01-27 18:38:56,363 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000002C08D307150>
+2026-01-27 18:38:56,363 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000002C08D307150>
+2026-01-27 18:38:56,363 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x000002C08C2CEF20>, 728805.828)])']
+connector: <aiohttp.connector.TCPConnector object at 0x000002C08D284950>
+2026-01-27 18:38:56,363 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x000002C08C2CEF20>, 728805.828)])']
+connector: <aiohttp.connector.TCPConnector object at 0x000002C08D284950>
+2026-01-27 18:38:56,366 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000002C08D2475D0>
+2026-01-27 18:38:56,366 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000002C08D2475D0>
+2026-01-27 18:38:56,366 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x000002C08D28C830>, 728802.062)])']
+connector: <aiohttp.connector.TCPConnector object at 0x000002C08D09DBD0>
+2026-01-27 18:38:56,366 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x000002C08D28C830>, 728802.062)])']
+connector: <aiohttp.connector.TCPConnector object at 0x000002C08D09DBD0>
+2026-01-27 18:39:08,003 - root - ERROR - Error streaming agent response: <class 'agent_framework_azure_ai._client.AzureAIClient'> service failed to complete the prompt: Error code: 401 - {'error': {'code': '401', 'message': 'Access denied due to invalid subscription key or wrong API endpoint. Make sure to provide a valid key for an active subscription and use a correct regional API endpoint for your resource.'}}
+2026-01-27 18:39:08,003 - root - ERROR - Error streaming agent response: <class 'agent_framework_azure_ai._client.AzureAIClient'> service failed to complete the prompt: Error code: 401 - {'error': {'code': '401', 'message': 'Access denied due to invalid subscription key or wrong API endpoint. Make sure to provide a valid key for an active subscription and use a correct regional API endpoint for your resource.'}}
+2026-01-27 18:39:08,009 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 18:39:08,009 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 18:39:26,468 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000002C08D0D5D10>
+2026-01-27 18:39:26,468 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000002C08D0D5D10>
+2026-01-27 18:39:26,468 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000002C08D08E550>
+2026-01-27 18:39:26,468 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000002C08D08E550>
+2026-01-27 18:39:26,468 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x000002C08C2CD940>, 728819.0)])']
+connector: <aiohttp.connector.TCPConnector object at 0x000002C08D24CCD0>
+2026-01-27 18:39:26,468 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x000002C08C2CD940>, 728819.0)])']
+connector: <aiohttp.connector.TCPConnector object at 0x000002C08D24CCD0>
+2026-01-27 18:39:26,468 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000002C08D09EF10>
+2026-01-27 18:39:26,468 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000002C08D09EF10>
+2026-01-27 18:39:26,468 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000002C08D337910>
+2026-01-27 18:39:26,468 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000002C08D337910>
+2026-01-27 18:39:26,468 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000002C08D0CC510>
+2026-01-27 18:39:26,468 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000002C08D0CC510>
+2026-01-27 18:39:53,926 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 18:39:58,485 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 18:39:58,559 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 18:39:58,559 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 18:40:18,847 - root - ERROR - Error streaming agent response: <class 'agent_framework_azure_ai._client.AzureAIClient'> service failed to complete the prompt: Error code: 401 - {'error': {'code': '401', 'message': 'Access denied due to invalid subscription key or wrong API endpoint. Make sure to provide a valid key for an active subscription and use a correct regional API endpoint for your resource.'}}
+2026-01-27 18:40:18,847 - root - ERROR - Error streaming agent response: <class 'agent_framework_azure_ai._client.AzureAIClient'> service failed to complete the prompt: Error code: 401 - {'error': {'code': '401', 'message': 'Access denied due to invalid subscription key or wrong API endpoint. Make sure to provide a valid key for an active subscription and use a correct regional API endpoint for your resource.'}}
+2026-01-27 18:40:18,855 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 18:40:18,855 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 18:45:20,619 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001780495E810>
+2026-01-27 18:45:20,619 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001780495E810>
+2026-01-27 18:45:20,619 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x00000178048BF490>
+2026-01-27 18:45:20,619 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x00000178048BF490>
+2026-01-27 18:45:27,701 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 18:45:27,778 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 18:45:27,778 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 18:46:09,301 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 18:46:09,372 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 18:46:09,372 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 18:46:32,909 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001F52BC414D0>
+2026-01-27 18:46:32,909 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001F52BC414D0>
+2026-01-27 18:46:32,909 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x000001F52AC6DB70>, 729265.406)])']
+connector: <aiohttp.connector.TCPConnector object at 0x000001F52BC42ED0>
+2026-01-27 18:46:32,909 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x000001F52AC6DB70>, 729265.406)])']
+connector: <aiohttp.connector.TCPConnector object at 0x000001F52BC42ED0>
+2026-01-27 18:46:32,909 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001F52BC40290>
+2026-01-27 18:46:32,909 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001F52BC40290>
+2026-01-27 18:46:32,909 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x000001F52AC6F540>, 729260.812)])']
+connector: <aiohttp.connector.TCPConnector object at 0x000001F52BC407D0>
+2026-01-27 18:46:32,909 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x000001F52AC6F540>, 729260.812)])']
+connector: <aiohttp.connector.TCPConnector object at 0x000001F52BC407D0>
+2026-01-27 18:46:32,909 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001F52AC52750>
+2026-01-27 18:46:32,909 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001F52AC52750>
+2026-01-27 18:46:32,909 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x000001F52BC39010>, 729257.593)])']
+connector: <aiohttp.connector.TCPConnector object at 0x000001F52AC52790>
+2026-01-27 18:46:32,909 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x000001F52BC39010>, 729257.593)])']
+connector: <aiohttp.connector.TCPConnector object at 0x000001F52AC52790>
+2026-01-27 18:46:42,023 - root - ERROR - Error streaming agent response: <class 'agent_framework_azure_ai._client.AzureAIClient'> service failed to complete the prompt: Error code: 401 - {'error': {'code': '401', 'message': 'Access denied due to invalid subscription key or wrong API endpoint. Make sure to provide a valid key for an active subscription and use a correct regional API endpoint for your resource.'}}
+2026-01-27 18:46:42,023 - root - ERROR - Error streaming agent response: <class 'agent_framework_azure_ai._client.AzureAIClient'> service failed to complete the prompt: Error code: 401 - {'error': {'code': '401', 'message': 'Access denied due to invalid subscription key or wrong API endpoint. Make sure to provide a valid key for an active subscription and use a correct regional API endpoint for your resource.'}}
+2026-01-27 18:46:42,023 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 18:46:42,023 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 18:47:02,916 - asyncio - ERROR - Future exception was never retrieved
+future: <Future finished exception=ClientConnectionError('Connection lost: SSL shutdown timed out')>
+TimeoutError: SSL shutdown timed out
+
+The above exception was the direct cause of the following exception:
+
+aiohttp.client_exceptions.ClientConnectionError: Connection lost: SSL shutdown timed out
+2026-01-27 18:47:02,916 - asyncio - ERROR - Future exception was never retrieved
+future: <Future finished exception=ClientConnectionError('Connection lost: SSL shutdown timed out')>
+TimeoutError: SSL shutdown timed out
+
+The above exception was the direct cause of the following exception:
+
+aiohttp.client_exceptions.ClientConnectionError: Connection lost: SSL shutdown timed out
+2026-01-27 18:47:02,917 - asyncio - ERROR - Future exception was never retrieved
+future: <Future finished exception=ClientConnectionError('Connection lost: SSL shutdown timed out')>
+TimeoutError: SSL shutdown timed out
+
+The above exception was the direct cause of the following exception:
+
+aiohttp.client_exceptions.ClientConnectionError: Connection lost: SSL shutdown timed out
+2026-01-27 18:47:02,917 - asyncio - ERROR - Future exception was never retrieved
+future: <Future finished exception=ClientConnectionError('Connection lost: SSL shutdown timed out')>
+TimeoutError: SSL shutdown timed out
+
+The above exception was the direct cause of the following exception:
+
+aiohttp.client_exceptions.ClientConnectionError: Connection lost: SSL shutdown timed out
+2026-01-27 18:47:02,917 - asyncio - ERROR - Future exception was never retrieved
+future: <Future finished exception=ClientConnectionError('Connection lost: SSL shutdown timed out')>
+TimeoutError: SSL shutdown timed out
+
+The above exception was the direct cause of the following exception:
+
+aiohttp.client_exceptions.ClientConnectionError: Connection lost: SSL shutdown timed out
+2026-01-27 18:47:02,917 - asyncio - ERROR - Future exception was never retrieved
+future: <Future finished exception=ClientConnectionError('Connection lost: SSL shutdown timed out')>
+TimeoutError: SSL shutdown timed out
+
+The above exception was the direct cause of the following exception:
+
+aiohttp.client_exceptions.ClientConnectionError: Connection lost: SSL shutdown timed out
+2026-01-27 20:10:05,911 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001F52BA4E390>
+2026-01-27 20:10:05,911 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001F52BA4E390>
+2026-01-27 20:10:06,143 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001F52BA4F450>
+2026-01-27 20:10:06,143 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001F52BA4F450>
+2026-01-27 20:10:06,284 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001F52BA5DD90>
+2026-01-27 20:10:06,284 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001F52BA5DD90>
+2026-01-27 20:10:06,328 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001F52BCE8150>
+2026-01-27 20:10:06,328 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001F52BCE8150>
+2026-01-27 20:10:06,360 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001F52BC29D10>
+2026-01-27 20:10:06,360 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001F52BC29D10>
+2026-01-27 20:10:27,095 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 20:10:39,006 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 20:10:39,124 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 20:10:39,124 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 20:11:23,153 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000018BC517A550>
+2026-01-27 20:11:23,153 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000018BC517A550>
+2026-01-27 20:11:23,154 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x0000018BC3F51940>, 734355.64)])']
+connector: <aiohttp.connector.TCPConnector object at 0x0000018BC5178A50>
+2026-01-27 20:11:23,154 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x0000018BC3F51940>, 734355.64)])']
+connector: <aiohttp.connector.TCPConnector object at 0x0000018BC5178A50>
+2026-01-27 20:11:23,156 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000018BC517B050>
+2026-01-27 20:11:23,156 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000018BC517B050>
+2026-01-27 20:11:23,156 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x0000018BC3F502F0>, 734351.843)])']
+connector: <aiohttp.connector.TCPConnector object at 0x0000018BC40E3B50>
+2026-01-27 20:11:23,156 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x0000018BC3F502F0>, 734351.843)])']
+connector: <aiohttp.connector.TCPConnector object at 0x0000018BC40E3B50>
+2026-01-27 20:11:23,158 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000018BC313F050>
+2026-01-27 20:11:23,158 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000018BC313F050>
+2026-01-27 20:11:23,163 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x0000018BC3F52F90>, 734343.093)])']
+connector: <aiohttp.connector.TCPConnector object at 0x0000018BC313F710>
+2026-01-27 20:11:23,163 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x0000018BC3F52F90>, 734343.093)])']
+connector: <aiohttp.connector.TCPConnector object at 0x0000018BC313F710>
+2026-01-27 20:11:36,634 - root - ERROR - Error streaming agent response: <class 'agent_framework_azure_ai._client.AzureAIClient'> service failed to complete the prompt: Error code: 401 - {'error': {'code': '401', 'message': 'Access denied due to invalid subscription key or wrong API endpoint. Make sure to provide a valid key for an active subscription and use a correct regional API endpoint for your resource.'}}
+2026-01-27 20:11:36,634 - root - ERROR - Error streaming agent response: <class 'agent_framework_azure_ai._client.AzureAIClient'> service failed to complete the prompt: Error code: 401 - {'error': {'code': '401', 'message': 'Access denied due to invalid subscription key or wrong API endpoint. Make sure to provide a valid key for an active subscription and use a correct regional API endpoint for your resource.'}}
+2026-01-27 20:11:36,638 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 20:11:36,638 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 20:11:40,696 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000018BC3EEBC90>
+2026-01-27 20:11:40,696 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000018BC3EEBC90>
+2026-01-27 20:11:40,697 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x0000018BC3F50D70>, 734362.234), (<aiohttp.client_proto.ResponseHandler object at 0x0000018BC3F50EC0>, 734362.437)])']
+connector: <aiohttp.connector.TCPConnector object at 0x0000018BC3EEB2D0>
+2026-01-27 20:11:40,697 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x0000018BC3F50D70>, 734362.234), (<aiohttp.client_proto.ResponseHandler object at 0x0000018BC3F50EC0>, 734362.437)])']
+connector: <aiohttp.connector.TCPConnector object at 0x0000018BC3EEB2D0>
+2026-01-27 20:11:40,699 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000018BC313F610>
+2026-01-27 20:11:40,699 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000018BC313F610>
+2026-01-27 20:11:40,700 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x0000018BC3F51BE0>, 734367.5)])']
+connector: <aiohttp.connector.TCPConnector object at 0x0000018BC313F490>
+2026-01-27 20:11:40,700 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x0000018BC3F51BE0>, 734367.5)])']
+connector: <aiohttp.connector.TCPConnector object at 0x0000018BC313F490>
+2026-01-27 20:11:40,700 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000018BC3124D50>
+2026-01-27 20:11:40,700 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000018BC3124D50>
+2026-01-27 20:11:40,701 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000018BC510E810>
+2026-01-27 20:11:40,701 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000018BC510E810>
+2026-01-27 20:11:40,701 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000018BC176AF10>
+2026-01-27 20:11:40,701 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000018BC176AF10>
+2026-01-27 20:12:25,861 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 20:12:37,957 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 20:12:38,158 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 20:12:38,158 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 20:13:16,612 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001386527A090>
+2026-01-27 20:13:16,612 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001386527A090>
+2026-01-27 20:13:16,613 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x000001386428EDD0>, 734469.109)])']
+connector: <aiohttp.connector.TCPConnector object at 0x000001386527AE10>
+2026-01-27 20:13:16,613 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x000001386428EDD0>, 734469.109)])']
+connector: <aiohttp.connector.TCPConnector object at 0x000001386527AE10>
+2026-01-27 20:13:16,614 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000013865161350>
+2026-01-27 20:13:16,614 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000013865161350>
+2026-01-27 20:13:16,615 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x000001386428E890>, 734465.359)])']
+connector: <aiohttp.connector.TCPConnector object at 0x00000138642B0150>
+2026-01-27 20:13:16,615 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x000001386428E890>, 734465.359)])']
+connector: <aiohttp.connector.TCPConnector object at 0x00000138642B0150>
+2026-01-27 20:13:16,616 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000013864F9F690>
+2026-01-27 20:13:16,616 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000013864F9F690>
+2026-01-27 20:13:16,617 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x000001386513A5F0>, 734461.796)])']
+connector: <aiohttp.connector.TCPConnector object at 0x0000013864FAC8D0>
+2026-01-27 20:13:16,617 - asyncio - ERROR - Unclosed connector
+connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x000001386513A5F0>, 734461.796)])']
+connector: <aiohttp.connector.TCPConnector object at 0x0000013864FAC8D0>
+2026-01-27 20:13:31,329 - root - ERROR - Error streaming agent response: <class 'agent_framework_azure_ai._client.AzureAIClient'> service failed to complete the prompt: Error code: 400 - {'error': {'code': 'invalid_payload', 'message': 'Not allowed when agent is specified.', 'param': 'temperature', 'type': 'invalid_request_error', 'details': [], 'additionalInfo': {'request_id': '4aff8d51491915ae420ed889f884c04a'}}}
+2026-01-27 20:13:31,329 - root - ERROR - Error streaming agent response: <class 'agent_framework_azure_ai._client.AzureAIClient'> service failed to complete the prompt: Error code: 400 - {'error': {'code': 'invalid_payload', 'message': 'Not allowed when agent is specified.', 'param': 'temperature', 'type': 'invalid_request_error', 'details': [], 'additionalInfo': {'request_id': '4aff8d51491915ae420ed889f884c04a'}}}
+2026-01-27 20:13:31,336 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 20:13:31,336 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 20:13:46,612 - asyncio - ERROR - Future exception was never retrieved
+future: <Future finished exception=ClientConnectionError('Connection lost: SSL shutdown timed out')>
+TimeoutError: SSL shutdown timed out
+
+The above exception was the direct cause of the following exception:
+
+aiohttp.client_exceptions.ClientConnectionError: Connection lost: SSL shutdown timed out
+2026-01-27 20:13:46,612 - asyncio - ERROR - Future exception was never retrieved
+future: <Future finished exception=ClientConnectionError('Connection lost: SSL shutdown timed out')>
+TimeoutError: SSL shutdown timed out
+
+The above exception was the direct cause of the following exception:
+
+aiohttp.client_exceptions.ClientConnectionError: Connection lost: SSL shutdown timed out
+2026-01-27 20:13:46,613 - asyncio - ERROR - Future exception was never retrieved
+future: <Future finished exception=ClientConnectionError('Connection lost: SSL shutdown timed out')>
+TimeoutError: SSL shutdown timed out
+
+The above exception was the direct cause of the following exception:
+
+aiohttp.client_exceptions.ClientConnectionError: Connection lost: SSL shutdown timed out
+2026-01-27 20:13:46,613 - asyncio - ERROR - Future exception was never retrieved
+future: <Future finished exception=ClientConnectionError('Connection lost: SSL shutdown timed out')>
+TimeoutError: SSL shutdown timed out
+
+The above exception was the direct cause of the following exception:
+
+aiohttp.client_exceptions.ClientConnectionError: Connection lost: SSL shutdown timed out
+2026-01-27 20:13:46,614 - asyncio - ERROR - Future exception was never retrieved
+future: <Future finished exception=ClientConnectionError('Connection lost: SSL shutdown timed out')>
+TimeoutError: SSL shutdown timed out
+
+The above exception was the direct cause of the following exception:
+
+aiohttp.client_exceptions.ClientConnectionError: Connection lost: SSL shutdown timed out
+2026-01-27 20:13:46,614 - asyncio - ERROR - Future exception was never retrieved
+future: <Future finished exception=ClientConnectionError('Connection lost: SSL shutdown timed out')>
+TimeoutError: SSL shutdown timed out
+
+The above exception was the direct cause of the following exception:
+
+aiohttp.client_exceptions.ClientConnectionError: Connection lost: SSL shutdown timed out
+2026-01-27 20:24:44,157 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: AgentsClient V1 get_agent failed (reason=EndpointGetFailed, id=asst_gV1U70ZMAgL9Yre69whvNtfj): (None) No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+Code: None
+Message: No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+2026-01-27 20:24:44,157 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: AgentsClient V1 get_agent failed (reason=EndpointGetFailed, id=asst_gV1U70ZMAgL9Yre69whvNtfj): (None) No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+Code: None
+Message: No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+2026-01-27 20:24:44,159 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: Agent not resolvable - may need to create new agent (id=asst_gV1U70ZMAgL9Yre69whvNtfj)
+2026-01-27 20:24:44,159 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: Agent not resolvable - may need to create new agent (id=asst_gV1U70ZMAgL9Yre69whvNtfj)
+2026-01-27 20:24:44,159 - v4.magentic_agents.foundry_agent - ERROR - RAI.AgentReuseMiss: stored id asst_gV1U70ZMAgL9Yre69whvNtfj not resolvable (agent_name=RAIAgent)
+2026-01-27 20:24:44,159 - v4.magentic_agents.foundry_agent - ERROR - RAI.AgentReuseMiss: stored id asst_gV1U70ZMAgL9Yre69whvNtfj not resolvable (agent_name=RAIAgent)
+2026-01-27 20:24:44,181 - root - ERROR - Error streaming agent response: 'str' object has no attribute 'get_openai_client'
+2026-01-27 20:24:44,181 - root - ERROR - Error streaming agent response: 'str' object has no attribute 'get_openai_client'
+2026-01-27 20:24:44,187 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 20:24:44,187 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 20:27:19,155 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000013864FE65D0>
+2026-01-27 20:27:19,155 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000013864FE65D0>
+2026-01-27 20:27:19,159 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x00000138642D4490>
+2026-01-27 20:27:19,159 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x00000138642D4490>
+2026-01-27 20:27:19,160 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001386527B890>
+2026-01-27 20:27:19,160 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001386527B890>
+2026-01-27 20:27:19,162 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000013864296550>
+2026-01-27 20:27:19,162 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000013864296550>
+2026-01-27 20:27:19,164 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x00000138642A2A90>
+2026-01-27 20:27:19,164 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x00000138642A2A90>
+2026-01-27 20:30:52,331 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 20:31:03,190 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 20:31:03,436 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 20:31:03,436 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 20:31:33,719 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: AgentsClient V1 get_agent failed (reason=EndpointGetFailed, id=asst_gV1U70ZMAgL9Yre69whvNtfj): (None) No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+Code: None
+Message: No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+2026-01-27 20:31:33,719 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: AgentsClient V1 get_agent failed (reason=EndpointGetFailed, id=asst_gV1U70ZMAgL9Yre69whvNtfj): (None) No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+Code: None
+Message: No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+2026-01-27 20:31:33,721 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: Agent not resolvable - may need to create new agent (id=asst_gV1U70ZMAgL9Yre69whvNtfj)
+2026-01-27 20:31:33,721 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: Agent not resolvable - may need to create new agent (id=asst_gV1U70ZMAgL9Yre69whvNtfj)
+2026-01-27 20:31:33,726 - v4.magentic_agents.foundry_agent - ERROR - RAI.AgentReuseMiss: stored id asst_gV1U70ZMAgL9Yre69whvNtfj not resolvable (agent_name=RAIAgent)
+2026-01-27 20:31:33,726 - v4.magentic_agents.foundry_agent - ERROR - RAI.AgentReuseMiss: stored id asst_gV1U70ZMAgL9Yre69whvNtfj not resolvable (agent_name=RAIAgent)
+2026-01-27 20:31:33,877 - root - ERROR - Error streaming agent response: 'str' object has no attribute 'get_openai_client'
+2026-01-27 20:31:33,877 - root - ERROR - Error streaming agent response: 'str' object has no attribute 'get_openai_client'
+2026-01-27 20:31:33,893 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 20:31:33,893 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 20:32:02,944 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: AgentsClient V1 get_agent failed (reason=EndpointGetFailed, id=asst_gV1U70ZMAgL9Yre69whvNtfj): (None) No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+Code: None
+Message: No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+2026-01-27 20:32:02,944 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: AgentsClient V1 get_agent failed (reason=EndpointGetFailed, id=asst_gV1U70ZMAgL9Yre69whvNtfj): (None) No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+Code: None
+Message: No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+2026-01-27 20:32:02,946 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: Agent not resolvable - may need to create new agent (id=asst_gV1U70ZMAgL9Yre69whvNtfj)
+2026-01-27 20:32:02,946 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: Agent not resolvable - may need to create new agent (id=asst_gV1U70ZMAgL9Yre69whvNtfj)
+2026-01-27 20:32:02,948 - v4.magentic_agents.foundry_agent - ERROR - RAI.AgentReuseMiss: stored id asst_gV1U70ZMAgL9Yre69whvNtfj not resolvable (agent_name=RAIAgent)
+2026-01-27 20:32:02,948 - v4.magentic_agents.foundry_agent - ERROR - RAI.AgentReuseMiss: stored id asst_gV1U70ZMAgL9Yre69whvNtfj not resolvable (agent_name=RAIAgent)
+2026-01-27 20:33:00,316 - root - ERROR - Error streaming agent response: 'str' object has no attribute 'get_openai_client'
+2026-01-27 20:33:00,316 - root - ERROR - Error streaming agent response: 'str' object has no attribute 'get_openai_client'
+2026-01-27 20:33:00,356 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 20:33:00,356 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 20:34:36,494 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: AgentsClient V1 get_agent failed (reason=EndpointGetFailed, id=asst_gV1U70ZMAgL9Yre69whvNtfj): (None) No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+Code: None
+Message: No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+2026-01-27 20:34:36,494 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: AgentsClient V1 get_agent failed (reason=EndpointGetFailed, id=asst_gV1U70ZMAgL9Yre69whvNtfj): (None) No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+Code: None
+Message: No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+2026-01-27 20:34:36,496 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: Agent not resolvable - may need to create new agent (id=asst_gV1U70ZMAgL9Yre69whvNtfj)
+2026-01-27 20:34:36,496 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: Agent not resolvable - may need to create new agent (id=asst_gV1U70ZMAgL9Yre69whvNtfj)
+2026-01-27 20:34:36,498 - v4.magentic_agents.foundry_agent - ERROR - RAI.AgentReuseMiss: stored id asst_gV1U70ZMAgL9Yre69whvNtfj not resolvable (agent_name=RAIAgent)
+2026-01-27 20:34:36,498 - v4.magentic_agents.foundry_agent - ERROR - RAI.AgentReuseMiss: stored id asst_gV1U70ZMAgL9Yre69whvNtfj not resolvable (agent_name=RAIAgent)
+2026-01-27 20:37:22,670 - root - ERROR - Error streaming agent response: 'str' object has no attribute 'get_openai_client'
+2026-01-27 20:37:22,670 - root - ERROR - Error streaming agent response: 'str' object has no attribute 'get_openai_client'
+2026-01-27 20:37:22,713 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 20:37:22,713 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 20:37:51,093 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: AgentsClient V1 get_agent failed (reason=EndpointGetFailed, id=asst_gV1U70ZMAgL9Yre69whvNtfj): (None) No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+Code: None
+Message: No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+2026-01-27 20:37:51,093 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: AgentsClient V1 get_agent failed (reason=EndpointGetFailed, id=asst_gV1U70ZMAgL9Yre69whvNtfj): (None) No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+Code: None
+Message: No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+2026-01-27 20:37:51,095 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: Agent not resolvable - may need to create new agent (id=asst_gV1U70ZMAgL9Yre69whvNtfj)
+2026-01-27 20:37:51,095 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: Agent not resolvable - may need to create new agent (id=asst_gV1U70ZMAgL9Yre69whvNtfj)
+2026-01-27 20:37:51,096 - v4.magentic_agents.foundry_agent - ERROR - RAI.AgentReuseMiss: stored id asst_gV1U70ZMAgL9Yre69whvNtfj not resolvable (agent_name=RAIAgent)
+2026-01-27 20:37:51,096 - v4.magentic_agents.foundry_agent - ERROR - RAI.AgentReuseMiss: stored id asst_gV1U70ZMAgL9Yre69whvNtfj not resolvable (agent_name=RAIAgent)
+2026-01-27 20:47:08,088 - root - ERROR - Error streaming agent response: 'str' object has no attribute 'get_openai_client'
+2026-01-27 20:47:08,088 - root - ERROR - Error streaming agent response: 'str' object has no attribute 'get_openai_client'
+2026-01-27 20:47:08,105 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 20:47:08,105 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 20:47:08,937 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001ADF64BE210>
+2026-01-27 20:47:08,937 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001ADF64BE210>
+2026-01-27 20:47:32,766 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 20:47:32,917 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 20:47:32,917 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 20:47:47,603 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: AgentsClient V1 get_agent failed (reason=EndpointGetFailed, id=asst_gV1U70ZMAgL9Yre69whvNtfj): (None) No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+Code: None
+Message: No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+2026-01-27 20:47:47,603 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: AgentsClient V1 get_agent failed (reason=EndpointGetFailed, id=asst_gV1U70ZMAgL9Yre69whvNtfj): (None) No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+Code: None
+Message: No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+2026-01-27 20:47:47,604 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: Agent not resolvable - may need to create new agent (id=asst_gV1U70ZMAgL9Yre69whvNtfj)
+2026-01-27 20:47:47,604 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: Agent not resolvable - may need to create new agent (id=asst_gV1U70ZMAgL9Yre69whvNtfj)
+2026-01-27 20:47:47,731 - v4.magentic_agents.foundry_agent - ERROR - RAI.AgentReuseMiss: stored id asst_gV1U70ZMAgL9Yre69whvNtfj not resolvable (agent_name=RAIAgent)
+2026-01-27 20:47:47,731 - v4.magentic_agents.foundry_agent - ERROR - RAI.AgentReuseMiss: stored id asst_gV1U70ZMAgL9Yre69whvNtfj not resolvable (agent_name=RAIAgent)
+2026-01-27 20:48:02,063 - root - ERROR - Error streaming agent response: 'str' object has no attribute 'get_openai_client'
+2026-01-27 20:48:02,063 - root - ERROR - Error streaming agent response: 'str' object has no attribute 'get_openai_client'
+2026-01-27 20:48:02,076 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 20:48:02,076 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 20:48:20,944 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001E544DFB610>
+2026-01-27 20:48:20,944 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001E544DFB610>
+2026-01-27 20:49:27,398 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 20:49:49,111 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 20:49:49,251 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 20:49:49,251 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 20:50:32,356 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: AgentsClient V1 get_agent failed (reason=EndpointGetFailed, id=asst_gV1U70ZMAgL9Yre69whvNtfj): (None) No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+Code: None
+Message: No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+2026-01-27 20:50:32,356 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: AgentsClient V1 get_agent failed (reason=EndpointGetFailed, id=asst_gV1U70ZMAgL9Yre69whvNtfj): (None) No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+Code: None
+Message: No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+2026-01-27 20:50:32,363 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: Agent not resolvable - may need to create new agent (id=asst_gV1U70ZMAgL9Yre69whvNtfj)
+2026-01-27 20:50:32,363 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: Agent not resolvable - may need to create new agent (id=asst_gV1U70ZMAgL9Yre69whvNtfj)
+2026-01-27 20:50:32,367 - v4.magentic_agents.foundry_agent - ERROR - RAI.AgentReuseMiss: stored id asst_gV1U70ZMAgL9Yre69whvNtfj not resolvable (agent_name=RAIAgent)
+2026-01-27 20:50:32,367 - v4.magentic_agents.foundry_agent - ERROR - RAI.AgentReuseMiss: stored id asst_gV1U70ZMAgL9Yre69whvNtfj not resolvable (agent_name=RAIAgent)
+2026-01-27 20:50:41,043 - root - ERROR - Error streaming agent response: 'str' object has no attribute 'get_openai_client'
+2026-01-27 20:50:41,043 - root - ERROR - Error streaming agent response: 'str' object has no attribute 'get_openai_client'
+2026-01-27 20:50:41,055 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 20:50:41,055 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 20:52:15,088 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x00000203B9368310>
+2026-01-27 20:52:15,088 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x00000203B9368310>
+2026-01-27 20:53:03,218 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 20:53:03,314 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 20:53:03,314 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 20:53:32,996 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: AgentsClient V1 get_agent failed (reason=EndpointGetFailed, id=asst_gV1U70ZMAgL9Yre69whvNtfj): (None) No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+Code: None
+Message: No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+2026-01-27 20:53:32,996 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: AgentsClient V1 get_agent failed (reason=EndpointGetFailed, id=asst_gV1U70ZMAgL9Yre69whvNtfj): (None) No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+Code: None
+Message: No assistant found with id 'asst_gV1U70ZMAgL9Yre69whvNtfj'.
+2026-01-27 20:53:32,998 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: Agent not resolvable - may need to create new agent (id=asst_gV1U70ZMAgL9Yre69whvNtfj)
+2026-01-27 20:53:32,998 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: Agent not resolvable - may need to create new agent (id=asst_gV1U70ZMAgL9Yre69whvNtfj)
+2026-01-27 20:53:33,003 - v4.magentic_agents.foundry_agent - ERROR - RAI.AgentReuseMiss: stored id asst_gV1U70ZMAgL9Yre69whvNtfj not resolvable (agent_name=RAIAgent)
+2026-01-27 20:53:33,003 - v4.magentic_agents.foundry_agent - ERROR - RAI.AgentReuseMiss: stored id asst_gV1U70ZMAgL9Yre69whvNtfj not resolvable (agent_name=RAIAgent)
+2026-01-27 20:53:43,337 - root - ERROR - Error streaming agent response: 'str' object has no attribute 'get_openai_client'
+2026-01-27 20:53:43,337 - root - ERROR - Error streaming agent response: 'str' object has no attribute 'get_openai_client'
+2026-01-27 20:53:43,346 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 20:53:43,346 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 20:54:49,851 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000002813508E890>
+2026-01-27 20:54:49,851 - asyncio - ERROR - Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000002813508E890>
+2026-01-27 21:11:54,354 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 21:13:36,188 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 21:13:36,324 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 21:13:36,324 - root - WARNING - No Application Insights Instrumentation Key found. Skipping configuration
+2026-01-27 21:13:52,132 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: Projects SDK get_agent failed (reason=ProjectsGetFailed, name=RAIAgent): 'AgentsOperations' object has no attribute 'get_agent'
+2026-01-27 21:13:52,132 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: Projects SDK get_agent failed (reason=ProjectsGetFailed, name=RAIAgent): 'AgentsOperations' object has no attribute 'get_agent'
+2026-01-27 21:13:52,133 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: AIProjectClient get_agent failed (reason=EndpointGetFailed, id=asst_gV1U70ZMAgL9Yre69whvNtfj): 'AzureAIClient' object has no attribute 'agents'
+2026-01-27 21:13:52,133 - v4.magentic_agents.foundry_agent - WARNING - RAI.AgentReuseMiss: AIProjectClient get_agent failed (reason=EndpointGetFailed, id=asst_gV1U70ZMAgL9Yre69whvNtfj): 'AzureAIClient' object has no attribute 'agents'
+2026-01-27 21:13:52,134 - v4.magentic_agents.foundry_agent - ERROR - RAI.AgentReuseMiss: Agent not resolvable via any client (reason=ClientMismatch, name=RAIAgent, id=asst_gV1U70ZMAgL9Yre69whvNtfj)
+2026-01-27 21:13:52,134 - v4.magentic_agents.foundry_agent - ERROR - RAI.AgentReuseMiss: Agent not resolvable via any client (reason=ClientMismatch, name=RAIAgent, id=asst_gV1U70ZMAgL9Yre69whvNtfj)
+2026-01-27 21:13:52,136 - v4.magentic_agents.foundry_agent - ERROR - RAI.AgentReuseMiss: stored id asst_gV1U70ZMAgL9Yre69whvNtfj not resolvable (agent_name=RAIAgent)
+2026-01-27 21:13:52,136 - v4.magentic_agents.foundry_agent - ERROR - RAI.AgentReuseMiss: stored id asst_gV1U70ZMAgL9Yre69whvNtfj not resolvable (agent_name=RAIAgent)
+2026-01-27 21:14:07,664 - root - ERROR - Error streaming agent response: <class 'agent_framework_azure_ai._client.AzureAIClient'> service failed to complete the prompt: Error code: 400 - {'error': {'code': 'invalid_payload', 'message': 'Not allowed when agent is specified.', 'param': 'temperature', 'type': 'invalid_request_error', 'details': [], 'additionalInfo': {'request_id': '84236a9d6c0e2b1567e0fadf7367bb92'}}}
+2026-01-27 21:14:07,664 - root - ERROR - Error streaming agent response: <class 'agent_framework_azure_ai._client.AzureAIClient'> service failed to complete the prompt: Error code: 400 - {'error': {'code': 'invalid_payload', 'message': 'Not allowed when agent is specified.', 'param': 'temperature', 'type': 'invalid_request_error', 'details': [], 'additionalInfo': {'request_id': '84236a9d6c0e2b1567e0fadf7367bb92'}}}
+2026-01-27 21:14:07,664 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
+2026-01-27 21:14:07,664 - root - WARNING - Skipping track_event for RAI failed as Application Insights is not configured
