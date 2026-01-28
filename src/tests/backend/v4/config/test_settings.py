@@ -42,16 +42,27 @@ sys.modules['azure.keyvault'] = Mock()
 sys.modules['azure.keyvault.secrets'] = Mock()
 sys.modules['azure.keyvault.secrets.aio'] = Mock()
 
-# Mock v4.models for relative imports used in settings.py
-mock_v4_models_messages = Mock()
-mock_mplan = Mock()
-mock_websocket_message_type = Mock()
-mock_websocket_message_type.SYSTEM_MESSAGE = 'system_message'
-mock_v4_models_messages.MPlan = mock_mplan
-mock_v4_models_messages.WebsocketMessageType = mock_websocket_message_type
-sys.modules['v4'] = Mock()
-sys.modules['v4.models'] = Mock()
+# Import the real v4.models classes first to avoid type annotation issues
+from backend.v4.models.messages import MPlan, WebsocketMessageType
+from backend.v4.models.models import MPlan as MPlanModel, MStep
+
+# Mock v4.models for relative imports used in settings.py, using REAL classes
+from types import ModuleType
+mock_v4 = ModuleType('v4')
+mock_v4_models = ModuleType('v4.models')
+mock_v4_models_messages = ModuleType('v4.models.messages')
+mock_v4_models_models = ModuleType('v4.models.models')
+
+# Assign real classes to mock modules
+mock_v4_models_messages.MPlan = MPlan
+mock_v4_models_messages.WebsocketMessageType = WebsocketMessageType
+mock_v4_models_models.MPlan = MPlanModel
+mock_v4_models_models.MStep = MStep
+
+sys.modules['v4'] = mock_v4
+sys.modules['v4.models'] = mock_v4_models
 sys.modules['v4.models.messages'] = mock_v4_models_messages
+sys.modules['v4.models.models'] = mock_v4_models_models
 
 # Mock common.config.app_config 
 sys.modules['common'] = Mock()

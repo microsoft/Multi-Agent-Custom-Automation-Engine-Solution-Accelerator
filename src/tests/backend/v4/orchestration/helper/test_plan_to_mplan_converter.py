@@ -21,15 +21,23 @@ os.environ.update({
 # Import the models first (from backend path)
 from backend.v4.models.models import MPlan, MStep, PlanStatus
 
-# Mock v4.models.models with the real classes so relative imports work
-from types import ModuleType
-mock_v4_models_models = ModuleType('models')
-mock_v4_models_models.MPlan = MPlan
-mock_v4_models_models.MStep = MStep
-mock_v4_models_models.PlanStatus = PlanStatus
-sys.modules['v4'] = ModuleType('v4')
-sys.modules['v4.models'] = ModuleType('models')
-sys.modules['v4.models.models'] = mock_v4_models_models
+# Check if v4.models.models is already properly set up (running in full test suite)
+_existing_v4_models = sys.modules.get('v4.models.models')
+_need_mock = _existing_v4_models is None or not hasattr(_existing_v4_models, 'MPlan')
+
+if _need_mock:
+    # Mock v4.models.models with the real classes so relative imports work
+    from types import ModuleType
+    mock_v4_models_models = ModuleType('models')
+    mock_v4_models_models.MPlan = MPlan
+    mock_v4_models_models.MStep = MStep
+    mock_v4_models_models.PlanStatus = PlanStatus
+    
+    if 'v4' not in sys.modules:
+        sys.modules['v4'] = ModuleType('v4')
+    if 'v4.models' not in sys.modules:
+        sys.modules['v4.models'] = ModuleType('models')
+    sys.modules['v4.models.models'] = mock_v4_models_models
 
 # Now import the converter
 from backend.v4.orchestration.helper.plan_to_mplan_converter import PlanToMPlanConverter
