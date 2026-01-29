@@ -8,10 +8,7 @@ import time
 import re
 from typing import Any
 
-from agent_framework import ChatMessage
-# Removed: from agent_framework._content import FunctionCallContent  (does not exist)
-
-from agent_framework._workflows._magentic import AgentRunResponseUpdate  # Streaming update type from workflows
+from agent_framework import ChatMessage, AgentResponseUpdate
 
 from common.utils.agent_name_sanitizer import AgentNameSanitizer
 from v4.config.settings import connection_config
@@ -113,12 +110,12 @@ def agent_response_callback(
 
 async def streaming_agent_response_callback(
     agent_id: str,
-    update: AgentRunResponseUpdate,
+    update: AgentResponseUpdate,
     is_final: bool,
     user_id: str | None = None,
 ) -> None:
     """
-    Streaming callback for incremental agent output (AgentRunResponseUpdate).
+    Streaming callback for incremental agent output (AgentResponseUpdate).
     """
     if not user_id:
         return

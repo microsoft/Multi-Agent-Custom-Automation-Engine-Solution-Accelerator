@@ -16,13 +16,12 @@ import uuid
 from typing import Any, AsyncIterable
 
 from agent_framework import (
-    AgentRunResponse,
-    AgentRunResponseUpdate,
+    AgentResponse,
+    AgentResponseUpdate,
     BaseAgent,
     ChatMessage,
+    Content,
     Role,
-    TextContent,
-    UsageContent,
     UsageDetails,
     AgentThread,
 )
@@ -88,7 +87,7 @@ class ProxyAgent(BaseAgent):
         *,
         thread: AgentThread | None = None,
         **kwargs: Any,
-    ) -> AgentRunResponse:
+    ) -> AgentResponse:
         """
         Get complete clarification response (non-streaming).
 
@@ -98,7 +97,7 @@ class ProxyAgent(BaseAgent):
             kwargs: Additional keyword arguments
 
         Returns:
-            AgentRunResponse with the clarification
+            AgentResponse with the clarification
         """
         # Collect all streaming updates
         response_messages: list[ChatMessage] = []
@@ -113,7 +112,7 @@ class ProxyAgent(BaseAgent):
                     )
                 )
 
-        return AgentRunResponse(
+        return AgentResponse(
             messages=response_messages,
             response_id=response_id,
         )
@@ -124,7 +123,7 @@ class ProxyAgent(BaseAgent):
         *,
         thread: AgentThread | None = None,
         **kwargs: Any,
-    ) -> AsyncIterable[AgentRunResponseUpdate]:
+    ) -> AsyncIterable[AgentResponseUpdate]:
         """
         Stream clarification process with human interaction.
 
@@ -134,7 +133,7 @@ class ProxyAgent(BaseAgent):
             kwargs: Additional keyword arguments
 
         Yields:
-            AgentRunResponseUpdate objects with clarification progress
+            AgentResponseUpdate objects with clarification progress
         """
         return self._invoke_stream_internal(messages, thread, **kwargs)
 
@@ -143,13 +142,13 @@ class ProxyAgent(BaseAgent):
         messages: str | ChatMessage | list[str] | list[ChatMessage] | None,
         thread: AgentThread | None,
         **kwargs: Any,
-    ) -> AsyncIterable[AgentRunResponseUpdate]:
+    ) -> AsyncIterable[AgentResponseUpdate]:
         """
         Internal streaming implementation.
 
         1. Sends clarification request via websocket
         2. Waits for human response / timeout
-        3. Yields AgentRunResponseUpdate with the clarified answer
+        3. Yields AgentResponseUpdate with the clarified answer
         """
         # Normalize messages to string
         message_text = self._extract_message_text(messages)
@@ -205,9 +204,9 @@ class ProxyAgent(BaseAgent):
         message_id = str(uuid.uuid4())
 
         # Yield final assistant text update with explicit text content
-        text_update = AgentRunResponseUpdate(
+        text_update = AgentResponseUpdate(
             role=Role.ASSISTANT,
-            contents=[TextContent(text=synthetic_reply)],
+            contents=[Content.from_text(text=synthetic_reply)],
             author_name=self.name,
             response_id=response_id,
             message_id=message_id,
@@ -218,11 +217,11 @@ class ProxyAgent(BaseAgent):
 
         # Yield synthetic usage update for consistency
         # Use same message_id to indicate this is part of the same message
-        usage_update = AgentRunResponseUpdate(
+        usage_update = AgentResponseUpdate(
             role=Role.ASSISTANT,
             contents=[
-                UsageContent(
-                    UsageDetails(
+                Content.from_usage(
+                    usage_details=UsageDetails(
                         input_token_count=len(message_text.split()),
                         output_token_count=len(synthetic_reply.split()),
                         total_token_count=len(message_text.split()) + len(synthetic_reply.split()),
