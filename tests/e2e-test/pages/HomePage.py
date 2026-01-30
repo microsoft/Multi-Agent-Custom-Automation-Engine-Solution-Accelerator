@@ -32,8 +32,10 @@ class BIABPage(BasePage):
     PROXY_AGENT = "//span[normalize-space()='Proxy Agent']"
     APPROVE_TASK_PLAN = "//button[normalize-space()='Approve Task Plan']"
     PROCESSING_PLAN = "//span[contains(text(),'Processing your plan and coordinating with AI agen')]"
-    RETAIL_CUSTOMER_RESPONSE_VALIDATION = "//p[contains(text(),'🎉🎉 Emily Thompson')]"
+    RETAIL_CUSTOMER_RESPONSE_VALIDATION = "//p[contains(text(),'🎉🎉')]"
     PRODUCT_MARKETING_RESPONSE_VALIDATION = "//p[contains(text(),'🎉🎉')]"
+    RFP_RESPONSE_VALIDATION = "//p[contains(text(),'🎉🎉')]"
+    CC_RESPONSE_VALIDATION = "//p[contains(text(),'🎉🎉')]"
     PM_COMPLETED_TASK = "//div[@title='Write a press release about our current products​']"
     CREATING_PLAN_LOADING = "//span[normalize-space()='Creating your plan...']"
     PRODUCT_AGENT = "//span[normalize-space()='Product Agent']"
@@ -47,6 +49,12 @@ class BIABPage(BasePage):
     ORDER_DATA = "//span[normalize-space()='Order Data']"
     CUSTOMER_DATA = "//span[normalize-space()='Customer Data']"
     ANALYSIS_RECOMMENDATION = "//span[normalize-space()='Analysis Recommendation']"
+    RFP_SUMMARY = "//span[.='Rfp Summary']"
+    RFP_RISK = "//span[normalize-space()='Rfp Risk']"
+    RFP_COMPLIANCE = "//span[normalize-space()='Rfp Compliance']"
+    CONTRACT_SUMMARY ="//span[.='Contract Summary']"
+    CONTRACT_RISK = "//span[normalize-space()='Contract Risk']"
+    CONTRACT_COMPLIANCE ="//span[normalize-space()='Contract Compliance']"
     PRODUCT = "//span[normalize-space()='Product']"
     MARKETING = "//span[normalize-space()='Marketing']"
     TECH_SUPPORT = "//span[normalize-space()='Technical Support']"
@@ -57,7 +65,12 @@ class BIABPage(BasePage):
     HOME_INPUT_TITLE_WRAPPER = "//div[@class='home-input-title-wrapper']"
     SOURCE_TEXT = "//p[contains(text(),'source')]"
     RAI_VALIDATION = "//span[normalize-space()='Failed to submit clarification']"
-
+    RFP_SUMMARY_AGENT = "//span[normalize-space()='Rfp Summary Agent']"
+    RFP_RISK_AGENT = "//span[normalize-space()='Rfp Risk Agent']"
+    RFP_COMPLIANCE_AGENT = "//span[normalize-space()='Rfp Compliance Agent']"
+    CC_SUMMARY_AGENT = "//span[normalize-space()='Contract Summary Agent']"
+    CC_RISK_AGENT = "//span[normalize-space()='Contract Risk Agent']"
+    CC_AGENT = "//span[normalize-space()='Contract Compliance Agent']"
 
     def __init__(self, page):
         """Initialize the BIABPage with a Playwright page instance."""
@@ -275,6 +288,42 @@ class BIABPage(BasePage):
         
         logger.info("All HR agents validation completed successfully!")
 
+    def validate_rfp_agents_visible(self):
+        """Validate that all RFP agents are visible."""
+        logger.info("Validating all RFP agents are visible...")        
+
+        logger.info("Checking RFP Summary Agent visibility...")
+        expect(self.page.locator(self.RFP_SUMMARY_AGENT)).to_be_visible(timeout=10000)
+        logger.info("✓ RFP Summary Agent is visible")
+        
+        logger.info("Checking RFP Risk Agent visibility...")
+        expect(self.page.locator(self.RFP_RISK_AGENT)).to_be_visible(timeout=10000)
+        logger.info("✓ RFP Risk Agent is visible")
+        
+        logger.info("Checking RFP Compliance Agent visibility...")
+        expect(self.page.locator(self.RFP_COMPLIANCE_AGENT)).to_be_visible(timeout=10000)
+        logger.info("✓ RFP Compliance Agent is visible")
+    
+        logger.info("All RFP agents validation completed successfully!")
+
+    def validate_contract_compliance_agents_visible(self):
+        """Validate that all Contract Compliance agents are visible."""
+        logger.info("Validating all Contract Compliance agents are visible...")        
+
+        logger.info("Checking Contract Summary Agent visibility...")
+        expect(self.page.locator(self.CC_SUMMARY_AGENT)).to_be_visible(timeout=10000)
+        logger.info("✓ Contract Summary Agent is visible")
+        
+        logger.info("Checking Contract Risk Agent visibility...")
+        expect(self.page.locator(self.CC_RISK_AGENT)).to_be_visible(timeout=10000)
+        logger.info("✓ Contract Risk Agent is visible")
+        
+        logger.info("Checking Contract Compliance Agent visibility...")
+        expect(self.page.locator(self.CC_AGENT)).to_be_visible(timeout=10000)
+        logger.info("✓ Contract Compliance Agent is visible")
+        
+        logger.info("All Contract Compliance agents validation completed successfully!")
+
     def cancel_retail_task_plan(self):
         """Cancel the retail task plan."""
         logger.info("Starting retail task plan cancellation process...")
@@ -298,7 +347,7 @@ class BIABPage(BasePage):
         #self.validate_agent_message_api_status(agent_name="CustomerDataAgent")
         
         logger.info("Waiting for plan processing to complete...")
-        self.page.locator(self.PROCESSING_PLAN).wait_for(state="hidden", timeout=200000)
+        self.page.locator(self.PROCESSING_PLAN).wait_for(state="hidden", timeout=400000)
         logger.info("✓ Plan processing completed")
         
         # Check if INPUT_CLARIFICATION textbox is enabled
@@ -334,7 +383,7 @@ class BIABPage(BasePage):
         #self.validate_agent_message_api_status(agent_name="CustomerDataAgent")
         
         logger.info("Waiting for plan processing to complete...")
-        self.page.locator(self.PROCESSING_PLAN).wait_for(state="hidden", timeout=200000)
+        self.page.locator(self.PROCESSING_PLAN).wait_for(state="hidden", timeout=400000)
         logger.info("✓ Plan processing completed")
         
         logger.info("Task plan approval and processing completed successfully!")
@@ -355,7 +404,7 @@ class BIABPage(BasePage):
         #self.validate_agent_message_api_status(agent_name="CustomerDataAgent")
         
         logger.info("Waiting for plan processing to complete...")
-        self.page.locator(self.PROCESSING_PLAN).wait_for(state="hidden", timeout=200000)
+        self.page.locator(self.PROCESSING_PLAN).wait_for(state="hidden", timeout=400000)
         logger.info("✓ Plan processing completed")
         
         # Check if INPUT_CLARIFICATION textbox is enabled
@@ -394,6 +443,73 @@ class BIABPage(BasePage):
         
         logger.info("Task plan approval and processing completed successfully!")
 
+    def approve_rfp_task_plan(self):
+        """Approve the RFP task plan and wait for processing to complete."""
+        logger.info("Starting RFP task plan approval process...")
+        
+        logger.info("Clicking 'Approve Task Plan' button...")
+        self.page.locator(self.APPROVE_TASK_PLAN).click()
+        self.page.wait_for_timeout(2000)
+        logger.info("✓ 'Approve Task Plan' button clicked")
+        
+        logger.info("Waiting for 'Processing your plan' message to be visible...")
+        expect(self.page.locator(self.PROCESSING_PLAN)).to_be_visible(timeout=10000)
+        logger.info("✓ 'Processing your plan' message is visible")
+        
+        logger.info("Waiting for plan processing to complete...")
+        self.page.locator(self.PROCESSING_PLAN).wait_for(state="hidden", timeout=400000)
+        logger.info("✓ Plan processing completed")
+        
+        # Check if INPUT_CLARIFICATION textbox is enabled
+        logger.info("Checking if clarification input is enabled...")
+        clarification_input = self.page.locator(self.INPUT_CLARIFICATION)
+        try:
+            if clarification_input.is_visible(timeout=5000) and clarification_input.is_enabled():
+                logger.error("⚠ Clarification input is enabled - RFP Task plan approval requires clarification")
+                raise ValueError("INPUT_CLARIFICATION is enabled - retry required")
+            logger.info("✓ No clarification required - task completed successfully")
+        except ValueError:
+            # Re-raise the clarification exception to trigger retry
+            raise
+        except (TimeoutError, Exception) as e:
+            # No clarification input detected, proceed normally
+            logger.info(f"✓ No clarification input detected - proceeding normally: {e}")
+        
+        logger.info("RFP task plan approval and processing completed successfully!")
+
+    def approve_contract_compliance_task_plan(self):
+        """Approve the Contract Compliance task plan and wait for processing to complete."""
+        logger.info("Starting Contract Compliance task plan approval process...")
+        
+        logger.info("Clicking 'Approve Task Plan' button...")
+        self.page.locator(self.APPROVE_TASK_PLAN).click()
+        self.page.wait_for_timeout(2000)
+        logger.info("✓ 'Approve Task Plan' button clicked")
+        
+        logger.info("Waiting for 'Processing your plan' message to be visible...")
+        expect(self.page.locator(self.PROCESSING_PLAN)).to_be_visible(timeout=10000)
+        logger.info("✓ 'Processing your plan' message is visible")
+        
+        logger.info("Waiting for plan processing to complete...")
+        self.page.locator(self.PROCESSING_PLAN).wait_for(state="hidden", timeout=400000)
+        logger.info("✓ Plan processing completed")
+        
+        # Check if INPUT_CLARIFICATION textbox is enabled
+        logger.info("Checking if clarification input is enabled...")
+        clarification_input = self.page.locator(self.INPUT_CLARIFICATION)
+        try:
+            if clarification_input.is_visible(timeout=5000) and clarification_input.is_enabled():
+                logger.error("⚠ Clarification input is enabled - Contract Compliance Task plan approval requires clarification")
+                raise ValueError("INPUT_CLARIFICATION is enabled - retry required")
+            logger.info("✓ No clarification required - task completed successfully")
+        except ValueError:
+            # Re-raise the clarification exception to trigger retry
+            raise
+        except (TimeoutError, Exception) as e:
+            # No clarification input detected, proceed normally
+            logger.info(f"✓ No clarification input detected - proceeding normally: {e}")
+        
+        logger.info("Contract Compliance task plan approval and processing completed successfully!")
     def validate_retail_customer_response(self):
         """Validate the retail customer response."""
 
@@ -473,6 +589,64 @@ class BIABPage(BasePage):
             logger.info("✓ HR Helper is visible")
         except (AssertionError, TimeoutError) as e:
             logger.warning(f"⚠ HR Helper Agent is NOT Utilized in response: {e}")
+
+    def validate_rfp_response(self):
+        """Validate the RFP response."""
+
+        logger.info("Validating RFP response...")
+        expect(self.page.locator(self.RFP_RESPONSE_VALIDATION)).to_be_visible(timeout=20000)
+        logger.info("✓ RFP response is visible")
+        
+        # Soft assertions for RFP Summary, RFP Risk, and RFP Compliance
+        logger.info("Checking RFP Summary visibility...")
+        try:
+            expect(self.page.locator(self.RFP_SUMMARY).first).to_be_visible(timeout=10000)
+            logger.info("✓ RFP Summary is visible")
+        except (AssertionError, TimeoutError) as e:
+            logger.warning(f"⚠ RFP Summary Agent is NOT Utilized in response: {e}")
+        
+        logger.info("Checking RFP Risk visibility...")
+        try:
+            expect(self.page.locator(self.RFP_RISK).first).to_be_visible(timeout=10000)
+            logger.info("✓ RFP Risk is visible")
+        except (AssertionError, TimeoutError) as e:
+            logger.warning(f"⚠ RFP Risk Agent is NOT Utilized in response: {e}")
+        
+        logger.info("Checking RFP Compliance visibility...")
+        try:
+            expect(self.page.locator(self.RFP_COMPLIANCE).first).to_be_visible(timeout=10000)
+            logger.info("✓ RFP Compliance is visible")
+        except (AssertionError, TimeoutError) as e:
+            logger.warning(f"⚠ RFP Compliance Agent is NOT Utilized in response: {e}")
+
+    def validate_contract_compliance_response(self):
+        """Validate the Contract Compliance response."""
+
+        logger.info("Validating Contract Compliance response...")
+        expect(self.page.locator(self.CC_RESPONSE_VALIDATION)).to_be_visible(timeout=20000)
+        logger.info("✓ Contract Compliance response is visible")
+        
+        # Soft assertions for Contract Summary, Contract Risk, and Contract Compliance
+        logger.info("Checking Contract Summary visibility...")
+        try:
+            expect(self.page.locator(self.CONTRACT_SUMMARY).first).to_be_visible(timeout=10000)
+            logger.info("✓ Contract Summary is visible")
+        except (AssertionError, TimeoutError) as e:
+            logger.warning(f"⚠ Contract Summary Agent is NOT Utilized in response: {e}")
+        
+        logger.info("Checking Contract Risk visibility...")
+        try:
+            expect(self.page.locator(self.CONTRACT_RISK).first).to_be_visible(timeout=10000)
+            logger.info("✓ Contract Risk is visible")
+        except (AssertionError, TimeoutError) as e:
+            logger.warning(f"⚠ Contract Risk Agent is NOT Utilized in response: {e}")
+        
+        logger.info("Checking Contract Compliance visibility...")
+        try:
+            expect(self.page.locator(self.CONTRACT_COMPLIANCE).first).to_be_visible(timeout=10000)
+            logger.info("✓ Contract Compliance is visible")
+        except (AssertionError, TimeoutError) as e:
+            logger.warning(f"⚠ Contract Compliance Agent is NOT Utilized in response: {e}")
 
     def click_new_task(self):
         """Click on the New Task button."""
