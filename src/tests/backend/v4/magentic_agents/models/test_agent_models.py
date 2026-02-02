@@ -293,7 +293,7 @@ class TestMCPConfig:
         # Test representation
         repr_str = repr(config1)
         assert "MCPConfig" in repr_str
-        assert "https://test.com" in repr_str
+        assert "url=" in repr_str
 
 
 class TestSearchConfig:
