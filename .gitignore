@@ -469,3 +469,6 @@ data/sample_code/
 
 # Auto Claude data directory
 .auto-claude/
+
+# OpenMemory - IDE/Assistant specific rules
+.cursor/rules/openmemory.mdc

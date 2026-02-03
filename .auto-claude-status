@@ -1,25 +1,25 @@
 {
   "active": true,
   "spec": "002-auto-voice-receptionist-lead-gen",
-  "state": "building",
+  "state": "complete",
   "subtasks": {
-    "completed": 30,
+    "completed": 45,
     "total": 45,
-    "in_progress": 1,
+    "in_progress": 0,
     "failed": 0
   },
   "phase": {
-    "current": "Demo Frontend Template",
+    "current": "Integration Testing",
     "id": null,
-    "total": 7
+    "total": 5
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 31,
+    "number": 45,
     "started_at": "2026-01-23T01:07:47.760541"
   },
-  "last_update": "2026-01-23T02:51:12.969949"
+  "last_update": "2026-01-23T03:51:45.183573"
 }
