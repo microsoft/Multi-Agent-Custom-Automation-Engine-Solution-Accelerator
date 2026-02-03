@@ -256,6 +256,7 @@ const CallButton: React.FC<CallButtonProps> = ({
   // Refs for WebSocket and timer
   const wsRef = useRef<WebSocket | null>(null);
   const durationTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const callStateRef = useRef<CallState>('idle');
 
   // Get phone number from env or prop
   const twilioNumber = phoneNumber || process.env.NEXT_PUBLIC_TWILIO_NUMBER;
@@ -284,6 +285,7 @@ const CallButton: React.FC<CallButtonProps> = ({
    */
   const updateCallState = useCallback(
     (newState: CallState) => {
+      callStateRef.current = newState;
       setCallState(newState);
       onCallStateChange?.(newState);
       emitEvent('state_change', { state: newState });
@@ -398,7 +400,12 @@ const CallButton: React.FC<CallButtonProps> = ({
       };
 
       ws.onclose = () => {
-        if (callState === 'connected' || callState === 'ringing' || callState === 'connecting') {
+        const currentState = callStateRef.current;
+        if (
+          currentState === 'connected' ||
+          currentState === 'ringing' ||
+          currentState === 'connecting'
+        ) {
           stopDurationTimer();
           updateCallState('ended');
         }
@@ -417,7 +424,6 @@ const CallButton: React.FC<CallButtonProps> = ({
     startDurationTimer,
     stopDurationTimer,
     cleanupWebSocket,
-    callState,
   ]);
 
   /**

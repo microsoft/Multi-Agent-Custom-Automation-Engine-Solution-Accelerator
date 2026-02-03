@@ -152,12 +152,36 @@ const MOCK_APPOINTMENTS: Appointment[] = [
 ];
 
 /**
+ * Format a local date as YYYY-MM-DD
+ */
+function toLocalDateString(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
  * Get date string relative to today
  */
 function getDateString(daysFromToday: number): string {
   const date = new Date();
   date.setDate(date.getDate() + daysFromToday);
-  return date.toISOString().split('T')[0];
+  return toLocalDateString(date);
+}
+
+/**
+ * Parse YYYY-MM-DD as a local date
+ */
+function parseLocalDate(dateString: string): Date {
+  const [yearStr, monthStr, dayStr] = dateString.split('-');
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+  if (!year || !month || !day) {
+    return new Date(dateString);
+  }
+  return new Date(year, month - 1, day);
 }
 
 /**
@@ -428,7 +452,7 @@ const WeekView: React.FC<{
   const appointmentsByDay = useMemo(() => {
     const byDay: Map<string, Appointment[]> = new Map();
     weekDays.forEach((day) => {
-      const dateStr = day.toISOString().split('T')[0];
+      const dateStr = toLocalDateString(day);
       byDay.set(dateStr, []);
     });
     appointments.forEach((apt) => {
@@ -472,7 +496,7 @@ const WeekView: React.FC<{
       ))}
       {/* Day columns */}
       {weekDays.map((day) => {
-        const dateStr = day.toISOString().split('T')[0];
+        const dateStr = toLocalDateString(day);
         const dayAppointments = appointmentsByDay.get(dateStr) || [];
 
         return (
@@ -582,7 +606,7 @@ const MonthView: React.FC<{
                 );
               }
 
-              const dateStr = day.toISOString().split('T')[0];
+              const dateStr = toLocalDateString(day);
               const dayAppointments = appointmentsByDay.get(dateStr) || [];
               const today = isToday(day);
 
@@ -686,7 +710,7 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
     }
 
     return appointments.filter((apt) => {
-      const aptDate = new Date(apt.date);
+      const aptDate = parseLocalDate(apt.date);
       return aptDate >= start && aptDate < end;
     });
   }, [appointments, viewStartDate, view]);

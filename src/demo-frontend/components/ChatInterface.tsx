@@ -498,7 +498,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   if (loading) {
     return (
-      <div className={`card overflow-hidden ${className}`} style={{ maxHeight }}>
+      <div className={`card relative overflow-hidden ${className}`} style={{ maxHeight }}>
         <ChatSkeleton />
       </div>
     );
@@ -506,7 +506,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   return (
     <div
-      className={`card flex flex-col overflow-hidden ${className}`}
+      className={`card relative flex flex-col overflow-hidden ${className}`}
       style={{ maxHeight }}
       role="region"
       aria-label="Chat interface"
