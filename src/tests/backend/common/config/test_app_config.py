@@ -619,7 +619,7 @@ class TestAppConfigIntegration:
             config = AppConfig()
             
             # Test credential creation uses ManagedIdentityCredential in prod
-            credential = config.get_azure_credential("test-client-id")
+            config.get_azure_credential("test-client-id")
             mock_managed_credential.assert_called_with(client_id="test-client-id")
             
             # Test Cosmos client creation

@@ -219,7 +219,7 @@ class TestTeamServiceInitialization:
 
     def test_init_config_attributes(self):
         """Test that configuration attributes are properly set."""
-        service = TeamService()
+        TeamService()
         
         # Verify config calls were made
         assert mock_config.get_azure_credentials.called
@@ -922,8 +922,7 @@ class TestSearchIndexValidation:
         # Patch the SearchIndexClient directly on the service call
         with patch.object(mock_search_indexes, 'SearchIndexClient', return_value=mock_index_client):
             # Mock the exception handling by patching the exception in the team_service_module
-            original_validate = service.validate_single_index
-            
+
             async def mock_validate(index_name):
                 try:
                     mock_index_client.get_index(index_name)

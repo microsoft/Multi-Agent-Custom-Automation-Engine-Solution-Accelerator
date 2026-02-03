@@ -934,7 +934,6 @@ class TestFoundryAgentTemplate:
         agent.project_client = mock_project_client
         
         # Mock the close method by setting up the agent to avoid base class call
-        original_close = agent.close
         agent.close = AsyncMock()
         
         # Override close to simulate the actual behavior but avoid base class issues
