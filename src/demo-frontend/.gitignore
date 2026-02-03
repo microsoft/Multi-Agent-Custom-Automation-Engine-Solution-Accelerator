@@ -1,2 +1,5 @@
 # OpenMemory - IDE/Assistant specific rules
 .cursor/rules/openmemory.mdc
+
+# Next.js build output
+.next/

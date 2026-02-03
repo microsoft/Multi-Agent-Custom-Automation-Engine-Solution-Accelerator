@@ -20,3 +20,4 @@
 ## Patterns
 - Date-only appointment strings use `YYYY-MM-DD` and are treated as local dates in UI.
 - Calendar day keys derive from local date strings for consistent mapping and filtering.
+- Next.js build output `.next/` is ignored to avoid committing preview/RSC keys.
