@@ -76,10 +76,17 @@ function calculateStatsFromAppointments(appointments: Appointment[]): StatsData 
  * Generate mock appointments relative to today's date
  */
 function generateMockAppointments(): Appointment[] {
+  const toLocalDateString = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const getDateString = (daysFromToday: number): string => {
     const date = new Date();
     date.setDate(date.getDate() + daysFromToday);
-    return date.toISOString().split('T')[0];
+    return toLocalDateString(date);
   };
 
   return [
@@ -474,8 +481,19 @@ const AppointmentDetailModal: React.FC<{
     return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
   };
 
+  const parseLocalDate = (dateString: string): Date => {
+    const [yearStr, monthStr, dayStr] = dateString.split('-');
+    const year = Number(yearStr);
+    const month = Number(monthStr);
+    const day = Number(dayStr);
+    if (!year || !month || !day) {
+      return new Date(dateString);
+    }
+    return new Date(year, month - 1, day);
+  };
+
   const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
+    const date = parseLocalDate(dateString);
     return date.toLocaleDateString('en-US', {
       weekday: 'long',
       month: 'long',
