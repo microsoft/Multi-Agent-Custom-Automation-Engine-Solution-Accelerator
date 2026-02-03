@@ -8,7 +8,6 @@ import json
 import os
 import sys
 import unittest
-from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock, Mock, patch
 
 # Add the backend directory to the Python path
@@ -162,7 +161,7 @@ class TestAzureConfig(unittest.TestCase):
         self.assertEqual(token, "test-token-123")
         mock_credential.get_token.assert_called_once_with(mock_config.AZURE_COGNITIVE_SERVICES)
 
-class TestAzureConfigAsync(IsolatedAsyncioTestCase):
+class TestAzureConfigAsync(unittest.IsolatedAsyncioTestCase):
     """Async test cases for AzureConfig class."""
 
     @patch('backend.v4.config.settings.AzureOpenAIChatClient')
@@ -284,7 +283,7 @@ class TestTeamConfig(unittest.TestCase):
         self.assertEqual(config.get_current_team(user_id), team_config2)
 
 
-class TestOrchestrationConfig(IsolatedAsyncioTestCase):
+class TestOrchestrationConfig(unittest.IsolatedAsyncioTestCase):
     """Test cases for OrchestrationConfig class."""
 
     def test_orchestration_config_creation(self):
@@ -490,7 +489,7 @@ class TestOrchestrationConfig(IsolatedAsyncioTestCase):
         self.assertNotIn(request_id, config._clarification_events)
 
 
-class TestConnectionConfig(IsolatedAsyncioTestCase):
+class TestConnectionConfig(unittest.IsolatedAsyncioTestCase):
     """Test cases for ConnectionConfig class."""
 
     def test_connection_config_creation(self):
