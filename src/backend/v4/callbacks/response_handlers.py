@@ -8,11 +8,9 @@ import time
 import re
 from typing import Any
 
-from agent_framework import ChatMessage
-# Removed: from agent_framework._content import FunctionCallContent  (does not exist)
+from agent_framework import ChatMessage, AgentResponseUpdate
 
-from agent_framework._workflows._magentic import AgentRunResponseUpdate  # Streaming update type from workflows
-
+from common.utils.agent_name_sanitizer import AgentNameSanitizer
 from v4.config.settings import connection_config
 from v4.models.messages import (
     AgentMessage,
@@ -74,6 +72,7 @@ def agent_response_callback(
     Final (non-streaming) agent response callback using agent_framework ChatMessage.
     """
     agent_name = getattr(message, "author_name", None) or agent_id or "Unknown Agent"
+    agent_name = AgentNameSanitizer.sanitize(agent_name)
     role = getattr(message, "role", "assistant")
 
     # FIX: Properly extract text from ChatMessage
@@ -111,12 +110,12 @@ def agent_response_callback(
 
 async def streaming_agent_response_callback(
     agent_id: str,
-    update: AgentRunResponseUpdate,
+    update: AgentResponseUpdate,
     is_final: bool,
     user_id: str | None = None,
 ) -> None:
     """
-    Streaming callback for incremental agent output (AgentRunResponseUpdate).
+    Streaming callback for incremental agent output (AgentResponseUpdate).
     """
     if not user_id:
         return

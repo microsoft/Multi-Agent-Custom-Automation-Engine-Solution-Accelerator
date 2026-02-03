@@ -6,17 +6,14 @@ import uuid
 from typing import List, Optional
 
 # agent_framework imports
-# V2 API: Use AzureAIClient for cleaner Azure AI Projects integration
 from agent_framework.azure import AzureAIClient
 from agent_framework import (
     ChatMessage,
     WorkflowOutputEvent,
     MagenticBuilder,
     InMemoryCheckpointStorage,
-    MagenticOrchestratorMessageEvent,
-    MagenticAgentDeltaEvent,
-    MagenticAgentMessageEvent,
-    MagenticFinalResultEvent,
+    MagenticOrchestratorEvent,
+    AgentRunUpdateEvent,
 )
 
 from common.config.app_config import config
@@ -24,6 +21,7 @@ from common.models.messages_af import TeamConfiguration
 
 from common.database.database_base import DatabaseBase
 
+from common.utils.agent_name_sanitizer import AgentNameSanitizer
 from v4.common.services.team_service import TeamService
 from v4.callbacks.response_handlers import (
     agent_response_callback,
@@ -59,7 +57,7 @@ class OrchestrationManager:
         Initialize a Magentic workflow with:
           - Provided agents (participants)
           - HumanApprovalMagenticManager as orchestrator manager
-          - AzureAIClient as the underlying chat client (V2 API)
+          - AzureAIClient as the underlying chat client
           - Event-based callbacks for streaming and final responses
         - Uses same deployment, endpoint, and credentials
         - Applies same execution settings (temperature, max_tokens)
@@ -74,21 +72,19 @@ class OrchestrationManager:
         # Create Azure AI Agent client for orchestration using config
         # This replaces AzureChatCompletion from SK
         agent_name = team_config.name if team_config.name else "OrchestratorAgent"
-
-        # Get project_client from config for V2 API
-        project_client = config.get_ai_project_client()
-
+        agent_name = AgentNameSanitizer.sanitize(agent_name)
         try:
-            # V2 API: Use AzureAIClient for cleaner Azure AI Projects integration
+            project_client = config.get_ai_project_client()
             chat_client = AzureAIClient(
-                project_client=config.AZURE_AI_PROJECT_ENDPOINT,
-                async_credential=credential,
+                project_client=project_client,
+                # credential=credential,
                 agent_name=agent_name,
-                model_deployment_name=team_config.deployment_name,
+                use_latest_version=True,
+                # model_deployment_name=team_config.deployment_name
             )
 
             cls.logger.info(
-                "Created AzureAIClient (V2 API) for orchestration with model '%s' at endpoint '%s'",
+                "Created AzureAIClient for orchestration with model '%s' at endpoint '%s'",
                 team_config.deployment_name,
                 config.AZURE_AI_PROJECT_ENDPOINT,
             )
@@ -96,14 +92,22 @@ class OrchestrationManager:
             cls.logger.error("Failed to create AzureAIClient: %s", e)
             raise
 
-        # Create HumanApprovalMagenticManager with the chat client
+        # Create HumanApprovalMagenticManager with chat_client wrapped as agent
         # Execution settings (temperature=0.1, max_tokens=4000) are configured via
         # orchestration_config.create_execution_settings() which matches old SK version
         try:
+            # Convert AzureAIClient to ChatAgent to pass to StandardMagenticManager
+            # StandardMagenticManager now expects an agent, not a chat_client
+            orchestrator_agent = chat_client.as_agent(
+                name=agent_name,
+                description="Orchestrates multi-agent workflows",
+                instructions=None,  # Instructions can be None
+            )
+            
             manager = HumanApprovalMagenticManager(
                 user_id=user_id,
-                chat_client=chat_client,
-                instructions=None,  # Orchestrator system instructions (optional)
+                agent=orchestrator_agent,
+                # instructions=None removed - not needed as it's on the agent
                 max_round_count=orchestration_config.max_rounds,
             )
             cls.logger.info(
@@ -128,10 +132,17 @@ class OrchestrationManager:
             if hasattr(ag, "_agent") and ag._agent is not None:
                 # This is a wrapper (FoundryAgentTemplate)
                 # Use the inner ChatAgent which implements AgentProtocol
-                participants[name] = ag._agent
+                inner_agent = ag._agent
+                # Ensure the inner agent has the name set
+                if not getattr(inner_agent, "name", None):
+                    inner_agent.name = name
+                participants[name] = inner_agent
                 cls.logger.debug("Added participant '%s' (extracted inner agent)", name)
             else:
                 # This is already an agent (like ProxyAgent extending BaseAgent)
+                # Ensure the agent has the name set
+                if not getattr(ag, "name", None):
+                    ag.name = name
                 participants[name] = ag
                 cls.logger.debug("Added participant '%s'", name)
 
@@ -139,7 +150,7 @@ class OrchestrationManager:
         storage = InMemoryCheckpointStorage()
         builder = (
             MagenticBuilder()
-            .participants(**participants)
+            .participants(list(participants.values()))  # Pass as list, not kwargs
             .with_standard_manager(
                 manager=manager,
                 max_round_count=orchestration_config.max_rounds,
@@ -184,6 +195,7 @@ class OrchestrationManager:
                     agent_name = getattr(
                         agent, "agent_name", getattr(agent, "name", "")
                     )
+                    agent_name = AgentNameSanitizer.sanitize(agent_name)
                     if agent_name != "ProxyAgent":
                         close_coro = getattr(agent, "close", None)
                         if callable(close_coro):
@@ -312,51 +324,45 @@ class OrchestrationManager:
             self.logger.info("Starting workflow execution...")
             async for event in workflow.run_stream(task_text):
                 try:
-                    # Handle orchestrator messages (task assignments, coordination)
-                    if isinstance(event, MagenticOrchestratorMessageEvent):
-                        message_text = getattr(event.message, "text", "")
-                        self.logger.info(f"[ORCHESTRATOR:{event.kind}] {message_text}")
+                    # Handle orchestrator events (plan created, updated, etc.)
+                    if isinstance(event, MagenticOrchestratorEvent):
+                        event_data = event.data
+                        if isinstance(event_data, ChatMessage):
+                            message_text = getattr(event_data, "text", "")
+                            self.logger.info(f"[ORCHESTRATOR:{event.event_type.value}] {message_text}")
+                        else:
+                            self.logger.info(f"[ORCHESTRATOR:{event.event_type.value}] {type(event_data).__name__}")
 
                     # Handle streaming updates from agents
-                    elif isinstance(event, MagenticAgentDeltaEvent):
+                    elif isinstance(event, AgentRunUpdateEvent):
                         try:
+                            # event.data contains AgentResponseUpdate with text, role, etc.
                             await streaming_agent_response_callback(
-                                event.agent_id,
-                                event,  # Pass the event itself as the update object
+                                event.executor_id,  # Use executor_id instead of agent_id
+                                event.data,  # Pass the update data
                                 False,  # Not final yet (streaming in progress)
                                 user_id,
                             )
                         except Exception as e:
                             self.logger.error(
-                                f"Error in streaming callback for agent {event.agent_id}: {e}"
+                                f"Error in streaming callback for agent {event.executor_id}: {e}"
                             )
-
-                    # Handle final agent messages (complete response)
-                    elif isinstance(event, MagenticAgentMessageEvent):
-                        if event.message:
-                            try:
-                                agent_response_callback(
-                                    event.agent_id, event.message, user_id
-                                )
-                            except Exception as e:
-                                self.logger.error(
-                                    f"Error in agent callback for agent {event.agent_id}: {e}"
-                                )
-
-                    # Handle final result from the entire workflow
-                    elif isinstance(event, MagenticFinalResultEvent):
-                        final_text = getattr(event.message, "text", "")
-                        self.logger.info(
-                            f"[FINAL RESULT] Length: {len(final_text)} chars"
-                        )
 
                     # Handle workflow output event (captures final result)
                     elif isinstance(event, WorkflowOutputEvent):
                         output_data = event.data
+                        # Handle both single ChatMessage and list of ChatMessages
                         if isinstance(output_data, ChatMessage):
-                            final_output = getattr(output_data, "text", None) or str(
-                                output_data
-                            )
+                            final_output = getattr(output_data, "text", None) or str(output_data)
+                        elif isinstance(output_data, list):
+                            # Extract text from list of ChatMessages
+                            text_parts = []
+                            for item in output_data:
+                                if isinstance(item, ChatMessage):
+                                    text_parts.append(getattr(item, "text", str(item)))
+                                else:
+                                    text_parts.append(str(item))
+                            final_output = "\n".join(text_parts)
                         else:
                             final_output = str(output_data)
                         self.logger.debug("Received workflow output event")

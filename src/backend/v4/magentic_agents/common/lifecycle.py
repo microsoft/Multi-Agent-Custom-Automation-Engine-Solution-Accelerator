@@ -10,13 +10,10 @@ from agent_framework import (
     MCPStreamableHTTPTool,
 )
 
-
 from agent_framework.azure import AzureAIClient
-from azure.ai.agents.aio import AgentsClient
-from azure.identity.aio import AzureCliCredential
+from azure.identity.aio import DefaultAzureCredential
 from common.database.database_base import DatabaseBase
 from common.models.messages_af import CurrentTeamAgent, TeamConfiguration
-from common.utils.agent_name_sanitizer import AgentNameSanitizer
 from common.utils.utils_agents import (
     generate_assistant_id,
     get_database_team_agent_id,
@@ -47,10 +44,6 @@ class MCPEnabledBase:
         model_deployment_name: str | None = None,
         project_client=None,
     ) -> None:
-        # Sanitize agent name to comply with Azure requirements
-        if agent_name:
-            agent_name = AgentNameSanitizer.sanitize(agent_name)
-        
         self._stack: AsyncExitStack | None = None
         self.mcp_cfg: MCPConfig | None = mcp
         self.mcp_tool: HostedMCPTool | None = None
@@ -73,9 +66,8 @@ class MCPEnabledBase:
             return self
         self._stack = AsyncExitStack()
 
-        # Acquire async credential - using AzureCliCredential for dev environment
-        # following Microsoft reference pattern from agent-framework samples
-        self.creds = AzureCliCredential()
+        # Acquire credential
+        self.creds = DefaultAzureCredential()
         if self._stack:
             await self._stack.enter_async_context(self.creds)
         
@@ -95,7 +87,7 @@ class MCPEnabledBase:
                 #async_credential=self.creds,
                 agent_name=self.agent_name,
                 use_latest_version=True,
-                model_deployment_name=self.model_deployment_name
+                # model_deployment_name=self.model_deployment_name
             )
         if self._stack:
             await self._stack.enter_async_context(self.client)
@@ -108,8 +100,14 @@ class MCPEnabledBase:
         # Register agent (best effort)
         try:
             agent_registry.register_agent(self)
-        except Exception:
-            pass
+        except Exception as exc:
+            # Best-effort registration; log and continue without failing open()
+            self.logger.warning(
+                "Failed to register agent %s in agent_registry: %s",
+                type(self).__name__,
+                exc,
+                exc_info=True,
+            )
 
         return self
 
@@ -121,13 +119,25 @@ class MCPEnabledBase:
             if self._agent and hasattr(self._agent, "close"):
                 try:
                     await self._agent.close()  # AzureAIAgentClient has async close
-                except Exception:
-                    pass
+                except Exception as exc:
+                    # Best-effort close; log failure but continue teardown
+                    self.logger.warning(
+                        "Error while closing underlying agent %s: %s",
+                        type(self._agent).__name__ if self._agent else "Unknown",
+                        exc,
+                        exc_info=True,
+                    )
             # Unregister from registry if present
             try:
                 agent_registry.unregister_agent(self)
-            except Exception:
-                pass
+            except Exception as exc:
+                # Best-effort unregister; log and continue teardown
+                self.logger.warning(
+                    "Failed to unregister agent %s from agent_registry: %s",
+                    type(self).__name__,
+                    exc,
+                    exc_info=True,
+                )
             await self._stack.aclose()
         finally:
             self._stack = None
@@ -158,15 +168,11 @@ class MCPEnabledBase:
         if self._agent and self._agent.chat_client:
             return self._agent.chat_client  # type: ignore
         
-        # Create new AzureAIClient with both project_client and async_credential
-        # The async_credential is needed for inference/streaming operations
         if self.project_client and self.agent_name and self.creds:
             chat_client = AzureAIClient(
                 project_client=self.project_client,
-                #async_credential=self.creds,
                 agent_name=self.agent_name,
-                use_latest_version=True,
-                model_deployment_name=self.model_deployment_name
+                use_latest_version=True
             )
             self.logger.info(
                 "Created new AzureAIClient for get chat client with agent_name=%s",
@@ -176,7 +182,6 @@ class MCPEnabledBase:
 
     async def resolve_agent_id(self, agent_id: str) -> Optional[str]:
         """Resolve agent ID via Projects SDK first (for RAI agents), fallback to AgentsClient.
-        In SDK v2, agents are retrieved by name and version, but we still support ID lookup for backwards compatibility.
 
         Args:
             agent_id: The agent ID to resolve
@@ -187,8 +192,7 @@ class MCPEnabledBase:
         # Try Projects SDK first (RAI agents were created via project_client)
         try:
             if self.project_client and self.agent_name:
-                # In SDK v2, use agent name to get latest version
-                agent = await self.project_client.agents.get_agent(name=self.agent_name)
+                agent = await self.project_client.agents.get(agent_name=self.agent_name)
                 if agent and agent.id:
                     self.logger.info(
                         "RAI.AgentReuseSuccess: Resolved agent via Projects SDK (name=%s, id=%s)",
@@ -206,7 +210,7 @@ class MCPEnabledBase:
         # Fallback: try to get by ID if provided (backwards compatibility)
         try:
             if self.client:
-                agent = await self.client.agents.get_agent(name=agent_id)
+                agent = await self.project_client.agents.get(agent_name=self.agent_name)
                 if agent and agent.id:
                     self.logger.info(
                         "RAI.AgentReuseSuccess: Resolved agent via AIProjectClient (id=%s)",
@@ -272,10 +276,8 @@ class MCPEnabledBase:
             if self.agent_name == "RAIAgent" and self.project_client and self.creds:
                 chat_client = AzureAIClient(
                     project_client=self.project_client,
-                    #async_credential=self.creds,
                     agent_name=self.agent_name,
                     use_latest_version=True,
-                    model_deployment_name=self.model_deployment_name
                 )
                 self.logger.info(
                     "RAI.AgentReuseSuccess: Created AzureAIClient via Projects SDK (id=%s)",
@@ -284,10 +286,8 @@ class MCPEnabledBase:
             elif self.project_client and self.creds:
                 chat_client = AzureAIClient(
                     project_client=self.project_client,
-                    #async_credential=self.creds,
                     agent_name=self.agent_name,
                     use_latest_version=True,
-                    model_deployment_name=self.model_deployment_name
                 )
                 self.logger.info(
                     "Created AzureAIClient via endpoint (id=%s)", resolved
@@ -442,26 +442,26 @@ class AzureAgentBase(MCPEnabledBase):
             if self._agent and hasattr(self._agent, "close"):
                 try:
                     await self._agent.close()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logging.warning("Failed to close underlying agent %r: %s", self._agent, exc, exc_info=True)
 
             # Unregister from registry
             try:
                 agent_registry.unregister_agent(self)
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.warning("Failed to unregister agent %r from registry: %s", self, exc, exc_info=True)
 
             # Close credential and project client
             if self.client:
                 try:
                     await self.client.close()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logging.warning("Failed to close Azure AgentsClient %r: %s", self.client, exc, exc_info=True)
             if self.creds:
                 try:
                     await self.creds.close()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logging.warning("Failed to close credentials %r: %s", self.creds, exc, exc_info=True)
 
         finally:
             await super().close()
