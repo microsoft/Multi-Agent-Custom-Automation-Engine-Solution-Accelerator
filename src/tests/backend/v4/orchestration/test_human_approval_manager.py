@@ -687,7 +687,7 @@ class TestHumanApprovalMagenticManager(IsolatedAsyncioTestCase):
         
         # Execute - should handle the error gracefully but still raise it
         with self.assertRaises(Exception) as cm:
-            ledger = await self.manager.create_progress_ledger(context)
+            await self.manager.create_progress_ledger(context)
         
         # Verify the exception message
         self.assertEqual(str(cm.exception), "WebSocket error")

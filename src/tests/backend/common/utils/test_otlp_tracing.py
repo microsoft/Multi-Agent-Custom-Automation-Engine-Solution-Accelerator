@@ -483,7 +483,7 @@ class TestConfigureOltpTracingIntegration:
         mock_processor.return_value = mock_processor_instance
         
         # Execute
-        result = configure_oltp_tracing()
+        configure_oltp_tracing()
         
         # Verify call sequence using call order
         expected_calls = [

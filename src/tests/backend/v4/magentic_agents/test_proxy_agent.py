@@ -125,15 +125,6 @@ class TestProxyAgentComplexScenarios:
         """Test timeout and error handling scenarios."""
         import asyncio
         
-        async def simulate_timeout_behavior():
-            """Simulate the timeout behavior from _wait_for_user_clarification."""
-            timeout_duration = 30  # seconds
-            try:
-                # Simulate waiting for user response that times out
-                await asyncio.wait_for(asyncio.sleep(100), timeout=timeout_duration)
-                return "Got response"
-            except asyncio.TimeoutError:
-                return "TIMEOUT_OCCURRED"
         
         # Test that timeout logic would work
         loop = asyncio.new_event_loop()
@@ -339,6 +330,7 @@ class TestProxyAgentComplexScenarios:
                 "data": request,
                 "timestamp": "2024-01-01T00:00:00Z"
             }
+            logging.debug("Simulated websocket message dispatch: %s", message)
             
             # Simulate waiting for response with timeout
             try:
