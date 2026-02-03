@@ -5,7 +5,6 @@ Test configuration for auth module tests.
 import pytest
 import sys
 import os
-from unittest.mock import MagicMock, patch
 import base64
 import json
 

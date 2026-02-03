@@ -5,7 +5,6 @@ This module tests the AgentRegistry class for tracking and managing agent lifecy
 including registration, unregistration, cleanup, and monitoring functionality.
 """
 
-import asyncio
 import logging
 import os
 import sys

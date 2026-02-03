@@ -1,6 +1,6 @@
 """Unit tests for backend.v4.magentic_agents.models.agent_models module."""
 import sys
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import patch, MagicMock
 import pytest
 
 

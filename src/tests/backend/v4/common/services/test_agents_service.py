@@ -16,9 +16,7 @@ import sys
 import asyncio
 import logging
 import importlib.util
-from unittest.mock import patch, MagicMock, AsyncMock, Mock
-from typing import Any, Dict, Optional, List, Union
-from dataclasses import dataclass
+from unittest.mock import patch, MagicMock
 
 # Add the src directory to sys.path for proper import
 src_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', '..')

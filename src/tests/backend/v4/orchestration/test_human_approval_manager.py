@@ -7,8 +7,8 @@ import asyncio
 import logging
 import os
 import sys
+import unittest
 from typing import Any, Optional
-from unittest import IsolatedAsyncioTestCase
 from unittest.mock import Mock, AsyncMock, patch
 
 import pytest
@@ -225,7 +225,7 @@ orchestration_config = sys.modules['v4.config.settings'].orchestration_config
 messages = sys.modules['v4.models.messages']
 
 
-class TestHumanApprovalMagenticManager(IsolatedAsyncioTestCase):
+class TestHumanApprovalMagenticManager(unittest.IsolatedAsyncioTestCase):
     """Test cases for HumanApprovalMagenticManager class."""
 
     def setUp(self):
@@ -697,5 +697,4 @@ class TestHumanApprovalMagenticManager(IsolatedAsyncioTestCase):
 
 
 if __name__ == '__main__':
-    import unittest
     unittest.main()
