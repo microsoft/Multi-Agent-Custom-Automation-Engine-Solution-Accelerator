@@ -34,11 +34,12 @@ class HumanApprovalMagenticManager(StandardMagenticManager):
     magentic_plan: Optional[MPlan] = None
     current_user_id: str  # populated in __init__
 
-    def __init__(self, user_id: str, *args, **kwargs):
+    def __init__(self, user_id: str, agent, *args, **kwargs):
         """
         Initialize the HumanApprovalMagenticManager.
         Args:
             user_id: ID of the user to associate with this orchestration instance.
+            agent: The manager ChatAgent for orchestration (required by new API).
             *args: Additional positional arguments for the parent StandardMagenticManager.
             **kwargs: Additional keyword arguments for the parent StandardMagenticManager.
         """
@@ -76,7 +77,8 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
         kwargs["final_answer_prompt"] = ORCHESTRATOR_FINAL_ANSWER_PROMPT + final_append
 
         self.current_user_id = user_id
-        super().__init__(*args, **kwargs)
+        # New API: StandardMagenticManager takes agent as first positional argument
+        super().__init__(agent, *args, **kwargs)
 
     async def plan(self, magentic_context: MagenticContext) -> Any:
         """

@@ -2,20 +2,22 @@
 
 import asyncio
 import logging
+import re
 import uuid
 from typing import List, Optional
 
 # agent_framework imports
-from agent_framework_azure_ai import AzureAIAgentClient
+from agent_framework_azure_ai import AzureAIClient
 from agent_framework import (
+    ChatAgent,
     ChatMessage,
     WorkflowOutputEvent,
     MagenticBuilder,
     InMemoryCheckpointStorage,
-    MagenticOrchestratorMessageEvent,
-    MagenticAgentDeltaEvent,
-    MagenticAgentMessageEvent,
-    MagenticFinalResultEvent,
+    AgentRunUpdateEvent,
+    GroupChatRequestSentEvent,
+    MagenticOrchestratorEvent,
+    MagenticProgressLedger,
 )
 
 from common.config.app_config import config
@@ -58,7 +60,7 @@ class OrchestrationManager:
         Initialize a Magentic workflow with:
           - Provided agents (participants)
           - HumanApprovalMagenticManager as orchestrator manager
-          - AzureAIAgentClient as the underlying chat client
+          - AzureAIClient as the underlying chat client
           - Event-based callbacks for streaming and final responses
         - Uses same deployment, endpoint, and credentials
         - Applies same execution settings (temperature, max_tokens)
@@ -72,33 +74,46 @@ class OrchestrationManager:
 
         # Create Azure AI Agent client for orchestration using config
         # This replaces AzureChatCompletion from SK
-        agent_name = team_config.name if team_config.name else "OrchestratorAgent"
+        # Sanitize agent name: must start/end with alphanumeric, only hyphens allowed, max 63 chars
+        raw_name = team_config.name if team_config.name else "OrchestratorAgent"
+        # Replace spaces and invalid chars with hyphens, strip leading/trailing hyphens
+        sanitized_name = re.sub(r'[^a-zA-Z0-9-]', '-', raw_name)
+        sanitized_name = re.sub(r'-+', '-', sanitized_name)  # Collapse multiple hyphens
+        sanitized_name = sanitized_name.strip('-')[:63]  # Trim and limit length
+        agent_name = sanitized_name if sanitized_name else "OrchestratorAgent"
 
         try:
-            chat_client = AzureAIAgentClient(
+            # Create the chat client (AzureAIClient)
+            chat_client = AzureAIClient(
                 project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
                 model_deployment_name=team_config.deployment_name,
                 agent_name=agent_name,
-                async_credential=credential,
+                credential=credential,
+            )
+
+            # New API: Create a ChatAgent to wrap the chat client for the manager
+            manager_agent = ChatAgent(
+                chat_client=chat_client,
+                name="MagenticManager",
+                description="Orchestrator that coordinates the team to complete complex tasks efficiently.",
+                instructions="You coordinate a team to complete complex tasks efficiently.",
             )
 
             cls.logger.info(
-                "Created AzureAIAgentClient for orchestration with model '%s' at endpoint '%s'",
+                "Created AzureAIClient and manager ChatAgent for orchestration with model '%s' at endpoint '%s'",
                 team_config.deployment_name,
                 config.AZURE_AI_PROJECT_ENDPOINT,
             )
         except Exception as e:
-            cls.logger.error("Failed to create AzureAIAgentClient: %s", e)
+            cls.logger.error("Failed to create AzureAIClient: %s", e)
             raise
 
-        # Create HumanApprovalMagenticManager with the chat client
-        # Execution settings (temperature=0.1, max_tokens=4000) are configured via
-        # orchestration_config.create_execution_settings() which matches old SK version
+        # Create HumanApprovalMagenticManager with the manager agent
+        # New API: StandardMagenticManager takes agent as first positional argument
         try:
             manager = HumanApprovalMagenticManager(
                 user_id=user_id,
-                chat_client=chat_client,
-                instructions=None,  # Orchestrator system instructions (optional)
+                agent=manager_agent,  # New API: pass agent instead of chat_client
                 max_round_count=orchestration_config.max_rounds,
             )
             cls.logger.info(
@@ -132,13 +147,18 @@ class OrchestrationManager:
 
         # Assemble workflow with callback
         storage = InMemoryCheckpointStorage()
+        
+        # New API: .participants() accepts a list of agents
+        participant_list = list(participants.values())
+        
         builder = (
             MagenticBuilder()
-            .participants(**participants)
-            .with_standard_manager(
-                manager=manager,
+            .participants(participant_list)
+            .with_manager(
+                manager=manager,  # Pass manager instance (extends StandardMagenticManager)
                 max_round_count=orchestration_config.max_rounds,
-                max_stall_count=0,
+                max_stall_count=3,
+                max_reset_count=2,
             )
             .with_checkpointing(storage)
         )
@@ -204,16 +224,20 @@ class OrchestrationManager:
                 raise
             try:
                 cls.logger.info("Initializing new orchestration for user '%s'", user_id)
-                orchestration_config.orchestrations[user_id] = (
-                    await cls.init_orchestration(
-                        agents, team_config, team_service.memory_context, user_id
-                    )
+                print(f"[DEBUG] Initializing new orchestration for user '{user_id}'")
+                workflow = await cls.init_orchestration(
+                    agents, team_config, team_service.memory_context, user_id
                 )
+                orchestration_config.orchestrations[user_id] = workflow
+                print(f"[DEBUG] Stored workflow for user '{user_id}': {workflow is not None}")
+                print(f"[DEBUG] orchestrations keys: {list(orchestration_config.orchestrations.keys())}")
             except Exception as e:
                 cls.logger.error(
                     "Failed to initialize orchestration for user '%s': %s", user_id, e
                 )
                 print(f"Failed to initialize orchestration for user '{user_id}': {e}")
+                import traceback
+                traceback.print_exc()
                 raise
         return orchestration_config.get_current_orchestration(user_id)
 
@@ -229,9 +253,13 @@ class OrchestrationManager:
         self.logger.info(
             "Starting orchestration job '%s' for user '%s'", job_id, user_id
         )
+        print(f"[DEBUG] run_orchestration called for user '{user_id}'")
+        print(f"[DEBUG] orchestrations keys before get: {list(orchestration_config.orchestrations.keys())}")
 
         workflow = orchestration_config.get_current_orchestration(user_id)
+        print(f"[DEBUG] workflow is None: {workflow is None}")
         if workflow is None:
+            print(f"[ERROR] Orchestration not initialized for user '{user_id}'")
             raise ValueError("Orchestration not initialized for user.")
         # Fresh thread per participant to avoid cross-run state bleed
         executors = getattr(workflow, "executors", {})
@@ -305,55 +333,71 @@ class OrchestrationManager:
             final_output: str | None = None
 
             self.logger.info("Starting workflow execution...")
+            last_message_id: str | None = None
             async for event in workflow.run_stream(task_text):
                 try:
-                    # Handle orchestrator messages (task assignments, coordination)
-                    if isinstance(event, MagenticOrchestratorMessageEvent):
-                        message_text = getattr(event.message, "text", "")
-                        self.logger.info(f"[ORCHESTRATOR:{event.kind}] {message_text}")
+                    # Handle orchestrator events (plan, progress ledger)
+                    if isinstance(event, MagenticOrchestratorEvent):
+                        self.logger.info(
+                            "[Magentic Orchestrator Event] Type: %s",
+                            event.event_type.name
+                        )
+                        if isinstance(event.data, ChatMessage):
+                            self.logger.info("Plan message: %s", event.data.text[:200] if event.data.text else "")
+                        elif isinstance(event.data, MagenticProgressLedger):
+                            self.logger.info("Progress ledger received")
 
-                    # Handle streaming updates from agents
-                    elif isinstance(event, MagenticAgentDeltaEvent):
+                    # Handle agent streaming/updates (replaces MagenticAgentDeltaEvent and MagenticAgentMessageEvent)
+                    elif isinstance(event, AgentRunUpdateEvent):
+                        message_id = event.data.message_id if hasattr(event.data, 'message_id') else None
+                        executor_id = event.executor_id
+                        
+                        # Stream the update
                         try:
                             await streaming_agent_response_callback(
-                                event.agent_id,
-                                event,  # Pass the event itself as the update object
-                                False,  # Not final yet (streaming in progress)
+                                executor_id,
+                                event.data,  # Pass the data object
+                                False,  # Not final yet
                                 user_id,
                             )
                         except Exception as e:
                             self.logger.error(
-                                f"Error in streaming callback for agent {event.agent_id}: {e}"
+                                "Error in streaming callback for agent %s: %s",
+                                executor_id, e
                             )
+                        
+                        # Track message for formatting
+                        if message_id != last_message_id:
+                            last_message_id = message_id
 
-                    # Handle final agent messages (complete response)
-                    elif isinstance(event, MagenticAgentMessageEvent):
-                        if event.message:
-                            try:
-                                agent_response_callback(
-                                    event.agent_id, event.message, user_id
-                                )
-                            except Exception as e:
-                                self.logger.error(
-                                    f"Error in agent callback for agent {event.agent_id}: {e}"
-                                )
-
-                    # Handle final result from the entire workflow
-                    elif isinstance(event, MagenticFinalResultEvent):
-                        final_text = getattr(event.message, "text", "")
+                    # Handle group chat request sent
+                    elif isinstance(event, GroupChatRequestSentEvent):
                         self.logger.info(
-                            f"[FINAL RESULT] Length: {len(final_text)} chars"
+                            "[REQUEST SENT (round %d)] to agent: %s",
+                            event.round_index,
+                            event.participant_name
                         )
 
                     # Handle workflow output event (captures final result)
                     elif isinstance(event, WorkflowOutputEvent):
                         output_data = event.data
+                        # Handle different output formats
                         if isinstance(output_data, ChatMessage):
-                            final_output = getattr(output_data, "text", None) or str(
-                                output_data
-                            )
+                            final_output = output_data.text or ""
+                        elif isinstance(output_data, list):
+                            # Handle list of ChatMessage objects
+                            texts = []
+                            for item in output_data:
+                                if isinstance(item, ChatMessage):
+                                    if item.text:
+                                        texts.append(item.text)
+                                else:
+                                    texts.append(str(item))
+                            final_output = "\n".join(texts)
+                        elif hasattr(output_data, "text"):
+                            final_output = output_data.text or ""
                         else:
-                            final_output = str(output_data)
+                            final_output = str(output_data) if output_data else ""
                         self.logger.debug("Received workflow output event")
 
                 except Exception as e:
