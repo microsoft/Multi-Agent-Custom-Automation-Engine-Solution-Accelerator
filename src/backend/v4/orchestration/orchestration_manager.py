@@ -133,18 +133,33 @@ class OrchestrationManager:
                 # This is a wrapper (FoundryAgentTemplate)
                 # Use the inner ChatAgent which implements AgentProtocol
                 inner_agent = ag._agent
+                # Log inner agent details for debugging
+                inner_name = getattr(inner_agent, "name", None)
+                inner_desc = getattr(inner_agent, "description", None)
+                cls.logger.info(
+                    "Extracting inner ChatAgent: wrapper_name=%s, inner_name=%s, inner_desc=%s, type=%s",
+                    name, inner_name, inner_desc[:50] if inner_desc else None, type(inner_agent).__name__
+                )
                 # Ensure the inner agent has the name set
-                if not getattr(inner_agent, "name", None):
+                if not inner_name:
                     inner_agent.name = name
+                    cls.logger.info("Set inner agent name to '%s'", name)
                 participants[name] = inner_agent
-                cls.logger.debug("Added participant '%s' (extracted inner agent)", name)
+                cls.logger.info("Added participant '%s' (extracted inner ChatAgent)", name)
             else:
                 # This is already an agent (like ProxyAgent extending BaseAgent)
+                agent_name = getattr(ag, "name", None)
+                agent_desc = getattr(ag, "description", None)
+                cls.logger.info(
+                    "Using agent directly: name=%s, desc=%s, type=%s",
+                    agent_name, agent_desc[:50] if agent_desc else None, type(ag).__name__
+                )
                 # Ensure the agent has the name set
-                if not getattr(ag, "name", None):
+                if not agent_name:
                     ag.name = name
+                    cls.logger.info("Set agent name to '%s'", name)
                 participants[name] = ag
-                cls.logger.debug("Added participant '%s'", name)
+                cls.logger.info("Added participant '%s' (direct agent)", name)
 
         # Assemble workflow with callback
         storage = InMemoryCheckpointStorage()
@@ -324,14 +339,22 @@ class OrchestrationManager:
             self.logger.info("Starting workflow execution...")
             async for event in workflow.run_stream(task_text):
                 try:
+                    # Log all events for debugging
+                    self.logger.info(f"[EVENT] Received event type: {type(event).__name__}")
+                    
                     # Handle orchestrator events (plan created, updated, etc.)
                     if isinstance(event, MagenticOrchestratorEvent):
                         event_data = event.data
                         if isinstance(event_data, ChatMessage):
                             message_text = getattr(event_data, "text", "")
-                            self.logger.info(f"[ORCHESTRATOR:{event.event_type.value}] {message_text}")
+                            self.logger.info(f"[ORCHESTRATOR:{event.event_type.value}] {message_text[:200] if message_text else 'empty'}")
                         else:
-                            self.logger.info(f"[ORCHESTRATOR:{event.event_type.value}] {type(event_data).__name__}")
+                            # Log progress ledger details if available
+                            if hasattr(event_data, 'next_speaker'):
+                                next_speaker = getattr(event_data.next_speaker, 'answer', 'unknown')
+                                self.logger.info(f"[ORCHESTRATOR:{event.event_type.value}] next_speaker={next_speaker}")
+                            else:
+                                self.logger.info(f"[ORCHESTRATOR:{event.event_type.value}] {type(event_data).__name__}")
 
                     # Handle streaming updates from agents
                     elif isinstance(event, AgentRunUpdateEvent):

@@ -259,11 +259,13 @@ class FoundryAgentTemplate(AzureAgentBase):
                 self._tool_choice = "required"
                 
                 # Create ChatAgent following reference pattern
+                # NOTE: Do NOT pass tools here - Azure AI Search tool is configured server-side
+                # when create_version() was called with AzureAISearchAgentTool
                 self._agent = ChatAgent(
                     chat_client=chat_client,
-                    tools=[{"type": "azure_ai_search"}],
-                    tool_choice="auto",
-                    store=True,
+                    name=self.agent_name,
+                    description=self.agent_description,
+                    instructions=self.agent_instructions,
                 )
                 print(f"Initialized ChatAgent with Azure AI Search tool, agent_name={self.agent_name}", flush=True)
             else:
@@ -301,22 +303,21 @@ class FoundryAgentTemplate(AzureAgentBase):
                 
                 # Use AzureAIClient with the created agent following reference pattern
                 # Each agent gets its own client instance with unique agent_name for proper conversation/thread handling
-                credential = config.get_azure_credential(client_id=config.AZURE_CLIENT_ID)
+                # NOTE: Don't pass credential here - use project_client which already has credentials
                 chat_client = AzureAIClient(
                     project_client=self.project_client,
-                    credential=credential,
                     agent_name=self.agent_name,
                     use_latest_version=True,
-                    model_deployment_name=self.model_deployment_name,
                 )
                 
                 # Create ChatAgent with the Azure-backed client
+                # Tools are configured server-side, not passed to ChatAgent
                 self._agent = ChatAgent(
                     chat_client=chat_client,
+                    name=self.agent_name,
+                    description=self.agent_description,
+                    instructions=self.agent_instructions,
                     tools=self._tools_for_invoke,
-                    tool_choice=self._tool_choice,
-                    store=True,
-                    model_id=self.model_deployment_name,  # Add model_id to prevent validation error
                 )
             self.logger.info("Initialized ChatAgent '%s'", self.agent_name)
 

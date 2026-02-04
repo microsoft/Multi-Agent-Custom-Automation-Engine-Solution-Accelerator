@@ -197,7 +197,17 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
             return ledger
 
         # Delegate to base for normal progress ledger creation
-        return await super().create_progress_ledger(magentic_context)
+        ledger = await super().create_progress_ledger(magentic_context)
+        
+        # Log the progress ledger details for debugging
+        logger.info(
+            "Progress ledger created: next_speaker=%s, is_request_satisfied=%s, instruction=%s",
+            getattr(ledger.next_speaker, 'answer', 'unknown'),
+            getattr(ledger.is_request_satisfied, 'answer', 'unknown'),
+            getattr(ledger.instruction_or_question, 'answer', 'unknown')[:100] if getattr(ledger.instruction_or_question, 'answer', None) else 'None'
+        )
+        
+        return ledger
 
     async def _wait_for_user_approval(
         self, m_plan_id: Optional[str] = None
