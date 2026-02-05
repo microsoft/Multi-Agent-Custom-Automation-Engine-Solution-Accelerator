@@ -16,6 +16,8 @@ from agent_framework import (
     InMemoryCheckpointStorage,
     AgentRunUpdateEvent,
     GroupChatRequestSentEvent,
+    GroupChatResponseReceivedEvent,
+    ExecutorCompletedEvent,
     MagenticOrchestratorEvent,
     MagenticProgressLedger,
 )
@@ -44,6 +46,53 @@ class OrchestrationManager:
     def __init__(self):
         self.user_id: Optional[str] = None
         self.logger = self.__class__.logger
+
+    def _extract_response_text(self, data) -> str:
+        """
+        Extract text content from various agent_framework response types.
+        
+        Handles:
+        - ChatMessage: Extract .text
+        - AgentResponse: Extract .text
+        - AgentExecutorResponse: Extract from agent_response.text or full_conversation[-1].text
+        - List of any of the above
+        """
+        if data is None:
+            return ""
+        
+        # Direct ChatMessage
+        if isinstance(data, ChatMessage):
+            return data.text or ""
+        
+        # Has .text attribute directly (AgentResponse, etc.)
+        if hasattr(data, "text") and data.text:
+            return data.text
+        
+        # AgentExecutorResponse - has agent_response and full_conversation
+        if hasattr(data, "agent_response"):
+            # Try to get text from agent_response first
+            agent_resp = data.agent_response
+            if agent_resp and hasattr(agent_resp, "text") and agent_resp.text:
+                return agent_resp.text
+            # Fallback to last message in full_conversation
+            if hasattr(data, "full_conversation") and data.full_conversation:
+                last_msg = data.full_conversation[-1]
+                if isinstance(last_msg, ChatMessage) and last_msg.text:
+                    return last_msg.text
+        
+        # List of items - could be AgentExecutorResponse, ChatMessage, etc.
+        if isinstance(data, list) and len(data) > 0:
+            texts = []
+            for item in data:
+                # Recursively extract from each item
+                item_text = self._extract_response_text(item)
+                if item_text:
+                    texts.append(item_text)
+            if texts:
+                # Return the last non-empty response (most recent)
+                return texts[-1]
+        
+        return ""
 
     # ---------------------------
     # Orchestration construction
@@ -336,6 +385,11 @@ class OrchestrationManager:
             last_message_id: str | None = None
             async for event in workflow.run_stream(task_text):
                 try:
+                    # Only log non-streaming events (reduce noise)
+                    event_type_name = type(event).__name__
+                    if event_type_name != "AgentRunUpdateEvent":
+                        self.logger.info("[EVENT] %s", event_type_name)
+                    
                     # Handle orchestrator events (plan, progress ledger)
                     if isinstance(event, MagenticOrchestratorEvent):
                         self.logger.info(
@@ -377,6 +431,34 @@ class OrchestrationManager:
                             event.round_index,
                             event.participant_name
                         )
+
+                    # Handle group chat response received - THIS IS WHERE AGENT RESPONSES COME
+                    elif isinstance(event, GroupChatResponseReceivedEvent):
+                        self.logger.info(
+                            "[RESPONSE RECEIVED (round %d)] from agent: %s",
+                            event.round_index,
+                            event.participant_name
+                        )
+                        # Send the agent response to the UI
+                        if event.data:
+                            response_text = self._extract_response_text(event.data)
+                            
+                            if response_text:
+                                self.logger.info("Sending agent response to UI from %s", event.participant_name)
+                                agent_response_callback(
+                                    event.participant_name,
+                                    ChatMessage(role="assistant", text=response_text),
+                                    user_id,
+                                )
+
+                    # Handle executor completed - just log, don't send to UI (GroupChatResponseReceivedEvent handles that)
+                    elif isinstance(event, ExecutorCompletedEvent):
+                        self.logger.debug(
+                            "[EXECUTOR COMPLETED] agent: %s",
+                            event.executor_id
+                        )
+                        # Don't send to UI here - GroupChatResponseReceivedEvent already handles agent messages
+                        # This avoids duplicate messages
 
                     # Handle workflow output event (captures final result)
                     elif isinstance(event, WorkflowOutputEvent):

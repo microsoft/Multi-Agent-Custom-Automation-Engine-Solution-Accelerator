@@ -125,7 +125,9 @@ class FoundryAgentTemplate(AzureAgentBase):
         Returns:
             AzureAIClient | None
         """
+        print(f"[DEBUG _create_azure_search_enabled_client] Agent={self.agent_name}, chatClient={chatClient}, search_config={self.search}")
         if chatClient:
+            self.logger.info("Reusing existing chatClient for agent '%s' (already has Azure Search configured)", self.agent_name)
             return chatClient
 
         if not self.search:
@@ -234,12 +236,16 @@ class FoundryAgentTemplate(AzureAgentBase):
 
         try:
             chatClient = await self.get_database_team_agent()
+            print(f"[DEBUG _after_open] Agent={self.agent_name}, _use_azure_search={self._use_azure_search}, search_config={self.search}, chatClient={chatClient}")
 
             if self._use_azure_search:
                 # Azure Search mode (skip MCP + Code Interpreter due to incompatibility)
                 self.logger.info(
-                    "Initializing agent in Azure AI Search mode (exclusive)."
+                    "Initializing agent '%s' in Azure AI Search mode (exclusive) with index=%s.",
+                    self.agent_name,
+                    getattr(self.search, "index_name", "N/A") if self.search else "N/A"
                 )
+                print(f"[DEBUG _after_open] Creating Azure Search client for {self.agent_name}")
                 chat_client = await self._create_azure_search_enabled_client(chatClient)
                 if not chat_client:
                     raise RuntimeError(
