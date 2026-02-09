@@ -4,10 +4,9 @@ import datetime
 import logging
 import sys
 import os
-from typing import Any, Dict, List, Optional
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from typing import Dict, List, Optional
+from unittest.mock import AsyncMock, Mock, patch
 import pytest
-import uuid
 
 # Add the backend directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'backend'))

@@ -1,10 +1,8 @@
 """Unit tests for backend.v4.magentic_agents.magentic_agent_factory module."""
-import asyncio
-import json
 import logging
 import sys
 from types import SimpleNamespace
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
+from unittest.mock import Mock, patch, AsyncMock
 import pytest
 
 # Mock the dependencies before importing the module under test

@@ -2,9 +2,9 @@
 
 import sys
 import os
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Any, Dict, List, Optional, Type
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 import pytest
 
 # Add the backend directory to the Python path

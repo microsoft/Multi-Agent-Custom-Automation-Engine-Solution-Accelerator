@@ -4,14 +4,11 @@ Comprehensive test cases covering HumanApprovalMagenticManager with proper mocki
 """
 
 import asyncio
-import logging
 import os
 import sys
 import unittest
-from typing import Any, Optional
+from typing import Optional
 from unittest.mock import Mock, AsyncMock, patch
-
-import pytest
 
 # Add the backend directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'backend'))

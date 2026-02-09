@@ -13,7 +13,7 @@ import os
 import sys
 import importlib.util
 from unittest.mock import patch, MagicMock, AsyncMock, Mock
-from typing import Any, Dict, Optional, Union
+from typing import Dict, Optional, Union
 import aiohttp
 from aiohttp import ClientTimeout, ClientSession
 

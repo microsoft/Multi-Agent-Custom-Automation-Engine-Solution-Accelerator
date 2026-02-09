@@ -432,7 +432,7 @@ class TestOrchestrationConfig(unittest.IsolatedAsyncioTestCase):
         cancel_task_handle = asyncio.create_task(cancel_task())
         
         with self.assertRaises(asyncio.CancelledError):
-            await task
+            result = await task
         
         await cancel_task_handle
 
@@ -454,7 +454,7 @@ class TestOrchestrationConfig(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(asyncio.CancelledError):
             await task
         
-        await cancel_task_handle
+        _ = await cancel_task_handle
 
     def test_cleanup_approval(self):
         """Test cleanup approval."""

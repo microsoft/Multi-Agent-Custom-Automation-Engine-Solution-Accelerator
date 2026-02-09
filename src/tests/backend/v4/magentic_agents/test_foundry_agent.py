@@ -1,11 +1,8 @@
 """Unit tests for backend.v4.magentic_agents.foundry_agent module."""
 
-import asyncio
-import logging
 import sys
 import os
-import time
-from unittest.mock import Mock, patch, AsyncMock, MagicMock, call
+from unittest.mock import Mock, patch, AsyncMock, call
 import pytest
 
 # Add the backend directory to the Python path

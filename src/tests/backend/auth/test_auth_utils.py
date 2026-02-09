@@ -5,10 +5,8 @@ Working unit tests for auth_utils.py module compatible with pytest command.
 import pytest
 import base64
 import json
-import logging
 import sys
 import os
-import importlib.util
 from unittest.mock import patch, MagicMock
 
 # Add the source root directory to the Python path for imports

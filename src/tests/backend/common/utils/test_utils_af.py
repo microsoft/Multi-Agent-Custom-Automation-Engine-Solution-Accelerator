@@ -1,10 +1,8 @@
 """Unit tests for utils_af module."""
 
-import logging
 import sys
 import os
-import uuid
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
+from unittest.mock import Mock, patch, AsyncMock
 import pytest
 
 # Add the backend directory to the Python path
