@@ -6,7 +6,6 @@ on:
       - main
       - demo-v4
       - dev-v4
-      - code-quality-fix
     paths:
       - 'src/backend/**/*.py'
       - 'src/tests/**/*.py'
@@ -26,7 +25,6 @@ on:
       - main
       - demo-v4
       - dev-v4
-      - code-quality-fix
       - 'src/backend/**/*.py'
       - 'src/tests/**/*.py'
       - 'src/mcp_server/**/*.py'
