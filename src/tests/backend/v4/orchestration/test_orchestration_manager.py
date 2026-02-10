@@ -7,7 +7,6 @@ import asyncio
 import logging
 import os
 import sys
-from typing import List
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock, Mock, patch
 

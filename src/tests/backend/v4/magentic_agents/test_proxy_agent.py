@@ -57,7 +57,7 @@ sys.modules['v4.models.messages'].WebsocketMessageType = mock_websocket_message_
 
 
 # Now import the module under test
-from backend.v4.magentic_agents.proxy_agent import create_proxy_agent
+import backend.v4.magentic_agents.proxy_agent
 
 
 class TestProxyAgentComplexScenarios:

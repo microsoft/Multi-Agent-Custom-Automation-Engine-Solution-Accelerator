@@ -18,7 +18,7 @@ import json
 import logging
 import importlib.util
 from unittest.mock import patch, MagicMock, AsyncMock
-from typing import Any, Optional, List
+from typing import Any, List
 from dataclasses import dataclass
 
 # Add the src directory to sys.path for proper import

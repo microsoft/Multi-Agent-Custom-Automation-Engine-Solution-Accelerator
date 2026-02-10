@@ -15,7 +15,7 @@ import sys
 import asyncio
 import importlib.util
 from unittest.mock import patch, MagicMock
-from aiohttp import ClientTimeout, ClientError
+from aiohttp import ClientError
 
 # Add the src directory to sys.path for proper import
 src_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', '..')
