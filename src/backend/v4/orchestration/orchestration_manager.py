@@ -231,17 +231,22 @@ class OrchestrationManager:
         team_config: TeamConfiguration,
         team_switched: bool,
         team_service: TeamService = None,
+        force_rebuild: bool = False,
     ):
         """
         Return an existing workflow for the user or create a new one if:
           - None exists
           - Team switched flag is True
+          - force_rebuild is True (for new tasks after workflow completion)
         """
         current = orchestration_config.get_current_orchestration(user_id)
-        if current is None or team_switched:
-            if current is not None and team_switched:
+        needs_rebuild = current is None or team_switched or force_rebuild
+        
+        if needs_rebuild:
+            if current is not None and (team_switched or force_rebuild):
+                reason = "team switched" if team_switched else "force rebuild for new task"
                 cls.logger.info(
-                    "Team switched, closing previous agents for user '%s'", user_id
+                    "Rebuilding orchestration for user '%s' (reason: %s)", user_id, reason
                 )
                 # Close prior agents (same logic as old version)
                 for agent in getattr(current, "_participants", {}).values():

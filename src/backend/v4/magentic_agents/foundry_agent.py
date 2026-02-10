@@ -7,7 +7,12 @@ from agent_framework import (ChatAgent, ChatMessage, HostedCodeInterpreterTool,
                              Role)
 from agent_framework_azure_ai import \
     AzureAIClient  # Provided by agent_framework
-from azure.ai.projects.models import ConnectionType
+from azure.ai.projects.models import (
+    PromptAgentDefinition,
+    AzureAISearchAgentTool,
+    AzureAISearchToolResource,
+    AISearchIndexResource,
+)
 from common.config.app_config import config
 from common.database.database_base import DatabaseBase
 from common.models.messages_af import TeamConfiguration
@@ -65,19 +70,23 @@ class FoundryAgentTemplate(AzureAgentBase):
         self._use_azure_search = self._is_azure_search_requested()
         self.use_reasoning = use_reasoning
 
-        # Placeholder for server-created Azure AI agent id (if Azure Search path)
+        # Placeholder for server-created Azure AI agent id/version (if Azure Search path)
         self._azure_server_agent_id: Optional[str] = None
+        self._azure_server_agent_version: Optional[str] = None
 
     # -------------------------
     # Mode detection
     # -------------------------
     def _is_azure_search_requested(self) -> bool:
         """Determine if Azure AI Search raw tool path should be used."""
+        print(f"[DEBUG _is_azure_search_requested] Agent={self.agent_name}, search={self.search}")
         if not self.search:
+            print(f"[DEBUG _is_azure_search_requested] Agent={self.agent_name}: No search config, returning False")
             return False
         # Minimal heuristic: presence of required attributes
 
         has_index = hasattr(self.search, "index_name") and bool(self.search.index_name)
+        print(f"[DEBUG _is_azure_search_requested] Agent={self.agent_name}: has_index={has_index}, index_name={getattr(self.search, 'index_name', None)}")
         if has_index:
             self.logger.info(
                 "Azure AI Search requested (connection_id=%s, index=%s).",
@@ -113,14 +122,17 @@ class FoundryAgentTemplate(AzureAgentBase):
     # -------------------------
     async def _create_azure_search_enabled_client(self, chatClient=None) -> Optional[AzureAIClient]:
         """
-        Create a server-side Azure AI agent with Azure AI Search raw tool.
+        Create a server-side Azure AI agent with Azure AI Search tool using create_version.
+
+        This uses the AIProjectClient.agents.create_version() approach with:
+        - PromptAgentDefinition for agent configuration
+        - AzureAISearchAgentTool with AzureAISearchToolResource for search capability
+        - AISearchIndexResource for index configuration with project_connection_id
 
         Requirements:
-          - An Azure AI Project Connection (type=AZURE_AI_SEARCH) that contains either:
-              a) API key + endpoint, OR
-              b) Managed Identity (RBAC enabled on the Search service with Search Service Contributor + Search Index Data Reader).
+          - An Azure AI Project Connection for Azure AI Search
           - search_config.index_name must exist in the Search service.
-
+          - search_config.connection_name should match the AI Project connection name
 
         Returns:
             AzureAIClient | None
@@ -134,9 +146,16 @@ class FoundryAgentTemplate(AzureAgentBase):
             self.logger.error("Search configuration missing.")
             return None
 
-        desired_connection_name = getattr(self.search, "connection_name", None)
+        # Get connection name - this is used as project_connection_id in create_version
+        connection_name = getattr(self.search, "connection_name", None)
+        if not connection_name:
+            # Fallback to environment variable
+            connection_name = config.AZURE_AI_SEARCH_CONNECTION_NAME
+            self.logger.info("Using connection_name from environment: %s", connection_name)
+
         index_name = getattr(self.search, "index_name", "")
         query_type = getattr(self.search, "search_query_type", "simple")
+        top_k = getattr(self.search, "top_k", 5)
 
         if not index_name:
             self.logger.error(
@@ -144,82 +163,89 @@ class FoundryAgentTemplate(AzureAgentBase):
             )
             return None
 
-        resolved_connection_id = None
-
-        try:
-            async for connection in self.project_client.connections.list():
-                if connection.type == ConnectionType.AZURE_AI_SEARCH:
-
-                    if (
-                        desired_connection_name
-                        and connection.name == desired_connection_name
-                    ):
-                        resolved_connection_id = connection.id
-                        break
-                    # Fallback: if no specific connection requested and none resolved yet, take the first
-                    if not desired_connection_name and not resolved_connection_id:
-                        resolved_connection_id = connection.id
-                        # Do not break yet; we log but allow chance to find a name match later. If not, this stays.
-
-            if not resolved_connection_id:
-                self.logger.error(
-                    "No Azure AI Search connection resolved. " "connection_name=%s",
-                    desired_connection_name,
-                )
-            #  return None
-
-            self.logger.info(
-                "Using Azure AI Search connection (id=%s, requested_name=%s).",
-                resolved_connection_id,
-                desired_connection_name,
+        if not connection_name:
+            self.logger.error(
+                "connection_name not provided; aborting Azure Search path."
             )
-        except Exception as ex:
-            self.logger.error("Failed to enumerate connections: %s", ex)
             return None
 
-        # Create agent with raw tool
+        self.logger.info(
+            "Creating Azure AI Search agent with create_version: connection_name=%s, index=%s, query_type=%s, top_k=%s",
+            connection_name,
+            index_name,
+            query_type,
+            top_k,
+        )
+
+        # Create agent using create_version with PromptAgentDefinition and AzureAISearchAgentTool
+        # This approach matches the Knowledge Mining Solution Accelerator pattern
         try:
-            azure_agent = await self.client.create_agent(
-                model=self.model_deployment_name,
-                name=self.agent_name,
-                instructions=(
-                    f"{self.agent_instructions} "
-                    "Always use the Azure AI Search tool and configured index for knowledge retrieval."
-                ),
-                tools=[{"type": "azure_ai_search"}],
-                tool_resources={
-                    "azure_ai_search": {
-                        "indexes": [
-                            {
-                                "index_connection_id": resolved_connection_id,
-                                "index_name": index_name,
-                                "query_type": query_type,
-                            }
-                        ]
-                    }
-                },
+            enhanced_instructions = (
+                f"{self.agent_instructions} "
+                "Always use the Azure AI Search tool and configured index for knowledge retrieval."
             )
-            self._azure_server_agent_id = azure_agent.id
-            self.logger.info(
-                "Created Azure server agent with Azure AI Search tool (agent_id=%s, index=%s, query_type=%s).",
-                azure_agent.id,
-                index_name,
-                query_type,
+            
+            print(f"[DEBUG] Creating agent '{self.agent_name}' with instructions (first 200 chars): {enhanced_instructions[:200]}...")
+            print(f"[DEBUG] Agent model: {self.model_deployment_name}")
+            print(f"[DEBUG] Search config: connection={connection_name}, index={index_name}, query_type={query_type}, top_k={top_k}")
+
+            azure_agent = await self.project_client.agents.create_version(
+                agent_name=self.agent_name,
+                definition=PromptAgentDefinition(
+                    model=self.model_deployment_name,
+                    instructions=enhanced_instructions,
+                    tools=[
+                        AzureAISearchAgentTool(
+                            azure_ai_search=AzureAISearchToolResource(
+                                indexes=[
+                                    AISearchIndexResource(
+                                        project_connection_id=connection_name,
+                                        index_name=index_name,
+                                        query_type=query_type,
+                                        top_k=top_k,
+                                    )
+                                ]
+                            )
+                        )
+                    ],
+                ),
             )
 
+            self._azure_server_agent_id = azure_agent.id
+            self._azure_server_agent_version = azure_agent.version
+            self.logger.info(
+                "Created Azure AI Search agent via create_version (name=%s, id=%s, version=%s, connection=%s, index=%s, query_type=%s, top_k=%s).",
+                azure_agent.name,
+                azure_agent.id,
+                azure_agent.version,
+                connection_name,
+                index_name,
+                query_type,
+                top_k,
+            )
+            print(f"[DEBUG] Created agent via create_version: name={azure_agent.name}, id={azure_agent.id}, version={azure_agent.version}")
+            print(f"[DEBUG] Agent definition: {azure_agent.definition}")
+            print(f"[DEBUG] Agent instructions from definition: {getattr(azure_agent.definition, 'instructions', 'N/A')}")
+
+            # Wrap in AzureAIClient using agent_name and agent_version (NOT agent_id)
+            # AzureAIClient constructor: agent_name, agent_version, project_endpoint, credential
             chat_client = AzureAIClient(
-                project_client=self.project_client,
-                agent_id=azure_agent.id,
+                project_endpoint=self.project_endpoint,
+                agent_name=azure_agent.name,
+                agent_version=azure_agent.version,  # Use the specific version we just created
                 credential=self.creds,
             )
             return chat_client
+
         except Exception as ex:
             self.logger.error(
-                "Failed to create Azure Search enabled agent (connection_id=%s, index=%s): %s",
-                resolved_connection_id,
+                "Failed to create Azure Search enabled agent via create_version (connection=%s, index=%s): %s",
+                connection_name,
                 index_name,
                 ex,
             )
+            import traceback
+            traceback.print_exc()
             return None
 
     # -------------------------

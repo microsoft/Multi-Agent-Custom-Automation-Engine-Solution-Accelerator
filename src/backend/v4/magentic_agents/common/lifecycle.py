@@ -51,7 +51,7 @@ class MCPEnabledBase:
         self._agent: ChatAgent | None = None
         self.team_service: TeamService | None = team_service
         self.team_config: TeamConfiguration | None = team_config
-        self.client: Optional[AzureAIClient] = None
+        self.client: Optional[AgentsClient] = None
         self.project_endpoint = project_endpoint
         self.creds: Optional[DefaultAzureCredential] = None
         self.memory_store: Optional[DatabaseBase] = memory_store
@@ -228,7 +228,25 @@ class MCPEnabledBase:
         return id
 
     async def get_database_team_agent(self) -> Optional[AzureAIClient]:
-        """Retrieve existing team agent from database, if any."""
+        """Retrieve existing team agent from database, if any.
+        
+        NOTE: Agent reuse is currently DISABLED to ensure fresh agents are created
+        with the correct Azure AI Search configuration.
+        This prevents issues with stale agents that may not have the search tool configured.
+        
+        To re-enable agent reuse, set ENABLE_AGENT_REUSE=true in environment.
+        """
+        import os
+        
+        # DISABLED: Always create fresh agents to ensure Azure AI Search tool is configured
+        enable_reuse = os.environ.get("ENABLE_AGENT_REUSE", "false").lower() == "true"
+        if not enable_reuse:
+            self.logger.info(
+                "Agent reuse DISABLED: Creating fresh agent with search tools (agent_name=%s)",
+                self.agent_name,
+            )
+            return None
+        
         chat_client = None
         try:
             agent_id = await get_database_team_agent_id(
@@ -251,15 +269,15 @@ class MCPEnabledBase:
                 )
                 return None
 
-            # Create client with resolved ID, preferring project_client for RAI agents
+            # Create client with resolved ID
             if self.agent_name == "RAIAgent" and self.project_client:
                 chat_client = AzureAIClient(
-                    project_client=self.project_client,
+                    project_endpoint=self.project_endpoint,
                     agent_id=resolved,
                     credential=self.creds,
                 )
                 self.logger.info(
-                    "RAI.AgentReuseSuccess: Created AzureAIClient via Projects SDK (id=%s)",
+                    "RAI.AgentReuseSuccess: Created AzureAIClient (id=%s)",
                     resolved,
                 )
             else:
@@ -284,17 +302,20 @@ class MCPEnabledBase:
     async def save_database_team_agent(self) -> None:
         """Save current team agent to database (only if truly new or changed)."""
         try:
-            if self._agent.id is None:
-                self.logger.error("Cannot save database team agent: agent_id is None")
+            if self._agent is None or self._agent.id is None:
+                self.logger.error("Cannot save database team agent: agent or agent_id is None")
                 return
+
+            # Use the agent ID from ChatAgent (set during creation)
+            agent_id = self._agent.id
 
             # Check if stored ID matches current ID
             stored_id = await get_database_team_agent_id(
                 self.memory_store, self.team_config, self.agent_name
             )
-            if stored_id == self._agent.chat_client.agent_id:
+            if stored_id == agent_id:
                 self.logger.info(
-                    "RAI reuse: id unchanged (id=%s); skip save.", self._agent.id
+                    "RAI reuse: id unchanged (id=%s); skip save.", agent_id
                 )
                 return
 
@@ -302,7 +323,7 @@ class MCPEnabledBase:
                 team_id=self.team_config.team_id,
                 team_name=self.team_config.name,
                 agent_name=self.agent_name,
-                agent_foundry_id=self._agent.chat_client.agent_id,
+                agent_foundry_id=agent_id,
                 agent_description=self.agent_description,
                 agent_instructions=self.agent_instructions,
             )
@@ -310,7 +331,7 @@ class MCPEnabledBase:
             self.logger.info(
                 "Saved team agent to database (agent_name=%s, id=%s)",
                 self.agent_name,
-                self._agent.id,
+                agent_id,
             )
 
         except Exception as ex:
