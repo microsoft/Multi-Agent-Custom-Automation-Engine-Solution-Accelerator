@@ -7,7 +7,6 @@ import asyncio
 import os
 import sys
 import unittest
-from typing import Optional
 from unittest.mock import Mock, AsyncMock, patch
 
 # Add the backend directory to the Python path

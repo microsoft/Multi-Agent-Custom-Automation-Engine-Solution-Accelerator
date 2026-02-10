@@ -14,8 +14,7 @@ import os
 import sys
 import asyncio
 import importlib.util
-from unittest.mock import patch, MagicMock, Mock
-from typing import Dict, Optional
+from unittest.mock import patch, MagicMock
 from aiohttp import ClientTimeout, ClientError
 
 # Add the src directory to sys.path for proper import

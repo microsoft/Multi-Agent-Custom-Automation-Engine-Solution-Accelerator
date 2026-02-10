@@ -2,7 +2,7 @@
 
 import sys
 import os
-from unittest.mock import Mock, patch, AsyncMock, call
+from unittest.mock import Mock, patch, AsyncMock
 import pytest
 
 # Add the backend directory to the Python path

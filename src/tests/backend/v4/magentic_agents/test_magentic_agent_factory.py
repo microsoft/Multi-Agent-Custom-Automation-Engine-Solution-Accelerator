@@ -2,7 +2,7 @@
 import logging
 import sys
 from types import SimpleNamespace
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import Mock, AsyncMock
 import pytest
 
 # Mock the dependencies before importing the module under test

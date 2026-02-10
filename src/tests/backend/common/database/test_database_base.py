@@ -4,7 +4,7 @@ import sys
 import os
 from abc import ABC
 from typing import Any, Dict, List, Optional, Type
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 import pytest
 
 # Add the backend directory to the Python path
