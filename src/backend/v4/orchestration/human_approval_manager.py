@@ -33,6 +33,7 @@ class HumanApprovalMagenticManager(StandardMagenticManager):
     approval_enabled: bool = True
     magentic_plan: Optional[MPlan] = None
     current_user_id: str  # populated in __init__
+    _called_agents: set  # Track which agents have been called
 
     def __init__(self, user_id: str, agent, *args, **kwargs):
         """
@@ -43,6 +44,9 @@ class HumanApprovalMagenticManager(StandardMagenticManager):
             *args: Additional positional arguments for the parent StandardMagenticManager.
             **kwargs: Additional keyword arguments for the parent StandardMagenticManager.
         """
+        
+        # Initialize called agents tracker
+        self._called_agents = set()
 
         plan_append = """
 
@@ -55,6 +59,9 @@ Plan steps should always include a bullet point, followed by an agent name, foll
 to be taken. If a step involves multiple actions, separate them into distinct steps with an agent included in each step.
 If the step is taken by an agent that is not part of the team, such as the MagenticManager, please always list the MagenticManager as the agent for that step. At any time, if more information is needed from the user, use the ProxyAgent to request this information.
 
+CRITICAL: Each agent should only be called ONCE to perform their task. Do NOT call the same agent multiple times.
+After an agent has provided their response, move on to the next agent in the plan.
+
 Here is an example of a well-structured plan:
 - **EnhancedResearchAgent** to gather authoritative data on the latest industry trends and best practices in employee onboarding
 - **EnhancedResearchAgent** to gather authoritative data on Innovative onboarding techniques that enhance new hire engagement and retention.
@@ -62,6 +69,13 @@ Here is an example of a well-structured plan:
 - **DocumentCreationAgent** to draft a comprehensive onboarding plan that includes a checklist of resources and materials needed for effective onboarding.
 - **ProxyAgent** to review the drafted onboarding plan for clarity and completeness.
 - **MagenticManager** to finalize the onboarding plan and prepare it for presentation to stakeholders.
+"""
+
+        # Add progress ledger prompt to prevent re-calling agents
+        progress_append = """
+CRITICAL RULE: DO NOT call the same agent more than once unless absolutely necessary.
+If an agent has already provided a response, consider their task COMPLETE and move to the next agent.
+Only re-call an agent if their previous response was explicitly an error or failure.
 """
 
         final_append = """
@@ -75,6 +89,10 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
             ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT + plan_append
         )
         kwargs["final_answer_prompt"] = ORCHESTRATOR_FINAL_ANSWER_PROMPT + final_append
+        
+        # Override progress ledger prompt to discourage re-calling agents
+        from agent_framework._workflows._magentic import ORCHESTRATOR_PROGRESS_LEDGER_PROMPT
+        kwargs["progress_ledger_prompt"] = ORCHESTRATOR_PROGRESS_LEDGER_PROMPT + progress_append
 
         self.current_user_id = user_id
         # New API: StandardMagenticManager takes agent as first positional argument

@@ -197,17 +197,19 @@ class OrchestrationManager:
         # Assemble workflow with callback
         storage = InMemoryCheckpointStorage()
         
-        # New API: .participants() accepts a list of agents
+        # New SDK: participants() accepts a Sequence (list) of agents
+        # The orchestrator uses agent.name to identify them
         participant_list = list(participants.values())
+        cls.logger.info("Participants for workflow: %s", list(participants.keys()))
+        print(f"[DEBUG] Participants for workflow: {list(participants.keys())}", flush=True)
         
         builder = (
             MagenticBuilder()
-            .participants(participant_list)
+            .participants(participant_list)  # New SDK: pass as list
             .with_manager(
                 manager=manager,  # Pass manager instance (extends StandardMagenticManager)
                 max_round_count=orchestration_config.max_rounds,
-                max_stall_count=3,
-                max_reset_count=2,
+                max_stall_count=0,  # CRITICAL: Prevent re-calling agents when stalled (default is 3!)
             )
             .with_checkpointing(storage)
         )
@@ -381,12 +383,16 @@ class OrchestrationManager:
         task_text = getattr(input_task, "description", str(input_task))
         self.logger.debug("Task: %s", task_text)
 
+        # Track how many times each agent is called (for debugging duplicate calls)
+        agent_call_counts: dict = {}
+
         try:
             # Execute workflow using run_stream with task as positional parameter
             # The execution settings are configured in the manager/client
             final_output: str | None = None
 
             self.logger.info("Starting workflow execution...")
+            print(f"[ORCHESTRATOR] 🚀 Starting workflow with max_rounds={orchestration_config.max_rounds}", flush=True)
             last_message_id: str | None = None
             async for event in workflow.run_stream(task_text):
                 try:
@@ -431,11 +437,20 @@ class OrchestrationManager:
 
                     # Handle group chat request sent
                     elif isinstance(event, GroupChatRequestSentEvent):
+                        agent_name = event.participant_name
+                        agent_call_counts[agent_name] = agent_call_counts.get(agent_name, 0) + 1
+                        call_num = agent_call_counts[agent_name]
+                        
                         self.logger.info(
-                            "[REQUEST SENT (round %d)] to agent: %s",
+                            "[REQUEST SENT (round %d)] to agent: %s (call #%d)",
                             event.round_index,
-                            event.participant_name
+                            agent_name,
+                            call_num
                         )
+                        print(f"[ORCHESTRATOR] 📤 REQUEST SENT round={event.round_index} to agent={agent_name} (call #{call_num})", flush=True)
+                        
+                        if call_num > 1:
+                            print(f"[ORCHESTRATOR] ⚠️ WARNING: Agent '{agent_name}' called {call_num} times!", flush=True)
 
                     # Handle group chat response received - THIS IS WHERE AGENT RESPONSES COME
                     elif isinstance(event, GroupChatResponseReceivedEvent):
@@ -495,6 +510,13 @@ class OrchestrationManager:
 
             # Extract final result
             final_text = final_output if final_output else ""
+
+            # Log agent call summary
+            print(f"\n[ORCHESTRATOR] 📊 AGENT CALL SUMMARY:", flush=True)
+            for agent_name, count in agent_call_counts.items():
+                status = "✅" if count == 1 else "⚠️ DUPLICATE"
+                print(f"  {status} {agent_name}: called {count} time(s)", flush=True)
+            self.logger.info("Agent call counts: %s", agent_call_counts)
 
             # Log results
             self.logger.info("\nAgent responses:")

@@ -185,12 +185,12 @@ class FoundryAgentTemplate(AzureAgentBase):
                 "Always use the Azure AI Search tool and configured index for knowledge retrieval."
             )
             
-            print(f"[DEBUG] Creating agent '{self.agent_name}' with instructions (first 200 chars): {enhanced_instructions[:200]}...")
-            print(f"[DEBUG] Agent model: {self.model_deployment_name}")
-            print(f"[DEBUG] Search config: connection={connection_name}, index={index_name}, query_type={query_type}, top_k={top_k}")
+            print(f"[AGENT CREATE] 🆕 Creating agent in Foundry: '{self.agent_name}'", flush=True)
+            print(f"[AGENT CREATE] Model: {self.model_deployment_name}", flush=True)
+            print(f"[AGENT CREATE] Search: connection={connection_name}, index={index_name}", flush=True)
 
             azure_agent = await self.project_client.agents.create_version(
-                agent_name=self.agent_name,
+                agent_name=self.agent_name,  # Use original name
                 definition=PromptAgentDefinition(
                     model=self.model_deployment_name,
                     instructions=enhanced_instructions,
@@ -213,19 +213,13 @@ class FoundryAgentTemplate(AzureAgentBase):
 
             self._azure_server_agent_id = azure_agent.id
             self._azure_server_agent_version = azure_agent.version
+            print(f"[AGENT CREATE] ✅ Created agent: name={azure_agent.name}, id={azure_agent.id}, version={azure_agent.version}", flush=True)
             self.logger.info(
-                "Created Azure AI Search agent via create_version (name=%s, id=%s, version=%s, connection=%s, index=%s, query_type=%s, top_k=%s).",
+                "Created Azure AI Search agent via create_version (name=%s, id=%s, version=%s).",
                 azure_agent.name,
                 azure_agent.id,
                 azure_agent.version,
-                connection_name,
-                index_name,
-                query_type,
-                top_k,
             )
-            print(f"[DEBUG] Created agent via create_version: name={azure_agent.name}, id={azure_agent.id}, version={azure_agent.version}")
-            print(f"[DEBUG] Agent definition: {azure_agent.definition}")
-            print(f"[DEBUG] Agent instructions from definition: {getattr(azure_agent.definition, 'instructions', 'N/A')}")
 
             # Wrap in AzureAIClient using agent_name and agent_version (NOT agent_id)
             # AzureAIClient constructor: agent_name, agent_version, project_endpoint, credential
