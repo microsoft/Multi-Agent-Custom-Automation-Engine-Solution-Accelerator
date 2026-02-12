@@ -1,4 +1,5 @@
 import logging
+import secrets
 from typing import Awaitable, Callable, Dict
 
 from fastapi import Request
@@ -74,7 +75,9 @@ class HealthCheckMiddleware(BaseHTTPMiddleware):
 
             if (
                 self.password is not None
-                and request.query_params.get("code") == self.password
+                and secrets.compare_digest(
+                    request.query_params.get("code", ""), self.password
+                )
             ):
                 return JSONResponse(jsonable_encoder(status), status_code=status_code)
 
