@@ -227,6 +227,7 @@ class FoundryAgentTemplate(AzureAgentBase):
                 project_endpoint=self.project_endpoint,
                 agent_name=azure_agent.name,
                 agent_version=azure_agent.version,  # Use the specific version we just created
+                model_deployment_name=self.model_deployment_name,
                 credential=self.creds,
             )
             return chat_client
@@ -282,6 +283,7 @@ class FoundryAgentTemplate(AzureAgentBase):
                     tool_choice="required",  # Force usage
                     temperature=temp,
                     model_id=self.model_deployment_name,
+                    default_options={"store": False},  # Client-managed conversation to avoid stale tool call IDs across rounds
                 )
             else:
                 # use MCP path
@@ -297,6 +299,7 @@ class FoundryAgentTemplate(AzureAgentBase):
                     tool_choice="auto" if tools else "none",
                     temperature=temp,
                     model_id=self.model_deployment_name,
+                    default_options={"store": False},  # Client-managed conversation to avoid stale tool call IDs across rounds
                 )
             self.logger.info("Initialized ChatAgent '%s'", self.agent_name)
 

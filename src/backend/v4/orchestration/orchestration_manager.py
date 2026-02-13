@@ -146,6 +146,7 @@ class OrchestrationManager:
                 name="MagenticManager",
                 description="Orchestrator that coordinates the team to complete complex tasks efficiently.",
                 instructions="You coordinate a team to complete complex tasks efficiently.",
+                default_options={"store": False},  # Client-managed conversation to avoid stale tool call IDs across rounds
             )
 
             cls.logger.info(
