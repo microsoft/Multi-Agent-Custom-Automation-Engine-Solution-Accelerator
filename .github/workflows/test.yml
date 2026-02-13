@@ -25,6 +25,7 @@ on:
       - main
       - demo-v4
       - dev-v4
+    paths:
       - 'src/backend/**/*.py'
       - 'src/tests/**/*.py'
       - 'src/mcp_server/**/*.py'
