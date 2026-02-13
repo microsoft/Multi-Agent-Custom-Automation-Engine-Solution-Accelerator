@@ -149,7 +149,10 @@ class MCPEnabledBase:
         raise NotImplementedError
 
     def get_chat_client(self, chat_client) -> AzureAIClient:
-        """Return the underlying ChatClientProtocol (AzureAIClient)."""
+        """Return the underlying ChatClientProtocol (AzureAIClient).
+        
+        Uses agent_name with use_latest_version=True to get the latest agent version
+        """
         if chat_client:
             return chat_client
         if (
@@ -159,11 +162,14 @@ class MCPEnabledBase:
             return self._agent.chat_client  # type: ignore
         chat_client = AzureAIClient(
             project_endpoint=self.project_endpoint,
+            agent_name=self.agent_name,
             model_deployment_name=self.model_deployment_name,
             credential=self.creds,
+            use_latest_version=True,
         )
         self.logger.info(
-            "Created new AzureAIClient for get chat client",
+            "Created new AzureAIClient (agent_name=%s, use_latest_version=True)",
+            self.agent_name,
         )
         return chat_client
 
