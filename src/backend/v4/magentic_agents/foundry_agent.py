@@ -222,13 +222,11 @@ class FoundryAgentTemplate(AzureAgentBase):
             )
 
             # Wrap in AzureAIClient using agent_name and agent_version (NOT agent_id)
-            # Include model_deployment_name to ensure SDK has model info for streaming
-            deployment_name = self.model_deployment_name or config.AZURE_OPENAI_DEPLOYMENT_NAME
+            # AzureAIClient constructor: agent_name, agent_version, project_endpoint, credential
             chat_client = AzureAIClient(
                 project_endpoint=self.project_endpoint,
                 agent_name=azure_agent.name,
                 agent_version=azure_agent.version,  # Use the specific version we just created
-                model_deployment_name=deployment_name,
                 credential=self.creds,
             )
             return chat_client

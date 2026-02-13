@@ -220,26 +220,6 @@ class OrchestrationConfig:
         self.clarifications.pop(request_id, None)
         self._clarification_events.pop(request_id, None)
 
-    def cleanup_user_state(self, user_id: str) -> None:
-        """Clean up all state for a user to prevent cross-scenario leakage.
-        
-        This removes any pending approvals, clarifications, and plans
-        associated with the user to ensure fresh state for new runs.
-        """
-        # Clean up any plans associated with this user
-        plans_to_remove = [
-            plan_id for plan_id, plan in self.plans.items()
-            if getattr(plan, 'user_id', None) == user_id
-        ]
-        for plan_id in plans_to_remove:
-            self.plans.pop(plan_id, None)
-            self.cleanup_approval(plan_id)
-        
-        # Clean up any pending approvals/clarifications for this user
-        # Note: We can't easily map approvals to users without plan context,
-        # so this primarily clears the plans and their associated approvals
-        logger.debug("Cleaned up state for user %s (removed %d plans)", user_id, len(plans_to_remove))
-
 
 class ConnectionConfig:
     """Connection manager for WebSocket connections."""
