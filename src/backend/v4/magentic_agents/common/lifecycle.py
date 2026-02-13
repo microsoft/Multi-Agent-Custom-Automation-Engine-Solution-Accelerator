@@ -14,6 +14,7 @@ from agent_framework import (
 from agent_framework_azure_ai import AzureAIClient
 from azure.ai.agents.aio import AgentsClient
 from azure.identity.aio import DefaultAzureCredential
+from common.config.app_config import config
 from common.database.database_base import DatabaseBase
 from common.models.messages_af import CurrentTeamAgent, TeamConfiguration
 from common.utils.utils_agents import (
@@ -160,10 +161,12 @@ class MCPEnabledBase:
             and self._agent.chat_client
         ):
             return self._agent.chat_client  # type: ignore
+        # Use model_deployment_name with fallback to default model if empty
+        deployment_name = self.model_deployment_name or config.AZURE_OPENAI_DEPLOYMENT_NAME
         chat_client = AzureAIClient(
             project_endpoint=self.project_endpoint,
             agent_name=self.agent_name,
-            model_deployment_name=self.model_deployment_name,
+            model_deployment_name=deployment_name,
             credential=self.creds,
             use_latest_version=True,
         )
@@ -277,20 +280,26 @@ class MCPEnabledBase:
 
             # Create client with resolved ID
             if self.agent_name == "RAIAgent" and self.project_client:
+                # Use RAI deployment name for RAI agents
+                rai_deployment = config.AZURE_OPENAI_RAI_DEPLOYMENT_NAME
                 chat_client = AzureAIClient(
                     project_endpoint=self.project_endpoint,
                     agent_id=resolved,
+                    model_deployment_name=rai_deployment,
                     credential=self.creds,
                 )
                 self.logger.info(
-                    "RAI.AgentReuseSuccess: Created AzureAIClient (id=%s)",
+                    "RAI.AgentReuseSuccess: Created AzureAIClient (id=%s, model=%s)",
                     resolved,
+                    rai_deployment,
                 )
             else:
+                # Use model_deployment_name with fallback to default model if empty
+                deployment_name = self.model_deployment_name or config.AZURE_OPENAI_DEPLOYMENT_NAME
                 chat_client = AzureAIClient(
                     project_endpoint=self.project_endpoint,
                     agent_id=resolved,
-                    model_deployment_name=self.model_deployment_name,
+                    model_deployment_name=deployment_name,
                     credential=self.creds,
                 )
                 self.logger.info(

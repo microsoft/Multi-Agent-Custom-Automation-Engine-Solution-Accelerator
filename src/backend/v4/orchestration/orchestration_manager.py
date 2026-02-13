@@ -133,9 +133,11 @@ class OrchestrationManager:
 
         try:
             # Create the chat client (AzureAIClient)
+            # Use team deployment_name with fallback to default model if empty
+            deployment_name = team_config.deployment_name or config.AZURE_OPENAI_DEPLOYMENT_NAME
             chat_client = AzureAIClient(
                 project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
-                model_deployment_name=team_config.deployment_name,
+                model_deployment_name=deployment_name,
                 agent_name=agent_name,
                 credential=credential,
             )
@@ -150,7 +152,7 @@ class OrchestrationManager:
 
             cls.logger.info(
                 "Created AzureAIClient and manager ChatAgent for orchestration with model '%s' at endpoint '%s'",
-                team_config.deployment_name,
+                deployment_name,
                 config.AZURE_AI_PROJECT_ENDPOINT,
             )
         except Exception as e:
@@ -197,19 +199,17 @@ class OrchestrationManager:
         # Assemble workflow with callback
         storage = InMemoryCheckpointStorage()
         
-        # New SDK: participants() accepts a Sequence (list) of agents
-        # The orchestrator uses agent.name to identify them
+        # New API: .participants() accepts a list of agents
         participant_list = list(participants.values())
-        cls.logger.info("Participants for workflow: %s", list(participants.keys()))
-        print(f"[DEBUG] Participants for workflow: {list(participants.keys())}", flush=True)
         
         builder = (
             MagenticBuilder()
-            .participants(participant_list)  # New SDK: pass as list
+            .participants(participant_list)
             .with_manager(
                 manager=manager,  # Pass manager instance (extends StandardMagenticManager)
                 max_round_count=orchestration_config.max_rounds,
-                max_stall_count=0,  # CRITICAL: Prevent re-calling agents when stalled (default is 3!)
+                max_stall_count=3,
+                max_reset_count=2,
             )
             .with_checkpointing(storage)
         )
@@ -239,16 +239,14 @@ class OrchestrationManager:
         Return an existing workflow for the user or create a new one if:
           - None exists
           - Team switched flag is True
-          - force_rebuild is True (for new tasks after workflow completion)
+          - force_rebuild is True (for new tasks that need fresh workflow)
         """
         current = orchestration_config.get_current_orchestration(user_id)
-        needs_rebuild = current is None or team_switched or force_rebuild
-        
-        if needs_rebuild:
+        if current is None or team_switched or force_rebuild:
             if current is not None and (team_switched or force_rebuild):
-                reason = "team switched" if team_switched else "force rebuild for new task"
+                reason = "team switched" if team_switched else "force rebuild"
                 cls.logger.info(
-                    "Rebuilding orchestration for user '%s' (reason: %s)", user_id, reason
+                    "Closing previous agents for user '%s' (reason: %s)", user_id, reason
                 )
                 # Close prior agents (same logic as old version)
                 for agent in getattr(current, "_participants", {}).values():
@@ -305,6 +303,11 @@ class OrchestrationManager:
         Execute the Magentic workflow for the provided user and task description.
         """
         job_id = str(uuid.uuid4())
+        
+        # Clean up any accumulated state from previous runs (cancelled plans, etc.)
+        # This prevents cross-scenario leakage
+        orchestration_config.cleanup_user_state(user_id)
+        
         orchestration_config.set_approval_pending(job_id)
         self.logger.info(
             "Starting orchestration job '%s' for user '%s'", job_id, user_id
@@ -317,6 +320,16 @@ class OrchestrationManager:
         if workflow is None:
             print(f"[ERROR] Orchestration not initialized for user '{user_id}'")
             raise ValueError("Orchestration not initialized for user.")
+        
+        # Reset manager's plan state to prevent leakage from cancelled plans
+        manager = getattr(workflow, "_manager", None)
+        if manager and hasattr(manager, "magentic_plan"):
+            manager.magentic_plan = None
+            self.logger.debug("Reset manager's magentic_plan for fresh run")
+        if manager and hasattr(manager, "task_ledger"):
+            manager.task_ledger = None
+            self.logger.debug("Reset manager's task_ledger for fresh run")
+        
         # Fresh thread per participant to avoid cross-run state bleed
         executors = getattr(workflow, "executors", {})
         self.logger.debug("Executor keys at run start: %s", list(executors.keys()))
@@ -383,16 +396,12 @@ class OrchestrationManager:
         task_text = getattr(input_task, "description", str(input_task))
         self.logger.debug("Task: %s", task_text)
 
-        # Track how many times each agent is called (for debugging duplicate calls)
-        agent_call_counts: dict = {}
-
         try:
             # Execute workflow using run_stream with task as positional parameter
             # The execution settings are configured in the manager/client
             final_output: str | None = None
 
             self.logger.info("Starting workflow execution...")
-            print(f"[ORCHESTRATOR] 🚀 Starting workflow with max_rounds={orchestration_config.max_rounds}", flush=True)
             last_message_id: str | None = None
             async for event in workflow.run_stream(task_text):
                 try:
@@ -437,20 +446,11 @@ class OrchestrationManager:
 
                     # Handle group chat request sent
                     elif isinstance(event, GroupChatRequestSentEvent):
-                        agent_name = event.participant_name
-                        agent_call_counts[agent_name] = agent_call_counts.get(agent_name, 0) + 1
-                        call_num = agent_call_counts[agent_name]
-                        
                         self.logger.info(
-                            "[REQUEST SENT (round %d)] to agent: %s (call #%d)",
+                            "[REQUEST SENT (round %d)] to agent: %s",
                             event.round_index,
-                            agent_name,
-                            call_num
+                            event.participant_name
                         )
-                        print(f"[ORCHESTRATOR] 📤 REQUEST SENT round={event.round_index} to agent={agent_name} (call #{call_num})", flush=True)
-                        
-                        if call_num > 1:
-                            print(f"[ORCHESTRATOR] ⚠️ WARNING: Agent '{agent_name}' called {call_num} times!", flush=True)
 
                     # Handle group chat response received - THIS IS WHERE AGENT RESPONSES COME
                     elif isinstance(event, GroupChatResponseReceivedEvent):
@@ -510,13 +510,6 @@ class OrchestrationManager:
 
             # Extract final result
             final_text = final_output if final_output else ""
-
-            # Log agent call summary
-            print(f"\n[ORCHESTRATOR] 📊 AGENT CALL SUMMARY:", flush=True)
-            for agent_name, count in agent_call_counts.items():
-                status = "✅" if count == 1 else "⚠️ DUPLICATE"
-                print(f"  {status} {agent_name}: called {count} time(s)", flush=True)
-            self.logger.info("Agent call counts: %s", agent_call_counts)
 
             # Log results
             self.logger.info("\nAgent responses:")
