@@ -1,7 +1,16 @@
-# Multi-Agent: Custom Automation Engine – Solution Accelerator : Responsible AI FAQ 
+# Multi-Agent-Custom-Automation-Engine – Solution Accelerator : Responsible AI FAQ 
+
+## Important Notice
+
+This accelerator is **intended solely for accelerating proofs of concept (POCs)**. 
+It is **not designed or recommended for direct production deployment**.
+ 
+### Best Practices
+- **Do not use this accelerator in production environments without thorough review and adaptation.**
+- **Ensure all implementation decisions consider security, scalability, and compliance requirements for production.
 
 ## What is the Multi Agent: Custom Automation Engine – Solution Accelerator? 
-Multi Agent: Custom Automation Engine – Solution Accelerator is an open-source GitHub Repository that enables users to solve complex tasks using multiple agents. The accelerator is designed to be generic across business tasks.  The user enters a task and a planning LLM formulates a plan to complete that task.  The system then dynamically generates agents which can complete the task.  The system also allows the user to create actions that agents can take (for example sending emails or scheduling orientation sessions for new employees).  These actions are taken into account by the planner and dynamically created agents may be empowered to take these actions.
+Multi Agent: Custom Automation Engine – Solution Accelerator is an open-source GitHub Repository that enables users to solve complex tasks using multiple agents. The accelerator is designed to be generic across business tasks. The user enters a task and a planning LLM formulates a plan to complete that task. The system then dynamically generates agents which can complete the task. The system also allows the user to create actions that agents can take (for example sending emails or scheduling orientation sessions for new employees, drafting a press release, customer retail remediation, reviewing contracts, reviewing proposals). These actions are taken into account by the planner and dynamically created agents may be empowered to take these actions.
 
 ## What can the Multi Agent: Custom Automation Engine – Solution Accelerator do? 
 The solution accelerator is designed to replace and enhance enterprise workflows and processes with intelligent automation. Agents can specialize in various functions and work together to achieve an objective as specified by the user. The accelerator will integrate seamlessly with existing systems and is designed to scale according to the needs of the customer. The system allows users to review, reorder and approve steps generated in a plan, ensuring human oversight. The system uses function calling with LLMs to perform actions, users can approve or modify these actions.
@@ -14,7 +23,6 @@ The evaluation process includes human review of the outputs, and tuned LLM promp
  
 ## What are the limitations of Multi Agent: Custom Automation Engine – Solution Accelerator? How can users minimize the impact Multi Agent: Custom Automation Engine – Solution Accelerator’s limitations when using the system? 
 The system allows users to review, reorder and approve steps generated in a plan, ensuring human oversight. The system uses function calling with LLMs to perform actions, users can approve or modify these actions. Users of the accelerator should review the system prompts provided and update as per their organizational guidance. Users should run their own evaluation flow either using the guidance provided in the GitHub repository or their choice of evaluation methods. 
-Note that the Multi Agent: Custom Automation Engine – Solution Accelerator relies on the AutoGen Multi Agent framework.  AutoGen has published their own [list of limitations and impacts](https://github.com/microsoft/autogen/blob/gaia_multiagent_v01_march_1st/TRANSPARENCY_FAQS.md#what-are-the-limitations-of-autogen-how-can-users-minimize-the-impact-of-autogens-limitations-when-using-the-system).
 
 ## What operational factors and settings allow for effective and responsible use of Multi Agent: Custom Automation Engine – Solution Accelerator? 
 Effective and responsible use of the Multi Agent: Custom Automation Engine – Solution Accelerator depends on several operational factors and settings. The system is designed to perform reliably and safely across a range of business tasks that it was evaluated for. Users can customize certain settings, such as the planning language model used by the system, the types of tasks that agents are assigned, and the specific actions that agents can take (e.g., sending emails or scheduling orientation sessions for new employees). However, it's important to note that these choices may impact the system's behavior in real-world scenarios.

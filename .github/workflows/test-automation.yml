@@ -1,0 +1,189 @@
+name: Test Automation MACAE
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      MACAE_WEB_URL:
+        required: false
+        type: string
+        description: "Web URL for MACAE (overrides environment variable)"
+      MACAE_URL_API:
+        required: false
+        type: string
+        description: "API URL for MACAE (overrides environment variable)"
+      MACAE_RG:
+        required: false
+        type: string
+      MACAE_CONTAINER_APP:
+        required: false
+        type: string
+    secrets:
+      EMAILNOTIFICATION_LOGICAPP_URL_TA:
+        required: false
+        description: "Logic App URL for email notifications"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      MACAE_WEB_URL: ${{ inputs.MACAE_WEB_URL }}
+      MACAE_URL_API: ${{ inputs.MACAE_URL_API }}
+      MACAE_RG: ${{ inputs.MACAE_RG }}
+      MACAE_CONTAINER_APP: ${{ inputs.MACAE_CONTAINER_APP }}
+      accelerator_name: "MACAE v4"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.13"
+
+      - name: Azure CLI Login
+        uses: azure/login@v2
+        with:
+          creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
+
+      # - name: Start Container App
+      #   uses: azure/cli@v2
+      #   with:
+      #     azcliversion: "latest"
+      #     inlineScript: |
+      #       az rest -m post -u "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/${{ env.MACAE_RG }}/providers/Microsoft.App/containerApps/${{ env.MACAE_CONTAINER_APP }}/start?api-version=2025-01-01"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r tests/e2e-test/requirements.txt
+
+      - name: Ensure browsers are installed
+        run: python -m playwright install --with-deps chromium
+
+      - name: Validate Inputs
+        run: |
+          if [ -z "${{ env.MACAE_WEB_URL }}" ]; then
+            echo "ERROR: No Web URL provided for testing"
+            exit 1
+          elif [ -z "${{ env.MACAE_URL_API  }}" ]; then
+            echo "ERROR: No API URL provided for testing"
+            exit 1
+          elif [ -z "${{ env.MACAE_RG }}" ]; then
+            echo "ERROR: Resource group name missing"
+            exit 1
+          elif [ -z "${{ env.MACAE_CONTAINER_APP }}" ]; then
+            echo "ERROR: Container app name missing"
+            exit 1
+          fi
+
+      - name: Wait for Application to be Ready
+        run: |
+          echo "Waiting for application to be ready at ${{ env.MACAE_WEB_URL }}"
+          max_attempts=10
+          attempt=1
+          while [ $attempt -le $max_attempts ]; do
+            echo "Attempt $attempt: Checking if application is ready..."
+            if curl -f -s "${{ env.MACAE_WEB_URL }}" > /dev/null; then
+              echo "Application is ready!"
+              break
+            fi
+            if [ $attempt -eq $max_attempts ]; then
+              echo "Application is not ready after $max_attempts attempts"
+              exit 1
+            fi
+            echo "Application not ready, waiting 30 seconds..."
+            sleep 30
+            attempt=$((attempt + 1))
+          done
+
+      - name: Run tests (1)
+        id: test1
+        run: |
+          xvfb-run pytest --headed --html=report/report.html --self-contained-html
+        working-directory: tests/e2e-test
+        continue-on-error: true
+
+      - name: Sleep for 30 seconds
+        if: steps.test1.outcome == 'failure'
+        run: sleep 30s
+        shell: bash
+
+      - name: Run tests (2)
+        id: test2
+        if: steps.test1.outcome == 'failure'
+        run: |
+          xvfb-run pytest --headed --html=report/report.html --self-contained-html
+        working-directory: tests/e2e-test
+        continue-on-error: true
+
+      - name: Sleep for 60 seconds
+        if: steps.test2.outcome == 'failure'
+        run: sleep 60s
+        shell: bash
+
+      - name: Run tests (3)
+        id: test3
+        if: steps.test2.outcome == 'failure'
+        run: |
+          xvfb-run pytest --headed --html=report/report.html --self-contained-html
+        working-directory: tests/e2e-test
+
+      - name: Upload test report
+        id: upload_report
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: test-report-${{ github.run_id }}
+          path: tests/e2e-test/report/*
+
+      - name: Determine Test Result
+        id: test_result
+        run: |
+          if [[ "${{ steps.test1.outcome }}" == "success" || "${{ steps.test2.outcome }}" == "success" || "${{ steps.test3.outcome }}" == "success" ]]; then
+            echo "IS_SUCCESS=true" >> $GITHUB_OUTPUT
+            echo "✅ Tests passed!"
+          else
+            echo "IS_SUCCESS=false" >> $GITHUB_OUTPUT
+            echo "❌ All test attempts failed"
+            exit 1
+          fi
+
+      - name: Send Notification
+        if: always()
+        run: |
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          REPORT_URL=${{ steps.upload_report.outputs.artifact-url }}
+          IS_SUCCESS=${{ steps.test_result.outputs.IS_SUCCESS }}
+
+          if [ "$IS_SUCCESS" = "true" ]; then
+                  EMAIL_BODY=$(cat <<EOF
+                  {
+                    "body": "<p>Dear Team,</p><p>We would like to inform you that the ${{ env.accelerator_name }} Test Automation process has completed successfully.</p><p><strong>Run URL:</strong> <a href=\\"${RUN_URL}\\">${RUN_URL}</a><br></p><p><strong>Test Report:</strong> <a href=\\"${REPORT_URL}\\">${REPORT_URL}</a></p><p>Best regards,<br>Your Automation Team</p>",
+                    "subject": "${{ env.accelerator_name }} Test Automation - Success"
+                  }
+          EOF
+            )
+          else
+                  EMAIL_BODY=$(cat <<EOF
+                  {
+                    "body": "<p>Dear Team,</p><p>We would like to inform you that the ${{ env.accelerator_name }} Test Automation process has encountered an issue and has failed to complete successfully.</p><p><strong>Run URL:</strong> <a href=\\"${RUN_URL}\\">${RUN_URL}</a><br></p><p><strong>Test Report:</strong> <a href=\\"${REPORT_URL}\\">${REPORT_URL}</a></p><p>Please investigate the matter at your earliest convenience.</p><p>Best regards,<br>Your Automation Team</p>",
+                    "subject": "${{ env.accelerator_name }} Test Automation - Failure"
+                  }
+          EOF
+            )
+          fi
+
+          curl -X POST "${{ secrets.EMAILNOTIFICATION_LOGICAPP_URL_TA }}" \
+            -H "Content-Type: application/json" \
+            -d "$EMAIL_BODY" || echo "Failed to send notification"
+
+      # - name: Stop Container App
+      #   if: always()
+      #   uses: azure/cli@v2
+      #   with:
+      #     azcliversion: "latest"
+      #     inlineScript: |
+      #       az rest -m post -u "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/${{ env.MACAE_RG }}/providers/Microsoft.App/containerApps/${{ env.MACAE_CONTAINER_APP }}/stop?api-version=2025-01-01"
+      #       az logout
