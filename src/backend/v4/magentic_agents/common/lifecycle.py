@@ -10,8 +10,8 @@ from agent_framework import (
     MCPStreamableHTTPTool,
 )
 
-# from agent_framework.azure import AzureAIAgentClient
-from agent_framework_azure_ai import AzureAIAgentClient
+# from agent_framework.azure import AzureAIClient
+from agent_framework_azure_ai import AzureAIClient
 from azure.ai.agents.aio import AgentsClient
 from azure.identity.aio import DefaultAzureCredential
 from common.database.database_base import DatabaseBase
@@ -51,7 +51,7 @@ class MCPEnabledBase:
         self._agent: ChatAgent | None = None
         self.team_service: TeamService | None = team_service
         self.team_config: TeamConfiguration | None = team_config
-        self.client: Optional[AzureAIAgentClient] = None
+        self.client: Optional[AgentsClient] = None
         self.project_endpoint = project_endpoint
         self.creds: Optional[DefaultAzureCredential] = None
         self.memory_store: Optional[DatabaseBase] = memory_store
@@ -105,7 +105,7 @@ class MCPEnabledBase:
             # Attempt to close the underlying agent/client if it exposes close()
             if self._agent and hasattr(self._agent, "close"):
                 try:
-                    await self._agent.close()  # AzureAIAgentClient has async close
+                    await self._agent.close()  # AzureAIClient has async close
                 except Exception as exc:
                     # Best-effort close; log failure but continue teardown
                     self.logger.warning(
@@ -148,24 +148,28 @@ class MCPEnabledBase:
         """Subclasses must build self._agent here."""
         raise NotImplementedError
 
-    def get_chat_client(self, chat_client) -> AzureAIAgentClient:
-        """Return the underlying ChatClientProtocol (AzureAIAgentClient)."""
+    def get_chat_client(self, chat_client) -> AzureAIClient:
+        """Return the underlying ChatClientProtocol (AzureAIClient).
+        
+        Uses agent_name with use_latest_version=True to get the latest agent version
+        """
         if chat_client:
             return chat_client
         if (
             self._agent
             and self._agent.chat_client
-            and self._agent.chat_client.agent_id is not None
         ):
             return self._agent.chat_client  # type: ignore
-        chat_client = AzureAIAgentClient(
+        chat_client = AzureAIClient(
             project_endpoint=self.project_endpoint,
+            agent_name=self.agent_name,
             model_deployment_name=self.model_deployment_name,
-            async_credential=self.creds,
+            credential=self.creds,
+            use_latest_version=True,
         )
         self.logger.info(
-            "Created new AzureAIAgentClient for  get chat client",
-            extra={"agent_id": chat_client.agent_id},
+            "Created new AzureAIClient (agent_name=%s, use_latest_version=True)",
+            self.agent_name,
         )
         return chat_client
 
@@ -219,21 +223,36 @@ class MCPEnabledBase:
         return None
 
     def get_agent_id(self, chat_client) -> str:
-        """Return the underlying agent ID."""
-        if chat_client and chat_client.agent_id is not None:
-            return chat_client.agent_id
-        if (
-            self._agent
-            and self._agent.chat_client
-            and self._agent.chat_client.agent_id is not None
-        ):
-            return self._agent.chat_client.agent_id  # type: ignore
+        """Return the underlying agent ID or generate a new one.
+        
+        Note: The new AzureAIClient doesn't expose agent_id directly.
+        We generate a new ID if not available.
+        """
+        # Generate a new agent ID since AzureAIClient doesn't expose agent_id
         id = generate_assistant_id()
         self.logger.info("Generated new agent ID: %s", id)
         return id
 
-    async def get_database_team_agent(self) -> Optional[AzureAIAgentClient]:
-        """Retrieve existing team agent from database, if any."""
+    async def get_database_team_agent(self) -> Optional[AzureAIClient]:
+        """Retrieve existing team agent from database, if any.
+        
+        NOTE: Agent reuse is currently DISABLED to ensure fresh agents are created
+        with the correct Azure AI Search configuration.
+        This prevents issues with stale agents that may not have the search tool configured.
+        
+        To re-enable agent reuse, set ENABLE_AGENT_REUSE=true in environment.
+        """
+        import os
+        
+        # DISABLED: Always create fresh agents to ensure Azure AI Search tool is configured
+        enable_reuse = os.environ.get("ENABLE_AGENT_REUSE", "false").lower() == "true"
+        if not enable_reuse:
+            self.logger.info(
+                "Agent reuse DISABLED: Creating fresh agent with search tools (agent_name=%s)",
+                self.agent_name,
+            )
+            return None
+        
         chat_client = None
         try:
             agent_id = await get_database_team_agent_id(
@@ -256,26 +275,26 @@ class MCPEnabledBase:
                 )
                 return None
 
-            # Create client with resolved ID, preferring project_client for RAI agents
+            # Create client with resolved ID
             if self.agent_name == "RAIAgent" and self.project_client:
-                chat_client = AzureAIAgentClient(
-                    project_client=self.project_client,
+                chat_client = AzureAIClient(
+                    project_endpoint=self.project_endpoint,
                     agent_id=resolved,
-                    async_credential=self.creds,
+                    credential=self.creds,
                 )
                 self.logger.info(
-                    "RAI.AgentReuseSuccess: Created AzureAIAgentClient via Projects SDK (id=%s)",
+                    "RAI.AgentReuseSuccess: Created AzureAIClient (id=%s)",
                     resolved,
                 )
             else:
-                chat_client = AzureAIAgentClient(
+                chat_client = AzureAIClient(
                     project_endpoint=self.project_endpoint,
                     agent_id=resolved,
                     model_deployment_name=self.model_deployment_name,
-                    async_credential=self.creds,
+                    credential=self.creds,
                 )
                 self.logger.info(
-                    "Created AzureAIAgentClient via endpoint (id=%s)", resolved
+                    "Created AzureAIClient via endpoint (id=%s)", resolved
                 )
 
         except Exception as ex:
@@ -289,17 +308,20 @@ class MCPEnabledBase:
     async def save_database_team_agent(self) -> None:
         """Save current team agent to database (only if truly new or changed)."""
         try:
-            if self._agent.id is None:
-                self.logger.error("Cannot save database team agent: agent_id is None")
+            if self._agent is None or self._agent.id is None:
+                self.logger.error("Cannot save database team agent: agent or agent_id is None")
                 return
+
+            # Use the agent ID from ChatAgent (set during creation)
+            agent_id = self._agent.id
 
             # Check if stored ID matches current ID
             stored_id = await get_database_team_agent_id(
                 self.memory_store, self.team_config, self.agent_name
             )
-            if stored_id == self._agent.chat_client.agent_id:
+            if stored_id == agent_id:
                 self.logger.info(
-                    "RAI reuse: id unchanged (id=%s); skip save.", self._agent.id
+                    "RAI reuse: id unchanged (id=%s); skip save.", agent_id
                 )
                 return
 
@@ -307,7 +329,7 @@ class MCPEnabledBase:
                 team_id=self.team_config.team_id,
                 team_name=self.team_config.name,
                 agent_name=self.agent_name,
-                agent_foundry_id=self._agent.chat_client.agent_id,
+                agent_foundry_id=agent_id,
                 agent_description=self.agent_description,
                 agent_instructions=self.agent_instructions,
             )
@@ -315,7 +337,7 @@ class MCPEnabledBase:
             self.logger.info(
                 "Saved team agent to database (agent_name=%s, id=%s)",
                 self.agent_name,
-                self._agent.id,
+                agent_id,
             )
 
         except Exception as ex:
@@ -339,10 +361,10 @@ class MCPEnabledBase:
 
 class AzureAgentBase(MCPEnabledBase):
     """
-    Extends MCPEnabledBase with Azure credential + AzureAIAgentClient contexts.
+    Extends MCPEnabledBase with Azure credential + AzureAIClient contexts.
     Subclasses:
       - create or attach an Azure AI Agent definition
-      - instantiate an AzureAIAgentClient and assign to self._agent
+      - instantiate an AzureAIClient and assign to self._agent
       - optionally register themselves via agent_registry
     """
 

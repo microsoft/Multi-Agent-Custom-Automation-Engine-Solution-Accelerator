@@ -303,6 +303,17 @@ async def process_request(
         )
         await memory_store.add_plan(plan)
 
+        # Ensure orchestration is initialized before running
+        # Force rebuild for each new task since Magentic workflows cannot be reused after completion
+        team_service = TeamService(memory_store)
+        await OrchestrationManager.get_current_or_new_orchestration(
+            user_id=user_id,
+            team_config=team,
+            team_switched=False,
+            team_service=team_service,
+            force_rebuild=True,  # Always rebuild workflow for new tasks
+        )
+
         track_event_if_configured(
             "PlanCreated",
             {

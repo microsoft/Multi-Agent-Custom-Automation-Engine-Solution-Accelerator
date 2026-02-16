@@ -16,13 +16,12 @@ import uuid
 from typing import Any, AsyncIterable
 
 from agent_framework import (
-    AgentRunResponse,
-    AgentRunResponseUpdate,
+    AgentResponse,
+    AgentResponseUpdate,
     BaseAgent,
     ChatMessage,
     Role,
-    TextContent,
-    UsageContent,
+    Content,
     UsageDetails,
     AgentThread,
 )
@@ -88,7 +87,7 @@ class ProxyAgent(BaseAgent):
         *,
         thread: AgentThread | None = None,
         **kwargs: Any,
-    ) -> AgentRunResponse:
+    ) -> AgentResponse:
         """
         Get complete clarification response (non-streaming).
 
@@ -98,7 +97,7 @@ class ProxyAgent(BaseAgent):
             kwargs: Additional keyword arguments
 
         Returns:
-            AgentRunResponse with the clarification
+            AgentResponse with the clarification
         """
         # Collect all streaming updates
         response_messages: list[ChatMessage] = []
@@ -113,7 +112,7 @@ class ProxyAgent(BaseAgent):
                     )
                 )
 
-        return AgentRunResponse(
+        return AgentResponse(
             messages=response_messages,
             response_id=response_id,
         )
@@ -124,7 +123,7 @@ class ProxyAgent(BaseAgent):
         *,
         thread: AgentThread | None = None,
         **kwargs: Any,
-    ) -> AsyncIterable[AgentRunResponseUpdate]:
+    ) -> AsyncIterable[AgentResponseUpdate]:
         """
         Stream clarification process with human interaction.
 
@@ -143,7 +142,7 @@ class ProxyAgent(BaseAgent):
         messages: str | ChatMessage | list[str] | list[ChatMessage] | None,
         thread: AgentThread | None,
         **kwargs: Any,
-    ) -> AsyncIterable[AgentRunResponseUpdate]:
+    ) -> AsyncIterable[AgentResponseUpdate]:
         """
         Internal streaming implementation.
 
@@ -205,9 +204,10 @@ class ProxyAgent(BaseAgent):
         message_id = str(uuid.uuid4())
 
         # Yield final assistant text update with explicit text content
-        text_update = AgentRunResponseUpdate(
+        # New API: use Content.from_text() or pass text directly to AgentResponseUpdate
+        text_update = AgentResponseUpdate(
             role=Role.ASSISTANT,
-            contents=[TextContent(text=synthetic_reply)],
+            text=synthetic_reply,  # New API accepts text directly
             author_name=self.name,
             response_id=response_id,
             message_id=message_id,
@@ -218,10 +218,10 @@ class ProxyAgent(BaseAgent):
 
         # Yield synthetic usage update for consistency
         # Use same message_id to indicate this is part of the same message
-        usage_update = AgentRunResponseUpdate(
+        usage_update = AgentResponseUpdate(
             role=Role.ASSISTANT,
             contents=[
-                UsageContent(
+                Content.from_usage(
                     UsageDetails(
                         input_token_count=len(message_text.split()),
                         output_token_count=len(synthetic_reply.split()),
