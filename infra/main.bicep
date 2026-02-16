@@ -1670,6 +1670,76 @@ module searchService 'br/public:avm/res/search/search-service:0.11.1' = {
     }
     disableLocalAuth: false
     hostingMode: 'default'
+
+    // Enabled the Public access because other services are not able to connect with search search AVM module when public access is disabled
+
+    // publicNetworkAccess: enablePrivateNetworking  ? 'Disabled' : 'Enabled'
+    publicNetworkAccess: 'Enabled'
+    networkRuleSet: {
+      bypass: 'AzureServices'
+    }
+    partitionCount: 1
+    replicaCount: 1
+    sku: enableScalability ? 'standard' : 'basic'
+    tags: tags
+    roleAssignments: [
+      {
+        principalId: userAssignedIdentity.outputs.principalId
+        roleDefinitionIdOrName: 'Search Index Data Contributor'
+        principalType: 'ServicePrincipal'
+      }
+      {
+        principalId: deployingUserPrincipalId
+        roleDefinitionIdOrName: 'Search Index Data Contributor'
+        principalType: deployerPrincipalType
+      }
+      {
+        principalId: aiFoundryAiProjectPrincipalId
+        roleDefinitionIdOrName: 'Search Index Data Reader'
+        principalType: 'ServicePrincipal'
+      }
+      {
+        principalId: aiFoundryAiProjectPrincipalId
+        roleDefinitionIdOrName: 'Search Service Contributor'
+        principalType: 'ServicePrincipal'
+      }
+    ]
+
+    //Removing the Private endpoints as we are facing the issue with connecting to search service while comminicating with agents
+
+    privateEndpoints: []
+    // privateEndpoints: enablePrivateNetworking 
+    //   ? [
+    //       {
+    //         name: 'pep-search-${solutionSuffix}'
+    //         customNetworkInterfaceName: 'nic-search-${solutionSuffix}'
+    //         privateDnsZoneGroup: {
+    //           privateDnsZoneGroupConfigs: [
+    //             {
+    //               privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.search]!.outputs.resourceId
+    //             }
+    //           ]
+    //         }
+    //         subnetResourceId: virtualNetwork!.outputs.subnetResourceIds[0]
+    //         service: 'searchService'
+    //       }
+    //     ]
+    //   : []
+  }
+}
+
+// Separate module for Search Service to enable managed identity, as this reduces deployment time
+module searchServiceIdentity 'br/public:avm/res/search/search-service:0.11.1' = {
+  name: take('avm.res.search.identity.${solutionSuffix}', 64)
+  params: {
+    name: searchServiceName
+    authOptions: {
+      aadOrApiKey: {
+        aadAuthFailureMode: 'http401WithBearerChallenge'
+      }
+    }
+    disableLocalAuth: false
+    hostingMode: 'default'
     managedIdentities: {
       systemAssigned: true
     }
@@ -1729,6 +1799,9 @@ module searchService 'br/public:avm/res/search/search-service:0.11.1' = {
     //     ]
     //   : []
   }
+  dependsOn: [
+    searchService
+  ]
 }
 
 // ========== Search Service - AI Project Connection ========== //
