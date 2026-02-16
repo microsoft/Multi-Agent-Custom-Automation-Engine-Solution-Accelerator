@@ -115,7 +115,6 @@ class MagenticAgentFactory:
             index_name,
             "Reasoning" if use_reasoning else "Foundry",
         )
-        print(f"[FACTORY] 🆕 Creating NEW agent: {agent_obj.name} (id={id(agent_obj)})", flush=True)
 
         agent = FoundryAgentTemplate(
             agent_name=agent_obj.name,

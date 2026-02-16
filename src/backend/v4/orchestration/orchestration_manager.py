@@ -202,7 +202,6 @@ class OrchestrationManager:
         # The orchestrator uses agent.name to identify them
         participant_list = list(participants.values())
         cls.logger.info("Participants for workflow: %s", list(participants.keys()))
-        print(f"[DEBUG] Participants for workflow: {list(participants.keys())}", flush=True)
         
         builder = (
             MagenticBuilder()
@@ -277,24 +276,17 @@ class OrchestrationManager:
                 cls.logger.error(
                     "Failed to create agents for user '%s': %s", user_id, e
                 )
-                print(f"Failed to create agents for user '{user_id}': {e}")
                 raise
             try:
                 cls.logger.info("Initializing new orchestration for user '%s'", user_id)
-                print(f"[DEBUG] Initializing new orchestration for user '{user_id}'")
                 workflow = await cls.init_orchestration(
                     agents, team_config, team_service.memory_context, user_id
                 )
                 orchestration_config.orchestrations[user_id] = workflow
-                print(f"[DEBUG] Stored workflow for user '{user_id}': {workflow is not None}")
-                print(f"[DEBUG] orchestrations keys: {list(orchestration_config.orchestrations.keys())}")
             except Exception as e:
                 cls.logger.error(
                     "Failed to initialize orchestration for user '%s': %s", user_id, e
                 )
-                print(f"Failed to initialize orchestration for user '{user_id}': {e}")
-                import traceback
-                traceback.print_exc()
                 raise
         return orchestration_config.get_current_orchestration(user_id)
 
@@ -310,13 +302,9 @@ class OrchestrationManager:
         self.logger.info(
             "Starting orchestration job '%s' for user '%s'", job_id, user_id
         )
-        print(f"[DEBUG] run_orchestration called for user '{user_id}'")
-        print(f"[DEBUG] orchestrations keys before get: {list(orchestration_config.orchestrations.keys())}")
 
         workflow = orchestration_config.get_current_orchestration(user_id)
-        print(f"[DEBUG] workflow is None: {workflow is None}")
         if workflow is None:
-            print(f"[ERROR] Orchestration not initialized for user '{user_id}'")
             raise ValueError("Orchestration not initialized for user.")
         # Fresh thread per participant to avoid cross-run state bleed
         executors = getattr(workflow, "executors", {})
@@ -393,7 +381,7 @@ class OrchestrationManager:
             final_output: str | None = None
 
             self.logger.info("Starting workflow execution...")
-            print(f"[ORCHESTRATOR] 🚀 Starting workflow with max_rounds={orchestration_config.max_rounds}", flush=True)
+
             last_message_id: str | None = None
             async for event in workflow.run_stream(task_text):
                 try:
@@ -448,10 +436,9 @@ class OrchestrationManager:
                             agent_name,
                             call_num
                         )
-                        print(f"[ORCHESTRATOR] 📤 REQUEST SENT round={event.round_index} to agent={agent_name} (call #{call_num})", flush=True)
                         
                         if call_num > 1:
-                            print(f"[ORCHESTRATOR] ⚠️ WARNING: Agent '{agent_name}' called {call_num} times!", flush=True)
+                            self.logger.warning("Agent '%s' called %d times", agent_name, call_num)
 
                     # Handle group chat response received - THIS IS WHERE AGENT RESPONSES COME
                     elif isinstance(event, GroupChatResponseReceivedEvent):
@@ -513,10 +500,6 @@ class OrchestrationManager:
             final_text = final_output if final_output else ""
 
             # Log agent call summary
-            print(f"\n[ORCHESTRATOR] 📊 AGENT CALL SUMMARY:", flush=True)
-            for agent_name, count in agent_call_counts.items():
-                status = "✅" if count == 1 else "⚠️ DUPLICATE"
-                print(f"  {status} {agent_name}: called {count} time(s)", flush=True)
             self.logger.info("Agent call counts: %s", agent_call_counts)
 
             # Log results

@@ -70,23 +70,18 @@ class FoundryAgentTemplate(AzureAgentBase):
         self._use_azure_search = self._is_azure_search_requested()
         self.use_reasoning = use_reasoning
 
-        # Placeholder for server-created Azure AI agent id/version (if Azure Search path)
+        # Placeholder for server-created Azure AI agent id (if Azure Search path)
         self._azure_server_agent_id: Optional[str] = None
-        self._azure_server_agent_version: Optional[str] = None
 
     # -------------------------
     # Mode detection
     # -------------------------
     def _is_azure_search_requested(self) -> bool:
         """Determine if Azure AI Search raw tool path should be used."""
-        print(f"[DEBUG _is_azure_search_requested] Agent={self.agent_name}, search={self.search}")
         if not self.search:
-            print(f"[DEBUG _is_azure_search_requested] Agent={self.agent_name}: No search config, returning False")
             return False
         # Minimal heuristic: presence of required attributes
-
         has_index = hasattr(self.search, "index_name") and bool(self.search.index_name)
-        print(f"[DEBUG _is_azure_search_requested] Agent={self.agent_name}: has_index={has_index}, index_name={getattr(self.search, 'index_name', None)}")
         if has_index:
             self.logger.info(
                 "Azure AI Search requested (connection_id=%s, index=%s).",
@@ -137,7 +132,6 @@ class FoundryAgentTemplate(AzureAgentBase):
         Returns:
             AzureAIClient | None
         """
-        print(f"[DEBUG _create_azure_search_enabled_client] Agent={self.agent_name}, chatClient={chatClient}, search_config={self.search}")
         if chatClient:
             self.logger.info("Reusing existing chatClient for agent '%s' (already has Azure Search configured)", self.agent_name)
             return chatClient
@@ -185,9 +179,6 @@ class FoundryAgentTemplate(AzureAgentBase):
                 "Always use the Azure AI Search tool and configured index for knowledge retrieval."
             )
             
-            print(f"[AGENT CREATE] 🆕 Creating agent in Foundry: '{self.agent_name}'", flush=True)
-            print(f"[AGENT CREATE] Model: {self.model_deployment_name}", flush=True)
-            print(f"[AGENT CREATE] Search: connection={connection_name}, index={index_name}", flush=True)
 
             azure_agent = await self.project_client.agents.create_version(
                 agent_name=self.agent_name,  # Use original name
@@ -212,8 +203,7 @@ class FoundryAgentTemplate(AzureAgentBase):
             )
 
             self._azure_server_agent_id = azure_agent.id
-            self._azure_server_agent_version = azure_agent.version
-            print(f"[AGENT CREATE] ✅ Created agent: name={azure_agent.name}, id={azure_agent.id}, version={azure_agent.version}", flush=True)
+
             self.logger.info(
                 "Created Azure AI Search agent via create_version (name=%s, id=%s, version=%s).",
                 azure_agent.name,
@@ -239,8 +229,6 @@ class FoundryAgentTemplate(AzureAgentBase):
                 index_name,
                 ex,
             )
-            import traceback
-            traceback.print_exc()
             return None
 
     # -------------------------
@@ -257,7 +245,6 @@ class FoundryAgentTemplate(AzureAgentBase):
 
         try:
             chatClient = await self.get_database_team_agent()
-            print(f"[DEBUG _after_open] Agent={self.agent_name}, _use_azure_search={self._use_azure_search}, search_config={self.search}, chatClient={chatClient}")
 
             if self._use_azure_search:
                 # Azure Search mode (skip MCP + Code Interpreter due to incompatibility)
@@ -266,7 +253,6 @@ class FoundryAgentTemplate(AzureAgentBase):
                     self.agent_name,
                     getattr(self.search, "index_name", "N/A") if self.search else "N/A"
                 )
-                print(f"[DEBUG _after_open] Creating Azure Search client for {self.agent_name}")
                 chat_client = await self._create_azure_search_enabled_client(chatClient)
                 if not chat_client:
                     raise RuntimeError(

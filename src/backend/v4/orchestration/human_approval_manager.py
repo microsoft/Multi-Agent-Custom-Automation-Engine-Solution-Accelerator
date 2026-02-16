@@ -33,7 +33,6 @@ class HumanApprovalMagenticManager(StandardMagenticManager):
     approval_enabled: bool = True
     magentic_plan: Optional[MPlan] = None
     current_user_id: str  # populated in __init__
-    _called_agents: set  # Track which agents have been called
 
     def __init__(self, user_id: str, agent, *args, **kwargs):
         """
@@ -44,9 +43,6 @@ class HumanApprovalMagenticManager(StandardMagenticManager):
             *args: Additional positional arguments for the parent StandardMagenticManager.
             **kwargs: Additional keyword arguments for the parent StandardMagenticManager.
         """
-        
-        # Initialize called agents tracker
-        self._called_agents = set()
 
         plan_append = """
 
