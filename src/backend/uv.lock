@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.11"
 resolution-markers = [
     "python_full_version >= '3.13'",
@@ -588,15 +588,15 @@ wheels = [
 
 [[package]]
 name = "azure-core"
-version = "1.36.0"
+version = "1.38.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "requests" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0a/c4/d4ff3bc3ddf155156460bff340bbe9533f99fac54ddea165f35a8619f162/azure_core-1.36.0.tar.gz", hash = "sha256:22e5605e6d0bf1d229726af56d9e92bc37b6e726b141a18be0b4d424131741b7", size = 351139, upload-time = "2025-10-15T00:33:49.083Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/dc/1b/e503e08e755ea94e7d3419c9242315f888fc664211c90d032e40479022bf/azure_core-1.38.0.tar.gz", hash = "sha256:8194d2682245a3e4e3151a667c686464c3786fed7918b394d035bdcd61bb5993", size = 363033, upload-time = "2026-01-12T17:03:05.535Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b1/3c/b90d5afc2e47c4a45f4bba00f9c3193b0417fad5ad3bb07869f9d12832aa/azure_core-1.36.0-py3-none-any.whl", hash = "sha256:fee9923a3a753e94a259563429f3644aaf05c486d45b1215d098115102d91d3b", size = 213302, upload-time = "2025-10-15T00:33:51.058Z" },
+    { url = "https://files.pythonhosted.org/packages/fc/d8/b8fcba9464f02b121f39de2db2bf57f0b216fe11d014513d666e8634380d/azure_core-1.38.0-py3-none-any.whl", hash = "sha256:ab0c9b2cd71fecb1842d52c965c95285d3cfb38902f6766e4a471f1cd8905335", size = 217825, upload-time = "2026-01-12T17:03:07.291Z" },
 ]
 
 [[package]]
@@ -735,6 +735,7 @@ dependencies = [
     { name = "azure-ai-evaluation" },
     { name = "azure-ai-inference" },
     { name = "azure-ai-projects" },
+    { name = "azure-core" },
     { name = "azure-cosmos" },
     { name = "azure-identity" },
     { name = "azure-monitor-events-extension" },
@@ -758,6 +759,7 @@ dependencies = [
     { name = "python-multipart" },
     { name = "semantic-kernel" },
     { name = "uvicorn" },
+    { name = "werkzeug" },
 ]
 
 [package.metadata]
@@ -767,13 +769,14 @@ requires-dist = [
     { name = "azure-ai-evaluation", specifier = "==1.11.0" },
     { name = "azure-ai-inference", specifier = "==1.0.0b9" },
     { name = "azure-ai-projects", specifier = "==1.0.0" },
+    { name = "azure-core", specifier = "==1.38.0" },
     { name = "azure-cosmos", specifier = "==4.9.0" },
     { name = "azure-identity", specifier = "==1.24.0" },
     { name = "azure-monitor-events-extension", specifier = "==0.1.0" },
     { name = "azure-monitor-opentelemetry", specifier = "==1.7.0" },
     { name = "azure-search-documents", specifier = "==11.5.3" },
     { name = "fastapi", specifier = "==0.116.1" },
-    { name = "mcp", specifier = "==1.13.1" },
+    { name = "mcp", specifier = "==1.23.0" },
     { name = "openai", specifier = "==1.105.0" },
     { name = "opentelemetry-api", specifier = "==1.36.0" },
     { name = "opentelemetry-exporter-otlp-proto-grpc", specifier = "==1.36.0" },
@@ -788,8 +791,9 @@ requires-dist = [
     { name = "pytest-cov", specifier = "==5.0.0" },
     { name = "python-dotenv", specifier = "==1.1.1" },
     { name = "python-multipart", specifier = "==0.0.20" },
-    { name = "semantic-kernel", specifier = "==1.35.3" },
+    { name = "semantic-kernel", specifier = "==1.39.3" },
     { name = "uvicorn", specifier = "==0.35.0" },
+    { name = "werkzeug", specifier = "==3.1.5" },
 ]
 
 [[package]]
@@ -1972,7 +1976,7 @@ wheels = [
 
 [[package]]
 name = "mcp"
-version = "1.13.1"
+version = "1.23.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -1981,15 +1985,18 @@ dependencies = [
     { name = "jsonschema" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
+    { name = "pyjwt", extra = ["crypto"] },
     { name = "python-multipart" },
     { name = "pywin32", marker = "sys_platform == 'win32'" },
     { name = "sse-starlette" },
     { name = "starlette" },
+    { name = "typing-extensions" },
+    { name = "typing-inspection" },
     { name = "uvicorn", marker = "sys_platform != 'emscripten'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/66/3c/82c400c2d50afdac4fbefb5b4031fd327e2ad1f23ccef8eee13c5909aa48/mcp-1.13.1.tar.gz", hash = "sha256:165306a8fd7991dc80334edd2de07798175a56461043b7ae907b279794a834c5", size = 438198, upload-time = "2025-08-22T09:22:16.061Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/25/1a/9c8a5362e3448d585081d6c7aa95898a64e0ac59d3e26169ae6c3ca5feaf/mcp-1.23.0.tar.gz", hash = "sha256:84e0c29316d0a8cf0affd196fd000487ac512aa3f771b63b2ea864e22961772b", size = 596506, upload-time = "2025-12-02T13:40:02.558Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/19/3f/d085c7f49ade6d273b185d61ec9405e672b6433f710ea64a90135a8dd445/mcp-1.13.1-py3-none-any.whl", hash = "sha256:c314e7c8bd477a23ba3ef472ee5a32880316c42d03e06dcfa31a1cc7a73b65df", size = 161494, upload-time = "2025-08-22T09:22:14.705Z" },
+    { url = "https://files.pythonhosted.org/packages/7b/b2/28739ce409f98159c0121eab56e69ad71546c4f34ac8b42e58c03f57dccc/mcp-1.23.0-py3-none-any.whl", hash = "sha256:5a645cf111ed329f4619f2629a3f15d9aabd7adc2ea09d600d31467b51ecb64f", size = 231427, upload-time = "2025-12-02T13:40:00.738Z" },
 ]
 
 [package.optional-dependencies]
@@ -2395,7 +2402,7 @@ wheels = [
 
 [[package]]
 name = "openapi-core"
-version = "0.19.5"
+version = "0.19.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "isodate" },
@@ -2405,12 +2412,11 @@ dependencies = [
     { name = "openapi-schema-validator" },
     { name = "openapi-spec-validator" },
     { name = "parse" },
-    { name = "typing-extensions" },
     { name = "werkzeug" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b1/35/1acaa5f2fcc6e54eded34a2ec74b479439c4e469fc4e8d0e803fda0234db/openapi_core-0.19.5.tar.gz", hash = "sha256:421e753da56c391704454e66afe4803a290108590ac8fa6f4a4487f4ec11f2d3", size = 103264, upload-time = "2025-03-20T20:17:28.193Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/34/b9/a769ae516c7f016465b2d9abc6e8dc4d5a1b54c57ab99b3cc95e9587955f/openapi_core-0.19.4.tar.gz", hash = "sha256:1150d9daa5e7b4cacfd7d7e097333dc89382d7d72703934128dcf8a1a4d0df49", size = 109095, upload-time = "2024-09-02T14:10:26.937Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/27/6f/83ead0e2e30a90445ee4fc0135f43741aebc30cca5b43f20968b603e30b6/openapi_core-0.19.5-py3-none-any.whl", hash = "sha256:ef7210e83a59394f46ce282639d8d26ad6fc8094aa904c9c16eb1bac8908911f", size = 106595, upload-time = "2025-03-20T20:17:26.77Z" },
+    { url = "https://files.pythonhosted.org/packages/d2/b3/4534adc8bac68a5d743caa786f1443545faed4d7cc7a5650b2d49255adfc/openapi_core-0.19.4-py3-none-any.whl", hash = "sha256:38e8347b6ebeafe8d3beb588214ecf0171874bb65411e9d4efd23cb011687201", size = 103714, upload-time = "2024-09-02T14:10:25.408Z" },
 ]
 
 [[package]]
@@ -3863,6 +3869,8 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/6b/fa/3234f913fe9a6525a7b97c6dad1f51e72b917e6872e051a5e2ffd8b16fbb/ruamel.yaml.clib-0.2.14-cp314-cp314-macosx_15_0_arm64.whl", hash = "sha256:70eda7703b8126f5e52fcf276e6c0f40b0d314674f896fc58c47b0aef2b9ae83", size = 137970, upload-time = "2025-09-22T19:51:09.472Z" },
     { url = "https://files.pythonhosted.org/packages/ef/ec/4edbf17ac2c87fa0845dd366ef8d5852b96eb58fcd65fc1ecf5fe27b4641/ruamel.yaml.clib-0.2.14-cp314-cp314-musllinux_1_2_i686.whl", hash = "sha256:a0cb71ccc6ef9ce36eecb6272c81afdc2f565950cdcec33ae8e6cd8f7fc86f27", size = 739639, upload-time = "2025-09-22T19:51:10.566Z" },
     { url = "https://files.pythonhosted.org/packages/15/18/b0e1fafe59051de9e79cdd431863b03593ecfa8341c110affad7c8121efc/ruamel.yaml.clib-0.2.14-cp314-cp314-musllinux_1_2_x86_64.whl", hash = "sha256:e7cb9ad1d525d40f7d87b6df7c0ff916a66bc52cb61b66ac1b2a16d0c1b07640", size = 764456, upload-time = "2025-09-22T19:51:11.736Z" },
+    { url = "https://files.pythonhosted.org/packages/e7/cd/150fdb96b8fab27fe08d8a59fe67554568727981806e6bc2677a16081ec7/ruamel_yaml_clib-0.2.14-cp314-cp314-win32.whl", hash = "sha256:9b4104bf43ca0cd4e6f738cb86326a3b2f6eef00f417bd1e7efb7bdffe74c539", size = 102394, upload-time = "2025-11-14T21:57:36.703Z" },
+    { url = "https://files.pythonhosted.org/packages/bd/e6/a3fa40084558c7e1dc9546385f22a93949c890a8b2e445b2ba43935f51da/ruamel_yaml_clib-0.2.14-cp314-cp314-win_amd64.whl", hash = "sha256:13997d7d354a9890ea1ec5937a219817464e5cc344805b37671562a401ca3008", size = 122673, upload-time = "2025-11-14T21:57:38.177Z" },
 ]
 
 [[package]]
@@ -3938,7 +3946,7 @@ wheels = [
 
 [[package]]
 name = "semantic-kernel"
-version = "1.35.3"
+version = "1.39.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -3964,9 +3972,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ac/c7/6319e51fea5d51fce21df597f58b0634a7505128e05aa9720ac7c996d215/semantic_kernel-1.35.3.tar.gz", hash = "sha256:fd6ae00ee50ac53ac830dceddafc652a4f178990c809f71b516ffa2d414886fe", size = 574198, upload-time = "2025-08-14T00:35:00.6Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/40/75/ace6cc290bbfec20def659df8dcc76fa1dc059ecbe7a13a65877a3d9ef42/semantic_kernel-1.39.3.tar.gz", hash = "sha256:c67265817cd0e4af8f49059ac46421a911158c8bbe9629b1092a632a2bc1f404", size = 601695, upload-time = "2026-02-02T01:32:42.727Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cc/9c/44314fcd4816367084e6df7698508b397d683f63b0d7b5acd86003b7b377/semantic_kernel-1.35.3-py3-none-any.whl", hash = "sha256:11c97405530c1c266df8589f3c0775e7fab7b92b17df19e0dfaee44f47cac5fa", size = 882352, upload-time = "2025-08-14T00:34:57.167Z" },
+    { url = "https://files.pythonhosted.org/packages/80/ee/a8f12b1d32f3a528f1fa5dfb4afb1f74eac2191c9efca300f17a177af539/semantic_kernel-1.39.3-py3-none-any.whl", hash = "sha256:0540547bc60b24caaf8b8ddff57d995dbabdd343448c434f939be8891fb52624", size = 913654, upload-time = "2026-02-02T01:32:40.525Z" },
 ]
 
 [[package]]
@@ -4360,14 +4368,14 @@ wheels = [
 
 [[package]]
 name = "werkzeug"
-version = "3.1.1"
+version = "3.1.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "markupsafe" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/32/af/d4502dc713b4ccea7175d764718d5183caf8d0867a4f0190d5d4a45cea49/werkzeug-3.1.1.tar.gz", hash = "sha256:8cd39dfbdfc1e051965f156163e2974e52c210f130810e9ad36858f0fd3edad4", size = 806453, upload-time = "2024-11-01T16:40:45.462Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5a/70/1469ef1d3542ae7c2c7b72bd5e3a4e6ee69d7978fa8a3af05a38eca5becf/werkzeug-3.1.5.tar.gz", hash = "sha256:6a548b0e88955dd07ccb25539d7d0cc97417ee9e179677d22c7041c8f078ce67", size = 864754, upload-time = "2026-01-08T17:49:23.247Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ee/ea/c67e1dee1ba208ed22c06d1d547ae5e293374bfc43e0eb0ef5e262b68561/werkzeug-3.1.1-py3-none-any.whl", hash = "sha256:a71124d1ef06008baafa3d266c02f56e1836a5984afd6dd6c9230669d60d9fb5", size = 224371, upload-time = "2024-11-01T16:40:43.994Z" },
+    { url = "https://files.pythonhosted.org/packages/ad/e4/8d97cca767bcc1be76d16fb76951608305561c6e056811587f36cb1316a8/werkzeug-3.1.5-py3-none-any.whl", hash = "sha256:5111e36e91086ece91f93268bb39b4a35c1e6f1feac762c9c822ded0a4e322dc", size = 225025, upload-time = "2026-01-08T17:49:21.859Z" },
 ]
 
 [[package]]
