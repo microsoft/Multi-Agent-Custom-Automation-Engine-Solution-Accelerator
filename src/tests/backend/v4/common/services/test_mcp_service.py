@@ -14,10 +14,8 @@ import os
 import sys
 import asyncio
 import importlib.util
-from unittest.mock import patch, MagicMock, AsyncMock, Mock
-from typing import Any, Dict, Optional
-import aiohttp
-from aiohttp import ClientTimeout, ClientSession, ClientError
+from unittest.mock import patch, MagicMock
+from aiohttp import ClientError
 
 # Add the src directory to sys.path for proper import
 src_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', '..')

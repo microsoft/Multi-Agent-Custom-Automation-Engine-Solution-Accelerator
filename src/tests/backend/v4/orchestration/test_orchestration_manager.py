@@ -7,12 +7,8 @@ import asyncio
 import logging
 import os
 import sys
-import uuid
-from typing import List, Optional
 from unittest import IsolatedAsyncioTestCase
-from unittest.mock import AsyncMock, Mock, patch, MagicMock
-
-import pytest
+from unittest.mock import AsyncMock, Mock, patch
 
 # Add the backend directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'backend'))
@@ -442,7 +438,7 @@ class TestOrchestrationManager(IsolatedAsyncioTestCase):
             mock_workflow = Mock()
             mock_init.return_value = mock_workflow
             
-            result = await OrchestrationManager.get_current_or_new_orchestration(
+            await OrchestrationManager.get_current_or_new_orchestration(
                 user_id=self.test_user_id,
                 team_config=self.test_team_config,
                 team_switched=False,
@@ -466,7 +462,7 @@ class TestOrchestrationManager(IsolatedAsyncioTestCase):
             mock_new_workflow = Mock()
             mock_init.return_value = mock_new_workflow
             
-            result = await OrchestrationManager.get_current_or_new_orchestration(
+            await OrchestrationManager.get_current_or_new_orchestration(
                 user_id=self.test_user_id,
                 team_config=self.test_team_config,
                 team_switched=True,

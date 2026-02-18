@@ -17,8 +17,8 @@ import asyncio
 import json
 import logging
 import importlib.util
-from unittest.mock import patch, MagicMock, AsyncMock, Mock
-from typing import Any, Dict, Optional, List
+from unittest.mock import patch, MagicMock, AsyncMock
+from typing import Any, List
 from dataclasses import dataclass
 
 # Add the src directory to sys.path for proper import

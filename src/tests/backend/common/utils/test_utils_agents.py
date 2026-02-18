@@ -4,7 +4,6 @@ Unit tests for utils_agents.py module.
 This module tests the utility functions for agent ID generation and database operations.
 """
 
-import logging
 import string
 import sys
 import unittest
@@ -33,10 +32,8 @@ sys.modules['common.database.database_base'] = Mock()
 sys.modules['common.models'] = Mock()
 sys.modules['common.models.messages_af'] = Mock()
 
-import pytest
-
 from backend.common.database.database_base import DatabaseBase
-from backend.common.models.messages_af import CurrentTeamAgent, DataType, TeamConfiguration
+from backend.common.models.messages_af import CurrentTeamAgent, TeamConfiguration
 from backend.common.utils.utils_agents import (
     generate_assistant_id,
     get_database_team_agent_id,

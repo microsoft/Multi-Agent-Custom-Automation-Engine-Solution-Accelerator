@@ -1,11 +1,8 @@
 """Unit tests for response_handlers module."""
 
-import asyncio
-import logging
 import sys
 import os
-import time
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
+from unittest.mock import Mock, patch, AsyncMock
 import pytest
 
 # Add the backend directory to the Python path
