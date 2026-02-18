@@ -233,14 +233,17 @@ var deployerPrincipalType = contains(deployer(), 'userPrincipalName') ? 'User' :
 resource resourceGroupTags 'Microsoft.Resources/tags@2021-04-01' = {
   name: 'default'
   properties: {
-    tags: {
-      ...allTags
-      TemplateName: 'MACAE'
-      Type: enablePrivateNetworking ? 'WAF' : 'Non-WAF'
-      CreatedBy: createdBy
-      DeploymentName: deployment().name
-      SolutionSuffix: solutionSuffix
-    }
+    tags: union(
+      resourceGroup().tags ?? {},
+      allTags,
+      {
+        TemplateName: 'MACAE'
+        Type: enablePrivateNetworking ? 'WAF' : 'Non-WAF'
+        CreatedBy: createdBy
+        DeploymentName: deployment().name
+        SolutionSuffix: solutionSuffix
+      }
+    )
   }
 }
 
