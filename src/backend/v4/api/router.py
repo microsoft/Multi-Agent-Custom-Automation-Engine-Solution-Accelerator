@@ -1,13 +1,17 @@
 import asyncio
 import json
 import logging
+import os
+import tempfile
 import uuid
 from typing import Optional
+from datetime import datetime
 
 import v4.models.messages as messages
 from v4.models.messages import WebsocketMessageType
 from auth.auth_utils import get_authenticated_user_details
 from common.database.database_factory import DatabaseFactory
+from v4.common.services.branch_report_service import BranchReportService
 from common.models.messages_af import (
     InputTask,
     Plan,
@@ -31,6 +35,7 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
+from fastapi.responses import FileResponse
 from v4.common.services.plan_service import PlanService
 from v4.common.services.team_service import TeamService
 from v4.config.settings import (
@@ -1428,3 +1433,127 @@ async def get_plan_by_id(
     except Exception as e:
         logging.error(f"Error retrieving plan: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error occurred")
+
+
+@app_v4.get("/generate_branch_report")
+async def generate_branch_report(
+    background_tasks: BackgroundTasks,
+    request: Request,
+    owner: str = Query(..., description="Repository owner (username or organization)"),
+    repo: str = Query(..., description="Repository name"),
+):
+    """
+    Generate an Excel report with branch information including branch name, PR status, and creator.
+
+    ---
+    tags:
+      - Reports
+    parameters:
+      - name: owner
+        in: query
+        type: string
+        required: true
+        description: Repository owner (username or organization)
+      - name: repo
+        in: query
+        type: string
+        required: true
+        description: Repository name
+      - name: user_principal_id
+        in: header
+        type: string
+        required: true
+        description: User ID extracted from the authentication header
+    responses:
+      200:
+        description: Excel file generated successfully
+        content:
+          application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+            schema:
+              type: string
+              format: binary
+      400:
+        description: Missing or invalid parameters
+      401:
+        description: Missing or invalid user information
+      500:
+        description: Internal server error
+    """
+    
+    # Validate user authentication
+    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    user_id = authenticated_user["user_principal_id"]
+    if not user_id:
+        raise HTTPException(
+            status_code=401, detail="Missing or invalid user information"
+        )
+
+    try:
+        # Create output directory if it doesn't exist (platform-independent)
+        output_dir = os.path.join(tempfile.gettempdir(), "reports")
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Generate filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"branch_report_{owner}_{repo}_{timestamp}.xlsx"
+        output_path = os.path.join(output_dir, filename)
+        
+        # Generate the report using the service
+        success, error_message = await BranchReportService.generate_branch_report(
+            owner, repo, output_path
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=500,
+                detail=error_message or "Failed to generate branch report"
+            )
+        
+        # Track the event
+        track_event_if_configured(
+            "Branch report generated",
+            {
+                "status": "success",
+                "owner": owner,
+                "repo": repo,
+                "user_id": user_id,
+                "filename": filename,
+            },
+        )
+        
+        # Create a background task to clean up the file after a delay
+        async def cleanup_file():
+            """Delete the temporary file after a delay to ensure download completes."""
+            await asyncio.sleep(300)  # Wait 5 minutes before cleanup
+            try:
+                if os.path.exists(output_path):
+                    os.remove(output_path)
+                    logger.info(f"Cleaned up temporary file: {output_path}")
+            except Exception as cleanup_error:
+                logger.warning(f"Failed to cleanup temporary file {output_path}: {cleanup_error}")
+        
+        # Schedule the cleanup task
+        background_tasks.add_task(cleanup_file)
+        
+        # Return the file
+        return FileResponse(
+            path=output_path,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            filename=filename,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error generating branch report: {str(e)}")
+        track_event_if_configured(
+            "Branch report generation error",
+            {
+                "status": "error",
+                "owner": owner,
+                "repo": repo,
+                "user_id": user_id,
+                "error": str(e),
+            },
+        )
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
