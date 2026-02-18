@@ -17,7 +17,7 @@ To troubleshoot any issues, see [troubleshooting](#troubleshooting).
 
 ### Configure environment variables for running services
 
-Environment variables can be configured by modifying the `env` settings in [resources.bicep](./infra/old/resources.bicep).
+Environment variables can be configured by modifying the `env` settings in [main.bicep](./infra/main.bicep).
 To define a secret, add the variable as a `secretRef` pointing to a `secrets` entry or a stored KeyVault secret.
 
 ### Configure CI/CD pipeline
@@ -37,12 +37,11 @@ To describe the infrastructure and application, `azure.yaml` along with Infrastr
 ```yaml
 - azure.yaml        # azd project configuration
 - infra/            # Infrastructure-as-code Bicep files
-  - main.bicep      # Subscription level resources
-  - resources.bicep # Primary resource group resources
+  - main.bicep      # Main infrastructure template
   - modules/        # Library modules
 ```
 
-The resources declared in [resources.bicep](./infra/old/resources.bicep) are provisioned when running `azd up` or `azd provision`.
+The resources declared in [main.bicep](./infra/main.bicep) are provisioned when running `azd up` or `azd provision`.
 This includes:
 
 
