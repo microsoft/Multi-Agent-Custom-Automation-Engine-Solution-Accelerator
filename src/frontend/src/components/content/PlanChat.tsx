@@ -1,31 +1,7 @@
-import React, { useState, useRef, useCallback, useEffect } from "react";
-import {
-  Button,
-  Body1,
-  Spinner,
-  Tag,
-  Textarea,
-} from "@fluentui/react-components";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import {
-  CheckmarkRegular,
-  DismissRegular,
-  SendRegular,
-  PersonRegular,
-  BotRegular,
-} from "@fluentui/react-icons";
+import React from "react";
 import { PlanChatProps, MPlanData } from "../../models/plan";
-import webSocketService from "../../services/WebSocketService";
-import { PlanDataService } from "../../services/PlanDataService";
-import { apiService } from "../../api/apiService";
-import { useNavigate } from "react-router-dom";
-import ChatInput from "../../coral/modules/ChatInput";
-import InlineToaster, {
-  useInlineToaster,
-} from "../toast/InlineToaster";
-import { AgentMessageData, WebsocketMessageType } from "@/models";
-import getUserPlan from "./streaming/StreamingUserPlan";
+import InlineToaster from "../toast/InlineToaster";
+import { AgentMessageData } from "@/models";
 import renderUserPlanMessage from "./streaming/StreamingUserPlanMessage";
 import renderPlanResponse from "./streaming/StreamingPlanResponse";
 import { renderPlanExecutionMessage, renderThinkingState } from "./streaming/StreamingPlanState";

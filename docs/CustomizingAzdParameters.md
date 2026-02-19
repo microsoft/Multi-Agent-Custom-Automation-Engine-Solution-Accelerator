@@ -29,6 +29,7 @@ By default this template will use the environment name as the prefix to prevent 
 | `AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID` | string  | Guide to get your [Existing Workspace ID](/docs/re-use-log-analytics.md) | Set this if you want to reuse an existing Log Analytics Workspace instead of creating a new one.     |
 | `AZURE_ENV_VM_ADMIN_USERNAME`  | string | `take(newGuid(), 20)`               | The administrator username for the virtual machine.         |
 | `AZURE_ENV_VM_ADMIN_PASSWORD`  | string | `newGuid()`               | The administrator password for the virtual machine.         |
+| `AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT`  | string | `<Container Registry Endpoint>`               | Sets container registry used by backend, frontend and Mcp containers.         |
 ---
 
 ## How to Set a Parameter

@@ -7,7 +7,7 @@ from azure.ai.projects.aio import AIProjectClient
 from azure.cosmos import CosmosClient
 from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
 from dotenv import load_dotenv
-from semantic_kernel import Kernel
+
 
 # Load environment variables from .env file
 load_dotenv()
@@ -33,9 +33,6 @@ class AppConfig:
             "APPLICATIONINSIGHTS_CONNECTION_STRING"
         )
         self.APP_ENV = self._get_required("APP_ENV", "prod")
-        # self.AZURE_AI_MODEL_DEPLOYMENT_NAME = self._get_required(
-        #     "AZURE_AI_MODEL_DEPLOYMENT_NAME", "gpt-4o"
-        # )
 
         self.AZURE_COGNITIVE_SERVICES = self._get_optional(
             "AZURE_COGNITIVE_SERVICES", "https://cognitiveservices.azure.com/.default"
@@ -48,6 +45,10 @@ class AppConfig:
         # Azure OpenAI settings
         self.AZURE_OPENAI_DEPLOYMENT_NAME = self._get_required(
             "AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o"
+        )
+
+        self.AZURE_OPENAI_RAI_DEPLOYMENT_NAME = self._get_required(
+            "AZURE_OPENAI_RAI_DEPLOYMENT_NAME", "gpt-4.1"
         )
         self.AZURE_OPENAI_API_VERSION = self._get_required(
             "AZURE_OPENAI_API_VERSION", "2024-11-20"
@@ -91,9 +92,6 @@ class AppConfig:
         self.CLIENT_ID = self._get_optional("AZURE_CLIENT_ID")
         self.AZURE_AI_SEARCH_CONNECTION_NAME = self._get_optional(
             "AZURE_AI_SEARCH_CONNECTION_NAME"
-        )
-        self.AZURE_AI_SEARCH_INDEX_NAME = self._get_optional(
-            "AZURE_AI_SEARCH_INDEX_NAME"
         )
         self.AZURE_AI_SEARCH_ENDPOINT = self._get_optional("AZURE_AI_SEARCH_ENDPOINT")
         self.AZURE_AI_SEARCH_API_KEY = self._get_optional("AZURE_AI_SEARCH_API_KEY")
@@ -219,17 +217,6 @@ class AppConfig:
                 exc,
             )
             raise
-
-    def create_kernel(self):
-        """Creates a new Semantic Kernel instance.
-
-        Returns:
-            A new Semantic Kernel instance
-        """
-        # Create a new kernel instance without manually configuring OpenAI services
-        # The agents will be created using Azure AI Agent Project pattern instead
-        kernel = Kernel()
-        return kernel
 
     def get_ai_project_client(self):
         """Create and return an AIProjectClient for Azure AI Foundry using from_connection_string.

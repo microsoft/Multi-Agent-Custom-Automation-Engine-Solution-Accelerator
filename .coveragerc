@@ -1,0 +1,25 @@
+[run]
+source = .
+omit = 
+    src/mcp_server/*
+    src/backend/tests/*
+    src/tests/mcp_server/*
+    src/tests/agents/*
+    src/**/__init__.py
+    tests/e2e-test/*
+    */venv/*
+    */env/*
+    */.pytest_cache/*
+    */node_modules/*
+
+[paths]
+source =
+    src/backend
+    */site-packages
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise AssertionError
+    raise NotImplementedError

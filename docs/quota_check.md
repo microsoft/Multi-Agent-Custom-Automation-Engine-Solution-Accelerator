@@ -5,7 +5,12 @@ Before deploying the accelerator, **ensure sufficient quota availability** for t
 
 ### Login if you have not done so already
 ```
-azd auth login
+az login
+```
+
+If using VS Code Web:
+```
+az login --use-device-code
 ```
 
 
@@ -79,7 +84,7 @@ The final table lists regions with available quota. You can select any of these 
       
 ### **If using VS Code or Codespaces**
 1. Open the terminal in VS Code or Codespaces.
-2. If you're using VS Code, click the dropdown on the right side of the terminal window, and select `Git Bash`.
+2. If you're using VS Code, click the dropdown on the right side of the terminal window, and select `Git Bash` / `bash`.
    ![git_bash](images/git_bash.png)
 3. Navigate to the `scripts` folder where the script files are located and make the script as executable:
    ```sh
@@ -102,4 +107,5 @@ The final table lists regions with available quota. You can select any of these 
     curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
     az login
     ```
+    > Note: Use `az login --use-device-code` in VS Code Web.
 6. Rerun the script after installing Azure CLI.

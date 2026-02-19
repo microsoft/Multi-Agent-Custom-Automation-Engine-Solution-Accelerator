@@ -15,7 +15,7 @@ class LoginPage(BasePage):
 
     def __init__(self, page):
         """Initialize the LoginPage with the Playwright page instance."""
-        self.page = page
+        super().__init__(page)
 
     def authenticate(self, username, password):
         """Login using provided username and password with conditional prompts."""

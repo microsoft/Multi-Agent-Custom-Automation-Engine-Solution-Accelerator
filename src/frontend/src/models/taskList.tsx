@@ -10,4 +10,5 @@ export interface TaskListProps {
     onTaskSelect: (taskId: string) => void;
     loading?: boolean;
     selectedTaskId?: string;
+    isLoadingTeam?: boolean;
 }

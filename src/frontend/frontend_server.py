@@ -1,11 +1,10 @@
-import html
 import os
 
 import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 # Load environment variables from .env file
@@ -37,8 +36,8 @@ async def serve_index():
 
 @app.get("/config")
 async def get_config():
-    backend_url = html.escape(os.getenv("BACKEND_API_URL", "http://localhost:8000"))
-    auth_enabled = html.escape(os.getenv("AUTH_ENABLED", "false"))
+    backend_url = os.getenv("BACKEND_API_URL", "http://localhost:8000")
+    auth_enabled = os.getenv("AUTH_ENABLED", "false")
     backend_url = backend_url + "/api"
 
     config = {
@@ -53,11 +52,17 @@ async def serve_app(full_path: str):
     # Remediation: normalize and check containment before serving
     file_path = os.path.normpath(os.path.join(BUILD_DIR, full_path))
     # Block traversal and dotfiles
-    if not file_path.startswith(BUILD_DIR) or ".." in full_path or "/." in full_path or "\\." in full_path:
+    if (
+        not file_path.startswith(BUILD_DIR)
+        or ".." in full_path
+        or "/." in full_path
+        or "\\." in full_path
+    ):
         return FileResponse(INDEX_HTML)
     if os.path.isfile(file_path):
         return FileResponse(file_path)
     return FileResponse(INDEX_HTML)
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=3000, access_log=False, log_level="info")

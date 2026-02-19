@@ -5,7 +5,7 @@ import {
 import {
   ArrowTurnDownRightRegular,
 } from "@fluentui/react-icons";
-import { MPlanData, PlanDetailsProps } from "../../models";
+import { PlanDetailsProps } from "../../models";
 import { getAgentIcon, getAgentDisplayNameWithSuffix } from '../../utils/agentIconUtils';
 import ContentNotFound from "../NotFound/ContentNotFound";
 import "../../styles/planpanelright.css";

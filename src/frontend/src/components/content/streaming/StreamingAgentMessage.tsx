@@ -3,9 +3,8 @@ import { AgentMessageData, AgentMessageType } from "@/models";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypePrism from "rehype-prism";
-import { Body1, Button, Tag, makeStyles, tokens } from "@fluentui/react-components";
+import { Body1, Tag, makeStyles, tokens } from "@fluentui/react-components";
 import { TaskService } from "@/services";
-import { Copy } from "@/coral/imports/bundleicons";
 import { PersonRegular } from "@fluentui/react-icons";
 import { getAgentIcon, getAgentDisplayName } from '@/utils/agentIconUtils';
 

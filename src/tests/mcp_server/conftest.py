@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 # Add the MCP server to path
-mcp_server_path = Path(__file__).parent.parent.parent / "backend" / "v3" / "mcp_server"
+mcp_server_path = Path(__file__).parent.parent.parent / "backend" / "v4" / "mcp_server"
 sys.path.insert(0, str(mcp_server_path))
 
 

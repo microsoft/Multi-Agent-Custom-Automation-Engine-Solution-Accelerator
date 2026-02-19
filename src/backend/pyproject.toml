@@ -8,7 +8,7 @@ dependencies = [
     "azure-ai-evaluation==1.11.0",
     "azure-ai-inference==1.0.0b9",
     "azure-ai-projects==1.0.0",
-    "azure-ai-agents==1.2.0b2",
+    "azure-ai-agents==1.2.0b5",
     "azure-cosmos==4.9.0",
     "azure-identity==1.24.0",
     "azure-monitor-events-extension==0.1.0",
@@ -31,5 +31,6 @@ dependencies = [
     "uvicorn==0.35.0",
     "pylint-pydantic==0.3.5",
     "pexpect==4.9.0",
-    "mcp==1.13.1"
+    "mcp==1.13.1",
+    "agent-framework>=1.0.0b251105",
 ]
