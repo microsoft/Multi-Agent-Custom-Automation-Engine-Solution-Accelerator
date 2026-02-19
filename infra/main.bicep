@@ -225,6 +225,7 @@ var allTags = union(
   },
   tags
 )
+var existingTags = resourceGroup().tags ?? {}
 @description('Tag, Created by user name')
 param createdBy string = contains(deployer(), 'userPrincipalName')
   ? split(deployer().userPrincipalName, '@')[0]
@@ -235,7 +236,7 @@ resource resourceGroupTags 'Microsoft.Resources/tags@2021-04-01' = {
   name: 'default'
   properties: {
     tags: union(
-      resourceGroup().tags ?? {},
+      existingTags,
       allTags,
       {
         TemplateName: 'MACAE'
