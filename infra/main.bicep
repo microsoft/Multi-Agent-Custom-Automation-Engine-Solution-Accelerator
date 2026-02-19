@@ -225,6 +225,7 @@ var allTags = union(
   },
   tags
 )
+var existingTags = resourceGroup().tags ?? {}
 @description('Tag, Created by user name')
 param createdBy string = contains(deployer(), 'userPrincipalName')
   ? split(deployer().userPrincipalName, '@')[0]
@@ -234,15 +235,17 @@ var deployerPrincipalType = contains(deployer(), 'userPrincipalName') ? 'User' :
 resource resourceGroupTags 'Microsoft.Resources/tags@2021-04-01' = {
   name: 'default'
   properties: {
-    tags: {
-      ...resourceGroup().tags
-      ...allTags
-      TemplateName: 'MACAE'
-      Type: enablePrivateNetworking ? 'WAF' : 'Non-WAF'
-      CreatedBy: createdBy
-      DeploymentName: deployment().name
-      SolutionSuffix: solutionSuffix
-    }
+    tags: union(
+      existingTags,
+      allTags,
+      {
+        TemplateName: 'MACAE'
+        Type: enablePrivateNetworking ? 'WAF' : 'Non-WAF'
+        CreatedBy: createdBy
+        DeploymentName: deployment().name
+        SolutionSuffix: solutionSuffix
+      }
+    )
   }
 }
 

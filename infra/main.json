@@ -5,8 +5,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.39.26.7824",
-      "templateHash": "8027163253572555334"
+      "version": "0.40.2.10011",
+      "templateHash": "11659042024779211153"
     },
     "name": "Multi-Agent Custom Automation Engine",
     "description": "This module contains the resources required to deploy the [Multi-Agent Custom Automation Engine solution accelerator](https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) for both Sandbox environments and WAF aligned environments.\n\n> **Note:** This module is not intended for broad, generic use, as it was designed by the Commercial Solution Areas CTO team, as a Microsoft Solution Accelerator. Feature requests and bug fix requests are welcome if they support the needs of this organization but may not be incorporated if they aim to make this module more generic than what it needs to be for its primary use case. This module will likely be updated to leverage AVM resource modules in the future. This may result in breaking changes in upcoming versions when these features are implemented.\n"
@@ -399,6 +399,7 @@
     },
     "replicaLocation": "[variables('replicaRegionPairs')[parameters('location')]]",
     "allTags": "[union(createObject('azd-env-name', parameters('solutionName')), parameters('tags'))]",
+    "existingTags": "[coalesce(resourceGroup().tags, createObject())]",
     "deployerPrincipalType": "[if(contains(deployer(), 'userPrincipalName'), 'User', 'ServicePrincipal')]",
     "useExistingLogAnalytics": "[not(empty(parameters('existingLogAnalyticsWorkspaceId')))]",
     "existingLawSubscription": "[if(variables('useExistingLogAnalytics'), split(parameters('existingLogAnalyticsWorkspaceId'), '/')[2], '')]",
@@ -502,7 +503,7 @@
       "apiVersion": "2021-04-01",
       "name": "default",
       "properties": {
-        "tags": "[shallowMerge(createArray(resourceGroup().tags, variables('allTags'), createObject('TemplateName', 'MACAE', 'Type', if(parameters('enablePrivateNetworking'), 'WAF', 'Non-WAF'), 'CreatedBy', parameters('createdBy'), 'DeploymentName', deployment().name, 'SolutionSuffix', variables('solutionSuffix'))))]"
+        "tags": "[union(variables('existingTags'), variables('allTags'), createObject('TemplateName', 'MACAE', 'Type', if(parameters('enablePrivateNetworking'), 'WAF', 'Non-WAF'), 'CreatedBy', parameters('createdBy'), 'DeploymentName', deployment().name, 'SolutionSuffix', variables('solutionSuffix')))]"
       }
     },
     "avmTelemetry": {
@@ -4911,8 +4912,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "17693629099431521233"
+              "version": "0.40.2.10011",
+              "templateHash": "16969845928384020185"
             }
           },
           "definitions": {
@@ -22443,8 +22444,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "7473169155225322335"
+              "version": "0.40.2.10011",
+              "templateHash": "8742987061721021759"
             }
           },
           "definitions": {
@@ -22751,7 +22752,7 @@
               },
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.CognitiveServices/accounts/{0}', parameters('name'))]",
+              "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('name'))]",
               "name": "[coalesce(tryGet(coalesce(variables('formattedRoleAssignments'), createArray())[copyIndex()], 'name'), guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('name')), coalesce(variables('formattedRoleAssignments'), createArray())[copyIndex()].principalId, coalesce(variables('formattedRoleAssignments'), createArray())[copyIndex()].roleDefinitionId))]",
               "properties": {
                 "roleDefinitionId": "[coalesce(variables('formattedRoleAssignments'), createArray())[copyIndex()].roleDefinitionId]",
@@ -25430,9 +25431,9 @@
         }
       },
       "dependsOn": [
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
         "logAnalyticsWorkspace",
         "userAssignedIdentity",
         "virtualNetwork"
@@ -25471,8 +25472,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "13634050148372048883"
+              "version": "0.40.2.10011",
+              "templateHash": "7507285802464480889"
             }
           },
           "parameters": {
@@ -34462,8 +34463,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "13074777962389399773"
+              "version": "0.40.2.10011",
+              "templateHash": "8640881069237947782"
             }
           },
           "definitions": {
@@ -35400,7 +35401,7 @@
               },
               "type": "Microsoft.Insights/diagnosticSettings",
               "apiVersion": "2021-05-01-preview",
-              "scope": "[format('Microsoft.Web/sites/{0}', parameters('name'))]",
+              "scope": "[resourceId('Microsoft.Web/sites', parameters('name'))]",
               "name": "[coalesce(tryGet(coalesce(parameters('diagnosticSettings'), createArray())[copyIndex()], 'name'), format('{0}-diagnosticSettings', parameters('name')))]",
               "properties": {
                 "copy": [
@@ -35475,8 +35476,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.39.26.7824",
-                      "templateHash": "11666262061409473778"
+                      "version": "0.40.2.10011",
+                      "templateHash": "10706743168754451638"
                     },
                     "name": "Site App Settings",
                     "description": "This module deploys a Site App Setting."
@@ -47021,8 +47022,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "13854536965493424643"
+              "version": "0.40.2.10011",
+              "templateHash": "14874963049736669838"
             }
           },
           "parameters": {
