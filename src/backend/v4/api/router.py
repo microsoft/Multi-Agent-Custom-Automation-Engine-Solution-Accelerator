@@ -579,7 +579,7 @@ async def user_clarification(
     # Set the approval in the orchestration config
     if user_id and human_feedback.request_id:
         # validate rai
-        if human_feedback.answer is not None or human_feedback.answer != "":
+        if human_feedback.answer is not None and human_feedback.answer != "":
             if not await rai_success(human_feedback.answer, team, memory_store):
                 track_event_if_configured(
                     "RAI failed",

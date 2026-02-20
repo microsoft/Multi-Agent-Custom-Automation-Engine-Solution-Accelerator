@@ -12,7 +12,7 @@ from v4.magentic_agents.foundry_agent import (
     FoundryAgentTemplate,
 )  # formerly v4.magentic_agents.foundry_agent
 
-logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 async def find_first_available_team(team_service: TeamService, user_id: str) -> str:
@@ -34,10 +34,10 @@ async def find_first_available_team(team_service: TeamService, user_id: str) -> 
         try:
             team_config = await team_service.get_team_configuration(team_id, user_id)
             if team_config is not None:
-                print(f"Found available standard team: {team_id}")
+                logger.info("Found available standard team: %s", team_id)
                 return team_id
         except Exception as e:
-            print(f"Error checking team {team_id}: {str(e)}")
+            logger.error("Error checking team %s: %s", team_id, str(e))
             continue
 
     # If no standard teams found, check for any available teams
@@ -45,12 +45,12 @@ async def find_first_available_team(team_service: TeamService, user_id: str) -> 
         all_teams = await team_service.get_all_team_configurations()
         if all_teams:
             first_team = all_teams[0]
-            print(f"Found available custom team: {first_team.team_id}")
+            logger.info("Found available custom team: %s", first_team.team_id)
             return first_team.team_id
     except Exception as e:
-        print(f"Error checking for any available teams: {str(e)}")
+        logger.error("Error checking for any available teams: %s", str(e))
 
-    print("No teams found in database")
+    logger.warning("No teams found in database")
     return None
 
 
