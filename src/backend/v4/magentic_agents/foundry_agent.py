@@ -115,7 +115,7 @@ class FoundryAgentTemplate(AzureAgentBase):
     # -------------------------
     # Azure Search helper
     # -------------------------
-    async def _create_azure_search_enabled_client(self, chatClient=None) -> Optional[AzureAIClient]:
+    async def _create_azure_search_enabled_client(self) -> Optional[AzureAIClient]:
         """
         Create a server-side Azure AI agent with Azure AI Search tool using create_version.
 
@@ -132,10 +132,6 @@ class FoundryAgentTemplate(AzureAgentBase):
         Returns:
             AzureAIClient | None
         """
-        if chatClient:
-            self.logger.info("Reusing existing chatClient for agent '%s' (already has Azure Search configured)", self.agent_name)
-            return chatClient
-
         if not self.search:
             self.logger.error("Search configuration missing.")
             return None
@@ -244,8 +240,6 @@ class FoundryAgentTemplate(AzureAgentBase):
             temp = 0.1
 
         try:
-            chatClient = await self.get_database_team_agent()
-
             if self._use_azure_search:
                 # Azure Search mode (skip MCP + Code Interpreter due to incompatibility)
                 self.logger.info(
@@ -253,7 +247,7 @@ class FoundryAgentTemplate(AzureAgentBase):
                     self.agent_name,
                     getattr(self.search, "index_name", "N/A") if self.search else "N/A"
                 )
-                chat_client = await self._create_azure_search_enabled_client(chatClient)
+                chat_client = await self._create_azure_search_enabled_client()
                 if not chat_client:
                     raise RuntimeError(
                         "Azure AI Search mode requested but setup failed."
@@ -261,8 +255,8 @@ class FoundryAgentTemplate(AzureAgentBase):
 
                 # In Azure Search raw tool path, tools/tool_choice are handled server-side.
                 self._agent = ChatAgent(
-                    id=self.get_agent_id(chat_client),
-                    chat_client=self.get_chat_client(chat_client),
+                    id=self.get_agent_id(),
+                    chat_client=chat_client,
                     instructions=self.agent_instructions,
                     name=self.agent_name,
                     description=self.agent_description,
@@ -272,12 +266,12 @@ class FoundryAgentTemplate(AzureAgentBase):
                     default_options={"store": False},  # Client-managed conversation to avoid stale tool call IDs across rounds
                 )
             else:
-                # use MCP path
+                # MCP path (also used by RAI agent which has no tools)
                 self.logger.info("Initializing agent in MCP mode.")
                 tools = await self._collect_tools()
                 self._agent = ChatAgent(
-                    id=self.get_agent_id(chatClient),
-                    chat_client=self.get_chat_client(chatClient),
+                    id=self.get_agent_id(),
+                    chat_client=self.get_chat_client(),
                     instructions=self.agent_instructions,
                     name=self.agent_name,
                     description=self.agent_description,
@@ -314,12 +308,7 @@ class FoundryAgentTemplate(AzureAgentBase):
 
         messages = [ChatMessage(role=Role.USER, text=prompt)]
 
-        agent_saved = False
         async for update in self._agent.run_stream(messages):
-            # Save agent ID only once on first update
-            if not agent_saved:
-                await self.save_database_team_agent()
-                agent_saved = True
             yield update
 
     # -------------------------

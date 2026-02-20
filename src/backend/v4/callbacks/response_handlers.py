@@ -8,7 +8,7 @@ import time
 import re
 from typing import Any
 
-from agent_framework import ChatMessage, AgentRunUpdateEvent
+from agent_framework import ChatMessage
 
 from v4.config.settings import connection_config
 from v4.models.messages import (
@@ -108,7 +108,7 @@ def agent_response_callback(
 
 async def streaming_agent_response_callback(
     agent_id: str,
-    update,  # AgentRunUpdateEvent.data or similar streaming update object
+    update,  # Streaming update object (e.g. AgentResponseUpdate, ChatMessage)
     is_final: bool,
     user_id: str | None = None,
 ) -> None:
@@ -119,7 +119,7 @@ async def streaming_agent_response_callback(
         return
 
     try:
-        # Handle both AgentRunUpdateEvent.data and raw text updates
+        # Handle various streaming update object shapes
         chunk_text = getattr(update, "text", None)
         
         # If text is None, don't fall back to str(update) as that would show object repr
