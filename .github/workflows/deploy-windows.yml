@@ -1,6 +1,7 @@
 name: Deploy-Test-Cleanup (v2) Windows
 
 permissions:
+  id-token: write
   contents: read
   actions: read
 on:

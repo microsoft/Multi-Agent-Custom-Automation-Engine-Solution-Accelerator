@@ -1,6 +1,7 @@
 name: Deploy-Test-Cleanup (v2) Linux
 
 permissions:
+  id-token: write
   contents: read
   actions: read
 on:

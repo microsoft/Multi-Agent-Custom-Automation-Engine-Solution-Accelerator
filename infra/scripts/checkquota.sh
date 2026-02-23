@@ -7,16 +7,6 @@ SUBSCRIPTION_ID="${AZURE_SUBSCRIPTION_ID}"
 GPT_MIN_CAPACITY="${GPT_MIN_CAPACITY}"
 O4_MINI_MIN_CAPACITY="${O4_MINI_MIN_CAPACITY}"
 GPT41_MINI_MIN_CAPACITY="${GPT41_MINI_MIN_CAPACITY}"
-AZURE_CLIENT_ID="${AZURE_CLIENT_ID}"
-AZURE_TENANT_ID="${AZURE_TENANT_ID}"
-AZURE_CLIENT_SECRET="${AZURE_CLIENT_SECRET}"
-
-# Authenticate using Managed Identity
-echo "Authentication using Managed Identity..."
-if ! az login --service-principal -u "$AZURE_CLIENT_ID" -p "$AZURE_CLIENT_SECRET" --tenant "$AZURE_TENANT_ID"; then
-   echo "❌ Error: Failed to login using Managed Identity."
-   exit 1
-fi
 
 echo "🔄 Validating required environment variables..."
 if [[ -z "$SUBSCRIPTION_ID" || -z "$REGIONS" ]]; then
