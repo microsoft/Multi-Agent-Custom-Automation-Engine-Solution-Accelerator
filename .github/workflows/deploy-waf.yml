@@ -1,6 +1,7 @@
 name: Validate WAF Deployment v4
 
 permissions:
+  id-token: write
   contents: read
   actions: read
 on:
@@ -13,6 +14,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: production
     env:
       GPT_MIN_CAPACITY: 1
       O4_MINI_MIN_CAPACITY: 1
@@ -21,12 +23,16 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       - name: Run Quota Check
         id: quota-check
         env:
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           GPT_MIN_CAPACITY: ${{ env.GPT_MIN_CAPACITY }}
           O4_MINI_MIN_CAPACITY: ${{ env.O4_MINI_MIN_CAPACITY }}
@@ -65,10 +71,6 @@ jobs:
         run: |
           echo "Selected Region: $VALID_REGION"
           echo "AZURE_LOCATION=$VALID_REGION" >> $GITHUB_ENV
-
-      - name: Login to Azure
-        run: |
-          az login --service-principal -u ${{ secrets.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_TENANT_ID }}
 
       - name: Install Bicep CLI
         run: az bicep install

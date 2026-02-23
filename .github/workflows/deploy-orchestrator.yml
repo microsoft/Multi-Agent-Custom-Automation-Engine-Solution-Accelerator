@@ -1,9 +1,5 @@
 name: Deployment orchestrator
 
-permissions:
-  contents: read
-  actions: read
-
 on:
   workflow_call:
     inputs:
