@@ -1288,7 +1288,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
           }
           {
             name: 'AZURE_AI_SEARCH_ENDPOINT'
-            value: searchService.outputs.endpoint
+            value: searchServiceUpdate.outputs.endpoint
           }
           {
             name: 'AZURE_COGNITIVE_SERVICES'
@@ -1662,78 +1662,17 @@ var aiSearchIndexNameForRFPSummary = 'macae-rfp-summary-index'
 var aiSearchIndexNameForRFPRisk = 'macae-rfp-risk-index'
 var aiSearchIndexNameForRFPCompliance = 'macae-rfp-compliance-index'
 
-module searchService 'br/public:avm/res/search/search-service:0.11.1' = {
-  name: take('avm.res.search.search-service.${solutionSuffix}', 64)
-  params: {
-    name: searchServiceName
-    authOptions: {
-      aadOrApiKey: {
-        aadAuthFailureMode: 'http401WithBearerChallenge'
-      }
-    }
-    disableLocalAuth: false
-    hostingMode: 'default'
-
-    // Enabled the Public access because other services are not able to connect with search search AVM module when public access is disabled
-
-    // publicNetworkAccess: enablePrivateNetworking  ? 'Disabled' : 'Enabled'
-    publicNetworkAccess: 'Enabled'
-    networkRuleSet: {
-      bypass: 'AzureServices'
-    }
-    partitionCount: 1
-    replicaCount: 1
-    sku: enableScalability ? 'standard' : 'basic'
-    tags: tags
-    roleAssignments: [
-      {
-        principalId: userAssignedIdentity.outputs.principalId
-        roleDefinitionIdOrName: 'Search Index Data Contributor'
-        principalType: 'ServicePrincipal'
-      }
-      {
-        principalId: deployingUserPrincipalId
-        roleDefinitionIdOrName: 'Search Index Data Contributor'
-        principalType: deployerPrincipalType
-      }
-      {
-        principalId: aiFoundryAiProjectPrincipalId
-        roleDefinitionIdOrName: 'Search Index Data Reader'
-        principalType: 'ServicePrincipal'
-      }
-      {
-        principalId: aiFoundryAiProjectPrincipalId
-        roleDefinitionIdOrName: 'Search Service Contributor'
-        principalType: 'ServicePrincipal'
-      }
-    ]
-
-    //Removing the Private endpoints as we are facing the issue with connecting to search service while comminicating with agents
-
-    privateEndpoints: []
-    // privateEndpoints: enablePrivateNetworking 
-    //   ? [
-    //       {
-    //         name: 'pep-search-${solutionSuffix}'
-    //         customNetworkInterfaceName: 'nic-search-${solutionSuffix}'
-    //         privateDnsZoneGroup: {
-    //           privateDnsZoneGroupConfigs: [
-    //             {
-    //               privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.search]!.outputs.resourceId
-    //             }
-    //           ]
-    //         }
-    //         subnetResourceId: virtualNetwork!.outputs.subnetResourceIds[0]
-    //         service: 'searchService'
-    //       }
-    //     ]
-    //   : []
+resource searchService 'Microsoft.Search/searchServices@2024-06-01-preview' = {
+  name: searchServiceName
+  location: location
+  sku: {
+    name: enableScalability ? 'standard' : 'basic'
   }
 }
 
-// Separate module for Search Service to enable managed identity, as this reduces deployment time
-module searchServiceIdentity 'br/public:avm/res/search/search-service:0.11.1' = {
-  name: take('avm.res.search.identity.${solutionSuffix}', 64)
+// Separate module for Search Service to enable managed identity and update other properties, as this reduces deployment time
+module searchServiceUpdate 'br/public:avm/res/search/search-service:0.11.1' = {
+  name: take('avm.res.search.update.${solutionSuffix}', 64)
   params: {
     name: searchServiceName
     authOptions: {
@@ -1817,10 +1756,10 @@ module aiSearchFoundryConnection 'modules/aifp-connections.bicep' = {
     aiFoundryProjectName: aiFoundryAiProjectName
     aiFoundryName: aiFoundryAiServicesResourceName
     aifSearchConnectionName: aiSearchConnectionName
-    searchServiceResourceId: searchService.outputs.resourceId
-    searchServiceLocation: searchService.outputs.location
-    searchServiceName: searchService.outputs.name
-    searchApiKey: searchService.outputs.primaryKey
+    searchServiceResourceId: searchService.id
+    searchServiceLocation: searchService.location
+    searchServiceName: searchService.name
+    searchApiKey: searchService.listAdminKeys().primaryKey
   }
   dependsOn: [
     aiFoundryAiServices
@@ -1874,7 +1813,7 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.12.1' = {
     secrets: [
       {
         name: 'AzureAISearchAPIKey'
-        value: searchService.outputs.primaryKey
+        value: searchService.listAdminKeys().primaryKey
       }
     ]
     enableTelemetry: enableTelemetry
@@ -1893,8 +1832,8 @@ output webSiteDefaultHostname string = webSite.outputs.defaultHostname
 
 output AZURE_STORAGE_BLOB_URL string = avmStorageAccount.outputs.serviceEndpoints.blob
 output AZURE_STORAGE_ACCOUNT_NAME string = storageAccountName
-output AZURE_AI_SEARCH_ENDPOINT string = searchService.outputs.endpoint
-output AZURE_AI_SEARCH_NAME string = searchService.outputs.name
+output AZURE_AI_SEARCH_ENDPOINT string = searchServiceUpdate.outputs.endpoint
+output AZURE_AI_SEARCH_NAME string = searchService.name
 
 output COSMOSDB_ENDPOINT string = 'https://${cosmosDbResourceName}.documents.azure.com:443/'
 output COSMOSDB_DATABASE string = cosmosDbDatabaseName
@@ -1917,7 +1856,7 @@ output AI_FOUNDRY_RESOURCE_ID string = !useExistingAiFoundryAiProject
   ? aiFoundryAiServices.outputs.resourceId
   : existingAiFoundryAiProjectResourceId
 output COSMOSDB_ACCOUNT_NAME string = cosmosDbResourceName
-output AZURE_SEARCH_ENDPOINT string = searchService.outputs.endpoint
+output AZURE_SEARCH_ENDPOINT string = searchServiceUpdate.outputs.endpoint  
 output AZURE_CLIENT_ID string = userAssignedIdentity!.outputs.clientId
 output AZURE_TENANT_ID string = tenant().tenantId
 output AZURE_AI_SEARCH_CONNECTION_NAME string = aiSearchConnectionName
