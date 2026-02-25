@@ -4,6 +4,7 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useLayoutEffect,
+  useCallback,
 } from "react";
 import { Caption1 } from "@fluentui/react-components";
 import HeaderTools from "../components/Header/HeaderTools";
@@ -20,7 +21,7 @@ interface ChatInputProps {
 }
 
 // ✅ ForwardRef component
-const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
+const ChatInput = React.memo(forwardRef<HTMLTextAreaElement, ChatInputProps>(
   (
     {
       value,
@@ -36,6 +37,17 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
     const [isFocused, setIsFocused] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const inputContainerRef = useRef<HTMLDivElement>(null);
+
+    // Stable callbacks
+    const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => onChange(e.target.value), [onChange]);
+    const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        onEnter?.();
+      }
+    }, [onEnter]);
+    const handleFocus = useCallback(() => setIsFocused(true), []);
+    const handleBlur = useCallback(() => setIsFocused(false), []);
 
     // ✅ Allow parent to access textarea DOM node
     useImperativeHandle(ref, () => textareaRef.current as HTMLTextAreaElement);
@@ -68,9 +80,6 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
             padding: "8px",
             borderRadius: "var(--borderRadiusLarge)",
             backgroundColor: "var(--colorNeutralBackground1)",
-            // border: `1px solid ${isFocused
-            //   ? "var(--colorNeutralStroke1Pressed)"
-            //   : "var(--colorNeutralStroke1)"}`,
             transition: "border-color 0.2s ease-in-out",
             position: "relative",
             boxSizing: "border-box",
@@ -84,15 +93,10 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
             disabled={disabledChat}
             ref={textareaRef}
             value={value}
-            onChange={(e) => onChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                onEnter?.();
-              }
-            }}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
             placeholder={placeholder}
             rows={1}
             style={{
@@ -165,6 +169,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
       </div>
     );
   }
-);
+));
+ChatInput.displayName = 'ChatInput';
 
 export default ChatInput;

@@ -46,7 +46,7 @@ const useStyles = makeStyles({
   },
 });
 
-const ContentNotFound: React.FC<ContentNotFoundProps> = ({
+const ContentNotFound: React.FC<ContentNotFoundProps> = React.memo(({
   imageSrc = DEFAULT_IMAGE,
   title = DEFAULT_TITLE,
   subtitle,
@@ -82,6 +82,7 @@ const ContentNotFound: React.FC<ContentNotFoundProps> = ({
       )}
     </div>
   );
-};
+});
+ContentNotFound.displayName = 'ContentNotFound';
 
 export default ContentNotFound;

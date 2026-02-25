@@ -2,6 +2,7 @@ import ChatInput from "@/coral/modules/ChatInput";
 import { PlanChatProps } from "@/models";
 import { Button } from "@fluentui/react-components";
 import { Send } from "@/coral/imports/bundleicons";
+import React, { useCallback, useMemo } from "react";
 
 interface SimplifiedPlanChatProps extends PlanChatProps {
     planData: any;
@@ -12,21 +13,22 @@ interface SimplifiedPlanChatProps extends PlanChatProps {
     waitingForPlan: boolean;
 }
 
-const PlanChatBody: React.FC<SimplifiedPlanChatProps> = ({
-    planData,
+const PlanChatBody: React.FC<SimplifiedPlanChatProps> = React.memo(({
     input,
     setInput,
     submittingChatDisableInput,
     OnChatSubmit,
-    waitingForPlan
 }) => {
+    const handleEnter = useCallback(() => OnChatSubmit(input), [OnChatSubmit, input]);
+    const handleSendClick = useCallback(() => OnChatSubmit(input), [OnChatSubmit, input]);
+    const isDisabled = useMemo(
+        () => submittingChatDisableInput || !input.trim(),
+        [submittingChatDisableInput, input]
+    );
     return (
         <div
             style={{
-                // position: 'sticky',
                 bottom: 0,
-                // backgroundColor: 'var(--colorNeutralBackground1)',
-                // borderTop: '1px solid var(--colorNeutralStroke2)',
                 padding: '16px 24px',
                 maxWidth: '800px',
                 margin: '0 auto',
@@ -39,14 +41,12 @@ const PlanChatBody: React.FC<SimplifiedPlanChatProps> = ({
             <ChatInput
                 value={input}
                 onChange={setInput}
-                onEnter={() => OnChatSubmit(input)}
+                onEnter={handleEnter}
                 disabledChat={submittingChatDisableInput}
                 placeholder="Type your message here..."
                 style={{
                     fontSize: '16px',
                     borderRadius: '8px',
-                    // border: '1px solid var(--colorNeutralStroke1)',
-                    // backgroundColor: 'var(--colorNeutralBackground1)',
                     width: '100%',
                     boxSizing: 'border-box',
                 }}
@@ -54,8 +54,8 @@ const PlanChatBody: React.FC<SimplifiedPlanChatProps> = ({
                 <Button
                     appearance="subtle"
                     className="home-input-send-button"
-                    onClick={() => OnChatSubmit(input)}
-                    disabled={submittingChatDisableInput || !input.trim()}
+                    onClick={handleSendClick}
+                    disabled={isDisabled}
                     icon={<Send />}
                     style={{
                         height: '32px',
@@ -63,7 +63,7 @@ const PlanChatBody: React.FC<SimplifiedPlanChatProps> = ({
                         borderRadius: '4px',
                         backgroundColor: 'transparent',
                         border: 'none',
-                        color: (submittingChatDisableInput || !input.trim())
+                        color: isDisabled
                             ? 'var(--colorNeutralForegroundDisabled)'
                             : 'var(--colorBrandForeground1)',
                         flexShrink: 0,
@@ -72,6 +72,7 @@ const PlanChatBody: React.FC<SimplifiedPlanChatProps> = ({
             </ChatInput>
         </div>
     );
-}
+});
+PlanChatBody.displayName = 'PlanChatBody';
 
 export default PlanChatBody;

@@ -13,7 +13,6 @@ import { ChatDismiss20Regular, HeartRegular } from "@fluentui/react-icons";
 import ChatInput from "./ChatInput";
 import "./Chat.css";
 import "./prism-material-oceanic.css";
-// import { chatService } from "../services/chatService";
 import HeaderTools from "../components/Header/HeaderTools";
 
 interface ChatProps {
@@ -35,7 +34,6 @@ interface ChatProps {
 
 const Chat: React.FC<ChatProps> = ({
   userId,
-  children,
   onSendMessage,
   onSaveMessage,
   onLoadHistory,
@@ -60,8 +58,6 @@ const Chat: React.FC<ChatProps> = ({
             return;
           }
         }
-        // const chatMessages = await chatService.getUserHistory(userId);
-        // setMessages(chatMessages);
       } catch (err) {
         console.log("Failed to load chat history.", err);
       }
@@ -144,11 +140,6 @@ const Chat: React.FC<ChatProps> = ({
           setMessages(newHistory);
           onSaveMessage?.(userId, newHistory);
         }
-      } else {
-        // const response = await chatService.sendMessage(userId, input, currentConversationId);
-        // setCurrentConversationId(response.conversation_id);
-        // const assistantMessage = { role: "assistant", content: response.assistant_response };
-        // setMessages([...updatedMessages, assistantMessage]);
       }
     } catch (err) {
       console.log("Send Message Error:", err);
@@ -165,8 +156,6 @@ const Chat: React.FC<ChatProps> = ({
     try {
       if (onClearHistory) {
         onClearHistory(userId);
-      } else {
-        // await chatService.clearChatHistory(userId);
       }
       setMessages([]);
     } catch (err) {
@@ -195,7 +184,7 @@ const Chat: React.FC<ChatProps> = ({
                         icon={<Copy />}
                       />
                       <Button
-                        onClick={() => console.log("Heart clicked for response:", msg.content)}
+                        onClick={() => {}}
                         title="Like"
                         appearance="subtle"
                         style={{ height: 28, width: 28 }}

@@ -26,7 +26,6 @@
     width: 100%;
     align-items: center;
     justify-content: center;
-    /* background-color: var(--colorNeutralBackground1); */
     border-top: 1px solid var(--colorNeutralStroke2);
     padding: 12px 0;
 }

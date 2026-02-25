@@ -1,4 +1,6 @@
-const ContosoLogo: React.FC = () => {
+import React from 'react';
+
+const ContosoLogo: React.FC = React.memo(() => {
     return (
         <svg
             width="32"
@@ -13,6 +15,7 @@ const ContosoLogo: React.FC = () => {
             <path d="M16.5217 16.5217H26.9565V26.9565H16.5217V16.5217Z" fill="#FFBA08" />
         </svg>
     );
-}
+});
+ContosoLogo.displayName = 'ContosoLogo';
 
 export default ContosoLogo;

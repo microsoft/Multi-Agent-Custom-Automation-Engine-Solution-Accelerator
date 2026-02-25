@@ -1,3 +1,4 @@
+import React from "react";
 import { TeamConfig } from "@/models";
 import { Body1, Caption1 } from "@fluentui/react-components";
 import styles from '../../styles/TeamSelector.module.css';
@@ -5,7 +6,7 @@ export interface TeamSelectedProps {
     selectedTeam?: TeamConfig | null;
 }
 
-const TeamSelected: React.FC<TeamSelectedProps> = ({ selectedTeam }) => {
+const TeamSelected: React.FC<TeamSelectedProps> = React.memo(({ selectedTeam }) => {
     return (
         <div className={styles.teamSelectorContent}>
             <Caption1 className={styles.currentTeamLabel}>
@@ -16,5 +17,7 @@ const TeamSelected: React.FC<TeamSelectedProps> = ({ selectedTeam }) => {
             </Body1>
         </div>
     );
-}
+});
+TeamSelected.displayName = 'TeamSelected';
+
 export default TeamSelected;

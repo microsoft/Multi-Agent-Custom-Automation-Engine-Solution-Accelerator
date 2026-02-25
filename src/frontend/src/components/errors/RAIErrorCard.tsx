@@ -27,7 +27,7 @@ interface RAIErrorCardProps {
     className?: string;
 }
 
-const RAIErrorCard: React.FC<RAIErrorCardProps> = ({
+const RAIErrorCard: React.FC<RAIErrorCardProps> = React.memo(({
     error,
     onRetry,
     onDismiss,
@@ -100,6 +100,7 @@ const RAIErrorCard: React.FC<RAIErrorCardProps> = ({
             </div>
         </Card>
     );
-};
+});
+RAIErrorCard.displayName = 'RAIErrorCard';
 
 export default RAIErrorCard;

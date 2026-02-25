@@ -6,15 +6,13 @@ import { Dismiss } from "../../imports/bundleicons.js";
 interface PanelRightToolbarProps {
     panelTitle?: string | null;
     panelIcon?: ReactNode;
-    //   panelType?: "first" | "second"; // Optional, defaults to "first"
     children?: ReactNode;
-    handleDismiss?: () => void;  // Add this line
+    handleDismiss?: () => void;
 }
 
 const PanelRightToolbar: React.FC<PanelRightToolbarProps> = ({
     panelTitle,
     panelIcon,
-    //   panelType = "first", // Default value set here
     children,
     handleDismiss,
 }) => {

@@ -7,7 +7,7 @@ import {
   SkeletonItem,
 } from "@fluentui/react-components";
 import { MoreHorizontal20Regular } from "@fluentui/react-icons";
-import React from "react";
+import React, { useCallback } from "react";
 import "../../styles/TaskList.css";
 import { Task, TaskListProps } from "@/models";
 import {
@@ -17,14 +17,14 @@ import {
   AccordionPanel,
 } from "@fluentui/react-components";
 
-const TaskList: React.FC<TaskListProps> = ({
+const TaskList: React.FC<TaskListProps> = React.memo(({
   completedTasks,
   onTaskSelect,
   loading,
   selectedTaskId,
   isLoadingTeam
 }) => {
-  const renderTaskItem = (task: Task) => {
+  const renderTaskItem = useCallback((task: Task) => {
     const isActive = task.id === selectedTaskId;
 
     return (
@@ -65,7 +65,7 @@ const TaskList: React.FC<TaskListProps> = ({
         </Menu>
       </div>
     );
-  };
+  }, [selectedTaskId, onTaskSelect]);
 
   const renderSkeleton = (key: string) => (
     <div key={key} className="task-skeleton-container">
@@ -96,6 +96,7 @@ const TaskList: React.FC<TaskListProps> = ({
       </Accordion>
     </div>
   );
-};
+});
+TaskList.displayName = 'TaskList';
 
 export default TaskList;

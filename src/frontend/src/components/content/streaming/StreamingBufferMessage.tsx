@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
     Button,
 } from '@fluentui/react-components';
@@ -13,7 +13,7 @@ interface StreamingBufferMessageProps {
 }
 
 // Convert to a proper React component instead of a function
-const StreamingBufferMessage: React.FC<StreamingBufferMessageProps> = ({
+const StreamingBufferMessage: React.FC<StreamingBufferMessageProps> = React.memo(({
     streamingMessageBuffer,
     isStreaming = false
 }) => {
@@ -21,6 +21,48 @@ const StreamingBufferMessage: React.FC<StreamingBufferMessageProps> = ({
     const [shouldFade, setShouldFade] = useState<boolean>(false);
     const contentRef = useRef<HTMLDivElement>(null);
     const prevBufferLength = useRef<number>(0);
+
+    const toggleExpanded = useCallback(() => setIsExpanded(prev => !prev), []);
+
+    // Memoize ReactMarkdown components to avoid re-creating on every render
+    const collapsedMarkdownComponents = useMemo(() => ({
+        a: ({ node, ...props }: any) => (
+            <a
+                {...props}
+                style={{
+                    color: 'var(--colorNeutralBrandForeground1)',
+                    textDecoration: 'none'
+                }}
+                onMouseEnter={(e: React.MouseEvent<HTMLAnchorElement>) => {
+                    e.currentTarget.style.textDecoration = 'underline';
+                }}
+                onMouseLeave={(e: React.MouseEvent<HTMLAnchorElement>) => {
+                    e.currentTarget.style.textDecoration = 'none';
+                }}
+            />
+        ),
+        p: ({ node, ...props }: any) => (
+            <p {...props} style={{ margin: '0 0 8px 0' }} />
+        )
+    }), []);
+
+    const expandedMarkdownComponents = useMemo(() => ({
+        a: ({ node, ...props }: any) => (
+            <a
+                {...props}
+                style={{
+                    color: 'var(--colorNeutralBrandForeground1)',
+                    textDecoration: 'none'
+                }}
+                onMouseEnter={(e: React.MouseEvent<HTMLAnchorElement>) => {
+                    e.currentTarget.style.textDecoration = 'underline';
+                }}
+                onMouseLeave={(e: React.MouseEvent<HTMLAnchorElement>) => {
+                    e.currentTarget.style.textDecoration = 'none';
+                }}
+            />
+        )
+    }), []);
 
     // Trigger fade effect when new content is being streamed
     useEffect(() => {
@@ -94,7 +136,7 @@ const StreamingBufferMessage: React.FC<StreamingBufferMessageProps> = ({
                     <Button
                         appearance="secondary"
                         size="small"
-                        onClick={() => setIsExpanded(!isExpanded)}
+                        onClick={toggleExpanded}
                         style={{
                             backgroundColor: 'var(--colorNeutralBackground3)',
                             border: '1px solid var(--colorNeutralStroke2)',
@@ -161,26 +203,7 @@ const StreamingBufferMessage: React.FC<StreamingBufferMessageProps> = ({
                                 <ReactMarkdown
                                     remarkPlugins={[remarkGfm]}
                                     rehypePlugins={[rehypePrism]}
-                                    components={{
-                                        a: ({ node, ...props }) => (
-                                            <a
-                                                {...props}
-                                                style={{
-                                                    color: 'var(--colorNeutralBrandForeground1)',
-                                                    textDecoration: 'none'
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                    e.currentTarget.style.textDecoration = 'underline';
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    e.currentTarget.style.textDecoration = 'none';
-                                                }}
-                                            />
-                                        ),
-                                        p: ({ node, ...props }) => (
-                                            <p {...props} style={{ margin: '0 0 8px 0' }} />
-                                        )
-                                    }}
+                                    components={collapsedMarkdownComponents}
                                 >
                                     {streamingMessageBuffer}
                                 </ReactMarkdown>
@@ -198,23 +221,7 @@ const StreamingBufferMessage: React.FC<StreamingBufferMessageProps> = ({
                         <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
                             rehypePlugins={[rehypePrism]}
-                            components={{
-                                a: ({ node, ...props }) => (
-                                    <a
-                                        {...props}
-                                        style={{
-                                            color: 'var(--colorNeutralBrandForeground1)',
-                                            textDecoration: 'none'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.textDecoration = 'underline';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.textDecoration = 'none';
-                                        }}
-                                    />
-                                )
-                            }}
+                            components={expandedMarkdownComponents}
                         >
                             {streamingMessageBuffer}
                         </ReactMarkdown>
@@ -223,6 +230,7 @@ const StreamingBufferMessage: React.FC<StreamingBufferMessageProps> = ({
             </div>
         </div>
     );
-};
+});
+StreamingBufferMessage.displayName = 'StreamingBufferMessage';
 
 export default StreamingBufferMessage;

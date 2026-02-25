@@ -1,58 +1,121 @@
 /**
- * Get a user-friendly error message based on the error type
- * @param error The error object to process
- * @returns User-friendly error message
+ * Error Handling Utilities
+ *
+ * Single-source-of-truth helpers for extracting user-friendly error messages
+ * from HttpError responses and formatting error content for display.
  */
-export const getErrorMessage = (error: unknown): string => {
-    if (error instanceof Error) {
-        // Check error message patterns for different types of errors
-        const message = error.message.toLowerCase();
 
-          if (message.includes('400') || message.includes('bad request')) {
-            return 'Invalid request. Please check your input and try again.';
-        } else if (message.includes('401') || message.includes('unauthorized')) {
-            return 'You are not authorized to perform this action. Please sign in again.';
-        } else if (message.includes('404') || message.includes('not found')) {
-            return 'The requested resource was not found.';
-        } else if (message.includes('429') || message.includes('too many requests')) {
-            return 'Too many requests. Please wait a moment and try again.';
-        } else if (message.includes('500') || message.includes('server error')) {
-            return 'A server error occurred. Please try again later.';
-        } else if (message.includes('network') || message.includes('fetch')) {
-            return 'Network error. Please check your connection and try again.';
-        } else if (message.includes('timeout')) {
-            return 'Request timed out. Please try again.';
-        } else if (message.includes('quota') || message.includes('limit')) {
-            return 'Service limit reached. Please try again later.';
-        }
-
-        // Return original message if it's already user-friendly (doesn't contain technical terms)
-        if (!message.includes('exception') && !message.includes('stack') && 
-            !message.includes('undefined') && !message.includes('null')) {
-            return error.message;
-        }
-    }
-    return 'An unexpected error occurred. Please try again.';
-};
+// ─── HttpError Detail Extraction ─────────────────────────────────────────────
 
 /**
- * Get CSS class or style based on error type for UI elements
- * @param error The error object to process
- * @returns CSS class name or style object
+ * Extract a user-friendly error message from an HttpError thrown by httpClient.
+ *
+ * The httpClient normalises errors into `{ data, status, statusText, message }`.
+ * Backend FastAPI endpoints typically return `{ detail: "..." }` in the body.
+ *
+ * Resolution order:
+ *  1. `error.data.detail` (string)  — FastAPI detail
+ *  2. `error.data.detail` (object)  — nested `.detail`, `.message`, or JSON
+ *  3. `error.data` (object)         — fallback `.detail`, `.message`, or JSON
+ *  4. `error.message` (string)      — JS Error.message (unless it's "[object Object]")
+ *  5. `fallback`                    — caller-provided default
+ *
+ * @param error     - the caught error (typed `any` for flexibility)
+ * @param fallback  - default message when nothing useful can be extracted
  */
-export const getErrorStyle = (error: unknown): string => {
-    if (error instanceof Error) {
-        const message = error.message.toLowerCase();
+export function extractHttpErrorMessage(
+    error: any,
+    fallback = 'An unexpected error occurred'
+): string {
+    // 1. Try error.data?.detail as string
+    if (typeof error?.data?.detail === 'string') {
+        return error.data.detail;
+    }
 
-        if (message.includes('400') || message.includes('bad request')) {
-            return 'error-bad-request';
-        } else if (message.includes('401') || message.includes('unauthorized')) {
-            return 'error-unauthorized';
-        } else if (message.includes('404') || message.includes('not found')) {
-            return 'error-not-found';
-        } else if (message.includes('500') || message.includes('server error')) {
-            return 'error-server';
+    // 2. Try error.data?.detail as object, then error.data itself
+    const rawDetail = error?.data?.detail ?? error?.data;
+    if (typeof rawDetail === 'object' && rawDetail !== null) {
+        const nested = rawDetail.detail || rawDetail.message;
+        if (typeof nested === 'string') return nested;
+        try {
+            const str = JSON.stringify(rawDetail);
+            if (str && str !== '{}') return str;
+        } catch { /* fall through */ }
+    }
+
+    // 3. Try error.message (JS Error), skip "[object Object]"
+    if (
+        typeof error?.message === 'string' &&
+        error.message !== '[object Object]'
+    ) {
+        return error.message;
+    }
+
+    // 4. Fallback
+    return fallback;
+}
+
+// ─── Error Content Classification ────────────────────────────────────────────
+
+/** Returns true when the error message indicates RAI content-policy failure. */
+export function isRaiError(message: string): boolean {
+    return message.includes('inappropriate content');
+}
+
+/** Returns true when the error message indicates search-index validation failure. */
+export function isSearchValidationError(message: string): boolean {
+    return message.includes('Search index validation failed');
+}
+
+// ─── Display Formatting ──────────────────────────────────────────────────────
+
+/**
+ * Format an error string for display in agent messages.
+ *
+ * - First line is prefixed with ⚠️
+ * - Subsequent non-empty lines are indented
+ *
+ * @param content - raw error text (may contain newlines)
+ */
+export function formatErrorMessage(content: string): string {
+    const lines = content.split('\n');
+    const formattedLines = lines.map((line, index) => {
+        if (index === 0) return `⚠️ ${line}`;
+        if (line.trim() === '') return '';
+        return `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${line}`;
+    });
+    return formattedLines.join('\n');
+}
+
+// ─── Deeply-Nested Content Extraction ────────────────────────────────────────
+
+/**
+ * Extract text content from a deeply-nested WebSocket error payload.
+ *
+ * Checks `data.data.content`, `data.content`, `content`, and bare string
+ * in that order — returning the first non-empty trimmed string.
+ *
+ * @param message - the raw WebSocket error message object
+ * @param fallback - default when no content can be found
+ */
+export function extractNestedContent(
+    message: any,
+    fallback = 'An unexpected error occurred. Please try again later.'
+): string {
+    const candidates: unknown[] = [
+        message?.data?.data?.content,
+        message?.data?.content,
+        message?.content,
+        typeof message === 'string' ? message : undefined,
+    ];
+
+    for (const candidate of candidates) {
+        if (typeof candidate === 'string') {
+            const trimmed = candidate.trim();
+            if (trimmed.length > 0) return trimmed;
         }
     }
-    return 'error-general';
-};
+
+    return fallback;
+}
+

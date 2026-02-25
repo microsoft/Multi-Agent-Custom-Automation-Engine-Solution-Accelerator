@@ -21,7 +21,7 @@ import {
     Shield20Regular
 } from '@fluentui/react-icons';
 import { TeamService } from '@/services/TeamService';
-import { TaskService } from '@/services';
+import { cleanTextToSpaces } from '@/utils/messageUtils';
 import { iconMap } from '@/models/homeInput';
 
 // Extended icon mapping for user-uploaded string icons
@@ -196,10 +196,10 @@ const getDeterministicAgentIcon = (cleanName: string): React.ComponentType<any> 
  */
 const getUniqueAgentIcon = (
     agentName: string,
-    allAgentNames: string[],
+    _allAgentNames: string[],
     iconStyle: React.CSSProperties
 ): React.ReactNode => {
-    const cleanName = TaskService.cleanTextToSpaces(agentName).toLowerCase();
+    const cleanName = cleanTextToSpaces(agentName).toLowerCase();
 
     // If we already assigned an icon to this agent, use it
     if (agentIconAssignments[cleanName]) {
@@ -231,12 +231,12 @@ export const getAgentIcon = (
 
     // 1. First priority: Get from uploaded team configuration in planData
     if (planData?.team?.agents) {
-        const cleanAgentName = TaskService.cleanTextToSpaces(agentName);
+        const cleanAgentName = cleanTextToSpaces(agentName);
 
         const agent = planData.team.agents.find((a: any) =>
-            TaskService.cleanTextToSpaces(a.name || '').toLowerCase().includes(cleanAgentName.toLowerCase()) ||
-            TaskService.cleanTextToSpaces(a.type || '').toLowerCase().includes(cleanAgentName.toLowerCase()) ||
-            TaskService.cleanTextToSpaces(a.input_key || '').toLowerCase().includes(cleanAgentName.toLowerCase())
+            cleanTextToSpaces(a.name || '').toLowerCase().includes(cleanAgentName.toLowerCase()) ||
+            cleanTextToSpaces(a.type || '').toLowerCase().includes(cleanAgentName.toLowerCase()) ||
+            cleanTextToSpaces(a.input_key || '').toLowerCase().includes(cleanAgentName.toLowerCase())
         );
 
         if (agent?.icon) {
@@ -258,10 +258,10 @@ export const getAgentIcon = (
     // 2. Second priority: Get from stored team configuration (TeamService)
     const storedTeam = TeamService.getStoredTeam();
     if (storedTeam?.agents) {
-        const cleanAgentName = TaskService.cleanTextToSpaces(agentName);
+        const cleanAgentName = cleanTextToSpaces(agentName);
 
         const agent = storedTeam.agents.find(a =>
-            TaskService.cleanTextToSpaces(a.name).toLowerCase().includes(cleanAgentName.toLowerCase()) ||
+            cleanTextToSpaces(a.name).toLowerCase().includes(cleanAgentName.toLowerCase()) ||
             a.type.toLowerCase().includes(cleanAgentName.toLowerCase()) ||
             a.input_key.toLowerCase().includes(cleanAgentName.toLowerCase())
         );
@@ -299,15 +299,6 @@ export const getAgentIcon = (
 };
 
 /**
- * Clear agent icon assignments (useful when switching teams/contexts)
- */
-export const clearAgentIconAssignments = (): void => {
-    Object.keys(agentIconAssignments).forEach(key => {
-        delete agentIconAssignments[key];
-    });
-};
-
-/**
  * Get agent display name with proper formatting
  * Removes redundant "Agent" suffix and handles proper spacing
  */
@@ -315,7 +306,7 @@ export const getAgentDisplayName = (agentName: string): string => {
     if (!agentName) return 'Assistant';
 
     // Clean and format the name
-    let cleanName = TaskService.cleanTextToSpaces(agentName);
+    let cleanName = cleanTextToSpaces(agentName);
 
     // Remove "Agent" suffix if it exists (case insensitive)
     cleanName = cleanName.replace(/\s*agent\s*$/gi, '').trim();
@@ -350,39 +341,4 @@ export const getAgentDisplayName = (agentName: string): string => {
 export const getAgentDisplayNameWithSuffix = (agentName: string): string => {
     const baseName = getAgentDisplayName(agentName);
     return `${baseName} Agent`;
-};
-
-/**
- * Get agent icon with custom styling override
- */
-/**
- * Get agent icon with custom styling override
- */
-export const getStyledAgentIcon = (
-    agentName: string,
-    customStyle: React.CSSProperties,
-    planData?: any,
-    planApprovalRequest?: any
-): React.ReactNode => {
-    const icon = getAgentIcon(agentName, planData, planApprovalRequest);
-
-    if (React.isValidElement(icon)) {
-        try {
-            // Safely merge styles
-            const mergedStyle = {
-                ...(icon.props as any)?.style,
-                ...customStyle
-            };
-
-            return React.cloneElement(icon as React.ReactElement<any>, {
-                style: mergedStyle
-            });
-        } catch (error) {
-            // Fallback: return original icon if cloning fails
-            console.warn('Failed to apply custom style to agent icon:', error);
-            return icon;
-        }
-    }
-
-    return icon;
 };

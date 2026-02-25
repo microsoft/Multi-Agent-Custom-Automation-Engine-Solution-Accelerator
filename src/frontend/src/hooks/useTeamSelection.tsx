@@ -36,13 +36,10 @@ export const useTeamSelection = ({
     setError(null);
 
     try {
-      console.log('Selecting team:', team.name, 'with session ID:', sessionId);
-
       const result = await TeamService.selectTeam(team.team_id);
 
       if (result.success) {
         setSelectedTeam(team);
-        console.log('Team selection successful:', result.data);
 
         // Call success callback
         onTeamSelected?.(team, result.data);

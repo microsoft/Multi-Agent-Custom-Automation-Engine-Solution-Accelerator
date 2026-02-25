@@ -1,5 +1,6 @@
 import { TeamConfig } from '../models/Team';
 import { apiClient } from '../api/apiClient';
+import { extractHttpErrorMessage, isRaiError, isSearchValidationError } from '../utils/errorUtils';
 
 export class TeamService {
     /**
@@ -34,33 +35,20 @@ export class TeamService {
         error?: string;
     }> {
         try {
-            console.log('Calling /v4/init_team endpoint...');
             const response = await apiClient.get('/v4/init_team', {
                 params: {
                     team_switched
                 }
             });
 
-            console.log('Team initialization response:', response);
-
             return {
                 success: true,
                 data: response
             };
         } catch (error: any) {
-            console.error('Team initialization failed:', error);
-
-            let errorMessage = 'Failed to initialize team';
-
-            if (error.response?.data?.detail) {
-                errorMessage = error.response.data.detail;
-            } else if (error.message) {
-                errorMessage = error.message;
-            }
-
             return {
                 success: false,
-                error: errorMessage
+                error: extractHttpErrorMessage(error, 'Failed to initialize team')
             };
         }
     }
@@ -83,7 +71,6 @@ export class TeamService {
         try {
             const formData = new FormData();
             formData.append('file', teamFile);
-            console.log(formData);
             const response = await apiClient.upload('/v4/upload_team_config', formData);
 
             return {
@@ -91,38 +78,28 @@ export class TeamService {
                 team: response.team
             };
         } catch (error: any) {
+            const errorMessage = extractHttpErrorMessage(error, 'Failed to upload team configuration');
 
-            // Check if this is an RAI validation error
-            const errorDetail = error.response?.data?.detail || error.response?.data;
-
-            // If the error message contains "inappropriate content", treat it as RAI error
-            if (typeof errorDetail === 'string' && errorDetail.includes('inappropriate content')) {
+            if (isRaiError(errorMessage)) {
                 return {
                     success: false,
                     raiError: {
                         error_type: 'RAI_VALIDATION_FAILED',
-                        message: errorDetail,
-                        description: errorDetail
+                        message: errorMessage,
+                        description: errorMessage
                     }
                 };
             }
 
-            // If the error message contains "Search index validation failed", treat it as search error
-            if (typeof errorDetail === 'string' && errorDetail.includes('Search index validation failed')) {
+            if (isSearchValidationError(errorMessage)) {
                 return {
                     success: false,
                     searchError: {
                         error_type: 'SEARCH_VALIDATION_FAILED',
-                        message: errorDetail,
-                        description: errorDetail
+                        message: errorMessage,
+                        description: errorMessage
                     }
                 };
-            }
-
-            // Get error message from the response
-            let errorMessage = error.message || 'Failed to upload team configuration';
-            if (error.response?.data?.detail) {
-                errorMessage = error.response.data.detail;
             }
 
             return {
@@ -191,17 +168,9 @@ export class TeamService {
                 data: response
             };
         } catch (error: any) {
-            let errorMessage = 'Failed to select team';
-
-            if (error.response?.data?.detail) {
-                errorMessage = error.response.data.detail;
-            } else if (error.message) {
-                errorMessage = error.message;
-            }
-
             return {
                 success: false,
-                error: errorMessage
+                error: extractHttpErrorMessage(error, 'Failed to select team')
             };
         }
     }

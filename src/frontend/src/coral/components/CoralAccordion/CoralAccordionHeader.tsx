@@ -11,7 +11,6 @@ type Props = {
 
 const CoralAccordionHeader: React.FC<Props> = ({
   children,
-  height = "32px",
   chevron = false,
 }) => {
   const { open, toggle } = useCoralAccordion();

@@ -1,11 +1,13 @@
-import React, { StrictMode, useEffect, useState } from 'react';
+import { StrictMode, useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
+import { Provider } from 'react-redux';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { FluentProvider, teamsLightTheme, teamsDarkTheme } from "@fluentui/react-components";
 import { setEnvData, setApiUrl, config as defaultConfig, toBoolean, getUserInfo, setUserInfoGlobal } from './api/config';
 import { apiService } from './api';
+import { store } from './store';
 const root = ReactDOM.createRoot(document.getElementById("root") as HTMLElement);
 
 const AppWrapper = () => {
@@ -65,11 +67,13 @@ const AppWrapper = () => {
   }, []);
   if (!isConfigLoaded || !isUserInfoLoaded) return <div>Loading...</div>;
   return (
-    <StrictMode>
-      <FluentProvider theme={isDarkMode ? teamsDarkTheme : teamsLightTheme} style={{ height: "100vh" }}>
-        <App />
-      </FluentProvider>
-    </StrictMode>
+    <Provider store={store}>
+      <StrictMode>
+        <FluentProvider theme={isDarkMode ? teamsDarkTheme : teamsLightTheme} style={{ height: "100vh" }}>
+          <App />
+        </FluentProvider>
+      </StrictMode>
+    </Provider>
   );
 };
 root.render(<AppWrapper />);

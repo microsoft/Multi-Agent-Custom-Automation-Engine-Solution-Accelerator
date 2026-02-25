@@ -17,7 +17,7 @@ export interface LoadingMessageProps {
     iconHeight?: number;
 }
 
-const LoadingMessage: React.FC<LoadingMessageProps> = ({
+const LoadingMessage: React.FC<LoadingMessageProps> = React.memo(({
     loadingMessage,
     iconSrc,
     iconWidth = 64,
@@ -35,6 +35,7 @@ const LoadingMessage: React.FC<LoadingMessageProps> = ({
             <Text>{loadingMessage}</Text>
         </div>
     );
-};
+});
+LoadingMessage.displayName = 'LoadingMessage';
 
 export default LoadingMessage;

@@ -1,104 +1,65 @@
-import { headerBuilder, getApiUrl } from './config';
+/**
+ * API Client - Backward-compatible wrapper around HttpClient
+ * 
+ * This module re-exports the httpClient methods in the original apiClient interface
+ * for backward compatibility with existing code.
+ * 
+ * For new code, prefer importing directly from httpClient:
+ * ```typescript
+ * import { httpClient } from './httpClient';
+ * ```
+ */
 
-// Helper function to build URL with query parameters
-const buildUrl = (url: string, params?: Record<string, any>): string => {
-    if (!params) return url;
+import { httpClient, RequestConfig } from './httpClient';
 
-    const searchParams = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-            searchParams.append(key, String(value));
-        }
-    });
-
-    const queryString = searchParams.toString();
-    return queryString ? `${url}?${queryString}` : url;
-};
-
-// Fetch with Authentication Headers
-const fetchWithAuth = async (url: string, method: string = "GET", body: BodyInit | null = null) => {
-    const token = localStorage.getItem('token'); // Get the token from localStorage
-    const authHeaders = headerBuilder(); // Get authentication headers
-
-    const headers: Record<string, string> = {
-        ...authHeaders, // Include auth headers from headerBuilder
-    };
-
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`; // Add the token to the Authorization header
-    }
-
-    // If body is FormData, do not set Content-Type header
-    if (body && body instanceof FormData) {
-        delete headers['Content-Type'];
-    } else {
-        headers['Content-Type'] = 'application/json';
-        body = body ? JSON.stringify(body) : null;
-    }
-
-    const options: RequestInit = {
-        method,
-        headers,
-        body: body || undefined,
-    };
-
-    try {
-        const apiUrl = getApiUrl();
-        const finalUrl = `${apiUrl}${url}`;
-        // Log the request details
-        const response = await fetch(finalUrl, options);
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || 'Something went wrong');
-        }
-
-        const isJson = response.headers.get('content-type')?.includes('application/json');
-        const responseData = isJson ? await response.json() : null;
-        return responseData;
-    } catch (error) {
-        console.info('API Error:', (error as Error).message);
-        throw error;
-    }
-};
-
-// Vanilla Fetch without Auth for Login
-const fetchWithoutAuth = async (url: string, method: string = "POST", body: BodyInit | null = null) => {
-    const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-    };
-
-    const options: RequestInit = {
-        method,
-        headers,
-        body: body ? JSON.stringify(body) : undefined,
-    };
-
-    try {
-        const apiUrl = getApiUrl();
-        const response = await fetch(`${apiUrl}${url}`, options);
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || 'Login failed');
-        }
-        const isJson = response.headers.get('content-type')?.includes('application/json');
-        return isJson ? await response.json() : null;
-    } catch (error) {
-        console.log('Login Error:', (error as Error).message);
-        throw error;
-    }
-};
-
-// Authenticated requests (with token) and login (without token)
+/**
+ * Legacy API client interface
+ * Maps to the new HttpClient methods while maintaining the same API
+ */
 export const apiClient = {
-    get: (url: string, config?: { params?: Record<string, any> }) => {
-        const finalUrl = buildUrl(url, config?.params);
-        return fetchWithAuth(finalUrl, 'GET');
+    /**
+     * GET request with optional query params
+     */
+    get: <T = any>(url: string, config?: { params?: Record<string, any> }): Promise<T> => {
+        return httpClient.get<T>(url, config as RequestConfig);
     },
-    post: (url: string, body?: any) => fetchWithAuth(url, 'POST', body),
-    put: (url: string, body?: any) => fetchWithAuth(url, 'PUT', body),
-    delete: (url: string) => fetchWithAuth(url, 'DELETE'),
-    upload: (url: string, formData: FormData) => fetchWithAuth(url, 'POST', formData),
-    login: (url: string, body?: any) => fetchWithoutAuth(url, 'POST', body), // For login without auth
+
+    /**
+     * POST request with JSON body
+     */
+    post: <T = any>(url: string, body?: any): Promise<T> => {
+        return httpClient.post<T>(url, body);
+    },
+
+    /**
+     * PUT request with JSON body
+     */
+    put: <T = any>(url: string, body?: any): Promise<T> => {
+        return httpClient.put<T>(url, body);
+    },
+
+    /**
+     * DELETE request
+     */
+    delete: <T = any>(url: string): Promise<T> => {
+        return httpClient.delete<T>(url);
+    },
+
+    /**
+     * Upload file using FormData
+     */
+    upload: <T = any>(url: string, formData: FormData): Promise<T> => {
+        return httpClient.upload<T>(url, formData);
+    },
+
+    /**
+     * Login request without auth headers
+     */
+    login: <T = any>(url: string, body?: any): Promise<T> => {
+        return httpClient.requestWithoutAuth<T>('POST', url, body);
+    },
 };
+
+// Re-export httpClient for direct usage in new code
+export { httpClient } from './httpClient';
+export type { HttpClientConfig, RequestConfig, HttpResponse, HttpError } from './httpClient';

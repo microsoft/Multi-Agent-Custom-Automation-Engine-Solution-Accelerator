@@ -29,7 +29,6 @@ class WebSocketService {
         const hasApiSegment = /\/api(\/|$)/i.test(base);
         const socketPath = hasApiSegment ? '/v4/socket' : '/api/v4/socket';
         const url = `${base}${socketPath}${processId ? `/${processId}` : `/${planId}`}?user_id=${userId || ''}`;
-        console.log("Constructed WebSocket URL:", url);
         return url;
     }
     connect(planId: string, processId?: string): Promise<void> {
@@ -91,7 +90,6 @@ class WebSocketService {
     }
 
     disconnect(): void {
-        console.log('WebSocketService: Disconnecting WebSocket');
         if (this.reconnectTimer) {
             clearTimeout(this.reconnectTimer);
             this.reconnectTimer = null;
@@ -176,7 +174,6 @@ class WebSocketService {
 
         switch (message.type) {
             case WebsocketMessageType.PLAN_APPROVAL_REQUEST: {
-                console.log("Message Plan Approval Request':", message);
                 const parsedData = PlanDataService.parsePlanApprovalRequest(message.data);
                 if (parsedData) {
                     const structuredMessage: ParsedPlanApprovalRequest = {
@@ -193,11 +190,8 @@ class WebSocketService {
             }
 
             case WebsocketMessageType.AGENT_MESSAGE: {
-                console.log("Message Agent':", message);
                 if (message.data) {
-                    console.log('WebSocket message received:', message);
                     const transformed = PlanDataService.parseAgentMessage(message);
-                    console.log('Transformed AGENT_MESSAGE:', transformed);
                     this.emit(WebsocketMessageType.AGENT_MESSAGE, transformed);
 
                 }
@@ -205,20 +199,16 @@ class WebSocketService {
             }
 
             case WebsocketMessageType.AGENT_MESSAGE_STREAMING: {
-                console.log("Message streamming agent buffer:", message);
                 if (message.data) {
                     const streamedMessage = PlanDataService.parseAgentMessageStreaming(message);
-                    console.log('WebSocket AGENT_MESSAGE_STREAMING message received:', streamedMessage);
                     this.emit(WebsocketMessageType.AGENT_MESSAGE_STREAMING, streamedMessage);
                 }
                 break;
             }
 
             case WebsocketMessageType.USER_CLARIFICATION_REQUEST: {
-                console.log("Message clarification':", message);
                 if (message.data) {
                     const transformed = PlanDataService.parseUserClarificationRequest(message);
-                    console.log('WebSocket USER_CLARIFICATION_REQUEST message received:', transformed);
                     this.emit(WebsocketMessageType.USER_CLARIFICATION_REQUEST, transformed);
                 }
                 break;
@@ -226,25 +216,20 @@ class WebSocketService {
 
 
             case WebsocketMessageType.AGENT_TOOL_MESSAGE: {
-                console.log("Message agent tool':", message);
                 if (message.data) {
-                    //const transformed = PlanDataService.parseUserClarificationRequest(message);
                     this.emit(WebsocketMessageType.AGENT_TOOL_MESSAGE, message);
                 }
                 break;
             }
             case WebsocketMessageType.FINAL_RESULT_MESSAGE: {
-                console.log("Message final result':", message);
                 if (message.data) {
                     const transformed = PlanDataService.parseFinalResultMessage(message);
-                    console.log('WebSocket FINAL_RESULT_MESSAGE received:', transformed);
                     this.emit(WebsocketMessageType.FINAL_RESULT_MESSAGE, transformed);
                 }
                 break;
             }
             case WebsocketMessageType.ERROR_MESSAGE: {
-            console.log("Received ERROR_MESSAGE:", message);
-            this.emit(WebsocketMessageType.ERROR_MESSAGE, message.data); // Emit the data
+            this.emit(WebsocketMessageType.ERROR_MESSAGE, message.data);
             break;
             }
             case WebsocketMessageType.USER_CLARIFICATION_RESPONSE:
@@ -254,13 +239,11 @@ class WebSocketService {
             case WebsocketMessageType.AGENT_STREAM_START:
             case WebsocketMessageType.AGENT_STREAM_END:
             case WebsocketMessageType.SYSTEM_MESSAGE: {
-                console.log("Message other types':", message);
                 this.emit(message.type, message);
                 break;
             }
 
             default: {
-                console.log("Message default':", message);
                 this.emit(message.type, message);
                 break;
             }

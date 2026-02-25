@@ -1,7 +1,19 @@
+import React from "react";
 import { Spinner } from "@fluentui/react-components";
 
-// Simple thinking message to show while creating plan
-const renderThinkingState = (waitingForPlan: boolean) => {
+// ─── ThinkingState ───────────────────────────────────────────────────────────
+
+/** Props for the ThinkingState component */
+export interface ThinkingStateProps {
+    /** Whether we are still waiting for the plan to arrive */
+    waitingForPlan: boolean;
+}
+
+/**
+ * Displays a spinner + "Creating your plan..." while the plan is being generated.
+ * Handles a single message type: thinking / loading state.
+ */
+const ThinkingState: React.FC<ThinkingStateProps> = React.memo(({ waitingForPlan }) => {
     if (!waitingForPlan) return null;
 
     return (
@@ -15,25 +27,6 @@ const renderThinkingState = (waitingForPlan: boolean) => {
                 alignItems: 'flex-start',
                 gap: '16px'
             }}>
-                {/* Bot Avatar */}
-                {/* <div style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    backgroundColor: 'var(--colorNeutralBackground3)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0
-                }}>
-                    <div style={{
-                        width: '16px',
-                        height: '16px',
-                        backgroundColor: 'var(--colorBrandBackground)',
-                        borderRadius: '2px'
-                    }} />
-                </div> */}
-
                 {/* Thinking Message */}
                 <div style={{ flex: 1, maxWidth: 'calc(100% - 48px)' }}>
                     <div style={{
@@ -51,10 +44,16 @@ const renderThinkingState = (waitingForPlan: boolean) => {
             </div>
         </div>
     );
-};
+});
+ThinkingState.displayName = 'ThinkingState';
 
-// Simple message to show while executing the plan
-const renderPlanExecutionMessage = () => {
+// ─── PlanExecutionMessage ────────────────────────────────────────────────────
+
+/**
+ * Displays a banner while the plan is being executed by AI agents.
+ * Handles a single message type: execution-in-progress state.
+ */
+const PlanExecutionMessage: React.FC = React.memo(() => {
     return (
         <div style={{
             maxWidth: '800px',
@@ -81,6 +80,17 @@ const renderPlanExecutionMessage = () => {
             </div>
         </div>
     );
-};
+});
+PlanExecutionMessage.displayName = 'PlanExecutionMessage';
 
-export { renderPlanExecutionMessage, renderThinkingState };
+// ─── Backward-compatible render functions (deprecated) ───────────────────────
+
+/** @deprecated Use `<ThinkingState>` component instead */
+const renderThinkingState = (waitingForPlan: boolean) => (
+    <ThinkingState waitingForPlan={waitingForPlan} />
+);
+
+/** @deprecated Use `<PlanExecutionMessage>` component instead */
+const renderPlanExecutionMessage = () => <PlanExecutionMessage />;
+
+export { ThinkingState, PlanExecutionMessage, renderPlanExecutionMessage, renderThinkingState };

@@ -21,6 +21,7 @@ import {
   UserRequestObject
 } from "@/models";
 import { apiService } from "@/api";
+import { cleanActionText, unescapeReprString } from "@/utils/jsonUtils";
 
 /**
  * Service for processing and managing plan data operations
@@ -38,10 +39,8 @@ export class PlanDataService {
     try {
       // Use optimized getPlanById method for better performance
       const planBody = await apiService.getPlanById(planId, useCache);
-      console.log('Raw plan data fetched:', planBody);
       return this.processPlanData(planBody);
     } catch (error) {
-      console.log("Failed to fetch plan data:", error);
       throw error;
     }
   }
@@ -169,15 +168,7 @@ export class PlanDataService {
     const steps = mplanBE.steps.map((stepBE: MStepBE, index: number) => ({
       id: index + 1, // MPlanData expects numeric id starting from 1
       action: stepBE.action,
-      cleanAction: stepBE.action
-        .replace(/\*\*/g, '') // Remove markdown bold
-        .replace(/^Certainly!\s*/i, '')
-        .replace(/^Given the team composition and the available facts,?\s*/i, '')
-        .replace(/^here is a (?:concise )?plan to[^.]*\.\s*/i, '')
-        .replace(/^\*\*([^*]+)\*\*:?\s*/g, '$1: ')
-        .replace(/^[-•]\s*/, '')
-        .replace(/\s+/g, ' ')
-        .trim(),
+      cleanAction: cleanActionText(stepBE.action),
       agent: stepBE.agent
     }));
 
@@ -230,7 +221,7 @@ export class PlanDataService {
     streaming_message: string = ''
   ): AgentMessageResponse {
     if (!planData || !planData.plan) {
-      console.log("Invalid plan data provided to createAgentMessageResponse");
+      // Invalid plan data - createAgentMessageResponse called with missing plan
     }
     return {
       plan_id: planData.plan.plan_id,
@@ -264,7 +255,6 @@ export class PlanDataService {
     try {
       return apiService.submitClarification(request_id, answer, plan_id, m_plan_id);
     } catch (error) {
-      console.log("Failed to submit clarification:", error);
       throw error;
     }
   }
@@ -292,20 +282,10 @@ export class PlanDataService {
 
           const steps = (mplan.steps || []).map((step: any, i: number) => {
             const action = step.action || '';
-            const cleanAction = action
-              .replace(/\*\*/g, '')
-              .replace(/^Certainly!\s*/i, '')
-              .replace(/^Given the team composition and the available facts,?\s*/i, '')
-              .replace(/^here is a (?:concise )?plan[^.]*\.\s*/i, '')
-              .replace(/^(?:here is|this is) a (?:concise )?(?:plan|approach|strategy)[^.]*[.:]\s*/i, '')
-              .replace(/^\*\*([^*]+)\*\*:?\s*/g, '$1: ')
-              .replace(/^[-•]\s*/, '')
-              .replace(/\s+/g, ' ')
-              .trim();
             return {
               id: i + 1,
               action,
-              cleanAction,
+              cleanAction: cleanActionText(action),
               agent: step.agent || step._agent || 'System'
             };
           }).filter((s: any) => s.cleanAction.length > 3 && !/^(?:involvement|certainly|given|here is)/i.test(s.cleanAction));
@@ -401,15 +381,7 @@ export class PlanDataService {
           '';
         if (!actionRaw) continue;
 
-        const cleanAction = actionRaw
-          .replace(/\*\*/g, '')
-          .replace(/^Certainly!\s*/i, '')
-          .replace(/^Given the team composition and the available facts,?\s*/i, '')
-          .replace(/^here is a (?:concise )?plan to[^.]*\.\s*/i, '')
-          .replace(/^\*\*([^*]+)\*\*:?\s*/g, '$1: ')
-          .replace(/^[-•]\s*/, '')
-          .replace(/\s+/g, ' ')
-          .trim();
+        const cleanAction = cleanActionText(actionRaw);
 
         const key = cleanAction.toLowerCase();
         if (
@@ -563,12 +535,7 @@ export class PlanDataService {
       // Extract content='...'
       const contentMatch = source.match(/content='((?:\\'|[^'])*)'/);
       let content = contentMatch ? contentMatch[1] : '';
-      // Unescape
-      content = content
-        .replace(/\\n/g, '\n')
-        .replace(/\\'/g, "'")
-        .replace(/\\"/g, '"')
-        .replace(/\\\\/g, '\\');
+      content = unescapeReprString(content);
 
       // Parse the content for steps and next_steps
       const { steps, next_steps } = this.parseContentForStepsAndNextSteps(content);
@@ -723,11 +690,7 @@ export class PlanDataService {
 
       const contentMatch = source.match(/content='((?:\\'|[^'])*)'/);
       let content = contentMatch ? contentMatch[1] : '';
-      content = content
-        .replace(/\\n/g, '\n')
-        .replace(/\\'/g, "'")
-        .replace(/\\"/g, '"')
-        .replace(/\\\\/g, '\\');
+      content = unescapeReprString(content);
 
       let is_final = false;
       const finalMatch = source.match(/is_final=(True|False)/i);
@@ -793,12 +756,7 @@ export class PlanDataService {
       const qMatch = source.match(questionRegex);
       if (!qMatch) return null;
 
-      let question = (qMatch[1] ?? qMatch[2] ?? '')
-        .replace(/\\n/g, '\n')
-        .replace(/\\'/g, "'")
-        .replace(/\\"/g, '"')
-        .replace(/\\\\/g, '\\')
-        .trim();
+      let question = unescapeReprString(qMatch[1] ?? qMatch[2] ?? '').trim();
 
       // request_id='uuid' or "uuid"
       const requestIdRegex = /request_id=(?:"([a-fA-F0-9-]+)"|'([a-fA-F0-9-]+)')/;
@@ -851,12 +809,7 @@ export class PlanDataService {
       if (!payload) return null;
 
       let content = typeof payload.content === 'string' ? payload.content : '';
-      content = content
-        .replace(/\\n/g, '\n')
-        .replace(/\\'/g, "'")
-        .replace(/\\"/g, '"')
-        .replace(/\\\\/g, '\\')
-        .trim();
+      content = unescapeReprString(content).trim();
 
       const statusRaw = (payload.status || 'completed').toString().trim();
       const status = statusRaw.toLowerCase();
@@ -902,25 +855,12 @@ export class PlanDataService {
       const doubleQuoteMatch = inner.match(/answer="([^"]*(?:""[^"]*)*)"/);
       if (!doubleQuoteMatch) return line;
 
-      let answer = doubleQuoteMatch[1];
-      answer = answer
-        .replace(/\\n/g, '\n')
-        .replace(/\\'/g, "'")
-        .replace(/\\"/g, '"')
-        .replace(/\\\\/g, '\\')
-        .trim();
+      let answer = unescapeReprString(doubleQuoteMatch[1]).trim();
 
       return `Human clarification: ${answer}`;
     }
 
-    let answer = answerMatch[1];
-    // Unescape common sequences
-    answer = answer
-      .replace(/\\n/g, '\n')
-      .replace(/\\'/g, "'")
-      .replace(/\\"/g, '"')
-      .replace(/\\\\/g, '\\')
-      .trim();
+    let answer = unescapeReprString(answerMatch[1]).trim();
 
     return `Human clarification: ${answer}`;
   }

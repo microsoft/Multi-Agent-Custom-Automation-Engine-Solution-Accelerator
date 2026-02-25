@@ -5,7 +5,7 @@ import {
   Title2
 } from "@fluentui/react-components";
 
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 import "./../../styles/Chat.css";
@@ -13,8 +13,9 @@ import "../../styles/prism-material-oceanic.css";
 import "./../../styles/HomeInput.css";
 
 import { HomeInputProps, iconMap, QuickTask } from "../../models/homeInput";
-import { TaskService } from "../../services/TaskService";
 import { NewTaskService } from "../../services/NewTaskService";
+import { useCreatePlan } from "../../hooks/useCreatePlan";
+import { useTextareaAutoResize } from "../../hooks/useTextareaAutoResize";
 
 import ChatInput from "@/coral/modules/ChatInput";
 import InlineToaster, { useInlineToaster } from "../toast/InlineToaster";
@@ -58,18 +59,22 @@ interface ExtendedQuickTask extends QuickTask {
 }
 
 const HomeInput: React.FC<HomeInputProps> = ({ selectedTeam }) => {
-  const [submitting, setSubmitting] = useState<boolean>(false);
   const [input, setInput] = useState<string>("");
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const navigate = useNavigate();
-  const location = useLocation(); // ✅ location.state used to control focus
+  const location = useLocation();
   const { showToast, dismissToast } = useInlineToaster();
 
+  // ── Custom hooks ──
+  const { submitting, createPlan } = useCreatePlan(showToast, dismissToast);
+  const { resetHeight } = useTextareaAutoResize(textareaRef, input);
+
   // Check if the selected team is the Contract Compliance Review Team
-  const isLegalTeam = selectedTeam?.name
-    ?.toLowerCase()
-    .includes("contract compliance");
+  const isLegalTeam = useMemo(
+    () => selectedTeam?.name?.toLowerCase().includes("contract compliance"),
+    [selectedTeam]
+  );
 
   useEffect(() => {
     if (location.state?.focusInput) {
@@ -77,81 +82,35 @@ const HomeInput: React.FC<HomeInputProps> = ({ selectedTeam }) => {
     }
   }, [location]);
 
-  const resetTextarea = () => {
+  const resetTextarea = useCallback(() => {
     setInput("");
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.focus();
-    }
-  };
+    resetHeight(true);
+  }, [resetHeight]);
 
   useEffect(() => {
     const cleanup = NewTaskService.addResetListener(resetTextarea);
     return cleanup;
   }, []);
 
-  const handleSubmit = async () => {
-    if (input.trim()) {
-      setSubmitting(true);
-      let id = showToast("Creating a plan", "progress");
-
-      try {
-        const response = await TaskService.createPlan(
-          input.trim(),
-          selectedTeam?.team_id
-        );
-        console.log("Plan created:", response);
-        setInput("");
-
-        if (textareaRef.current) {
-          textareaRef.current.style.height = "auto";
-        }
-
-        if (response.plan_id && response.plan_id !== null) {
-          showToast("Plan created!", "success");
-          dismissToast(id);
-
-          navigate(`/plan/${response.plan_id}`);
-        } else {
-          showToast("Failed to create plan", "error");
-          dismissToast(id);
-        }
-      } catch (error: any) {
-        console.log("Error creating plan:", error);
-        let errorMessage = "Unable to create plan. Please try again.";
-        dismissToast(id);
-        // Check if this is an RAI validation error
-        try {
-          // errorDetail = JSON.parse(error);
-          errorMessage = error?.message || errorMessage;
-        } catch (parseError) {
-          console.error("Error parsing error detail:", parseError);
-        }
-
-        showToast(errorMessage, "error");
-      } finally {
-        setInput("");
-        setSubmitting(false);
-      }
+  const handleSubmit = useCallback(async () => {
+    if (!input.trim()) return;
+    const planId = await createPlan(input, selectedTeam?.team_id);
+    setInput("");
+    resetHeight();
+    if (planId) {
+      navigate(`/plan/${planId}`);
     }
-  };
+  }, [input, selectedTeam, createPlan, resetHeight, navigate]);
 
-  const handleQuickTaskClick = (task: ExtendedQuickTask) => {
+  const handleQuickTaskClick = useCallback((task: ExtendedQuickTask) => {
     setInput(task.fullDescription);
     if (textareaRef.current) {
       textareaRef.current.focus();
     }
-  };
+  }, []);
 
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-    }
-  }, [input]);
-
-  // Convert team starting_tasks to ExtendedQuickTask format
-  const tasksToDisplay: ExtendedQuickTask[] =
+  // Convert team starting_tasks to ExtendedQuickTask format (memoized)
+  const tasksToDisplay: ExtendedQuickTask[] = useMemo(() =>
     selectedTeam && selectedTeam.starting_tasks
       ? selectedTeam.starting_tasks.map((task, index) => {
           // Handle both string tasks and StartingTask objects
@@ -177,7 +136,9 @@ const HomeInput: React.FC<HomeInputProps> = ({ selectedTeam }) => {
             };
           }
         })
-      : [];
+      : [],
+    [selectedTeam]
+  );
 
   return (
     <div className="home-input-container">

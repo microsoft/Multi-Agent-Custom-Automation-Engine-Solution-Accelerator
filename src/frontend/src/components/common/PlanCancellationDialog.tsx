@@ -24,7 +24,7 @@ interface PlanCancellationDialogProps {
 /**
  * Confirmation dialog for plan cancellation when navigating during active plans
  */
-const PlanCancellationDialog: React.FC<PlanCancellationDialogProps> = ({
+const PlanCancellationDialog: React.FC<PlanCancellationDialogProps> = React.memo(({
   isOpen,
   onConfirm,
   onCancel,
@@ -65,6 +65,7 @@ const PlanCancellationDialog: React.FC<PlanCancellationDialogProps> = ({
       </DialogSurface>
     </Dialog>
   );
-};
+});
+PlanCancellationDialog.displayName = 'PlanCancellationDialog';
 
 export default PlanCancellationDialog;

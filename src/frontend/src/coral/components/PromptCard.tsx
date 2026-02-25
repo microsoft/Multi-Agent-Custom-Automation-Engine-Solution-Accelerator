@@ -11,7 +11,7 @@ type PromptCardProps = {
   disabled?: boolean; 
 };
 
-const PromptCard: React.FC<PromptCardProps> = ({
+const PromptCard: React.FC<PromptCardProps> = React.memo(({
   title,
   description,
   icon,
@@ -76,6 +76,7 @@ const PromptCard: React.FC<PromptCardProps> = ({
       </div>
     </Card>
   );
-};
+});
+PromptCard.displayName = 'PromptCard';
 
 export default PromptCard;

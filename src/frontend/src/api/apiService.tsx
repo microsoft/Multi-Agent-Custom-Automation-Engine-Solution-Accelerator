@@ -13,6 +13,7 @@ import {
     PlanFromAPI,
     AgentMessageResponse
 } from '../models';
+import { RequestCache, RequestTracker } from '@/utils/apiUtils';
 
 // Constants for endpoints
 const API_ENDPOINTS = {
@@ -25,80 +26,10 @@ const API_ENDPOINTS = {
     AGENT_MESSAGE: '/v4/agent_message',
 };
 
-// Simple cache implementation
-interface CacheEntry<T> {
-    data: T;
-    timestamp: number;
-    ttl: number; // Time to live in ms
-}
-
-class APICache {
-    private cache: Map<string, CacheEntry<any>> = new Map();
-
-    set<T>(key: string, data: T, ttl = 60000): void { // Default TTL: 1 minute
-        this.cache.set(key, {
-            data,
-            timestamp: Date.now(),
-            ttl
-        });
-    }
-
-    get<T>(key: string): T | null {
-        const entry = this.cache.get(key);
-        if (!entry) return null;
-
-        // Check if entry is expired
-        if (Date.now() - entry.timestamp > entry.ttl) {
-            this.cache.delete(key);
-            return null;
-        }
-
-        return entry.data;
-    }
-
-    clear(): void {
-        this.cache.clear();
-    }
-
-    invalidate(pattern: RegExp): void {
-        for (const key of this.cache.keys()) {
-            if (pattern.test(key)) {
-                this.cache.delete(key);
-            }
-        }
-    }
-}
-
-// Request tracking to prevent duplicate requests
-class RequestTracker {
-    private pendingRequests: Map<string, Promise<any>> = new Map();
-
-    async trackRequest<T>(key: string, requestFn: () => Promise<T>): Promise<T> {
-        // If request is already pending, return the existing promise
-        if (this.pendingRequests.has(key)) {
-            return this.pendingRequests.get(key)!;
-        }
-
-        // Create new request
-        const requestPromise = requestFn();
-
-        // Track the request
-        this.pendingRequests.set(key, requestPromise);
-
-        try {
-            const result = await requestPromise;
-            return result;
-        } finally {
-            // Remove from tracking when done (success or failure)
-            this.pendingRequests.delete(key);
-        }
-    }
-}
-
 
 
 export class APIService {
-    private _cache = new APICache();
+    private _cache = new RequestCache();
     private _requestTracker = new RequestTracker();
 
 
@@ -107,10 +38,6 @@ export class APIService {
      * @param inputTask The task description and optional session ID
      * @returns Promise with the response containing plan ID and status
      */
-    // async createPlan(inputTask: InputTask): Promise<{ plan_id: string; status: string; session_id: string }> {
-    //     return apiClient.post(API_ENDPOINTS.PROCESS_REQUEST, inputTask);
-    // }
-
     async createPlan(inputTask: InputTask): Promise<InputTaskResponse> {
         return apiClient.post(API_ENDPOINTS.PROCESS_REQUEST, inputTask);
     }
@@ -156,7 +83,6 @@ export class APIService {
             if (!data) {
                 throw new Error(`Plan with ID ${planId} not found`);
             }
-            console.log('Fetched plan by ID:', data);
             const results = {
                 plan: data.plan as Plan,
                 messages: data.messages as AgentMessageBE[],
@@ -190,8 +116,6 @@ export class APIService {
         const requestKey = `approve-plan-${planApprovalData.m_plan_id}`;
 
         return this._requestTracker.trackRequest(requestKey, async () => {
-            console.log('📤 Approving plan via v4 API:', planApprovalData);
-
             const response = await apiClient.post(API_ENDPOINTS.PLAN_APPROVAL, planApprovalData);
 
             // Invalidate cache since plan execution will start
@@ -200,7 +124,6 @@ export class APIService {
                 this._cache.invalidate(new RegExp(`^plan.*_${planApprovalData.plan_id}`));
             }
 
-            console.log('✅ Plan approval successful:', response);
             return response;
         });
     }
@@ -260,14 +183,7 @@ export class APIService {
         return response;
     }
     async sendAgentMessage(data: AgentMessageResponse): Promise<AgentMessage> {
-        const t0 = performance.now();
-        const result = await apiClient.post(API_ENDPOINTS.AGENT_MESSAGE, data);
-        console.log('[agent_message] sent', {
-            ms: +(performance.now() - t0).toFixed(1),
-            agent: data.agent,
-            type: data.agent_type
-        });
-        return result;
+        return apiClient.post(API_ENDPOINTS.AGENT_MESSAGE, data);
     }
 }
 

@@ -35,6 +35,5 @@ const getUserPlan = (
     }
 
     // Default fallback
-    // return 'Please create a plan for me';
 };
 export default getUserPlan;

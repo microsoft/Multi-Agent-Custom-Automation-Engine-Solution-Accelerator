@@ -13,12 +13,9 @@ import {
   ErrorCircle20Regular,
 } from "@fluentui/react-icons";
 import TaskList from "./TaskList";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Plan, PlanPanelLefProps, Task, UserInfo } from "@/models";
-import { apiService } from "@/api";
-import { TaskService } from "@/services";
-import ContosoLogo from "../../coral/imports/ContosoLogo";
+import { Plan, PlanPanelLefProps, UserInfo } from "@/models";
 import "../../styles/PlanPanelLeft.css";
 import PanelFooter from "@/coral/components/Panels/PanelFooter";
 import PanelUserCard from "../../coral/components/Panels/UserCard";
@@ -26,6 +23,8 @@ import { getUserInfoGlobal } from "@/api/config";
 import TeamSelector from "../common/TeamSelector";
 import { TeamConfig } from "../../models/Team";
 import TeamSelected from "../common/TeamSelected";
+import ContosoLogo from "../../coral/imports/ContosoLogo";
+import { usePlanList } from "@/hooks/usePlanList";
 
 const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
   reloadTasks,
@@ -42,69 +41,24 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
   const navigate = useNavigate();
   const { planId } = useParams<{ planId: string }>();
 
-  const [completedTasks, setCompletedTasks] = useState<Task[]>([]);
-  const [plans, setPlans] = useState<Plan[] | null>(null);
-  const [plansLoading, setPlansLoading] = useState<boolean>(false);
-  const [plansError, setPlansError] = useState<Error | null>(null);
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(
-    getUserInfoGlobal()
-  );
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(getUserInfoGlobal());
 
   // Use parent's selected team if provided, otherwise use local state
   const [localSelectedTeam, setLocalSelectedTeam] = useState<TeamConfig | null>(null);
   const selectedTeam = parentSelectedTeam || localSelectedTeam;
 
-  const loadPlansData = useCallback(async (forceRefresh = false) => {
-    try {
-      console.log("Loading plans, forceRefresh:", forceRefresh);
-      setPlansLoading(true);
-      setPlansError(null);
-      const plansData = await apiService.getPlans(undefined, !forceRefresh); // Invert forceRefresh for useCache
-      setPlans(plansData);
-      
-      // Reset the reload flag after successful load
-      if (forceRefresh && restReload) {
-        restReload();
-      }
-    } catch (error) {
-      console.log("Failed to load plans:", error);
-      setPlansError(
-        error instanceof Error ? error : new Error("Failed to load plans")
-      );
-      
-      // Reset the reload flag even on error to prevent infinite loops
-      if (forceRefresh && restReload) {
-        restReload();
-      }
-    } finally {
-      setPlansLoading(false);
-    }
-  }, [restReload]);
+  // ── Plan list hook ──
+  const { plans, completedTasks, plansLoading, plansError, loadPlans } = usePlanList(
+    reloadTasks,
+    restReload
+  );
 
-
-  // Fetch plans
-
-
+  // Refresh user info on mount
   useEffect(() => {
-    loadPlansData();
     setUserInfo(getUserInfoGlobal());
-  }, [loadPlansData, setUserInfo]);
+  }, []);
 
-
-  useEffect(() => {
-    console.log("Reload tasks changed:", reloadTasks);
-    if (reloadTasks) {
-      loadPlansData(true); // Force refresh when reloadTasks is true
-    }
-  }, [loadPlansData, setUserInfo, reloadTasks]);
-  useEffect(() => {
-    if (plans) {
-      const { completed } =
-        TaskService.transformPlansToTasks(plans);
-      setCompletedTasks(completed);
-    }
-  }, [plans]);
-
+  // Show error toast when plan loading fails
   useEffect(() => {
     if (plansError) {
       dispatchToast(
@@ -120,9 +74,11 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
     }
   }, [plansError, dispatchToast]);
 
-  // Get the session_id that matches the current URL's planId
-  const selectedTaskId =
-    plans?.find((plan) => plan.id === planId)?.session_id ?? null;
+  // Get the session_id that matches the current URL's planId (memoized)
+  const selectedTaskId = useMemo(
+    () => plans?.find((plan) => plan.id === planId)?.session_id ?? null,
+    [plans, planId]
+  );
 
   const handleTaskSelect = useCallback(
     (taskId: string) => {
@@ -158,8 +114,7 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
 
   const handleTeamSelect = useCallback(
     (team: TeamConfig | null) => {
-      // Use parent's team select handler if provided, otherwise use local state
-      loadPlansData();
+      loadPlans();
       if (onTeamSelect) {
         onTeamSelect(team);
       } else {
@@ -189,7 +144,7 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
         }
       }
     },
-    [onTeamSelect, dispatchToast, loadPlansData]
+    [onTeamSelect, dispatchToast, loadPlans]
   );
 
   return (
@@ -255,7 +210,6 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
             {/* User Card */}
             <PanelUserCard
               name={userInfo?.user_first_last_name || "Guest"}
-              // alias={userInfo ? userInfo.user_email : ""}
               size={32}
             />
           </div>

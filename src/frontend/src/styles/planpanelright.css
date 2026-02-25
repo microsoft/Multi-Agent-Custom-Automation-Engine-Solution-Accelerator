@@ -7,7 +7,6 @@
   flex-direction: column;
   overflow: hidden;
   border-left: 1px solid var(--colorNeutralStroke1);
-  /* backgroundColor: var(--colorNeutralBackground1); */
 }
 
 .plan-panel-right__no-data {

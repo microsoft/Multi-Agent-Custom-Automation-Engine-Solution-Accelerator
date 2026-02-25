@@ -11,6 +11,13 @@ import { Body1, Button, Spinner } from "@fluentui/react-components";
 // Toast type
 export type ToastIntent = "info" | "success" | "warning" | "error" | "progress";
 
+/** Signature of the showToast function returned by useInlineToaster */
+export type ShowToastFn = (
+  content: React.ReactNode,
+  intent?: ToastIntent,
+  options?: { dismissible?: boolean; timeoutMs?: number | null }
+) => number;
+
 type Toast = {
   id: number;
   content: React.ReactNode;

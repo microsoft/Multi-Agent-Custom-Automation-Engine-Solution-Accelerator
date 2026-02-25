@@ -1,22 +1,21 @@
 import { useCallback } from 'react';
 import { PlanStatus } from '../models';
-import { APIService } from '../api/apiService';
+import { apiService } from '../api/apiService';
+import { useAppSelector, selectPlanData, selectPlanApprovalRequest } from '../store';
 
 interface UsePlanCancellationAlertProps {
-  planData: any;
-  planApprovalRequest: any;
   onNavigate: () => void;
 }
 
 /**
- * Custom hook to handle plan cancellation alerts when navigating during active plans
+ * Custom hook to handle plan cancellation alerts when navigating during active plans.
+ * Reads planData and planApprovalRequest from Redux via granular selectors.
  */
 export const usePlanCancellationAlert = ({
-  planData,
-  planApprovalRequest,
   onNavigate
 }: UsePlanCancellationAlertProps) => {
-  const apiService = new APIService();
+  const planData = useAppSelector(selectPlanData);
+  const planApprovalRequest = useAppSelector(selectPlanApprovalRequest);
 
   /**
    * Check if a plan is currently active/running
@@ -50,7 +49,7 @@ export const usePlanCancellationAlert = ({
       if (planApprovalRequest?.id) {
         await apiService.approvePlan({
           m_plan_id: planApprovalRequest.id,
-          plan_id: planData?.plan?.id,
+          plan_id: planData?.plan?.id || "",
           approved: false,
           feedback: 'Plan cancelled by user navigation'
         });
@@ -59,7 +58,6 @@ export const usePlanCancellationAlert = ({
       // Navigate after successful cancellation
       onNavigate();
     } catch (error) {
-      console.error('❌ Failed to cancel plan:', error);
       // Show error but still allow navigation
       alert('Failed to cancel the plan properly, but navigation will continue.');
       onNavigate();

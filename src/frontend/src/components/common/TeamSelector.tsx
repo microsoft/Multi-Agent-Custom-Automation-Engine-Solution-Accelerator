@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   Button,
   Dialog,
@@ -34,6 +34,7 @@ import {
 } from '@fluentui/react-icons';
 import { TeamConfig } from '../../models/Team';
 import { TeamService } from '../../services/TeamService';
+import { useFileUpload } from '../../hooks/useFileUpload';
 
 import styles from '../../styles/TeamSelector.module.css';
 
@@ -48,14 +49,11 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
   onTeamSelect,
   onTeamUpload,
   selectedTeam,
-  isHomePage,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [teams, setTeams] = useState<TeamConfig[]>([]);
   const [loading, setLoading] = useState(false);
-  const [uploadLoading, setUploadLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const [tempSelectedTeam, setTempSelectedTeam] = useState<TeamConfig | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -63,8 +61,16 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('teams');
   const [selectionLoading, setSelectionLoading] = useState(false);
-  const [uploadedTeam, setUploadedTeam] = useState<TeamConfig | null>(null);
-  const [uploadSuccessMessage, setUploadSuccessMessage] = useState<string | null>(null);
+
+  // ── File upload hook ──
+  const {
+    uploadLoading,
+    uploadMessage,
+    uploadSuccessMessage,
+    uploadedTeam,
+    handleFileUpload: doFileUpload,
+    resetUploadState,
+  } = useFileUpload(onTeamUpload);
   // Helper function to check if a team is a default team
   const isDefaultTeam = (team: TeamConfig): boolean => {
     const defaultTeamIds = ['team-1', 'team-2', 'team-3','team-clm-1', 'team-compliance-1'];
@@ -73,7 +79,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
     return defaultTeamIds.includes(team.team_id) || 
            defaultTeamNames.includes(team.name);
   };
-  const loadTeams = async () => {
+  const loadTeams = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -84,30 +90,26 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleOpenChange = async (open: boolean) => {
+  const handleOpenChange = useCallback(async (open: boolean) => {
     setIsOpen(open);
     if (open) {
       await loadTeams();
       setTempSelectedTeam(selectedTeam || null);
       setError(null);
-      setUploadMessage(null);
       setSearchQuery('');
       setActiveTab('teams');
-      setUploadedTeam(null);
-      setUploadSuccessMessage(null);
+      resetUploadState();
     } else {
       setTempSelectedTeam(null);
       setError(null);
-      setUploadMessage(null);
       setSearchQuery('');
-      setUploadedTeam(null);
-      setUploadSuccessMessage(null);
+      resetUploadState();
     }
-  };
+  }, [loadTeams, selectedTeam]);
 
-  const handleContinue = async () => {
+  const handleContinue = useCallback(async () => {
     if (!tempSelectedTeam) return;
 
     setSelectionLoading(true);
@@ -116,7 +118,6 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
     try {
       // If this team was just uploaded, skip the selection API call and go directly to homepage
       if (uploadedTeam && uploadedTeam.team_id === tempSelectedTeam.team_id) {
-        console.log('Uploaded team selected, going directly to homepage:', tempSelectedTeam.name);
         onTeamSelect?.(tempSelectedTeam);
         setIsOpen(false);
         return; // Skip the selectTeam API call
@@ -126,7 +127,6 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
       const result = await TeamService.selectTeam(tempSelectedTeam.team_id);
 
       if (result.success) {
-        console.log('Team selected:', result.data);
         onTeamSelect?.(tempSelectedTeam);
         setIsOpen(false);
       } else {
@@ -138,14 +138,14 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
     } finally {
       setSelectionLoading(false);
     }
-  };
+  }, [tempSelectedTeam, uploadedTeam, onTeamSelect]);
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     setTempSelectedTeam(null);
     setIsOpen(false);
-  };
+  }, []);
 
-  const filteredTeams = teams
+  const filteredTeams = useMemo(() => teams
     .filter(team => {
       const searchLower = searchQuery.toLowerCase();
       const nameMatch = team.name && team.name.toLowerCase().includes(searchLower);
@@ -160,15 +160,17 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
       if (!aIsUploaded && bIsUploaded) return 1;
 
       return 0;
-    });
+    }),
+    [teams, searchQuery, uploadedTeam]
+  );
 
-  const handleDeleteTeam = (team: TeamConfig, event: React.MouseEvent) => {
+  const handleDeleteTeam = useCallback((team: TeamConfig, event: React.MouseEvent) => {
     event.stopPropagation();
     setTeamToDelete(team);
     setDeleteConfirmOpen(true);
-  };
+  }, []);
 
-  const confirmDeleteTeam = async () => {
+  const confirmDeleteTeam = useCallback(async () => {
     if (!teamToDelete || deleteLoading) return;
 
     if (teamToDelete.protected) {
@@ -223,103 +225,39 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
     } finally {
       setDeleteLoading(false);
     }
-  };
+  }, [teamToDelete, deleteLoading, tempSelectedTeam, selectedTeam, onTeamSelect, loadTeams]);
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setUploadLoading(true);
     setError(null);
-    setUploadMessage('Reading and validating team configuration...');
-    setUploadSuccessMessage(null);
+    const result = await doFileUpload(file, teams);
 
-    try {
-      if (!file.name.toLowerCase().endsWith('.json')) {
-        throw new Error('Please upload a valid JSON file');
-      }
-
-      const fileText = await file.text();
-      let teamData;
-      try {
-        teamData = JSON.parse(fileText);
-      } catch (parseError) {
-        throw new Error('Invalid JSON file format');
-      }
-
-      if (teamData.agents && Array.isArray(teamData.agents) && teamData.agents.length > 6) {
-        throw new Error(`Team configuration cannot have more than 6 agents. Your team has ${teamData.agents.length} agents.`);
-      }
-
-      // Check for duplicate team names or IDs
-      if (teamData.name) {
-        const existingTeam = teams.find(team =>
-          team.name.toLowerCase() === teamData.name.toLowerCase() ||
-          (teamData.team_id && team.team_id === teamData.team_id)
-        );
-
-        if (existingTeam) {
-          throw new Error(`A team with the name "${teamData.name}" already exists. Please choose a different name or modify the existing team.`);
-        }
-      }
-
-      setUploadMessage('Uploading team configuration...');
-      const result = await TeamService.uploadCustomTeam(file);
-
-      if (result.success) {
-        setUploadMessage(null);
-
-        if (result.team) {
-          // Set success message with team name
-          setUploadSuccessMessage(`${result.team.name} was uploaded`);
-
-          setTeams(currentTeams => [result.team!, ...currentTeams]);
-          setUploadedTeam(result.team);
-          setTempSelectedTeam(result.team);
-
-          setTimeout(() => {
-            setUploadSuccessMessage(null);
-          }, 15000);
-        }
-
-        if (onTeamUpload) {
-          await onTeamUpload();
-        }
-      } else if (result.raiError) {
-        setError('❌ Content Safety Check Failed\n\nYour team configuration contains content that doesn\'t meet our safety guidelines.');
-        setUploadMessage(null);
-      } else if (result.modelError) {
-        setError('🤖 Model Deployment Validation Failed\n\nYour team configuration references models that are not properly deployed.');
-        setUploadMessage(null);
-      } else if (result.searchError) {
-        setError('🔍 RAG Search Configuration Error\n\nYour team configuration includes RAG/search agents but has search index issues.');
-        setUploadMessage(null);
-      } else {
-        setError(result.error || 'Failed to upload team configuration');
-        setUploadMessage(null);
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to upload team configuration');
-      setUploadMessage(null);
-    } finally {
-      setUploadLoading(false);
-      event.target.value = '';
+    if (result.success && result.team) {
+      setTeams(currentTeams => [result.team!, ...currentTeams]);
+      setTempSelectedTeam(result.team);
+    } else if (!result.success && result.error) {
+      setError(result.error);
     }
-  };
 
-  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    // Reset file input so the same file can be re-uploaded if needed
+    event.target.value = '';
+  }, [doFileUpload, teams]);
+
+  const handleDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.stopPropagation();
     event.currentTarget.classList.add(styles.dropZoneHover);
-  };
+  }, []);
 
-  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+  const handleDragLeave = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.stopPropagation();
     event.currentTarget.classList.remove(styles.dropZoneHover);
-  };
+  }, []);
 
-  const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = useCallback(async (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.stopPropagation();
 
@@ -334,81 +272,18 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
       return;
     }
 
-    setUploadLoading(true);
     setError(null);
-    setUploadMessage('Reading and validating team configuration...');
-    setUploadSuccessMessage(null);
+    const result = await doFileUpload(file, teams);
 
-    try {
-      const fileText = await file.text();
-      let teamData;
-      try {
-        teamData = JSON.parse(fileText);
-      } catch (parseError) {
-        throw new Error('Invalid JSON file format');
-      }
-
-      if (teamData.agents && Array.isArray(teamData.agents) && teamData.agents.length > 6) {
-        throw new Error(`Team configuration cannot have more than 6 agents. Your team has ${teamData.agents.length} agents.`);
-      }
-
-      // Check for duplicate team names or IDs
-      if (teamData.name) {
-        const existingTeam = teams.find(team =>
-          team.name.toLowerCase() === teamData.name.toLowerCase() ||
-          (teamData.team_id && team.team_id === teamData.team_id)
-        );
-
-        if (existingTeam) {
-          throw new Error(`A team with the name "${teamData.name}" already exists. Please choose a different name or modify the existing team.`);
-        }
-      }
-
-      setUploadMessage('Uploading team configuration...');
-      const result = await TeamService.uploadCustomTeam(file);
-
-      if (result.success) {
-        setUploadMessage(null);
-
-        if (result.team) {
-          // Set success message with team name
-          setUploadSuccessMessage(`${result.team.name} was uploaded and selected`);
-
-          setTeams(currentTeams => [result.team!, ...currentTeams]);
-          setUploadedTeam(result.team);
-          setTempSelectedTeam(result.team);
-
-          // Clear success message after 15 seconds if user doesn't act
-          setTimeout(() => {
-            setUploadSuccessMessage(null);
-          }, 15000);
-        }
-
-        if (onTeamUpload) {
-          await onTeamUpload();
-        }
-      } else if (result.raiError) {
-        setError(' Content Safety Check Failed\n\nYour team configuration contains content that doesn\'t meet our safety guidelines.');
-        setUploadMessage(null);
-      } else if (result.modelError) {
-        setError(' Model Deployment Validation Failed\n\nYour team configuration references models that are not properly deployed.');
-        setUploadMessage(null);
-      } else if (result.searchError) {
-        setError(' RAG Search Configuration Error\n\nYour team configuration includes RAG/search agents but has search index issues.');
-        setUploadMessage(null);
-      } else {
-        setError(result.error || 'Failed to upload team configuration');
-        setUploadMessage(null);
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to upload team configuration');
-      setUploadMessage(null);
-    } finally {
-      setUploadLoading(false);
+    if (result.success && result.team) {
+      setTeams(currentTeams => [result.team!, ...currentTeams]);
+      setTempSelectedTeam(result.team);
+    } else if (!result.success && result.error) {
+      setError(result.error);
     }
-  };
+  }, [teams, doFileUpload]);
 
-  const renderTeamCard = (team: TeamConfig, index?: number) => {
+  const renderTeamCard = useCallback((team: TeamConfig, index?: number) => {
     const isSelected = tempSelectedTeam?.team_id === team.team_id;
     const isDefault = isDefaultTeam(team);
     return (
@@ -491,11 +366,11 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
         )}
       </div>
     );
-  };
+  }, [tempSelectedTeam, handleDeleteTeam]);
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={(event: DialogOpenChangeEvent, data: DialogOpenChangeData) => handleOpenChange(data.open)}>
+      <Dialog open={isOpen} onOpenChange={(_event: DialogOpenChangeEvent, data: DialogOpenChangeData) => handleOpenChange(data.open)}>
         <DialogTrigger disableButtonEnhancement>
           <Button
             appearance="subtle"
@@ -530,7 +405,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
                 <TabList
                   className={styles.tabList}
                   selectedValue={activeTab}
-                  onTabSelect={(event: SelectTabEvent, data: SelectTabData) => setActiveTab(data.value as string)}
+                  onTabSelect={(_event: SelectTabEvent, data: SelectTabData) => setActiveTab(data.value as string)}
                 >
                   <Tab
                     value="teams"
@@ -562,8 +437,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
                           className={styles.searchInput}
                           placeholder="Search teams..."
                           value={searchQuery}
-                          onChange={(e: React.ChangeEvent<HTMLInputElement>, data: InputOnChangeData) => {
-                            console.log('Search changed:', data.value);
+                          onChange={(_e: React.ChangeEvent<HTMLInputElement>, data: InputOnChangeData) => {
                             setSearchQuery(data.value || '');
                           }}
                           contentBefore={<Search20Regular />}
@@ -717,7 +591,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
         </DialogSurface>
       </Dialog>
 
-      <Dialog open={deleteConfirmOpen} onOpenChange={(event: DialogOpenChangeEvent, data: DialogOpenChangeData) => setDeleteConfirmOpen(data.open)}>
+      <Dialog open={deleteConfirmOpen} onOpenChange={(_event: DialogOpenChangeEvent, data: DialogOpenChangeData) => setDeleteConfirmOpen(data.open)}>
         <DialogSurface className={styles.deleteDialogSurface}>
           <DialogContent className={styles.deleteDialogContent}>
             <DialogBody className={styles.deleteDialogBody}>

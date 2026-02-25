@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Body1,
 } from "@fluentui/react-components";
@@ -11,27 +11,16 @@ import ContentNotFound from "../NotFound/ContentNotFound";
 import "../../styles/planpanelright.css";
 
 
-const PlanPanelRight: React.FC<PlanDetailsProps> = ({
+const PlanPanelRight: React.FC<PlanDetailsProps> = React.memo(({
   planData,
   loading,
   planApprovalRequest
 }) => {
 
-  if (!planData && !loading) {
-    return <ContentNotFound subtitle="The requested page could not be found." />;
-  }
-
-  if (!planApprovalRequest) {
-    return (
-      <div className="plan-panel-right__no-data">
-        No plan available
-      </div>
-    );
-  }
-
-  // Extract plan steps from the planApprovalRequest
-  const extractPlanSteps = () => {
-    if (!planApprovalRequest.steps || planApprovalRequest.steps.length === 0) {
+  // Extract plan steps from the planApprovalRequest (memoized)
+  // Hooks must be called before any conditional returns (Rules of Hooks)
+  const planSteps = useMemo(() => {
+    if (!planApprovalRequest?.steps || planApprovalRequest.steps.length === 0) {
       return [];
     }
 
@@ -45,12 +34,28 @@ const PlanPanelRight: React.FC<PlanDetailsProps> = ({
         key: `${index}-${action.substring(0, 20)}`
       };
     }).filter(step => step.text.length > 0);
-  };
+  }, [planApprovalRequest]);
+
+  // Memoize agents list
+  const agents = useMemo(
+    () => planApprovalRequest?.team || [],
+    [planApprovalRequest]
+  );
+
+  if (!planData && !loading) {
+    return <ContentNotFound subtitle="The requested page could not be found." />;
+  }
+
+  if (!planApprovalRequest) {
+    return (
+      <div className="plan-panel-right__no-data">
+        No plan available
+      </div>
+    );
+  }
 
   // Render Plan Section
   const renderPlanSection = () => {
-    const planSteps = extractPlanSteps();
-
     return (
       <div className="plan-section">
         <Body1 className="plan-section__title">
@@ -63,7 +68,7 @@ const PlanPanelRight: React.FC<PlanDetailsProps> = ({
           </div>
         ) : (
           <div className="plan-steps">
-            {planSteps.map((step, index) => (
+            {planSteps.map((step, _index) => (
               <div key={step.key} className="plan-step">
                 {step.isHeading ? (
                   // Heading - larger text, bold
@@ -89,8 +94,6 @@ const PlanPanelRight: React.FC<PlanDetailsProps> = ({
 
   // Render Agents Section
   const renderAgentsSection = () => {
-    const agents = planApprovalRequest?.team || [];
-
     return (
       <div className="agents-section">
         <Body1 className="agents-section__title">
@@ -134,6 +137,7 @@ const PlanPanelRight: React.FC<PlanDetailsProps> = ({
       {renderAgentsSection()}
     </div>
   );
-};
+});
+PlanPanelRight.displayName = 'PlanPanelRight';
 
 export default PlanPanelRight;

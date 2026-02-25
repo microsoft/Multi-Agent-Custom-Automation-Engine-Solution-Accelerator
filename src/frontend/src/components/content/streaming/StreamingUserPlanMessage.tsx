@@ -1,12 +1,28 @@
+import React, { useMemo } from "react";
 import { PersonRegular } from "@fluentui/react-icons";
 import getUserTask from "./StreamingUserPlan";
 import { MPlanData, ProcessedPlanData } from "@/models";
 
-// Render user task message with exact styling from image
-const renderUserPlanMessage = (planApprovalRequest: MPlanData | null,
-    initialTask?: string,
-    planData?: ProcessedPlanData) => {
-    const userPlan = getUserTask(planApprovalRequest, initialTask, planData);
+/** Props for the UserPlanMessage component */
+export interface UserPlanMessageProps {
+    planApprovalRequest: MPlanData | null;
+    initialTask?: string;
+    planData?: ProcessedPlanData;
+}
+
+/**
+ * Renders the user's plan message bubble (right-aligned, branded background).
+ * Handles a single message type: user plan request.
+ */
+const UserPlanMessage: React.FC<UserPlanMessageProps> = React.memo(({
+    planApprovalRequest,
+    initialTask,
+    planData,
+}) => {
+    const userPlan = useMemo(
+        () => getUserTask(planApprovalRequest, initialTask, planData),
+        [planApprovalRequest, initialTask, planData]
+    );
 
     if (!userPlan) return null;
 
@@ -56,6 +72,21 @@ const renderUserPlanMessage = (planApprovalRequest: MPlanData | null,
             </div>
         </div>
     );
-};
+});
+UserPlanMessage.displayName = 'UserPlanMessage';
 
+/** @deprecated Use `<UserPlanMessage>` component instead */
+const renderUserPlanMessage = (
+    planApprovalRequest: MPlanData | null,
+    initialTask?: string,
+    planData?: ProcessedPlanData
+) => (
+    <UserPlanMessage
+        planApprovalRequest={planApprovalRequest}
+        initialTask={initialTask}
+        planData={planData}
+    />
+);
+
+export { UserPlanMessage };
 export default renderUserPlanMessage;
