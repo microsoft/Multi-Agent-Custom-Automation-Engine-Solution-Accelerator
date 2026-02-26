@@ -3,8 +3,7 @@
 import logging
 import sys
 import os
-from typing import Optional
-from unittest.mock import AsyncMock, Mock, patch, MagicMock
+from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 # Add the backend directory to the Python path
