@@ -14,7 +14,7 @@ opentelemetry-instrumentation-fastapi
 opentelemetry-instrumentation-openai
 opentelemetry-exporter-otlp-proto-http
 
-semantic-kernel[azure]==1.32.2
+semantic-kernel[azure]==1.39.4
 azure-ai-projects==1.0.0b11
 openai==1.84.0 
 azure-ai-inference==1.0.0b9 
@@ -24,7 +24,7 @@ azure-ai-evaluation
 opentelemetry-exporter-otlp-proto-grpc
 
 # Date and internationalization
-babel>=2.9.0
+babel>=2.9.1
 
 # Testing tools
 pytest>=8.2,<9  # Compatible version for pytest-asyncio
