@@ -1759,7 +1759,6 @@ module aiSearchFoundryConnection 'modules/aifp-connections.bicep' = {
     searchServiceResourceId: searchService.id
     searchServiceLocation: searchService.location
     searchServiceName: searchService.name
-    searchApiKey: searchService.listAdminKeys().primaryKey
   }
   dependsOn: [
     aiFoundryAiServices
