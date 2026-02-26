@@ -563,7 +563,7 @@ wheels = [
 
 [[package]]
 name = "azure-ai-projects"
-version = "1.0.0b12"
+version = "1.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "azure-ai-agents" },
@@ -572,9 +572,9 @@ dependencies = [
     { name = "isodate" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a5/57/9a89c1978ec9ce29a3be454b83b66885982261762d7a436cad73c47c9225/azure_ai_projects-1.0.0b12.tar.gz", hash = "sha256:1a3784e4be6af3b0fc76e9e4a64158a38f6679fe3a1f8b9c33f12bc8914ae36c", size = 144358, upload-time = "2025-06-27T04:12:48.334Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/dd/95/9c04cb5f658c7f856026aa18432e0f0fa254ead2983a3574a0f5558a7234/azure_ai_projects-1.0.0.tar.gz", hash = "sha256:b5f03024ccf0fd543fbe0f5abcc74e45b15eccc1c71ab87fc71c63061d9fd63c", size = 130798, upload-time = "2025-07-31T02:09:27.912Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/73/e4/50cd2c3bd5ab745e85a4a1bd591bf4343d6e3470580f1eadceed55fd57c0/azure_ai_projects-1.0.0b12-py3-none-any.whl", hash = "sha256:4e3d3ef275f7409ea8030e474626968848055d4b3717ff7ef03681da809c096f", size = 129783, upload-time = "2025-06-27T04:12:49.837Z" },
+    { url = "https://files.pythonhosted.org/packages/b5/db/7149cdf71e12d9737f186656176efc94943ead4f205671768c1549593efe/azure_ai_projects-1.0.0-py3-none-any.whl", hash = "sha256:81369ed7a2f84a65864f57d3fa153e16c30f411a1504d334e184fb070165a3fa", size = 115188, upload-time = "2025-07-31T02:09:29.362Z" },
 ]
 
 [[package]]
@@ -775,7 +775,7 @@ requires-dist = [
     { name = "azure-ai-agents", specifier = "==1.2.0b5" },
     { name = "azure-ai-evaluation", specifier = "==1.11.0" },
     { name = "azure-ai-inference", specifier = "==1.0.0b9" },
-    { name = "azure-ai-projects", specifier = "==1.0.0b12" },
+    { name = "azure-ai-projects", specifier = "==1.0.0" },
     { name = "azure-core", specifier = "==1.38.0" },
     { name = "azure-cosmos", specifier = "==4.9.0" },
     { name = "azure-identity", specifier = "==1.24.0" },
