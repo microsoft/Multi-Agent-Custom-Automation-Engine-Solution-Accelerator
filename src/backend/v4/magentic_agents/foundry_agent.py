@@ -174,7 +174,6 @@ class FoundryAgentTemplate(AzureAgentBase):
                 f"{self.agent_instructions} "
                 "Always use the Azure AI Search tool and configured index for knowledge retrieval."
             )
-            
 
             azure_agent = await self.project_client.agents.create_version(
                 agent_name=self.agent_name,  # Use original name

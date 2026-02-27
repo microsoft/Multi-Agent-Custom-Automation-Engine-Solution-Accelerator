@@ -149,7 +149,7 @@ class MCPEnabledBase:
 
     def get_chat_client(self) -> AzureAIClient:
         """Return the underlying ChatClientProtocol (AzureAIClient).
-        
+
         Uses agent_name with use_latest_version=True to get the latest agent version.
         Agent reuse is handled automatically by the SDK via agent_name.
         """
@@ -173,7 +173,7 @@ class MCPEnabledBase:
 
     def get_agent_id(self) -> str:
         """Generate a local agent ID for the ChatAgent wrapper.
-        
+
         The new AzureAIClient identifies agents by name (not ID) on the server side.
         This ID is only used locally for the ChatAgent wrapper instance.
         """

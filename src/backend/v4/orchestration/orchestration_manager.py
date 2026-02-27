@@ -50,7 +50,7 @@ class OrchestrationManager:
     def _extract_response_text(self, data) -> str:
         """
         Extract text content from various agent_framework response types.
-        
+
         Handles:
         - ChatMessage: Extract .text
         - AgentResponse: Extract .text
@@ -59,15 +59,15 @@ class OrchestrationManager:
         """
         if data is None:
             return ""
-        
+
         # Direct ChatMessage
         if isinstance(data, ChatMessage):
             return data.text or ""
-        
+
         # Has .text attribute directly (AgentResponse, etc.)
         if hasattr(data, "text") and data.text:
             return data.text
-        
+
         # AgentExecutorResponse - has agent_response and full_conversation
         if hasattr(data, "agent_response"):
             # Try to get text from agent_response first
@@ -79,7 +79,7 @@ class OrchestrationManager:
                 last_msg = data.full_conversation[-1]
                 if isinstance(last_msg, ChatMessage) and last_msg.text:
                     return last_msg.text
-        
+
         # List of items - could be AgentExecutorResponse, ChatMessage, etc.
         if isinstance(data, list) and len(data) > 0:
             texts = []
@@ -91,7 +91,7 @@ class OrchestrationManager:
             if texts:
                 # Return the last non-empty response (most recent)
                 return texts[-1]
-        
+
         return ""
 
     # ---------------------------
@@ -195,12 +195,12 @@ class OrchestrationManager:
 
         # Assemble workflow with callback
         storage = InMemoryCheckpointStorage()
-        
+
         # New SDK: participants() accepts a Sequence (list) of agents
         # The orchestrator uses agent.name to identify them
         participant_list = list(participants.values())
         cls.logger.info("Participants for workflow: %s", list(participants.keys()))
-        
+
         builder = (
             MagenticBuilder()
             .participants(participant_list)  # New SDK: pass as list
@@ -241,7 +241,7 @@ class OrchestrationManager:
         """
         current = orchestration_config.get_current_orchestration(user_id)
         needs_rebuild = current is None or team_switched or force_rebuild
-        
+
         if needs_rebuild:
             if current is not None and (team_switched or force_rebuild):
                 reason = "team switched" if team_switched else "force rebuild for new task"
@@ -387,7 +387,7 @@ class OrchestrationManager:
                     event_type_name = type(event).__name__
                     if event_type_name != "AgentRunUpdateEvent":
                         self.logger.info("[EVENT] %s", event_type_name)
-                    
+
                     # Handle orchestrator events (plan, progress ledger)
                     if isinstance(event, MagenticOrchestratorEvent):
                         self.logger.info(
@@ -403,7 +403,7 @@ class OrchestrationManager:
                     elif isinstance(event, AgentRunUpdateEvent):
                         message_id = event.data.message_id if hasattr(event.data, 'message_id') else None
                         executor_id = event.executor_id
-                        
+
                         # Stream the update
                         try:
                             await streaming_agent_response_callback(
@@ -417,7 +417,7 @@ class OrchestrationManager:
                                 "Error in streaming callback for agent %s: %s",
                                 executor_id, e
                             )
-                        
+
                         # Track message for formatting
                         if message_id != last_message_id:
                             last_message_id = message_id
@@ -427,14 +427,14 @@ class OrchestrationManager:
                         agent_name = event.participant_name
                         agent_call_counts[agent_name] = agent_call_counts.get(agent_name, 0) + 1
                         call_num = agent_call_counts[agent_name]
-                        
+
                         self.logger.info(
                             "[REQUEST SENT (round %d)] to agent: %s (call #%d)",
                             event.round_index,
                             agent_name,
                             call_num
                         )
-                        
+
                         if call_num > 1:
                             self.logger.warning("Agent '%s' called %d times", agent_name, call_num)
 
@@ -448,7 +448,7 @@ class OrchestrationManager:
                         # Send the agent response to the UI
                         if event.data:
                             response_text = self._extract_response_text(event.data)
-                            
+
                             if response_text:
                                 self.logger.info("Sending agent response to UI from %s", event.participant_name)
                                 agent_response_callback(

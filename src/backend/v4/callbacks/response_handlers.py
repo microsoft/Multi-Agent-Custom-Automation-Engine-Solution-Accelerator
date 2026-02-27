@@ -121,7 +121,7 @@ async def streaming_agent_response_callback(
     try:
         # Handle various streaming update object shapes
         chunk_text = getattr(update, "text", None)
-        
+
         # If text is None, don't fall back to str(update) as that would show object repr
         # Just skip if there's no actual text content
         if chunk_text is None:

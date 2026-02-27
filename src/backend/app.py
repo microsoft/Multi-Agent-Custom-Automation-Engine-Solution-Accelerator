@@ -10,7 +10,7 @@ logging.basicConfig(level=getattr(logging, config.AZURE_BASIC_LOGGING_LEVEL.uppe
 
 
 from azure.monitor.opentelemetry import configure_azure_monitor
-#from common.config.app_config import config
+# from common.config.app_config import config
 from common.models.messages_af import UserLanguage
 
 # FastAPI imports
@@ -66,7 +66,7 @@ else:
     )
 
 # Configure logging levels from environment variables
-#logging.basicConfig(level=getattr(logging, config.AZURE_BASIC_LOGGING_LEVEL.upper(), logging.INFO))
+# logging.basicConfig(level=getattr(logging, config.AZURE_BASIC_LOGGING_LEVEL.upper(), logging.INFO))
 
 # Configure Azure package logging levels
 azure_level = getattr(logging, config.AZURE_PACKAGE_LOGGING_LEVEL.upper(), logging.WARNING)
