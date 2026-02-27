@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.40.2.10011",
-      "templateHash": "16839096090855786967"
+      "templateHash": "17476534152468179054"
     },
     "name": "Multi-Agent Custom Automation Engine",
     "description": "This module contains the resources required to deploy the [Multi-Agent Custom Automation Engine solution accelerator](https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) for both Sandbox environments and WAF aligned environments.\n\n> **Note:** This module is not intended for broad, generic use, as it was designed by the Commercial Solution Areas CTO team, as a Microsoft Solution Accelerator. Feature requests and bug fix requests are welcome if they support the needs of this organization but may not be incorporated if they aim to make this module more generic than what it needs to be for its primary use case. This module will likely be updated to leverage AVM resource modules in the future. This may result in breaking changes in upcoming versions when these features are implemented.\n"
@@ -25441,8 +25441,8 @@
       },
       "dependsOn": [
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "logAnalyticsWorkspace",
         "userAssignedIdentity",
         "virtualNetwork"
@@ -30522,10 +30522,6 @@
                     "value": "[[\"o3\",\"o4-mini\",\"gpt-4.1\",\"gpt-4.1-mini\"]"
                   },
                   {
-                    "name": "AZURE_AI_SEARCH_API_KEY",
-                    "secretRef": "azure-ai-search-api-key"
-                  },
-                  {
                     "name": "AZURE_STORAGE_BLOB_URL",
                     "value": "[reference('avmStorageAccount').outputs.serviceEndpoints.value.blob]"
                   },
@@ -30562,13 +30558,7 @@
             ]
           },
           "secrets": {
-            "value": [
-              {
-                "name": "azure-ai-search-api-key",
-                "keyVaultUrl": "[reference('keyvault').outputs.secrets.value[0].uriWithVersion]",
-                "identity": "[reference('userAssignedIdentity').outputs.resourceId.value]"
-              }
-            ]
+            "value": []
           }
         },
         "template": {
@@ -32140,7 +32130,6 @@
         "containerAppEnvironment",
         "containerAppMcp",
         "existingAiFoundryAiServicesProject",
-        "keyvault",
         "searchServiceUpdate",
         "userAssignedIdentity"
       ]
@@ -42268,15 +42257,8 @@
           "name": {
             "value": "[variables('searchServiceName')]"
           },
-          "authOptions": {
-            "value": {
-              "aadOrApiKey": {
-                "aadAuthFailureMode": "http401WithBearerChallenge"
-              }
-            }
-          },
           "disableLocalAuth": {
-            "value": false
+            "value": true
           },
           "hostingMode": {
             "value": "default"
@@ -44654,9 +44636,6 @@
           },
           "searchServiceName": {
             "value": "[variables('searchServiceName')]"
-          },
-          "searchApiKey": {
-            "value": "[listAdminKeys('searchService', '2024-06-01-preview').primaryKey]"
           }
         },
         "template": {
@@ -44666,30 +44645,45 @@
             "_generator": {
               "name": "bicep",
               "version": "0.40.2.10011",
-              "templateHash": "14874963049736669838"
+              "templateHash": "15348022841521786626"
             }
           },
           "parameters": {
             "aifSearchConnectionName": {
-              "type": "string"
+              "type": "string",
+              "metadata": {
+                "description": "Name of the AI Foundry search connection"
+              }
             },
             "searchServiceName": {
-              "type": "string"
+              "type": "string",
+              "metadata": {
+                "description": "Name of the Azure AI Search service"
+              }
             },
             "searchServiceResourceId": {
-              "type": "string"
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Azure AI Search service"
+              }
             },
             "searchServiceLocation": {
-              "type": "string"
+              "type": "string",
+              "metadata": {
+                "description": "Location/region of the Azure AI Search service"
+              }
             },
             "aiFoundryName": {
-              "type": "string"
+              "type": "string",
+              "metadata": {
+                "description": "Name of the AI Foundry account"
+              }
             },
             "aiFoundryProjectName": {
-              "type": "string"
-            },
-            "searchApiKey": {
-              "type": "securestring"
+              "type": "string",
+              "metadata": {
+                "description": "Name of the AI Foundry project"
+              }
             }
           },
           "resources": [
@@ -44700,10 +44694,7 @@
               "properties": {
                 "category": "CognitiveSearch",
                 "target": "[format('https://{0}.search.windows.net', parameters('searchServiceName'))]",
-                "authType": "ApiKey",
-                "credentials": {
-                  "key": "[parameters('searchApiKey')]"
-                },
+                "authType": "AAD",
                 "isSharedToAll": true,
                 "metadata": {
                   "ApiType": "Azure",
@@ -44777,12 +44768,7 @@
             ]
           },
           "secrets": {
-            "value": [
-              {
-                "name": "AzureAISearchAPIKey",
-                "value": "[listAdminKeys('searchService', '2024-06-01-preview').primaryKey]"
-              }
-            ]
+            "value": []
           },
           "enableTelemetry": {
             "value": "[parameters('enableTelemetry')]"
@@ -47908,7 +47894,6 @@
       "dependsOn": [
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').keyVault)]",
         "logAnalyticsWorkspace",
-        "searchService",
         "userAssignedIdentity",
         "virtualNetwork"
       ]
@@ -48040,10 +48025,6 @@
     "SUPPORTED_MODELS": {
       "type": "string",
       "value": "[[\"o3\",\"o4-mini\",\"gpt-4.1\",\"gpt-4.1-mini\"]"
-    },
-    "AZURE_AI_SEARCH_API_KEY": {
-      "type": "string",
-      "value": "<Deployed-Search-ApiKey>"
     },
     "BACKEND_URL": {
       "type": "string",
