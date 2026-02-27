@@ -2,7 +2,7 @@
 import asyncio
 import logging
 import sys
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
+from unittest.mock import Mock, patch, AsyncMock
 import pytest
 
 # Mock the dependencies before importing the module under test

@@ -16,7 +16,7 @@ jobs:
       packages: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       # - name: Download deps
       #   run: |
       #     curl -fsSL ${{ vars.AUTOGEN_WHL_URL }} -o agnext-biab-02/autogen_core-0.3.dev0-py3-none-any.whl

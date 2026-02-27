@@ -13,9 +13,6 @@ import pytest
 import os
 import logging
 from unittest.mock import patch, MagicMock, AsyncMock
-from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
-from azure.cosmos import CosmosClient
-from azure.ai.projects.aio import AIProjectClient
 
 # Add the source root directory to the Python path for imports
 import sys

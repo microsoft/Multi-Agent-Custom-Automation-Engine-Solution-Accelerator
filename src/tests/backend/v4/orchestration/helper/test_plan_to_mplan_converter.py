@@ -8,7 +8,6 @@ bullet-style plan text into MPlan objects with agent assignment and action extra
 import os
 import sys
 import unittest
-import re
 
 # Set up environment variables (removed manual path modification as pytest config handles it)
 os.environ.update({
