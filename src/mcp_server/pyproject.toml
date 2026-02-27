@@ -21,10 +21,12 @@ dependencies = [
   "azure-identity==1.19.0",
   "pydantic==2.11.7",
   "pydantic-settings==2.6.1",
-  "python-multipart==0.0.18",
+  "python-multipart==0.0.22",
   "httpx==0.28.1",
   "werkzeug==3.1.5",
   "urllib3==2.6.3",
+  "azure-core==1.38.0",
+  "cryptography==46.0.5",
 ]
 
 [project.optional-dependencies]
