@@ -15,7 +15,7 @@ jobs:
     steps:
        # Step 1: Checkout the code from your repository 
       - name: Checkout code 
-        uses: actions/checkout@v4 
+        uses: actions/checkout@v6 
       # Step 2: Validate the Azure template using microsoft/template-validation-action 
       - name: Validate Azure Template 
         uses: microsoft/template-validation-action@bae4895d0a8abd4f0d5aad68ae8647b3027f4c91
