@@ -1366,10 +1366,6 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
             value: '["o3","o4-mini","gpt-4.1","gpt-4.1-mini"]'
           }
           {
-            name: 'AZURE_AI_SEARCH_API_KEY'
-            secretRef: 'azure-ai-search-api-key'
-          }
-          {
             name: 'AZURE_STORAGE_BLOB_URL'
             value: avmStorageAccount.outputs.serviceEndpoints.blob
           }
@@ -1412,13 +1408,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
         ]
       }
     ]
-    secrets: [
-      {
-        name: 'azure-ai-search-api-key'
-        keyVaultUrl: keyvault.outputs.secrets[0].uriWithVersion
-        identity: userAssignedIdentity.outputs.resourceId
-      }
-    ]
+    secrets: []
   }
 }
 
@@ -1720,12 +1710,7 @@ module searchService 'br/public:avm/res/search/search-service:0.11.1' = {
   name: take('avm.res.search.search-service.${solutionSuffix}', 64)
   params: {
     name: searchServiceName
-    authOptions: {
-      aadOrApiKey: {
-        aadAuthFailureMode: 'http401WithBearerChallenge'
-      }
-    }
-    disableLocalAuth: false
+    disableLocalAuth: true
     hostingMode: 'default'
     managedIdentities: {
       systemAssigned: true
@@ -1801,7 +1786,6 @@ module aiSearchFoundryConnection 'modules/aifp-connections.bicep' = {
     searchServiceResourceId: searchService.outputs.resourceId
     searchServiceLocation: searchService.outputs.location
     searchServiceName: searchService.outputs.name
-    searchApiKey: searchService.outputs.primaryKey
   }
   dependsOn: [
     aiFoundryAiServices
@@ -1852,12 +1836,7 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.12.1' = {
         roleDefinitionIdOrName: 'Key Vault Administrator'
       }
     ]
-    secrets: [
-      {
-        name: 'AzureAISearchAPIKey'
-        value: searchService.outputs.primaryKey
-      }
-    ]
+    secrets: []
     enableTelemetry: enableTelemetry
   }
 }
@@ -1908,7 +1887,6 @@ output REASONING_MODEL_NAME string = aiFoundryAiServicesReasoningModelDeployment
 output MCP_SERVER_NAME string = 'MacaeMcpServer'
 output MCP_SERVER_DESCRIPTION string = 'MCP server with greeting, HR, and planning tools'
 output SUPPORTED_MODELS string = '["o3","o4-mini","gpt-4.1","gpt-4.1-mini"]'
-output AZURE_AI_SEARCH_API_KEY string = '<Deployed-Search-ApiKey>'
 output BACKEND_URL string = 'https://${containerApp.outputs.fqdn}'
 output AZURE_AI_PROJECT_ENDPOINT string = aiFoundryAiProjectEndpoint
 output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiProjectEndpoint

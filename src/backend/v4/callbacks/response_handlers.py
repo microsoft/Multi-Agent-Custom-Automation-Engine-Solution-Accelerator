@@ -9,9 +9,6 @@ import re
 from typing import Any
 
 from agent_framework import ChatMessage
-# Removed: from agent_framework._content import FunctionCallContent  (does not exist)
-
-from agent_framework._workflows._magentic import AgentRunResponseUpdate  # Streaming update type from workflows
 
 from v4.config.settings import connection_config
 from v4.models.messages import (
@@ -111,26 +108,31 @@ def agent_response_callback(
 
 async def streaming_agent_response_callback(
     agent_id: str,
-    update: AgentRunResponseUpdate,
+    update,  # Streaming update object (e.g. AgentResponseUpdate, ChatMessage)
     is_final: bool,
     user_id: str | None = None,
 ) -> None:
     """
-    Streaming callback for incremental agent output (AgentRunResponseUpdate).
+    Streaming callback for incremental agent output.
     """
     if not user_id:
         return
 
     try:
+        # Handle various streaming update object shapes
         chunk_text = getattr(update, "text", None)
-        if not chunk_text:
-            contents = getattr(update, "contents", []) or []
-            collected = []
-            for item in contents:
-                txt = getattr(item, "text", None)
-                if txt:
-                    collected.append(str(txt))
-            chunk_text = "".join(collected) if collected else ""
+
+        # If text is None, don't fall back to str(update) as that would show object repr
+        # Just skip if there's no actual text content
+        if chunk_text is None:
+            # Check if update is a ChatMessage
+            if isinstance(update, ChatMessage):
+                chunk_text = update.text or ""
+            elif hasattr(update, "content"):
+                chunk_text = str(update.content) if update.content else ""
+            else:
+                # Skip if no text content available
+                return
 
         cleaned = clean_citations(chunk_text or "")
 

@@ -11,13 +11,9 @@ This module contains extensive test coverage for:
 
 import pytest
 import os
-import re
-import logging
-import aiohttp
 import sys
-import importlib.util
-from unittest.mock import patch, MagicMock, AsyncMock, Mock
-from typing import Any, Dict, List
+from unittest.mock import patch, MagicMock, AsyncMock
+from typing import Any, Dict
 
 # Add backend directory to sys.path for imports
 current_dir = os.path.dirname(os.path.abspath(__file__))
