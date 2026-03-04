@@ -6,6 +6,8 @@ import reportWebVitals from './reportWebVitals';
 import { FluentProvider, teamsLightTheme, teamsDarkTheme } from "@fluentui/react-components";
 import { setEnvData, setApiUrl, config as defaultConfig, toBoolean, getUserInfo, setUserInfoGlobal } from './api/config';
 import { apiService } from './api';
+import { Provider as ReduxProvider } from 'react-redux';
+import { store } from './state/store';
 const root = ReactDOM.createRoot(document.getElementById("root") as HTMLElement);
 
 const AppWrapper = () => {
@@ -38,8 +40,8 @@ const AppWrapper = () => {
         window.userInfo = defaultUserInfo;
         setUserInfoGlobal(defaultUserInfo);
         await apiService.sendUserBrowserLanguage();
-      } catch (error) {
-        console.info("frontend config did not load from python", error);
+      } catch {
+        // Config endpoint not available — using defaults
       } finally {
         setIsConfigLoaded(true);
         setIsUserInfoLoaded(true);
@@ -54,7 +56,7 @@ const AppWrapper = () => {
 
     const handleThemeChange = (event: MediaQueryListEvent) => {
       setIsDarkMode(event.matches);
-      document.body.classList.toggle("dark-mode", event.matches); // ✅ Add this
+      document.body.classList.toggle("dark-mode", event.matches);
     };
 
     // Apply dark-mode class initially
@@ -66,14 +68,13 @@ const AppWrapper = () => {
   if (!isConfigLoaded || !isUserInfoLoaded) return <div>Loading...</div>;
   return (
     <StrictMode>
-      <FluentProvider theme={isDarkMode ? teamsDarkTheme : teamsLightTheme} style={{ height: "100vh" }}>
-        <App />
-      </FluentProvider>
+      <ReduxProvider store={store}>
+        <FluentProvider theme={isDarkMode ? teamsDarkTheme : teamsLightTheme} style={{ height: "100vh" }}>
+          <App />
+        </FluentProvider>
+      </ReduxProvider>
     </StrictMode>
   );
 };
 root.render(<AppWrapper />);
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
 reportWebVitals();

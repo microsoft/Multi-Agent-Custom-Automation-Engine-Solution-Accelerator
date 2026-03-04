@@ -7,11 +7,14 @@ class WebSocketService {
     private ws: WebSocket | null = null;
     private reconnectAttempts = 0;
     private maxReconnectAttempts = 5;
-    private reconnectDelay = 12000;
+    private reconnectDelay = 1000; // 1s base, exponential: 1s, 2s, 4s, 8s, 16s
     private listeners: Map<string, Set<(message: StreamMessage) => void>> = new Map();
     private planSubscriptions: Set<string> = new Set();
     private reconnectTimer: NodeJS.Timeout | null = null;
     private isConnecting = false;
+    private intentionalDisconnect = false;
+    private lastPlanId: string | undefined;
+    private lastProcessId: string | undefined;
 
 
     private buildSocketUrl(processId?: string, planId?: string): string {
@@ -29,7 +32,6 @@ class WebSocketService {
         const hasApiSegment = /\/api(\/|$)/i.test(base);
         const socketPath = hasApiSegment ? '/v4/socket' : '/api/v4/socket';
         const url = `${base}${socketPath}${processId ? `/${processId}` : `/${planId}`}?user_id=${userId || ''}`;
-        console.log("Constructed WebSocket URL:", url);
         return url;
     }
     connect(planId: string, processId?: string): Promise<void> {
@@ -44,6 +46,9 @@ class WebSocketService {
             }
             try {
                 this.isConnecting = true;
+                this.intentionalDisconnect = false;
+                this.lastPlanId = planId;
+                this.lastProcessId = processId;
                 const wsUrl = this.buildSocketUrl(processId, planId);
                 this.ws = new WebSocket(wsUrl);
 
@@ -71,7 +76,9 @@ class WebSocketService {
                     this.isConnecting = false;
                     this.ws = null;
                     this.emit('connection_status', { connected: false });
-                    if (this.reconnectAttempts < this.maxReconnectAttempts && event.code !== 1000) {
+                    /* P1: Only auto-reconnect if not intentional and not a clean close */
+                    if (!this.intentionalDisconnect && event.code !== 1000 &&
+                        this.reconnectAttempts < this.maxReconnectAttempts) {
                         this.attemptReconnect();
                     }
                 };
@@ -91,15 +98,32 @@ class WebSocketService {
     }
 
     disconnect(): void {
-        console.log('WebSocketService: Disconnecting WebSocket');
+        this.intentionalDisconnect = true;
         if (this.reconnectTimer) {
             clearTimeout(this.reconnectTimer);
             this.reconnectTimer = null;
         }
         this.reconnectAttempts = this.maxReconnectAttempts;
         if (this.ws) {
-            this.ws.close(1000, 'Manual disconnect');
+            const socket = this.ws;
             this.ws = null;
+
+            // Detach handlers so no stale callbacks fire during/after close
+            socket.onopen = null;
+            socket.onmessage = null;
+            socket.onerror = null;
+            socket.onclose = null;
+
+            if (socket.readyState === WebSocket.OPEN) {
+                // Normal close
+                socket.close(1000, 'Manual disconnect');
+            } else if (socket.readyState === WebSocket.CONNECTING) {
+                // Still handshaking — wait for open then close cleanly.
+                // This avoids the "WebSocket closed before connection established" warning.
+                socket.addEventListener('open', () => socket.close(1000, 'Manual disconnect'), { once: true });
+                socket.addEventListener('error', () => { /* handshake failed — nothing to close */ }, { once: true });
+            }
+            // CLOSING / CLOSED — no action needed
         }
         this.planSubscriptions.clear();
         this.isConnecting = false;
@@ -176,7 +200,6 @@ class WebSocketService {
 
         switch (message.type) {
             case WebsocketMessageType.PLAN_APPROVAL_REQUEST: {
-                console.log("Message Plan Approval Request':", message);
                 const parsedData = PlanDataService.parsePlanApprovalRequest(message.data);
                 if (parsedData) {
                     const structuredMessage: ParsedPlanApprovalRequest = {
@@ -193,11 +216,8 @@ class WebSocketService {
             }
 
             case WebsocketMessageType.AGENT_MESSAGE: {
-                console.log("Message Agent':", message);
                 if (message.data) {
-                    console.log('WebSocket message received:', message);
                     const transformed = PlanDataService.parseAgentMessage(message);
-                    console.log('Transformed AGENT_MESSAGE:', transformed);
                     this.emit(WebsocketMessageType.AGENT_MESSAGE, transformed);
 
                 }
@@ -205,20 +225,16 @@ class WebSocketService {
             }
 
             case WebsocketMessageType.AGENT_MESSAGE_STREAMING: {
-                console.log("Message streamming agent buffer:", message);
                 if (message.data) {
                     const streamedMessage = PlanDataService.parseAgentMessageStreaming(message);
-                    console.log('WebSocket AGENT_MESSAGE_STREAMING message received:', streamedMessage);
                     this.emit(WebsocketMessageType.AGENT_MESSAGE_STREAMING, streamedMessage);
                 }
                 break;
             }
 
             case WebsocketMessageType.USER_CLARIFICATION_REQUEST: {
-                console.log("Message clarification':", message);
                 if (message.data) {
                     const transformed = PlanDataService.parseUserClarificationRequest(message);
-                    console.log('WebSocket USER_CLARIFICATION_REQUEST message received:', transformed);
                     this.emit(WebsocketMessageType.USER_CLARIFICATION_REQUEST, transformed);
                 }
                 break;
@@ -226,7 +242,6 @@ class WebSocketService {
 
 
             case WebsocketMessageType.AGENT_TOOL_MESSAGE: {
-                console.log("Message agent tool':", message);
                 if (message.data) {
                     //const transformed = PlanDataService.parseUserClarificationRequest(message);
                     this.emit(WebsocketMessageType.AGENT_TOOL_MESSAGE, message);
@@ -234,16 +249,13 @@ class WebSocketService {
                 break;
             }
             case WebsocketMessageType.FINAL_RESULT_MESSAGE: {
-                console.log("Message final result':", message);
                 if (message.data) {
                     const transformed = PlanDataService.parseFinalResultMessage(message);
-                    console.log('WebSocket FINAL_RESULT_MESSAGE received:', transformed);
                     this.emit(WebsocketMessageType.FINAL_RESULT_MESSAGE, transformed);
                 }
                 break;
             }
             case WebsocketMessageType.ERROR_MESSAGE: {
-            console.log("Received ERROR_MESSAGE:", message);
             this.emit(WebsocketMessageType.ERROR_MESSAGE, message.data); // Emit the data
             break;
             }
@@ -254,13 +266,11 @@ class WebSocketService {
             case WebsocketMessageType.AGENT_STREAM_START:
             case WebsocketMessageType.AGENT_STREAM_END:
             case WebsocketMessageType.SYSTEM_MESSAGE: {
-                console.log("Message other types':", message);
                 this.emit(message.type, message);
                 break;
             }
 
             default: {
-                console.log("Message default':", message);
                 this.emit(message.type, message);
                 break;
             }
@@ -274,10 +284,21 @@ class WebSocketService {
         }
         if (this.isConnecting || this.reconnectTimer) return;
         this.reconnectAttempts++;
-        const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
+        /* P1: exponential backoff — 1s, 2s, 4s, 8s, 16s (capped) */
+        const delay = Math.min(
+            this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1),
+            16000,
+        );
         this.reconnectTimer = setTimeout(() => {
             this.reconnectTimer = null;
-            this.emit('error', { error: 'Connection lost - manual reconnection required' });
+            if (this.intentionalDisconnect) return;
+            if (this.lastPlanId) {
+                this.connect(this.lastPlanId, this.lastProcessId).catch(() => {
+                    /* If reconnect fails, onclose will trigger another attempt */
+                });
+            } else {
+                this.emit('error', { error: 'Connection lost — no planId available for reconnection' });
+            }
         }, delay);
     }
 

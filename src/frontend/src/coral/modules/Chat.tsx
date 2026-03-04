@@ -62,8 +62,8 @@ const Chat: React.FC<ChatProps> = ({
         }
         // const chatMessages = await chatService.getUserHistory(userId);
         // setMessages(chatMessages);
-      } catch (err) {
-        console.log("Failed to load chat history.", err);
+      } catch {
+        // Failed to load history — silent fail
       }
     };
     loadHistory();
@@ -102,8 +102,8 @@ const Chat: React.FC<ChatProps> = ({
   };
 
   const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text).catch((err) => {
-      console.log("Failed to copy text:", err);
+    navigator.clipboard.writeText(text).catch(() => {
+      // clipboard copy failed — silent
     });
   };
 
@@ -150,8 +150,7 @@ const Chat: React.FC<ChatProps> = ({
         // const assistantMessage = { role: "assistant", content: response.assistant_response };
         // setMessages([...updatedMessages, assistantMessage]);
       }
-    } catch (err) {
-      console.log("Send Message Error:", err);
+    } catch {
       setMessages([
         ...updatedMessages,
         { role: "assistant", content: "Oops! Something went wrong sending your message." },
@@ -169,8 +168,8 @@ const Chat: React.FC<ChatProps> = ({
         // await chatService.clearChatHistory(userId);
       }
       setMessages([]);
-    } catch (err) {
-      console.log("Failed to clear chat history:", err);
+    } catch {
+      // clear history failed — silent
     }
   };
 
@@ -195,7 +194,7 @@ const Chat: React.FC<ChatProps> = ({
                         icon={<Copy />}
                       />
                       <Button
-                        onClick={() => console.log("Heart clicked for response:", msg.content)}
+                        onClick={() => {}}
                         title="Like"
                         appearance="subtle"
                         style={{ height: 28, width: 28 }}

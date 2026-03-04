@@ -47,8 +47,7 @@ export const useWebSocket = () => {
         isConnecting: false,
         error: null
       }));
-    } catch (error) {
-      console.error('Failed to connect to WebSocket:', error);
+    } catch {
       isConnectedRef.current = false;
       isConnectingRef.current = false;
       setState(prev => ({
@@ -73,8 +72,7 @@ export const useWebSocket = () => {
         isReconnecting: false,
         error: null
       }));
-    } catch (error) {
-      console.error('Failed to reconnect to WebSocket:', error);
+    } catch {
       isConnectedRef.current = false;
       setState(prev => ({
         ...prev,
