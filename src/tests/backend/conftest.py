@@ -42,16 +42,60 @@ def _setup_agent_framework_mock():
     """
     Set up mock for agent_framework which is not a pip-installable package.
     This framework is used for Azure AI Agents and needs proper mocking.
+    Uses ModuleType with real stub classes for names used in type annotations
+    or as base classes, and MagicMock for everything else.
     """
     if 'agent_framework' not in sys.modules:
-        # Use MagicMock so any attribute access (ChatAgent, ChatMessage, etc.) works
-        mock_af = MagicMock()
-        
+        # Top-level: agent_framework
+        mock_af = ModuleType('agent_framework')
+
+        # Names used as base classes or in Union type hints MUST be real classes
+        # to avoid SyntaxError from typing module's forward reference evaluation.
+        _class_names = [
+            'AgentResponse', 'AgentResponseUpdate', 'AgentRunUpdateEvent',
+            'AgentThread', 'BaseAgent', 'ChatAgent', 'ChatMessage',
+            'ChatOptions', 'Content', 'ExecutorCompletedEvent',
+            'GroupChatRequestSentEvent', 'GroupChatResponseReceivedEvent',
+            'HostedCodeInterpreterTool', 'HostedMCPTool',
+            'InMemoryCheckpointStorage', 'MCPStreamableHTTPTool',
+            'MagenticBuilder', 'MagenticOrchestratorEvent',
+            'MagenticProgressLedger', 'Role', 'UsageDetails',
+            'WorkflowOutputEvent',
+        ]
+        for name in _class_names:
+            setattr(mock_af, name, type(name, (), {}))
+
+        # Sub-module: agent_framework.azure
+        mock_af_azure = ModuleType('agent_framework.azure')
+        mock_af_azure.AzureOpenAIChatClient = type('AzureOpenAIChatClient', (), {})
+        mock_af.azure = mock_af_azure
+
+        # Sub-module: agent_framework._workflows._magentic
+        mock_af_workflows = ModuleType('agent_framework._workflows')
+        mock_af_magentic = ModuleType('agent_framework._workflows._magentic')
+        for name in [
+            'MagenticContext', 'StandardMagenticManager',
+        ]:
+            setattr(mock_af_magentic, name, type(name, (), {}))
+        for name in [
+            'ORCHESTRATOR_FINAL_ANSWER_PROMPT',
+            'ORCHESTRATOR_PROGRESS_LEDGER_PROMPT',
+            'ORCHESTRATOR_TASK_LEDGER_PLAN_PROMPT',
+            'ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT',
+        ]:
+            setattr(mock_af_magentic, name, "mock_prompt_string")
+        mock_af_workflows._magentic = mock_af_magentic
+        mock_af._workflows = mock_af_workflows
+
         sys.modules['agent_framework'] = mock_af
-        sys.modules['agent_framework.azure'] = mock_af.azure
-    
+        sys.modules['agent_framework.azure'] = mock_af_azure
+        sys.modules['agent_framework._workflows'] = mock_af_workflows
+        sys.modules['agent_framework._workflows._magentic'] = mock_af_magentic
+
     if 'agent_framework_azure_ai' not in sys.modules:
-        sys.modules['agent_framework_azure_ai'] = MagicMock()
+        mock_af_ai = ModuleType('agent_framework_azure_ai')
+        mock_af_ai.AzureAIClient = type('AzureAIClient', (), {})
+        sys.modules['agent_framework_azure_ai'] = mock_af_ai
 
 
 def _setup_azure_monitor_mock():
@@ -62,10 +106,33 @@ def _setup_azure_monitor_mock():
         sys.modules['azure.monitor.opentelemetry'] = mock_module
 
 
+def _patch_azure_ai_projects_models():
+    """
+    Patch azure.ai.projects.models to add names that may be missing
+    in older SDK versions (e.g. PromptAgentDefinition).
+    """
+    try:
+        import azure.ai.projects.models as models_mod
+        missing_names = [
+            'PromptAgentDefinition',
+            'AzureAISearchAgentTool',
+            'AzureAISearchToolResource',
+            'AISearchIndexResource',
+        ]
+        for name in missing_names:
+            if not hasattr(models_mod, name):
+                setattr(models_mod, name, MagicMock())
+    except ImportError:
+        # azure-ai-projects not installed at all — create full mock
+        sys.modules['azure.ai.projects'] = MagicMock()
+        sys.modules['azure.ai.projects.models'] = MagicMock()
+
+
 # Set up environment and minimal mocks before any test imports
 _setup_environment_variables()
 _setup_agent_framework_mock()
 _setup_azure_monitor_mock()
+_patch_azure_ai_projects_models()
 
 
 @pytest.fixture
