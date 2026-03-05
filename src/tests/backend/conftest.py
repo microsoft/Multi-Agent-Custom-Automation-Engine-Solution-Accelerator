@@ -44,19 +44,11 @@ def _setup_agent_framework_mock():
     This framework is used for Azure AI Agents and needs proper mocking.
     """
     if 'agent_framework' not in sys.modules:
-        # Create mock agent_framework module hierarchy
-        mock_af = ModuleType('agent_framework')
-        mock_af_azure = ModuleType('agent_framework.azure')
-        
-        # Create mock classes for agent_framework
-        mock_af.ChatOptions = MagicMock()
-        mock_af_azure.AzureOpenAIChatClient = MagicMock()
-        
-        # Set up the module hierarchy
-        mock_af.azure = mock_af_azure
+        # Use MagicMock so any attribute access (ChatAgent, ChatMessage, etc.) works
+        mock_af = MagicMock()
         
         sys.modules['agent_framework'] = mock_af
-        sys.modules['agent_framework.azure'] = mock_af_azure
+        sys.modules['agent_framework.azure'] = mock_af.azure
     
     if 'agent_framework_azure_ai' not in sys.modules:
         sys.modules['agent_framework_azure_ai'] = MagicMock()

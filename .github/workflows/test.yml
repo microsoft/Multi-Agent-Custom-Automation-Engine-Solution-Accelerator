@@ -66,6 +66,8 @@ jobs:
 
       - name: Run tests with coverage
         if: env.skip_tests == 'false'
+        env:
+          PYTHONPATH: src:src/backend
         run: |
           # Run test_app.py first (isolation required)
           python -m pytest src/tests/backend/test_app.py --cov=src/backend --cov-config=.coveragerc -q
