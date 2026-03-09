@@ -900,7 +900,7 @@ class TestSearchIndexValidation:
         mock_index = MagicMock()
         mock_index_client.get_index.return_value = mock_index
         
-        with patch.object(mock_search_indexes, 'SearchIndexClient', return_value=mock_index_client):
+        with patch.object(team_service_module, 'SearchIndexClient', return_value=mock_index_client):
             is_valid, error = await service.validate_single_index("test_index")
         
         assert is_valid is True
@@ -911,24 +911,15 @@ class TestSearchIndexValidation:
         """Test single index validation when index not found."""
         service = TeamService()
         
+        # Use the module's ResourceNotFoundError which is mocked
+        ResourceNotFoundError = team_service_module.ResourceNotFoundError
+        
         # Mock SearchIndexClient that raises ResourceNotFoundError
         mock_index_client = MagicMock()
-        mock_index_client.get_index.side_effect = MockResourceNotFoundError("Index not found")
+        mock_index_client.get_index.side_effect = ResourceNotFoundError("Index not found")
         
-        # Patch the SearchIndexClient directly on the service call
-        with patch.object(mock_search_indexes, 'SearchIndexClient', return_value=mock_index_client):
-            # Mock the exception handling by patching the exception in the team_service_module
-
-            async def mock_validate(index_name):
-                try:
-                    mock_index_client.get_index(index_name)
-                    return True, ""
-                except MockResourceNotFoundError:
-                    return False, f"Search index '{index_name}' does not exist"
-                except Exception as e:
-                    return False, str(e)
-            
-            service.validate_single_index = mock_validate
+        # Patch SearchIndexClient in the team_service module
+        with patch.object(team_service_module, 'SearchIndexClient', return_value=mock_index_client):
             is_valid, error = await service.validate_single_index("missing_index")
         
         assert is_valid is False
@@ -939,21 +930,14 @@ class TestSearchIndexValidation:
         """Test single index validation with authentication error."""
         service = TeamService()
         
+        # Use the module's ClientAuthenticationError which is mocked
+        ClientAuthenticationError = team_service_module.ClientAuthenticationError
+        
         # Mock SearchIndexClient that raises ClientAuthenticationError
         mock_index_client = MagicMock()
-        mock_index_client.get_index.side_effect = MockClientAuthenticationError("Auth failed")
+        mock_index_client.get_index.side_effect = ClientAuthenticationError("Auth failed")
         
-        with patch.object(mock_search_indexes, 'SearchIndexClient', return_value=mock_index_client):
-            async def mock_validate(index_name):
-                try:
-                    mock_index_client.get_index(index_name)
-                    return True, ""
-                except MockClientAuthenticationError:
-                    return False, f"Authentication failed for search index '{index_name}': Auth failed"
-                except Exception as e:
-                    return False, str(e)
-            
-            service.validate_single_index = mock_validate
+        with patch.object(team_service_module, 'SearchIndexClient', return_value=mock_index_client):
             is_valid, error = await service.validate_single_index("test_index")
         
         assert is_valid is False
@@ -964,41 +948,66 @@ class TestSearchIndexValidation:
         """Test single index validation with HTTP error."""
         service = TeamService()
         
+        # Use the module's HttpResponseError which is mocked
+        HttpResponseError = team_service_module.HttpResponseError
+        
         # Mock SearchIndexClient that raises HttpResponseError
         mock_index_client = MagicMock()
-        mock_index_client.get_index.side_effect = MockHttpResponseError("HTTP error")
+        mock_index_client.get_index.side_effect = HttpResponseError("HTTP error")
         
-        with patch.object(mock_search_indexes, 'SearchIndexClient', return_value=mock_index_client):
-            async def mock_validate(index_name):
-                try:
-                    mock_index_client.get_index(index_name)
-                    return True, ""
-                except MockHttpResponseError:
-                    return False, f"Error accessing search index '{index_name}': HTTP error"
-                except Exception as e:
-                    return False, str(e)
-            
-            service.validate_single_index = mock_validate
+        with patch.object(team_service_module, 'SearchIndexClient', return_value=mock_index_client):
             is_valid, error = await service.validate_single_index("test_index")
         
         assert is_valid is False
         assert "Error accessing" in error
 
     @pytest.mark.asyncio
+    async def test_validate_single_index_unexpected_exception(self):
+        """Test single index validation with unexpected exception."""
+        service = TeamService()
+        
+        # Mock SearchIndexClient that raises generic Exception
+        mock_index_client = MagicMock()
+        mock_index_client.get_index.side_effect = RuntimeError("Unexpected error")
+        
+        with patch.object(team_service_module, 'SearchIndexClient', return_value=mock_index_client):
+            is_valid, error = await service.validate_single_index("test_index")
+        
+        assert is_valid is False
+        assert "Unexpected error validating" in error
+
+    @pytest.mark.asyncio
+    async def test_validate_single_index_index_not_configured(self):
+        """Test single index validation when index exists but not properly configured."""
+        service = TeamService()
+        
+        # Mock SearchIndexClient that returns None
+        mock_index_client = MagicMock()
+        mock_index_client.get_index.return_value = None
+        
+        with patch.object(team_service_module, 'SearchIndexClient', return_value=mock_index_client):
+            is_valid, error = await service.validate_single_index("partial_index")
+        
+        assert is_valid is False
+        assert "not be properly configured" in error
+
+    @pytest.mark.asyncio
     async def test_get_search_index_summary_success(self):
         """Test successful search index summary."""
         service = TeamService()
         
-        # Mock the method directly for better control
-        async def mock_summary():
-            return {
-                "search_endpoint": "https://test.search.azure.com",
-                "total_indexes": 2,
-                "available_indexes": ["index1", "index2"]
-            }
+        # Create mock indexes
+        mock_index1 = MagicMock()
+        mock_index1.name = "index1"
+        mock_index2 = MagicMock()
+        mock_index2.name = "index2"
         
-        service.get_search_index_summary = mock_summary
-        summary = await service.get_search_index_summary()
+        # Mock SearchIndexClient
+        mock_index_client = MagicMock()
+        mock_index_client.list_indexes.return_value = [mock_index1, mock_index2]
+        
+        with patch.object(team_service_module, 'SearchIndexClient', return_value=mock_index_client):
+            summary = await service.get_search_index_summary()
         
         assert summary["total_indexes"] == 2
         assert "index1" in summary["available_indexes"]
@@ -1020,12 +1029,12 @@ class TestSearchIndexValidation:
         """Test search index summary with exception."""
         service = TeamService()
         
-        # Mock the method to return error
-        async def mock_summary_error():
-            return {"error": "Service error"}
+        # Mock SearchIndexClient that raises an exception
+        mock_index_client = MagicMock()
+        mock_index_client.list_indexes.side_effect = RuntimeError("Service error")
         
-        service.get_search_index_summary = mock_summary_error
-        summary = await service.get_search_index_summary()
+        with patch.object(team_service_module, 'SearchIndexClient', return_value=mock_index_client):
+            summary = await service.get_search_index_summary()
         
         assert "error" in summary
         assert "Service error" in summary["error"]
