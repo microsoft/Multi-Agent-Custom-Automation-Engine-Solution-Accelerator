@@ -311,12 +311,12 @@ async def process_request(
 
     if not input_task.session_id:
         input_task.session_id = str(uuid.uuid4())
-    
+
     # Attach session_id to current span for Application Insights
     span = trace.get_current_span()
     if span:
         span.set_attribute("session_id", input_task.session_id)
-    
+
     try:
         plan_id = str(uuid.uuid4())
         # Initialize memory store and service
@@ -452,7 +452,7 @@ async def plan_approval(
         raise HTTPException(
             status_code=401, detail="Missing or invalid user information"
         )
-    
+
     # Attach session_id to span if plan_id is available
     if human_feedback.plan_id:
         try:
@@ -464,7 +464,7 @@ async def plan_approval(
                     span.set_attribute("session_id", plan.session_id)
         except Exception:
             pass  # Don't fail request if span attribute fails
-    
+
     # Set the approval in the orchestration config
     try:
         if user_id and human_feedback.m_plan_id:
@@ -614,7 +614,7 @@ async def user_clarification(
         raise HTTPException(
             status_code=401, detail="Missing or invalid user information"
         )
-    
+
     # Attach session_id to span if plan_id is available
     if human_feedback.plan_id:
         try:
@@ -626,7 +626,7 @@ async def user_clarification(
                     span.set_attribute("session_id", plan.session_id)
         except Exception:
             pass  # Don't fail request if span attribute fails
-    
+
     try:
         memory_store = await DatabaseFactory.get_database(user_id=user_id)
         user_current_team = await memory_store.get_current_team(user_id=user_id)
@@ -769,7 +769,7 @@ async def agent_message_user(
         raise HTTPException(
             status_code=401, detail="Missing or invalid user information"
         )
-    
+
     # Attach session_id to span if plan_id is available
     if agent_message.plan_id:
         try:
@@ -781,7 +781,7 @@ async def agent_message_user(
                     span.set_attribute("session_id", plan.session_id)
         except Exception:
             pass  # Don't fail request if span attribute fails
-    
+
     # Set the approval in the orchestration config
 
     try:
@@ -1398,7 +1398,7 @@ async def get_plans(request: Request):
     all_plans = await memory_store.get_all_plans_by_team_id_status(
         user_id=user_id, team_id=current_team.team_id, status=PlanStatus.completed
     )
-    
+
     # Attach session_id to span if plans exist
     if all_plans and len(all_plans) > 0 and hasattr(all_plans[0], 'session_id'):
         span = trace.get_current_span()
@@ -1494,7 +1494,7 @@ async def get_plan_by_id(
                     {"status_code": 400, "detail": "Plan not found"},
                 )
                 raise HTTPException(status_code=404, detail="Plan not found")
-            
+
             # Attach session_id to span
             if plan.session_id:
                 span = trace.get_current_span()

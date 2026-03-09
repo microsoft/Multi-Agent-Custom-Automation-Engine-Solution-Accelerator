@@ -71,10 +71,10 @@ logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(l
 # Suppress noisy Azure Monitor exporter "Transmission succeeded" logs
 logging.getLogger("azure.monitor.opentelemetry.exporter.export._base").setLevel(logging.WARNING)
 
-
 # Initialize the FastAPI app
 app = FastAPI(lifespan=lifespan)
 
+frontend_url = config.FRONTEND_SITE_NAME
 # Configure Azure Monitor and instrument FastAPI for OpenTelemetry
 # This enables automatic request tracing, dependency tracking, and proper operation_id
 if config.APPLICATIONINSIGHTS_CONNECTION_STRING:
@@ -83,7 +83,7 @@ if config.APPLICATIONINSIGHTS_CONNECTION_STRING:
         connection_string=config.APPLICATIONINSIGHTS_CONNECTION_STRING,
         enable_live_metrics=True
     )
-    
+
     # Instrument FastAPI app — exclude WebSocket URLs to reduce telemetry noise
     FastAPIInstrumentor.instrument_app(
         app,
@@ -95,6 +95,7 @@ else:
         "No Application Insights connection string found. Telemetry disabled."
     )
 
+# Add this near the top of your app.py, after initializing the app
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allow all origins for development; restrict in production

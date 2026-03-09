@@ -10,7 +10,6 @@ from common.models.messages_af import (
     AgentType,
     PlanStatus,
 )
-from common.utils.event_utils import track_event_if_configured
 from v4.config.settings import orchestration_config
 
 logger = logging.getLogger(__name__)
