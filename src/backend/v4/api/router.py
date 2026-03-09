@@ -4,6 +4,8 @@ import logging
 import uuid
 from typing import Optional
 
+from opentelemetry import trace
+
 import v4.models.messages as messages
 from v4.models.messages import WebsocketMessageType
 from auth.auth_utils import get_authenticated_user_details
@@ -60,42 +62,62 @@ async def start_comms(
 
     user_id = user_id or "00000000-0000-0000-0000-000000000000"
 
-    # Add to the connection manager for backend updates
-    connection_config.add_connection(
-        process_id=process_id, connection=websocket, user_id=user_id
-    )
-    track_event_if_configured(
-        "WebSocketConnectionAccepted", {"process_id": process_id, "user_id": user_id}
-    )
+    # Manually create a span for WebSocket since excluded_urls suppresses auto-instrumentation.
+    # Without this, all track_event_if_configured calls inside WebSocket would get operation_Id = 0.
+    tracer = trace.get_tracer(__name__)
+    with tracer.start_as_current_span(
+        "WebSocket_Connection",
+        attributes={"process_id": process_id, "user_id": user_id},
+    ) as ws_span:
+        # Resolve session_id from plan for telemetry
+        session_id = None
+        try:
+            memory_store = await DatabaseFactory.get_database(user_id=user_id)
+            plan = await memory_store.get_plan_by_plan_id(plan_id=process_id)
+            if plan:
+                session_id = getattr(plan, 'session_id', None)
+                if session_id:
+                    ws_span.set_attribute("session_id", session_id)
+        except Exception as e:
+            logging.warning(f"[websocket] Failed to resolve session_id: {e}")
 
-    # Keep the connection open - FastAPI will close the connection if this returns
-    try:
+        # Add to the connection manager for backend updates
+        connection_config.add_connection(
+            process_id=process_id, connection=websocket, user_id=user_id
+        )
+        ws_props = {"process_id": process_id, "user_id": user_id}
+        if session_id:
+            ws_props["session_id"] = session_id
+        track_event_if_configured("WebSocket_Connected", ws_props)
+
         # Keep the connection open - FastAPI will close the connection if this returns
-        while True:
-            # no expectation that we will receive anything from the client but this keeps
-            # the connection open and does not take cpu cycle
-            try:
-                message = await websocket.receive_text()
-                logging.debug(f"Received WebSocket message from {user_id}: {message}")
-            except asyncio.TimeoutError:
-                # Ignore timeouts to keep the WebSocket connection open, but avoid a tight loop.
-                logging.debug(
-                    f"WebSocket receive timeout for user {user_id}, process {process_id}"
-                )
-                await asyncio.sleep(0.1)
-            except WebSocketDisconnect:
-                track_event_if_configured(
-                    "WebSocketDisconnect",
-                    {"process_id": process_id, "user_id": user_id},
-                )
-                logging.info(f"Client disconnected from batch {process_id}")
-                break
-    except Exception as e:
-        # Fixed logging syntax - removed the error= parameter
-        logging.error(f"Error in WebSocket connection: {str(e)}")
-    finally:
-        # Always clean up the connection
-        await connection_config.close_connection(process_id=process_id)
+        try:
+            # Keep the connection open - FastAPI will close the connection if this returns
+            while True:
+                # no expectation that we will receive anything from the client but this keeps
+                # the connection open and does not take cpu cycle
+                try:
+                    message = await websocket.receive_text()
+                    logging.debug(f"Received WebSocket message from {user_id}: {message}")
+                except asyncio.TimeoutError:
+                    # Ignore timeouts to keep the WebSocket connection open, but avoid a tight loop.
+                    logging.debug(
+                        f"WebSocket receive timeout for user {user_id}, process {process_id}"
+                    )
+                    await asyncio.sleep(0.1)
+                except WebSocketDisconnect:
+                    dc_props = {"process_id": process_id, "user_id": user_id}
+                    if session_id:
+                        dc_props["session_id"] = session_id
+                    track_event_if_configured("WebSocket_Disconnected", dc_props)
+                    logging.info(f"Client disconnected from batch {process_id}")
+                    break
+        except Exception as e:
+            # Fixed logging syntax - removed the error= parameter
+            logging.error(f"Error in WebSocket connection: {str(e)}")
+        finally:
+            # Always clean up the connection
+            await connection_config.close_connection(process_id=process_id)
 
 
 @app_v4.get("/init_team")
@@ -115,7 +137,7 @@ async def init_team(
         user_id = authenticated_user["user_principal_id"]
         if not user_id:
             track_event_if_configured(
-                "UserIdNotFound", {"status_code": 400, "detail": "no user"}
+                "Error_User_Not_Found", {"status_code": 400, "detail": "no user"}
             )
             raise HTTPException(status_code=400, detail="no user")
 
@@ -186,7 +208,7 @@ async def init_team(
 
     except Exception as e:
         track_event_if_configured(
-            "InitTeamFailed",
+            "Error_Init_Team_Failed",
             {
                 "error": str(e),
             },
@@ -252,7 +274,7 @@ async def process_request(
     user_id = authenticated_user["user_principal_id"]
     if not user_id:
         track_event_if_configured(
-            "UserIdNotFound", {"status_code": 400, "detail": "no user"}
+            "Error_User_Not_Found", {"status_code": 400, "detail": "no user"}
         )
         raise HTTPException(status_code=400, detail="no user found")
     try:
@@ -275,7 +297,7 @@ async def process_request(
 
     if not await rai_success(input_task.description, team, memory_store):
         track_event_if_configured(
-            "RAI failed",
+            "Error_RAI_Check_Failed",
             {
                 "status": "Plan not created - RAI check failed",
                 "description": input_task.description,
@@ -289,6 +311,12 @@ async def process_request(
 
     if not input_task.session_id:
         input_task.session_id = str(uuid.uuid4())
+    
+    # Attach session_id to current span for Application Insights
+    span = trace.get_current_span()
+    if span:
+        span.set_attribute("session_id", input_task.session_id)
+    
     try:
         plan_id = str(uuid.uuid4())
         # Initialize memory store and service
@@ -315,7 +343,7 @@ async def process_request(
         )
 
         track_event_if_configured(
-            "PlanCreated",
+            "Plan_Created",
             {
                 "status": "success",
                 "plan_id": plan.plan_id,
@@ -328,7 +356,7 @@ async def process_request(
     except Exception as e:
         print(f"Error creating plan: {e}")
         track_event_if_configured(
-            "PlanCreationFailed",
+            "Error_Plan_Creation_Failed",
             {
                 "status": "error",
                 "description": input_task.description,
@@ -354,7 +382,7 @@ async def process_request(
 
     except Exception as e:
         track_event_if_configured(
-            "RequestStartFailed",
+            "Error_Request_Start_Failed",
             {
                 "session_id": input_task.session_id,
                 "description": input_task.description,
@@ -424,6 +452,19 @@ async def plan_approval(
         raise HTTPException(
             status_code=401, detail="Missing or invalid user information"
         )
+    
+    # Attach session_id to span if plan_id is available
+    if human_feedback.plan_id:
+        try:
+            memory_store = await DatabaseFactory.get_database(user_id=user_id)
+            plan = await memory_store.get_plan_by_plan_id(plan_id=human_feedback.plan_id)
+            if plan and plan.session_id:
+                span = trace.get_current_span()
+                if span:
+                    span.set_attribute("session_id", plan.session_id)
+        except Exception:
+            pass  # Don't fail request if span attribute fails
+    
     # Set the approval in the orchestration config
     try:
         if user_id and human_feedback.m_plan_id:
@@ -472,8 +513,11 @@ async def plan_approval(
                         message_type=WebsocketMessageType.ERROR_MESSAGE,
                     )
 
+                # Use dynamic event name based on approval status
+                approval_status = "Approved" if human_feedback.approved else "Rejected"
+                event_name = f"Plan_{approval_status}"
                 track_event_if_configured(
-                    "PlanApprovalReceived",
+                    event_name,
                     {
                         "plan_id": human_feedback.plan_id,
                         "m_plan_id": human_feedback.m_plan_id,
@@ -570,6 +614,19 @@ async def user_clarification(
         raise HTTPException(
             status_code=401, detail="Missing or invalid user information"
         )
+    
+    # Attach session_id to span if plan_id is available
+    if human_feedback.plan_id:
+        try:
+            memory_store = await DatabaseFactory.get_database(user_id=user_id)
+            plan = await memory_store.get_plan_by_plan_id(plan_id=human_feedback.plan_id)
+            if plan and plan.session_id:
+                span = trace.get_current_span()
+                if span:
+                    span.set_attribute("session_id", plan.session_id)
+        except Exception:
+            pass  # Don't fail request if span attribute fails
+    
     try:
         memory_store = await DatabaseFactory.get_database(user_id=user_id)
         user_current_team = await memory_store.get_current_team(user_id=user_id)
@@ -593,7 +650,7 @@ async def user_clarification(
         if human_feedback.answer is not None or human_feedback.answer != "":
             if not await rai_success(human_feedback.answer, team, memory_store):
                 track_event_if_configured(
-                    "RAI failed",
+                    "Error_RAI_Check_Failed",
                     {
                         "status": "Plan Clarification ",
                         "description": human_feedback.answer,
@@ -634,7 +691,7 @@ async def user_clarification(
             except Exception as e:
                 print(f"Error processing human clarification: {e}")
             track_event_if_configured(
-                "HumanClarificationReceived",
+                "Human_Clarification_Received",
                 {
                     "request_id": human_feedback.request_id,
                     "answer": human_feedback.answer,
@@ -712,6 +769,19 @@ async def agent_message_user(
         raise HTTPException(
             status_code=401, detail="Missing or invalid user information"
         )
+    
+    # Attach session_id to span if plan_id is available
+    if agent_message.plan_id:
+        try:
+            memory_store = await DatabaseFactory.get_database(user_id=user_id)
+            plan = await memory_store.get_plan_by_plan_id(plan_id=agent_message.plan_id)
+            if plan and plan.session_id:
+                span = trace.get_current_span()
+                if span:
+                    span.set_attribute("session_id", plan.session_id)
+        except Exception:
+            pass  # Don't fail request if span attribute fails
+    
     # Set the approval in the orchestration config
 
     try:
@@ -723,8 +793,10 @@ async def agent_message_user(
     except Exception as e:
         print(f"Error processing agent message: {e}")
 
+    # Use dynamic event name with agent identifier
+    event_name = f"Agent_Message_From_{agent_message.agent.replace(' ', '_')}"
     track_event_if_configured(
-        "AgentMessageReceived",
+        event_name,
         {
             "agent": agent_message.agent,
             "content": agent_message.content,
@@ -774,7 +846,7 @@ async def upload_team_config(
     user_id = authenticated_user["user_principal_id"]
     if not user_id:
         track_event_if_configured(
-            "UserIdNotFound", {"status_code": 400, "detail": "no user"}
+            "Error_User_Not_Found", {"status_code": 400, "detail": "no user"}
         )
         raise HTTPException(status_code=400, detail="no user found")
     try:
@@ -807,7 +879,7 @@ async def upload_team_config(
             rai_valid, rai_error = await rai_validate_team_config(json_data, memory_store)
             if not rai_valid:
                 track_event_if_configured(
-                    "Team configuration RAI validation failed",
+                    "Error_Config_RAI_Validation_Failed",
                     {
                         "status": "failed",
                         "user_id": user_id,
@@ -818,7 +890,7 @@ async def upload_team_config(
                 raise HTTPException(status_code=400, detail=rai_error)
 
         track_event_if_configured(
-            "Team configuration RAI validation passed",
+            "Config_RAI_Validation_Passed",
             {"status": "passed", "user_id": user_id, "filename": file.filename},
         )
         team_service = TeamService(memory_store)
@@ -833,7 +905,7 @@ async def upload_team_config(
                 f"Please deploy these models in Azure AI Foundry before uploading this team configuration."
             )
             track_event_if_configured(
-                "Team configuration model validation failed",
+                "Error_Config_Model_Validation_Failed",
                 {
                     "status": "failed",
                     "user_id": user_id,
@@ -844,7 +916,7 @@ async def upload_team_config(
             raise HTTPException(status_code=400, detail=error_message)
 
         track_event_if_configured(
-            "Team configuration model validation passed",
+            "Config_Model_Validation_Passed",
             {"status": "passed", "user_id": user_id, "filename": file.filename},
         )
 
@@ -860,7 +932,7 @@ async def upload_team_config(
                 f"Please ensure all referenced search indexes exist in your Azure AI Search service."
             )
             track_event_if_configured(
-                "Team configuration search validation failed",
+                "Error_Config_Search_Validation_Failed",
                 {
                     "status": "failed",
                     "user_id": user_id,
@@ -872,7 +944,7 @@ async def upload_team_config(
 
         logger.info(f"✅ Search validation passed for user: {user_id}")
         track_event_if_configured(
-            "Team configuration search validation passed",
+            "Config_Search_Validation_Passed",
             {"status": "passed", "user_id": user_id, "filename": file.filename},
         )
 
@@ -897,7 +969,7 @@ async def upload_team_config(
             ) from e
 
         track_event_if_configured(
-            "Team configuration uploaded",
+            "Config_Team_Uploaded",
             {
                 "status": "success",
                 "team_id": team_id,
@@ -1137,7 +1209,7 @@ async def delete_team_config(team_id: str, request: Request):
 
         # Track the event
         track_event_if_configured(
-            "Team configuration deleted",
+            "Config_Team_Deleted",
             {"status": "success", "team_id": team_id, "user_id": user_id},
         )
 
@@ -1190,7 +1262,7 @@ async def select_team(selection: TeamSelectionRequest, request: Request):
         )
         if not set_team:
             track_event_if_configured(
-                "Team selected",
+                "Error_Config_Team_Selection_Failed",
                 {
                     "status": "failed",
                     "team_id": selection.team_id,
@@ -1210,7 +1282,7 @@ async def select_team(selection: TeamSelectionRequest, request: Request):
 
         # Track the team selection event
         track_event_if_configured(
-            "Team selected",
+            "Config_Team_Selected",
             {
                 "status": "success",
                 "team_id": selection.team_id,
@@ -1234,7 +1306,7 @@ async def select_team(selection: TeamSelectionRequest, request: Request):
     except Exception as e:
         logging.error(f"Error selecting team: {str(e)}")
         track_event_if_configured(
-            "Team selection error",
+            "Error_Config_Team_Selection",
             {
                 "status": "error",
                 "team_id": selection.team_id,
@@ -1310,7 +1382,7 @@ async def get_plans(request: Request):
     user_id = authenticated_user["user_principal_id"]
     if not user_id:
         track_event_if_configured(
-            "UserIdNotFound", {"status_code": 400, "detail": "no user"}
+            "Error_User_Not_Found", {"status_code": 400, "detail": "no user"}
         )
         raise HTTPException(status_code=400, detail="no user")
 
@@ -1326,6 +1398,13 @@ async def get_plans(request: Request):
     all_plans = await memory_store.get_all_plans_by_team_id_status(
         user_id=user_id, team_id=current_team.team_id, status=PlanStatus.completed
     )
+    
+    # Attach session_id to span if plans exist
+    if all_plans and len(all_plans) > 0 and hasattr(all_plans[0], 'session_id'):
+        span = trace.get_current_span()
+        if span:
+            # Use first plan's session_id as representative
+            span.set_attribute("session_id", all_plans[0].session_id)
 
     return all_plans
 
@@ -1398,7 +1477,7 @@ async def get_plan_by_id(
     user_id = authenticated_user["user_principal_id"]
     if not user_id:
         track_event_if_configured(
-            "UserIdNotFound", {"status_code": 400, "detail": "no user"}
+            "Error_User_Not_Found", {"status_code": 400, "detail": "no user"}
         )
         raise HTTPException(status_code=400, detail="no user")
 
@@ -1411,10 +1490,16 @@ async def get_plan_by_id(
             plan = await memory_store.get_plan_by_plan_id(plan_id=plan_id)
             if not plan:
                 track_event_if_configured(
-                    "GetPlanBySessionNotFound",
+                    "Error_Plan_Not_Found",
                     {"status_code": 400, "detail": "Plan not found"},
                 )
                 raise HTTPException(status_code=404, detail="Plan not found")
+            
+            # Attach session_id to span
+            if plan.session_id:
+                span = trace.get_current_span()
+                if span:
+                    span.set_attribute("session_id", plan.session_id)
 
             # Use get_steps_by_plan to match the original implementation
 
