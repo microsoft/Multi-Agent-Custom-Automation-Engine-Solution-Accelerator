@@ -620,9 +620,9 @@ async def user_clarification(
 
     # Attach session_id to span if plan_id is available and capture for events
     session_id = None
+    memory_store = await DatabaseFactory.get_database(user_id=user_id)
     if human_feedback.plan_id:
         try:
-            memory_store = await DatabaseFactory.get_database(user_id=user_id)
             plan = await memory_store.get_plan_by_plan_id(plan_id=human_feedback.plan_id)
             if plan and plan.session_id:
                 session_id = plan.session_id
@@ -633,9 +633,6 @@ async def user_clarification(
             pass  # Don't fail request if span attribute fails
 
     try:
-        if not human_feedback.plan_id:
-            memory_store = await DatabaseFactory.get_database(user_id=user_id)
-        # else: memory_store already initialized above
         user_current_team = await memory_store.get_current_team(user_id=user_id)
         team_id = None
         if user_current_team:
@@ -654,7 +651,7 @@ async def user_clarification(
     # Set the approval in the orchestration config
     if user_id and human_feedback.request_id:
         # validate rai
-        if human_feedback.answer is not None or human_feedback.answer != "":
+        if human_feedback.answer is not None and str(human_feedback.answer).strip() != "":
             if not await rai_success(human_feedback.answer, team, memory_store):
                 event_props = {
                     "status": "Plan Clarification ",
