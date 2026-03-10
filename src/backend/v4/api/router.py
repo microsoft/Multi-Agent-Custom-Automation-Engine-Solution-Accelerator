@@ -273,9 +273,10 @@ async def process_request(
     authenticated_user = get_authenticated_user_details(request_headers=request.headers)
     user_id = authenticated_user["user_principal_id"]
     if not user_id:
-        track_event_if_configured(
-            "Error_User_Not_Found", {"status_code": 400, "detail": "no user"}
-        )
+        event_props = {"status_code": 400, "detail": "no user"}
+        if input_task and hasattr(input_task, 'session_id') and input_task.session_id:
+            event_props["session_id"] = input_task.session_id
+        track_event_if_configured("Error_User_Not_Found", event_props)
         raise HTTPException(status_code=400, detail="no user found")
     try:
         memory_store = await DatabaseFactory.get_database(user_id=user_id)
@@ -453,15 +454,17 @@ async def plan_approval(
             status_code=401, detail="Missing or invalid user information"
         )
 
-    # Attach session_id to span if plan_id is available
+    # Attach session_id to span if plan_id is available and capture for events
+    session_id = None
     if human_feedback.plan_id:
         try:
             memory_store = await DatabaseFactory.get_database(user_id=user_id)
             plan = await memory_store.get_plan_by_plan_id(plan_id=human_feedback.plan_id)
             if plan and plan.session_id:
+                session_id = plan.session_id
                 span = trace.get_current_span()
                 if span:
-                    span.set_attribute("session_id", plan.session_id)
+                    span.set_attribute("session_id", session_id)
         except Exception:
             pass  # Don't fail request if span attribute fails
 
@@ -516,16 +519,16 @@ async def plan_approval(
                 # Use dynamic event name based on approval status
                 approval_status = "Approved" if human_feedback.approved else "Rejected"
                 event_name = f"Plan_{approval_status}"
-                track_event_if_configured(
-                    event_name,
-                    {
-                        "plan_id": human_feedback.plan_id,
-                        "m_plan_id": human_feedback.m_plan_id,
-                        "approved": human_feedback.approved,
-                        "user_id": user_id,
-                        "feedback": human_feedback.feedback,
-                    },
-                )
+                event_props = {
+                    "plan_id": human_feedback.plan_id,
+                    "m_plan_id": human_feedback.m_plan_id,
+                    "approved": human_feedback.approved,
+                    "user_id": user_id,
+                    "feedback": human_feedback.feedback,
+                }
+                if session_id:
+                    event_props["session_id"] = session_id
+                track_event_if_configured(event_name, event_props)
 
                 return {"status": "approval recorded"}
             else:
@@ -615,20 +618,24 @@ async def user_clarification(
             status_code=401, detail="Missing or invalid user information"
         )
 
-    # Attach session_id to span if plan_id is available
+    # Attach session_id to span if plan_id is available and capture for events
+    session_id = None
     if human_feedback.plan_id:
         try:
             memory_store = await DatabaseFactory.get_database(user_id=user_id)
             plan = await memory_store.get_plan_by_plan_id(plan_id=human_feedback.plan_id)
             if plan and plan.session_id:
+                session_id = plan.session_id
                 span = trace.get_current_span()
                 if span:
-                    span.set_attribute("session_id", plan.session_id)
+                    span.set_attribute("session_id", session_id)
         except Exception:
             pass  # Don't fail request if span attribute fails
 
     try:
-        memory_store = await DatabaseFactory.get_database(user_id=user_id)
+        if not human_feedback.plan_id:
+            memory_store = await DatabaseFactory.get_database(user_id=user_id)
+        # else: memory_store already initialized above
         user_current_team = await memory_store.get_current_team(user_id=user_id)
         team_id = None
         if user_current_team:
@@ -649,14 +656,14 @@ async def user_clarification(
         # validate rai
         if human_feedback.answer is not None or human_feedback.answer != "":
             if not await rai_success(human_feedback.answer, team, memory_store):
-                track_event_if_configured(
-                    "Error_RAI_Check_Failed",
-                    {
-                        "status": "Plan Clarification ",
-                        "description": human_feedback.answer,
-                        "request_id": human_feedback.request_id,
-                    },
-                )
+                event_props = {
+                    "status": "Plan Clarification ",
+                    "description": human_feedback.answer,
+                    "request_id": human_feedback.request_id,
+                }
+                if session_id:
+                    event_props["session_id"] = session_id
+                track_event_if_configured("Error_RAI_Check_Failed", event_props)
                 raise HTTPException(
                     status_code=400,
                     detail={
@@ -690,14 +697,14 @@ async def user_clarification(
                 print(f"ValueError processing human clarification: {ve}")
             except Exception as e:
                 print(f"Error processing human clarification: {e}")
-            track_event_if_configured(
-                "Human_Clarification_Received",
-                {
-                    "request_id": human_feedback.request_id,
-                    "answer": human_feedback.answer,
-                    "user_id": user_id,
-                },
-            )
+            event_props = {
+                "request_id": human_feedback.request_id,
+                "answer": human_feedback.answer,
+                "user_id": user_id,
+            }
+            if session_id:
+                event_props["session_id"] = session_id
+            track_event_if_configured("Human_Clarification_Received", event_props)
             return {
                 "status": "clarification recorded",
             }
@@ -770,15 +777,17 @@ async def agent_message_user(
             status_code=401, detail="Missing or invalid user information"
         )
 
-    # Attach session_id to span if plan_id is available
+    # Attach session_id to span if plan_id is available and capture for events
+    session_id = None
     if agent_message.plan_id:
         try:
             memory_store = await DatabaseFactory.get_database(user_id=user_id)
             plan = await memory_store.get_plan_by_plan_id(plan_id=agent_message.plan_id)
             if plan and plan.session_id:
+                session_id = plan.session_id
                 span = trace.get_current_span()
                 if span:
-                    span.set_attribute("session_id", plan.session_id)
+                    span.set_attribute("session_id", session_id)
         except Exception:
             pass  # Don't fail request if span attribute fails
 
@@ -795,14 +804,14 @@ async def agent_message_user(
 
     # Use dynamic event name with agent identifier
     event_name = f"Agent_Message_From_{agent_message.agent.replace(' ', '_')}"
-    track_event_if_configured(
-        event_name,
-        {
-            "agent": agent_message.agent,
-            "content": agent_message.content,
-            "user_id": user_id,
-        },
-    )
+    event_props = {
+        "agent": agent_message.agent,
+        "content": agent_message.content,
+        "user_id": user_id,
+    }
+    if session_id:
+        event_props["session_id"] = session_id
+    track_event_if_configured(event_name, event_props)
     return {
         "status": "message recorded",
     }
@@ -1489,10 +1498,9 @@ async def get_plan_by_id(
         if plan_id:
             plan = await memory_store.get_plan_by_plan_id(plan_id=plan_id)
             if not plan:
-                track_event_if_configured(
-                    "Error_Plan_Not_Found",
-                    {"status_code": 400, "detail": "Plan not found"},
-                )
+                event_props = {"status_code": 400, "detail": "Plan not found"}
+                # No session_id available since plan not found
+                track_event_if_configured("Error_Plan_Not_Found", event_props)
                 raise HTTPException(status_code=404, detail="Plan not found")
 
             # Attach session_id to span
