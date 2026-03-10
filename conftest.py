@@ -7,9 +7,18 @@ from pathlib import Path
 
 import pytest
 
-# Add the agents path
-agents_path = Path(__file__).parent.parent.parent / "backend" / "v4" / "magentic_agents"
-sys.path.insert(0, str(agents_path))
+# Get the root directory of the project
+root_dir = Path(__file__).parent
+
+# Add src directory to path for 'backend', 'common', 'v4' etc. imports
+src_path = root_dir / "src"
+if str(src_path) not in sys.path:
+    sys.path.insert(0, str(src_path))
+
+# Add src/backend to path for relative imports within backend
+backend_path = root_dir / "src" / "backend"
+if str(backend_path) not in sys.path:
+    sys.path.insert(0, str(backend_path))
 
 @pytest.fixture
 def agent_env_vars():

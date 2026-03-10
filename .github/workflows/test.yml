@@ -66,20 +66,29 @@ jobs:
 
       - name: Run tests with coverage
         if: env.skip_tests == 'false'
+        env:
+          PYTHONPATH: src:src/backend
         run: |
-          if python -m pytest src/tests/backend/test_app.py --cov=backend --cov-config=.coveragerc -q > /dev/null 2>&1 && \
-             python -m pytest src/tests/backend --cov=backend --cov-append --cov-report=term --cov-report=xml --cov-config=.coveragerc --ignore=src/tests/backend/test_app.py; then
-            echo "Tests completed, checking coverage."
-            if [ -f coverage.xml ]; then
-              COVERAGE=$(python -c "import xml.etree.ElementTree as ET; tree = ET.parse('coverage.xml'); root = tree.getroot(); print(float(root.attrib.get('line-rate', 0)) * 100)")
-              echo "Overall coverage: $COVERAGE%"
-              if (( $(echo "$COVERAGE < 80" | bc -l) )); then
-                echo "Coverage is below 80%, failing the job."
-                exit 1
-              fi
+          # Run test_app.py first (isolation required)
+          python -m pytest src/tests/backend/test_app.py --cov=src/backend --cov-config=.coveragerc -q
+          
+          # Run remaining backend tests with coverage append
+          python -m pytest src/tests/backend --cov=src/backend --cov-append --cov-report=term --cov-report=xml --cov-config=.coveragerc --ignore=src/tests/backend/test_app.py
+
+      - name: Check coverage threshold
+        if: env.skip_tests == 'false'
+        run: |
+          if [ -f coverage.xml ]; then
+            COVERAGE=$(python -c "import xml.etree.ElementTree as ET; tree = ET.parse('coverage.xml'); root = tree.getroot(); print(float(root.attrib.get('line-rate', 0)) * 100)")
+            echo "Overall coverage: $COVERAGE%"
+            if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+              echo "::error::Coverage is below 80% threshold. Current: $COVERAGE%"
+              exit 1
             fi
+            echo "✅ Coverage threshold met: $COVERAGE% >= 80%"
           else
-            echo "No tests found, skipping coverage check."
+            echo "::error::coverage.xml not found"
+            exit 1
           fi
 
       - name: Skip coverage report if no tests
