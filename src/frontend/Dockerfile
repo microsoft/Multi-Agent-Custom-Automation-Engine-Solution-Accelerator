@@ -1,7 +1,7 @@
 # Multi-stage Dockerfile for React frontend with Python backend support using UV
 
 # Stage 1: Node build environment for React
-FROM node:18-alpine AS frontend-builder
+FROM node:20-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 

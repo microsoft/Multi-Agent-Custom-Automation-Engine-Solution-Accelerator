@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect} from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Spinner, Text } from '@fluentui/react-components';
 
@@ -11,8 +11,6 @@ import webSocketService from '../services/WebSocketService';
 import {
     AgentMessageData,
     AgentMessageType,
-    PlanStatus,
-    PlanApprovalRequest,
 } from '../models';
 
 /* ── Redux ───────────────────────────────────────────────────── */
@@ -37,7 +35,6 @@ import {
     setCancellingPlan,
     setLoadingMessage,
     setErrorLoading,
-    setPlanData,
     planApprovalAccepted,
     planApprovalRejected,
 } from '../state/slices/planSlice';

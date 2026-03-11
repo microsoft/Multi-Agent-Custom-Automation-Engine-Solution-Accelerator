@@ -40,8 +40,8 @@ const AppWrapper = () => {
         window.userInfo = defaultUserInfo;
         setUserInfoGlobal(defaultUserInfo);
         await apiService.sendUserBrowserLanguage();
-      } catch {
-        // Config endpoint not available — using defaults
+      } catch (error) {
+          console.info("frontend config did not load from python", error);
       } finally {
         setIsConfigLoaded(true);
         setIsUserInfoLoaded(true);

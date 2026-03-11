@@ -129,7 +129,7 @@ const HomePage: React.FC = () => {
                 showToast(`Team uploaded successfully! ${defaultTeam.name} remains your default team.`, 'success');
             }
         } catch {
-            // Silently handle — toast was already shown for upload success
+            console.error('Team upload failed');
         }
     }, [dispatch, showToast]);
 

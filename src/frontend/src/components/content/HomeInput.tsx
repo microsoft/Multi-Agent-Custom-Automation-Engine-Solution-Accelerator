@@ -122,8 +122,8 @@ const HomeInput: React.FC<HomeInputProps> = ({ selectedTeam }) => {
         try {
           // errorDetail = JSON.parse(error);
           errorMessage = error?.message || errorMessage;
-        } catch {
-          // ignore parse error
+        } catch (parseError) {
+          console.error("Error parsing error response", parseError);
         }
 
         showToast(errorMessage, "error");

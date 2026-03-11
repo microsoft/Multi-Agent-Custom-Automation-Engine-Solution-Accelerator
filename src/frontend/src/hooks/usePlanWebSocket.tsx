@@ -10,13 +10,8 @@ import webSocketService from '@/services/WebSocketService';
 import { PlanDataService } from '@/services/PlanDataService';
 import { useAppDispatch, useAppSelector } from '@/state/hooks';
 import {
-    setWaitingForPlan,
     setShowProcessingPlanSpinner,
-    setPlanApprovalRequest,
-    setShowApprovalButtons,
-    setContinueWithWebsocketFlow,
     setReloadLeftList,
-    markPlanCompleted,
     selectPlanData,
     selectContinueWithWebsocketFlow,
     selectPlanApproved,
@@ -27,7 +22,6 @@ import {
     setSubmittingChatDisableInput,
     setClarificationMessage,
     addAgentMessage,
-    selectAgentMessages,
 } from '@/state/slices/chatSlice';
 import {
     appendToStreamingBuffer,
@@ -46,6 +40,7 @@ import {
     PlanStatus,
     ParsedUserClarification,
     StreamMessage,
+    ProcessedPlanData,
 } from '@/models';
 import { APIService } from '@/api/apiService';
 
@@ -65,11 +60,13 @@ interface UsePlanWebSocketProps {
  */
 function persistAgentMessage(
     agentMessageData: AgentMessageData,
-    planData: any,
+    planData: ProcessedPlanData | null,
     dispatch: ReturnType<typeof useAppDispatch>,
     isFinal = false,
     streamingMessage = '',
 ) {
+    if (!planData?.plan) return;
+
     const agentMessageResponse = PlanDataService.createAgentMessageResponse(
         agentMessageData,
         planData,
@@ -274,8 +271,8 @@ export function usePlanWebSocket({
         const connectWebSocket = async () => {
             try {
                 await webSocketService.connect(planId);
-            } catch {
-                // Continue without WebSocket — the app should still work
+            } catch (error) {
+                console.log('WebSocket connection failed, continuing without real-time updates', error);
             }
         };
         connectWebSocket();
