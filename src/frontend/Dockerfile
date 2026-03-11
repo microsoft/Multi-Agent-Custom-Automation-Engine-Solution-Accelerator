@@ -8,13 +8,11 @@ WORKDIR /app/frontend
 # Copy package files first for better caching
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --silent
+# Install all dependencies (including devDependencies needed for tsc/vite build)
+RUN npm ci
 
 # Copy source files
 COPY . ./
-
-RUN rm -rf node_modules && npm ci && npm rebuild esbuild --force
 
 # Build the React app
 RUN npm run build
