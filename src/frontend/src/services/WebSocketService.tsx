@@ -10,7 +10,7 @@ class WebSocketService {
     private reconnectDelay = 1000; // 1s base, exponential: 1s, 2s, 4s, 8s, 16s
     private listeners: Map<string, Set<(message: StreamMessage) => void>> = new Map();
     private planSubscriptions: Set<string> = new Set();
-    private reconnectTimer: NodeJS.Timeout | null = null;
+    private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     private isConnecting = false;
     private intentionalDisconnect = false;
     private lastPlanId: string | undefined;

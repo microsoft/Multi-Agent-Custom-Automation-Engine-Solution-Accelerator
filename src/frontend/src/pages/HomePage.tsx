@@ -111,7 +111,6 @@ const HomePage: React.FC = () => {
                 } finally {
                     dispatch(setIsLoadingTeam(false));
                 }
-                showToast(`${team.name} team has been selected with ${team.agents.length} agents`, 'success');
             } else {
                 showToast('No team is currently selected', 'info');
             }
