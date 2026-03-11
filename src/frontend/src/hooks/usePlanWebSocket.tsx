@@ -271,8 +271,8 @@ export function usePlanWebSocket({
         const connectWebSocket = async () => {
             try {
                 await webSocketService.connect(planId);
-            } catch (error) {
-                console.log('WebSocket connection failed, continuing without real-time updates', error);
+            } catch {
+                console.log('WebSocket connection failed, continuing without real-time updates');
             }
         };
         connectWebSocket();

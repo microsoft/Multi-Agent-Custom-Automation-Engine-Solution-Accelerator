@@ -62,9 +62,9 @@ const Chat: React.FC<ChatProps> = ({
         }
         // const chatMessages = await chatService.getUserHistory(userId);
         // setMessages(chatMessages);
-      } catch (error) {
+      } catch {
         // Failed to load history — silent fail
-        console.log("Failed to load chat history for user", userId);
+        console.log("Failed to load chat history for user");
       }
     };
     loadHistory();
@@ -171,7 +171,7 @@ const Chat: React.FC<ChatProps> = ({
       setMessages([]);
     } catch {
       // clear history failed — silent
-      console.log("Failed to clear chat history for user", userId);
+      console.log("Failed to clear chat history for user");
     }
   };
 
