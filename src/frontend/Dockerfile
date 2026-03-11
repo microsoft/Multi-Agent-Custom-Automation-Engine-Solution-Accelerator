@@ -1,19 +1,23 @@
 # Multi-stage Dockerfile for React frontend with Python backend support using UV
 
 # Stage 1: Node build environment for React
-FROM node:20-alpine AS frontend-builder
+FROM node:18-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 
 # Copy package files first for better caching
 COPY package*.json ./
 
-# Copy all source files
+# Install dependencies
+RUN npm ci --silent
+
+# Copy source files
 COPY . ./
 
-# Install dependencies and build in a single layer to avoid BuildKit overlay issues
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci && npm run build
+RUN rm -rf node_modules && npm ci && npm rebuild esbuild --force
+
+# Build the React app
+RUN npm run build
 
 # Stage 2: Python build environment with UV
 FROM python:3.11-slim-bullseye AS python-builder
