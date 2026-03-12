@@ -17,6 +17,8 @@ from common.models.messages_af import UserLanguage
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
 # Local imports
 from middleware.health_check import HealthCheckMiddleware
 from v4.api.router import app_v4
@@ -51,20 +53,6 @@ async def lifespan(app: FastAPI):
     logger.info("👋 MACAE application shutdown complete")
 
 
-# Check if the Application Insights Instrumentation Key is set in the environment variables
-connection_string = config.APPLICATIONINSIGHTS_CONNECTION_STRING
-if connection_string:
-    # Configure Application Insights if the Instrumentation Key is found
-    configure_azure_monitor(connection_string=connection_string)
-    logging.info(
-        "Application Insights configured with the provided Instrumentation Key"
-    )
-else:
-    # Log a warning if the Instrumentation Key is not found
-    logging.warning(
-        "No Application Insights Instrumentation Key found. Skipping configuration"
-    )
-
 # Configure logging levels from environment variables
 # logging.basicConfig(level=getattr(logging, config.AZURE_BASIC_LOGGING_LEVEL.upper(), logging.INFO))
 
@@ -80,10 +68,32 @@ logging.getLogger("opentelemetry.sdk").setLevel(logging.ERROR)
 
 logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
 
+# Suppress noisy Azure Monitor exporter "Transmission succeeded" logs
+logging.getLogger("azure.monitor.opentelemetry.exporter.export._base").setLevel(logging.WARNING)
+
 # Initialize the FastAPI app
 app = FastAPI(lifespan=lifespan)
 
 frontend_url = config.FRONTEND_SITE_NAME
+# Configure Azure Monitor and instrument FastAPI for OpenTelemetry
+# This enables automatic request tracing, dependency tracking, and proper operation_id
+if config.APPLICATIONINSIGHTS_CONNECTION_STRING:
+    # Configure Application Insights telemetry with live metrics
+    configure_azure_monitor(
+        connection_string=config.APPLICATIONINSIGHTS_CONNECTION_STRING,
+        enable_live_metrics=True
+    )
+
+    # Instrument FastAPI app — exclude WebSocket URLs to reduce telemetry noise
+    FastAPIInstrumentor.instrument_app(
+        app,
+        excluded_urls="socket,ws"
+    )
+    logging.info("Application Insights configured with live metrics and WebSocket filtering")
+else:
+    logging.warning(
+        "No Application Insights connection string found. Telemetry disabled."
+    )
 
 # Add this near the top of your app.py, after initializing the app
 app.add_middleware(
