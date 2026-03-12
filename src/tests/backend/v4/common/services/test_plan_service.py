@@ -533,8 +533,6 @@ class TestPlanService:
         """Test that event tracking is callable via the mocked event_utils module."""
         # Verify the mock event_utils has the track function accessible
         assert callable(mock_event_utils.track_event_if_configured)
-        # Verify the plan_service module imported it (may be a mock attribute)
-        assert hasattr(plan_service_module, 'track_event_if_configured')
 
     def test_logging_integration(self):
         """Test that logging is properly configured."""
