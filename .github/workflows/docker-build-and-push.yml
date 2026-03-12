@@ -45,12 +45,14 @@ on:
   workflow_dispatch:
 
 permissions:
+  id-token: write
   contents: read
   actions: read
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    environment: production
 
     steps:
       - name: Checkout repository
@@ -59,13 +61,17 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Login to Azure
+        if: ${{ github.ref_name == 'main' || github.ref_name == 'dev-v4'|| github.ref_name == 'demo-v4' || github.ref_name == 'hotfix' }}
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       - name: Log in to Azure Container Registry
         if: ${{ github.ref_name == 'main' || github.ref_name == 'dev-v4'|| github.ref_name == 'demo-v4' || github.ref_name == 'hotfix' }}
-        uses: azure/docker-login@v2
-        with:
-          login-server: ${{ secrets.ACR_LOGIN_SERVER || 'acrlogin.azurecr.io' }}
-          username: ${{ secrets.ACR_USERNAME }}
-          password: ${{ secrets.ACR_PASSWORD }}
+        run: az acr login --name ${{ secrets.ACR_LOGIN_SERVER || 'acrlogin.azurecr.io' }}
 
       - name: Get current date
         id: date
