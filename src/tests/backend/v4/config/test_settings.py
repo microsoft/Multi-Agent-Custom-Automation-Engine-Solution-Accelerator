@@ -75,6 +75,7 @@ class TestAzureConfig(unittest.TestCase):
         self.assertEqual(token, "test-token-123")
         mock_credential.get_token.assert_called_once_with(mock_config.AZURE_COGNITIVE_SERVICES)
 
+
 class TestAzureConfigAsync(unittest.IsolatedAsyncioTestCase):
     """Async test cases for AzureConfig class."""
 

@@ -529,18 +529,34 @@ class TestPlanService:
             result = await PlanService.handle_plan_approval(mock_approval, "user")
             assert result is False
 
-    def test_event_tracking_calls(self):
+    @pytest.mark.asyncio
+    async def test_event_tracking_calls(self):
         """Test that event tracking is called appropriately."""
-        # This test verifies the event tracking integration
-        with patch.object(mock_event_utils, 'track_event_if_configured') as mock_track:
+        # Seed orchestration plan + memory store so approval path reaches event tracking.
+        mock_mplan = MagicMock()
+        mock_mplan.plan_id = None
+        mock_mplan.team_id = None
+        mock_mplan.model_dump.return_value = {"test": "plan"}
+        mock_orchestration_config.plans = {"test-m-plan": mock_mplan}
+
+        mock_plan = MagicMock()
+        mock_plan.team_id = "team-123"
+        mock_db = MagicMock()
+        mock_db.get_plan = AsyncMock(return_value=mock_plan)
+        mock_db.update_plan = AsyncMock()
+        mock_database_factory.DatabaseFactory.get_database = AsyncMock(return_value=mock_db)
+
+        with patch.object(plan_service_module, 'track_event_if_configured') as mock_track:
             mock_approval = MockPlanApprovalResponse(
                 plan_id="test-plan",
                 m_plan_id="test-m-plan",
                 approved=True
             )
-            
-            # The actual event tracking calls are tested indirectly through the service methods
-            assert mock_track is not None
+
+            result = await PlanService.handle_plan_approval(mock_approval, "user")
+            assert result is True
+            # Verify that event tracking was invoked
+            mock_track.assert_called_once()
 
     def test_logging_integration(self):
         """Test that logging is properly configured."""

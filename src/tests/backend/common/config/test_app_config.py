@@ -12,7 +12,7 @@ This module contains extensive test coverage for:
 import pytest
 import os
 import logging
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch, MagicMock
 
 # Add the source root directory to the Python path for imports
 import sys
