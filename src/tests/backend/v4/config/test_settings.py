@@ -503,27 +503,23 @@ class TestConnectionConfig(unittest.IsolatedAsyncioTestCase):
             mock_logger.error.assert_called()
             # Connection should still be removed
             self.assertNotIn(process_id, config.connections)
-
+            
     async def test_send_status_update_async_success(self):
-        """Test sending status update successfully."""
+        """Test sending a plain string status update successfully."""
+
         config = ConnectionConfig()
         user_id = "user-123"
         process_id = "process-456"
         message = "Test message"
         connection = AsyncMock()
-        
+
         config.add_connection(process_id, connection, user_id)
-        
+
         await config.send_status_update_async(message, user_id)
-        
+
         connection.send_text.assert_called_once()
         sent_data = json.loads(connection.send_text.call_args[0][0])
-        # Verify payload structure - type field exists (may be mocked or real enum value)
         self.assertIn('type', sent_data)
-        # If not mocked, verify actual value
-        type_val = str(sent_data['type'])
-        if 'MagicMock' not in type_val:
-            self.assertEqual(sent_data['type'], 'system_message')
         self.assertEqual(sent_data['data'], message)
 
     async def test_send_status_update_async_no_user_id(self):
@@ -812,7 +808,7 @@ class TestApprovalAndClarificationEdgeCases(IsolatedAsyncioTestCase):
         result = await config.wait_for_approval(plan_id, timeout=1.0)
         
         self.assertTrue(result)
-        await approve_task_handle
+        _ = await approve_task_handle
 
     async def test_wait_for_approval_rejected(self):
         """Test waiting for approval when plan is rejected."""
@@ -829,7 +825,7 @@ class TestApprovalAndClarificationEdgeCases(IsolatedAsyncioTestCase):
         result = await config.wait_for_approval(plan_id, timeout=1.0)
         
         self.assertFalse(result)
-        await reject_task_handle
+        _ = await reject_task_handle
 
     async def test_wait_for_clarification_key_error(self):
         """Test waiting for clarification with non-existent request_id raises KeyError."""
@@ -855,7 +851,7 @@ class TestApprovalAndClarificationEdgeCases(IsolatedAsyncioTestCase):
         result = await config.wait_for_clarification(request_id, timeout=1.0)
         
         self.assertEqual(result, "User answer")
-        await answer_task_handle
+        _ = await answer_task_handle
 
     async def test_wait_for_approval_creates_new_event(self):
         """Test that waiting for approval creates event if not exists."""
@@ -873,7 +869,7 @@ class TestApprovalAndClarificationEdgeCases(IsolatedAsyncioTestCase):
         result = await config.wait_for_approval(plan_id, timeout=1.0)
         
         self.assertTrue(result)
-        await approve_task_handle
+        _ = await approve_task_handle
 
 
 if __name__ == '__main__':

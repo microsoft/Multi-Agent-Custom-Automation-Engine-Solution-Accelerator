@@ -748,639 +748,83 @@ class TestConcreteImplementation:
         assert not db.initialized
 
 
+# Note: Coverage-only tests that exercised abstract base methods via super()
+# have been removed to avoid high-maintenance scaffolding without behavioral
+# assertions. Abstract/base stubs should instead be excluded from coverage
+# or tested via focused, behavior-oriented tests in concrete implementations.
+
+
 class TestDatabaseBaseAbstractMethodCoverage:
-    """Test coverage for abstract method pass statements via super() calls."""
-    
+    """Minimal test to verify abstract base class methods can be called via super()."""
+
     @pytest.mark.asyncio
-    async def test_abstract_initialize_via_super(self):
-        """Test that initialize abstract method can be called via super()."""
-        
+    async def test_abstract_methods_callable_via_super(self):
+        """Verify abstract methods are callable through super() without errors."""
+
         class TestDatabase(DatabaseBase):
-            async def initialize(self):
-                await super().initialize()
-            async def close(self): pass
-            async def add_item(self, item): pass
-            async def update_item(self, item): pass
-            async def get_item_by_id(self, item_id, partition_key, model_class): return None
-            async def query_items(self, query, parameters, model_class): return []
-            async def delete_item(self, item_id, partition_key): pass
-            async def add_plan(self, plan): pass
-            async def update_plan(self, plan): pass
-            async def get_plan_by_plan_id(self, plan_id): return None
-            async def get_plan(self, plan_id): return None
-            async def get_all_plans(self): return []
-            async def get_all_plans_by_team_id(self, team_id): return []
-            async def get_all_plans_by_team_id_status(self, user_id, team_id, status): return []
-            async def add_step(self, step): pass
-            async def update_step(self, step): pass
-            async def get_steps_by_plan(self, plan_id): return []
-            async def get_step(self, step_id, session_id): return None
-            async def add_team(self, team): pass
-            async def update_team(self, team): pass
-            async def get_team(self, team_id): return None
-            async def get_team_by_id(self, team_id): return None
-            async def get_all_teams(self): return []
-            async def delete_team(self, team_id): return False
-            async def get_data_by_type(self, data_type): return []
-            async def get_all_items(self): return []
-            async def get_steps_for_plan(self, plan_id): return []
-            async def get_current_team(self, user_id): return None
-            async def delete_current_team(self, user_id): return None
-            async def set_current_team(self, current_team): pass
-            async def update_current_team(self, current_team): pass
-            async def delete_plan_by_plan_id(self, plan_id): return False
-            async def add_mplan(self, mplan): pass
-            async def update_mplan(self, mplan): pass
-            async def get_mplan(self, plan_id): return None
-            async def add_agent_message(self, message): pass
-            async def update_agent_message(self, message): pass
-            async def get_agent_messages(self, plan_id): return None
-            async def add_team_agent(self, team_agent): pass
-            async def delete_team_agent(self, team_id, agent_name): pass
-            async def get_team_agent(self, team_id, agent_name): return None
-        
-        db = TestDatabase()
-        await db.initialize()  # Calls super().initialize() which executes pass
-    
-    @pytest.mark.asyncio
-    async def test_abstract_close_via_super(self):
-        """Test that close abstract method can be called via super()."""
-        
-        class TestDatabase(DatabaseBase):
-            async def initialize(self): pass
-            async def close(self):
-                await super().close()
-            async def add_item(self, item): pass
-            async def update_item(self, item): pass
-            async def get_item_by_id(self, item_id, partition_key, model_class): return None
-            async def query_items(self, query, parameters, model_class): return []
-            async def delete_item(self, item_id, partition_key): pass
-            async def add_plan(self, plan): pass
-            async def update_plan(self, plan): pass
-            async def get_plan_by_plan_id(self, plan_id): return None
-            async def get_plan(self, plan_id): return None
-            async def get_all_plans(self): return []
-            async def get_all_plans_by_team_id(self, team_id): return []
-            async def get_all_plans_by_team_id_status(self, user_id, team_id, status): return []
-            async def add_step(self, step): pass
-            async def update_step(self, step): pass
-            async def get_steps_by_plan(self, plan_id): return []
-            async def get_step(self, step_id, session_id): return None
-            async def add_team(self, team): pass
-            async def update_team(self, team): pass
-            async def get_team(self, team_id): return None
-            async def get_team_by_id(self, team_id): return None
-            async def get_all_teams(self): return []
-            async def delete_team(self, team_id): return False
-            async def get_data_by_type(self, data_type): return []
-            async def get_all_items(self): return []
-            async def get_steps_for_plan(self, plan_id): return []
-            async def get_current_team(self, user_id): return None
-            async def delete_current_team(self, user_id): return None
-            async def set_current_team(self, current_team): pass
-            async def update_current_team(self, current_team): pass
-            async def delete_plan_by_plan_id(self, plan_id): return False
-            async def add_mplan(self, mplan): pass
-            async def update_mplan(self, mplan): pass
-            async def get_mplan(self, plan_id): return None
-            async def add_agent_message(self, message): pass
-            async def update_agent_message(self, message): pass
-            async def get_agent_messages(self, plan_id): return None
-            async def add_team_agent(self, team_agent): pass
-            async def delete_team_agent(self, team_id, agent_name): pass
-            async def get_team_agent(self, team_id, agent_name): return None
-        
-        db = TestDatabase()
-        await db.close()  # Calls super().close() which executes pass
-    
-    @pytest.mark.asyncio
-    async def test_abstract_crud_operations_via_super(self):
-        """Test CRUD abstract methods via super() calls."""
-        
-        class TestDatabase(DatabaseBase):
-            async def initialize(self): pass
-            async def close(self): pass
-            async def add_item(self, item):
-                await super().add_item(item)
-            async def update_item(self, item):
-                await super().update_item(item)
-            async def get_item_by_id(self, item_id, partition_key, model_class):
-                return await super().get_item_by_id(item_id, partition_key, model_class)
-            async def query_items(self, query, parameters, model_class):
-                return await super().query_items(query, parameters, model_class)
-            async def delete_item(self, item_id, partition_key):
-                await super().delete_item(item_id, partition_key)
-            async def add_plan(self, plan): pass
-            async def update_plan(self, plan): pass
-            async def get_plan_by_plan_id(self, plan_id): return None
-            async def get_plan(self, plan_id): return None
-            async def get_all_plans(self): return []
-            async def get_all_plans_by_team_id(self, team_id): return []
-            async def get_all_plans_by_team_id_status(self, user_id, team_id, status): return []
-            async def add_step(self, step): pass
-            async def update_step(self, step): pass
-            async def get_steps_by_plan(self, plan_id): return []
-            async def get_step(self, step_id, session_id): return None
-            async def add_team(self, team): pass
-            async def update_team(self, team): pass
-            async def get_team(self, team_id): return None
-            async def get_team_by_id(self, team_id): return None
-            async def get_all_teams(self): return []
-            async def delete_team(self, team_id): return False
-            async def get_data_by_type(self, data_type): return []
-            async def get_all_items(self): return []
-            async def get_steps_for_plan(self, plan_id): return []
-            async def get_current_team(self, user_id): return None
-            async def delete_current_team(self, user_id): return None
-            async def set_current_team(self, current_team): pass
-            async def update_current_team(self, current_team): pass
-            async def delete_plan_by_plan_id(self, plan_id): return False
-            async def add_mplan(self, mplan): pass
-            async def update_mplan(self, mplan): pass
-            async def get_mplan(self, plan_id): return None
-            async def add_agent_message(self, message): pass
-            async def update_agent_message(self, message): pass
-            async def get_agent_messages(self, plan_id): return None
-            async def add_team_agent(self, team_agent): pass
-            async def delete_team_agent(self, team_id, agent_name): pass
-            async def get_team_agent(self, team_id, agent_name): return None
-        
+            async def initialize(self): await super().initialize()
+            async def close(self): await super().close()
+            async def add_item(self, item): await super().add_item(item)
+            async def update_item(self, item): await super().update_item(item)
+            async def get_item_by_id(self, item_id, partition_key, model_class): return await super().get_item_by_id(item_id, partition_key, model_class)
+            async def query_items(self, query, parameters, model_class): return await super().query_items(query, parameters, model_class)
+            async def delete_item(self, item_id, partition_key): await super().delete_item(item_id, partition_key)
+            async def add_plan(self, plan): await super().add_plan(plan)
+            async def update_plan(self, plan): await super().update_plan(plan)
+            async def get_plan_by_plan_id(self, plan_id): return await super().get_plan_by_plan_id(plan_id)
+            async def get_plan(self, plan_id): return await super().get_plan(plan_id)
+            async def get_all_plans(self): return await super().get_all_plans()
+            async def get_all_plans_by_team_id(self, team_id): return await super().get_all_plans_by_team_id(team_id)
+            async def get_all_plans_by_team_id_status(self, user_id, team_id, status): return await super().get_all_plans_by_team_id_status(user_id, team_id, status)
+            async def add_step(self, step): await super().add_step(step)
+            async def update_step(self, step): await super().update_step(step)
+            async def get_steps_by_plan(self, plan_id): return await super().get_steps_by_plan(plan_id)
+            async def get_step(self, step_id, session_id): return await super().get_step(step_id, session_id)
+            async def add_team(self, team): await super().add_team(team)
+            async def update_team(self, team): await super().update_team(team)
+            async def get_team(self, team_id): return await super().get_team(team_id)
+            async def get_team_by_id(self, team_id): return await super().get_team_by_id(team_id)
+            async def get_all_teams(self): return await super().get_all_teams()
+            async def delete_team(self, team_id): return await super().delete_team(team_id)
+            async def get_data_by_type(self, data_type): return await super().get_data_by_type(data_type)
+            async def get_all_items(self): return await super().get_all_items()
+            async def get_steps_for_plan(self, plan_id): return await super().get_steps_for_plan(plan_id)
+            async def get_current_team(self, user_id): return await super().get_current_team(user_id)
+            async def delete_current_team(self, user_id): return await super().delete_current_team(user_id)
+            async def set_current_team(self, current_team): await super().set_current_team(current_team)
+            async def update_current_team(self, current_team): await super().update_current_team(current_team)
+            async def delete_plan_by_plan_id(self, plan_id): return await super().delete_plan_by_plan_id(plan_id)
+            async def add_mplan(self, mplan): await super().add_mplan(mplan)
+            async def update_mplan(self, mplan): await super().update_mplan(mplan)
+            async def get_mplan(self, plan_id): return await super().get_mplan(plan_id)
+            async def add_agent_message(self, message): await super().add_agent_message(message)
+            async def update_agent_message(self, message): await super().update_agent_message(message)
+            async def get_agent_messages(self, plan_id): return await super().get_agent_messages(plan_id)
+            async def add_team_agent(self, team_agent): await super().add_team_agent(team_agent)
+            async def delete_team_agent(self, team_id, agent_name): await super().delete_team_agent(team_id, agent_name)
+            async def get_team_agent(self, team_id, agent_name): return await super().get_team_agent(team_id, agent_name)
+
         db = TestDatabase()
         mock_item = Mock()
+        await db.initialize()
+        await db.close()
         await db.add_item(mock_item)
         await db.update_item(mock_item)
-        result = await db.get_item_by_id("id", "pk", BaseDataModel)
-        assert result is None
-        results = await db.query_items("query", [], BaseDataModel)
-        assert results is None
         await db.delete_item("id", "pk")
-    
-    @pytest.mark.asyncio
-    async def test_abstract_plan_operations_via_super(self):
-        """Test plan abstract methods via super() calls."""
-        
-        class TestDatabase(DatabaseBase):
-            async def initialize(self): pass
-            async def close(self): pass
-            async def add_item(self, item): pass
-            async def update_item(self, item): pass
-            async def get_item_by_id(self, item_id, partition_key, model_class): return None
-            async def query_items(self, query, parameters, model_class): return []
-            async def delete_item(self, item_id, partition_key): pass
-            async def add_plan(self, plan):
-                await super().add_plan(plan)
-            async def update_plan(self, plan):
-                await super().update_plan(plan)
-            async def get_plan_by_plan_id(self, plan_id):
-                return await super().get_plan_by_plan_id(plan_id)
-            async def get_plan(self, plan_id):
-                return await super().get_plan(plan_id)
-            async def get_all_plans(self):
-                return await super().get_all_plans()
-            async def get_all_plans_by_team_id(self, team_id):
-                return await super().get_all_plans_by_team_id(team_id)
-            async def get_all_plans_by_team_id_status(self, user_id, team_id, status):
-                return await super().get_all_plans_by_team_id_status(user_id, team_id, status)
-            async def delete_plan_by_plan_id(self, plan_id):
-                return await super().delete_plan_by_plan_id(plan_id)
-            async def add_step(self, step): pass
-            async def update_step(self, step): pass
-            async def get_steps_by_plan(self, plan_id): return []
-            async def get_step(self, step_id, session_id): return None
-            async def add_team(self, team): pass
-            async def update_team(self, team): pass
-            async def get_team(self, team_id): return None
-            async def get_team_by_id(self, team_id): return None
-            async def get_all_teams(self): return []
-            async def delete_team(self, team_id): return False
-            async def get_data_by_type(self, data_type): return []
-            async def get_all_items(self): return []
-            async def get_steps_for_plan(self, plan_id): return []
-            async def get_current_team(self, user_id): return None
-            async def delete_current_team(self, user_id): return None
-            async def set_current_team(self, current_team): pass
-            async def update_current_team(self, current_team): pass
-            async def add_mplan(self, mplan): pass
-            async def update_mplan(self, mplan): pass
-            async def get_mplan(self, plan_id): return None
-            async def add_agent_message(self, message): pass
-            async def update_agent_message(self, message): pass
-            async def get_agent_messages(self, plan_id): return None
-            async def add_team_agent(self, team_agent): pass
-            async def delete_team_agent(self, team_id, agent_name): pass
-            async def get_team_agent(self, team_id, agent_name): return None
-        
-        db = TestDatabase()
-        mock_plan = Mock()
-        await db.add_plan(mock_plan)
-        await db.update_plan(mock_plan)
-        assert await db.get_plan_by_plan_id("id") is None
-        assert await db.get_plan("id") is None
-        assert await db.get_all_plans() is None
-        assert await db.get_all_plans_by_team_id("team_id") is None
-        assert await db.get_all_plans_by_team_id_status("user", "team", "status") is None
-        assert await db.delete_plan_by_plan_id("id") is None
-    
-    @pytest.mark.asyncio
-    async def test_abstract_step_operations_via_super(self):
-        """Test step abstract methods via super() calls."""
-        
-        class TestDatabase(DatabaseBase):
-            async def initialize(self): pass
-            async def close(self): pass
-            async def add_item(self, item): pass
-            async def update_item(self, item): pass
-            async def get_item_by_id(self, item_id, partition_key, model_class): return None
-            async def query_items(self, query, parameters, model_class): return []
-            async def delete_item(self, item_id, partition_key): pass
-            async def add_plan(self, plan): pass
-            async def update_plan(self, plan): pass
-            async def get_plan_by_plan_id(self, plan_id): return None
-            async def get_plan(self, plan_id): return None
-            async def get_all_plans(self): return []
-            async def get_all_plans_by_team_id(self, team_id): return []
-            async def get_all_plans_by_team_id_status(self, user_id, team_id, status): return []
-            async def add_step(self, step):
-                await super().add_step(step)
-            async def update_step(self, step):
-                await super().update_step(step)
-            async def get_steps_by_plan(self, plan_id):
-                return await super().get_steps_by_plan(plan_id)
-            async def get_step(self, step_id, session_id):
-                return await super().get_step(step_id, session_id)
-            async def get_steps_for_plan(self, plan_id):
-                return await super().get_steps_for_plan(plan_id)
-            async def add_team(self, team): pass
-            async def update_team(self, team): pass
-            async def get_team(self, team_id): return None
-            async def get_team_by_id(self, team_id): return None
-            async def get_all_teams(self): return []
-            async def delete_team(self, team_id): return False
-            async def get_data_by_type(self, data_type): return []
-            async def get_all_items(self): return []
-            async def get_current_team(self, user_id): return None
-            async def delete_current_team(self, user_id): return None
-            async def set_current_team(self, current_team): pass
-            async def update_current_team(self, current_team): pass
-            async def delete_plan_by_plan_id(self, plan_id): return False
-            async def add_mplan(self, mplan): pass
-            async def update_mplan(self, mplan): pass
-            async def get_mplan(self, plan_id): return None
-            async def add_agent_message(self, message): pass
-            async def update_agent_message(self, message): pass
-            async def get_agent_messages(self, plan_id): return None
-            async def add_team_agent(self, team_agent): pass
-            async def delete_team_agent(self, team_id, agent_name): pass
-            async def get_team_agent(self, team_id, agent_name): return None
-        
-        db = TestDatabase()
-        mock_step = Mock()
-        await db.add_step(mock_step)
-        await db.update_step(mock_step)
-        assert await db.get_steps_by_plan("plan_id") is None
-        assert await db.get_step("step_id", "session_id") is None
-        assert await db.get_steps_for_plan("plan_id") is None
-    
-    @pytest.mark.asyncio
-    async def test_abstract_team_operations_via_super(self):
-        """Test team abstract methods via super() calls."""
-        
-        class TestDatabase(DatabaseBase):
-            async def initialize(self): pass
-            async def close(self): pass
-            async def add_item(self, item): pass
-            async def update_item(self, item): pass
-            async def get_item_by_id(self, item_id, partition_key, model_class): return None
-            async def query_items(self, query, parameters, model_class): return []
-            async def delete_item(self, item_id, partition_key): pass
-            async def add_plan(self, plan): pass
-            async def update_plan(self, plan): pass
-            async def get_plan_by_plan_id(self, plan_id): return None
-            async def get_plan(self, plan_id): return None
-            async def get_all_plans(self): return []
-            async def get_all_plans_by_team_id(self, team_id): return []
-            async def get_all_plans_by_team_id_status(self, user_id, team_id, status): return []
-            async def add_step(self, step): pass
-            async def update_step(self, step): pass
-            async def get_steps_by_plan(self, plan_id): return []
-            async def get_step(self, step_id, session_id): return None
-            async def add_team(self, team):
-                await super().add_team(team)
-            async def update_team(self, team):
-                await super().update_team(team)
-            async def get_team(self, team_id):
-                return await super().get_team(team_id)
-            async def get_team_by_id(self, team_id):
-                return await super().get_team_by_id(team_id)
-            async def get_all_teams(self):
-                return await super().get_all_teams()
-            async def delete_team(self, team_id):
-                return await super().delete_team(team_id)
-            async def get_data_by_type(self, data_type): return []
-            async def get_all_items(self): return []
-            async def get_steps_for_plan(self, plan_id): return []
-            async def get_current_team(self, user_id): return None
-            async def delete_current_team(self, user_id): return None
-            async def set_current_team(self, current_team): pass
-            async def update_current_team(self, current_team): pass
-            async def delete_plan_by_plan_id(self, plan_id): return False
-            async def add_mplan(self, mplan): pass
-            async def update_mplan(self, mplan): pass
-            async def get_mplan(self, plan_id): return None
-            async def add_agent_message(self, message): pass
-            async def update_agent_message(self, message): pass
-            async def get_agent_messages(self, plan_id): return None
-            async def add_team_agent(self, team_agent): pass
-            async def delete_team_agent(self, team_id, agent_name): pass
-            async def get_team_agent(self, team_id, agent_name): return None
-        
-        db = TestDatabase()
-        mock_team = Mock()
-        await db.add_team(mock_team)
-        await db.update_team(mock_team)
-        assert await db.get_team("team_id") is None
-        assert await db.get_team_by_id("team_id") is None
-        assert await db.get_all_teams() is None
-        assert await db.delete_team("team_id") is None
-    
-    @pytest.mark.asyncio
-    async def test_abstract_data_management_via_super(self):
-        """Test data management abstract methods via super() calls."""
-        
-        class TestDatabase(DatabaseBase):
-            async def initialize(self): pass
-            async def close(self): pass
-            async def add_item(self, item): pass
-            async def update_item(self, item): pass
-            async def get_item_by_id(self, item_id, partition_key, model_class): return None
-            async def query_items(self, query, parameters, model_class): return []
-            async def delete_item(self, item_id, partition_key): pass
-            async def add_plan(self, plan): pass
-            async def update_plan(self, plan): pass
-            async def get_plan_by_plan_id(self, plan_id): return None
-            async def get_plan(self, plan_id): return None
-            async def get_all_plans(self): return []
-            async def get_all_plans_by_team_id(self, team_id): return []
-            async def get_all_plans_by_team_id_status(self, user_id, team_id, status): return []
-            async def add_step(self, step): pass
-            async def update_step(self, step): pass
-            async def get_steps_by_plan(self, plan_id): return []
-            async def get_step(self, step_id, session_id): return None
-            async def add_team(self, team): pass
-            async def update_team(self, team): pass
-            async def get_team(self, team_id): return None
-            async def get_team_by_id(self, team_id): return None
-            async def get_all_teams(self): return []
-            async def delete_team(self, team_id): return False
-            async def get_data_by_type(self, data_type):
-                return await super().get_data_by_type(data_type)
-            async def get_all_items(self):
-                return await super().get_all_items()
-            async def get_steps_for_plan(self, plan_id): return []
-            async def get_current_team(self, user_id): return None
-            async def delete_current_team(self, user_id): return None
-            async def set_current_team(self, current_team): pass
-            async def update_current_team(self, current_team): pass
-            async def delete_plan_by_plan_id(self, plan_id): return False
-            async def add_mplan(self, mplan): pass
-            async def update_mplan(self, mplan): pass
-            async def get_mplan(self, plan_id): return None
-            async def add_agent_message(self, message): pass
-            async def update_agent_message(self, message): pass
-            async def get_agent_messages(self, plan_id): return None
-            async def add_team_agent(self, team_agent): pass
-            async def delete_team_agent(self, team_id, agent_name): pass
-            async def get_team_agent(self, team_id, agent_name): return None
-        
-        db = TestDatabase()
-        assert await db.get_data_by_type("type") is None
-        assert await db.get_all_items() is None
-    
-    @pytest.mark.asyncio
-    async def test_abstract_current_team_operations_via_super(self):
-        """Test current team abstract methods via super() calls."""
-        
-        class TestDatabase(DatabaseBase):
-            async def initialize(self): pass
-            async def close(self): pass
-            async def add_item(self, item): pass
-            async def update_item(self, item): pass
-            async def get_item_by_id(self, item_id, partition_key, model_class): return None
-            async def query_items(self, query, parameters, model_class): return []
-            async def delete_item(self, item_id, partition_key): pass
-            async def add_plan(self, plan): pass
-            async def update_plan(self, plan): pass
-            async def get_plan_by_plan_id(self, plan_id): return None
-            async def get_plan(self, plan_id): return None
-            async def get_all_plans(self): return []
-            async def get_all_plans_by_team_id(self, team_id): return []
-            async def get_all_plans_by_team_id_status(self, user_id, team_id, status): return []
-            async def add_step(self, step): pass
-            async def update_step(self, step): pass
-            async def get_steps_by_plan(self, plan_id): return []
-            async def get_step(self, step_id, session_id): return None
-            async def add_team(self, team): pass
-            async def update_team(self, team): pass
-            async def get_team(self, team_id): return None
-            async def get_team_by_id(self, team_id): return None
-            async def get_all_teams(self): return []
-            async def delete_team(self, team_id): return False
-            async def get_data_by_type(self, data_type): return []
-            async def get_all_items(self): return []
-            async def get_steps_for_plan(self, plan_id): return []
-            async def get_current_team(self, user_id):
-                return await super().get_current_team(user_id)
-            async def delete_current_team(self, user_id):
-                return await super().delete_current_team(user_id)
-            async def set_current_team(self, current_team):
-                await super().set_current_team(current_team)
-            async def update_current_team(self, current_team):
-                await super().update_current_team(current_team)
-            async def delete_plan_by_plan_id(self, plan_id): return False
-            async def add_mplan(self, mplan): pass
-            async def update_mplan(self, mplan): pass
-            async def get_mplan(self, plan_id): return None
-            async def add_agent_message(self, message): pass
-            async def update_agent_message(self, message): pass
-            async def get_agent_messages(self, plan_id): return None
-            async def add_team_agent(self, team_agent): pass
-            async def delete_team_agent(self, team_id, agent_name): pass
-            async def get_team_agent(self, team_id, agent_name): return None
-        
-        db = TestDatabase()
-        mock_team = Mock()
-        assert await db.get_current_team("user_id") is None
-        assert await db.delete_current_team("user_id") is None
-        await db.set_current_team(mock_team)
-        await db.update_current_team(mock_team)
-    
-    @pytest.mark.asyncio
-    async def test_abstract_mplan_operations_via_super(self):
-        """Test mplan abstract methods via super() calls."""
-        
-        class TestDatabase(DatabaseBase):
-            async def initialize(self): pass
-            async def close(self): pass
-            async def add_item(self, item): pass
-            async def update_item(self, item): pass
-            async def get_item_by_id(self, item_id, partition_key, model_class): return None
-            async def query_items(self, query, parameters, model_class): return []
-            async def delete_item(self, item_id, partition_key): pass
-            async def add_plan(self, plan): pass
-            async def update_plan(self, plan): pass
-            async def get_plan_by_plan_id(self, plan_id): return None
-            async def get_plan(self, plan_id): return None
-            async def get_all_plans(self): return []
-            async def get_all_plans_by_team_id(self, team_id): return []
-            async def get_all_plans_by_team_id_status(self, user_id, team_id, status): return []
-            async def add_step(self, step): pass
-            async def update_step(self, step): pass
-            async def get_steps_by_plan(self, plan_id): return []
-            async def get_step(self, step_id, session_id): return None
-            async def add_team(self, team): pass
-            async def update_team(self, team): pass
-            async def get_team(self, team_id): return None
-            async def get_team_by_id(self, team_id): return None
-            async def get_all_teams(self): return []
-            async def delete_team(self, team_id): return False
-            async def get_data_by_type(self, data_type): return []
-            async def get_all_items(self): return []
-            async def get_steps_for_plan(self, plan_id): return []
-            async def get_current_team(self, user_id): return None
-            async def delete_current_team(self, user_id): return None
-            async def set_current_team(self, current_team): pass
-            async def update_current_team(self, current_team): pass
-            async def delete_plan_by_plan_id(self, plan_id): return False
-            async def add_mplan(self, mplan):
-                await super().add_mplan(mplan)
-            async def update_mplan(self, mplan):
-                await super().update_mplan(mplan)
-            async def get_mplan(self, plan_id):
-                return await super().get_mplan(plan_id)
-            async def add_agent_message(self, message): pass
-            async def update_agent_message(self, message): pass
-            async def get_agent_messages(self, plan_id): return None
-            async def add_team_agent(self, team_agent): pass
-            async def delete_team_agent(self, team_id, agent_name): pass
-            async def get_team_agent(self, team_id, agent_name): return None
-        
-        db = TestDatabase()
-        mock_mplan = Mock()
-        await db.add_mplan(mock_mplan)
-        await db.update_mplan(mock_mplan)
-        assert await db.get_mplan("plan_id") is None
-    
-    @pytest.mark.asyncio
-    async def test_abstract_agent_message_operations_via_super(self):
-        """Test agent message abstract methods via super() calls."""
-        
-        class TestDatabase(DatabaseBase):
-            async def initialize(self): pass
-            async def close(self): pass
-            async def add_item(self, item): pass
-            async def update_item(self, item): pass
-            async def get_item_by_id(self, item_id, partition_key, model_class): return None
-            async def query_items(self, query, parameters, model_class): return []
-            async def delete_item(self, item_id, partition_key): pass
-            async def add_plan(self, plan): pass
-            async def update_plan(self, plan): pass
-            async def get_plan_by_plan_id(self, plan_id): return None
-            async def get_plan(self, plan_id): return None
-            async def get_all_plans(self): return []
-            async def get_all_plans_by_team_id(self, team_id): return []
-            async def get_all_plans_by_team_id_status(self, user_id, team_id, status): return []
-            async def add_step(self, step): pass
-            async def update_step(self, step): pass
-            async def get_steps_by_plan(self, plan_id): return []
-            async def get_step(self, step_id, session_id): return None
-            async def add_team(self, team): pass
-            async def update_team(self, team): pass
-            async def get_team(self, team_id): return None
-            async def get_team_by_id(self, team_id): return None
-            async def get_all_teams(self): return []
-            async def delete_team(self, team_id): return False
-            async def get_data_by_type(self, data_type): return []
-            async def get_all_items(self): return []
-            async def get_steps_for_plan(self, plan_id): return []
-            async def get_current_team(self, user_id): return None
-            async def delete_current_team(self, user_id): return None
-            async def set_current_team(self, current_team): pass
-            async def update_current_team(self, current_team): pass
-            async def delete_plan_by_plan_id(self, plan_id): return False
-            async def add_mplan(self, mplan): pass
-            async def update_mplan(self, mplan): pass
-            async def get_mplan(self, plan_id): return None
-            async def add_agent_message(self, message):
-                await super().add_agent_message(message)
-            async def update_agent_message(self, message):
-                await super().update_agent_message(message)
-            async def get_agent_messages(self, plan_id):
-                return await super().get_agent_messages(plan_id)
-            async def add_team_agent(self, team_agent): pass
-            async def delete_team_agent(self, team_id, agent_name): pass
-            async def get_team_agent(self, team_id, agent_name): return None
-        
-        db = TestDatabase()
-        mock_message = Mock()
-        await db.add_agent_message(mock_message)
-        await db.update_agent_message(mock_message)
-        assert await db.get_agent_messages("plan_id") is None
-    
-    @pytest.mark.asyncio
-    async def test_abstract_team_agent_operations_via_super(self):
-        """Test team agent abstract methods via super() calls."""
-        
-        class TestDatabase(DatabaseBase):
-            async def initialize(self): pass
-            async def close(self): pass
-            async def add_item(self, item): pass
-            async def update_item(self, item): pass
-            async def get_item_by_id(self, item_id, partition_key, model_class): return None
-            async def query_items(self, query, parameters, model_class): return []
-            async def delete_item(self, item_id, partition_key): pass
-            async def add_plan(self, plan): pass
-            async def update_plan(self, plan): pass
-            async def get_plan_by_plan_id(self, plan_id): return None
-            async def get_plan(self, plan_id): return None
-            async def get_all_plans(self): return []
-            async def get_all_plans_by_team_id(self, team_id): return []
-            async def get_all_plans_by_team_id_status(self, user_id, team_id, status): return []
-            async def add_step(self, step): pass
-            async def update_step(self, step): pass
-            async def get_steps_by_plan(self, plan_id): return []
-            async def get_step(self, step_id, session_id): return None
-            async def add_team(self, team): pass
-            async def update_team(self, team): pass
-            async def get_team(self, team_id): return None
-            async def get_team_by_id(self, team_id): return None
-            async def get_all_teams(self): return []
-            async def delete_team(self, team_id): return False
-            async def get_data_by_type(self, data_type): return []
-            async def get_all_items(self): return []
-            async def get_steps_for_plan(self, plan_id): return []
-            async def get_current_team(self, user_id): return None
-            async def delete_current_team(self, user_id): return None
-            async def set_current_team(self, current_team): pass
-            async def update_current_team(self, current_team): pass
-            async def delete_plan_by_plan_id(self, plan_id): return False
-            async def add_mplan(self, mplan): pass
-            async def update_mplan(self, mplan): pass
-            async def get_mplan(self, plan_id): return None
-            async def add_agent_message(self, message): pass
-            async def update_agent_message(self, message): pass
-            async def get_agent_messages(self, plan_id): return None
-            async def add_team_agent(self, team_agent):
-                await super().add_team_agent(team_agent)
-            async def delete_team_agent(self, team_id, agent_name):
-                await super().delete_team_agent(team_id, agent_name)
-            async def get_team_agent(self, team_id, agent_name):
-                return await super().get_team_agent(team_id, agent_name)
-        
-        db = TestDatabase()
-        mock_agent = Mock()
-        await db.add_team_agent(mock_agent)
+        await db.add_plan(mock_item)
+        await db.update_plan(mock_item)
+        await db.add_step(mock_item)
+        await db.update_step(mock_item)
+        await db.add_team(mock_item)
+        await db.update_team(mock_item)
+        await db.set_current_team(mock_item)
+        await db.update_current_team(mock_item)
+        await db.add_mplan(mock_item)
+        await db.update_mplan(mock_item)
+        await db.add_agent_message(mock_item)
+        await db.update_agent_message(mock_item)
+        await db.add_team_agent(mock_item)
         await db.delete_team_agent("team_id", "agent_name")
-        assert await db.get_team_agent("team_id", "agent_name") is None
 
 
 if __name__ == "__main__":

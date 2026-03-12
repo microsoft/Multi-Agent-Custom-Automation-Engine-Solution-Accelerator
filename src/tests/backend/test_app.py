@@ -36,7 +36,7 @@ os.environ.setdefault("APP_ENV", "dev")
 os.environ.setdefault("AZURE_OPENAI_RAI_DEPLOYMENT_NAME", "test-rai-deployment")
 
 # Check if v4 has been mocked by another test file (prevents import errors)
-_v4_is_mocked = 'v4' in sys.modules and isinstance(sys.modules['v4'], Mock)
+_v4_is_mocked = 'v4' in sys.modules and isinstance(sys.modules['v4'], (Mock, MagicMock))
 if _v4_is_mocked:
     # Skip this module - v4 has been mocked by another test file
     pytest.skip(

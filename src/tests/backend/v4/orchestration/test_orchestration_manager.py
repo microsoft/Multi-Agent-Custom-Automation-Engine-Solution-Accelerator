@@ -927,9 +927,8 @@ class TestExtractResponseText(IsolatedAsyncioTestCase):
         agent_resp = Mock()
         agent_resp.text = "Agent executor response"
         
-        executor_resp = Mock()
+        executor_resp = Mock(spec=['agent_response'])
         executor_resp.agent_response = agent_resp
-        del executor_resp.text  # Remove text attr so it falls through
         
         result = self.manager._extract_response_text(executor_resp)
         self.assertEqual(result, "Agent executor response")
@@ -941,10 +940,9 @@ class TestExtractResponseText(IsolatedAsyncioTestCase):
         
         last_msg = MockChatMessage("Last conversation message")
         
-        executor_resp = Mock()
+        executor_resp = Mock(spec=['agent_response', 'full_conversation'])
         executor_resp.agent_response = agent_resp
         executor_resp.full_conversation = [MockChatMessage("First"), last_msg]
-        del executor_resp.text  # Remove text attr
         
         result = self.manager._extract_response_text(executor_resp)
         self.assertEqual(result, "Last conversation message")
@@ -954,10 +952,9 @@ class TestExtractResponseText(IsolatedAsyncioTestCase):
         agent_resp = Mock()
         agent_resp.text = None
         
-        executor_resp = Mock()
+        executor_resp = Mock(spec=['agent_response', 'full_conversation'])
         executor_resp.agent_response = agent_resp
         executor_resp.full_conversation = []
-        del executor_resp.text  # Remove text attr
         
         result = self.manager._extract_response_text(executor_resp)
         self.assertEqual(result, "")
