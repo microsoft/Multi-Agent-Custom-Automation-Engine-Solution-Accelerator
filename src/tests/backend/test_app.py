@@ -324,5 +324,3 @@ def test_health_check_middleware_configured():
     """Test that health check middleware is in the middleware stack."""
     # The middleware should be present
     assert len(app.user_middleware) >= 2  # CORS + HealthCheck minimum
-
-
