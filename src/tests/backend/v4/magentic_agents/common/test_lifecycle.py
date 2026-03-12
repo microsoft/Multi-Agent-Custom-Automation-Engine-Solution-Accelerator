@@ -1,5 +1,4 @@
 """Unit tests for backend.v4.magentic_agents.common.lifecycle module."""
-import asyncio
 import logging
 import sys
 from unittest.mock import Mock, patch, AsyncMock

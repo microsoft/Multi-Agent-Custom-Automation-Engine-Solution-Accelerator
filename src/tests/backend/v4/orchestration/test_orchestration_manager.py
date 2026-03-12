@@ -7,7 +7,7 @@ import asyncio
 import logging
 import os
 import sys
-from unittest import IsolatedAsyncioTestCase
+from unittest import IsolatedAsyncioTestCase, main
 from unittest.mock import AsyncMock, Mock, patch
 
 # Add the backend directory to the Python path
@@ -1159,5 +1159,4 @@ class TestWorkflowOutputEventHandling(IsolatedAsyncioTestCase):
 
 
 if __name__ == '__main__':
-    import unittest
-    unittest.main()
+    main()

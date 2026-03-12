@@ -106,6 +106,8 @@ class TestFormatDateForUser(unittest.TestCase):
             else:
                 locale.setlocale(locale.LC_TIME, "")
         except Exception:
+            # Best-effort cleanup: if restoring the locale fails (e.g., unsupported locale),
+            # do not fail tests because of the environment configuration.
             pass
 
     def test_format_date_for_user_valid_iso_date(self):
