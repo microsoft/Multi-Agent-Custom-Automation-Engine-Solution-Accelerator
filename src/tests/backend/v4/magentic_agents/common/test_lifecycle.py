@@ -1,5 +1,4 @@
 """Unit tests for backend.v4.magentic_agents.common.lifecycle module."""
-import asyncio
 import logging
 import sys
 from unittest.mock import Mock, patch, AsyncMock
@@ -171,7 +170,9 @@ class TestMCPEnabledBase:
         mock_mcp_tool = AsyncMock()
         
         with patch('backend.v4.magentic_agents.common.lifecycle.AsyncExitStack', return_value=mock_stack):
-            with patch('backend.v4.magentic_agents.common.lifecycle.DefaultAzureCredential', return_value=mock_creds):
+            with patch('backend.v4.magentic_agents.common.lifecycle.config') as mock_config:
+                mock_config.get_azure_credential_async.return_value = mock_creds
+                mock_config.AZURE_CLIENT_ID = "test-client-id"
                 with patch('backend.v4.magentic_agents.common.lifecycle.AgentsClient', return_value=mock_client):
                     with patch('backend.v4.magentic_agents.common.lifecycle.MCPStreamableHTTPTool', return_value=mock_mcp_tool):
                         with patch.object(base, '_after_open', new_callable=AsyncMock) as mock_after_open:
@@ -182,6 +183,7 @@ class TestMCPEnabledBase:
                             assert base._stack is mock_stack
                             assert base.creds is mock_creds
                             assert base.client is mock_client
+                            mock_config.get_azure_credential_async.assert_called_once_with("test-client-id")
                             mock_after_open.assert_called_once()
                             mock_agent_registry.register_agent.assert_called_once_with(base)
 
@@ -207,7 +209,9 @@ class TestMCPEnabledBase:
         mock_client = AsyncMock()
         
         with patch('backend.v4.magentic_agents.common.lifecycle.AsyncExitStack', return_value=mock_stack):
-            with patch('backend.v4.magentic_agents.common.lifecycle.DefaultAzureCredential', return_value=mock_creds):
+            with patch('backend.v4.magentic_agents.common.lifecycle.config') as mock_config:
+                mock_config.get_azure_credential_async.return_value = mock_creds
+                mock_config.AZURE_CLIENT_ID = "test-client-id"
                 with patch('backend.v4.magentic_agents.common.lifecycle.AgentsClient', return_value=mock_client):
                     with patch.object(base, '_after_open', new_callable=AsyncMock):
                         mock_agent_registry.register_agent.side_effect = Exception("Registration failed")
@@ -216,6 +220,7 @@ class TestMCPEnabledBase:
                         result = await base.open()
                         
                         assert result is base
+                        mock_config.get_azure_credential_async.assert_called_once_with("test-client-id")
                         mock_agent_registry.register_agent.assert_called_once_with(base)
 
     @pytest.mark.asyncio

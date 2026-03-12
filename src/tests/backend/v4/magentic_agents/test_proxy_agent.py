@@ -55,9 +55,13 @@ sys.modules['v4.models.messages'].UserClarificationResponse = mock_user_clarific
 sys.modules['v4.models.messages'].TimeoutNotification = mock_timeout_notification
 sys.modules['v4.models.messages'].WebsocketMessageType = mock_websocket_message_type
 
-
 # Now import the module under test
-import backend.v4.magentic_agents.proxy_agent
+import backend.v4.magentic_agents.proxy_agent as proxy_agent_module
+
+
+def test_module_imports():
+    """Ensure the proxy_agent module imports correctly and is referenced in tests."""
+    assert proxy_agent_module is not None
 
 
 class TestProxyAgentComplexScenarios:
