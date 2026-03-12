@@ -76,7 +76,6 @@ class TestAzureConfig(unittest.TestCase):
         mock_credential.get_token.assert_called_once_with(mock_config.AZURE_COGNITIVE_SERVICES)
 
 
-
 class TestAzureConfigAsync(unittest.IsolatedAsyncioTestCase):
     """Async test cases for AzureConfig class."""
 
@@ -350,7 +349,7 @@ class TestOrchestrationConfig(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(asyncio.CancelledError):
             await task
         
-        _ = await cancel_task_handle
+        await cancel_task_handle
 
     async def test_wait_for_clarification_cancelled(self):
         """Test waiting for clarification when cancelled."""
@@ -370,7 +369,7 @@ class TestOrchestrationConfig(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(asyncio.CancelledError):
             await task
         
-        _ = await cancel_task_handle
+        await cancel_task_handle
 
     def test_cleanup_approval(self):
         """Test cleanup approval."""
