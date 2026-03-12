@@ -620,19 +620,19 @@ async def user_clarification(
 
     # Attach session_id to span if plan_id is available and capture for events
     session_id = None
-    memory_store = await DatabaseFactory.get_database(user_id=user_id)
-    if human_feedback.plan_id:
-        try:
-            plan = await memory_store.get_plan_by_plan_id(plan_id=human_feedback.plan_id)
-            if plan and plan.session_id:
-                session_id = plan.session_id
-                span = trace.get_current_span()
-                if span:
-                    span.set_attribute("session_id", session_id)
-        except Exception:
-            pass  # Don't fail request if span attribute fails
 
     try:
+        memory_store = await DatabaseFactory.get_database(user_id=user_id)
+        if human_feedback.plan_id:
+            try:
+                plan = await memory_store.get_plan_by_plan_id(plan_id=human_feedback.plan_id)
+                if plan and plan.session_id:
+                    session_id = plan.session_id
+                    span = trace.get_current_span()
+                    if span:
+                        span.set_attribute("session_id", session_id)
+            except Exception:
+                pass  # Don't fail request if span attribute fails
         user_current_team = await memory_store.get_current_team(user_id=user_id)
         team_id = None
         if user_current_team:
