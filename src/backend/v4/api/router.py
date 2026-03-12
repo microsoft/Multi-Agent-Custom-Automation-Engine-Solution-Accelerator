@@ -1405,13 +1405,6 @@ async def get_plans(request: Request):
         user_id=user_id, team_id=current_team.team_id, status=PlanStatus.completed
     )
 
-    # Attach session_id to span if plans exist
-    if all_plans and len(all_plans) > 0 and hasattr(all_plans[0], 'session_id'):
-        span = trace.get_current_span()
-        if span:
-            # Use first plan's session_id as representative
-            span.set_attribute("session_id", all_plans[0].session_id)
-
     return all_plans
 
 
