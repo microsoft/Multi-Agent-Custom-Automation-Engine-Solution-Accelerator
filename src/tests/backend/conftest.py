@@ -6,7 +6,6 @@ This module handles proper test isolation and minimal external module mocking.
 
 import os
 import sys
-from pathlib import Path
 from types import ModuleType
 from unittest.mock import Mock, MagicMock
 
