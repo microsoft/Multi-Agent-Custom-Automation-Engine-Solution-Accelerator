@@ -444,7 +444,7 @@ class TestSearchConfig:
         assert hasattr(search_config, '__dataclass_fields__')
         
         # Test field names
-        expected_fields = {'connection_name', 'endpoint', 'index_name'}
+        expected_fields = {'connection_name', 'endpoint', 'index_name', 'search_query_type', 'top_k'}
         actual_fields = set(search_config.__dataclass_fields__.keys())
         assert expected_fields == actual_fields
 

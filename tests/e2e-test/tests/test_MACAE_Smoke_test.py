@@ -106,7 +106,6 @@ def test_macae_v4_gp_workflow(login_logout, request):
         logger.info("STEP 5: Approving Retail Task Plan")
         logger.info("=" * 80)
         step5_start = time.time()
-        step5_retry_attempted = False
         try:
             biab_page.approve_retail_task_plan()
             step5_end = time.time()

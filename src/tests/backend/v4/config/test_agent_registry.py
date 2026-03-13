@@ -6,16 +6,12 @@ including registration, unregistration, cleanup, and monitoring functionality.
 """
 
 import logging
-import os
-import sys
 import threading
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 from weakref import WeakSet
 
-# Add the backend directory to the Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'backend'))
-
+# Environment variables and paths are set by conftest.py
 from backend.v4.config.agent_registry import AgentRegistry, agent_registry
 
 
