@@ -1,3 +1,4 @@
+import React from "react";
 import PanelLeft from "@/coral/components/Panels/PanelLeft";
 import PanelLeftToolbar from "@/coral/components/Panels/PanelLeftToolbar";
 import {
@@ -56,7 +57,6 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
 
   const loadPlansData = useCallback(async (forceRefresh = false) => {
     try {
-      console.log("Loading plans, forceRefresh:", forceRefresh);
       setPlansLoading(true);
       setPlansError(null);
       const plansData = await apiService.getPlans(undefined, !forceRefresh); // Invert forceRefresh for useCache
@@ -67,7 +67,6 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
         restReload();
       }
     } catch (error) {
-      console.log("Failed to load plans:", error);
       setPlansError(
         error instanceof Error ? error : new Error("Failed to load plans")
       );
@@ -92,7 +91,6 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
 
 
   useEffect(() => {
-    console.log("Reload tasks changed:", reloadTasks);
     if (reloadTasks) {
       loadPlansData(true); // Force refresh when reloadTasks is true
     }
@@ -265,4 +263,6 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
   );
 };
 
-export default PlanPanelLeft;
+const MemoizedPlanPanelLeft = React.memo(PlanPanelLeft);
+MemoizedPlanPanelLeft.displayName = 'PlanPanelLeft';
+export default MemoizedPlanPanelLeft;

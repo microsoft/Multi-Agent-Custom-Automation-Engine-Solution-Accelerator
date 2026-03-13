@@ -52,9 +52,6 @@ export async function getUserInfo(): Promise<UserInfo> {
     try {
         const response = await fetch("/.auth/me");
         if (!response.ok) {
-            console.log(
-                "No identity provider found. Access to chat will be blocked."
-            );
             return {} as UserInfo;
         }
         const payload = await response.json();
@@ -97,7 +94,6 @@ export function getUserInfoGlobal() {
     }
 
     if (!USER_INFO) {
-        // console.info('User info not yet configured');
         return null;
     }
 
@@ -105,30 +101,11 @@ export function getUserInfoGlobal() {
 }
 
 export function getUserId(): string {
-    // USER_ID = getUserInfoGlobal()?.user_id || null;
     if (!USER_ID) {
         USER_ID = getUserInfoGlobal()?.user_id || null;
     }
     const userId = USER_ID ?? "00000000-0000-0000-0000-000000000000";
     return userId;
-}
-
-/**
- * Build headers with authentication information
- * @param headers Optional additional headers to merge
- * @returns Combined headers object with authentication
- */
-export function headerBuilder(headers?: Record<string, string>): Record<string, string> {
-    let userId = getUserId();
-    //console.log('headerBuilder: Using user ID:', userId);
-    let defaultHeaders = {
-        "x-ms-client-principal-id": String(userId) || "",  // Custom header
-    };
-    //console.log('headerBuilder: Created headers:', defaultHeaders);
-    return {
-        ...defaultHeaders,
-        ...(headers ? headers : {})
-    };
 }
 
 export const toBoolean = (value: any): boolean => {

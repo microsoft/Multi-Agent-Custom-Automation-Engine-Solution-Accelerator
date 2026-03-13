@@ -38,10 +38,9 @@ export class PlanDataService {
     try {
       // Use optimized getPlanById method for better performance
       const planBody = await apiService.getPlanById(planId, useCache);
-      console.log('Raw plan data fetched:', planBody);
       return this.processPlanData(planBody);
     } catch (error) {
-      console.log("Failed to fetch plan data:", error);
+      console.error("Failed to fetch plan data:", error);
       throw error;
     }
   }
@@ -230,7 +229,7 @@ export class PlanDataService {
     streaming_message: string = ''
   ): AgentMessageResponse {
     if (!planData || !planData.plan) {
-      console.log("Invalid plan data provided to createAgentMessageResponse");
+      console.warn("Invalid plan data provided to createAgentMessageResponse");
     }
     return {
       plan_id: planData.plan.plan_id,
@@ -264,7 +263,7 @@ export class PlanDataService {
     try {
       return apiService.submitClarification(request_id, answer, plan_id, m_plan_id);
     } catch (error) {
-      console.log("Failed to submit clarification:", error);
+      console.error("Failed to submit clarification:", error);
       throw error;
     }
   }

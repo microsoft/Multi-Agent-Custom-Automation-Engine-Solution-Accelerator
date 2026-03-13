@@ -1,3 +1,4 @@
+import React from "react";
 import ChatInput from "@/coral/modules/ChatInput";
 import { PlanChatProps } from "@/models";
 import { Button } from "@fluentui/react-components";
@@ -74,4 +75,6 @@ const PlanChatBody: React.FC<SimplifiedPlanChatProps> = ({
     );
 }
 
-export default PlanChatBody;
+const MemoizedPlanChatBody = React.memo(PlanChatBody);
+MemoizedPlanChatBody.displayName = 'PlanChatBody';
+export default MemoizedPlanChatBody;

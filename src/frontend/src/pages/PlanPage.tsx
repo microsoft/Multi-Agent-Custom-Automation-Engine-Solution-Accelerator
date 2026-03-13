@@ -1,726 +1,304 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { Spinner, Text } from "@fluentui/react-components";
-import { PlanDataService } from "../services/PlanDataService";
-import { ProcessedPlanData, WebsocketMessageType, MPlanData, AgentMessageData, AgentMessageType, ParsedUserClarification, AgentType, PlanStatus, TeamConfig } from "../models";
-import PlanChat from "../components/content/PlanChat";
-import PlanPanelRight from "../components/content/PlanPanelRight";
-import PlanPanelLeft from "../components/content/PlanPanelLeft";
-import CoralShellColumn from "../coral/components/Layout/CoralShellColumn";
-import CoralShellRow from "../coral/components/Layout/CoralShellRow";
-import Content from "../coral/components/Content/Content";
-import ContentToolbar from "../coral/components/Content/ContentToolbar";
-import {
-    useInlineToaster,
-} from "../components/toast/InlineToaster";
-import Octo from "../coral/imports/Octopus.png";
-import LoadingMessage, { loadingMessages } from "../coral/components/LoadingMessage";
-import webSocketService from "../services/WebSocketService";
-import { APIService } from "../api/apiService";
-import { StreamMessage, StreamingPlanUpdate } from "../models";
-import { usePlanCancellationAlert } from "../hooks/usePlanCancellationAlert";
-import PlanCancellationDialog from "../components/common/PlanCancellationDialog";
-import "../styles/PlanPage.css"
+import React, { useCallback, useEffect} from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Spinner, Text } from '@fluentui/react-components';
 
-// Create API service instance
+/* ── Services / API ──────────────────────────────────────────── */
+import { APIService } from '../api/apiService';
+import { PlanDataService } from '../services/PlanDataService';
+import webSocketService from '../services/WebSocketService';
+
+/* ── Models ──────────────────────────────────────────────────── */
+import {
+    AgentMessageData,
+    AgentMessageType,
+} from '../models';
+
+/* ── Redux ───────────────────────────────────────────────────── */
+import { useAppDispatch, useAppSelector } from '../state/hooks';
+import {
+    selectPlanData,
+    selectPlanLoading,
+    selectErrorLoading,
+    selectPlanApprovalRequest,
+    selectProcessingApproval,
+    selectShowApprovalButtons,
+    selectShowProcessingPlanSpinner,
+    selectShowCancellationDialog,
+    selectCancellingPlan,
+    selectLoadingMessage,
+    selectReloadLeftList,
+    selectWaitingForPlan,
+    setReloadLeftList,
+    setProcessingApproval,
+    setShowProcessingPlanSpinner,
+    setShowCancellationDialog,
+    setCancellingPlan,
+    setLoadingMessage,
+    setErrorLoading,
+    planApprovalAccepted,
+    planApprovalRejected,
+} from '../state/slices/planSlice';
+import {
+    selectInput,
+    selectSubmittingChatDisable,
+    selectClarificationMessage,
+    selectAgentMessages,
+    setInput,
+    setSubmittingChatDisableInput,
+    addAgentMessage,
+} from '../state/slices/chatSlice';
+import {
+    selectStreamingMessages,
+    selectStreamingMessageBuffer,
+    selectShowBufferingText,
+} from '../state/slices/streamingSlice';
+import { selectWsConnected } from '../state/slices/appSlice';
+import { selectSelectedTeam } from '../state/slices/teamSlice';
+
+/* ── Custom Hooks ────────────────────────────────────────────── */
+import { usePlanWebSocket } from '../hooks/usePlanWebSocket';
+import { usePlanActions } from '../hooks/usePlanActions';
+import { useAutoScroll } from '../hooks/useAutoScroll';
+import { usePlanCancellationAlert } from '../hooks/usePlanCancellationAlert';
+
+/* ── Components ──────────────────────────────────────────────── */
+import PlanChat from '../components/content/PlanChat';
+import PlanPanelRight from '../components/content/PlanPanelRight';
+import PlanPanelLeft from '../components/content/PlanPanelLeft';
+import CoralShellColumn from '../coral/components/Layout/CoralShellColumn';
+import CoralShellRow from '../coral/components/Layout/CoralShellRow';
+import Content from '../coral/components/Content/Content';
+import ContentToolbar from '../coral/components/Content/ContentToolbar';
+import { useInlineToaster } from '../components/toast/InlineToaster';
+import Octo from '../coral/imports/Octopus.png';
+import LoadingMessage, { loadingMessages } from '../coral/components/LoadingMessage';
+import PlanCancellationDialog from '../components/common/PlanCancellationDialog';
+import '../styles/PlanPage.css';
+
+// Singleton API service
 const apiService = new APIService();
 
-/**
- * Page component for displaying a specific plan
- * Accessible via the route /plan/{plan_id}
- */
+/* ================================================================
+ *  PlanPage — refactored to use Redux + extracted hooks
+ * ================================================================ */
 const PlanPage: React.FC = () => {
     const { planId } = useParams<{ planId: string }>();
     const navigate = useNavigate();
+    const dispatch = useAppDispatch();
     const { showToast, dismissToast } = useInlineToaster();
-    const messagesContainerRef = useRef<HTMLDivElement>(null);
-    const [input, setInput] = useState<string>("");
-    const [planData, setPlanData] = useState<ProcessedPlanData | any>(null);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [submittingChatDisableInput, setSubmittingChatDisableInput] = useState<boolean>(true);
-    const [errorLoading, setErrorLoading] = useState<boolean>(false);
-    const [clarificationMessage, setClarificationMessage] = useState<ParsedUserClarification | null>(null);
-    const [processingApproval, setProcessingApproval] = useState<boolean>(false);
-    const [planApprovalRequest, setPlanApprovalRequest] = useState<MPlanData | null>(null);
-    const [reloadLeftList, setReloadLeftList] = useState<boolean>(true);
-    const [waitingForPlan, setWaitingForPlan] = useState<boolean>(true);
-    const [showProcessingPlanSpinner, setShowProcessingPlanSpinner] = useState<boolean>(false);
-    const [showApprovalButtons, setShowApprovalButtons] = useState<boolean>(true);
-    const [continueWithWebsocketFlow, setContinueWithWebsocketFlow] = useState<boolean>(false);
-    const [selectedTeam, setSelectedTeam] = useState<TeamConfig | null>(null);
-    // WebSocket connection state
-    const [wsConnected, setWsConnected] = useState<boolean>(false);
-    const [streamingMessages, setStreamingMessages] = useState<StreamingPlanUpdate[]>([]);
-    const [streamingMessageBuffer, setStreamingMessageBuffer] = useState<string>("");
-    const [showBufferingText, setShowBufferingText] = useState<boolean>(false);
-    const [agentMessages, setAgentMessages] = useState<AgentMessageData[]>([]);
-    const formatErrorMessage = useCallback((content: string): string => {
-        // Split content by newlines and add proper indentation
-        const lines = content.split('\n');
-        const formattedLines = lines.map((line, index) => {
-            if (index === 0) {
-                return `⚠️ ${line}`;
-            } else if (line.trim() === '') {
-                return ''; // Preserve blank lines
-            } else {
-                return `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${line}`;
-            }
-        });
-        return formattedLines.join('\n');
-    }, []);
+    const { messagesContainerRef, scrollToBottom } = useAutoScroll();
+    const { loadPlanData, resetPlanVariables } = usePlanActions();
 
-    // Plan cancellation dialog state
-    const [showCancellationDialog, setShowCancellationDialog] = useState<boolean>(false);
-    const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
-    const [cancellingPlan, setCancellingPlan] = useState<boolean>(false);
+    /* ── Redux Selectors (granular — Point 10) ──────────────── */
+    const planData = useAppSelector(selectPlanData);
+    const loading = useAppSelector(selectPlanLoading);
+    const errorLoading = useAppSelector(selectErrorLoading);
+    const planApprovalRequest = useAppSelector(selectPlanApprovalRequest);
+    const processingApproval = useAppSelector(selectProcessingApproval);
+    const showApprovalButtons = useAppSelector(selectShowApprovalButtons);
+    const showProcessingPlanSpinner = useAppSelector(selectShowProcessingPlanSpinner);
+    const showCancellationDialog = useAppSelector(selectShowCancellationDialog);
+    const cancellingPlan = useAppSelector(selectCancellingPlan);
+    const loadingMessage = useAppSelector(selectLoadingMessage);
+    const reloadLeftList = useAppSelector(selectReloadLeftList);
+    const waitingForPlan = useAppSelector(selectWaitingForPlan);
+    const input = useAppSelector(selectInput);
+    const submittingChatDisableInput = useAppSelector(selectSubmittingChatDisable);
+    const clarificationMessage = useAppSelector(selectClarificationMessage);
+    const agentMessages = useAppSelector(selectAgentMessages);
+    const streamingMessages = useAppSelector(selectStreamingMessages);
+    const streamingMessageBuffer = useAppSelector(selectStreamingMessageBuffer);
+    const showBufferingText = useAppSelector(selectShowBufferingText);
+    const wsConnected = useAppSelector(selectWsConnected);
+    const selectedTeam = useAppSelector(selectSelectedTeam);
 
-    const [loadingMessage, setLoadingMessage] = useState<string>(loadingMessages[0]);
+    /* ── Cancellation alert hook ────────────────────────────── */
+    const [pendingNavigation, setPendingNavigation] = React.useState<(() => void) | null>(null);
 
-    // Plan cancellation alert hook
     const { isPlanActive } = usePlanCancellationAlert({
         planData,
         planApprovalRequest,
-        onNavigate: pendingNavigation || (() => { })
+        onNavigate: pendingNavigation || (() => {}),
     });
 
-    // Handle navigation with plan cancellation check
-    const handleNavigationWithAlert = useCallback((navigationFn: () => void) => {
-        if (!isPlanActive()) {
-            // Plan is not active, proceed with navigation
-            navigationFn();
-            return;
-        }
+    /* ── Memoized formatErrorMessage ────────────────────────── */
+    const formatErrorMessage = useCallback((content: string): string => {
+        const lines = content.split('\n');
+        return lines
+            .map((line, idx) => {
+                if (idx === 0) return `\u26A0\uFE0F ${line}`;
+                if (line.trim() === '') return '';
+                return `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${line}`;
+            })
+            .join('\n');
+    }, []);
 
-        // Plan is active, show confirmation dialog
-        setPendingNavigation(() => navigationFn);
-        setShowCancellationDialog(true);
-    }, [isPlanActive]);
+    /* ── WebSocket subscriptions (extracted hook) ───────────── */
+    usePlanWebSocket({ planId, scrollToBottom, formatErrorMessage, showToast });
 
-    // Handle confirmation dialog response
+    /* ── Navigation with cancellation check ─────────────────── */
+    const handleNavigationWithAlert = useCallback(
+        (navigationFn: () => void) => {
+            if (!isPlanActive()) {
+                navigationFn();
+                return;
+            }
+            setPendingNavigation(() => navigationFn);
+            dispatch(setShowCancellationDialog(true));
+        },
+        [isPlanActive, dispatch],
+    );
+
     const handleConfirmCancellation = useCallback(async () => {
-        setCancellingPlan(true);
-
+        dispatch(setCancellingPlan(true));
         try {
             if (planApprovalRequest?.id) {
                 await apiService.approvePlan({
                     m_plan_id: planApprovalRequest.id,
-                    plan_id: planData?.plan?.id,
+                    plan_id: planData?.plan?.id ?? '',
                     approved: false,
-                    feedback: 'Plan cancelled by user navigation'
+                    feedback: 'Plan cancelled by user navigation',
                 });
             }
-
-            // Execute the pending navigation
-            if (pendingNavigation) {
-                pendingNavigation();
-            }
+            pendingNavigation?.();
             webSocketService.disconnect();
-        } catch (error) {
-            console.error('❌ Failed to cancel plan:', error);
+        } catch {
             showToast('Failed to cancel the plan properly, but navigation will continue.', 'error');
-            // Still proceed with navigation even if cancellation failed
-            if (pendingNavigation) {
-                pendingNavigation();
-            }
+            pendingNavigation?.();
         } finally {
-            setCancellingPlan(false);
-            setShowCancellationDialog(false);
+            dispatch(setCancellingPlan(false));
+            dispatch(setShowCancellationDialog(false));
             setPendingNavigation(null);
         }
-    }, [planApprovalRequest, planData, pendingNavigation, showToast]);
+    }, [planApprovalRequest, planData, pendingNavigation, showToast, dispatch]);
 
     const handleCancelDialog = useCallback(() => {
-        setShowCancellationDialog(false);
+        dispatch(setShowCancellationDialog(false));
         setPendingNavigation(null);
-    }, []);
+    }, [dispatch]);
 
-
-
-    const processAgentMessage = useCallback((agentMessageData: AgentMessageData, planData: ProcessedPlanData, is_final: boolean = false, streaming_message: string = '') => {
-
-        // Persist / forward to backend (fire-and-forget with logging)
-        const agentMessageResponse = PlanDataService.createAgentMessageResponse(agentMessageData, planData, is_final, streaming_message);
-        console.log('📤 Persisting agent message:', agentMessageResponse);
-        const sendPromise = apiService.sendAgentMessage(agentMessageResponse)
-            .then(saved => {
-                console.log('[agent_message][persisted]', {
-                    agent: agentMessageData.agent,
-                    type: agentMessageData.agent_type,
-                    ts: agentMessageData.timestamp
-                });
-
-                // If this is a final message, refresh the task list after successful persistence
-                if (is_final) {
-                    // Single refresh with a delay to ensure backend processing is complete
-                    setTimeout(() => {
-                        setReloadLeftList(true);
-                    }, 1000);
-                }
-            })
-            .catch(err => {
-                console.warn('[agent_message][persist-failed]', err);
-                // Even if persistence fails, still refresh the task list for final messages
-                // The local plan data has been updated, so the UI should reflect that
-                if (is_final) {
-                    setTimeout(() => {
-                        setReloadLeftList(true);
-                    }, 1000);
-                }
-            });
-
-        return sendPromise;
-
-    }, [setReloadLeftList]);
-
-    const resetPlanVariables = useCallback(() => {
-        setInput("");
-        setPlanData(null);
-        setLoading(true);
-        setSubmittingChatDisableInput(true);
-        setErrorLoading(false);
-        setClarificationMessage(null);
-        setProcessingApproval(false);
-        setPlanApprovalRequest(null);
-        setReloadLeftList(true);
-        setWaitingForPlan(true);
-        setShowProcessingPlanSpinner(false);
-        setShowApprovalButtons(true);
-        setContinueWithWebsocketFlow(false);
-        setWsConnected(false);
-        setStreamingMessages([]);
-        setStreamingMessageBuffer("");
-        setShowBufferingText(false);
-        setAgentMessages([]);
-    }, [
-        setInput,
-        setPlanData,
-        setLoading,
-        setSubmittingChatDisableInput,
-        setErrorLoading,
-        setClarificationMessage,
-        setProcessingApproval,
-        setPlanApprovalRequest,
-        setReloadLeftList,
-        setWaitingForPlan,
-        setShowProcessingPlanSpinner,
-        setShowApprovalButtons,
-        setContinueWithWebsocketFlow,
-        setWsConnected,
-        setStreamingMessages,
-        setStreamingMessageBuffer,
-        setShowBufferingText,
-        setAgentMessages
-    ]);
-
-    // Auto-scroll helper
-    const scrollToBottom = useCallback(() => {
-        setTimeout(() => {
-            if (messagesContainerRef.current) {
-                //messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-                messagesContainerRef.current?.scrollTo({
-                    top: messagesContainerRef.current.scrollHeight,
-                    behavior: "smooth",
-                });
-            }
-        }, 100);
-    }, []);
-
-
-    //WebsocketMessageType.PLAN_APPROVAL_REQUEST
-    useEffect(() => {
-        const unsubscribe = webSocketService.on(WebsocketMessageType.PLAN_APPROVAL_REQUEST, (approvalRequest: any) => {
-            console.log('📋 Plan received:', approvalRequest);
-
-            let mPlanData: MPlanData | null = null;
-
-            // Handle the different message structures
-            if (approvalRequest.parsedData) {
-                // Direct parsedData property
-                mPlanData = approvalRequest.parsedData;
-            } else if (approvalRequest.data && typeof approvalRequest.data === 'object') {
-                // Data property with nested object
-                if (approvalRequest.data.parsedData) {
-                    mPlanData = approvalRequest.data.parsedData;
-                } else {
-                    // Try to parse the data object directly
-                    mPlanData = approvalRequest.data;
-                }
-            } else if (approvalRequest.rawData) {
-                // Parse the raw data string
-                mPlanData = PlanDataService.parsePlanApprovalRequest(approvalRequest.rawData);
-            } else {
-                // Try to parse the entire object
-                mPlanData = PlanDataService.parsePlanApprovalRequest(approvalRequest);
-            }
-
-            if (mPlanData) {
-                console.log('✅ Parsed plan data:', mPlanData);
-                setPlanApprovalRequest(mPlanData);
-                setWaitingForPlan(false);
-                setShowProcessingPlanSpinner(false);
-                scrollToBottom();
-            } else {
-                console.error('❌ Failed to parse plan data', approvalRequest);
-            }
-        });
-
-        return () => unsubscribe();
-    }, [scrollToBottom]);
-
-    //(WebsocketMessageType.AGENT_MESSAGE_STREAMING
-    useEffect(() => {
-        const unsubscribe = webSocketService.on(WebsocketMessageType.AGENT_MESSAGE_STREAMING, (streamingMessage: any) => {
-            
-            //console.log('📋 Streaming Message', streamingMessage);
-            // if is final true clear buffer and add final message to agent messages
-            const line = PlanDataService.simplifyHumanClarification(streamingMessage.data.content);
-            setShowBufferingText(true);
-            setStreamingMessageBuffer(prev => prev + line);
-            //scrollToBottom();
-
-        });
-
-        return () => unsubscribe();
-    }, [scrollToBottom]);
-
-    //WebsocketMessageType.USER_CLARIFICATION_REQUEST
-    useEffect(() => {
-        const unsubscribe = webSocketService.on(WebsocketMessageType.USER_CLARIFICATION_REQUEST, (clarificationMessage: any) => {
-            console.log('📋 Clarification Message', clarificationMessage);
-            console.log('📋 Current plan data User clarification', planData);
-            if (!clarificationMessage) {
-                console.warn('⚠️ clarification message missing data:', clarificationMessage);
-                return;
-            }
-            const agentMessageData = {
-                agent: AgentType.GROUP_CHAT_MANAGER,
-                agent_type: AgentMessageType.AI_AGENT,
-                timestamp: clarificationMessage.timestamp || Date.now(),
-                steps: [],   // intentionally always empty
-                next_steps: [],  // intentionally always empty
-                content: clarificationMessage.data.question || '',
-                raw_data: clarificationMessage.data || '',
-            } as AgentMessageData;
-            console.log('✅ Parsed clarification message:', agentMessageData);
-            setClarificationMessage(clarificationMessage.data as ParsedUserClarification | null);
-            setAgentMessages(prev => [...prev, agentMessageData]);
-            setShowBufferingText(false);
-            setShowProcessingPlanSpinner(false);
-            setSubmittingChatDisableInput(false);
-            scrollToBottom();
-            // Persist the agent message
-            processAgentMessage(agentMessageData, planData);
-
-        });
-
-        return () => unsubscribe();
-    }, [scrollToBottom, planData, processAgentMessage]);
-    //WebsocketMessageType.AGENT_TOOL_MESSAGE
-    useEffect(() => {
-        const unsubscribe = webSocketService.on(WebsocketMessageType.AGENT_TOOL_MESSAGE, (toolMessage: any) => {
-            console.log('📋 Tool Message', toolMessage);
-            // scrollToBottom()
-
-        });
-
-        return () => unsubscribe();
-    }, [scrollToBottom]);
-
-
-    //WebsocketMessageType.FINAL_RESULT_MESSAGE
-    useEffect(() => {
-        const unsubscribe = webSocketService.on(WebsocketMessageType.FINAL_RESULT_MESSAGE, (finalMessage: any) => {
-            console.log('📋 Final Result Message', finalMessage);
-            if (!finalMessage) {
-
-                console.warn('⚠️ Final result message missing data:', finalMessage);
-                return;
-            }
-            const agentMessageData = {
-                agent: AgentType.GROUP_CHAT_MANAGER,
-                agent_type: AgentMessageType.AI_AGENT,
-                timestamp: Date.now(),
-                steps: [],   // intentionally always empty
-                next_steps: [],  // intentionally always empty
-                content: "🎉🎉 " + (finalMessage.data?.content || ''),
-                raw_data: finalMessage,
-            } as AgentMessageData;
-
-
-            console.log('✅ Parsed final result message:', agentMessageData);
-            // we ignore the terminated message 
-            if (finalMessage?.data?.status === PlanStatus.COMPLETED) {
-
-                setShowBufferingText(true);
-                setShowProcessingPlanSpinner(false);
-                setAgentMessages(prev => [...prev, agentMessageData]);
-                setSelectedTeam(planData?.team || null);
-                scrollToBottom();
-                // Persist the agent message
-                const is_final = true;
-                if (planData?.plan) {
-                    planData.plan.overall_status = PlanStatus.COMPLETED;
-                    setPlanData({ ...planData });
-                }
-
-                // Wait for the agent message to be processed and persisted
-                // The processAgentMessage function will handle refreshing the task list
-                webSocketService.disconnect();
-                processAgentMessage(agentMessageData, planData, is_final, streamingMessageBuffer);
-
-            }
-
-
-        });
-
-        return () => unsubscribe();
-    }, [scrollToBottom, planData, processAgentMessage, streamingMessageBuffer, setSelectedTeam]);
-
-    // WebsocketMessageType.ERROR_MESSAGE
-    useEffect(() => {
-        const unsubscribe = webSocketService.on(WebsocketMessageType.ERROR_MESSAGE, (errorMessage: any) => {
-            console.log('❌ Received ERROR_MESSAGE:', errorMessage);
-            console.log('❌ Error message data:', errorMessage?.data);
-            
-            // Try multiple ways to extract the error message
-            let errorContent = "An unexpected error occurred. Please try again later.";
-            
-            // Check for double-nested data structure
-            if (errorMessage?.data?.data?.content) {
-                const content = errorMessage.data.data.content.trim();
-                if (content.length > 0) {
-                    errorContent = content;
-                }
-            } else if (errorMessage?.data?.content) {
-                const content = errorMessage.data.content.trim();
-                if (content.length > 0) {
-                    errorContent = content;
-                }
-            } else if (errorMessage?.content) {
-                const content = errorMessage.content.trim();
-                if (content.length > 0) {
-                    errorContent = content;
-                }
-            } else if (typeof errorMessage === 'string') {
-                const content = errorMessage.trim();
-                if (content.length > 0) {
-                    errorContent = content;
-                }
-            }
-
-            console.log('❌ Final error content to display:', errorContent);
-
-            const errorAgentMessage: AgentMessageData = {
-                agent: 'system',
-                agent_type: AgentMessageType.SYSTEM_AGENT,
-                timestamp: Date.now(),
-                steps: [],
-                next_steps: [],
-                content: formatErrorMessage(errorContent),
-                raw_data: errorMessage || '',
-            };
-
-            setAgentMessages(prev => [...prev, errorAgentMessage]);
-            setShowProcessingPlanSpinner(false);
-            setShowBufferingText(false);
-            setSubmittingChatDisableInput(false);
-            scrollToBottom();
-            showToast(errorContent, "error");
-        });
-
-        return () => unsubscribe();
-    }, [scrollToBottom, showToast, formatErrorMessage]);
-
-    //WebsocketMessageType.AGENT_MESSAGE
-    useEffect(() => {
-        const unsubscribe = webSocketService.on(WebsocketMessageType.AGENT_MESSAGE, (agentMessage: any) => {
-            console.log('📋 Agent Message', agentMessage)
-            console.log('📋 Current plan data', planData);
-            const agentMessageData = agentMessage.data as AgentMessageData;
-            if (agentMessageData) {
-                agentMessageData.content = PlanDataService.simplifyHumanClarification(agentMessageData?.content);
-                setAgentMessages(prev => [...prev, agentMessageData]);
-                setShowProcessingPlanSpinner(true);
-                scrollToBottom();
-                processAgentMessage(agentMessageData, planData);
-            }
-
-        });
-
-        return () => unsubscribe();
-    }, [scrollToBottom, planData, processAgentMessage]); //onPlanReceived, scrollToBottom
-
-    // Loading message rotation effect
-    useEffect(() => {
-        let interval: NodeJS.Timeout;
-        if (loading) {
-            let index = 0;
-            interval = setInterval(() => {
-                index = (index + 1) % loadingMessages.length;
-                setLoadingMessage(loadingMessages[index]);
-            }, 3000);
-        }
-        return () => clearInterval(interval);
-    }, [loading]);
-
-    // WebSocket connection with proper error handling and v4 backend compatibility
-    useEffect(() => {
-        if (planId && continueWithWebsocketFlow) {
-            console.log('🔌 Connecting WebSocket:', { planId, continueWithWebsocketFlow });
-
-            const connectWebSocket = async () => {
-                try {
-                    await webSocketService.connect(planId);
-                    console.log('✅ WebSocket connected successfully');
-                } catch (error) {
-                    console.error('❌ WebSocket connection failed:', error);
-                    // Continue without WebSocket - the app should still work
-                }
-            };
-
-            connectWebSocket();
-
-            const handleConnectionChange = (connected: boolean) => {
-                setWsConnected(connected);
-                console.log('🔗 WebSocket connection status:', connected);
-            };
-
-            const handleStreamingMessage = (message: StreamMessage) => {
-                console.log('📨 Received streaming message:', message);
-                if (message.data && message.data.plan_id) {
-                    setStreamingMessages(prev => [...prev, message.data]);
-                }
-            };
-
-            const handlePlanApprovalResponse = (message: StreamMessage) => {
-                console.log('✅ Plan approval response received:', message);
-            };
-
-            const handlePlanApprovalRequest = (message: StreamMessage) => {
-                console.log('📥 Plan approval request received:', message);
-                // This is handled by PlanChat component through its own listener
-            };
-
-            // Subscribe to all relevant v4 backend events
-            const unsubscribeConnection = webSocketService.on('connection_status', (message) => {
-                handleConnectionChange(message.data?.connected || false);
-            });
-
-            const unsubscribeStreaming = webSocketService.on(WebsocketMessageType.AGENT_MESSAGE, handleStreamingMessage);
-            const unsubscribePlanApproval = webSocketService.on(WebsocketMessageType.PLAN_APPROVAL_RESPONSE, handlePlanApprovalResponse);
-            const unsubscribePlanApprovalRequest = webSocketService.on(WebsocketMessageType.PLAN_APPROVAL_REQUEST, handlePlanApprovalRequest);
-            const unsubscribeParsedPlanApprovalRequest = webSocketService.on(WebsocketMessageType.PLAN_APPROVAL_REQUEST, handlePlanApprovalRequest);
-
-            return () => {
-                console.log('🔌 Cleaning up WebSocket connections');
-                unsubscribeConnection();
-                unsubscribeStreaming();
-                unsubscribePlanApproval();
-                unsubscribePlanApprovalRequest();
-                unsubscribeParsedPlanApprovalRequest();
-                webSocketService.disconnect();
-            };
-        }
-    }, [planId, loading, continueWithWebsocketFlow]);
-
-    // Create loadPlanData function with useCallback to memoize it
-    const loadPlanData = useCallback(
-        async (useCache = true): Promise<ProcessedPlanData | null> => {
-            if (!planId) return null;
-            resetPlanVariables();
-            setLoading(true);
-            try {
-
-                let planResult: ProcessedPlanData | null = null;
-                console.log("Fetching plan with ID:", planId);
-                planResult = await PlanDataService.fetchPlanData(planId, useCache);
-                console.log("Plan data fetched:", planResult);
-                if (planResult?.plan?.overall_status === PlanStatus.IN_PROGRESS) {
-                    setShowApprovalButtons(true);
-
-                } else {
-                    setShowApprovalButtons(false);
-                    setWaitingForPlan(false);
-                }
-                if (planResult?.plan?.overall_status !== PlanStatus.COMPLETED) {
-                    setContinueWithWebsocketFlow(true);
-                }
-                if (planResult?.messages) {
-                    setAgentMessages(planResult.messages);
-                }
-                if (planResult?.mplan) {
-                    setPlanApprovalRequest(planResult.mplan);
-                }
-                if (planResult?.streaming_message && planResult.streaming_message.trim() !== "") {
-                    setStreamingMessageBuffer(planResult.streaming_message);
-                    setShowBufferingText(true);
-                }
-                setPlanData(planResult);
-                return planResult;
-            } catch (err) {
-                console.log("Failed to load plan data:", err);
-                setErrorLoading(true);
-                setPlanData(null);
-                return null;
-            } finally {
-                setLoading(false);
-            }
-        },
-        [planId, navigate, resetPlanVariables]
-    );
-
-
-    // Handle plan approval
+    /* ── Plan Approval / Rejection ──────────────────────────── */
     const handleApprovePlan = useCallback(async () => {
         if (!planApprovalRequest) return;
-
-        setProcessingApproval(true);
-        let id = showToast("Submitting Approval", "progress");
-
+        dispatch(setProcessingApproval(true));
+        const id = showToast('Submitting Approval', 'progress');
         try {
             await apiService.approvePlan({
                 m_plan_id: planApprovalRequest.id,
-                plan_id: planData?.plan?.id,
+                plan_id: planData?.plan?.id ?? '',
                 approved: true,
-                feedback: 'Plan approved by user'
+                feedback: 'Plan approved by user',
             });
-            
             dismissToast(id);
-            setShowProcessingPlanSpinner(true);
-            setShowApprovalButtons(false);
-
-        } catch (error) {
+            /* P0: single compound action replaces 3 separate dispatches */
+            dispatch(planApprovalAccepted());
+        } catch {
             dismissToast(id);
-            showToast("Failed to submit approval", "error");
-            console.error('❌ Failed to approve plan:', error);
+            showToast('Failed to submit approval', 'error');
         } finally {
-            setProcessingApproval(false);
+            dispatch(setProcessingApproval(false));
         }
-    }, [planApprovalRequest, planData, setProcessingApproval]);
+    }, [planApprovalRequest, planData, showToast, dismissToast, dispatch]);
 
-    // Handle plan rejection  
     const handleRejectPlan = useCallback(async () => {
         if (!planApprovalRequest) return;
-
-        setProcessingApproval(true);
-        let id = showToast("Submitting cancellation", "progress");
+        dispatch(setProcessingApproval(true));
+        const id = showToast('Submitting cancellation', 'progress');
         try {
             await apiService.approvePlan({
                 m_plan_id: planApprovalRequest.id,
-                plan_id: planData?.plan?.id,
+                plan_id: planData?.plan?.id ?? '',
                 approved: false,
-                feedback: 'Plan rejected by user'
+                feedback: 'Plan rejected by user',
             });
-
             dismissToast(id);
-
             navigate('/');
-
-        } catch (error) {
+        } catch {
             dismissToast(id);
-            showToast("Failed to submit cancellation", "error");
-            console.error('❌ Failed to reject plan:', error);
+            showToast('Failed to submit cancellation', 'error');
             navigate('/');
         } finally {
-            setProcessingApproval(false);
+            /* P0: single compound action replaces multiple state resets */
+            dispatch(planApprovalRejected());
         }
-    }, [planApprovalRequest, planData, navigate, setProcessingApproval]);
-    // Chat submission handler - updated for v4 backend compatibility
+    }, [planApprovalRequest, planData, navigate, showToast, dismissToast, dispatch]);
 
+    /* ── Chat submission ────────────────────────────────────── */
     const handleOnchatSubmit = useCallback(
         async (chatInput: string) => {
             if (!chatInput.trim()) {
-                showToast("Please enter a clarification", "error");
+                showToast('Please enter a clarification', 'error');
                 return;
             }
-            setInput("");
-
+            dispatch(setInput(''));
             if (!planData?.plan) return;
-            setSubmittingChatDisableInput(true);
-            let id = showToast("Submitting clarification", "progress");
-
+            dispatch(setSubmittingChatDisableInput(true));
+            const id = showToast('Submitting clarification', 'progress');
             try {
-                // Use legacy method for non-v4 backends
-                const response = await PlanDataService.submitClarification({
-                    request_id: clarificationMessage?.request_id || "",
+                await PlanDataService.submitClarification({
+                    request_id: clarificationMessage?.request_id || '',
                     answer: chatInput,
-                    plan_id: planData?.plan.id,
-                    m_plan_id: planApprovalRequest?.id || ""
+                    plan_id: planData.plan.id,
+                    m_plan_id: planApprovalRequest?.id || '',
                 });
-
-                console.log("Clarification submitted successfully:", response);
-                setInput("");
+                dispatch(setInput(''));
                 dismissToast(id);
-                showToast("Clarification submitted successfully", "success");
-
-                const agentMessageData = {
+                showToast('Clarification submitted successfully', 'success');
+                const agentMessageData: AgentMessageData = {
                     agent: 'human',
                     agent_type: AgentMessageType.HUMAN_AGENT,
                     timestamp: Date.now(),
-                    steps: [],   // intentionally always empty
-                    next_steps: [],  // intentionally always empty
-                    content: chatInput || '',
-                    raw_data: chatInput || '',
-                } as AgentMessageData;
-
-                setAgentMessages(prev => [...prev, agentMessageData]);
-                setSubmittingChatDisableInput(true);
-                setShowProcessingPlanSpinner(true);
+                    steps: [],
+                    next_steps: [],
+                    content: chatInput,
+                    raw_data: chatInput,
+                };
+                dispatch(addAgentMessage(agentMessageData));
+                dispatch(setSubmittingChatDisableInput(true));
+                dispatch(setShowProcessingPlanSpinner(true));
                 scrollToBottom();
-
-            } catch (error: any) {
-                setShowProcessingPlanSpinner(false);
+            } catch {
+                dispatch(setShowProcessingPlanSpinner(false));
                 dismissToast(id);
-                setSubmittingChatDisableInput(false);
-                showToast(
-                    "Failed to submit clarification",
-                    "error"
-                );
-
-            } finally {
-
+                dispatch(setSubmittingChatDisableInput(false));
+                showToast('Failed to submit clarification', 'error');
             }
         },
-        [planData?.plan, showToast, dismissToast, loadPlanData]
+        [planData, clarificationMessage, planApprovalRequest, showToast, dismissToast, dispatch, scrollToBottom],
     );
 
-
-    // ✅ Handlers for PlanPanelLeft with plan cancellation protection
+    /* ── Left-panel handlers ────────────────────────────────── */
     const handleNewTaskButton = useCallback(() => {
-        handleNavigationWithAlert(() => {
-            navigate("/", { state: { focusInput: true } });
-        });
+        handleNavigationWithAlert(() => navigate('/', { state: { focusInput: true } }));
     }, [navigate, handleNavigationWithAlert]);
 
-
     const resetReload = useCallback(() => {
-        setReloadLeftList(false);
-    }, []);
+        dispatch(setReloadLeftList(false));
+    }, [dispatch]);
 
+    /* ── Loading message rotation ───────────────────────────── */
     useEffect(() => {
-        const initializePlanLoading = async () => {
-            if (!planId) {
-                resetPlanVariables();
-                setErrorLoading(true);
-                return;
-            }
+        if (!loading) return;
+        let index = 0;
+        dispatch(setLoadingMessage(loadingMessages[0]));
+        const interval = setInterval(() => {
+            index = (index + 1) % loadingMessages.length;
+            dispatch(setLoadingMessage(loadingMessages[index]));
+        }, 3000);
+        return () => clearInterval(interval);
+    }, [loading, dispatch]);
 
-            try {
-                await loadPlanData(false);
-            } catch (err) {
-                console.error("Failed to initialize plan loading:", err);
-            }
-        };
-
-        initializePlanLoading();
-    }, [planId, loadPlanData, resetPlanVariables, setErrorLoading]);
-
+    /* ── Initial plan load ──────────────────────────────────── */
     useEffect(() => {
-        if (planData?.team) {
-            setSelectedTeam(planData.team);
+        if (!planId) {
+            resetPlanVariables();
+            dispatch(setErrorLoading(true));
+            return;
         }
-    }, [planData, setSelectedTeam]);
+        loadPlanData(planId, false);
+    }, [planId, loadPlanData, resetPlanVariables, dispatch]);
 
+    /* ── Render: Error state ────────────────────────────────── */
     if (errorLoading) {
         return (
             <CoralShellColumn>
@@ -729,17 +307,15 @@ const PlanPage: React.FC = () => {
                         reloadTasks={reloadLeftList}
                         onNewTaskButton={handleNewTaskButton}
                         restReload={resetReload}
-                        onTeamSelect={() => { }}
-                        onTeamUpload={async () => { }}
+                        onTeamSelect={() => {}}
+                        onTeamUpload={async () => {}}
                         isHomePage={false}
                         selectedTeam={selectedTeam}
                         onNavigationWithAlert={handleNavigationWithAlert}
                     />
                     <Content>
                         <div className="plan-error-message">
-                            <Text size={500}>
-                                {"An error occurred while loading the plan"}
-                            </Text>
+                            <Text size={500}>An error occurred while loading the plan</Text>
                         </div>
                     </Content>
                 </CoralShellRow>
@@ -747,16 +323,16 @@ const PlanPage: React.FC = () => {
         );
     }
 
+    /* ── Render: Normal state ───────────────────────────────── */
     return (
         <CoralShellColumn>
             <CoralShellRow>
-                {/* ✅ RESTORED: PlanPanelLeft for navigation */}
                 <PlanPanelLeft
                     reloadTasks={reloadLeftList}
                     onNewTaskButton={handleNewTaskButton}
                     restReload={resetReload}
-                    onTeamSelect={() => { }}
-                    onTeamUpload={async () => { }}
+                    onTeamSelect={() => {}}
+                    onTeamUpload={async () => {}}
                     isHomePage={false}
                     selectedTeam={selectedTeam}
                     onNavigationWithAlert={handleNavigationWithAlert}
@@ -769,27 +345,16 @@ const PlanPage: React.FC = () => {
                                 <Spinner size="medium" />
                                 <Text>Loading plan data...</Text>
                             </div>
-                            <LoadingMessage
-                                loadingMessage={loadingMessage}
-                                iconSrc={Octo}
-                            />
+                            <LoadingMessage loadingMessage={loadingMessage} iconSrc={Octo} />
                         </>
                     ) : (
                         <>
-                            
-                            <ContentToolbar
-                                panelTitle="Multi-Agent Planner"
-                            >
-                                {/* <PanelRightToggles>
-                                    <TaskListSquareLtr />
-                                </PanelRightToggles> */}
-                            </ContentToolbar>
-                            
+                            <ContentToolbar panelTitle="Multi-Agent Planner" />
                             <PlanChat
                                 planData={planData}
                                 OnChatSubmit={handleOnchatSubmit}
                                 loading={loading}
-                                setInput={setInput}
+                                setInput={(val: string) => dispatch(setInput(val))}
                                 submittingChatDisableInput={submittingChatDisableInput}
                                 input={input}
                                 streamingMessages={streamingMessages}
@@ -805,7 +370,6 @@ const PlanPage: React.FC = () => {
                                 processingApproval={processingApproval}
                                 handleApprovePlan={handleApprovePlan}
                                 handleRejectPlan={handleRejectPlan}
-
                             />
                         </>
                     )}
@@ -818,7 +382,6 @@ const PlanPage: React.FC = () => {
                 />
             </CoralShellRow>
 
-            {/* Plan Cancellation Confirmation Dialog */}
             <PlanCancellationDialog
                 isOpen={showCancellationDialog}
                 onConfirm={handleConfirmCancellation}
@@ -829,4 +392,6 @@ const PlanPage: React.FC = () => {
     );
 };
 
-export default PlanPage;
+const MemoizedPlanPage = React.memo(PlanPage);
+MemoizedPlanPage.displayName = 'PlanPage';
+export default MemoizedPlanPage;

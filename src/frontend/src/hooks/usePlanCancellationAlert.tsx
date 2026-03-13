@@ -58,8 +58,7 @@ export const usePlanCancellationAlert = ({
 
       // Navigate after successful cancellation
       onNavigate();
-    } catch (error) {
-      console.error('❌ Failed to cancel plan:', error);
+    } catch {
       // Show error but still allow navigation
       alert('Failed to cancel the plan properly, but navigation will continue.');
       onNavigate();

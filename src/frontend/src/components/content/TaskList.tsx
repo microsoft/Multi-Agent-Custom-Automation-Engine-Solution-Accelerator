@@ -98,4 +98,6 @@ const TaskList: React.FC<TaskListProps> = ({
   );
 };
 
-export default TaskList;
+const MemoizedTaskList = React.memo(TaskList);
+MemoizedTaskList.displayName = 'TaskList';
+export default MemoizedTaskList;

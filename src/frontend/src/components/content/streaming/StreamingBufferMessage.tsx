@@ -225,4 +225,6 @@ const StreamingBufferMessage: React.FC<StreamingBufferMessageProps> = ({
     );
 };
 
-export default StreamingBufferMessage;
+const MemoizedStreamingBufferMessage = React.memo(StreamingBufferMessage);
+MemoizedStreamingBufferMessage.displayName = 'StreamingBufferMessage';
+export default MemoizedStreamingBufferMessage;

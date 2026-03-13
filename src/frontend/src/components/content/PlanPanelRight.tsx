@@ -136,4 +136,6 @@ const PlanPanelRight: React.FC<PlanDetailsProps> = ({
   );
 };
 
-export default PlanPanelRight;
+const MemoizedPlanPanelRight = React.memo(PlanPanelRight);
+MemoizedPlanPanelRight.displayName = 'PlanPanelRight';
+export default MemoizedPlanPanelRight;
