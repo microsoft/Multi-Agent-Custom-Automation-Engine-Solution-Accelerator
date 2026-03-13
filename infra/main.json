@@ -5,8 +5,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.40.2.10011",
-      "templateHash": "17476534152468179054"
+      "version": "0.41.2.15936",
+      "templateHash": "576514245908514889"
     },
     "name": "Multi-Agent Custom Automation Engine",
     "description": "This module contains the resources required to deploy the [Multi-Agent Custom Automation Engine solution accelerator](https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) for both Sandbox environments and WAF aligned environments.\n\n> **Note:** This module is not intended for broad, generic use, as it was designed by the Commercial Solution Areas CTO team, as a Microsoft Solution Accelerator. Feature requests and bug fix requests are welcome if they support the needs of this organization but may not be incorporated if they aim to make this module more generic than what it needs to be for its primary use case. This module will likely be updated to leverage AVM resource modules in the future. This may result in breaking changes in upcoming versions when these features are implemented.\n"
@@ -240,6 +240,13 @@
         "description": "Optional. The password for the administrator account of the virtual machine. Allows to customize credentials if `enablePrivateNetworking` is set to true."
       }
     },
+    "virtualMachineSize": {
+      "type": "string",
+      "defaultValue": "Standard_D2s_v5",
+      "metadata": {
+        "description": "Optional. The size of the virtual machine. Defaults to Standard_D2s_v5."
+      }
+    },
     "backendContainerRegistryHostname": {
       "type": "string",
       "defaultValue": "biabcontainerreg.azurecr.io",
@@ -415,7 +422,6 @@
     "proximityPlacementGroupResourceName": "[format('ppg-{0}', variables('solutionSuffix'))]",
     "virtualMachineResourceName": "[format('vm-{0}', variables('solutionSuffix'))]",
     "virtualMachineAvailabilityZone": 1,
-    "virtualMachineSize": "Standard_D2s_v4",
     "keyVaultPrivateDNSZone": "[format('privatelink.{0}', if(equals(toLower(environment().name), 'azureusgovernment'), 'vaultcore.usgovcloudapi.net', 'vaultcore.azure.net'))]",
     "privateDnsZones": [
       "privatelink.cognitiveservices.azure.com",
@@ -4921,8 +4927,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.40.2.10011",
-              "templateHash": "16969845928384020185"
+              "version": "0.41.2.15936",
+              "templateHash": "8667922205584012198"
             }
           },
           "definitions": {
@@ -10446,7 +10452,7 @@
           "intent": {
             "value": {
               "vmSizes": [
-                "[variables('virtualMachineSize')]"
+                "[parameters('virtualMachineSize')]"
               ]
             }
           }
@@ -10804,7 +10810,7 @@
             "value": "Windows"
           },
           "vmSize": {
-            "value": "[variables('virtualMachineSize')]"
+            "value": "[parameters('virtualMachineSize')]"
           },
           "adminUsername": {
             "value": "[coalesce(parameters('virtualMachineAdminUsername'), 'JumpboxAdminUser')]"
@@ -22453,8 +22459,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.40.2.10011",
-              "templateHash": "8742987061721021759"
+              "version": "0.41.2.15936",
+              "templateHash": "8365054813170845685"
             }
           },
           "definitions": {
@@ -25440,9 +25446,9 @@
         }
       },
       "dependsOn": [
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
         "logAnalyticsWorkspace",
         "userAssignedIdentity",
         "virtualNetwork"
@@ -25481,8 +25487,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.40.2.10011",
-              "templateHash": "7507285802464480889"
+              "version": "0.41.2.15936",
+              "templateHash": "5789718034225488560"
             }
           },
           "parameters": {
@@ -34461,8 +34467,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.40.2.10011",
-              "templateHash": "8640881069237947782"
+              "version": "0.41.2.15936",
+              "templateHash": "14525082674956141939"
             }
           },
           "definitions": {
@@ -35474,8 +35480,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.40.2.10011",
-                      "templateHash": "10706743168754451638"
+                      "version": "0.41.2.15936",
+                      "templateHash": "1185169597469996118"
                     },
                     "name": "Site App Settings",
                     "description": "This module deploys a Site App Setting."
@@ -44644,8 +44650,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.40.2.10011",
-              "templateHash": "15348022841521786626"
+              "version": "0.41.2.15936",
+              "templateHash": "8488390916703184584"
             }
           },
           "parameters": {
