@@ -8,8 +8,8 @@ import logging
 from typing import Any, Optional
 
 import v4.models.messages as messages
-from agent_framework import ChatMessage
-from agent_framework._workflows._magentic import (
+from agent_framework import Message
+from agent_framework_orchestrations._magentic import (
     MagenticContext,
     StandardMagenticManager,
     ORCHESTRATOR_FINAL_ANSWER_PROMPT,
@@ -87,7 +87,7 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
         kwargs["final_answer_prompt"] = ORCHESTRATOR_FINAL_ANSWER_PROMPT + final_append
 
         # Override progress ledger prompt to discourage re-calling agents
-        from agent_framework._workflows._magentic import ORCHESTRATOR_PROGRESS_LEDGER_PROMPT
+        from agent_framework_orchestrations._magentic import ORCHESTRATOR_PROGRESS_LEDGER_PROMPT
         kwargs["progress_ledger_prompt"] = ORCHESTRATOR_PROGRESS_LEDGER_PROMPT + progress_append
 
         self.current_user_id = user_id
@@ -292,7 +292,7 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
 
     async def prepare_final_answer(
         self, magentic_context: MagenticContext
-    ) -> ChatMessage:
+    ) -> Message:
         """
         Override to ensure final answer is prepared after all steps are executed.
         """
