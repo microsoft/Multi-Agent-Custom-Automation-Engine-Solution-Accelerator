@@ -917,17 +917,17 @@ class TestExtractResponseText(IsolatedAsyncioTestCase):
     def test_extract_response_text_object_with_empty_text(self):
         """Test extracting text from object with empty text attribute."""
         # Use spec to ensure only specified attributes exist
-        obj = Mock(spec=['text'])
+        obj = Mock(spec_set=['text'])
         obj.text = ""
         result = self.manager._extract_response_text(obj)
         self.assertEqual(result, "")
 
     def test_extract_response_text_agent_executor_response_with_agent_response(self):
         """Test extracting text from AgentExecutorResponse with agent_response.text."""
-        agent_resp = Mock(spec=['text'])
+        agent_resp = Mock(spec_set=['text'])
         agent_resp.text = "Agent executor response"
         
-        executor_resp = Mock(spec=['agent_response'])
+        executor_resp = Mock(spec_set=['agent_response'])
         executor_resp.agent_response = agent_resp
         
         result = self.manager._extract_response_text(executor_resp)
@@ -935,12 +935,12 @@ class TestExtractResponseText(IsolatedAsyncioTestCase):
 
     def test_extract_response_text_agent_executor_response_fallback_to_conversation(self):
         """Test extracting text from AgentExecutorResponse falling back to full_conversation."""
-        agent_resp = Mock(spec=['text'])
+        agent_resp = Mock(spec_set=['text'])
         agent_resp.text = None
         
         last_msg = MockChatMessage("Last conversation message")
         
-        executor_resp = Mock(spec=['agent_response', 'full_conversation'])
+        executor_resp = Mock(spec_set=['agent_response', 'full_conversation'])
         executor_resp.agent_response = agent_resp
         executor_resp.full_conversation = [MockChatMessage("First"), last_msg]
         
@@ -949,10 +949,10 @@ class TestExtractResponseText(IsolatedAsyncioTestCase):
 
     def test_extract_response_text_agent_executor_response_empty_conversation(self):
         """Test extracting text from AgentExecutorResponse with empty conversation."""
-        agent_resp = Mock(spec=['text'])
+        agent_resp = Mock(spec_set=['text'])
         agent_resp.text = None
         
-        executor_resp = Mock(spec=['agent_response', 'full_conversation'])
+        executor_resp = Mock(spec_set=['agent_response', 'full_conversation'])
         executor_resp.agent_response = agent_resp
         executor_resp.full_conversation = []
         
@@ -1091,7 +1091,7 @@ class TestWorkflowOutputEventHandling(IsolatedAsyncioTestCase):
         mock_workflow = Mock()
         
         # Create object with text attribute
-        obj_with_text = Mock(spec=['text'])
+        obj_with_text = Mock(spec_set=['text'])
         obj_with_text.text = "Object response"
         output_event = MockWorkflowOutputEvent(obj_with_text)
         
