@@ -147,16 +147,19 @@ class ProxyAgent(BaseAgent):
         logger.debug("ProxyAgent: Message text: %s", message_text[:100])
 
         clarification_req_text = f"{message_text}"
+        request_id = str(uuid.uuid4())
         clarification_request = UserClarificationRequest(
             question=clarification_req_text,
-            request_id=str(uuid.uuid4()),
+            request_id=request_id,
         )
 
         # Dispatch websocket event requesting clarification
+        # Serialize dataclass to a plain dict so json.dumps produces proper JSON
+        # instead of relying on str() repr which is fragile for the frontend parser.
         await connection_config.send_status_update_async(
             {
-                "type": WebsocketMessageType.USER_CLARIFICATION_REQUEST,
-                "data": clarification_request,
+                "question": clarification_req_text,
+                "request_id": request_id,
             },
             user_id=self.user_id,
             message_type=WebsocketMessageType.USER_CLARIFICATION_REQUEST,

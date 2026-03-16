@@ -14,7 +14,6 @@ from agent_framework import (
     ChatOptions,
     Message,
     InMemoryCheckpointStorage,
-    WorkflowEvent,
 )
 from agent_framework_orchestrations import MagenticBuilder
 from agent_framework_orchestrations._base_group_chat_orchestrator import (
@@ -22,7 +21,6 @@ from agent_framework_orchestrations._base_group_chat_orchestrator import (
     GroupChatResponseReceivedEvent,
 )
 from agent_framework_orchestrations._magentic import (
-    MagenticOrchestratorEvent,
     MagenticProgressLedger,
 )
 
@@ -34,7 +32,6 @@ from common.database.database_base import DatabaseBase
 from v4.common.services.team_service import TeamService
 import time as _time
 from v4.callbacks.response_handlers import (
-    agent_response_callback,
     streaming_agent_response_callback,
 )
 from v4.config.settings import connection_config, orchestration_config
@@ -387,7 +384,6 @@ class OrchestrationManager:
 
             self.logger.info("Starting workflow execution...")
 
-            last_message_id: str | None = None
             async for event in workflow.run(task_text, stream=True):
                 try:
                     # WorkflowEvent has a .type field (string) instead of specific event classes
