@@ -12,7 +12,7 @@ This module contains extensive test coverage for:
 import pytest
 import os
 import logging
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch, MagicMock
 
 # Add the source root directory to the Python path for imports
 import sys
@@ -251,7 +251,7 @@ class TestAppConfigCredentials:
 
     @patch('backend.common.config.app_config.DefaultAzureCredential')
     def test_get_azure_credential_dev_environment(self, mock_default_credential):
-        """Test get_azure_credential method in dev environment."""
+        """Test get_azure_credential method in dev environment with exclude_environment_credential."""
         mock_credential = MagicMock()
         mock_default_credential.return_value = mock_credential
         
@@ -259,7 +259,8 @@ class TestAppConfigCredentials:
             config = AppConfig()
             result = config.get_azure_credential()
             
-            mock_default_credential.assert_called_once()
+            # Verify it's called with exclude_environment_credential=True in dev
+            mock_default_credential.assert_called_once_with(exclude_environment_credential=True)
             assert result == mock_credential
 
     @patch('backend.common.config.app_config.ManagedIdentityCredential')
@@ -332,6 +333,55 @@ class TestAppConfigCredentials:
             
             with pytest.raises(Exception, match="Token retrieval failed"):
                 credential.get_token(config.AZURE_COGNITIVE_SERVICES)
+
+    @patch('backend.common.config.app_config.DefaultAzureCredentialAsync')
+    def test_get_azure_credential_async_dev_environment(self, mock_default_credential_async):
+        """Test get_azure_credential_async method in dev environment with exclude_environment_credential."""
+        mock_credential = MagicMock()
+        mock_default_credential_async.return_value = mock_credential
+        
+        with patch.dict(os.environ, self._get_minimal_env()):
+            config = AppConfig()
+            result = config.get_azure_credential_async()
+            
+            # Verify it's called with exclude_environment_credential=True in dev
+            mock_default_credential_async.assert_called_once_with(exclude_environment_credential=True)
+            assert result == mock_credential
+
+    @patch('backend.common.config.app_config.ManagedIdentityCredentialAsync')
+    def test_get_azure_credential_async_prod_environment(self, mock_managed_credential_async):
+        """Test get_azure_credential_async method in production environment."""
+        mock_credential = MagicMock()
+        mock_managed_credential_async.return_value = mock_credential
+        
+        env = self._get_minimal_env()
+        env["APP_ENV"] = "prod"
+        env["AZURE_CLIENT_ID"] = "test-client-id"
+        
+        with patch.dict(os.environ, env):
+            config = AppConfig()
+            result = config.get_azure_credential_async("test-client-id")
+            
+            mock_managed_credential_async.assert_called_once_with(client_id="test-client-id")
+            assert result == mock_credential
+
+    @patch('backend.common.config.app_config.ManagedIdentityCredentialAsync')
+    def test_get_azure_credential_async_prod_uppercase(self, mock_managed_credential_async):
+        """Test get_azure_credential_async handles uppercase Prod environment value."""
+        mock_credential = MagicMock()
+        mock_managed_credential_async.return_value = mock_credential
+        
+        env = self._get_minimal_env()
+        env["APP_ENV"] = "Prod"  # Bicep sets it as "Prod" with capital P
+        env["AZURE_CLIENT_ID"] = "test-client-id"
+        
+        with patch.dict(os.environ, env):
+            config = AppConfig()
+            result = config.get_azure_credential_async("test-client-id")
+            
+            # Should use ManagedIdentityCredential even with capital "Prod"
+            mock_managed_credential_async.assert_called_once_with(client_id="test-client-id")
+            assert result == mock_credential
 
 
 class TestAppConfigClientMethods:

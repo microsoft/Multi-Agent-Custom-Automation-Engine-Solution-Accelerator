@@ -1,32 +1,21 @@
 """
 Unit tests for backend.app module.
 
-IMPORTANT: This test file MUST run in isolation from other backend tests.
-Run it separately: python -m pytest tests/backend/test_app.py
+NOTE: This test module relies on conftest.py for path setup and external module mocking.
+When running the full test suite, modules are imported properly from the backend.
 
-It uses sys.modules mocking that conflicts with other v4 tests when run together.
-The CI/CD workflow runs all backend tests together, where this file will work 
-because it detects existing v4 imports and skips mocking.
+IMPORTANT: This module requires the real v4 package to be importable. Other test files
+that mock v4 at module level (sys.modules['v4'] = Mock()) will cause import failures
+when running the full test suite due to test collection order. If v4 is mocked before
+this file is imported, the tests will be skipped.
 """
 
 import pytest
 import sys
 import os
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-from types import ModuleType
+from unittest.mock import Mock, AsyncMock, patch, NonCallableMock
 
-# Add src to path
-src_path = os.path.join(os.path.dirname(__file__), '..', '..')
-src_path = os.path.abspath(src_path)
-if src_path not in sys.path:
-    sys.path.insert(0, src_path)
-
-# Add backend to path for relative imports
-backend_path = os.path.join(src_path, 'backend')
-if backend_path not in sys.path:
-    sys.path.insert(0, backend_path)
-
-# Set environment variables BEFORE importing backend.app
+# Environment variables are set by conftest.py, but ensure they're available
 os.environ.setdefault("APPLICATIONINSIGHTS_CONNECTION_STRING", "InstrumentationKey=test-key-12345")
 os.environ.setdefault("AZURE_OPENAI_API_KEY", "test-key")
 os.environ.setdefault("AZURE_OPENAI_ENDPOINT", "https://test.openai.azure.com")
@@ -45,53 +34,18 @@ os.environ.setdefault("AZURE_AI_AGENT_ENDPOINT", "https://test.endpoint.azure.co
 os.environ.setdefault("APP_ENV", "dev")
 os.environ.setdefault("AZURE_OPENAI_RAI_DEPLOYMENT_NAME", "test-rai-deployment")
 
+# Check if v4 has been mocked by another test file (prevents import errors)
+# Use NonCallableMock to catch all mock subclasses (Mock, MagicMock, etc.)
+_v4_is_mocked = 'v4' in sys.modules and isinstance(sys.modules['v4'], NonCallableMock)
+if _v4_is_mocked:
+    # Skip this module - v4 has been mocked by another test file
+    pytest.skip(
+        "Skipping test_app.py: v4 module has been mocked by another test file. "
+        "Run this file individually with: pytest src/tests/backend/test_app.py",
+        allow_module_level=True
+    )
 
-# Check if v4 modules are already properly imported (means we're in a full test run)
-_router_module = sys.modules.get('backend.v4.api.router')
-_has_real_router = (_router_module is not None and 
-                   hasattr(_router_module, 'PlanService'))
-
-if not _has_real_router:
-    # We're running in isolation - need to mock v4 imports
-    # This prevents relative import issues from v4.api.router
-    
-    # Create a real FastAPI router to avoid isinstance errors
-    from fastapi import APIRouter
-    
-    # Mock azure.monitor.opentelemetry module
-    mock_azure_monitor_module = ModuleType('configure_azure_monitor')
-    mock_azure_monitor_module.configure_azure_monitor = lambda *args, **kwargs: None
-    sys.modules['azure.monitor.opentelemetry'] = mock_azure_monitor_module
-    
-    # Mock v4.models.messages module (both backend. and relative paths)
-    mock_messages_module = ModuleType('messages')
-    mock_messages_module.WebsocketMessageType = type('WebsocketMessageType', (), {})
-    sys.modules['backend.v4.models.messages'] = mock_messages_module
-    sys.modules['v4.models.messages'] = mock_messages_module
-    
-    # Mock v4.api.router module with a real APIRouter (both backend. and relative paths)
-    mock_router_module = ModuleType('router')
-    mock_router_module.app_v4 = APIRouter()
-    sys.modules['backend.v4.api.router'] = mock_router_module
-    sys.modules['v4.api.router'] = mock_router_module
-    
-    # Mock v4.config.agent_registry module (both backend. and relative paths)
-    class MockAgentRegistry:
-        async def cleanup_all_agents(self):
-            pass
-    
-    mock_agent_registry_module = ModuleType('agent_registry')
-    mock_agent_registry_module.agent_registry = MockAgentRegistry()
-    sys.modules['backend.v4.config.agent_registry'] = mock_agent_registry_module
-    sys.modules['v4.config.agent_registry'] = mock_agent_registry_module
-    
-    # Mock middleware.health_check module (both backend. and relative paths)
-    mock_health_check_module = ModuleType('health_check')
-    mock_health_check_module.HealthCheckMiddleware = MagicMock()
-    sys.modules['backend.middleware.health_check'] = mock_health_check_module
-    sys.modules['middleware.health_check'] = mock_health_check_module
-
-# Now import backend.app
+# Import from backend - conftest.py handles path setup
 from backend.app import app, user_browser_language_endpoint, lifespan
 from backend.common.models.messages_af import UserLanguage
 
