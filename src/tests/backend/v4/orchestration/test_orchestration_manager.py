@@ -924,7 +924,7 @@ class TestExtractResponseText(IsolatedAsyncioTestCase):
 
     def test_extract_response_text_agent_executor_response_with_agent_response(self):
         """Test extracting text from AgentExecutorResponse with agent_response.text."""
-        agent_resp = Mock()
+        agent_resp = Mock(spec=['text'])
         agent_resp.text = "Agent executor response"
         
         executor_resp = Mock(spec=['agent_response'])
@@ -935,7 +935,7 @@ class TestExtractResponseText(IsolatedAsyncioTestCase):
 
     def test_extract_response_text_agent_executor_response_fallback_to_conversation(self):
         """Test extracting text from AgentExecutorResponse falling back to full_conversation."""
-        agent_resp = Mock()
+        agent_resp = Mock(spec=['text'])
         agent_resp.text = None
         
         last_msg = MockChatMessage("Last conversation message")
@@ -949,7 +949,7 @@ class TestExtractResponseText(IsolatedAsyncioTestCase):
 
     def test_extract_response_text_agent_executor_response_empty_conversation(self):
         """Test extracting text from AgentExecutorResponse with empty conversation."""
-        agent_resp = Mock()
+        agent_resp = Mock(spec=['text'])
         agent_resp.text = None
         
         executor_resp = Mock(spec=['agent_response', 'full_conversation'])
