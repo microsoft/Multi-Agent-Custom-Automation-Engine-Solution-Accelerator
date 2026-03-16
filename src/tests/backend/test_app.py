@@ -13,8 +13,7 @@ this file is imported, the tests will be skipped.
 import pytest
 import sys
 import os
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-from types import ModuleType
+from unittest.mock import Mock, AsyncMock, patch, NonCallableMock
 
 # Environment variables are set by conftest.py, but ensure they're available
 os.environ.setdefault("APPLICATIONINSIGHTS_CONNECTION_STRING", "InstrumentationKey=test-key-12345")
@@ -36,7 +35,8 @@ os.environ.setdefault("APP_ENV", "dev")
 os.environ.setdefault("AZURE_OPENAI_RAI_DEPLOYMENT_NAME", "test-rai-deployment")
 
 # Check if v4 has been mocked by another test file (prevents import errors)
-_v4_is_mocked = 'v4' in sys.modules and isinstance(sys.modules['v4'], (Mock, MagicMock))
+# Use NonCallableMock to catch all mock subclasses (Mock, MagicMock, etc.)
+_v4_is_mocked = 'v4' in sys.modules and isinstance(sys.modules['v4'], NonCallableMock)
 if _v4_is_mocked:
     # Skip this module - v4 has been mocked by another test file
     pytest.skip(
