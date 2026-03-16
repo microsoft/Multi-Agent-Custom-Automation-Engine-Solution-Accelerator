@@ -11,7 +11,7 @@ the full test suite due to test collection order.
 
 import unittest
 import sys
-from unittest.mock import Mock, MagicMock, NonCallableMock
+from unittest.mock import NonCallableMock
 
 import pytest
 

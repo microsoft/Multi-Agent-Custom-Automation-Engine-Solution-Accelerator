@@ -13,8 +13,7 @@ this file is imported, the tests will be skipped.
 import pytest
 import sys
 import os
-from unittest.mock import Mock, AsyncMock, patch, MagicMock, NonCallableMock
-from types import ModuleType
+from unittest.mock import Mock, AsyncMock, patch, NonCallableMock
 
 # Environment variables are set by conftest.py, but ensure they're available
 os.environ.setdefault("APPLICATIONINSIGHTS_CONNECTION_STRING", "InstrumentationKey=test-key-12345")
