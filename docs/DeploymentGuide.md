@@ -96,6 +96,29 @@ Important instructions:
 
 GitHub Copilot will walk you through the deployment guide step by step, running commands on your behalf and explaining each action before executing it. If you prefer to deploy manually, continue with the steps below.
 
+During the deployment, you will be prompted with the following questions:
+
+WAF / Non-WAF:
+1. Yes - will implement WAF configuration
+2. No - will perform non-WAF deployment
+
+Advanced Configuration Changes:
+1. Yes - will implement advanced changes to AI model configurations and resources
+2. No - will keep default values
+
+Use Case Implementation:
+1. RFP
+2. Retail
+3. HR Employee
+4. Marketing
+5. Contract Compliance
+6. All
+
+App Authentication Configuration:
+1. Yes - will provide steps to implement in Azure portal
+2. No - will skip this step
+
+
 ---
 
 ## Step 3: Choose Your Deployment Environment
