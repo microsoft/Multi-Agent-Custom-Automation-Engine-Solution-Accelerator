@@ -11,13 +11,14 @@ the full test suite due to test collection order.
 
 import unittest
 import sys
-from unittest.mock import Mock, MagicMock
+from unittest.mock import NonCallableMock
 
 import pytest
 
 # Check if v4 has been mocked by another test file (prevents import errors)
-_v4_is_mocked = 'v4' in sys.modules and isinstance(sys.modules['v4'], (Mock, MagicMock))
-_v4_models_is_mocked = 'v4.models' in sys.modules and isinstance(sys.modules['v4.models'], (Mock, MagicMock))
+# Use NonCallableMock to catch all mock subclasses (Mock, MagicMock, etc.)
+_v4_is_mocked = 'v4' in sys.modules and isinstance(sys.modules['v4'], NonCallableMock)
+_v4_models_is_mocked = 'v4.models' in sys.modules and isinstance(sys.modules['v4.models'], NonCallableMock)
 if _v4_is_mocked or _v4_models_is_mocked:
     pytest.skip(
         "Skipping test_plan_to_mplan_converter.py: v4 module has been mocked by another test file. "
