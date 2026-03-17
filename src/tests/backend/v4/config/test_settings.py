@@ -522,6 +522,24 @@ class TestConnectionConfig(unittest.IsolatedAsyncioTestCase):
         self.assertIn('type', sent_data)
         self.assertEqual(sent_data['data'], message)
 
+    async def test_send_status_update_async_success(self):
+        """Test sending a plain string status update successfully."""
+
+        config = ConnectionConfig()
+        user_id = "user-123"
+        process_id = "process-456"
+        message = "Test message"
+        connection = AsyncMock()
+
+        config.add_connection(process_id, connection, user_id)
+
+        await config.send_status_update_async(message, user_id)
+
+        connection.send_text.assert_called_once()
+        sent_data = json.loads(connection.send_text.call_args[0][0])
+        self.assertIn('type', sent_data)
+        self.assertEqual(sent_data['data'], message)
+
     async def test_send_status_update_async_no_user_id(self):
         """Test sending status update with no user ID."""
         
