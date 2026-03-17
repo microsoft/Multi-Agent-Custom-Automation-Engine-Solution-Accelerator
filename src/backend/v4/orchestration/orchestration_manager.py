@@ -210,7 +210,7 @@ class OrchestrationManager:
             manager=manager,
             checkpoint_storage=storage,
             max_round_count=orchestration_config.max_rounds,
-            max_stall_count=3,  # CRITICAL: Prevent re-calling agents when stalled (default is 3!)
+            max_stall_count=3,  # Allow up to 3 stalled rounds before stopping; set to 0 to strictly prevent re-calling stalled agents.
             intermediate_outputs=True,  # Required: yield agent streaming output events, not just orchestrator output
         )
 
