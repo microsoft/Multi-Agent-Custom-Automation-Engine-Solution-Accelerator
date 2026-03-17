@@ -134,8 +134,8 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
                 raise
         # If we get here, all retry attempts have been exhausted without a successful response.
         raise RuntimeError(
-             f"Agent failed to complete after {max_retries} attempts due to repeated errors."
-         )
+            f"Agent failed to complete after {max_retries} attempts due to repeated errors."
+        )
 
     async def plan(self, magentic_context: MagenticContext) -> Any:
         """
