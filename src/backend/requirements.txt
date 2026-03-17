@@ -26,10 +26,6 @@ opentelemetry-exporter-otlp-proto-grpc
 # Date and internationalization
 babel>=2.9.0
 
-# Agent Framework
-agent-framework-core==1.0.0rc4
-agent-framework-azure-ai==1.0.0rc4
-agent-framework-orchestrations==1.0.0b260311
 
 # Testing tools
 pytest>=8.2,<9  # Compatible version for pytest-asyncio
