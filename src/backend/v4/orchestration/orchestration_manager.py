@@ -9,16 +9,18 @@ from typing import List, Optional
 # agent_framework imports
 from agent_framework_azure_ai import AzureAIClient
 from agent_framework import (
-    ChatAgent,
-    ChatMessage,
-    WorkflowOutputEvent,
-    MagenticBuilder,
+    Agent,
+    AgentResponseUpdate,
+    ChatOptions,
+    Message,
     InMemoryCheckpointStorage,
-    AgentRunUpdateEvent,
+)
+from agent_framework_orchestrations import MagenticBuilder
+from agent_framework_orchestrations._base_group_chat_orchestrator import (
     GroupChatRequestSentEvent,
     GroupChatResponseReceivedEvent,
-    ExecutorCompletedEvent,
-    MagenticOrchestratorEvent,
+)
+from agent_framework_orchestrations._magentic import (
     MagenticProgressLedger,
 )
 
@@ -28,8 +30,8 @@ from common.models.messages_af import TeamConfiguration
 from common.database.database_base import DatabaseBase
 
 from v4.common.services.team_service import TeamService
+import time as _time
 from v4.callbacks.response_handlers import (
-    agent_response_callback,
     streaming_agent_response_callback,
 )
 from v4.config.settings import connection_config, orchestration_config
@@ -52,7 +54,7 @@ class OrchestrationManager:
         Extract text content from various agent_framework response types.
 
         Handles:
-        - ChatMessage: Extract .text
+        - Message: Extract .text
         - AgentResponse: Extract .text
         - AgentExecutorResponse: Extract from agent_response.text or full_conversation[-1].text
         - List of any of the above
@@ -60,8 +62,8 @@ class OrchestrationManager:
         if data is None:
             return ""
 
-        # Direct ChatMessage
-        if isinstance(data, ChatMessage):
+        # Direct Message
+        if isinstance(data, Message):
             return data.text or ""
 
         # Has .text attribute directly (AgentResponse, etc.)
@@ -77,7 +79,7 @@ class OrchestrationManager:
             # Fallback to last message in full_conversation
             if hasattr(data, "full_conversation") and data.full_conversation:
                 last_msg = data.full_conversation[-1]
-                if isinstance(last_msg, ChatMessage) and last_msg.text:
+                if isinstance(last_msg, Message) and last_msg.text:
                     return last_msg.text
 
         # List of items - could be AgentExecutorResponse, ChatMessage, etc.
@@ -140,15 +142,15 @@ class OrchestrationManager:
                 credential=credential,
             )
 
-            # New API: Create a ChatAgent to wrap the chat client for the manager
-            manager_agent = ChatAgent(
-                chat_client=chat_client,
+            # New API: Create an Agent to wrap the chat client for the manager
+            manager_agent = Agent(
+                client=chat_client,
                 name="MagenticManager",
-                default_options={"store": False},  # Client-managed conversation to avoid stale tool call IDs across rounds
+                default_options=ChatOptions(store=False),  # Client-managed conversation to avoid stale tool call IDs across rounds
             )
 
             cls.logger.info(
-                "Created AzureAIClient and manager ChatAgent for orchestration with model '%s' at endpoint '%s'",
+                "Created AzureAIClient and manager Agent for orchestration with model '%s' at endpoint '%s'",
                 team_config.deployment_name,
                 config.AZURE_AI_PROJECT_ENDPOINT,
             )
@@ -163,6 +165,8 @@ class OrchestrationManager:
                 user_id=user_id,
                 agent=manager_agent,  # New API: pass agent instead of chat_client
                 max_round_count=orchestration_config.max_rounds,
+                max_stall_count=3,
+                max_reset_count=2
             )
             cls.logger.info(
                 "Created HumanApprovalMagenticManager for user '%s' with max_rounds=%d",
@@ -180,12 +184,12 @@ class OrchestrationManager:
             if not name:
                 name = f"agent_{len(participants) + 1}"
 
-            # Extract the inner ChatAgent for wrapper templates
-            # FoundryAgentTemplate wrap a ChatAgent in self._agent
+            # Extract the inner Agent for wrapper templates
+            # FoundryAgentTemplate wrap an Agent in self._agent
             # ProxyAgent directly extends BaseAgent and can be used as-is
             if hasattr(ag, "_agent") and ag._agent is not None:
                 # This is a wrapper (FoundryAgentTemplate)
-                # Use the inner ChatAgent which implements AgentProtocol
+                # Use the inner Agent which implements AgentProtocol
                 participants[name] = ag._agent
                 cls.logger.debug("Added participant '%s' (extracted inner agent)", name)
             else:
@@ -201,15 +205,13 @@ class OrchestrationManager:
         participant_list = list(participants.values())
         cls.logger.info("Participants for workflow: %s", list(participants.keys()))
 
-        builder = (
-            MagenticBuilder()
-            .participants(participant_list)  # New SDK: pass as list
-            .with_manager(
-                manager=manager,  # Pass manager instance (extends StandardMagenticManager)
-                max_round_count=orchestration_config.max_rounds,
-                max_stall_count=0,  # CRITICAL: Prevent re-calling agents when stalled (default is 3!)
-            )
-            .with_checkpointing(storage)
+        builder = MagenticBuilder(
+            participants=participant_list,
+            manager=manager,
+            checkpoint_storage=storage,
+            max_round_count=orchestration_config.max_rounds,
+            max_stall_count=3,  # Allow up to 3 stalled rounds before stopping; set to 0 to strictly prevent re-calling stalled agents.
+            intermediate_outputs=True,  # Required: yield agent streaming output events, not just orchestrator output
         )
 
         # Build workflow
@@ -372,111 +374,122 @@ class OrchestrationManager:
 
         # Track how many times each agent is called (for debugging duplicate calls)
         agent_call_counts: dict = {}
+        # Buffer streamed text per-agent so we can emit a complete AGENT_MESSAGE
+        agent_stream_buffers: dict[str, str] = {}
 
         try:
-            # Execute workflow using run_stream with task as positional parameter
+            # Execute workflow using run() with stream=True
             # The execution settings are configured in the manager/client
             final_output: str | None = None
 
             self.logger.info("Starting workflow execution...")
 
-            last_message_id: str | None = None
-            async for event in workflow.run_stream(task_text):
+            async for event in workflow.run(task_text, stream=True):
                 try:
-                    # Only log non-streaming events (reduce noise)
-                    event_type_name = type(event).__name__
-                    if event_type_name != "AgentRunUpdateEvent":
-                        self.logger.info("[EVENT] %s", event_type_name)
+                    # WorkflowEvent has a .type field (string) instead of specific event classes
+                    event_type = event.type if hasattr(event, "type") else type(event).__name__
+                    if event_type not in ("status", "output"):
+                        self.logger.info("[EVENT] type=%s", event_type)
 
                     # Handle orchestrator events (plan, progress ledger)
-                    if isinstance(event, MagenticOrchestratorEvent):
+                    if event_type == "magentic_orchestrator":
                         self.logger.info(
-                            "[Magentic Orchestrator Event] Type: %s",
-                            event.event_type.name
+                            "[Magentic Orchestrator Event]"
                         )
-                        if isinstance(event.data, ChatMessage):
+                        if isinstance(event.data, Message):
                             self.logger.info("Plan message: %s", event.data.text[:200] if event.data.text else "")
                         elif isinstance(event.data, MagenticProgressLedger):
                             self.logger.info("Progress ledger received")
 
-                    # Handle agent streaming/updates (replaces MagenticAgentDeltaEvent and MagenticAgentMessageEvent)
-                    elif isinstance(event, AgentRunUpdateEvent):
-                        message_id = event.data.message_id if hasattr(event.data, 'message_id') else None
-                        executor_id = event.executor_id
-
-                        # Stream the update
-                        try:
-                            await streaming_agent_response_callback(
-                                executor_id,
-                                event.data,  # Pass the data object
-                                False,  # Not final yet
-                                user_id,
-                            )
-                        except Exception as e:
-                            self.logger.error(
-                                "Error in streaming callback for agent %s: %s",
-                                executor_id, e
-                            )
-
-                        # Track message for formatting
-                        if message_id != last_message_id:
-                            last_message_id = message_id
-
                     # Handle group chat request sent
-                    elif isinstance(event, GroupChatRequestSentEvent):
-                        agent_name = event.participant_name
-                        agent_call_counts[agent_name] = agent_call_counts.get(agent_name, 0) + 1
-                        call_num = agent_call_counts[agent_name]
+                    elif event_type == "group_chat":
+                        # Check if this is a request or response via the data type
+                        if isinstance(event.data, GroupChatRequestSentEvent):
+                            agent_name = event.data.participant_name
+                            agent_call_counts[agent_name] = agent_call_counts.get(agent_name, 0) + 1
+                            call_num = agent_call_counts[agent_name]
 
-                        self.logger.info(
-                            "[REQUEST SENT (round %d)] to agent: %s (call #%d)",
-                            event.round_index,
-                            agent_name,
-                            call_num
-                        )
+                            self.logger.info(
+                                "[REQUEST SENT (round %d)] to agent: %s (call #%d)",
+                                event.data.round_index,
+                                agent_name,
+                                call_num
+                            )
 
-                        if call_num > 1:
-                            self.logger.warning("Agent '%s' called %d times", agent_name, call_num)
+                            if call_num > 1:
+                                self.logger.warning("Agent '%s' called %d times", agent_name, call_num)
 
-                    # Handle group chat response received - THIS IS WHERE AGENT RESPONSES COME
-                    elif isinstance(event, GroupChatResponseReceivedEvent):
-                        self.logger.info(
-                            "[RESPONSE RECEIVED (round %d)] from agent: %s",
-                            event.round_index,
-                            event.participant_name
-                        )
-                        # Send the agent response to the UI
-                        if event.data:
-                            response_text = self._extract_response_text(event.data)
+                        elif isinstance(event.data, GroupChatResponseReceivedEvent):
+                            agent_name = event.data.participant_name
+                            self.logger.info(
+                                "[RESPONSE RECEIVED (round %d)] from agent: %s",
+                                event.data.round_index,
+                                agent_name
+                            )
+                            # Flush accumulated streaming content as a complete AGENT_MESSAGE
+                            buffered = agent_stream_buffers.pop(agent_name, "")
+                            if buffered:
+                                from v4.callbacks.response_handlers import clean_citations
+                                from v4.models.messages import AgentMessage
+                                cleaned = clean_citations(buffered)
+                                if cleaned.strip():
+                                    agent_msg = AgentMessage(
+                                        agent_name=agent_name,
+                                        timestamp=str(_time.time()),
+                                        content=cleaned,
+                                    )
+                                    await connection_config.send_status_update_async(
+                                        agent_msg,
+                                        user_id,
+                                        message_type=WebsocketMessageType.AGENT_MESSAGE,
+                                    )
+                                    self.logger.info(
+                                        "Sent AGENT_MESSAGE for '%s' (%d chars)",
+                                        agent_name, len(cleaned)
+                                    )
 
-                            if response_text:
-                                self.logger.info("Sending agent response to UI from %s", event.participant_name)
-                                agent_response_callback(
-                                    event.participant_name,
-                                    ChatMessage(role="assistant", text=response_text),
-                                    user_id,
-                                )
-
-                    # Handle executor completed - just log, don't send to UI (GroupChatResponseReceivedEvent handles that)
-                    elif isinstance(event, ExecutorCompletedEvent):
+                    # Handle executor completed - just log, don't send to UI
+                    elif event_type == "executor_completed":
                         self.logger.debug(
                             "[EXECUTOR COMPLETED] agent: %s",
-                            event.executor_id
+                            getattr(event, "executor_id", "unknown")
                         )
-                        # Don't send to UI here - GroupChatResponseReceivedEvent already handles agent messages
-                        # This avoids duplicate messages
+                        # Don't send to UI here - group_chat events already handle agent messages
 
-                    # Handle workflow output event (captures final result)
-                    elif isinstance(event, WorkflowOutputEvent):
+                    # Handle workflow output event (streaming chunks AND final result)
+                    elif event_type == "output":
+                        executor_id = getattr(event, "executor_id", None)
                         output_data = event.data
-                        # Handle different output formats
-                        if isinstance(output_data, ChatMessage):
+                        self.logger.info(
+                            "[OUTPUT] executor=%s data_type=%s",
+                            executor_id, type(output_data).__name__
+                        )
+
+                        # Streaming chunk from an agent executor
+                        if isinstance(output_data, AgentResponseUpdate) and executor_id:
+                            chunk_text = output_data.text or ""
+                            if chunk_text:
+                                agent_stream_buffers[executor_id] = agent_stream_buffers.get(executor_id, "") + chunk_text
+                            try:
+                                await streaming_agent_response_callback(
+                                    executor_id,
+                                    output_data,
+                                    False,
+                                    user_id,
+                                )
+                            except Exception as e:
+                                self.logger.error(
+                                    "Error in streaming callback for agent %s: %s",
+                                    executor_id, e
+                                )
+                        # Final workflow output (list[Message] or Message)
+                        elif isinstance(output_data, Message):
                             final_output = output_data.text or ""
                         elif isinstance(output_data, list):
-                            # Handle list of ChatMessage objects
+                            # Handle list of Message objects
                             texts = []
                             for item in output_data:
-                                if isinstance(item, ChatMessage):
+                                if isinstance(item, Message):
                                     if item.text:
                                         texts.append(item.text)
                                 else:

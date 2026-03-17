@@ -8,8 +8,8 @@ import logging
 from typing import Any, Optional
 
 import v4.models.messages as messages
-from agent_framework import ChatMessage
-from agent_framework._workflows._magentic import (
+from agent_framework import AgentResponse, Message
+from agent_framework_orchestrations._magentic import (
     MagenticContext,
     StandardMagenticManager,
     ORCHESTRATOR_FINAL_ANSWER_PROMPT,
@@ -87,12 +87,55 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
         kwargs["final_answer_prompt"] = ORCHESTRATOR_FINAL_ANSWER_PROMPT + final_append
 
         # Override progress ledger prompt to discourage re-calling agents
-        from agent_framework._workflows._magentic import ORCHESTRATOR_PROGRESS_LEDGER_PROMPT
+        from agent_framework_orchestrations._magentic import ORCHESTRATOR_PROGRESS_LEDGER_PROMPT
         kwargs["progress_ledger_prompt"] = ORCHESTRATOR_PROGRESS_LEDGER_PROMPT + progress_append
 
         self.current_user_id = user_id
         # New API: StandardMagenticManager takes agent as first positional argument
         super().__init__(agent, *args, **kwargs)
+
+    async def _complete(self, messages: list[Message]) -> Message:
+        """Override to pass session=None, making each LLM call stateless.
+
+        The base class passes session=self._session which triggers
+        InMemoryHistoryProvider auto-injection and previous_response_id
+        chaining in rc4. This causes message payloads to grow with every
+        internal call (facts, plan, progress ledger, etc.), burning through
+        TPM quota (429 errors) and confusing the orchestrator LLM's routing
+        decisions (e.g. skipping ProxyAgent for user clarification).
+
+        Passing session=None restores the old stateless behavior where each
+        call only sends the messages explicitly provided.
+        """
+        from openai import RateLimitError
+
+        max_retries = 5
+        base_delay = 2.0  # seconds
+
+        for attempt in range(max_retries):
+            try:
+                response: AgentResponse = await self._agent.run(messages, session=None)
+                if not response.messages:
+                    raise RuntimeError("Agent returned no messages in response.")
+                if len(response.messages) > 1:
+                    logger.warning("Agent returned multiple messages; using the last one.")
+                return response.messages[-1]
+            except Exception as exc:
+                inner = getattr(exc, "inner_exception", None)
+                is_rate_limit = isinstance(inner, RateLimitError) or "429" in str(exc)
+                if is_rate_limit and attempt < max_retries - 1:
+                    delay = base_delay * (2 ** attempt)
+                    logger.warning(
+                        "Rate limit hit (attempt %d/%d). Retrying in %.1fs...",
+                        attempt + 1, max_retries, delay,
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+                raise
+        # If we get here, all retry attempts have been exhausted without a successful response.
+        raise RuntimeError(
+            f"Agent failed to complete after {max_retries} attempts due to repeated errors."
+        )
 
     async def plan(self, magentic_context: MagenticContext) -> Any:
         """
@@ -292,7 +335,7 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
 
     async def prepare_final_answer(
         self, magentic_context: MagenticContext
-    ) -> ChatMessage:
+    ) -> Message:
         """
         Override to ensure final answer is prepared after all steps are executed.
         """

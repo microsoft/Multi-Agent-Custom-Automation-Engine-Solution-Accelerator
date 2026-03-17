@@ -765,6 +765,23 @@ export class PlanDataService {
    */
   static parseUserClarificationRequest(rawData: any): ParsedUserClarification | null {
     try {
+      // First try direct JSON extraction (clean dict format from backend)
+      const extractDirect = (val: any, depth = 0): ParsedUserClarification | null => {
+        if (depth > 10 || !val || typeof val !== 'object') return null;
+        if (typeof val.question === 'string' && typeof val.request_id === 'string') {
+          return {
+            type: WebsocketMessageType.USER_CLARIFICATION_REQUEST,
+            question: val.question.trim(),
+            request_id: val.request_id,
+          };
+        }
+        if (val.data !== undefined) return extractDirect(val.data, depth + 1);
+        return null;
+      };
+      const direct = extractDirect(rawData);
+      if (direct) return direct;
+
+      // Fallback: extract from Python repr string (legacy format)
       const extractString = (val: any, depth = 0): string | null => {
         if (depth > 15) return null;
         if (typeof val === 'string') {
