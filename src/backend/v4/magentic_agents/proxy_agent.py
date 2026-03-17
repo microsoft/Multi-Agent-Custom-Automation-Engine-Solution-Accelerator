@@ -13,18 +13,18 @@ import asyncio
 import logging
 import time
 import uuid
-from typing import Any, AsyncIterable
+from typing import Any, AsyncIterable, Awaitable
 
 from agent_framework import (
     AgentResponse,
     AgentResponseUpdate,
     BaseAgent,
-    ChatMessage,
-    Role,
+    Message,
     Content,
     UsageDetails,
-    AgentThread,
+    AgentSession,
 )
+from agent_framework._types import ResponseStream
 
 from v4.config.settings import connection_config, orchestration_config
 from v4.models.messages import (
@@ -42,7 +42,7 @@ class ProxyAgent(BaseAgent):
     A human-in-the-loop clarification agent extending agent_framework's BaseAgent.
 
     This agent mediates human clarification requests rather than using an LLM.
-    It follows the agent_framework protocol with run() and run_stream() methods.
+    It follows the agent_framework protocol with run() method (stream=True/False).
     """
 
     def __init__(
@@ -68,79 +68,65 @@ class ProxyAgent(BaseAgent):
     # AgentProtocol implementation
     # ---------------------------
 
-    def get_new_thread(self, **kwargs: Any) -> AgentThread:
+    def create_session(self, *, session_id: str | None = None, **kwargs: Any) -> AgentSession:
         """
-        Create a new thread for ProxyAgent conversations.
+        Create a new session for ProxyAgent conversations.
         Required by AgentProtocol for workflow integration.
 
         Args:
-            **kwargs: Additional keyword arguments for thread creation
+            session_id: Optional session ID
+            **kwargs: Additional keyword arguments for session creation
 
         Returns:
-            A new AgentThread instance
+            A new AgentSession instance
         """
-        return AgentThread(**kwargs)
+        return AgentSession(session_id=session_id, **kwargs)
 
-    async def run(
+    def run(
         self,
-        messages: str | ChatMessage | list[str] | list[ChatMessage] | None = None,
+        messages: str | Message | list[str] | list[Message] | None = None,
         *,
-        thread: AgentThread | None = None,
+        stream: bool = False,
+        session: AgentSession | None = None,
         **kwargs: Any,
-    ) -> AgentResponse:
+    ) -> Awaitable[AgentResponse] | ResponseStream[AgentResponseUpdate, AgentResponse]:
         """
-        Get complete clarification response (non-streaming).
+        Run clarification (streaming or non-streaming).
 
-        Args:
-            messages: The message(s) requiring clarification
-            thread: Optional conversation thread
-            kwargs: Additional keyword arguments
-
-        Returns:
-            AgentResponse with the clarification
+        Must be a regular def (not async def) to match the Agent.run() contract.
+        The framework calls agent.run() without await and expects either
+        a ResponseStream (stream=True) or an Awaitable (stream=False).
         """
-        # Collect all streaming updates
-        response_messages: list[ChatMessage] = []
-        response_id = str(uuid.uuid4())
+        if stream:
+            return ResponseStream(
+                self._invoke_stream_internal(messages, session, **kwargs),
+                finalizer=lambda updates: AgentResponse.from_updates(updates),
+            )
 
-        async for update in self.run_stream(messages, thread=thread, **kwargs):
-            if update.contents:
-                response_messages.append(
-                    ChatMessage(
-                        role=update.role or Role.ASSISTANT,
-                        contents=update.contents,
+        async def _run_non_streaming() -> AgentResponse:
+            response_messages: list[Message] = []
+            response_id = str(uuid.uuid4())
+
+            async for update in self._invoke_stream_internal(messages, session, **kwargs):
+                if update.contents:
+                    response_messages.append(
+                        Message(
+                            role=update.role or "assistant",
+                            contents=update.contents,
+                        )
                     )
-                )
 
-        return AgentResponse(
-            messages=response_messages,
-            response_id=response_id,
-        )
+            return AgentResponse(
+                messages=response_messages,
+                response_id=response_id,
+            )
 
-    def run_stream(
-        self,
-        messages: str | ChatMessage | list[str] | list[ChatMessage] | None = None,
-        *,
-        thread: AgentThread | None = None,
-        **kwargs: Any,
-    ) -> AsyncIterable[AgentResponseUpdate]:
-        """
-        Stream clarification process with human interaction.
-
-        Args:
-            messages: The message(s) requiring clarification
-            thread: Optional conversation thread
-            kwargs: Additional keyword arguments
-
-        Yields:
-            AgentRunResponseUpdate objects with clarification progress
-        """
-        return self._invoke_stream_internal(messages, thread, **kwargs)
+        return _run_non_streaming()
 
     async def _invoke_stream_internal(
         self,
-        messages: str | ChatMessage | list[str] | list[ChatMessage] | None,
-        thread: AgentThread | None,
+        messages: str | Message | list[str] | list[Message] | None,
+        session: AgentSession | None,
         **kwargs: Any,
     ) -> AsyncIterable[AgentResponseUpdate]:
         """
@@ -154,23 +140,26 @@ class ProxyAgent(BaseAgent):
         message_text = self._extract_message_text(messages)
 
         logger.info(
-            "ProxyAgent: Requesting clarification (thread=%s, user=%s)",
-            "present" if thread else "None",
+            "ProxyAgent: Requesting clarification (session=%s, user=%s)",
+            "present" if session else "None",
             self.user_id
         )
         logger.debug("ProxyAgent: Message text: %s", message_text[:100])
 
         clarification_req_text = f"{message_text}"
+        request_id = str(uuid.uuid4())
         clarification_request = UserClarificationRequest(
             question=clarification_req_text,
-            request_id=str(uuid.uuid4()),
+            request_id=request_id,
         )
 
         # Dispatch websocket event requesting clarification
+        # Serialize dataclass to a plain dict so json.dumps produces proper JSON
+        # instead of relying on str() repr which is fragile for the frontend parser.
         await connection_config.send_status_update_async(
             {
-                "type": WebsocketMessageType.USER_CLARIFICATION_REQUEST,
-                "data": clarification_request,
+                "question": clarification_req_text,
+                "request_id": request_id,
             },
             user_id=self.user_id,
             message_type=WebsocketMessageType.USER_CLARIFICATION_REQUEST,
@@ -204,10 +193,10 @@ class ProxyAgent(BaseAgent):
         message_id = str(uuid.uuid4())
 
         # Yield final assistant text update with explicit text content
-        # New API: use Content.from_text() or pass text directly to AgentResponseUpdate
+        # New API: use Content.from_text() to wrap text in AgentResponseUpdate
         text_update = AgentResponseUpdate(
-            role=Role.ASSISTANT,
-            text=synthetic_reply,  # New API accepts text directly
+            role="assistant",
+            contents=[Content.from_text(text=synthetic_reply)],
             author_name=self.name,
             response_id=response_id,
             message_id=message_id,
@@ -219,7 +208,7 @@ class ProxyAgent(BaseAgent):
         # Yield synthetic usage update for consistency
         # Use same message_id to indicate this is part of the same message
         usage_update = AgentResponseUpdate(
-            role=Role.ASSISTANT,
+            role="assistant",
             contents=[
                 Content.from_usage(
                     UsageDetails(
@@ -244,14 +233,14 @@ class ProxyAgent(BaseAgent):
     # ---------------------------
 
     def _extract_message_text(
-        self, messages: str | ChatMessage | list[str] | list[ChatMessage] | None
+        self, messages: str | Message | list[str] | list[Message] | None
     ) -> str:
         """Extract text from various message formats."""
         if messages is None:
             return ""
         if isinstance(messages, str):
             return messages
-        if isinstance(messages, ChatMessage):
+        if isinstance(messages, Message):
             # Use the .text property which concatenates all TextContent items
             return messages.text or ""
         if isinstance(messages, list):
@@ -259,7 +248,7 @@ class ProxyAgent(BaseAgent):
                 return ""
             if isinstance(messages[0], str):
                 return " ".join(messages)
-            if isinstance(messages[0], ChatMessage):
+            if isinstance(messages[0], Message):
                 # Use .text property for each message
                 return " ".join(msg.text or "" for msg in messages)
         return str(messages)

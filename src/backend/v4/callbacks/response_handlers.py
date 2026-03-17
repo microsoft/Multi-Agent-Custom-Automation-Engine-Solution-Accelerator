@@ -8,7 +8,7 @@ import time
 import re
 from typing import Any
 
-from agent_framework import ChatMessage
+from agent_framework import Message
 
 from v4.config.settings import connection_config
 from v4.models.messages import (
@@ -64,22 +64,22 @@ def _extract_tool_calls_from_contents(contents: list[Any]) -> list[AgentToolCall
 
 def agent_response_callback(
     agent_id: str,
-    message: ChatMessage,
+    message: Message,
     user_id: str | None = None,
 ) -> None:
     """
-    Final (non-streaming) agent response callback using agent_framework ChatMessage.
+    Final (non-streaming) agent response callback using agent_framework Message.
     """
     agent_name = getattr(message, "author_name", None) or agent_id or "Unknown Agent"
     role = getattr(message, "role", "assistant")
 
-    # FIX: Properly extract text from ChatMessage
-    # ChatMessage has a .text property that concatenates all TextContent items
+    # FIX: Properly extract text from Message
+    # Message has a .text property that concatenates all TextContent items
     text = ""
-    if isinstance(message, ChatMessage):
+    if isinstance(message, Message):
         text = message.text  # Use the property directly
     else:
-        # Fallback for non-ChatMessage objects
+        # Fallback for non-Message objects
         text = str(getattr(message, "text", ""))
 
     text = clean_citations(text or "")
@@ -125,8 +125,8 @@ async def streaming_agent_response_callback(
         # If text is None, don't fall back to str(update) as that would show object repr
         # Just skip if there's no actual text content
         if chunk_text is None:
-            # Check if update is a ChatMessage
-            if isinstance(update, ChatMessage):
+            # Check if update is a Message
+            if isinstance(update, Message):
                 chunk_text = update.text or ""
             elif hasattr(update, "content"):
                 chunk_text = str(update.content) if update.content else ""
