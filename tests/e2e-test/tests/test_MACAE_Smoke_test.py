@@ -447,6 +447,129 @@ def test_macae_v4_gp_workflow(login_logout, request):
         raise
 
 
+@pytest.mark.gp
+def test_hr_workflow_only(login_logout, request):
+    """
+    Validate HR workflow only (Steps 14-19).
+    
+    This test focuses on just the Human Resources workflow for easier debugging.
+    Note: This assumes a fresh page state.
+    
+    Steps:
+    1. Validate home page elements are visible
+    2. Select Human Resources team
+    3. Select quick task and create plan
+    4. Validate all HR agents are displayed
+    5. Approve the task plan
+    6. Send human clarification with employee details
+    7. Validate HR response
+    """
+    page = login_logout
+    biab_page = BIABPage(page)
+    
+    # Update test node ID for HTML report
+    request.node._nodeid = "(MACAE V4) HR Workflow Only - Steps 14-19"
+    
+    logger.info("=" * 80)
+    logger.info("Starting HR Workflow Test")
+    logger.info("=" * 80)
+    
+    start_time = time.time()
+    
+    try:
+        # Reload home page before starting test
+        biab_page.reload_home_page()
+        
+        # Step 1: Validate Home Page
+        logger.info("\n" + "=" * 80)
+        logger.info("STEP 1: Validating Home Page")
+        logger.info("=" * 80)
+        step1_start = time.time()
+        biab_page.validate_home_page()
+        step1_end = time.time()
+        logger.info(f"Step 1 completed in {step1_end - step1_start:.2f} seconds")
+        
+        # Step 2: Select Human Resources Team
+        logger.info("\n" + "=" * 80)
+        logger.info("STEP 2: Selecting Human Resources Team")
+        logger.info("=" * 80)
+        step2_start = time.time()
+        biab_page.select_human_resources_team()
+        step2_end = time.time()
+        logger.info(f"Step 2 completed in {step2_end - step2_start:.2f} seconds")
+        
+        # Step 3: Select Quick Task and Create Plan (HR)
+        logger.info("\n" + "=" * 80)
+        logger.info("STEP 3: Selecting Quick Task and Creating Plan (HR)")
+        logger.info("=" * 80)
+        step3_start = time.time()
+        biab_page.select_quick_task_and_create_plan()
+        step3_end = time.time()
+        logger.info(f"Step 3 completed in {step3_end - step3_start:.2f} seconds")
+        
+        # Step 4: Validate All HR Agents Visible
+        logger.info("\n" + "=" * 80)
+        logger.info("STEP 4: Validating All HR Agents Are Displayed")
+        logger.info("=" * 80)
+        step4_start = time.time()
+        biab_page.validate_hr_agents()
+        step4_end = time.time()
+        logger.info(f"Step 4 completed in {step4_end - step4_start:.2f} seconds")
+        
+        # Step 5: Approve Task Plan (HR)
+        logger.info("\n" + "=" * 80)
+        logger.info("STEP 5: Approving HR Task Plan")
+        logger.info("=" * 80)
+        step5_start = time.time()
+        biab_page.approve_task_plan()
+        step5_end = time.time()
+        logger.info(f"Step 5 completed in {step5_end - step5_start:.2f} seconds")
+        
+        # Step 6: Send Human Clarification with Employee Details
+        logger.info("\n" + "=" * 80)
+        logger.info("STEP 6: Sending Human Clarification with Employee Details")
+        logger.info("=" * 80)
+        step6_start = time.time()
+        biab_page.input_clarification_and_send(HR_CLARIFICATION_TEXT)
+        step6_end = time.time()
+        logger.info(f"Step 6 completed in {step6_end - step6_start:.2f} seconds")
+        
+        # Step 7: Validate HR Response
+        logger.info("\n" + "=" * 80)
+        logger.info("STEP 7: Validating HR Response")
+        logger.info("=" * 80)
+        step7_start = time.time()
+        biab_page.validate_hr_response()
+        step7_end = time.time()
+        logger.info(f"Step 7 completed in {step7_end - step7_start:.2f} seconds")
+        
+        # Test completed successfully
+        end_time = time.time()
+        total_duration = end_time - start_time
+        
+        logger.info("\n" + "=" * 80)
+        logger.info("✓ HR Workflow Test PASSED")
+        logger.info("=" * 80)
+        logger.info(f"Total execution time: {total_duration:.2f} seconds")
+        logger.info("=" * 80)
+        
+        # Attach execution time to pytest report
+        request.node._report_sections.append(
+            ("call", "log", f"Total execution time: {total_duration:.2f}s")
+        )
+        
+    except Exception as e:
+        end_time = time.time()
+        total_duration = end_time - start_time
+        logger.error("\n" + "=" * 80)
+        logger.error("TEST EXECUTION FAILED")
+        logger.error("=" * 80)
+        logger.error(f"Error: {str(e)}")
+        logger.error(f"Execution time before failure: {total_duration:.2f}s")
+        logger.error("=" * 80)
+        raise
+
+
 def test_validate_source_text_not_visible(login_logout, request):
     """
     Validate that source text is not visible after retail customer response.
@@ -640,7 +763,7 @@ def test_rai_validation_unable_to_create_plan(login_logout, request):
         biab_page.select_retail_customer_success_team()
         
         logger.info(f"Entering RAI prompt: {RAI_PROMPT}")
-        biab_page.input_RAI_PROMPT_and_send(RAI_PROMPT)
+        biab_page.input_rai_prompt_and_send(RAI_PROMPT)
         
         logger.info("Validating 'Unable to create plan' message is visible...")
         biab_page.validate_rai_error_message()
@@ -661,7 +784,7 @@ def test_rai_validation_unable_to_create_plan(login_logout, request):
         biab_page.select_product_marketing_team()
         
         logger.info(f"Entering RAI prompt: {RAI_PROMPT}")
-        biab_page.input_RAI_PROMPT_and_send(RAI_PROMPT)
+        biab_page.input_rai_prompt_and_send(RAI_PROMPT)
         
         logger.info("Validating 'Unable to create plan' message is visible...")
         biab_page.validate_rai_error_message()
@@ -682,7 +805,7 @@ def test_rai_validation_unable_to_create_plan(login_logout, request):
         biab_page.select_human_resources_team()
         
         logger.info(f"Entering RAI prompt: {RAI_PROMPT}")
-        biab_page.input_RAI_PROMPT_and_send(RAI_PROMPT)
+        biab_page.input_rai_prompt_and_send(RAI_PROMPT)
         
         logger.info("Validating 'Unable to create plan' message is visible...")
         biab_page.validate_rai_error_message()
@@ -703,7 +826,7 @@ def test_rai_validation_unable_to_create_plan(login_logout, request):
         biab_page.select_rfp_team()
         
         logger.info(f"Entering RAI prompt: {RAI_PROMPT}")
-        biab_page.input_RAI_PROMPT_and_send(RAI_PROMPT)
+        biab_page.input_rai_prompt_and_send(RAI_PROMPT)
         
         logger.info("Validating 'Unable to create plan' message is visible...")
         biab_page.validate_rai_error_message()
@@ -724,7 +847,7 @@ def test_rai_validation_unable_to_create_plan(login_logout, request):
         biab_page.select_contract_compliance_team()
         
         logger.info(f"Entering RAI prompt: {RAI_PROMPT}")
-        biab_page.input_RAI_PROMPT_and_send(RAI_PROMPT)
+        biab_page.input_rai_prompt_and_send(RAI_PROMPT)
         
         logger.info("Validating 'Unable to create plan' message is visible...")
         biab_page.validate_rai_error_message()
@@ -1396,7 +1519,7 @@ def test_rai_prompts_all_teams(login_logout, request):
         step2_start = time.time()
         
         biab_page.select_human_resources_team()
-        biab_page.input_RAI_PROMPT_and_send(RAI_PROMPT)
+        biab_page.input_rai_prompt_and_send(RAI_PROMPT)
         biab_page.validate_rai_error_message()
         
         step2_end = time.time()
@@ -1409,7 +1532,7 @@ def test_rai_prompts_all_teams(login_logout, request):
         step3_start = time.time()
         
         biab_page.select_product_marketing_team()
-        biab_page.input_RAI_PROMPT_and_send(RAI_PROMPT)
+        biab_page.input_rai_prompt_and_send(RAI_PROMPT)
         biab_page.validate_rai_error_message()
         
         step3_end = time.time()
@@ -1422,7 +1545,7 @@ def test_rai_prompts_all_teams(login_logout, request):
         step4_start = time.time()
         
         biab_page.select_retail_customer_success_team()
-        biab_page.input_RAI_PROMPT_and_send(RAI_PROMPT)
+        biab_page.input_rai_prompt_and_send(RAI_PROMPT)
         biab_page.validate_rai_error_message()
         
         step4_end = time.time()
@@ -1435,7 +1558,7 @@ def test_rai_prompts_all_teams(login_logout, request):
         step5_start = time.time()
         
         biab_page.select_rfp_team()
-        biab_page.input_RAI_PROMPT_and_send(RAI_PROMPT)
+        biab_page.input_rai_prompt_and_send(RAI_PROMPT)
         biab_page.validate_rai_error_message()
         
         step5_end = time.time()
@@ -1448,7 +1571,7 @@ def test_rai_prompts_all_teams(login_logout, request):
         step6_start = time.time()
         
         biab_page.select_contract_compliance_team()
-        biab_page.input_RAI_PROMPT_and_send(RAI_PROMPT)
+        biab_page.input_rai_prompt_and_send(RAI_PROMPT)
         biab_page.validate_rai_error_message()
         
         step6_end = time.time()
@@ -1552,7 +1675,7 @@ def test_chat_input_validation(login_logout, request):
         
         # Create a long query (>5000 characters)
         long_query = "a" * 5001
-        biab_page.input_RAI_PROMPT_and_send(long_query)
+        biab_page.input_rai_prompt_and_send(long_query)
         biab_page.validate_rai_error_message()
         
         step5_end = time.time()
