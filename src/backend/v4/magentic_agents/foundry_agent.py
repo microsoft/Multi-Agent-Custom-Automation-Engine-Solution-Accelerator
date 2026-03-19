@@ -3,13 +3,12 @@
 import logging
 from typing import List, Optional
 
-from agent_framework import (ChatAgent, ChatMessage, HostedCodeInterpreterTool,
-                             Role)
+from agent_framework import (Agent, Message, ChatOptions)
 from agent_framework_azure_ai import \
     AzureAIClient  # Provided by agent_framework
 from azure.ai.projects.models import (
     PromptAgentDefinition,
-    AzureAISearchAgentTool,
+    AzureAISearchTool,
     AzureAISearchToolResource,
     AISearchIndexResource,
 )
@@ -92,17 +91,13 @@ class FoundryAgentTemplate(AzureAgentBase):
         return False
 
     async def _collect_tools(self) -> List:
-        """Collect tool definitions for ChatAgent (MCP path only)."""
+        """Collect tool definitions for Agent (MCP path only)."""
         tools: List = []
 
-        # Code Interpreter (only in MCP path per incompatibility note)
+        # Code Interpreter is now handled server-side via AzureAIClient agent definition.
+        # HostedCodeInterpreterTool was removed in rc4.
         if self.enable_code_interpreter:
-            try:
-                code_tool = HostedCodeInterpreterTool()
-                tools.append(code_tool)
-                self.logger.info("Added Code Interpreter tool.")
-            except Exception as ie:
-                self.logger.error("Code Interpreter tool creation failed: %s", ie)
+            self.logger.info("Code Interpreter requested — handled server-side by AzureAIClient.")
 
         # MCP Tool (from base class)
         if self.mcp_tool:
@@ -121,7 +116,7 @@ class FoundryAgentTemplate(AzureAgentBase):
 
         This uses the AIProjectClient.agents.create_version() approach with:
         - PromptAgentDefinition for agent configuration
-        - AzureAISearchAgentTool with AzureAISearchToolResource for search capability
+        - AzureAISearchTool with AzureAISearchToolResource for search capability
         - AISearchIndexResource for index configuration with project_connection_id
 
         Requirements:
@@ -167,7 +162,7 @@ class FoundryAgentTemplate(AzureAgentBase):
             top_k,
         )
 
-        # Create agent using create_version with PromptAgentDefinition and AzureAISearchAgentTool
+        # Create agent using create_version with PromptAgentDefinition and AzureAISearchTool
         # This approach matches the Knowledge Mining Solution Accelerator pattern
         try:
             enhanced_instructions = (
@@ -181,7 +176,7 @@ class FoundryAgentTemplate(AzureAgentBase):
                     model=self.model_deployment_name,
                     instructions=enhanced_instructions,
                     tools=[
-                        AzureAISearchAgentTool(
+                        AzureAISearchTool(
                             azure_ai_search=AzureAISearchToolResource(
                                 indexes=[
                                     AISearchIndexResource(
@@ -253,37 +248,39 @@ class FoundryAgentTemplate(AzureAgentBase):
                     )
 
                 # In Azure Search raw tool path, tools/tool_choice are handled server-side.
-                self._agent = ChatAgent(
+                self._agent = Agent(
                     id=self.get_agent_id(),
-                    chat_client=chat_client,
+                    client=chat_client,
                     instructions=self.agent_instructions,
                     name=self.agent_name,
                     description=self.agent_description,
-                    tool_choice="required",  # Force usage
-                    temperature=temp,
-                    model_id=self.model_deployment_name,
-                    default_options={"store": False},  # Client-managed conversation to avoid stale tool call IDs across rounds
+                    default_options=ChatOptions(
+                        store=False,
+                        tool_choice="required",
+                        temperature=temp,
+                    ),
                 )
             else:
                 # MCP path (also used by RAI agent which has no tools)
                 self.logger.info("Initializing agent in MCP mode.")
                 tools = await self._collect_tools()
-                self._agent = ChatAgent(
+                self._agent = Agent(
                     id=self.get_agent_id(),
-                    chat_client=self.get_chat_client(),
+                    client=self.get_chat_client(),
                     instructions=self.agent_instructions,
                     name=self.agent_name,
                     description=self.agent_description,
                     tools=tools if tools else None,
-                    tool_choice="auto" if tools else "none",
-                    temperature=temp,
-                    model_id=self.model_deployment_name,
-                    default_options={"store": False},  # Client-managed conversation to avoid stale tool call IDs across rounds
+                    default_options=ChatOptions(
+                        store=False,
+                        tool_choice="auto" if tools else "none",
+                        temperature=temp,
+                    ),
                 )
-            self.logger.info("Initialized ChatAgent '%s'", self.agent_name)
+            self.logger.info("Initialized Agent '%s'", self.agent_name)
 
         except Exception as ex:
-            self.logger.error("Failed to initialize ChatAgent: %s", ex)
+            self.logger.error("Failed to initialize Agent: %s", ex)
             raise
 
         # Register agent globally
@@ -305,9 +302,9 @@ class FoundryAgentTemplate(AzureAgentBase):
         if not self._agent:
             raise RuntimeError("Agent not initialized; call open() first.")
 
-        messages = [ChatMessage(role=Role.USER, text=prompt)]
+        messages = [Message(role="user", text=prompt)]
 
-        async for update in self._agent.run_stream(messages):
+        async for update in self._agent.run(messages, stream=True):
             yield update
 
     # -------------------------

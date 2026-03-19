@@ -5,8 +5,7 @@ from contextlib import AsyncExitStack
 from typing import Any, Optional
 
 from agent_framework import (
-    ChatAgent,
-    HostedMCPTool,
+    Agent,
     MCPStreamableHTTPTool,
 )
 
@@ -46,8 +45,8 @@ class MCPEnabledBase:
     ) -> None:
         self._stack: AsyncExitStack | None = None
         self.mcp_cfg: MCPConfig | None = mcp
-        self.mcp_tool: HostedMCPTool | None = None
-        self._agent: ChatAgent | None = None
+        self.mcp_tool: MCPStreamableHTTPTool | None = None
+        self._agent: Agent | None = None
         self.team_service: TeamService | None = team_service
         self.team_config: TeamConfiguration | None = team_config
         self.client: Optional[AgentsClient] = None
@@ -155,9 +154,9 @@ class MCPEnabledBase:
         """
         if (
             self._agent
-            and self._agent.chat_client
+            and self._agent.client
         ):
-            return self._agent.chat_client  # type: ignore
+            return self._agent.client  # type: ignore
         chat_client = AzureAIClient(
             project_endpoint=self.project_endpoint,
             agent_name=self.agent_name,
