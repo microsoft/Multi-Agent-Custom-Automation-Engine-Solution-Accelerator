@@ -347,7 +347,7 @@ class TestOrchestrationConfig(IsolatedAsyncioTestCase):
             _ = await task
         
         await cancel_task_handle
-        self.assertTrue(cancel_task_handle.done())
+        self.assertTrue(task.cancelled())
 
     async def test_wait_for_clarification_cancelled(self):
         """Test waiting for clarification when cancelled."""
@@ -368,7 +368,7 @@ class TestOrchestrationConfig(IsolatedAsyncioTestCase):
             _ = await task
         
         await cancel_task_handle
-        self.assertTrue(cancel_task_handle.done())
+        self.assertTrue(task.cancelled())
 
     def test_cleanup_approval(self):
         """Test cleanup approval."""
