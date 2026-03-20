@@ -28,7 +28,7 @@ if _v4_is_mocked or _v4_models_is_mocked:
 
 # Environment variables and paths are set by conftest.py
 # Import the models (conftest.py handles path setup)
-from backend.v4.models.models import MPlan, MStep, PlanStatus
+from backend.v4.models.models import MPlan, PlanStatus
 
 # Import the converter
 from backend.v4.orchestration.helper.plan_to_mplan_converter import PlanToMPlanConverter
