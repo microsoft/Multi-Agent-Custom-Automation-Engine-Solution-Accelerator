@@ -113,10 +113,21 @@ ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT = "Task ledger plan update prompt"
 ORCHESTRATOR_PROGRESS_LEDGER_PROMPT = "Progress ledger prompt"
 
 sys.modules['agent_framework'] = Mock(
-    ChatMessage=MockChatMessage
+    ChatMessage=MockChatMessage,
+    AgentResponse=Mock,
+    Message=MockChatMessage,
 )
 sys.modules['agent_framework._workflows'] = Mock()
 sys.modules['agent_framework._workflows._magentic'] = Mock(
+    MagenticContext=MockMagenticContext,
+    StandardMagenticManager=MockStandardMagenticManager,
+    ORCHESTRATOR_FINAL_ANSWER_PROMPT=ORCHESTRATOR_FINAL_ANSWER_PROMPT,
+    ORCHESTRATOR_TASK_LEDGER_PLAN_PROMPT=ORCHESTRATOR_TASK_LEDGER_PLAN_PROMPT,
+    ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT=ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT,
+    ORCHESTRATOR_PROGRESS_LEDGER_PROMPT=ORCHESTRATOR_PROGRESS_LEDGER_PROMPT,
+)
+sys.modules['agent_framework_orchestrations'] = Mock()
+sys.modules['agent_framework_orchestrations._magentic'] = Mock(
     MagenticContext=MockMagenticContext,
     StandardMagenticManager=MockStandardMagenticManager,
     ORCHESTRATOR_FINAL_ANSWER_PROMPT=ORCHESTRATOR_FINAL_ANSWER_PROMPT,
