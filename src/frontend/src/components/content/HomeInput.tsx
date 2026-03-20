@@ -100,7 +100,6 @@ const HomeInput: React.FC<HomeInputProps> = ({ selectedTeam }) => {
           input.trim(),
           selectedTeam?.team_id
         );
-        console.log("Plan created:", response);
         setInput("");
 
         if (textareaRef.current) {
@@ -117,7 +116,6 @@ const HomeInput: React.FC<HomeInputProps> = ({ selectedTeam }) => {
           dismissToast(id);
         }
       } catch (error: any) {
-        console.log("Error creating plan:", error);
         let errorMessage = "Unable to create plan. Please try again.";
         dismissToast(id);
         // Check if this is an RAI validation error
@@ -125,7 +123,7 @@ const HomeInput: React.FC<HomeInputProps> = ({ selectedTeam }) => {
           // errorDetail = JSON.parse(error);
           errorMessage = error?.message || errorMessage;
         } catch (parseError) {
-          console.error("Error parsing error detail:", parseError);
+          console.error("Error parsing error response", parseError);
         }
 
         showToast(errorMessage, "error");
@@ -290,4 +288,6 @@ const HomeInput: React.FC<HomeInputProps> = ({ selectedTeam }) => {
   );
 };
 
-export default HomeInput;
+const MemoizedHomeInput = React.memo(HomeInput);
+MemoizedHomeInput.displayName = 'HomeInput';
+export default MemoizedHomeInput;

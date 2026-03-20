@@ -156,7 +156,6 @@ export class APIService {
             if (!data) {
                 throw new Error(`Plan with ID ${planId} not found`);
             }
-            console.log('Fetched plan by ID:', data);
             const results = {
                 plan: data.plan as Plan,
                 messages: data.messages as AgentMessageBE[],
@@ -190,8 +189,6 @@ export class APIService {
         const requestKey = `approve-plan-${planApprovalData.m_plan_id}`;
 
         return this._requestTracker.trackRequest(requestKey, async () => {
-            console.log('📤 Approving plan via v4 API:', planApprovalData);
-
             const response = await apiClient.post(API_ENDPOINTS.PLAN_APPROVAL, planApprovalData);
 
             // Invalidate cache since plan execution will start
@@ -200,7 +197,6 @@ export class APIService {
                 this._cache.invalidate(new RegExp(`^plan.*_${planApprovalData.plan_id}`));
             }
 
-            console.log('✅ Plan approval successful:', response);
             return response;
         });
     }
@@ -260,13 +256,7 @@ export class APIService {
         return response;
     }
     async sendAgentMessage(data: AgentMessageResponse): Promise<AgentMessage> {
-        const t0 = performance.now();
         const result = await apiClient.post(API_ENDPOINTS.AGENT_MESSAGE, data);
-        console.log('[agent_message] sent', {
-            ms: +(performance.now() - t0).toFixed(1),
-            agent: data.agent,
-            type: data.agent_type
-        });
         return result;
     }
 }

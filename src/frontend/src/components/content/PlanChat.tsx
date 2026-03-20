@@ -108,4 +108,6 @@ const PlanChat: React.FC<SimplifiedPlanChatProps> = ({
   );
 };
 
-export default PlanChat;
+const MemoizedPlanChat = React.memo(PlanChat);
+MemoizedPlanChat.displayName = 'PlanChat';
+export default MemoizedPlanChat;

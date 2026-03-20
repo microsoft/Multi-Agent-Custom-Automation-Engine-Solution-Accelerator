@@ -36,13 +36,10 @@ export const useTeamSelection = ({
     setError(null);
 
     try {
-      console.log('Selecting team:', team.name, 'with session ID:', sessionId);
-
       const result = await TeamService.selectTeam(team.team_id);
 
       if (result.success) {
         setSelectedTeam(team);
-        console.log('Team selection successful:', result.data);
 
         // Call success callback
         onTeamSelected?.(team, result.data);
@@ -60,8 +57,6 @@ export const useTeamSelection = ({
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to select team';
       setError(errorMessage);
-
-      console.error('Team selection error:', err);
 
       // Call error callback
       onError?.(errorMessage);

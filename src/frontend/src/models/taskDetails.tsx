@@ -21,7 +21,7 @@ export interface Human {
 }
 
 export interface PlanDetailsProps {
-    planData: ProcessedPlanData;
+    planData: ProcessedPlanData | null;
     loading: boolean;
     planApprovalRequest: MPlanData | null;
 }

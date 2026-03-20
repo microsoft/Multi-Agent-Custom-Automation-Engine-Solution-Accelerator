@@ -34,22 +34,17 @@ export class TeamService {
         error?: string;
     }> {
         try {
-            console.log('Calling /v4/init_team endpoint...');
             const response = await apiClient.get('/v4/init_team', {
                 params: {
                     team_switched
                 }
             });
 
-            console.log('Team initialization response:', response);
-
             return {
                 success: true,
                 data: response
             };
         } catch (error: any) {
-            console.error('Team initialization failed:', error);
-
             let errorMessage = 'Failed to initialize team';
 
             if (error.response?.data?.detail) {
@@ -58,6 +53,7 @@ export class TeamService {
                 errorMessage = error.message;
             }
 
+            console.error('TeamService.initializeTeam failed:', errorMessage);
             return {
                 success: false,
                 error: errorMessage
@@ -83,7 +79,6 @@ export class TeamService {
         try {
             const formData = new FormData();
             formData.append('file', teamFile);
-            console.log(formData);
             const response = await apiClient.upload('/v4/upload_team_config', formData);
 
             return {
@@ -143,7 +138,7 @@ export class TeamService {
             const teams = Array.isArray(response) ? response : [];
 
             return teams;
-        } catch (error: any) {
+        } catch {
             return [];
         }
     }
@@ -156,7 +151,7 @@ export class TeamService {
             const teams = await this.getUserTeams();
             const team = teams.find(t => t.team_id === teamId);
             return team || null;
-        } catch (error: any) {
+        } catch {
             return null;
         }
     }
@@ -168,7 +163,7 @@ export class TeamService {
         try {
             await apiClient.delete(`/v4/team_configs/${teamId}`);
             return true;
-        } catch (error: any) {
+        } catch {
             return false;
         }
     }
