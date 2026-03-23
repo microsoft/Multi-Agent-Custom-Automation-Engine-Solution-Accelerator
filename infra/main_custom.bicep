@@ -975,7 +975,7 @@ module aiFoundryPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.8.
   params: {
     name: 'pep-${aiFoundryAiServicesResourceName}'
     customNetworkInterfaceName: 'nic-${aiFoundryAiServicesResourceName}'
-    location: azureAiServiceLocation
+    location: location
     tags: tags
     privateLinkServiceConnections: [
       {
