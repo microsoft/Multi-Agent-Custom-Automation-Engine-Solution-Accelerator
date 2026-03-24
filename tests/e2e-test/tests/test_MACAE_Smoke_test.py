@@ -1676,10 +1676,15 @@ def test_chat_input_validation(login_logout, request):
         # Create a long query (>5000 characters)
         long_query = "a" * 5001
         biab_page.input_rai_prompt_and_send(long_query)
-        biab_page.validate_rai_error_message()
+        biab_page.validate_input_validation_error()
         
         step5_end = time.time()
         logger.info(f"Step 5 completed in {step5_end - step5_start:.2f} seconds")
+        
+        # Reload page to clear error state before testing valid query
+        logger.info("Reloading page to clear error state...")
+        biab_page.reload_home_page()
+        biab_page.select_human_resources_team()
         
         # Step 6: Test valid short query
         logger.info("\n" + "=" * 80)

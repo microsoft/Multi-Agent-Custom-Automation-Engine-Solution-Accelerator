@@ -358,11 +358,12 @@ class BIABPage(BasePage):
         clarification_input = self.page.locator(self.INPUT_CLARIFICATION)
         try:
             if clarification_input.is_visible(timeout=5000) and clarification_input.is_enabled():
-                logger.warning("⚠ Clarification input is enabled - Task plan may require additional clarification")
-                # Don't raise error - this is expected for some teams like HR
-                # Callers should handle clarification as needed
-            else:
-                logger.info("✓ No clarification required - task completed successfully")
+                logger.error("⚠ Clarification input is enabled - Task plan approval requires clarification")
+                raise ValueError("INPUT_CLARIFICATION is enabled - retry required")
+            logger.info("✓ No clarification required - task completed successfully")
+        except ValueError:
+            # Re-raise the clarification exception to trigger retry
+            raise
         except (TimeoutError, Exception) as e:
             # No clarification input detected, proceed normally
             logger.info(f"✓ No clarification input detected - proceeding normally: {e}")
@@ -467,11 +468,12 @@ class BIABPage(BasePage):
         clarification_input = self.page.locator(self.INPUT_CLARIFICATION)
         try:
             if clarification_input.is_visible(timeout=5000) and clarification_input.is_enabled():
-                logger.warning("⚠ Clarification input is enabled - RFP Task plan may require additional clarification")
-                # Don't raise error - this is expected for some workflows
-                # Callers should handle clarification as needed
-            else:
-                logger.info("✓ No clarification required - task completed successfully")
+                logger.error("⚠ Clarification input is enabled - RFP Task plan approval requires clarification")
+                raise ValueError("INPUT_CLARIFICATION is enabled - retry required")
+            logger.info("✓ No clarification required - task completed successfully")
+        except ValueError:
+            # Re-raise the clarification exception to trigger retry
+            raise
         except (TimeoutError, Exception) as e:
             # No clarification input detected, proceed normally
             logger.info(f"✓ No clarification input detected - proceeding normally: {e}")
@@ -500,11 +502,12 @@ class BIABPage(BasePage):
         clarification_input = self.page.locator(self.INPUT_CLARIFICATION)
         try:
             if clarification_input.is_visible(timeout=5000) and clarification_input.is_enabled():
-                logger.warning("⚠ Clarification input is enabled - Contract Compliance Task plan may require additional clarification")
-                # Don't raise error - this is expected for some workflows
-                # Callers should handle clarification as needed
-            else:
-                logger.info("✓ No clarification required - task completed successfully")
+                logger.error("⚠ Clarification input is enabled - Contract Compliance Task plan approval requires clarification")
+                raise ValueError("INPUT_CLARIFICATION is enabled - retry required")
+            logger.info("✓ No clarification required - task completed successfully")
+        except ValueError:
+            # Re-raise the clarification exception to trigger retry
+            raise
         except (TimeoutError, Exception) as e:
             # No clarification input detected, proceed normally
             logger.info(f"✓ No clarification input detected - proceeding normally: {e}")
@@ -799,8 +802,14 @@ class BIABPage(BasePage):
         """Input clarification text and click send button."""
         logger.info("Starting clarification input process...")
         
+        # Wait for the clarification input to be enabled before typing
+        logger.info("Waiting for clarification input to be enabled...")
+        clarification_input = self.page.locator(self.INPUT_CLARIFICATION)
+        expect(clarification_input).to_be_enabled(timeout=60000)
+        logger.info("✓ Clarification input is enabled")
+        
         logger.info(f"Typing clarification: {clarification_text}")
-        self.page.locator(self.INPUT_CLARIFICATION).fill(clarification_text)
+        clarification_input.fill(clarification_text)
         self.page.wait_for_timeout(1000)
         logger.info("✓ Clarification text entered")
         
@@ -867,12 +876,25 @@ class BIABPage(BasePage):
         """Validate that RAI blocked the prompt by checking for error messages."""
         logger.info("Validating RAI error response...")
         
-        # Wait a bit for system to process the request
-        self.page.wait_for_timeout(3000)
+        # The flow: toast shows "Creating a plan" briefly, then updates to "Unable to create plan"
+        # First, wait for the "Creating a plan" message to appear (confirms request was sent)
+        try:
+            logger.info("Waiting for plan creation attempt to start...")
+            self.page.locator("//span[contains(text(), 'Creating a plan')]").wait_for(state="visible", timeout=10000)
+            logger.info("✓ Plan creation started")
+        except Exception as e:
+            logger.warning(f"'Creating a plan' message not detected: {e}")
+        
+        # Now wait for it to change to the error message
+        logger.info("Waiting for RAI error message to appear...")
         
         # Check for various possible error messages that indicate RAI blocking
         possible_error_locators = [
+            "//span[normalize-space()='Unable to create plan. Please try again.']",
+            "//span[contains(@class, 'fui-Text') and normalize-space()='Unable to create plan. Please try again.']",
+            "//span[contains(@class, 'fui-Text') and contains(text(), 'Unable to create plan')]",
             self.UNABLE_TO_CREATE_PLAN,
+            "//span[contains(text(), 'Unable to create plan')]",
             "//span[contains(text(), 'Unable')]",
             "//span[contains(text(), 'Error')]",
             "//span[contains(text(), 'failed')]",
@@ -883,61 +905,100 @@ class BIABPage(BasePage):
         error_message_found = False
         for locator in possible_error_locators:
             try:
-                if self.page.locator(locator).first.is_visible(timeout=5000):
-                    logger.info(f"✓ RAI error message found with locator: {locator}")
-                    error_message_found = True
-                    break
+                # Wait for error message - it should replace "Creating a plan"
+                self.page.locator(locator).first.wait_for(state="visible", timeout=15000)
+                error_text = self.page.locator(locator).first.text_content()
+                logger.info(f"✓ RAI error message found: '{error_text}' with locator: {locator}")
+                error_message_found = True
+                break
             except Exception:
                 continue
         
-        # If we found an explicit error message, RAI successfully blocked
-        if error_message_found:
-            logger.info("✓ RAI successfully blocked the prompt with an error message")
-            return
-        
-        # No explicit error message found - check if plan creation started (would indicate RAI failed)
-        logger.info("No explicit error message found - checking if plan creation started...")
-        try:
-            # Wait briefly to see if plan creation becomes visible
-            # If it does, RAI failed to block the prompt
-            if self.page.locator(self.CREATING_PLAN).is_visible(timeout=3000):
-                logger.error("✗ Plan creation started - RAI did not block the prompt as expected")
-                # Take a screenshot before failing
-                try:
-                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    screenshots_dir = os.path.join(os.path.dirname(__file__), "..", "tests", "screenshots")
-                    os.makedirs(screenshots_dir, exist_ok=True)
-                    screenshot_path = os.path.join(screenshots_dir, f"rai_validation_failed_{timestamp}.png")
-                    self.page.screenshot(path=screenshot_path)
-                    logger.info(f"Screenshot captured: {screenshot_path}")
-                except Exception as e:
-                    logger.warning("Failed to capture screenshot: %s", e)
-                raise AssertionError(
-                    "RAI validation failed: Plan creation started, indicating the prompt was not blocked by RAI"
-                )
-            else:
-                # Plan creation didn't become visible - this could mean:
-                # 1. RAI blocked it (good)
-                # 2. Plan creation started and finished before we checked (bad - false positive)
-                # Without an explicit error message, we can't be certain, so fail the test
-                logger.error("✗ No explicit error message and no visible plan creation - ambiguous state")
-                raise AssertionError(
-                    "RAI validation failed: No explicit error message found. Cannot confirm RAI blocked the prompt."
-                )
-        except AssertionError:
-            # Re-raise assertion errors
-            raise
-        except Exception as e:
-            logger.error("✗ Exception while checking CREATING_PLAN: %s", e)
+        if not error_message_found:
+            # No error message found - capture screenshot for debugging
+            logger.error("✗ No RAI error message found")
+            try:
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                screenshots_dir = os.path.join(os.path.dirname(__file__), "..", "tests", "screenshots")
+                os.makedirs(screenshots_dir, exist_ok=True)
+                screenshot_path = os.path.join(screenshots_dir, f"rai_validation_failed_{timestamp}.png")
+                self.page.screenshot(path=screenshot_path)
+                logger.info(f"Screenshot captured: {screenshot_path}")
+            except Exception as e:
+                logger.warning("Failed to capture screenshot: %s", e)
             raise AssertionError(
-                f"RAI validation failed: Could not verify plan creation state: {e}"
+                "RAI validation failed: No explicit error message found. Cannot confirm RAI blocked the prompt."
             )
+        
+        logger.info("✓ RAI successfully blocked the prompt with an error message")
 
     def validate_rai_clarification_error_message(self):
         """Validate that the RAI 'Failed to submit clarification' error message is visible."""
         logger.info("Validating RAI 'Failed to submit clarification' message is visible...")
         expect(self.page.locator(self.RAI_VALIDATION)).to_be_visible(timeout=10000)
         logger.info("✓ RAI 'Failed to submit clarification' message is visible")
+
+    def validate_input_validation_error(self):
+        """Validate that an input validation error (like text too long) is displayed."""
+        logger.info("Validating input validation error message...")
+        
+        # The flow: toast shows "Creating a plan" briefly, then updates to "Unable to create plan"
+        # First, wait for the "Creating a plan" message to appear (confirms request was sent)
+        try:
+            logger.info("Waiting for plan creation attempt to start...")
+            self.page.locator("//span[contains(text(), 'Creating a plan')]").wait_for(state="visible", timeout=10000)
+            logger.info("✓ Plan creation started")
+        except Exception as e:
+            logger.warning(f"'Creating a plan' message not detected: {e}")
+        
+        # Now wait for it to change to the error message
+        logger.info("Waiting for error message to appear...")
+        
+        # Check for various input validation error messages
+        # The toast notification structure: div > span with text
+        possible_error_locators = [
+            "//span[normalize-space()='Unable to create plan. Please try again.']",
+            "//span[contains(@class, 'fui-Text') and normalize-space()='Unable to create plan. Please try again.']",
+            "//span[contains(@class, 'fui-Text') and contains(text(), 'Unable to create plan')]",
+            self.UNABLE_TO_CREATE_PLAN,  # "Unable to create plan. Please try again."
+            "//span[contains(text(), 'Unable to create plan')]",
+            "//span[contains(text(), 'try again')]",
+            "//div[contains(text(), 'Unable to create')]",
+            "//span[contains(text(), 'too long')]",
+            "//span[contains(text(), 'exceeds')]",
+            "//span[contains(text(), 'maximum')]"
+        ]
+        
+        error_found = False
+        for locator in possible_error_locators:
+            try:
+                # Wait for error message - it should replace "Creating a plan"
+                self.page.locator(locator).first.wait_for(state="visible", timeout=15000)
+                error_text = self.page.locator(locator).first.text_content()
+                logger.info(f"✓ Input validation error found: '{error_text}' with locator: {locator}")
+                error_found = True
+                break
+            except Exception:
+                continue
+        
+        if not error_found:
+            # No error message found - capture screenshot for debugging
+            logger.error("✗ No validation error message found")
+            try:
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                screenshots_dir = os.path.join(os.path.dirname(__file__), "..", "tests", "screenshots")
+                os.makedirs(screenshots_dir, exist_ok=True)
+                screenshot_path = os.path.join(screenshots_dir, f"input_validation_no_error_{timestamp}.png")
+                self.page.screenshot(path=screenshot_path)
+                logger.info(f"Screenshot captured: {screenshot_path}")
+            except Exception as e:
+                logger.warning("Failed to capture screenshot: %s", e)
+            
+            raise AssertionError(
+                "Input validation failed: No error message displayed for invalid input"
+            )
+        
+        logger.info("✓ Input validation successfully blocked invalid input")
 
     def click_cancel_button(self):
         """Click on the Cancel button."""
