@@ -255,7 +255,10 @@ def pytest_runtest_makereport(item, call):
 
                         logging.info("Debug screenshot attached to report: %s", debug_screenshot_path)
 
-    handler, stream = log_streams.get(item.nodeid, (None, None))
+    # Retrieve handler and stream using item id (not nodeid)
+    # This works even if the test mutated node._nodeid during execution
+    log_data = log_streams.get(id(item), (None, None, None))
+    handler, stream, original_nodeid = log_data[0], log_data[1], log_data[2] if len(log_data) == 3 else None
 
     if handler and stream:
         # Make sure logs are flushed
@@ -305,8 +308,8 @@ def pytest_runtest_makereport(item, call):
         else:
             report.description = f"<pre>{log_output.strip()}</pre>"
 
-        # Clean up references
-        log_streams.pop(item.nodeid, None)
+        # Clean up references using item id (not nodeid)
+        log_streams.pop(id(item), None)
     else:
         report.description = ""
 
