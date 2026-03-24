@@ -1013,6 +1013,7 @@ resource existingAiFoundryAiServicesProject 'Microsoft.CognitiveServices/account
 
 module aiFoundryAiServicesProject 'modules/ai-project.bicep' = if (!useExistingAiFoundryAiProject) {
   name: take('module.ai-project.${aiFoundryAiProjectResourceName}', 64)
+  dependsOn: enablePrivateNetworking ? [ aiFoundryPrivateEndpoint ] : []
   params: {
     name: aiFoundryAiProjectResourceName
     location: azureAiServiceLocation
