@@ -168,8 +168,9 @@ def pytest_runtest_makereport(item, call):
                         if not hasattr(report, 'extra'):
                             report.extra = []
 
-                        # Use relative path for HTML report
-                        relative_screenshot_path = f"screenshots/{screenshot_name}"
+                        # Compute relative path from report.html location to screenshot
+                        report_dir = os.path.dirname(os.path.abspath("report.html"))
+                        relative_screenshot_path = os.path.relpath(screenshot_path, report_dir).replace("\\", "/")
 
                         # Add both image and link to report
                         report.extra.append(extras.image(relative_screenshot_path, name="Failure Screenshot"))
@@ -210,7 +211,9 @@ def pytest_runtest_makereport(item, call):
                         if not hasattr(report, 'extra'):
                             report.extra = []
 
-                        relative_screenshot_path = f"screenshots/{screenshot_name}"
+                        # Compute relative path from report.html location to screenshot
+                        report_dir = os.path.dirname(os.path.abspath("report.html"))
+                        relative_screenshot_path = os.path.relpath(screenshot_path, report_dir).replace("\\", "/")
                         report.extra.append(extras.image(relative_screenshot_path, name=f"{status} Screenshot"))
                         report.extra.append(extras.url(relative_screenshot_path, name="Open Screenshot"))
 
@@ -242,7 +245,9 @@ def pytest_runtest_makereport(item, call):
                             report.extra = []
 
                         screenshot_filename = os.path.basename(debug_screenshot_path)
-                        relative_debug_path = f"screenshots/{screenshot_filename}"
+                        # Compute relative path from report.html location to screenshot
+                        report_dir = os.path.dirname(os.path.abspath("report.html"))
+                        relative_debug_path = os.path.relpath(debug_screenshot_path, report_dir).replace("\\", "/")
 
                         # Add debug screenshot to report
                         report.extra.append(extras.image(relative_debug_path, name=f"Debug Screenshot: {screenshot_filename}"))
