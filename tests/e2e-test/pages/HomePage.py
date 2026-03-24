@@ -864,13 +864,13 @@ class BIABPage(BasePage):
         logger.info("✓ Send button clicked")
 
     def validate_rai_error_message(self):
-        """Validate that the RAI 'Unable to create plan' error message is visible."""
+        """Validate that RAI blocked the prompt by checking for error messages."""
         logger.info("Validating RAI error response...")
         
         # Wait a bit for system to process the request
         self.page.wait_for_timeout(3000)
         
-        # Check for various possible error messages or states
+        # Check for various possible error messages that indicate RAI blocking
         possible_error_locators = [
             self.UNABLE_TO_CREATE_PLAN,
             "//span[contains(text(), 'Unable')]",
@@ -880,47 +880,57 @@ class BIABPage(BasePage):
             "//p[contains(text(), 'Unable')]"
         ]
         
-        error_found = False
+        error_message_found = False
         for locator in possible_error_locators:
             try:
                 if self.page.locator(locator).first.is_visible(timeout=5000):
                     logger.info(f"✓ RAI error message found with locator: {locator}")
-                    error_found = True
+                    error_message_found = True
                     break
             except Exception:
                 continue
         
-        if not error_found:
-            # Try to confirm plan creation started (to rule out silent acceptance)
-            # Wait briefly to see if plan creation becomes visible
-            try:
-                # If plan creation becomes visible, the input was accepted (not blocked by RAI)
-                if self.page.locator(self.CREATING_PLAN).is_visible(timeout=3000):
-                    logger.error("✗ Plan creation started - RAI did not block the prompt as expected")
-                    error_found = False  # This is actually a failure case
-                else:
-                    # Plan creation didn't start within timeout - likely rejected
-                    logger.info("✓ Plan creation did not start - input appears to have been rejected")
-                    error_found = True
-            except Exception as e:
-                # If we can't determine, treat as ambiguous but log it
-                logger.warning("⚠ Could not verify CREATING_PLAN state: %s - assuming rejection", e)
-                error_found = True
+        # If we found an explicit error message, RAI successfully blocked
+        if error_message_found:
+            logger.info("✓ RAI successfully blocked the prompt with an error message")
+            return
         
-        if not error_found:
-            logger.error("✗ No RAI error or rejection state detected; prompt appears to have been accepted unexpectedly")
-            # Take a screenshot for investigation before failing the test
-            try:
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                screenshots_dir = os.path.join(os.path.dirname(__file__), "..", "tests", "screenshots")
-                os.makedirs(screenshots_dir, exist_ok=True)
-                screenshot_path = os.path.join(screenshots_dir, f"rai_validation_failed_{timestamp}.png")
-                self.page.screenshot(path=screenshot_path)
-                logger.info(f"Screenshot captured for investigation: {screenshot_path}")
-            except Exception as e:
-                logger.warning("Failed to capture screenshot when RAI validation failed: %s", e)
+        # No explicit error message found - check if plan creation started (would indicate RAI failed)
+        logger.info("No explicit error message found - checking if plan creation started...")
+        try:
+            # Wait briefly to see if plan creation becomes visible
+            # If it does, RAI failed to block the prompt
+            if self.page.locator(self.CREATING_PLAN).is_visible(timeout=3000):
+                logger.error("✗ Plan creation started - RAI did not block the prompt as expected")
+                # Take a screenshot before failing
+                try:
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    screenshots_dir = os.path.join(os.path.dirname(__file__), "..", "tests", "screenshots")
+                    os.makedirs(screenshots_dir, exist_ok=True)
+                    screenshot_path = os.path.join(screenshots_dir, f"rai_validation_failed_{timestamp}.png")
+                    self.page.screenshot(path=screenshot_path)
+                    logger.info(f"Screenshot captured: {screenshot_path}")
+                except Exception as e:
+                    logger.warning("Failed to capture screenshot: %s", e)
+                raise AssertionError(
+                    "RAI validation failed: Plan creation started, indicating the prompt was not blocked by RAI"
+                )
+            else:
+                # Plan creation didn't become visible - this could mean:
+                # 1. RAI blocked it (good)
+                # 2. Plan creation started and finished before we checked (bad - false positive)
+                # Without an explicit error message, we can't be certain, so fail the test
+                logger.error("✗ No explicit error message and no visible plan creation - ambiguous state")
+                raise AssertionError(
+                    "RAI validation failed: No explicit error message found. Cannot confirm RAI blocked the prompt."
+                )
+        except AssertionError:
+            # Re-raise assertion errors
+            raise
+        except Exception as e:
+            logger.error("✗ Exception while checking CREATING_PLAN: %s", e)
             raise AssertionError(
-                "Expected RAI to block the prompt, but no error message or rejection state was detected."
+                f"RAI validation failed: Could not verify plan creation state: {e}"
             )
 
     def validate_rai_clarification_error_message(self):
