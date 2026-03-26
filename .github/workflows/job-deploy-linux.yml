@@ -267,7 +267,7 @@ jobs:
             if [[ -n "$INPUT_AZURE_ENV_FOUNDRY_PROJECT_RID" ]]; then
               EXP_AI_PROJECT_ID="$INPUT_AZURE_ENV_FOUNDRY_PROJECT_RID"
             else
-              EXP_AI_PROJECT_ID="${{ secrets.AZURE_ENV_FOUNDRY_PROJECT_ID }}"
+              EXP_AI_PROJECT_ID="${{ secrets.AZURE_ENV_FOUNDRY_PROJECT_RID }}"
             fi
             
             echo "AZURE_ENV_LOG_ANALYTICS_WORKSPACE_RID: $EXP_LOG_ANALYTICS_ID"
