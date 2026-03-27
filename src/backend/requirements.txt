@@ -31,3 +31,9 @@ pytest>=8.2,<9  # Compatible version for pytest-asyncio
 pytest-asyncio==0.24.0
 pytest-cov==5.0.0
 
+# Excel generation
+openpyxl>=3.1.0
+
+# GitHub API
+PyGithub>=2.1.0
+
