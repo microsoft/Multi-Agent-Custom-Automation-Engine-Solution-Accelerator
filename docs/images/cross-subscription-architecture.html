@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Cross-Subscription Private Networking Architecture</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #fff; 
+    display: flex; 
+    justify-content: center; 
+    padding: 30px;
+  }
+  .diagram { 
+    display: flex; 
+    gap: 40px; 
+    align-items: stretch;
+    position: relative;
+  }
+  .subscription {
+    border: 2.5px solid;
+    border-radius: 12px;
+    padding: 20px;
+    min-width: 340px;
+    position: relative;
+  }
+  .sub-a { border-color: #1a73e8; background: #f0f6ff; }
+  .sub-b { border-color: #e8a817; background: #fffbf0; }
+  .sub-title {
+    font-size: 15px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 16px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    color: #fff;
+  }
+  .sub-a .sub-title { background: #1a73e8; }
+  .sub-b .sub-title { background: #e8a817; color: #333; }
+  .resource {
+    background: #fff;
+    border: 1.5px solid #bbb;
+    border-radius: 6px;
+    padding: 7px 12px;
+    margin: 5px 0;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .resource .icon { font-size: 16px; }
+  .vnet {
+    border: 2px solid #34a853;
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 12px;
+    background: #edf7ef;
+  }
+  .vnet-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #34a853;
+    margin-bottom: 8px;
+  }
+  .subnet {
+    border: 1.5px dashed #888;
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin: 6px 0;
+    background: #fff;
+  }
+  .subnet-title {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 4px;
+  }
+  .subnet-badge {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-left: 6px;
+  }
+  .delegated { background: #fce4ec; color: #c62828; }
+  .no-delegation { background: #e0f2f1; color: #00695c; }
+  .pe {
+    background: #f3e8fd;
+    border: 1px solid #b388ff;
+    border-radius: 4px;
+    padding: 4px 8px;
+    margin: 3px 0;
+    font-size: 12px;
+    color: #6a1b9a;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .pe::before { content: "🔗"; font-size: 11px; }
+  .nsg {
+    background: #fff3e0;
+    border: 1px solid #ffb74d;
+    border-radius: 4px;
+    padding: 4px 8px;
+    margin: 3px 0;
+    font-size: 11px;
+    color: #e65100;
+  }
+  .nsg::before { content: "🛡️ "; }
+  .dns-box {
+    background: #fce8e6;
+    border: 1.5px solid #ea4335;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-top: 12px;
+    font-size: 12px;
+    color: #c62828;
+    text-align: center;
+  }
+  .dns-box::before { content: "🌐 "; }
+  .compute-box {
+    border: 1.5px solid #aaa;
+    border-radius: 6px;
+    padding: 10px;
+    margin-top: 12px;
+    background: #fafafa;
+  }
+  .compute-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+    margin-bottom: 6px;
+  }
+  /* Peering arrow */
+  .peering {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 100px;
+    position: relative;
+  }
+  .peering-line {
+    width: 100%;
+    height: 3px;
+    background: #1565c0;
+    position: relative;
+  }
+  .peering-line::before {
+    content: "◀";
+    position: absolute;
+    left: -8px;
+    top: -9px;
+    color: #1565c0;
+    font-size: 16px;
+  }
+  .peering-line::after {
+    content: "▶";
+    position: absolute;
+    right: -8px;
+    top: -9px;
+    color: #1565c0;
+    font-size: 16px;
+  }
+  .peering-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #1565c0;
+    margin-top: 6px;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #888;
+    margin-top: 10px;
+    margin-bottom: 2px;
+  }
+  .title-bar {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .title-bar h1 {
+    font-size: 18px;
+    color: #333;
+  }
+  .title-bar p {
+    font-size: 12px;
+    color: #888;
+    margin-top: 2px;
+  }
+  .wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .legend {
+    display: flex;
+    gap: 20px;
+    margin-top: 16px;
+    font-size: 11px;
+    color: #666;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .legend-color {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid #ccc;
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="title-bar">
+    <h1>Cross-Subscription Private Networking for AI Foundry Agents</h1>
+    <p>Architecture showing VNet peering, duplicate Private Endpoints, and DNS zone links</p>
+  </div>
+
+  <div class="diagram">
+    <!-- Subscription A -->
+    <div class="subscription sub-a">
+      <div class="sub-title">Subscription A — Foundry</div>
+      
+      <div class="resource"><span class="icon">🧠</span> AI Services Account</div>
+      <div class="resource"><span class="icon">📁</span> AI Foundry Project</div>
+
+      <div class="vnet">
+        <div class="vnet-title">Foundry VNet (172.16.0.0/16)</div>
+        
+        <div class="subnet">
+          <div class="subnet-title">Agent Subnet (172.16.0.0/24) <span class="subnet-badge delegated">Delegated: Microsoft.App/environments</span></div>
+          <div class="resource" style="margin:4px 0;font-size:12px"><span class="icon">🤖</span> Agent Compute (networkInjections)</div>
+        </div>
+
+        <div class="subnet">
+          <div class="subnet-title">PE Subnet (172.16.1.0/24) <span class="subnet-badge no-delegation">No Delegation</span></div>
+          <div class="pe">Cosmos DB PE</div>
+          <div class="pe">Storage PE</div>
+          <div class="pe">AI Search PE</div>
+        </div>
+      </div>
+
+      <div style="margin-top:8px">
+        <div class="nsg">Agent NSG (deny SSH/RDP outbound)</div>
+        <div class="nsg">Backend NSG (deny SSH/RDP outbound)</div>
+      </div>
+    </div>
+
+    <!-- Peering Arrow -->
+    <div class="peering">
+      <div class="peering-line"></div>
+      <div class="peering-label">Bidirectional<br>VNet Peering</div>
+    </div>
+
+    <!-- Subscription B -->
+    <div class="subscription sub-b">
+      <div class="sub-title">Subscription B — Deployment</div>
+
+      <div class="section-label">Data Resources</div>
+      <div class="resource"><span class="icon">🗄️</span> Cosmos DB</div>
+      <div class="resource"><span class="icon">📦</span> Storage Account</div>
+      <div class="resource"><span class="icon">🔍</span> AI Search</div>
+      <div class="resource"><span class="icon">🔑</span> Key Vault</div>
+
+      <div class="vnet">
+        <div class="vnet-title">Deployment VNet (10.0.0.0/8)</div>
+
+        <div class="subnet">
+          <div class="subnet-title">Backend Subnet</div>
+          <div class="pe">Cosmos DB PE</div>
+          <div class="pe">Storage PE</div>
+          <div class="pe">Search PE</div>
+          <div class="pe">Key Vault PE</div>
+          <div class="pe">AI Services PE</div>
+        </div>
+
+        <div class="subnet">
+          <div class="subnet-title">Agent Subnet (10.0.6.0/24) <span class="subnet-badge delegated">Delegated</span></div>
+        </div>
+
+        <div class="subnet">
+          <div class="subnet-title" style="color:#999">Container / Bastion / Web subnets</div>
+        </div>
+      </div>
+
+      <div class="dns-box">7 Private DNS Zones (linked to both VNets)</div>
+
+      <div class="compute-box">
+        <div class="compute-title">Application Compute</div>
+        <div class="resource" style="font-size:12px"><span class="icon">⚙️</span> Backend Container App</div>
+        <div class="resource" style="font-size:12px"><span class="icon">🖥️</span> Frontend Web App</div>
+        <div class="resource" style="font-size:12px"><span class="icon">🔧</span> MCP Container App</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-color" style="background:#f0f6ff;border-color:#1a73e8"></div> Foundry Subscription</div>
+    <div class="legend-item"><div class="legend-color" style="background:#fffbf0;border-color:#e8a817"></div> Deployment Subscription</div>
+    <div class="legend-item"><div class="legend-color" style="background:#edf7ef;border-color:#34a853"></div> Virtual Network</div>
+    <div class="legend-item"><div class="legend-color" style="background:#f3e8fd;border-color:#b388ff"></div> Private Endpoint</div>
+    <div class="legend-item"><div class="legend-color" style="background:#fce8e6;border-color:#ea4335"></div> DNS Zones</div>
+    <div class="legend-item"><div class="legend-color" style="background:#fff3e0;border-color:#ffb74d"></div> NSG</div>
+  </div>
+</div>
+</body>
+</html>

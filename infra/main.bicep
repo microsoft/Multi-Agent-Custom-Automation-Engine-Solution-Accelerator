@@ -242,12 +242,12 @@ resource resourceGroupTags 'Microsoft.Resources/tags@2021-04-01' = {
       existingTags,
       allTags,
       {
-        TemplateName: 'MACAE'
-        Type: enablePrivateNetworking ? 'WAF' : 'Non-WAF'
-        CreatedBy: createdBy
-        DeploymentName: deployment().name
-        SolutionSuffix: solutionSuffix
-      }
+      TemplateName: 'MACAE'
+      Type: enablePrivateNetworking ? 'WAF' : 'Non-WAF'
+      CreatedBy: createdBy
+      DeploymentName: deployment().name
+      SolutionSuffix: solutionSuffix
+    }
     )
   }
 }
@@ -723,35 +723,36 @@ var dnsZoneIndex = {
   keyVault: 6
 }
 
-// List of DNS zone indices that correspond to AI-related services.
-var aiRelatedDnsZoneIndices = [
-  dnsZoneIndex.cognitiveServices
-  dnsZoneIndex.openAI
-  dnsZoneIndex.aiServices
-]
-
 // ===================================================
 // DEPLOY PRIVATE DNS ZONES
-// - Deploys all zones if no existing Foundry project is used
-// - Excludes AI-related zones when using with an existing Foundry project
+// - Deploys all zones when private networking is enabled
+// - Required for both new and existing Foundry projects to ensure
+//   private endpoint DNS resolution from the deployment VNet
 // ===================================================
 @batchSize(5)
 module avmPrivateDnsZones 'br/public:avm/res/network/private-dns-zone:0.7.1' = [
-  for (zone, i) in privateDnsZones: if (enablePrivateNetworking && (!useExistingAiFoundryAiProject || !contains(
-    aiRelatedDnsZoneIndices,
-    i
-  ))) {
+  for (zone, i) in privateDnsZones: if (enablePrivateNetworking) {
     name: 'avm.res.network.private-dns-zone.${contains(zone, 'azurecontainerapps.io') ? 'containerappenv' : split(zone, '.')[1]}'
     params: {
       name: zone
       tags: tags
       enableTelemetry: enableTelemetry
-      virtualNetworkLinks: [
-        {
-          name: take('vnetlink-${virtualNetworkResourceName}-${split(zone, '.')[1]}', 80)
-          virtualNetworkResourceId: virtualNetwork!.outputs.resourceId
-        }
-      ]
+      virtualNetworkLinks: union(
+        [
+          {
+            name: take('vnetlink-${virtualNetworkResourceName}-${split(zone, '.')[1]}', 80)
+            virtualNetworkResourceId: virtualNetwork!.outputs.resourceId
+          }
+        ],
+        isExistingFoundryCrossSubscription
+          ? [
+              {
+                name: take('vnetlink-${foundryVNetName}-${split(zone, '.')[1]}', 80)
+                virtualNetworkResourceId: foundryVNet!.outputs.resourceId
+              }
+            ]
+          : []
+      )
     }
   }
 ]
@@ -766,6 +767,57 @@ var aiFoundryAiServicesResourceGroupName = useExistingAiFoundryAiProject
 var aiFoundryAiServicesSubscriptionId = useExistingAiFoundryAiProject
   ? split(existingAiFoundryAiProjectResourceId, '/')[2]
   : subscription().subscriptionId
+// Detect cross-subscription scenario for existing Foundry.
+// networkInjections requires the subnet to be in the same subscription as the AI Services account.
+// For cross-subscription, we create a VNet with an agent subnet in the Foundry's subscription,
+// peer it to the deployment VNet, and link DNS zones so agent compute can resolve PEs.
+var isExistingFoundryCrossSubscription = useExistingAiFoundryAiProject && (aiFoundryAiServicesSubscriptionId != subscription().subscriptionId)
+
+// Cross-subscription VNet in the Foundry's subscription for agent networkInjections.
+// The agent subnet must be in the same subscription as the AI Services account.
+var foundryVNetName = 'vnet-agent-${solutionSuffix}'
+module foundryVNet 'modules/cross-subscription-vnet.bicep' = if (isExistingFoundryCrossSubscription && enablePrivateNetworking) {
+  name: take('module.foundry-vnet.${solutionSuffix}', 64)
+  scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
+  params: {
+    name: foundryVNetName
+    location: existingAiFoundryAiServices!.location
+    addressPrefixes: ['172.16.0.0/16']
+    agentSubnetAddressPrefix: '172.16.0.0/24'
+    backendSubnetAddressPrefix: '172.16.1.0/24'
+    remoteVirtualNetworkId: virtualNetwork!.outputs.resourceId
+    tags: tags
+  }
+}
+
+// Peering from deployment VNet -> Foundry VNet (reverse direction)
+resource deploymentVNet 'Microsoft.Network/virtualNetworks@2024-05-01' existing = if (isExistingFoundryCrossSubscription && enablePrivateNetworking) {
+  name: virtualNetworkResourceName
+}
+
+resource peeringToFoundryVNet 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2024-05-01' = if (isExistingFoundryCrossSubscription && enablePrivateNetworking) {
+  parent: deploymentVNet
+  name: 'peer-to-foundry-vnet'
+  properties: {
+    remoteVirtualNetwork: {
+      id: foundryVNet!.outputs.resourceId
+    }
+    allowVirtualNetworkAccess: true
+    allowForwardedTraffic: true
+    allowGatewayTransit: false
+    useRemoteGateways: false
+  }
+  dependsOn: [
+    virtualNetwork
+  ]
+}
+
+// The agent subnet to use for networkInjections:
+// - Cross-subscription: use the Foundry VNet's agent subnet (same sub as AI Services)
+// - Same-subscription: use the deployment VNet's agent subnet
+var agentSubnetResourceIdForNetworkInjections = isExistingFoundryCrossSubscription
+  ? foundryVNet!.outputs.agentSubnetResourceId
+  : virtualNetwork!.outputs.agentSubnetResourceId
 var aiFoundryAiServicesResourceName = useExistingAiFoundryAiProject
   ? split(existingAiFoundryAiProjectResourceId, '/')[8]
   : 'aif-${solutionSuffix}'
@@ -875,6 +927,92 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
   }
 }
 
+// ========== Existing AI Services: WAF Networking Update ========== //
+// When using an existing AI Foundry project with private networking, update the account with
+// networkInjections (agent VNet connectivity) and disable public access.
+// For cross-subscription, a VNet with agent subnet is created in the Foundry's subscription
+// and peered to the deployment VNet, allowing the same networkInjections approach.
+module existingAiServicesNetworking 'modules/ai-services-account-networking.bicep' = if (useExistingAiFoundryAiProject && enablePrivateNetworking) {
+  name: take('module.ai-services-networking.${aiFoundryAiServicesResourceName}', 64)
+  scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
+  params: {
+    name: existingAiFoundryAiServices!.name
+    location: existingAiFoundryAiServices!.location
+    kind: existingAiFoundryAiServices!.kind
+    skuName: existingAiFoundryAiServices!.sku.name
+    customSubDomainName: existingAiFoundryAiServices!.properties.customSubDomainName
+    disableLocalAuth: existingAiFoundryAiServices!.properties.disableLocalAuth
+    allowProjectManagement: existingAiFoundryAiServices!.properties.allowProjectManagement
+    networkAcls: existingAiFoundryAiServices!.properties.networkAcls
+    identityType: existingAiFoundryAiServices!.identity.type
+    userAssignedIdentityResourceIds: objectKeys(existingAiFoundryAiServices!.identity.?userAssignedIdentities ?? {})
+    tags: existingAiFoundryAiServices!.tags ?? {}
+    agentSubnetResourceId: agentSubnetResourceIdForNetworkInjections
+    publicNetworkAccess: 'Disabled'
+  }
+  dependsOn: [
+    existingAiFoundryAiServicesDeployments
+    peeringToFoundryVNet
+  ]
+}
+
+// ========== Existing AI Services: Private Endpoint ========== //
+// Creates a private endpoint in the deployment VNet for the existing AI Services account,
+// matching the WAF-aligned setup used when creating a new AI Services account.
+// Supports both same-subscription and cross-subscription scenarios.
+resource existingAiServicesPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-11-01' = if (useExistingAiFoundryAiProject && enablePrivateNetworking) {
+  name: 'pep-${aiFoundryAiServicesResourceName}'
+  location: location
+  tags: tags
+  properties: {
+    customNetworkInterfaceName: 'nic-${aiFoundryAiServicesResourceName}'
+    subnet: {
+      id: virtualNetwork!.outputs.backendSubnetResourceId
+    }
+    privateLinkServiceConnections: [
+      {
+        name: 'pep-${aiFoundryAiServicesResourceName}'
+        properties: {
+          privateLinkServiceId: existingAiFoundryAiServices.id
+          groupIds: [
+            'account'
+          ]
+        }
+      }
+    ]
+  }
+  dependsOn: [
+    existingAiServicesNetworking
+  ]
+}
+
+resource existingAiServicesPeDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-11-01' = if (useExistingAiFoundryAiProject && enablePrivateNetworking) {
+  parent: existingAiServicesPrivateEndpoint
+  name: 'default'
+  properties: {
+    privateDnsZoneConfigs: [
+      {
+        name: 'ai-services-dns-zone-cognitiveservices'
+        properties: {
+          privateDnsZoneId: avmPrivateDnsZones[dnsZoneIndex.cognitiveServices]!.outputs.resourceId
+        }
+      }
+      {
+        name: 'ai-services-dns-zone-openai'
+        properties: {
+          privateDnsZoneId: avmPrivateDnsZones[dnsZoneIndex.openAI]!.outputs.resourceId
+        }
+      }
+      {
+        name: 'ai-services-dns-zone-aiservices'
+        properties: {
+          privateDnsZoneId: avmPrivateDnsZones[dnsZoneIndex.aiServices]!.outputs.resourceId
+        }
+      }
+    ]
+  }
+}
+
 module aiFoundryAiServices 'br:mcr.microsoft.com/bicep/avm/res/cognitive-services/account:0.13.2' = if (!useExistingAiFoundryAiProject) {
   name: take('avm.res.cognitive-services.account.${aiFoundryAiServicesResourceName}', 64)
   params: {
@@ -935,7 +1073,12 @@ module aiFoundryAiServices 'br:mcr.microsoft.com/bicep/avm/res/cognitive-service
       virtualNetworkRules: []
       ipRules: []
     }
-    managedIdentities: { userAssignedResourceIds: [userAssignedIdentity!.outputs.resourceId] } //To create accounts or projects, you must enable a managed identity on your resource
+    networkInjections: (enablePrivateNetworking) ? ({
+        scenario: 'agent'
+        subnetResourceId: virtualNetwork!.outputs.agentSubnetResourceId
+        useMicrosoftManagedNetwork: false
+    }) : null
+    managedIdentities: { systemAssigned: true, userAssignedResourceIds: [userAssignedIdentity!.outputs.resourceId] } //To create accounts or projects, you must enable a managed identity on your resource
     roleAssignments: [
       {
         roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
@@ -1078,14 +1221,22 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
         assignments: [
           { principalId: userAssignedIdentity.outputs.principalId }
           { principalId: deployingUserPrincipalId }
+          { principalId: aiFoundryAiProjectPrincipalId }
         ]
       }
     ]
     // WAF aligned configuration for Monitoring
     diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : null
     // WAF aligned configuration for Private Networking
+    roleAssignments:[
+      {
+        principalId: aiFoundryAiProjectPrincipalId
+        roleDefinitionIdOrName: '230815da-be43-4aae-9cb4-875f7bd000aa' //Cosmos DB Account Reader Role
+        principalType: 'ServicePrincipal'
+      }
+    ]
     networkRestrictions: {
-      networkAclBypass: 'None'
+      networkAclBypass: useExistingAiFoundryAiProject ? 'AzureServices' : 'None'
       publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
     }
     privateEndpoints: enablePrivateNetworking
@@ -1582,6 +1733,11 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
         roleDefinitionIdOrName: 'Storage Blob Data Contributor'
         principalType: deployerPrincipalType
       }
+      {
+        principalId: aiFoundryAiProjectPrincipalId
+        roleDefinitionIdOrName: 'Storage Blob Data Contributor'
+        principalType: 'ServicePrincipal'
+      }
     ]
 
     // WAF aligned networking
@@ -1687,10 +1843,7 @@ module searchServiceUpdate 'br/public:avm/res/search/search-service:0.11.1' = {
       systemAssigned: true
     }
 
-    // Enabled the Public access because other services are not able to connect with search search AVM module when public access is disabled
-
-    // publicNetworkAccess: enablePrivateNetworking  ? 'Disabled' : 'Enabled'
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
     networkRuleSet: {
       bypass: 'AzureServices'
     }
@@ -1721,26 +1874,23 @@ module searchServiceUpdate 'br/public:avm/res/search/search-service:0.11.1' = {
       }
     ]
 
-    //Removing the Private endpoints as we are facing the issue with connecting to search service while comminicating with agents
-
-    privateEndpoints: []
-    // privateEndpoints: enablePrivateNetworking 
-    //   ? [
-    //       {
-    //         name: 'pep-search-${solutionSuffix}'
-    //         customNetworkInterfaceName: 'nic-search-${solutionSuffix}'
-    //         privateDnsZoneGroup: {
-    //           privateDnsZoneGroupConfigs: [
-    //             {
-    //               privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.search]!.outputs.resourceId
-    //             }
-    //           ]
-    //         }
-    //         subnetResourceId: virtualNetwork!.outputs.subnetResourceIds[0]
-    //         service: 'searchService'
-    //       }
-    //     ]
-    //   : []
+    privateEndpoints: enablePrivateNetworking
+      ? [
+          {
+            name: 'pep-search-${solutionSuffix}'
+            customNetworkInterfaceName: 'nic-search-${solutionSuffix}'
+            privateDnsZoneGroup: {
+              privateDnsZoneGroupConfigs: [
+                {
+                  privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.search]!.outputs.resourceId
+                }
+              ]
+            }
+            subnetResourceId: virtualNetwork!.outputs.backendSubnetResourceId
+            service: 'searchService'
+          }
+        ]
+      : []
   }
   dependsOn: [
     searchService
@@ -1750,7 +1900,9 @@ module searchServiceUpdate 'br/public:avm/res/search/search-service:0.11.1' = {
 // ========== Search Service - AI Project Connection ========== //
 
 var aiSearchConnectionName = 'aifp-srch-connection-${solutionSuffix}'
-module aiSearchFoundryConnection 'modules/aifp-connections.bicep' = {
+var aiStorageConnectionName = 'aifp-st-connection-${solutionSuffix}'
+var aiCosmosConnectionName = 'aifp-cosmos-connection-${solutionSuffix}'
+module aiProjectConnections 'modules/aifp-connections.bicep' = {
   name: take('aifp-srch-connection.${solutionSuffix}', 64)
   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
   params: {
@@ -1760,9 +1912,70 @@ module aiSearchFoundryConnection 'modules/aifp-connections.bicep' = {
     searchServiceResourceId: searchService.id
     searchServiceLocation: searchService.location
     searchServiceName: searchService.name
+    aifStorageConnectionName: aiStorageConnectionName
+    storageAccountResourceId: avmStorageAccount.outputs.resourceId
+    storageAccountLocation: avmStorageAccount.outputs.location
+    blobstorageEndpoint: avmStorageAccount.outputs.primaryBlobEndpoint
+    aifCosmosConnectionName: aiCosmosConnectionName
+    cosmosAccountResourceId: cosmosDb.outputs.resourceId
+    cosmosAccountLocation: cosmosDb.outputs.location
+    cosmosDbEndpoint: cosmosDb.outputs.endpoint
+    enablePrivateNetworking: enablePrivateNetworking
   }
   dependsOn: [
     aiFoundryAiServices
+  ]
+}
+
+// This module creates the capability host for the project and account
+var projectCapHost = useExistingAiFoundryAiProject ? 'default' : 'proj-cap-host-${solutionSuffix}'
+var accountCapHost = 'default'
+module addProjectCapabilityHost 'modules/add-project-capability-host.bicep' = if(enablePrivateNetworking) {
+  name: take('module-project-capability-host.${solutionSuffix}', 64)
+  scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
+  params: {
+    accountName: aiFoundryAiServicesResourceName
+    projectName: aiFoundryAiProjectName
+    aiSearchConnection: aiSearchConnectionName
+    cosmosDBConnection: aiCosmosConnectionName
+    azureStorageConnection: aiStorageConnectionName
+    projectCapHost: projectCapHost
+    accountCapHost: accountCapHost
+    createAccountCapabilityHost: useExistingAiFoundryAiProject
+    customerSubnetResourceId: agentSubnetResourceIdForNetworkInjections
+  }
+  dependsOn: [
+    searchServiceUpdate
+    virtualNetwork
+    avmPrivateDnsZones
+    aiProjectConnections
+    existingAiServicesNetworking
+    existingAiServicesPrivateEndpoint
+  ]
+}
+
+// ========== Cross-Subscription: Private Endpoints in Foundry VNet ========== //
+// When using an existing AI Foundry in a different subscription, agent compute runs
+// in the Foundry VNet. It needs local private endpoints to Cosmos DB, Storage, and
+// Search to satisfy the service-side "approved private endpoint" check.
+module foundryVNetPrivateEndpoints 'modules/foundry-vnet-private-endpoints.bicep' = if (isExistingFoundryCrossSubscription && enablePrivateNetworking) {
+  name: take('module.foundry-vnet-pes.${solutionSuffix}', 64)
+  scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
+  params: {
+    location: existingAiFoundryAiServices!.location
+    tags: tags
+    solutionSuffix: solutionSuffix
+    backendSubnetResourceId: foundryVNet!.outputs.backendSubnetResourceId
+    cosmosDbAccountResourceId: cosmosDb.outputs.resourceId
+    storageAccountResourceId: avmStorageAccount.outputs.resourceId
+    searchServiceResourceId: searchService.id
+    cosmosDbDnsZoneId: avmPrivateDnsZones[dnsZoneIndex.cosmosDb]!.outputs.resourceId
+    blobDnsZoneId: avmPrivateDnsZones[dnsZoneIndex.blob]!.outputs.resourceId
+    searchDnsZoneId: avmPrivateDnsZones[dnsZoneIndex.search]!.outputs.resourceId
+  }
+  dependsOn: [
+    peeringToFoundryVNet
+    addProjectCapabilityHost
   ]
 }
 

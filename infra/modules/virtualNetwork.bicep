@@ -119,6 +119,32 @@ param subnets subnetType[] = [
     }
   }
   {
+    name: 'agent'
+    addressPrefixes: ['10.0.6.0/24']
+    delegation: 'Microsoft.App/environments'
+    networkSecurityGroup: {
+      name: 'nsg-agent'
+      securityRules: [
+        {
+          name: 'deny-hop-outbound'
+          properties: {
+            access: 'Deny'
+            destinationAddressPrefix: '*'
+            destinationPortRanges: [
+              '22'
+              '3389'
+            ]
+            direction: 'Outbound'
+            priority: 200
+            protocol: 'Tcp'
+            sourceAddressPrefix: 'VirtualNetwork'
+            sourcePortRange: '*'
+          }
+        }
+      ]
+    }
+  }
+  {
     name: 'AzureBastionSubnet' // Required name for Azure Bastion
     addressPrefixes: ['10.0.0.64/26']
     networkSecurityGroup: {
@@ -315,6 +341,9 @@ output administrationSubnetResourceId string = contains(map(subnets, subnet => s
   : ''
 output webserverfarmSubnetResourceId string = contains(map(subnets, subnet => subnet.name), 'webserverfarm')
   ? virtualNetwork.outputs.subnetResourceIds[indexOf(map(subnets, subnet => subnet.name), 'webserverfarm')]
+  : ''
+output agentSubnetResourceId string = contains(map(subnets, subnet => subnet.name), 'agent')
+  ? virtualNetwork.outputs.subnetResourceIds[indexOf(map(subnets, subnet => subnet.name), 'agent')]
   : ''
 output bastionSubnetResourceId string = contains(map(subnets, subnet => subnet.name), 'AzureBastionSubnet')
   ? virtualNetwork.outputs.subnetResourceIds[indexOf(map(subnets, subnet => subnet.name), 'AzureBastionSubnet')]
