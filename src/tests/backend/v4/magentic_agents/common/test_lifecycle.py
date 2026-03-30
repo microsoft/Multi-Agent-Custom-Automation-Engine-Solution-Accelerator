@@ -15,6 +15,8 @@ sys.modules['azure.ai.agents.aio'] = Mock()
 sys.modules['azure.identity'] = Mock()
 sys.modules['azure.identity.aio'] = Mock()
 sys.modules['common'] = Mock()
+sys.modules['common.config'] = Mock()
+sys.modules['common.config.app_config'] = Mock(config=Mock())
 sys.modules['common.database'] = Mock()
 sys.modules['common.database.database_base'] = Mock()
 sys.modules['common.models'] = Mock()
@@ -327,7 +329,7 @@ class TestMCPEnabledBase:
         base = MCPEnabledBase()
         mock_agent = Mock()
         mock_chat_client = Mock()
-        mock_agent.chat_client = mock_chat_client
+        mock_agent.client = mock_chat_client
         base._agent = mock_agent
         
         result = base.get_chat_client()
@@ -339,7 +341,7 @@ class TestMCPEnabledBase:
         base = MCPEnabledBase()
         mock_agent = Mock()
         mock_chat_client = Mock()
-        mock_agent.chat_client = mock_chat_client
+        mock_agent.client = mock_chat_client
         base._agent = mock_agent
         
         result = base.get_chat_client()
