@@ -6,9 +6,9 @@
  * needs 7+ useEffect blocks for WebSocket handling.
  */
 import React, { useEffect } from 'react';
-import webSocketService from '@/services/WebSocketService';
-import { PlanDataService } from '@/services/PlanDataService';
-import { useAppDispatch, useAppSelector } from '@/state/hooks';
+import webSocketService from '@/store/WebSocketService';
+import { PlanDataService } from '@/store/PlanDataService';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
     setShowProcessingPlanSpinner,
     setReloadLeftList,
@@ -17,20 +17,20 @@ import {
     selectPlanApproved,
     approvalRequestReceived,
     planCompletedFinal,
-} from '@/state/slices/planSlice';
+} from '@/store/slices/planSlice';
 import {
     setSubmittingChatDisableInput,
     setClarificationMessage,
     addAgentMessage,
-} from '@/state/slices/chatSlice';
+} from '@/store/slices/chatSlice';
 import {
     appendToStreamingBuffer,
     setShowBufferingText,
     addStreamingMessage,
     selectStreamingMessageBuffer,
-} from '@/state/slices/streamingSlice';
-import { setWsConnected } from '@/state/slices/appSlice';
-import { setSelectedTeam } from '@/state/slices/teamSlice';
+} from '@/store/slices/streamingSlice';
+import { setWsConnected } from '@/store/slices/appSlice';
+import { setSelectedTeam } from '@/store/slices/teamSlice';
 import {
     WebsocketMessageType,
     MPlanData,

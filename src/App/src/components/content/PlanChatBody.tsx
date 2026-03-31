@@ -1,8 +1,8 @@
 import React from "react";
-import ChatInput from "@/coral/modules/ChatInput";
+import ChatInput from "@/commonComponents/modules/ChatInput";
 import { PlanChatProps } from "@/models";
 import { Button } from "@fluentui/react-components";
-import { Send } from "@/coral/imports/bundleicons";
+import { Send } from "@/commonComponents/imports/bundleicons";
 
 interface SimplifiedPlanChatProps extends PlanChatProps {
     planData: any;

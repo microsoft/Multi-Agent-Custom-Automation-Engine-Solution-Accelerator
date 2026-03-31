@@ -8,7 +8,7 @@ on:
       - demo-v4
       - hotfix
     paths:
-      - 'src/frontend/**'
+      - 'src/App/**'
       - 'src/backend/**'
       - 'src/mcp_server/**'
       - '.github/workflows/docker-build-and-push.yml'
@@ -31,7 +31,7 @@ on:
       - demo-v4
       - hotfix
     paths:
-      - 'src/frontend/**'
+      - 'src/App/**'
       - 'src/backend/**'
       - 'src/mcp_server/**'
       - '.github/workflows/docker-build-and-push.yml'
@@ -111,8 +111,8 @@ jobs:
       - name: Build and optionally push Frontend Docker image
         uses: docker/build-push-action@v6
         with:
-          context: ./src/frontend
-          file: ./src/frontend/Dockerfile
+          context: ./src/App
+          file: ./src/App/Dockerfile
           push: ${{ env.TAG != 'pullrequest-ignore' }}
           tags: |
             ${{ steps.registry.outputs.ext_registry }}/macaefrontend:${{ env.TAG }}

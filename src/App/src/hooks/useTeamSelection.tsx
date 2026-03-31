@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { TeamConfig } from '../models/Team';
-import { TeamService } from '../services/TeamService';
+import { TeamService } from '../store/TeamService';
 
 interface UseTeamSelectionProps {
   sessionId?: string;

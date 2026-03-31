@@ -11,3 +11,7 @@ export * from './slices/chatSlice';
 export * from './slices/appSlice';
 export * from './slices/teamSlice';
 export * from './slices/streamingSlice';
+
+// Services
+export { default as TaskService } from './TaskService';
+export * from './WebSocketService';

@@ -7,7 +7,7 @@ import { FluentProvider, teamsLightTheme, teamsDarkTheme } from "@fluentui/react
 import { setEnvData, setApiUrl, config as defaultConfig, toBoolean, getUserInfo, setUserInfoGlobal } from './api/config';
 import { apiService } from './api';
 import { Provider as ReduxProvider } from 'react-redux';
-import { store } from './state/store';
+import { store } from './store/store';
 const root = ReactDOM.createRoot(document.getElementById("root") as HTMLElement);
 
 const AppWrapper = () => {

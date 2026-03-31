@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { webSocketService } from '@/services';
+import { webSocketService } from '@/store';
 import { StreamMessage } from '../models';
 
 export interface WebSocketState {

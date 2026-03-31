@@ -1,6 +1,6 @@
 import React from "react";
-import PanelLeft from "@/coral/components/Panels/PanelLeft";
-import PanelLeftToolbar from "@/coral/components/Panels/PanelLeftToolbar";
+import PanelLeft from "@/commonComponents/components/Panels/PanelLeft";
+import PanelLeftToolbar from "@/commonComponents/components/Panels/PanelLeftToolbar";
 import {
   Body1Strong,
   Toast,
@@ -18,11 +18,11 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Plan, PlanPanelLefProps, Task, UserInfo } from "@/models";
 import { apiService } from "@/api";
-import { TaskService } from "@/services";
-import ContosoLogo from "../../coral/imports/ContosoLogo";
+import { TaskService } from "@/store";
+import ContosoLogo from "../../commonComponents/imports/ContosoLogo";
 import "../../styles/PlanPanelLeft.css";
-import PanelFooter from "@/coral/components/Panels/PanelFooter";
-import PanelUserCard from "../../coral/components/Panels/UserCard";
+import PanelFooter from "@/commonComponents/components/Panels/PanelFooter";
+import PanelUserCard from "../../commonComponents/components/Panels/UserCard";
 import { getUserInfoGlobal } from "@/api/config";
 import TeamSelector from "../common/TeamSelector";
 import { TeamConfig } from "../../models/Team";

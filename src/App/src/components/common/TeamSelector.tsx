@@ -33,7 +33,7 @@ import {
   Delete20Filled
 } from '@fluentui/react-icons';
 import { TeamConfig } from '../../models/Team';
-import { TeamService } from '../../services/TeamService';
+import { TeamService } from '../../store/TeamService';
 
 import styles from '../../styles/TeamSelector.module.css';
 

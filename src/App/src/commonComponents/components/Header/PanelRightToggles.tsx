@@ -12,7 +12,7 @@ import {
   Button,
   ButtonProps
 } from "@fluentui/react-components";
-import { PanelRightContract, PanelRightExpand } from "@/coral/imports/bundleicons";
+import { PanelRightContract, PanelRightExpand } from "@/commonComponents/imports/bundleicons";
 import eventBus from "../eventbus.js";
 
 type PanelRightTogglesProps = {

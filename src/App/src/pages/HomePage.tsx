@@ -1,24 +1,24 @@
 import React, { useEffect, useCallback } from 'react';
 import { Spinner } from '@fluentui/react-components';
 import '../styles/PlanPage.css';
-import CoralShellColumn from '../coral/components/Layout/CoralShellColumn';
-import CoralShellRow from '../coral/components/Layout/CoralShellRow';
-import Content from '../coral/components/Content/Content';
+import CoralShellColumn from '../commonComponents/components/Layout/CoralShellColumn';
+import CoralShellRow from '../commonComponents/components/Layout/CoralShellRow';
+import Content from '../commonComponents/components/Content/Content';
 import HomeInput from '@/components/content/HomeInput';
-import { NewTaskService } from '../services/NewTaskService';
+import { NewTaskService } from '../store/NewTaskService';
 import PlanPanelLeft from '@/components/content/PlanPanelLeft';
-import ContentToolbar from '@/coral/components/Content/ContentToolbar';
+import ContentToolbar from '@/commonComponents/components/Content/ContentToolbar';
 import { TeamConfig } from '../models/Team';
-import { TeamService } from '../services/TeamService';
+import { TeamService } from '../store/TeamService';
 import InlineToaster, { useInlineToaster } from '../components/toast/InlineToaster';
-import { useAppDispatch, useAppSelector } from '../state/hooks';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
     selectSelectedTeam,
     selectIsLoadingTeam,
     setSelectedTeam,
     setIsLoadingTeam,
-} from '../state/slices/teamSlice';
-import { selectReloadLeftList, setReloadLeftList } from '../state/slices/planSlice';
+} from '../store/slices/teamSlice';
+import { selectReloadLeftList, setReloadLeftList } from '../store/slices/planSlice';
 
 /**
  * HomePage component - displays task lists and provides navigation

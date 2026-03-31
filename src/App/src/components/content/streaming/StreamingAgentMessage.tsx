@@ -4,7 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypePrism from "rehype-prism";
 import { Body1, Tag, makeStyles, tokens } from "@fluentui/react-components";
-import { TaskService } from "@/services";
+import { TaskService } from "@/store";
 import { PersonRegular } from "@fluentui/react-icons";
 import { getAgentIcon, getAgentDisplayName } from '@/utils/agentIconUtils';
 

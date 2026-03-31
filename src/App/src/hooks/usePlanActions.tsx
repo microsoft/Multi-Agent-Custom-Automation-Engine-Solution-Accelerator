@@ -8,22 +8,22 @@
  * or when the component unmounts, preventing stale dispatches.
  */
 import { useCallback, useEffect, useRef } from 'react';
-import { useAppDispatch } from '@/state/hooks';
+import { useAppDispatch } from '@/store/hooks';
 import { ProcessedPlanData, PlanStatus } from '@/models';
 import {
     fetchPlanData,
     resetPlan,
-} from '@/state/slices/planSlice';
+} from '@/store/slices/planSlice';
 import {
     setAgentMessages,
     resetChat,
-} from '@/state/slices/chatSlice';
+} from '@/store/slices/chatSlice';
 import {
     setStreamingMessageBuffer,
     setShowBufferingText,
     resetStreaming,
-} from '@/state/slices/streamingSlice';
-import { setWsConnected } from '@/state/slices/appSlice';
+} from '@/store/slices/streamingSlice';
+import { setWsConnected } from '@/store/slices/appSlice';
 
 /** Return type of dispatch(createAsyncThunk()) — has .abort() */
 type ThunkPromise = ReturnType<typeof fetchPlanData> extends (...args: any[]) => infer R ? R : never;

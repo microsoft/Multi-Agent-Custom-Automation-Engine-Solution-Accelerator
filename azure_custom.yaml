@@ -26,7 +26,7 @@ services:
       remoteBuild: true
 
   frontend:
-    project: ./src/frontend
+    project: ./src/App
     language: py
     host: appservice
     dist: ./dist

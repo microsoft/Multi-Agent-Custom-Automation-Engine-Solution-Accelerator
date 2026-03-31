@@ -4,8 +4,8 @@ import { Spinner, Text } from '@fluentui/react-components';
 
 /* ── Services / API ──────────────────────────────────────────── */
 import { APIService } from '../api/apiService';
-import { PlanDataService } from '../services/PlanDataService';
-import webSocketService from '../services/WebSocketService';
+import { PlanDataService } from '../store/PlanDataService';
+import webSocketService from '../store/WebSocketService';
 
 /* ── Models ──────────────────────────────────────────────────── */
 import {
@@ -14,7 +14,7 @@ import {
 } from '../models';
 
 /* ── Redux ───────────────────────────────────────────────────── */
-import { useAppDispatch, useAppSelector } from '../state/hooks';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
     selectPlanData,
     selectPlanLoading,
@@ -37,7 +37,7 @@ import {
     setErrorLoading,
     planApprovalAccepted,
     planApprovalRejected,
-} from '../state/slices/planSlice';
+} from '../store/slices/planSlice';
 import {
     selectInput,
     selectSubmittingChatDisable,
@@ -46,14 +46,14 @@ import {
     setInput,
     setSubmittingChatDisableInput,
     addAgentMessage,
-} from '../state/slices/chatSlice';
+} from '../store/slices/chatSlice';
 import {
     selectStreamingMessages,
     selectStreamingMessageBuffer,
     selectShowBufferingText,
-} from '../state/slices/streamingSlice';
-import { selectWsConnected } from '../state/slices/appSlice';
-import { selectSelectedTeam } from '../state/slices/teamSlice';
+} from '../store/slices/streamingSlice';
+import { selectWsConnected } from '../store/slices/appSlice';
+import { selectSelectedTeam } from '../store/slices/teamSlice';
 
 /* ── Custom Hooks ────────────────────────────────────────────── */
 import { usePlanWebSocket } from '../hooks/usePlanWebSocket';
@@ -65,13 +65,13 @@ import { usePlanCancellationAlert } from '../hooks/usePlanCancellationAlert';
 import PlanChat from '../components/content/PlanChat';
 import PlanPanelRight from '../components/content/PlanPanelRight';
 import PlanPanelLeft from '../components/content/PlanPanelLeft';
-import CoralShellColumn from '../coral/components/Layout/CoralShellColumn';
-import CoralShellRow from '../coral/components/Layout/CoralShellRow';
-import Content from '../coral/components/Content/Content';
-import ContentToolbar from '../coral/components/Content/ContentToolbar';
+import CoralShellColumn from '../commonComponents/components/Layout/CoralShellColumn';
+import CoralShellRow from '../commonComponents/components/Layout/CoralShellRow';
+import Content from '../commonComponents/components/Content/Content';
+import ContentToolbar from '../commonComponents/components/Content/ContentToolbar';
 import { useInlineToaster } from '../components/toast/InlineToaster';
-import Octo from '../coral/imports/Octopus.png';
-import LoadingMessage, { loadingMessages } from '../coral/components/LoadingMessage';
+import Octo from '../commonComponents/imports/Octopus.png';
+import LoadingMessage, { loadingMessages } from '../commonComponents/components/LoadingMessage';
 import PlanCancellationDialog from '../components/common/PlanCancellationDialog';
 import '../styles/PlanPage.css';
 

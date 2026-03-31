@@ -13,13 +13,13 @@ import "../../styles/prism-material-oceanic.css";
 import "./../../styles/HomeInput.css";
 
 import { HomeInputProps, iconMap, QuickTask } from "../../models/homeInput";
-import { TaskService } from "../../services/TaskService";
-import { NewTaskService } from "../../services/NewTaskService";
+import { TaskService } from "../../store/TaskService";
+import { NewTaskService } from "../../store/NewTaskService";
 
-import ChatInput from "@/coral/modules/ChatInput";
+import ChatInput from "@/commonComponents/modules/ChatInput";
 import InlineToaster, { useInlineToaster } from "../toast/InlineToaster";
-import PromptCard from "@/coral/components/PromptCard";
-import { Send } from "@/coral/imports/bundleicons";
+import PromptCard from "@/commonComponents/components/PromptCard";
+import { Send } from "@/commonComponents/imports/bundleicons";
 import { Clipboard20Regular } from "@fluentui/react-icons";
 
 // Icon mapping function to convert string icons to FluentUI icons

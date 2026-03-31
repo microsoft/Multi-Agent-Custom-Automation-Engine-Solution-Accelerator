@@ -20,8 +20,8 @@ import {
     Flash20Regular,
     Shield20Regular
 } from '@fluentui/react-icons';
-import { TeamService } from '@/services/TeamService';
-import { TaskService } from '@/services';
+import { TeamService } from '@/store/TeamService';
+import { TaskService } from '@/store';
 import { iconMap } from '@/models/homeInput';
 
 // Extended icon mapping for user-uploaded string icons

@@ -5,7 +5,7 @@
 import { createSlice, createAsyncThunk, createSelector, PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '../store';
 import { ProcessedPlanData, MPlanData, PlanStatus } from '@/models';
-import { PlanDataService } from '@/services/PlanDataService';
+import { PlanDataService } from '@/store/PlanDataService';
 
 /* ── Async Thunks (Point 9 — createAsyncThunk for API‑driven state) ── */
 
