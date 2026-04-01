@@ -300,6 +300,10 @@ azd auth login --tenant-id <tenant-id>
 3. Under the **Overview** section, locate the **Tenant ID** field. Copy the value displayed
 
 ### 4.2 Start Deployment
+**NOTE:** If you are running the latest azd version (version 1.23.9), please run the following command. 
+```bash 
+azd config set provision.preflight off
+```
 
 ```shell
 azd up
