@@ -17,8 +17,8 @@ import asyncio
 import json
 import logging
 import importlib.util
-from unittest.mock import patch, MagicMock, AsyncMock, Mock
-from typing import Any, Dict, Optional, List
+from unittest.mock import patch, MagicMock, AsyncMock
+from typing import Any, List
 from dataclasses import dataclass
 
 # Add the src directory to sys.path for proper import
@@ -530,17 +530,9 @@ class TestPlanService:
             assert result is False
 
     def test_event_tracking_calls(self):
-        """Test that event tracking is called appropriately."""
-        # This test verifies the event tracking integration
-        with patch.object(mock_event_utils, 'track_event_if_configured') as mock_track:
-            mock_approval = MockPlanApprovalResponse(
-                plan_id="test-plan",
-                m_plan_id="test-m-plan",
-                approved=True
-            )
-            
-            # The actual event tracking calls are tested indirectly through the service methods
-            assert mock_track is not None
+        """Test that event tracking is callable via the mocked event_utils module."""
+        # Verify the mock event_utils has the track function accessible
+        assert callable(mock_event_utils.track_event_if_configured)
 
     def test_logging_integration(self):
         """Test that logging is properly configured."""

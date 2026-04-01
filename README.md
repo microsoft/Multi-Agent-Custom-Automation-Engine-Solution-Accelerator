@@ -194,6 +194,15 @@ Check out similar solution accelerators
 
 <br/>   
 
+💡 Want to get familiar with Microsoft's AI and Data Engineering best practices? Check out our playbooks to learn more
+
+| Playbook | Description |
+|:---|:---|
+| [AI&nbsp;playbook](https://learn.microsoft.com/en-us/ai/playbook/) | The Artificial Intelligence (AI) Playbook provides enterprise software engineers with solutions, capabilities, and code developed to solve real-world AI problems. |
+| [Data&nbsp;playbook](https://learn.microsoft.com/en-us/data-engineering/playbook/understanding-data-playbook) | The data playbook provides enterprise software engineers with solutions which contain code developed to solve real-world problems. Everything in the playbook is developed with, and validated by, some of Microsoft's largest and most influential customers and partners. |
+
+<br/> 
+
 ## Provide feedback
 
 Have questions, find a bug, or want to request a feature? [Submit a new issue](https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/issues) on this repo and we'll connect.

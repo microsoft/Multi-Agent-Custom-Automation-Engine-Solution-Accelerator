@@ -4,14 +4,10 @@ Comprehensive test cases covering HumanApprovalMagenticManager with proper mocki
 """
 
 import asyncio
-import logging
 import os
 import sys
 import unittest
-from typing import Any, Optional
 from unittest.mock import Mock, AsyncMock, patch
-
-import pytest
 
 # Add the backend directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'backend'))
@@ -114,9 +110,12 @@ class MockStandardMagenticManager:
 ORCHESTRATOR_FINAL_ANSWER_PROMPT = "Final answer prompt"
 ORCHESTRATOR_TASK_LEDGER_PLAN_PROMPT = "Task ledger plan prompt"
 ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT = "Task ledger plan update prompt"
+ORCHESTRATOR_PROGRESS_LEDGER_PROMPT = "Progress ledger prompt"
 
 sys.modules['agent_framework'] = Mock(
-    ChatMessage=MockChatMessage
+    ChatMessage=MockChatMessage,
+    AgentResponse=Mock,
+    Message=MockChatMessage,
 )
 sys.modules['agent_framework._workflows'] = Mock()
 sys.modules['agent_framework._workflows._magentic'] = Mock(
@@ -125,6 +124,16 @@ sys.modules['agent_framework._workflows._magentic'] = Mock(
     ORCHESTRATOR_FINAL_ANSWER_PROMPT=ORCHESTRATOR_FINAL_ANSWER_PROMPT,
     ORCHESTRATOR_TASK_LEDGER_PLAN_PROMPT=ORCHESTRATOR_TASK_LEDGER_PLAN_PROMPT,
     ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT=ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT,
+    ORCHESTRATOR_PROGRESS_LEDGER_PROMPT=ORCHESTRATOR_PROGRESS_LEDGER_PROMPT,
+)
+sys.modules['agent_framework_orchestrations'] = Mock()
+sys.modules['agent_framework_orchestrations._magentic'] = Mock(
+    MagenticContext=MockMagenticContext,
+    StandardMagenticManager=MockStandardMagenticManager,
+    ORCHESTRATOR_FINAL_ANSWER_PROMPT=ORCHESTRATOR_FINAL_ANSWER_PROMPT,
+    ORCHESTRATOR_TASK_LEDGER_PLAN_PROMPT=ORCHESTRATOR_TASK_LEDGER_PLAN_PROMPT,
+    ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT=ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT,
+    ORCHESTRATOR_PROGRESS_LEDGER_PROMPT=ORCHESTRATOR_PROGRESS_LEDGER_PROMPT,
 )
 
 # Mock v4.models.messages
@@ -240,10 +249,15 @@ class TestHumanApprovalMagenticManager(unittest.IsolatedAsyncioTestCase):
         orchestration_config.wait_for_approval.return_value = True  # Default return value
         orchestration_config.cleanup_approval.reset_mock()
         
+        # Create mock agent for new API
+        self.mock_agent = Mock()
+        self.mock_agent.name = "MockAgent"
+        
         # Create test instance
         self.user_id = "test_user_123"
         self.manager = HumanApprovalMagenticManager(
             user_id=self.user_id,
+            agent=self.mock_agent,
             chat_client=Mock(),
             instructions="Test instructions"
         )
@@ -252,8 +266,10 @@ class TestHumanApprovalMagenticManager(unittest.IsolatedAsyncioTestCase):
     def test_init(self):
         """Test HumanApprovalMagenticManager initialization."""
         # Test basic initialization
+        mock_agent = Mock()
         manager = HumanApprovalMagenticManager(
             user_id="test_user",
+            agent=mock_agent,
             chat_client=Mock(),
             instructions="Test instructions"
         )
@@ -273,8 +289,10 @@ class TestHumanApprovalMagenticManager(unittest.IsolatedAsyncioTestCase):
             "custom_param": "test_value"
         }
         
+        mock_agent = Mock()
         manager = HumanApprovalMagenticManager(
             user_id="test_user",
+            agent=mock_agent,
             chat_client=Mock(),
             **additional_kwargs
         )
@@ -654,8 +672,10 @@ class TestHumanApprovalMagenticManager(unittest.IsolatedAsyncioTestCase):
 
     def test_approval_enabled_default(self):
         """Test that approval_enabled is True by default."""
+        mock_agent = Mock()
         manager = HumanApprovalMagenticManager(
             user_id="test_user",
+            agent=mock_agent,
             chat_client=Mock()
         )
         
@@ -663,8 +683,10 @@ class TestHumanApprovalMagenticManager(unittest.IsolatedAsyncioTestCase):
 
     def test_magentic_plan_default(self):
         """Test that magentic_plan is None by default."""
+        mock_agent = Mock()
         manager = HumanApprovalMagenticManager(
             user_id="test_user",
+            agent=mock_agent,
             chat_client=Mock()
         )
         

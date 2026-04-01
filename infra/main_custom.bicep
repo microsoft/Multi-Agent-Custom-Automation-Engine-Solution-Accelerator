@@ -131,6 +131,9 @@ param virtualMachineAdminUsername string?
 @description('Optional. The password for the administrator account of the virtual machine. Allows to customize credentials if `enablePrivateNetworking` is set to true.')
 @secure()
 param virtualMachineAdminPassword string?
+
+@description('Optional. The size of the virtual machine. Defaults to Standard_D2s_v5.')
+param virtualMachineSize string = 'Standard_D2s_v5'
 // These parameters are changed for testing - please reset as part of publication
 
 @description('Optional. The Container Registry hostname where the docker images for the backend are located.')
@@ -372,7 +375,6 @@ module applicationInsights 'br/public:avm/res/insights/component:0.6.0' = if (en
     flowType: 'Bluefield'
     // WAF aligned configuration for Monitoring
     workspaceResourceId: enableMonitoring ? logAnalyticsWorkspaceResourceId : ''
-    diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : null
   }
 }
 
@@ -603,7 +605,6 @@ module proximityPlacementGroup 'br/public:avm/res/compute/proximity-placement-gr
 
 var virtualMachineResourceName = 'vm-${solutionSuffix}'
 var virtualMachineAvailabilityZone = 1
-var virtualMachineSize = 'Standard_D2s_v4'
 module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.17.0' = if (enablePrivateNetworking) {
   name: take('avm.res.compute.virtual-machine.${virtualMachineResourceName}', 64)
   params: {
@@ -964,31 +965,44 @@ module aiFoundryAiServices 'br:mcr.microsoft.com/bicep/avm/res/cognitive-service
     // WAF aligned configuration for Monitoring
     diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : null
     publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
-    privateEndpoints: (enablePrivateNetworking)
-      ? ([
-          {
-            name: 'pep-${aiFoundryAiServicesResourceName}'
-            customNetworkInterfaceName: 'nic-${aiFoundryAiServicesResourceName}'
-            subnetResourceId: virtualNetwork!.outputs.backendSubnetResourceId
-            privateDnsZoneGroup: {
-              privateDnsZoneGroupConfigs: [
-                {
-                  name: 'ai-services-dns-zone-cognitiveservices'
-                  privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.cognitiveServices]!.outputs.resourceId
-                }
-                {
-                  name: 'ai-services-dns-zone-openai'
-                  privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.openAI]!.outputs.resourceId
-                }
-                {
-                  name: 'ai-services-dns-zone-aiservices'
-                  privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.aiServices]!.outputs.resourceId
-                }
-              ]
-            }
-          }
-        ])
-      : []
+    // Private endpoints are deployed separately via the aiFoundryPrivateEndpoint module below
+    privateEndpoints: []
+  }
+}
+
+module aiFoundryPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.8.1' = if (enablePrivateNetworking && !useExistingAiFoundryAiProject) {
+  name: take('pep-${aiFoundryAiServicesResourceName}-deployment', 64)
+  params: {
+    name: 'pep-${aiFoundryAiServicesResourceName}'
+    customNetworkInterfaceName: 'nic-${aiFoundryAiServicesResourceName}'
+    location: location
+    tags: tags
+    privateLinkServiceConnections: [
+      {
+        name: 'pep-${aiFoundryAiServicesResourceName}-connection'
+        properties: {
+          privateLinkServiceId: aiFoundryAiServices!.outputs.resourceId
+          groupIds: ['account']
+        }
+      }
+    ]
+    privateDnsZoneGroup: {
+      privateDnsZoneGroupConfigs: [
+        {
+          name: 'ai-services-dns-zone-cognitiveservices'
+          privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.cognitiveServices]!.outputs.resourceId
+        }
+        {
+          name: 'ai-services-dns-zone-openai'
+          privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.openAI]!.outputs.resourceId
+        }
+        {
+          name: 'ai-services-dns-zone-aiservices'
+          privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.aiServices]!.outputs.resourceId
+        }
+      ]
+    }
+    subnetResourceId: virtualNetwork!.outputs.backendSubnetResourceId
   }
 }
 
@@ -999,6 +1013,7 @@ resource existingAiFoundryAiServicesProject 'Microsoft.CognitiveServices/account
 
 module aiFoundryAiServicesProject 'modules/ai-project.bicep' = if (!useExistingAiFoundryAiProject) {
   name: take('module.ai-project.${aiFoundryAiProjectResourceName}', 64)
+  dependsOn: enablePrivateNetworking ? [ aiFoundryPrivateEndpoint ] : []
   params: {
     name: aiFoundryAiProjectResourceName
     location: azureAiServiceLocation
@@ -1366,10 +1381,6 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
             value: '["o3","o4-mini","gpt-4.1","gpt-4.1-mini"]'
           }
           {
-            name: 'AZURE_AI_SEARCH_API_KEY'
-            secretRef: 'azure-ai-search-api-key'
-          }
-          {
             name: 'AZURE_STORAGE_BLOB_URL'
             value: avmStorageAccount.outputs.serviceEndpoints.blob
           }
@@ -1412,13 +1423,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
         ]
       }
     ]
-    secrets: [
-      {
-        name: 'azure-ai-search-api-key'
-        keyVaultUrl: keyvault.outputs.secrets[0].uriWithVersion
-        identity: userAssignedIdentity.outputs.resourceId
-      }
-    ]
+    secrets: []
   }
 }
 
@@ -1720,12 +1725,7 @@ module searchService 'br/public:avm/res/search/search-service:0.11.1' = {
   name: take('avm.res.search.search-service.${solutionSuffix}', 64)
   params: {
     name: searchServiceName
-    authOptions: {
-      aadOrApiKey: {
-        aadAuthFailureMode: 'http401WithBearerChallenge'
-      }
-    }
-    disableLocalAuth: false
+    disableLocalAuth: true
     hostingMode: 'default'
     managedIdentities: {
       systemAssigned: true
@@ -1801,7 +1801,6 @@ module aiSearchFoundryConnection 'modules/aifp-connections.bicep' = {
     searchServiceResourceId: searchService.outputs.resourceId
     searchServiceLocation: searchService.outputs.location
     searchServiceName: searchService.outputs.name
-    searchApiKey: searchService.outputs.primaryKey
   }
   dependsOn: [
     aiFoundryAiServices
@@ -1852,12 +1851,7 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.12.1' = {
         roleDefinitionIdOrName: 'Key Vault Administrator'
       }
     ]
-    secrets: [
-      {
-        name: 'AzureAISearchAPIKey'
-        value: searchService.outputs.primaryKey
-      }
-    ]
+    secrets: []
     enableTelemetry: enableTelemetry
   }
 }
@@ -1908,7 +1902,6 @@ output REASONING_MODEL_NAME string = aiFoundryAiServicesReasoningModelDeployment
 output MCP_SERVER_NAME string = 'MacaeMcpServer'
 output MCP_SERVER_DESCRIPTION string = 'MCP server with greeting, HR, and planning tools'
 output SUPPORTED_MODELS string = '["o3","o4-mini","gpt-4.1","gpt-4.1-mini"]'
-output AZURE_AI_SEARCH_API_KEY string = '<Deployed-Search-ApiKey>'
 output BACKEND_URL string = 'https://${containerApp.outputs.fqdn}'
 output AZURE_AI_PROJECT_ENDPOINT string = aiFoundryAiProjectEndpoint
 output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiProjectEndpoint

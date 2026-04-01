@@ -16,7 +16,7 @@
     "@types/node": "^16.18.126",
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",
-    "axios": "^1.11.0",
+    "axios": "^1.13.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-markdown": "^10.1.0",
@@ -65,9 +65,14 @@
     "@vitest/ui": "^3.2.4",
     "eslint": "^8.57.1",
     "eslint-plugin-react": "^7.37.5",
+    "flatted": "^3.4.2",
     "jsdom": "^26.1.0",
+    "rollup": "^4.59.0",
     "typescript": "^5.8.3",
     "vite": "^7.1.2",
     "vitest": "^3.2.4"
+  },
+  "overrides": {
+    "minimatch": "3.1.3"
   }
 }

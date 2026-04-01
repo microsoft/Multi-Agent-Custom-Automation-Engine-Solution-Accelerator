@@ -1,7 +1,4 @@
 name: Docker Build Job
-permissions:
-  contents: read
-  actions: read
 on:
   workflow_call:
     inputs:
@@ -26,6 +23,7 @@ jobs:
   docker-build:
     if: inputs.trigger_type == 'workflow_dispatch' && inputs.build_docker_image == true
     runs-on: ubuntu-latest
+    environment: production
     outputs:
       IMAGE_TAG: ${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}
     steps:
@@ -49,12 +47,15 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Azure Container Registry
-        uses: azure/docker-login@v2
+      - name: Login to Azure
+        uses: azure/login@v2
         with:
-          login-server: ${{ secrets.ACR_TEST_LOGIN_SERVER }}
-          username: ${{ secrets.ACR_TEST_USERNAME }}
-          password: ${{ secrets.ACR_TEST_PASSWORD }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Log in to Azure Container Registry
+        run: az acr login --name ${{ secrets.ACR_TEST_LOGIN_SERVER }}
 
       - name: Build and optionally push Backend Docker image
         uses: docker/build-push-action@v6

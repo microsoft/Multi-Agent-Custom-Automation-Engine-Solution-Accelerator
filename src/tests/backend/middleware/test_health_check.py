@@ -1,7 +1,5 @@
 """Unit tests for backend.middleware.health_check module."""
-import asyncio
-import logging
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
+from unittest.mock import Mock, patch, AsyncMock
 import pytest
 
 # Import the module under test

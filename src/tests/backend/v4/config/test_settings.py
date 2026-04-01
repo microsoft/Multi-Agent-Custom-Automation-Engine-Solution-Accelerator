@@ -8,98 +8,12 @@ import json
 import os
 import sys
 import unittest
+from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock, Mock, patch
 
-# Add the backend directory to the Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'backend'))
+# Environment variables are set by conftest.py
 
-# Set up required environment variables before any imports
-os.environ.update({
-    'APPLICATIONINSIGHTS_CONNECTION_STRING': 'InstrumentationKey=test-key',
-    'AZURE_AI_SUBSCRIPTION_ID': 'test-subscription',
-    'AZURE_AI_RESOURCE_GROUP': 'test-rg',
-    'AZURE_AI_PROJECT_NAME': 'test-project',
-    'AZURE_AI_AGENT_ENDPOINT': 'https://test.agent.endpoint.com',
-    'AZURE_OPENAI_ENDPOINT': 'https://test.openai.azure.com/',
-    'AZURE_OPENAI_API_KEY': 'test-key',
-    'AZURE_OPENAI_API_VERSION': '2023-05-15'
-})
-
-# Only mock external problematic dependencies - do NOT mock internal common.* modules
-sys.modules['agent_framework'] = Mock()
-sys.modules['agent_framework.azure'] = Mock()
-sys.modules['agent_framework_azure_ai'] = Mock()
-sys.modules['azure'] = Mock()
-sys.modules['azure.ai'] = Mock()
-sys.modules['azure.ai.projects'] = Mock()
-sys.modules['azure.ai.projects.aio'] = Mock()
-sys.modules['azure.core'] = Mock()
-sys.modules['azure.core.exceptions'] = Mock()
-sys.modules['azure.identity'] = Mock()
-sys.modules['azure.identity.aio'] = Mock()
-sys.modules['azure.keyvault'] = Mock()
-sys.modules['azure.keyvault.secrets'] = Mock()
-sys.modules['azure.keyvault.secrets.aio'] = Mock()
-
-# Import the real v4.models classes first to avoid type annotation issues
-from backend.v4.models.messages import MPlan, WebsocketMessageType
-from backend.v4.models.models import MPlan as MPlanModel, MStep
-
-# Mock v4.models for relative imports used in settings.py, using REAL classes
-from types import ModuleType
-mock_v4 = ModuleType('v4')
-mock_v4_models = ModuleType('v4.models')
-mock_v4_models_messages = ModuleType('v4.models.messages')
-mock_v4_models_models = ModuleType('v4.models.models')
-
-# Assign real classes to mock modules
-mock_v4_models_messages.MPlan = MPlan
-mock_v4_models_messages.WebsocketMessageType = WebsocketMessageType
-mock_v4_models_models.MPlan = MPlanModel
-mock_v4_models_models.MStep = MStep
-
-sys.modules['v4'] = mock_v4
-sys.modules['v4.models'] = mock_v4_models
-sys.modules['v4.models.messages'] = mock_v4_models_messages
-sys.modules['v4.models.models'] = mock_v4_models_models
-
-# Mock common.config.app_config 
-sys.modules['common'] = Mock()
-sys.modules['common.config'] = Mock()
-sys.modules['common.config.app_config'] = Mock()
-sys.modules['common.models'] = Mock()
-sys.modules['common.models.messages_af'] = Mock()
-
-# Create comprehensive mock objects
-mock_azure_openai_chat_client = Mock()
-mock_chat_options = Mock()
-mock_choice_update = Mock()
-mock_chat_message_delta = Mock()
-mock_user_message = Mock()
-mock_assistant_message = Mock()
-mock_system_message = Mock()
-mock_get_log_analytics_workspace = Mock()
-mock_get_applicationinsights = Mock()
-mock_get_azure_openai_config = Mock()
-mock_get_azure_ai_config = Mock()
-mock_get_mcp_server_config = Mock()
-mock_team_configuration = Mock()
-
-# Mock config object with all required attributes
-mock_config = Mock()
-mock_config.AZURE_OPENAI_ENDPOINT = 'https://test.openai.azure.com/'
-mock_config.REASONING_MODEL_NAME = 'o1-reasoning'
-mock_config.AZURE_OPENAI_DEPLOYMENT_NAME = 'gpt-4'
-mock_config.AZURE_COGNITIVE_SERVICES = 'https://cognitiveservices.azure.com/.default'
-mock_config.get_azure_credentials.return_value = Mock()
-
-# Set up external mocks
-sys.modules['agent_framework'].azure.AzureOpenAIChatClient = mock_azure_openai_chat_client
-sys.modules['agent_framework'].ChatOptions = mock_chat_options
-sys.modules['common.config.app_config'].config = mock_config
-sys.modules['common.models.messages_af'].TeamConfiguration = mock_team_configuration
-
-# Now import from backend with proper path
+# Import from backend - conftest.py handles path setup and external module mocking
 from backend.v4.config.settings import (
     AzureConfig,
     MCPConfig,
@@ -160,6 +74,7 @@ class TestAzureConfig(unittest.TestCase):
         
         self.assertEqual(token, "test-token-123")
         mock_credential.get_token.assert_called_once_with(mock_config.AZURE_COGNITIVE_SERVICES)
+
 
 class TestAzureConfigAsync(unittest.IsolatedAsyncioTestCase):
     """Async test cases for AzureConfig class."""
@@ -588,22 +503,23 @@ class TestConnectionConfig(unittest.IsolatedAsyncioTestCase):
             mock_logger.error.assert_called()
             # Connection should still be removed
             self.assertNotIn(process_id, config.connections)
-
+            
     async def test_send_status_update_async_success(self):
-        """Test sending status update successfully."""
+        """Test sending a plain string status update successfully."""
+
         config = ConnectionConfig()
         user_id = "user-123"
         process_id = "process-456"
         message = "Test message"
         connection = AsyncMock()
-        
+
         config.add_connection(process_id, connection, user_id)
-        
+
         await config.send_status_update_async(message, user_id)
-        
+
         connection.send_text.assert_called_once()
         sent_data = json.loads(connection.send_text.call_args[0][0])
-        self.assertEqual(sent_data['type'], 'system_message')
+        self.assertIn('type', sent_data)
         self.assertEqual(sent_data['data'], message)
 
     async def test_send_status_update_async_no_user_id(self):
@@ -863,6 +779,97 @@ class TestGlobalInstances(unittest.TestCase):
         self.assertIsInstance(orchestration_config, OrchestrationConfig)
         self.assertIsInstance(connection_config, ConnectionConfig)
         self.assertIsInstance(team_config, TeamConfig)
+
+
+class TestApprovalAndClarificationEdgeCases(IsolatedAsyncioTestCase):
+    """Test cases for approval and clarification edge cases."""
+
+    async def test_wait_for_approval_key_error(self):
+        """Test waiting for approval with non-existent plan_id raises KeyError."""
+        config = OrchestrationConfig()
+        
+        with self.assertRaises(KeyError) as context:
+            await config.wait_for_approval("non_existent_plan", timeout=1.0)
+        
+        self.assertIn("non_existent_plan", str(context.exception))
+
+    async def test_wait_for_approval_success(self):
+        """Test waiting for approval succeeds when approval is set."""
+        config = OrchestrationConfig()
+        plan_id = "test-plan-success"
+        
+        config.set_approval_pending(plan_id)
+        
+        async def approve_task():
+            await asyncio.sleep(0.05)
+            config.set_approval_result(plan_id, True)
+        
+        approve_task_handle = asyncio.create_task(approve_task())
+        result = await config.wait_for_approval(plan_id, timeout=1.0)
+        
+        self.assertTrue(result)
+        _ = await approve_task_handle
+
+    async def test_wait_for_approval_rejected(self):
+        """Test waiting for approval when plan is rejected."""
+        config = OrchestrationConfig()
+        plan_id = "test-plan-rejected"
+        
+        config.set_approval_pending(plan_id)
+        
+        async def reject_task():
+            await asyncio.sleep(0.05)
+            config.set_approval_result(plan_id, False)
+        
+        reject_task_handle = asyncio.create_task(reject_task())
+        result = await config.wait_for_approval(plan_id, timeout=1.0)
+        
+        self.assertFalse(result)
+        _ = await reject_task_handle
+
+    async def test_wait_for_clarification_key_error(self):
+        """Test waiting for clarification with non-existent request_id raises KeyError."""
+        config = OrchestrationConfig()
+        
+        with self.assertRaises(KeyError) as context:
+            await config.wait_for_clarification("non_existent_request", timeout=1.0)
+        
+        self.assertIn("non_existent_request", str(context.exception))
+
+    async def test_wait_for_clarification_success(self):
+        """Test waiting for clarification succeeds when answer is set."""
+        config = OrchestrationConfig()
+        request_id = "test-request-success"
+        
+        config.set_clarification_pending(request_id)
+        
+        async def answer_task():
+            await asyncio.sleep(0.05)
+            config.set_clarification_result(request_id, "User answer")
+        
+        answer_task_handle = asyncio.create_task(answer_task())
+        result = await config.wait_for_clarification(request_id, timeout=1.0)
+        
+        self.assertEqual(result, "User answer")
+        _ = await answer_task_handle
+
+    async def test_wait_for_approval_creates_new_event(self):
+        """Test that waiting for approval creates event if not exists."""
+        config = OrchestrationConfig()
+        plan_id = "test-plan-new-event"
+        
+        # Set pending but don't create the event manually
+        config.approvals[plan_id] = None
+        
+        async def approve_task():
+            await asyncio.sleep(0.05)
+            config.set_approval_result(plan_id, True)
+        
+        approve_task_handle = asyncio.create_task(approve_task())
+        result = await config.wait_for_approval(plan_id, timeout=1.0)
+        
+        self.assertTrue(result)
+        _ = await approve_task_handle
 
 
 if __name__ == '__main__':

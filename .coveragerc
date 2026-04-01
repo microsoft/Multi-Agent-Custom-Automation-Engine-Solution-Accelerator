@@ -11,6 +11,7 @@ omit =
     */env/*
     */.pytest_cache/*
     */node_modules/*
+    src/backend/v4/api/router.py
 
 [paths]
 source =

@@ -88,9 +88,15 @@ async def create_RAI_agent(
     )
 
     model_deployment_name = config.AZURE_OPENAI_RAI_DEPLOYMENT_NAME
-    team.team_id = "rai_team"  # Use a fixed team ID for RAI agent
-    team.name = "RAI Team"
-    team.description = "Team responsible for Responsible AI checks"
+
+    # Create a copy to avoid mutating the caller's team config.
+    # The original team object is reused later (e.g., for orchestration init),
+    # so mutating it would corrupt the real team name/id.
+    rai_team = team.model_copy()
+    rai_team.team_id = "rai_team"
+    rai_team.name = "RAI Team"
+    rai_team.description = "Team responsible for Responsible AI checks"
+
     agent = FoundryAgentTemplate(
         agent_name=agent_name,
         agent_description=agent_description,
@@ -101,7 +107,7 @@ async def create_RAI_agent(
         project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
         mcp_config=None,
         search_config=None,
-        team_config=team,
+        team_config=rai_team,
         memory_store=memory_store,
     )
 

@@ -1,7 +1,6 @@
 """Unit tests for backend.v4.callbacks.global_debug module."""
 import sys
-from unittest.mock import Mock, patch
-import pytest
+from unittest.mock import Mock
 
 # Mock the dependencies before importing the module under test
 sys.modules['azure'] = Mock()
