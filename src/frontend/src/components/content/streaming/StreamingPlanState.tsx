@@ -54,7 +54,9 @@ const renderThinkingState = (waitingForPlan: boolean) => {
 };
 
 // Simple message to show while executing the plan
-const renderPlanExecutionMessage = () => {
+const renderPlanExecutionMessage = (countdownSeconds?: number | null) => {
+    const countdownSuffix = typeof countdownSeconds === 'number' ? ` (${countdownSeconds}s)` : '';
+
     return (
         <div style={{
             maxWidth: '800px',
@@ -76,7 +78,7 @@ const renderPlanExecutionMessage = () => {
                     color: 'var(--colorNeutralForeground1)',
                     fontWeight: '500'
                 }}>
-                    Processing your plan and coordinating with AI agents...
+                    {`Processing your plan and coordinating with AI agents...${countdownSuffix}`}
                 </span>
             </div>
         </div>

@@ -45,6 +45,7 @@ const PlanPage: React.FC = () => {
     const [reloadLeftList, setReloadLeftList] = useState<boolean>(true);
     const [waitingForPlan, setWaitingForPlan] = useState<boolean>(true);
     const [showProcessingPlanSpinner, setShowProcessingPlanSpinner] = useState<boolean>(false);
+    const [processingCountdownSeconds, setProcessingCountdownSeconds] = useState<number | null>(null);
     const [showApprovalButtons, setShowApprovalButtons] = useState<boolean>(true);
     const [continueWithWebsocketFlow, setContinueWithWebsocketFlow] = useState<boolean>(false);
     const [selectedTeam, setSelectedTeam] = useState<TeamConfig | null>(null);
@@ -184,6 +185,7 @@ const PlanPage: React.FC = () => {
         setReloadLeftList(true);
         setWaitingForPlan(true);
         setShowProcessingPlanSpinner(false);
+        setProcessingCountdownSeconds(null);
         setShowApprovalButtons(true);
         setContinueWithWebsocketFlow(false);
         setWsConnected(false);
@@ -203,6 +205,7 @@ const PlanPage: React.FC = () => {
         setReloadLeftList,
         setWaitingForPlan,
         setShowProcessingPlanSpinner,
+        setProcessingCountdownSeconds,
         setShowApprovalButtons,
         setContinueWithWebsocketFlow,
         setWsConnected,
@@ -450,6 +453,30 @@ const PlanPage: React.FC = () => {
         return () => unsubscribe();
     }, [scrollToBottom, planData, processAgentMessage]); //onPlanReceived, scrollToBottom
 
+    // Countdown for plan processing after explicit approval.
+    useEffect(() => {
+        if (!showProcessingPlanSpinner || processingCountdownSeconds === null || processingCountdownSeconds <= 0) {
+            return;
+        }
+
+        const interval = window.setInterval(() => {
+            setProcessingCountdownSeconds((previous) => {
+                if (previous === null || previous <= 0) {
+                    return previous;
+                }
+                return previous - 1;
+            });
+        }, 1000);
+
+        return () => window.clearInterval(interval);
+    }, [showProcessingPlanSpinner, processingCountdownSeconds]);
+
+    useEffect(() => {
+        if (!showProcessingPlanSpinner && processingCountdownSeconds !== null) {
+            setProcessingCountdownSeconds(null);
+        }
+    }, [showProcessingPlanSpinner, processingCountdownSeconds]);
+
     // Loading message rotation effect
     useEffect(() => {
         let interval: NodeJS.Timeout;
@@ -587,6 +614,7 @@ const PlanPage: React.FC = () => {
             
             dismissToast(id);
             setShowProcessingPlanSpinner(true);
+            setProcessingCountdownSeconds(11);
             setShowApprovalButtons(false);
 
         } catch (error) {
@@ -803,6 +831,7 @@ const PlanPage: React.FC = () => {
                                 showProcessingPlanSpinner={showProcessingPlanSpinner}
                                 showApprovalButtons={showApprovalButtons}
                                 processingApproval={processingApproval}
+                                processingCountdownSeconds={processingCountdownSeconds}
                                 handleApprovePlan={handleApprovePlan}
                                 handleRejectPlan={handleRejectPlan}
 
