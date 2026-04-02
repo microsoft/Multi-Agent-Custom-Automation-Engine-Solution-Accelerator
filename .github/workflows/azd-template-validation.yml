@@ -17,6 +17,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set timestamp
+        run: echo "HHMM=$(date -u +'%H%M')" >> $GITHUB_ENV
+
       - uses: microsoft/template-validation-action@v0.4.3
         with:
           validateAzd: ${{ vars.TEMPLATE_VALIDATE_AZD }}
@@ -27,7 +30,7 @@ jobs:
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
+          AZURE_ENV_NAME: azd-${{ vars.AZURE_ENV_NAME }}-${{ env.HHMM }}
           AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
           AZURE_ENV_OPENAI_LOCATION : ${{ vars.AZURE_AI_DEPLOYMENT_LOCATION }}
           AZURE_ENV_MODEL_CAPACITY: 1
