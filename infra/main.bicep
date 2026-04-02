@@ -364,7 +364,7 @@ module bastionHost 'br/public:avm/res/network/bastion-host:0.7.0' = if (enablePr
     enableFileCopy: false
     enableIpConnect: false
     enableShareableLink: false
-    scaleUnits: 4
+    scaleUnits: 2
     diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : null
   }
 }
