@@ -5,3 +5,4 @@ jinja2
 azure-identity
 python-dotenv
 python-multipart
+pyjwt[crypto]==2.12.0

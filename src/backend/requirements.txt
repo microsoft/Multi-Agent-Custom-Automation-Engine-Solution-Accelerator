@@ -32,8 +32,8 @@ urllib3==2.6.3
 protobuf==5.29.6
 cryptography==46.0.5
 aiohttp==3.13.3
-pyasn1==0.6.2
-nltk==3.9.3
+pyasn1==0.6.3
+nltk==3.9.4
 
 # Testing tools
 pytest==8.4.1
