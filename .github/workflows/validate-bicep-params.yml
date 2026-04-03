@@ -14,9 +14,6 @@ on:
       - 'infra/**/*.bicep'
       - 'infra/**/*.parameters.json'
   workflow_dispatch:
-  push:
-    branches:
-      - hb-psl-38859
 
 env:
   accelerator_name: "MACAE"
@@ -66,7 +63,7 @@ jobs:
           retention-days: 30
 
       - name: Send schedule notification on failure
-        if: steps.result.outputs.status == 'failure'
+        if: github.event_name == 'schedule' && steps.result.outputs.status == 'failure'
         env:
           LOGICAPP_URL: ${{ secrets.EMAILNOTIFICATION_LOGICAPP_URL_TA }}
           GITHUB_REPOSITORY: ${{ github.repository }}
@@ -86,7 +83,7 @@ jobs:
               -d @- || echo "Failed to send notification"
 
       - name: Send schedule notification on success
-        if: steps.result.outputs.status == 'success'
+        if: github.event_name == 'schedule' && steps.result.outputs.status == 'success'
         env:
           LOGICAPP_URL: ${{ secrets.EMAILNOTIFICATION_LOGICAPP_URL_TA }}
           GITHUB_REPOSITORY: ${{ github.repository }}
