@@ -7,6 +7,12 @@ on:
       - dev
       - demo
       - hotfix
+    paths:
+      - 'src/backend/**'
+      - 'tests/**'
+      - 'pytest.ini'
+      - '.github/workflows/test.yml'
+      - '!**/*.md'
   pull_request:
     types:
       - opened
@@ -19,6 +25,11 @@ on:
       - dev
       - demo
       - hotfix
+    paths:
+      - 'src/backend/**'
+      - 'tests/**'
+      - 'pytest.ini'
+      - '.github/workflows/test.yml'
 
 jobs:
   test:

@@ -1,6 +1,11 @@
 name: PyLint
 
-on: [push]
+on:
+  push:
+    paths:
+      - 'src/backend/**/*.py'
+      - '.flake8'
+      - '.github/workflows/pylint.yml'
 
 jobs:
   build:

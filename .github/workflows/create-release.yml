@@ -2,6 +2,18 @@ on:
    push:
     branches:
       - main
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+      - 'LICENSE'
+      - '.devcontainer/**'
+      - '.azdo/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/CODEOWNERS'
+      - '.github/PULL_REQUEST_TEMPLATE.md'
+      - '.github/dependabot.yml'
+      - '**/*.code-workspace'
+      - '**/.env.sample'
 
 permissions:
   contents: write
