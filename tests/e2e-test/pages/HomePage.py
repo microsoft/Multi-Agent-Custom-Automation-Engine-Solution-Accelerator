@@ -1,6 +1,7 @@
 """BIAB Page object for automating interactions with the Multi-Agent Planner UI."""
 
 import logging
+import re
 from playwright.sync_api import expect
 from base.base import BasePage
 
@@ -76,6 +77,47 @@ class BIABPage(BasePage):
         """Initialize the BIABPage with a Playwright page instance."""
         super().__init__(page)
         self.page = page
+
+    def validate_processing_countdown(self, timeout=10000, context=""):
+        """Validate that the processing banner shows a live countdown timer."""
+        context_suffix = f" {context}" if context else ""
+        processing_locator = self.page.locator(self.PROCESSING_PLAN).first
+
+        logger.info(f"Waiting for 'Processing your plan' message{context_suffix} to be visible...")
+        expect(processing_locator).to_be_visible(timeout=timeout)
+        logger.info(f"✓ 'Processing your plan' message{context_suffix} is visible")
+
+        initial_text = ""
+        for _ in range(5):
+            initial_text = (processing_locator.text_content() or "").strip()
+            if re.search(r"\(\d+s\)", initial_text):
+                break
+            self.page.wait_for_timeout(500)
+        else:
+            raise AssertionError(
+                f"Expected the processing message to include a countdown timer, but got: {initial_text!r}"
+            )
+        logger.info(f"✓ Countdown timer is visible in processing message: {initial_text}")
+
+        for _ in range(4):
+            self.page.wait_for_timeout(1100)
+
+            if not processing_locator.is_visible():
+                logger.info("✓ Processing completed after the countdown appeared")
+                return
+
+            updated_text = (processing_locator.text_content() or "").strip()
+            if updated_text != initial_text:
+                if not re.search(r"\(\d+s\)", updated_text):
+                    raise AssertionError(
+                        f"Expected the updated processing message to retain a countdown timer, but got: {updated_text!r}"
+                    )
+                logger.info("✓ Countdown timer updated from '%s' to '%s'", initial_text, updated_text)
+                return
+
+        raise AssertionError(
+            f"Processing countdown timer was visible but did not change. Last observed text: {initial_text!r}"
+        )
 
     def reload_home_page(self):
         """Reload the home page URL."""
@@ -339,10 +381,8 @@ class BIABPage(BasePage):
         self.page.locator(self.APPROVE_TASK_PLAN).click()
         self.page.wait_for_timeout(2000)
         logger.info("✓ 'Approve Retail Task Plan' button clicked")
-        
-        logger.info("Waiting for 'Processing your plan' message to be visible...")
-        expect(self.page.locator(self.PROCESSING_PLAN)).to_be_visible(timeout=10000)
-        logger.info("✓ 'Processing your plan' message is visible")
+
+        self.validate_processing_countdown()
 
         #self.validate_agent_message_api_status(agent_name="CustomerDataAgent")
         
@@ -375,10 +415,8 @@ class BIABPage(BasePage):
         self.page.locator(self.APPROVE_TASK_PLAN).click()
         self.page.wait_for_timeout(2000)
         logger.info("✓ 'Approve Task Plan' button clicked")
-        
-        logger.info("Waiting for 'Processing your plan' message to be visible...")
-        expect(self.page.locator(self.PROCESSING_PLAN)).to_be_visible(timeout=10000)
-        logger.info("✓ 'Processing your plan' message is visible")
+
+        self.validate_processing_countdown()
 
         #self.validate_agent_message_api_status(agent_name="CustomerDataAgent")
         
@@ -396,10 +434,8 @@ class BIABPage(BasePage):
         self.page.locator(self.APPROVE_TASK_PLAN).click()
         self.page.wait_for_timeout(2000)
         logger.info("✓ 'Approve Task Plan' button clicked")
-        
-        logger.info("Waiting for 'Processing your plan' message to be visible...")
-        expect(self.page.locator(self.PROCESSING_PLAN)).to_be_visible(timeout=10000)
-        logger.info("✓ 'Processing your plan' message is visible")
+
+        self.validate_processing_countdown()
 
         #self.validate_agent_message_api_status(agent_name="CustomerDataAgent")
         
@@ -430,9 +466,7 @@ class BIABPage(BasePage):
                 logger.info("✓ Clarification send button clicked")
                 
                 # Wait for processing to start again
-                logger.info("Waiting for 'Processing your plan' message after clarification...")
-                expect(self.page.locator(self.PROCESSING_PLAN)).to_be_visible(timeout=15000)
-                logger.info("✓ 'Processing your plan' message is visible after clarification")
+                self.validate_processing_countdown(timeout=15000, context="after clarification")
                 logger.info("Waiting for plan processing to complete...")
                 self.page.locator(self.PROCESSING_PLAN).wait_for(state="hidden", timeout=200000)
                 logger.info("✓ Plan processing completed")
@@ -451,10 +485,8 @@ class BIABPage(BasePage):
         self.page.locator(self.APPROVE_TASK_PLAN).click()
         self.page.wait_for_timeout(2000)
         logger.info("✓ 'Approve Task Plan' button clicked")
-        
-        logger.info("Waiting for 'Processing your plan' message to be visible...")
-        expect(self.page.locator(self.PROCESSING_PLAN)).to_be_visible(timeout=10000)
-        logger.info("✓ 'Processing your plan' message is visible")
+
+        self.validate_processing_countdown()
         
         logger.info("Waiting for plan processing to complete...")
         self.page.locator(self.PROCESSING_PLAN).wait_for(state="hidden", timeout=400000)
@@ -485,10 +517,8 @@ class BIABPage(BasePage):
         self.page.locator(self.APPROVE_TASK_PLAN).click()
         self.page.wait_for_timeout(2000)
         logger.info("✓ 'Approve Task Plan' button clicked")
-        
-        logger.info("Waiting for 'Processing your plan' message to be visible...")
-        expect(self.page.locator(self.PROCESSING_PLAN)).to_be_visible(timeout=10000)
-        logger.info("✓ 'Processing your plan' message is visible")
+
+        self.validate_processing_countdown()
         
         logger.info("Waiting for plan processing to complete...")
         self.page.locator(self.PROCESSING_PLAN).wait_for(state="hidden", timeout=400000)
@@ -671,9 +701,7 @@ class BIABPage(BasePage):
         
         logger.info("Clarification input and send completed successfully!")
 
-        logger.info("Waiting for 'Processing your plan' message to be visible...")
-        expect(self.page.locator(self.PROCESSING_PLAN)).to_be_visible(timeout=15000)
-        logger.info("✓ 'Processing your plan' message is visible")
+        self.validate_processing_countdown(timeout=15000)
 
         logger.info("Waiting for plan processing to complete...")
         self.page.locator(self.PROCESSING_PLAN).wait_for(state="hidden", timeout=200000)
