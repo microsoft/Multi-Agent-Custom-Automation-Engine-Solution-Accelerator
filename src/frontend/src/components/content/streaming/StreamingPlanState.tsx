@@ -1,3 +1,4 @@
+import React, { useEffect, useRef, useState } from "react";
 import { Spinner } from "@fluentui/react-components";
 
 // Simple thinking message to show while creating plan
@@ -53,9 +54,36 @@ const renderThinkingState = (waitingForPlan: boolean) => {
     );
 };
 
-// Simple message to show while executing the plan
-const renderPlanExecutionMessage = (countdownSeconds?: number | null) => {
-    const countdownSuffix = typeof countdownSeconds === 'number' ? ` (${countdownSeconds}s)` : '';
+// Self-contained component with elapsed timer and rotating stage messages
+// Pattern adopted from content-generation-solution-accelerator
+const PlanExecutionMessage: React.FC = () => {
+    const [elapsed, setElapsed] = useState(0);
+    const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    useEffect(() => {
+        intervalRef.current = setInterval(() => {
+            setElapsed(prev => prev + 1);
+        }, 1000);
+        return () => {
+            if (intervalRef.current) clearInterval(intervalRef.current);
+        };
+    }, []);
+
+    // Rotate stage messages based on elapsed time
+    let stageMessage: string;
+    if (elapsed < 8) {
+        stageMessage = 'Processing your plan and coordinating with AI agents...';
+    } else if (elapsed < 20) {
+        stageMessage = 'Assigning tasks to specialized agents...';
+    } else if (elapsed < 35) {
+        stageMessage = 'Agents are analyzing and researching...';
+    } else if (elapsed < 50) {
+        stageMessage = 'Compiling results from agents...';
+    } else {
+        stageMessage = 'Finalizing responses...';
+    }
+
+    const elapsedSuffix = elapsed > 0 ? ` (${elapsed}s)` : '';
 
     return (
         <div style={{
@@ -78,11 +106,11 @@ const renderPlanExecutionMessage = (countdownSeconds?: number | null) => {
                     color: 'var(--colorNeutralForeground1)',
                     fontWeight: '500'
                 }}>
-                    {`Processing your plan and coordinating with AI agents...${countdownSuffix}`}
+                    {`${stageMessage}${elapsedSuffix}`}
                 </span>
             </div>
         </div>
     );
 };
 
-export { renderPlanExecutionMessage, renderThinkingState };
+export { PlanExecutionMessage, renderThinkingState };

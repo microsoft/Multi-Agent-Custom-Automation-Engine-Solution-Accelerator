@@ -4,7 +4,7 @@ import InlineToaster from "../toast/InlineToaster";
 import { AgentMessageData } from "@/models";
 import renderUserPlanMessage from "./streaming/StreamingUserPlanMessage";
 import renderPlanResponse from "./streaming/StreamingPlanResponse";
-import { renderPlanExecutionMessage, renderThinkingState } from "./streaming/StreamingPlanState";
+import { PlanExecutionMessage, renderThinkingState } from "./streaming/StreamingPlanState";
 import ContentNotFound from "../NotFound/ContentNotFound";
 import PlanChatBody from "./PlanChatBody";
 import renderAgentMessages from "./streaming/StreamingAgentMessage";
@@ -24,7 +24,6 @@ interface SimplifiedPlanChatProps extends PlanChatProps {
   handleApprovePlan: () => Promise<void>;
   handleRejectPlan: () => Promise<void>;
   processingApproval: boolean;
-  processingCountdownSeconds: number | null;
 
 }
 
@@ -47,8 +46,7 @@ const PlanChat: React.FC<SimplifiedPlanChatProps> = ({
   showApprovalButtons,
   handleApprovePlan,
   handleRejectPlan,
-  processingApproval,
-  processingCountdownSeconds
+  processingApproval
 }) => {
   // States
 
@@ -86,7 +84,7 @@ const PlanChat: React.FC<SimplifiedPlanChatProps> = ({
         {renderPlanResponse(planApprovalRequest, handleApprovePlan, handleRejectPlan, processingApproval, showApprovalButtons)}
         {renderAgentMessages(agentMessages)}
 
-        {showProcessingPlanSpinner && renderPlanExecutionMessage(processingCountdownSeconds)}
+        {showProcessingPlanSpinner && <PlanExecutionMessage />}
         {/* Streaming plan updates */}
         {showBufferingText && (
           <StreamingBufferMessage

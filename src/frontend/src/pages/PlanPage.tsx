@@ -34,7 +34,6 @@ const PlanPage: React.FC = () => {
     const navigate = useNavigate();
     const { showToast, dismissToast } = useInlineToaster();
     const messagesContainerRef = useRef<HTMLDivElement>(null);
-    const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const [input, setInput] = useState<string>("");
     const [planData, setPlanData] = useState<ProcessedPlanData | any>(null);
     const [loading, setLoading] = useState<boolean>(true);
@@ -46,7 +45,6 @@ const PlanPage: React.FC = () => {
     const [reloadLeftList, setReloadLeftList] = useState<boolean>(true);
     const [waitingForPlan, setWaitingForPlan] = useState<boolean>(true);
     const [showProcessingPlanSpinner, setShowProcessingPlanSpinner] = useState<boolean>(false);
-    const [processingCountdownSeconds, setProcessingCountdownSeconds] = useState<number | null>(null);
     const [showApprovalButtons, setShowApprovalButtons] = useState<boolean>(true);
     const [continueWithWebsocketFlow, setContinueWithWebsocketFlow] = useState<boolean>(false);
     const [selectedTeam, setSelectedTeam] = useState<TeamConfig | null>(null);
@@ -186,7 +184,6 @@ const PlanPage: React.FC = () => {
         setReloadLeftList(true);
         setWaitingForPlan(true);
         setShowProcessingPlanSpinner(false);
-        setProcessingCountdownSeconds(null);
         setShowApprovalButtons(true);
         setContinueWithWebsocketFlow(false);
         setWsConnected(false);
@@ -206,7 +203,6 @@ const PlanPage: React.FC = () => {
         setReloadLeftList,
         setWaitingForPlan,
         setShowProcessingPlanSpinner,
-        setProcessingCountdownSeconds,
         setShowApprovalButtons,
         setContinueWithWebsocketFlow,
         setWsConnected,
@@ -454,33 +450,6 @@ const PlanPage: React.FC = () => {
         return () => unsubscribe();
     }, [scrollToBottom, planData, processAgentMessage]); //onPlanReceived, scrollToBottom
 
-    // Countdown for plan processing whenever the execution spinner is shown.
-    useEffect(() => {
-        if (showProcessingPlanSpinner) {
-            // Clear any pre-existing interval before starting fresh
-            if (countdownIntervalRef.current !== null) {
-                clearInterval(countdownIntervalRef.current);
-            }
-            setProcessingCountdownSeconds(11);
-            countdownIntervalRef.current = setInterval(() => {
-                setProcessingCountdownSeconds(prev => (prev === null || prev <= 1 ? 0 : prev - 1));
-            }, 1000);
-        } else {
-            if (countdownIntervalRef.current !== null) {
-                clearInterval(countdownIntervalRef.current);
-                countdownIntervalRef.current = null;
-            }
-            setProcessingCountdownSeconds(null);
-        }
-
-        return () => {
-            if (countdownIntervalRef.current !== null) {
-                clearInterval(countdownIntervalRef.current);
-                countdownIntervalRef.current = null;
-            }
-        };
-    }, [showProcessingPlanSpinner]);
-
     // Loading message rotation effect
     useEffect(() => {
         let interval: ReturnType<typeof setInterval> | undefined;
@@ -618,7 +587,6 @@ const PlanPage: React.FC = () => {
             
             dismissToast(id);
             setShowProcessingPlanSpinner(true);
-            setProcessingCountdownSeconds(11);
             setShowApprovalButtons(false);
 
         } catch (error) {
@@ -835,7 +803,6 @@ const PlanPage: React.FC = () => {
                                 showProcessingPlanSpinner={showProcessingPlanSpinner}
                                 showApprovalButtons={showApprovalButtons}
                                 processingApproval={processingApproval}
-                                processingCountdownSeconds={processingCountdownSeconds}
                                 handleApprovePlan={handleApprovePlan}
                                 handleRejectPlan={handleRejectPlan}
 
