@@ -34,6 +34,7 @@ const PlanPage: React.FC = () => {
     const navigate = useNavigate();
     const { showToast, dismissToast } = useInlineToaster();
     const messagesContainerRef = useRef<HTMLDivElement>(null);
+    const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const [input, setInput] = useState<string>("");
     const [planData, setPlanData] = useState<ProcessedPlanData | any>(null);
     const [loading, setLoading] = useState<boolean>(true);
@@ -453,33 +454,36 @@ const PlanPage: React.FC = () => {
         return () => unsubscribe();
     }, [scrollToBottom, planData, processAgentMessage]); //onPlanReceived, scrollToBottom
 
-    // Countdown for plan processing after explicit approval.
+    // Countdown for plan processing whenever the execution spinner is shown.
     useEffect(() => {
-        if (!showProcessingPlanSpinner || processingCountdownSeconds === null || processingCountdownSeconds <= 0) {
-            return;
-        }
-
-        const interval = window.setInterval(() => {
-            setProcessingCountdownSeconds((previous) => {
-                if (previous === null || previous <= 0) {
-                    return previous;
-                }
-                return previous - 1;
-            });
-        }, 1000);
-
-        return () => window.clearInterval(interval);
-    }, [showProcessingPlanSpinner, processingCountdownSeconds]);
-
-    useEffect(() => {
-        if (!showProcessingPlanSpinner && processingCountdownSeconds !== null) {
+        if (showProcessingPlanSpinner) {
+            // Clear any pre-existing interval before starting fresh
+            if (countdownIntervalRef.current !== null) {
+                clearInterval(countdownIntervalRef.current);
+            }
+            setProcessingCountdownSeconds(11);
+            countdownIntervalRef.current = setInterval(() => {
+                setProcessingCountdownSeconds(prev => (prev === null || prev <= 1 ? 0 : prev - 1));
+            }, 1000);
+        } else {
+            if (countdownIntervalRef.current !== null) {
+                clearInterval(countdownIntervalRef.current);
+                countdownIntervalRef.current = null;
+            }
             setProcessingCountdownSeconds(null);
         }
-    }, [showProcessingPlanSpinner, processingCountdownSeconds]);
+
+        return () => {
+            if (countdownIntervalRef.current !== null) {
+                clearInterval(countdownIntervalRef.current);
+                countdownIntervalRef.current = null;
+            }
+        };
+    }, [showProcessingPlanSpinner]);
 
     // Loading message rotation effect
     useEffect(() => {
-        let interval: NodeJS.Timeout;
+        let interval: ReturnType<typeof setInterval> | undefined;
         if (loading) {
             let index = 0;
             interval = setInterval(() => {
