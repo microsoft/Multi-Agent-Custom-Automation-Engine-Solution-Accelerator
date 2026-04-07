@@ -27,8 +27,6 @@ dependencies = [
   "urllib3==2.6.3",
   "azure-core==1.38.0",
   "cryptography==46.0.6",
-  "requests==2.33.0",
-  "pygments==2.20.0",
 ]
 
 [project.optional-dependencies]
