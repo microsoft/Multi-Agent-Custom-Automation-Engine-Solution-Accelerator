@@ -4,3 +4,4 @@ metadata:
   template: multi-agent-custom-automation-engine-solution-accelerator@1.0
 requiredVersions:
   azd: '>= 1.18.0'
+  bicep: '>= 0.33.0'

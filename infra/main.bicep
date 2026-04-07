@@ -36,7 +36,7 @@ param location string
   azd: {
     type: 'location'
     usageName: [
-      'OpenAI.GlobalStandard.gpt-4o, 150'
+      'OpenAI.GlobalStandard.gpt-4o, 80'
     ]
   }
 })
@@ -61,8 +61,9 @@ param azureopenaiVersion string = '2025-01-01-preview'
 @description('Optional. GPT model deployment type. Defaults to GlobalStandard.')
 param gptModelDeploymentType string = 'GlobalStandard'
 
-@description('Optional. AI model deployment token capacity. Defaults to 150 for optimal performance.')
-param gptModelCapacity int = 150
+@description('Optional. AI model deployment token capacity (thousands of tokens per minute). Reduce if provisioning fails with InsufficientQuota. Total must not exceed your subscription GlobalStandard quota.')
+@minValue(1)
+param gptModelCapacity int = 80
 
 @description('Optional. The tags to apply to all deployed Azure resources.')
 param tags resourceInput<'Microsoft.Resources/resourceGroups@2025-04-01'>.tags = {}
@@ -80,11 +81,11 @@ param enableRedundancy bool = false
 param enablePrivateNetworking bool = false
 
 @secure()
-@description('Optional. The user name for the administrator account of the virtual machine. Allows to customize credentials if `enablePrivateNetworking` is set to true.')
+@description('Optional. The admin username for the jumpbox VM (used when `enablePrivateNetworking` is true). Provide via AZURE_ENV_VM_ADMIN_USERNAME environment variable for predictable access. Defaults to a random value if not set.')
 param virtualMachineAdminUsername string = take(newGuid(), 20)
 
-@description('Optional. The password for the administrator account of the virtual machine. Allows to customize credentials if `enablePrivateNetworking` is set to true.')
 @secure()
+@description('Optional. The admin password for the jumpbox VM (used when `enablePrivateNetworking` is true). Must meet Azure complexity requirements (12+ chars, uppercase, lowercase, number, special char). Provide via AZURE_ENV_VM_ADMIN_PASSWORD environment variable for predictable access. Defaults to a random value if not set.')
 param virtualMachineAdminPassword string = newGuid()
 
 @description('Optional. The Container Registry hostname where the docker images for the backend are located.')
