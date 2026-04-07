@@ -339,7 +339,7 @@ class BIABPage(BasePage):
         self.page.locator(self.APPROVE_TASK_PLAN).click()
         self.page.wait_for_timeout(2000)
         logger.info("✓ 'Approve Retail Task Plan' button clicked")
-
+        
         logger.info("Waiting for 'Processing your plan' message to be visible...")
         expect(self.page.locator(self.PROCESSING_PLAN)).to_be_visible(timeout=10000)
         logger.info("✓ 'Processing your plan' message is visible")
@@ -375,7 +375,7 @@ class BIABPage(BasePage):
         self.page.locator(self.APPROVE_TASK_PLAN).click()
         self.page.wait_for_timeout(2000)
         logger.info("✓ 'Approve Task Plan' button clicked")
-
+        
         logger.info("Waiting for 'Processing your plan' message to be visible...")
         expect(self.page.locator(self.PROCESSING_PLAN)).to_be_visible(timeout=10000)
         logger.info("✓ 'Processing your plan' message is visible")
@@ -396,7 +396,7 @@ class BIABPage(BasePage):
         self.page.locator(self.APPROVE_TASK_PLAN).click()
         self.page.wait_for_timeout(2000)
         logger.info("✓ 'Approve Task Plan' button clicked")
-
+        
         logger.info("Waiting for 'Processing your plan' message to be visible...")
         expect(self.page.locator(self.PROCESSING_PLAN)).to_be_visible(timeout=10000)
         logger.info("✓ 'Processing your plan' message is visible")
@@ -451,7 +451,7 @@ class BIABPage(BasePage):
         self.page.locator(self.APPROVE_TASK_PLAN).click()
         self.page.wait_for_timeout(2000)
         logger.info("✓ 'Approve Task Plan' button clicked")
-
+        
         logger.info("Waiting for 'Processing your plan' message to be visible...")
         expect(self.page.locator(self.PROCESSING_PLAN)).to_be_visible(timeout=10000)
         logger.info("✓ 'Processing your plan' message is visible")
@@ -485,7 +485,7 @@ class BIABPage(BasePage):
         self.page.locator(self.APPROVE_TASK_PLAN).click()
         self.page.wait_for_timeout(2000)
         logger.info("✓ 'Approve Task Plan' button clicked")
-
+        
         logger.info("Waiting for 'Processing your plan' message to be visible...")
         expect(self.page.locator(self.PROCESSING_PLAN)).to_be_visible(timeout=10000)
         logger.info("✓ 'Processing your plan' message is visible")
