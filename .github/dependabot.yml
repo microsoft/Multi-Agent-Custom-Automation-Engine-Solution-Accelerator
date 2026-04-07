@@ -32,7 +32,7 @@ updates:
           - "*"
 
   - package-ecosystem: "pip"
-    directory: "/src/frontend"
+    directory: "/src/App"
     schedule:
       interval: "monthly"
     commit-message:
