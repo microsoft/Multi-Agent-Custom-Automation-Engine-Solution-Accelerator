@@ -60,8 +60,7 @@ export default defineConfig({
             'react-dom',
             '@fluentui/react-components',
             '@fluentui/react-icons',
-            'react-router-dom',
-            'axios'
+            'react-router-dom'
         ]
     }
 })
