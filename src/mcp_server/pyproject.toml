@@ -13,7 +13,7 @@ authors = [
 ]
 dynamic = ["version"]
 
-# Core runtime dependencies (kept in sync with requirements.txt)
+# Core runtime dependencies managed in this pyproject.toml
 dependencies = [
   "fastmcp==3.2.0",
   "uvicorn[standard]==0.38.0",
