@@ -35,18 +35,18 @@ var deployerInfo = deployer()
 var deployingUserPrincipalId = deployerInfo.objectId
 
 // Restricting deployment to only supported Azure OpenAI regions validated with GPT-4o model
-@allowed(['australiaeast', 'eastus2', 'francecentral', 'japaneast', 'norwayeast', 'swedencentral', 'uksouth', 'westus'])
+@allowed(['eastus2', 'swedencentral', 'westus'])
 @metadata({
   azd: {
     type: 'location'
     usageName: [
-      'OpenAI.GlobalStandard.gpt4.1, 150'
-      'OpenAI.GlobalStandard.o4-mini, 50'
-      'OpenAI.GlobalStandard.gpt4.1-mini, 50'
+      'OpenAI.GlobalStandard.gpt4.1, 80'
+      'OpenAI.GlobalStandard.o4-mini, 30'
+      'OpenAI.GlobalStandard.gpt4.1-mini, 30'
     ]
   }
 })
-@description('Required. Location for all AI service resources. This should be one of the supported Azure AI Service locations.')
+@description('Required. Location for all AI service resources. Limited to regions where gpt-4.1, gpt-4.1-mini, and o4-mini are all available as GlobalStandard.')
 param azureAiServiceLocation string
 
 @minLength(1)
@@ -892,47 +892,7 @@ module aiFoundryAiServices 'br:mcr.microsoft.com/bicep/avm/res/cognitive-service
     apiProperties: {
       //staticsEnabled: false
     }
-    deployments: [
-      {
-        name: aiFoundryAiServicesModelDeployment.name
-        model: {
-          format: aiFoundryAiServicesModelDeployment.format
-          name: aiFoundryAiServicesModelDeployment.name
-          version: aiFoundryAiServicesModelDeployment.version
-        }
-        raiPolicyName: aiFoundryAiServicesModelDeployment.raiPolicyName
-        sku: {
-          name: aiFoundryAiServicesModelDeployment.sku.name
-          capacity: aiFoundryAiServicesModelDeployment.sku.capacity
-        }
-      }
-      {
-        name: aiFoundryAiServices4_1ModelDeployment.name
-        model: {
-          format: aiFoundryAiServices4_1ModelDeployment.format
-          name: aiFoundryAiServices4_1ModelDeployment.name
-          version: aiFoundryAiServices4_1ModelDeployment.version
-        }
-        raiPolicyName: aiFoundryAiServices4_1ModelDeployment.raiPolicyName
-        sku: {
-          name: aiFoundryAiServices4_1ModelDeployment.sku.name
-          capacity: aiFoundryAiServices4_1ModelDeployment.sku.capacity
-        }
-      }
-      {
-        name: aiFoundryAiServicesReasoningModelDeployment.name
-        model: {
-          format: aiFoundryAiServicesReasoningModelDeployment.format
-          name: aiFoundryAiServicesReasoningModelDeployment.name
-          version: aiFoundryAiServicesReasoningModelDeployment.version
-        }
-        raiPolicyName: aiFoundryAiServicesReasoningModelDeployment.raiPolicyName
-        sku: {
-          name: aiFoundryAiServicesReasoningModelDeployment.sku.name
-          capacity: aiFoundryAiServicesReasoningModelDeployment.sku.capacity
-        }
-      }
-    ]
+    deployments: [] // Deploy models separately via ai-services-deployments.bicep to avoid ETag conflicts
     networkAcls: {
       defaultAction: 'Allow'
       virtualNetworkRules: []
@@ -972,6 +932,74 @@ module aiFoundryAiServices 'br:mcr.microsoft.com/bicep/avm/res/cognitive-service
     // Private endpoints are deployed separately via the aiFoundryPrivateEndpoint module below
     privateEndpoints: []
   }
+}
+
+// Deploy models sequentially after the AI Services account is fully created (avoids ETag conflicts)
+module newAiFoundryModelDeployments 'modules/ai-services-deployments.bicep' = if (!useExistingAiFoundryAiProject) {
+  name: take('module.ai-services-model-deployments.new.${aiFoundryAiServicesResourceName}', 64)
+  params: {
+    name: aiFoundryAiServices!.outputs.name
+    deployments: [
+      {
+        name: aiFoundryAiServicesModelDeployment.name
+        model: {
+          format: aiFoundryAiServicesModelDeployment.format
+          name: aiFoundryAiServicesModelDeployment.name
+          version: aiFoundryAiServicesModelDeployment.version
+        }
+        raiPolicyName: aiFoundryAiServicesModelDeployment.raiPolicyName
+        sku: aiFoundryAiServicesModelDeployment.sku
+      }
+      {
+        name: aiFoundryAiServices4_1ModelDeployment.name
+        model: {
+          format: aiFoundryAiServices4_1ModelDeployment.format
+          name: aiFoundryAiServices4_1ModelDeployment.name
+          version: aiFoundryAiServices4_1ModelDeployment.version
+        }
+        raiPolicyName: aiFoundryAiServices4_1ModelDeployment.raiPolicyName
+        sku: aiFoundryAiServices4_1ModelDeployment.sku
+      }
+      {
+        name: aiFoundryAiServicesReasoningModelDeployment.name
+        model: {
+          format: aiFoundryAiServicesReasoningModelDeployment.format
+          name: aiFoundryAiServicesReasoningModelDeployment.name
+          version: aiFoundryAiServicesReasoningModelDeployment.version
+        }
+        raiPolicyName: aiFoundryAiServicesReasoningModelDeployment.raiPolicyName
+        sku: aiFoundryAiServicesReasoningModelDeployment.sku
+      }
+    ]
+    roleAssignments: [
+      {
+        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d'
+        principalId: userAssignedIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
+      }
+      {
+        roleDefinitionIdOrName: '64702f94-c441-49e6-a78b-ef80e0188fee'
+        principalId: userAssignedIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
+      }
+      {
+        roleDefinitionIdOrName: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
+        principalId: userAssignedIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
+      }
+      {
+        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d'
+        principalId: deployingUserPrincipalId
+        principalType: deployerPrincipalType
+      }
+      {
+        roleDefinitionIdOrName: '64702f94-c441-49e6-a78b-ef80e0188fee'
+        principalId: deployingUserPrincipalId
+        principalType: deployerPrincipalType
+      }
+    ]
+  }
+  dependsOn: [aiFoundryAiServices]
 }
 
 module aiFoundryPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.8.1' = if (enablePrivateNetworking && !useExistingAiFoundryAiProject) {
@@ -1452,7 +1480,7 @@ module containerAppMcp 'br/public:avm/res/app/container-app:0.18.1' = {
           }
           {
             name: 'ENABLE_AUTH'
-            value: 'false'
+            value: 'true'
           }
           {
             name: 'TENANT_ID'
@@ -1692,8 +1720,7 @@ module searchServiceUpdate 'br/public:avm/res/search/search-service:0.11.1' = {
 
     // Enabled the Public access because other services are not able to connect with search search AVM module when public access is disabled
 
-    // publicNetworkAccess: enablePrivateNetworking  ? 'Disabled' : 'Enabled'
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
     networkRuleSet: {
       bypass: 'AzureServices'
     }
@@ -1724,26 +1751,24 @@ module searchServiceUpdate 'br/public:avm/res/search/search-service:0.11.1' = {
       }
     ]
 
-    //Removing the Private endpoints as we are facing the issue with connecting to search service while comminicating with agents
-
-    privateEndpoints: []
-    // privateEndpoints: enablePrivateNetworking 
-    //   ? [
-    //       {
-    //         name: 'pep-search-${solutionSuffix}'
-    //         customNetworkInterfaceName: 'nic-search-${solutionSuffix}'
-    //         privateDnsZoneGroup: {
-    //           privateDnsZoneGroupConfigs: [
-    //             {
-    //               privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.search]!.outputs.resourceId
-    //             }
-    //           ]
-    //         }
-    //         subnetResourceId: virtualNetwork!.outputs.subnetResourceIds[0]
-    //         service: 'searchService'
-    //       }
-    //     ]
-    //   : []
+    privateEndpoints: enablePrivateNetworking
+      ? [
+          {
+            name: 'pep-search-${solutionSuffix}'
+            customNetworkInterfaceName: 'nic-search-${solutionSuffix}'
+            privateDnsZoneGroup: {
+              privateDnsZoneGroupConfigs: [
+                {
+                  privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.search]!.outputs.resourceId
+                }
+              ]
+            }
+            subnetResourceId: virtualNetwork!.outputs.subnetResourceIds[0]
+            service: 'searchService'
+          }
+        ]
+      : []
+    publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
   }
   dependsOn: [
     searchService
@@ -1787,6 +1812,7 @@ module keyvault 'br/public:avm/res/key-vault/vault:0.12.1' = {
     enableVaultForTemplateDeployment: true
     enableRbacAuthorization: true
     enableSoftDelete: true
+    enablePurgeProtection: false
     softDeleteRetentionInDays: 7
     diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : []
     // WAF aligned configuration for Private Networking
