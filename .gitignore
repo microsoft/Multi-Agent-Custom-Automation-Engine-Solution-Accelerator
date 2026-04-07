@@ -464,4 +464,4 @@ __pycache__/
 data/sample_code/
 # Bicep local files
 *.local*.bicepparam
-*.local*.parameters.json
+*.local*.parameters.jsonMYC-SA

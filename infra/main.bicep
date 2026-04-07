@@ -100,14 +100,17 @@ param gptModelDeploymentType string = 'GlobalStandard'
 @description('Optional. GPT model deployment type. Defaults to GlobalStandard.')
 param gptReasoningModelDeploymentType string = 'GlobalStandard'
 
-@description('Optional. AI model deployment token capacity. Defaults to 50 for optimal performance.')
-param gptModelCapacity int = 50
+@description('Optional. AI model deployment token capacity (thousands of tokens per minute). Total across all 3 models must not exceed your subscription GlobalStandard quota. Reduce if provisioning fails with InsufficientQuota.')
+@minValue(1)
+param gptModelCapacity int = 30
 
-@description('Optional. AI model deployment token capacity. Defaults to 150 for optimal performance.')
-param gpt4_1ModelCapacity int = 150
+@description('Optional. AI model deployment token capacity (thousands of tokens per minute). This is the primary model — allocate the most capacity here.')
+@minValue(1)
+param gpt4_1ModelCapacity int = 80
 
-@description('Optional. AI model deployment token capacity. Defaults to 50 for optimal performance.')
-param gptReasoningModelCapacity int = 50
+@description('Optional. AI model deployment token capacity (thousands of tokens per minute). Reasoning model used for complex tasks.')
+@minValue(1)
+param gptReasoningModelCapacity int = 30
 
 @description('Optional. The tags to apply to all deployed Azure resources.')
 param tags resourceInput<'Microsoft.Resources/resourceGroups@2025-04-01'>.tags = {}
@@ -125,10 +128,10 @@ param enableRedundancy bool = false
 param enablePrivateNetworking bool = false
 
 @secure()
-@description('Optional. The user name for the administrator account of the virtual machine. Allows to customize credentials if `enablePrivateNetworking` is set to true.')
+@description('Required when enablePrivateNetworking is true. The admin username for the jumpbox VM. Must be provided — no default for security.')
 param virtualMachineAdminUsername string?
 
-@description('Optional. The password for the administrator account of the virtual machine. Allows to customize credentials if `enablePrivateNetworking` is set to true.')
+@description('Required when enablePrivateNetworking is true. The admin password for the jumpbox VM. Must meet Azure complexity requirements (12+ chars, uppercase, lowercase, number, special char). Must be provided — no default for security.')
 @secure()
 param virtualMachineAdminPassword string?
 
@@ -616,8 +619,8 @@ module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.17.0' = if (e
     computerName: take(virtualMachineResourceName, 15)
     osType: 'Windows'
     vmSize: virtualMachineSize
-    adminUsername: virtualMachineAdminUsername ?? 'JumpboxAdminUser'
-    adminPassword: virtualMachineAdminPassword ?? 'JumpboxAdminP@ssw0rd1234!'
+    adminUsername: virtualMachineAdminUsername!
+    adminPassword: virtualMachineAdminPassword!
     patchMode: 'AutomaticByPlatform'
     bypassPlatformSafetyChecksOnUserSchedule: true
     maintenanceConfigurationResourceId: maintenanceConfiguration!.outputs.resourceId
