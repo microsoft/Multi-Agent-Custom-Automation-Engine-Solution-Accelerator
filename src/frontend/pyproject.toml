@@ -12,4 +12,5 @@ dependencies = [
     "python-dotenv",
     "python-multipart",
     "pyjwt[crypto]==2.12.0",
+    "cryptography==46.0.6",
 ]

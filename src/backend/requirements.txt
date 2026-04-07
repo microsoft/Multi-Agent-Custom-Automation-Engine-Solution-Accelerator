@@ -30,11 +30,12 @@ pylint-pydantic==0.3.5
 pexpect==4.9.0
 urllib3==2.6.3
 protobuf==5.29.6
-cryptography==46.0.5
+cryptography==46.0.6
 aiohttp==3.13.4
 pyasn1==0.6.3
 nltk==3.9.4
 requests==2.33.0
+pygments==2.20.0
 
 # Testing tools
 pytest==8.4.1
