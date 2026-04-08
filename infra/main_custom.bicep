@@ -1140,8 +1140,8 @@ module containerAppEnvironment 'br/public:avm/res/app/managed-environment:0.11.2
     tags: tags
     enableTelemetry: enableTelemetry
     // WAF aligned configuration for Private Networking
-    publicNetworkAccess: 'Enabled' // Always enabling the publicNetworkAccess for Container App Environment
-    internal: false //  Must be false when publicNetworkAccess is'Enabled'
+    publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
+    internal: enablePrivateNetworking ? true : false
     infrastructureSubnetResourceId: enablePrivateNetworking ? virtualNetwork.?outputs.?containerSubnetResourceId : null
     // WAF aligned configuration for Monitoring
     appLogsConfiguration: enableMonitoring
@@ -1218,7 +1218,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
     environmentResourceId: containerAppEnvironment.outputs.resourceId
     managedIdentities: { userAssignedResourceIds: [userAssignedIdentity.outputs.resourceId] }
     ingressTargetPort: 8000
-    ingressExternal: true
+    ingressExternal: enablePrivateNetworking ? false : true
     activeRevisionsMode: 'Single'
     corsPolicy: {
       allowedOrigins: [
@@ -1441,7 +1441,7 @@ module containerAppMcp 'br/public:avm/res/app/container-app:0.18.1' = {
     environmentResourceId: containerAppEnvironment.outputs.resourceId
     managedIdentities: { userAssignedResourceIds: [userAssignedIdentity.outputs.resourceId] }
     ingressTargetPort: 9000
-    ingressExternal: true
+    ingressExternal: enablePrivateNetworking ? false : true
     activeRevisionsMode: 'Single'
     corsPolicy: {
       allowedOrigins: [
@@ -1582,6 +1582,7 @@ module webSite 'modules/web-sites.bicep' = {
           WEBSITES_PORT: '8000'
           //WEBSITES_CONTAINER_START_TIME_LIMIT: '1800' // 30 minutes, adjust as needed
           BACKEND_API_URL: 'https://${containerApp.outputs.fqdn}'
+          PROXY_API_REQUESTS: enablePrivateNetworking ? 'true' : 'false'
           AUTH_ENABLED: 'false'
           ENABLE_ORYX_BUILD: 'True'
         }
