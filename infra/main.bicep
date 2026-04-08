@@ -1684,6 +1684,7 @@ module searchServiceUpdate 'br/public:avm/res/search/search-service:0.11.1' = {
   name: take('avm.res.search.update.${solutionSuffix}', 64)
   params: {
     name: searchServiceName
+    location: location
     disableLocalAuth: true
     hostingMode: 'default'
     managedIdentities: {
