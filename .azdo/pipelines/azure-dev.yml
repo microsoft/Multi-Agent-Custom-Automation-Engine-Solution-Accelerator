@@ -1,7 +1,20 @@
 # Run when commits are pushed to mainline branch (main or master)
 # Set this to the mainline branch you are using
 trigger:
-  - main
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - src/*
+      - infra/*
+      - azure.yaml
+      - azure_custom.yaml
+      - .azdo/pipelines/azure-dev.yml
+    exclude:
+      - '*.md'
+      - docs/*
+      - data/*
 
 # Azure Pipelines workflow to deploy to Azure using azd
 # To configure required secrets and service connection for connecting to Azure, simply run `azd pipeline config --provider azdo`
