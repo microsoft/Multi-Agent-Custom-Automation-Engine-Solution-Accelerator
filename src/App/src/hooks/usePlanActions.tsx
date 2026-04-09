@@ -9,7 +9,7 @@
  */
 import { useCallback, useEffect, useRef } from 'react';
 import { useAppDispatch } from '@/store/hooks';
-import { ProcessedPlanData, PlanStatus } from '@/models';
+import { ProcessedPlanData } from '@/models';
 import {
     fetchPlanData,
     resetPlan,
