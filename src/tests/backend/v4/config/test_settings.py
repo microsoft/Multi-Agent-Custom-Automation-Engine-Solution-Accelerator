@@ -5,10 +5,7 @@ Comprehensive test cases covering all configuration classes with proper mocking.
 
 import asyncio
 import json
-import os
-import sys
-import unittest
-from unittest import IsolatedAsyncioTestCase
+from unittest import TestCase, IsolatedAsyncioTestCase, main
 from unittest.mock import AsyncMock, Mock, patch
 
 # Environment variables are set by conftest.py
@@ -23,7 +20,7 @@ from backend.v4.config.settings import (
 )
 
 
-class TestAzureConfig(unittest.TestCase):
+class TestAzureConfig(TestCase):
     """Test cases for AzureConfig class."""
 
     @patch('backend.v4.config.settings.config')
@@ -76,7 +73,7 @@ class TestAzureConfig(unittest.TestCase):
         mock_credential.get_token.assert_called_once_with(mock_config.AZURE_COGNITIVE_SERVICES)
 
 
-class TestAzureConfigAsync(unittest.IsolatedAsyncioTestCase):
+class TestAzureConfigAsync(IsolatedAsyncioTestCase):
     """Async test cases for AzureConfig class."""
 
     @patch('backend.v4.config.settings.AzureOpenAIChatClient')
@@ -106,7 +103,7 @@ class TestAzureConfigAsync(unittest.IsolatedAsyncioTestCase):
         mock_client_class.assert_called_once()
 
 
-class TestMCPConfig(unittest.TestCase):
+class TestMCPConfig(TestCase):
     """Test cases for MCPConfig class."""
 
     def test_mcp_config_creation(self):
@@ -151,7 +148,7 @@ class TestMCPConfig(unittest.TestCase):
         self.assertEqual(headers, {})
 
 
-class TestTeamConfig(unittest.TestCase):
+class TestTeamConfig(TestCase):
     """Test cases for TeamConfig class."""
 
     def test_team_config_creation(self):
@@ -198,7 +195,7 @@ class TestTeamConfig(unittest.TestCase):
         self.assertEqual(config.get_current_team(user_id), team_config2)
 
 
-class TestOrchestrationConfig(unittest.IsolatedAsyncioTestCase):
+class TestOrchestrationConfig(IsolatedAsyncioTestCase):
     """Test cases for OrchestrationConfig class."""
 
     def test_orchestration_config_creation(self):
@@ -347,9 +344,10 @@ class TestOrchestrationConfig(unittest.IsolatedAsyncioTestCase):
         cancel_task_handle = asyncio.create_task(cancel_task())
         
         with self.assertRaises(asyncio.CancelledError):
-            await task
+            _ = await task
         
         await cancel_task_handle
+        self.assertTrue(task.cancelled())
 
     async def test_wait_for_clarification_cancelled(self):
         """Test waiting for clarification when cancelled."""
@@ -367,9 +365,10 @@ class TestOrchestrationConfig(unittest.IsolatedAsyncioTestCase):
         cancel_task_handle = asyncio.create_task(cancel_task())
         
         with self.assertRaises(asyncio.CancelledError):
-            await task
+            _ = await task
         
         await cancel_task_handle
+        self.assertTrue(task.cancelled())
 
     def test_cleanup_approval(self):
         """Test cleanup approval."""
@@ -404,7 +403,7 @@ class TestOrchestrationConfig(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn(request_id, config._clarification_events)
 
 
-class TestConnectionConfig(unittest.IsolatedAsyncioTestCase):
+class TestConnectionConfig(IsolatedAsyncioTestCase):
     """Test cases for ConnectionConfig class."""
 
     def test_connection_config_creation(self):
@@ -745,7 +744,7 @@ class TestConnectionConfig(unittest.IsolatedAsyncioTestCase):
             mock_logger.warning.assert_called()
 
 
-class TestGlobalInstances(unittest.TestCase):
+class TestGlobalInstances(TestCase):
     """Test cases for global configuration instances."""
 
     def test_global_instances_exist(self):
@@ -873,4 +872,4 @@ class TestApprovalAndClarificationEdgeCases(IsolatedAsyncioTestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    main()

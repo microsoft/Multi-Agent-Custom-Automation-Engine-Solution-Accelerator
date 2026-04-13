@@ -74,8 +74,8 @@ jobs:
         env:
           DOCKER_BUILD_SUMMARY: false
         with:
-          context: ./src/frontend
-          file: ./src/frontend/Dockerfile
+          context: ./src/App
+          file: ./src/App/Dockerfile
           push: true
           tags: |
             ${{ secrets.ACR_TEST_LOGIN_SERVER }}/macaefrontend:${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}

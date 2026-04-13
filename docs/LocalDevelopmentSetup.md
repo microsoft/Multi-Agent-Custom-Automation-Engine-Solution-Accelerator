@@ -34,7 +34,7 @@ Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/    ← Repository roo
 │   │   ├── .venv/                          ← Virtual environment
 │   │   └── .env                            ← Backend config file
 │   │   └── app.py                          ← Backend Entry Point
-│   ├── frontend/                           ← cd src/frontend
+│   ├── App/                               ← cd src/App
 │   │   ├── node_modules/                   ← npm dependencies
 │   │   ├── .venv/                          ← Virtual environment
 │   │   ├── frontend_server.py              ← Frontend entry point
@@ -60,7 +60,7 @@ cd path/to/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator
 This project uses Backend `.env` file in Backend directory with different configuration requirements:
 
 - **Backend**: `src/backend/.env` 
-<!-- - **Frontend**: `src/frontend.env` 
+<!-- - **Frontend**: `src/App.env` 
 - **MCP Server**: `src/mcp_sevrer/.env`  -->
 
 
@@ -189,7 +189,7 @@ Create `.vscode/settings.json` and copy the following JSON:
         },
         {
             "name": "Frontend",
-            "path": "./src/frontend"
+            "path": "./src/App"
         }
     ]
 }
@@ -443,13 +443,13 @@ python mcp_server.py --transport streamable-http --host 0.0.0.0 --port 9000
 
 > **📋 Terminal Reminder**: Open a **third dedicated terminal window (Terminal 3)** for the Frontend. Keep Terminals 1 (Backend) and 2 (MCP Server) running. All commands assume you start from the **repository root directory**.
 
-The UI is located under `src/frontend`.
+The UI is located under `src/App`.
 
 ### 6.1. Navigate to Frontend Directory
 
 ```bash
 # From repository root
-cd src/frontend
+cd src/App
 ```
 
 ### 6.2. Install UI Dependencies
