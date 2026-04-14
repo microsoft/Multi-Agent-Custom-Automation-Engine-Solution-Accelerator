@@ -445,6 +445,23 @@ do {
     }
 } while (-not $useCaseValid)
 
+# WAF/Private Networking: If the Container App ingress is internal, the backendUrl
+# is not reachable from the developer's machine. Route through the frontend App Service
+# proxy instead, which is public and forwards /api/* to the private backend over VNet.
+$solutionSuffix = az group show --name $ResourceGroup --query "tags.SolutionSuffix" -o tsv 2>$null
+if ($solutionSuffix) {
+    $containerAppName = "ca-$solutionSuffix"
+    $isInternal = az containerapp show --name $containerAppName --resource-group $ResourceGroup `
+        --query "properties.configuration.ingress.external" -o tsv 2>$null
+    if ($isInternal -eq "false") {
+        $frontendHostname = "app-$solutionSuffix"
+        $frontendUrl = "https://${frontendHostname}.azurewebsites.net"
+        Write-Host "Private networking detected: Container App ingress is internal."
+        Write-Host "Routing API calls through frontend App Service: $frontendUrl"
+        $script:backendUrl = $frontendUrl
+    }
+}
+
 Write-Host ""
 Write-Host "==============================================="
 Write-Host "Values to be used:"
