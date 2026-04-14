@@ -336,17 +336,13 @@ class TestOrchestrationConfig(IsolatedAsyncioTestCase):
         
         config.set_approval_pending(plan_id)
         
-        async def cancel_task():
-            await asyncio.sleep(0.05)
-            task.cancel()
-        
         task = asyncio.create_task(config.wait_for_approval(plan_id, timeout=1.0))
-        cancel_task_handle = asyncio.create_task(cancel_task())
+        await asyncio.sleep(0.05)
+        task.cancel()
         
         with self.assertRaises(asyncio.CancelledError):
             _ = await task
         
-        await cancel_task_handle
         self.assertTrue(task.cancelled())
 
     async def test_wait_for_clarification_cancelled(self):
@@ -357,17 +353,13 @@ class TestOrchestrationConfig(IsolatedAsyncioTestCase):
         
         config.set_clarification_pending(request_id)
         
-        async def cancel_task():
-            await asyncio.sleep(0.05)
-            task.cancel()
-        
         task = asyncio.create_task(config.wait_for_clarification(request_id, timeout=1.0))
-        cancel_task_handle = asyncio.create_task(cancel_task())
+        await asyncio.sleep(0.05)
+        task.cancel()
         
         with self.assertRaises(asyncio.CancelledError):
             _ = await task
         
-        await cancel_task_handle
         self.assertTrue(task.cancelled())
 
     def test_cleanup_approval(self):
