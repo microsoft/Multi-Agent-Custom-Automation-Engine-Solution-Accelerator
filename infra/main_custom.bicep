@@ -1140,8 +1140,8 @@ module containerAppEnvironment 'br/public:avm/res/app/managed-environment:0.11.2
     tags: tags
     enableTelemetry: enableTelemetry
     // WAF aligned configuration for Private Networking
-    publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
-    internal: enablePrivateNetworking ? true : false
+    publicNetworkAccess: 'Enabled' // Always enabling the publicNetworkAccess for Container App Environment
+    internal: false //  Must be false when publicNetworkAccess is'Enabled'
     infrastructureSubnetResourceId: enablePrivateNetworking ? virtualNetwork.?outputs.?containerSubnetResourceId : null
     // WAF aligned configuration for Monitoring
     appLogsConfiguration: enableMonitoring
@@ -1218,7 +1218,15 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
     environmentResourceId: containerAppEnvironment.outputs.resourceId
     managedIdentities: { userAssignedResourceIds: [userAssignedIdentity.outputs.resourceId] }
     ingressTargetPort: 8000
-    ingressExternal: enablePrivateNetworking ? false : true
+    ingressExternal: true
+    ipSecurityRestrictions: enablePrivateNetworking ? [
+      {
+        name: 'allow-vnet-only'
+        action: 'Allow'
+        ipAddressRange: '10.0.0.0/8'
+        description: 'Allow VNet traffic only'
+      }
+    ] : []
     activeRevisionsMode: 'Single'
     corsPolicy: {
       allowedOrigins: [
@@ -1441,7 +1449,15 @@ module containerAppMcp 'br/public:avm/res/app/container-app:0.18.1' = {
     environmentResourceId: containerAppEnvironment.outputs.resourceId
     managedIdentities: { userAssignedResourceIds: [userAssignedIdentity.outputs.resourceId] }
     ingressTargetPort: 9000
-    ingressExternal: enablePrivateNetworking ? false : true
+    ingressExternal: true
+    ipSecurityRestrictions: enablePrivateNetworking ? [
+      {
+        name: 'allow-vnet-only'
+        action: 'Allow'
+        ipAddressRange: '10.0.0.0/8'
+        description: 'Allow VNet traffic only'
+      }
+    ] : []
     activeRevisionsMode: 'Single'
     corsPolicy: {
       allowedOrigins: [
