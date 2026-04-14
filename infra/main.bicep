@@ -1192,14 +1192,6 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
     managedIdentities: { userAssignedResourceIds: [userAssignedIdentity.outputs.resourceId] }
     ingressTargetPort: 8000
     ingressExternal: true
-    ipSecurityRestrictions: enablePrivateNetworking ? [
-      {
-        name: 'allow-vnet-only'
-        action: 'Allow'
-        ipAddressRange: '10.0.0.0/8'
-        description: 'Allow VNet traffic only'
-      }
-    ] : []
     activeRevisionsMode: 'Single'
     corsPolicy: {
       allowedOrigins: [
@@ -1408,14 +1400,6 @@ module containerAppMcp 'br/public:avm/res/app/container-app:0.18.1' = {
     managedIdentities: { userAssignedResourceIds: [userAssignedIdentity.outputs.resourceId] }
     ingressTargetPort: 9000
     ingressExternal: true
-    ipSecurityRestrictions: enablePrivateNetworking ? [
-      {
-        name: 'allow-vnet-only'
-        action: 'Allow'
-        ipAddressRange: '10.0.0.0/8'
-        description: 'Allow VNet traffic only'
-      }
-    ] : []
     activeRevisionsMode: 'Single'
     corsPolicy: {
       allowedOrigins: [
