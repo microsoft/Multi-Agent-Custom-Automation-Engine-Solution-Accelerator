@@ -487,14 +487,18 @@ dependencies = [
     { name = "protobuf" },
     { name = "pyasn1" },
     { name = "pylint-pydantic" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
     { name = "python-dotenv" },
     { name = "python-multipart" },
     { name = "urllib3" },
     { name = "uvicorn" },
     { name = "werkzeug" },
+]
+
+[package.optional-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
 ]
 
 [package.metadata]
@@ -527,15 +531,16 @@ requires-dist = [
     { name = "protobuf", specifier = "==5.29.6" },
     { name = "pyasn1", specifier = "==0.6.3" },
     { name = "pylint-pydantic", specifier = "==0.3.5" },
-    { name = "pytest", specifier = "==9.0.3" },
-    { name = "pytest-asyncio", specifier = "==1.3.0" },
-    { name = "pytest-cov", specifier = "==5.0.0" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = "==9.0.3" },
+    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = "==1.3.0" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = "==5.0.0" },
     { name = "python-dotenv", specifier = "==1.1.1" },
     { name = "python-multipart", specifier = "==0.0.22" },
     { name = "urllib3", specifier = "==2.6.3" },
     { name = "uvicorn", specifier = "==0.35.0" },
     { name = "werkzeug", specifier = "==3.1.6" },
 ]
+provides-extras = ["dev"]
 
 [[package]]
 name = "certifi"
