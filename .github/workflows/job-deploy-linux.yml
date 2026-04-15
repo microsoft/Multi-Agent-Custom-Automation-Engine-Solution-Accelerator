@@ -261,13 +261,13 @@ jobs:
             if [[ -n "$INPUT_AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID" ]]; then
               EXP_LOG_ANALYTICS_ID="$INPUT_AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID"
             else
-              EXP_LOG_ANALYTICS_ID="${{ secrets.AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID }}"
+              EXP_LOG_ANALYTICS_ID="${{ secrets.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID }}"
             fi
             
             if [[ -n "$INPUT_AZURE_EXISTING_AIPROJECT_RESOURCE_ID" ]]; then
               EXP_AI_PROJECT_ID="$INPUT_AZURE_EXISTING_AIPROJECT_RESOURCE_ID"
             else
-              EXP_AI_PROJECT_ID="${{ secrets.AZURE_EXISTING_AIPROJECT_RESOURCE_ID }}"
+              EXP_AI_PROJECT_ID="${{ secrets.AZURE_ENV_FOUNDRY_PROJECT_ID }}"
             fi
             
             echo "AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID: $EXP_LOG_ANALYTICS_ID"

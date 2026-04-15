@@ -264,15 +264,15 @@ jobs:
             if ($env:INPUT_AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID -ne "") {
               $EXP_LOG_ANALYTICS_ID = $env:INPUT_AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID
             } else {
-              $EXP_LOG_ANALYTICS_ID = "${{ secrets.AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID }}"
+              $EXP_LOG_ANALYTICS_ID = "${{ secrets.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID }}"
             }
             
             if ($env:INPUT_AZURE_EXISTING_AIPROJECT_RESOURCE_ID -ne "") {
               $EXP_AI_PROJECT_ID = $env:INPUT_AZURE_EXISTING_AIPROJECT_RESOURCE_ID
             } else {
-              $EXP_AI_PROJECT_ID = "${{ secrets.AZURE_EXISTING_AIPROJECT_RESOURCE_ID }}"
+              $EXP_AI_PROJECT_ID = "${{ secrets.AZURE_ENV_FOUNDRY_PROJECT_ID }}"
               if (-not $EXP_AI_PROJECT_ID) {
-                $EXP_AI_PROJECT_ID = "${{ secrets.AZURE_EXISTING_AIPROJECT_RESOURCE_ID }}"
+                $EXP_AI_PROJECT_ID = "${{ secrets.AZURE_ENV_FOUNDRY_PROJECT_ID }}"
               }
             }
             
