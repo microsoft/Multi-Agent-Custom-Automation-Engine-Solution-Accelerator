@@ -500,8 +500,8 @@ class TestDatabaseBaseContextManager:
                 # Raise an exception to test cleanup
                 raise ValueError("Test exception")
 
-            # Even with exception, close should have been called
-            assert database.closed is True
+                # Even with exception, close should have been called
+                assert database.closed is True
 
 
 class TestDatabaseBaseInheritance:
