@@ -8,8 +8,8 @@ import logging
 from typing import Any, Optional
 
 import v4.models.messages as messages
-from agent_framework import ChatMessage
-from agent_framework._workflows._magentic import (
+from agent_framework import AgentResponse, Message
+from agent_framework_orchestrations._magentic import (
     MagenticContext,
     StandardMagenticManager,
     ORCHESTRATOR_FINAL_ANSWER_PROMPT,
@@ -34,11 +34,12 @@ class HumanApprovalMagenticManager(StandardMagenticManager):
     magentic_plan: Optional[MPlan] = None
     current_user_id: str  # populated in __init__
 
-    def __init__(self, user_id: str, *args, **kwargs):
+    def __init__(self, user_id: str, agent, *args, **kwargs):
         """
         Initialize the HumanApprovalMagenticManager.
         Args:
             user_id: ID of the user to associate with this orchestration instance.
+            agent: The manager ChatAgent for orchestration (required by new API).
             *args: Additional positional arguments for the parent StandardMagenticManager.
             **kwargs: Additional keyword arguments for the parent StandardMagenticManager.
         """
@@ -54,6 +55,9 @@ Plan steps should always include a bullet point, followed by an agent name, foll
 to be taken. If a step involves multiple actions, separate them into distinct steps with an agent included in each step.
 If the step is taken by an agent that is not part of the team, such as the MagenticManager, please always list the MagenticManager as the agent for that step. At any time, if more information is needed from the user, use the ProxyAgent to request this information.
 
+CRITICAL: Each agent should only be called ONCE to perform their task. Do NOT call the same agent multiple times.
+After an agent has provided their response, move on to the next agent in the plan.
+
 Here is an example of a well-structured plan:
 - **EnhancedResearchAgent** to gather authoritative data on the latest industry trends and best practices in employee onboarding
 - **EnhancedResearchAgent** to gather authoritative data on Innovative onboarding techniques that enhance new hire engagement and retention.
@@ -61,6 +65,13 @@ Here is an example of a well-structured plan:
 - **DocumentCreationAgent** to draft a comprehensive onboarding plan that includes a checklist of resources and materials needed for effective onboarding.
 - **ProxyAgent** to review the drafted onboarding plan for clarity and completeness.
 - **MagenticManager** to finalize the onboarding plan and prepare it for presentation to stakeholders.
+"""
+
+        # Add progress ledger prompt to prevent re-calling agents
+        progress_append = """
+CRITICAL RULE: DO NOT call the same agent more than once unless absolutely necessary.
+If an agent has already provided a response, consider their task COMPLETE and move to the next agent.
+Only re-call an agent if their previous response was explicitly an error or failure.
 """
 
         final_append = """
@@ -75,8 +86,56 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
         )
         kwargs["final_answer_prompt"] = ORCHESTRATOR_FINAL_ANSWER_PROMPT + final_append
 
+        # Override progress ledger prompt to discourage re-calling agents
+        from agent_framework_orchestrations._magentic import ORCHESTRATOR_PROGRESS_LEDGER_PROMPT
+        kwargs["progress_ledger_prompt"] = ORCHESTRATOR_PROGRESS_LEDGER_PROMPT + progress_append
+
         self.current_user_id = user_id
-        super().__init__(*args, **kwargs)
+        # New API: StandardMagenticManager takes agent as first positional argument
+        super().__init__(agent, *args, **kwargs)
+
+    async def _complete(self, messages: list[Message]) -> Message:
+        """Override to pass session=None, making each LLM call stateless.
+
+        The base class passes session=self._session which triggers
+        InMemoryHistoryProvider auto-injection and previous_response_id
+        chaining in rc4. This causes message payloads to grow with every
+        internal call (facts, plan, progress ledger, etc.), burning through
+        TPM quota (429 errors) and confusing the orchestrator LLM's routing
+        decisions (e.g. skipping ProxyAgent for user clarification).
+
+        Passing session=None restores the old stateless behavior where each
+        call only sends the messages explicitly provided.
+        """
+        from openai import RateLimitError
+
+        max_retries = 5
+        base_delay = 2.0  # seconds
+
+        for attempt in range(max_retries):
+            try:
+                response: AgentResponse = await self._agent.run(messages, session=None)
+                if not response.messages:
+                    raise RuntimeError("Agent returned no messages in response.")
+                if len(response.messages) > 1:
+                    logger.warning("Agent returned multiple messages; using the last one.")
+                return response.messages[-1]
+            except Exception as exc:
+                inner = getattr(exc, "inner_exception", None)
+                is_rate_limit = isinstance(inner, RateLimitError) or "429" in str(exc)
+                if is_rate_limit and attempt < max_retries - 1:
+                    delay = base_delay * (2 ** attempt)
+                    logger.warning(
+                        "Rate limit hit (attempt %d/%d). Retrying in %.1fs...",
+                        attempt + 1, max_retries, delay,
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+                raise
+        # If we get here, all retry attempts have been exhausted without a successful response.
+        raise RuntimeError(
+            f"Agent failed to complete after {max_retries} attempts due to repeated errors."
+        )
 
     async def plan(self, magentic_context: MagenticContext) -> Any:
         """
@@ -162,6 +221,8 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
     async def create_progress_ledger(self, magentic_context: MagenticContext):
         """
         Check for max rounds exceeded and send final message if so, else defer to base.
+        After base evaluation, prevent premature satisfaction by ensuring all planned
+        agents have responded before allowing is_request_satisfied=True.
 
         Returns:
             Progress ledger object (type depends on agent_framework version)
@@ -197,7 +258,65 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
             return ledger
 
         # Delegate to base for normal progress ledger creation
-        return await super().create_progress_ledger(magentic_context)
+        ledger = await super().create_progress_ledger(magentic_context)
+
+        # --- Premature satisfaction guard ---
+        # If the LLM says the request is satisfied, verify that all planned
+        # (non-proxy, non-manager) agents have actually responded before allowing
+        # the workflow to terminate.  This addresses the bug where the orchestrator
+        # marks satisfied=True after a single comprehensive agent response.
+        if ledger.is_request_satisfied.answer:
+            uncalled = self._get_uncalled_agents(magentic_context)
+            if uncalled:
+                next_agent = uncalled[0]
+                logger.info(
+                    "Progress ledger marked satisfied but %d agent(s) have not responded yet: %s. "
+                    "Overriding to continue with '%s'.",
+                    len(uncalled),
+                    uncalled,
+                    next_agent,
+                )
+                ledger.is_request_satisfied.answer = False
+                ledger.is_request_satisfied.reason = (
+                    f"Not all agents have responded yet. Waiting for: {', '.join(uncalled)}"
+                )
+                ledger.is_progress_being_made.answer = True
+                ledger.is_progress_being_made.reason = "Continuing to consult remaining agents"
+                ledger.next_speaker.answer = next_agent
+                ledger.next_speaker.reason = f"{next_agent} has not yet been consulted"
+                # Always override instruction with task-relevant prompt so that
+                # data agents (Azure AI Search, RAG) execute meaningful queries
+                # instead of receiving a stale finalization instruction.
+                task_text = getattr(magentic_context.task, "text", str(magentic_context.task))
+                ledger.instruction_or_question.answer = (
+                    f"Using your available tools and data sources, provide your response for the following task: {task_text}"
+                )
+                ledger.instruction_or_question.reason = (
+                    f"Routing to {next_agent} who has not yet contributed"
+                )
+
+        return ledger
+
+    @staticmethod
+    def _get_uncalled_agents(magentic_context: MagenticContext) -> list[str]:
+        """Return agent names from participant_descriptions that have not yet
+        authored a message in the chat_history (excluding ProxyAgent and the
+        MagenticManager)."""
+        skip_names = {"ProxyAgent", "MagenticManager", "magentic_manager"}
+
+        all_agents = [
+            name for name in magentic_context.participant_descriptions
+            if name not in skip_names
+        ]
+
+        # Collect author names that appear in chat_history
+        responded = set()
+        for msg in magentic_context.chat_history:
+            author = getattr(msg, "author_name", None)
+            if author:
+                responded.add(author)
+
+        return [name for name in all_agents if name not in responded]
 
     async def _wait_for_user_approval(
         self, m_plan_id: Optional[str] = None
@@ -276,7 +395,7 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
 
     async def prepare_final_answer(
         self, magentic_context: MagenticContext
-    ) -> ChatMessage:
+    ) -> Message:
         """
         Override to ensure final answer is prepared after all steps are executed.
         """

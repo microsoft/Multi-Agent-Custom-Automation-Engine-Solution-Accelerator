@@ -7,12 +7,8 @@ import asyncio
 import logging
 import os
 import sys
-import uuid
-from typing import List, Optional
-from unittest import IsolatedAsyncioTestCase
-from unittest.mock import AsyncMock, Mock, patch, MagicMock
-
-import pytest
+from unittest import IsolatedAsyncioTestCase, main
+from unittest.mock import AsyncMock, Mock, patch
 
 # Add the backend directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'backend'))
@@ -134,10 +130,15 @@ class AsyncGeneratorMock:
 
 class MockMagenticBuilder:
     """Mock MagenticBuilder."""
-    def __init__(self):
+    def __init__(self, participants=None, manager=None, checkpoint_storage=None,
+                 max_round_count=10, max_stall_count=0, intermediate_outputs=False, **kwargs):
         self._participants = {}
-        self._manager = None
-        self._storage = None
+        self._manager = manager
+        self._storage = checkpoint_storage
+        if participants:
+            for p in participants:
+                name = getattr(p, 'name', None) or getattr(p, 'agent_name', None) or str(p)
+                self._participants[name] = p
         
     def participants(self, participants_dict=None, **kwargs):
         if participants_dict:
@@ -147,6 +148,11 @@ class MockMagenticBuilder:
         return self
     
     def with_standard_manager(self, manager=None, max_round_count=10, max_stall_count=0):
+        self._manager = manager
+        return self
+    
+    def with_manager(self, manager=None, max_round_count=10, max_stall_count=0):
+        """Mock for with_manager builder method."""
         self._manager = manager
         return self
     
@@ -165,25 +171,85 @@ class MockMagenticBuilder:
                 _chat_history=[]
             )
         }
-        # Mock async generator for run_stream
-        workflow.run_stream = AsyncGeneratorMock([])
+        # Mock async generator for run (source uses workflow.run(task, stream=True))
+        workflow.run = AsyncGeneratorMock([])
         return workflow
 
 class MockInMemoryCheckpointStorage:
     """Mock InMemoryCheckpointStorage."""
     pass
 
+# Base class for orchestrator events - needed for isinstance() checks
+class MockMagenticOrchestratorEvent:
+    """Mock MagenticOrchestratorEvent base class."""
+    def __init__(self, data=None):
+        self.data = data
+
+class MockAgentRunUpdateEvent:
+    """Mock AgentRunUpdateEvent."""
+    def __init__(self, agent_id="test_agent", update=None):
+        self.agent_id = agent_id
+        self.update = update
+        self.author_name = agent_id  # Used in some callbacks
+
+class MockGroupChatRequestSentEvent:
+    """Mock GroupChatRequestSentEvent."""
+    def __init__(self):
+        pass
+
+class MockGroupChatResponseReceivedEvent:
+    """Mock GroupChatResponseReceivedEvent."""
+    def __init__(self):
+        pass
+
+class MockExecutorCompletedEvent:
+    """Mock ExecutorCompletedEvent."""
+    def __init__(self, executor_name="test_executor"):
+        self.executor_name = executor_name
+
+class MockMagenticProgressLedger:
+    """Mock MagenticProgressLedger."""
+    def __init__(self):
+        self.is_request_satisfied = Mock()
+        self.is_request_satisfied.answer = False
+
 # Set up agent_framework mocks
-sys.modules['agent_framework_azure_ai'] = Mock(AzureAIAgentClient=Mock())
+sys.modules['agent_framework_azure_ai'] = Mock(AzureAIAgentClient=Mock(), AzureAIClient=Mock())
 sys.modules['agent_framework'] = Mock(
+    Agent=Mock(return_value=Mock()),
+    AgentResponseUpdate=MockAgentRunUpdateEvent,
+    ChatOptions=Mock(return_value=Mock()),
     ChatMessage=MockChatMessage,
-    WorkflowOutputEvent=MockWorkflowOutputEvent,
-    MagenticBuilder=MockMagenticBuilder,
+    Message=MockChatMessage,
     InMemoryCheckpointStorage=MockInMemoryCheckpointStorage,
+    WorkflowOutputEvent=MockWorkflowOutputEvent,
     MagenticOrchestratorMessageEvent=MockMagenticOrchestratorMessageEvent,
     MagenticAgentDeltaEvent=MockMagenticAgentDeltaEvent,
     MagenticAgentMessageEvent=MockMagenticAgentMessageEvent,
     MagenticFinalResultEvent=MockMagenticFinalResultEvent,
+    MagenticOrchestratorEvent=MockMagenticOrchestratorEvent,
+    AgentRunUpdateEvent=MockAgentRunUpdateEvent,
+    GroupChatRequestSentEvent=MockGroupChatRequestSentEvent,
+    GroupChatResponseReceivedEvent=MockGroupChatResponseReceivedEvent,
+    ExecutorCompletedEvent=MockExecutorCompletedEvent,
+    MagenticProgressLedger=MockMagenticProgressLedger,
+)
+# agent_framework_orchestrations mocks (source imports from these paths)
+sys.modules['agent_framework_orchestrations'] = Mock(
+    MagenticBuilder=MockMagenticBuilder,
+)
+sys.modules['agent_framework_orchestrations._base_group_chat_orchestrator'] = Mock(
+    GroupChatRequestSentEvent=MockGroupChatRequestSentEvent,
+    GroupChatResponseReceivedEvent=MockGroupChatResponseReceivedEvent,
+)
+sys.modules['agent_framework_orchestrations._magentic'] = Mock(
+    MagenticProgressLedger=MockMagenticProgressLedger,
+    StandardMagenticManager=Mock(),
+    MagenticContext=Mock(),
+    ORCHESTRATOR_FINAL_ANSWER_PROMPT="Final answer prompt",
+    ORCHESTRATOR_TASK_LEDGER_PLAN_PROMPT="Task ledger plan prompt",
+    ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT="Task ledger plan update prompt",
+    ORCHESTRATOR_PROGRESS_LEDGER_PROMPT="Progress ledger prompt",
 )
 
 # Mock common modules
@@ -256,11 +322,10 @@ sys.modules['v4.models.messages'] = Mock(WebsocketMessageType=MockWebsocketMessa
 # Mock v4.orchestration.human_approval_manager
 class MockHumanApprovalMagenticManager:
     """Mock HumanApprovalMagenticManager."""
-    def __init__(self, user_id, chat_client, instructions=None, max_round_count=10):
+    def __init__(self, user_id, agent, *args, **kwargs):
         self.user_id = user_id
-        self.chat_client = chat_client
-        self.instructions = instructions
-        self.max_round_count = max_round_count
+        self.agent = agent
+        self.max_round_count = kwargs.get('max_round_count', 10)
 
 sys.modules['v4.orchestration'] = Mock()
 sys.modules['v4.orchestration.human_approval_manager'] = Mock(
@@ -363,7 +428,7 @@ class TestOrchestrationManager(IsolatedAsyncioTestCase):
         
         self.assertIn("user_id is required", str(context.exception))
 
-    @patch('backend.v4.orchestration.orchestration_manager.AzureAIAgentClient')
+    @patch('backend.v4.orchestration.orchestration_manager.AzureAIClient')
     async def test_init_orchestration_client_creation_failure(self, mock_client_class):
         """Test orchestration initialization when client creation fails."""
         mock_client_class.side_effect = Exception("Client creation failed")
@@ -442,7 +507,7 @@ class TestOrchestrationManager(IsolatedAsyncioTestCase):
             mock_workflow = Mock()
             mock_init.return_value = mock_workflow
             
-            result = await OrchestrationManager.get_current_or_new_orchestration(
+            await OrchestrationManager.get_current_or_new_orchestration(
                 user_id=self.test_user_id,
                 team_config=self.test_team_config,
                 team_switched=False,
@@ -466,7 +531,7 @@ class TestOrchestrationManager(IsolatedAsyncioTestCase):
             mock_new_workflow = Mock()
             mock_init.return_value = mock_new_workflow
             
-            result = await OrchestrationManager.get_current_or_new_orchestration(
+            await OrchestrationManager.get_current_or_new_orchestration(
                 user_id=self.test_user_id,
                 team_config=self.test_team_config,
                 team_switched=True,
@@ -519,14 +584,41 @@ class TestOrchestrationManager(IsolatedAsyncioTestCase):
         """Test successful orchestration execution."""
         # Set up mock workflow with events
         mock_workflow = Mock()
+        
+        # Source dispatches on event.type (string), not isinstance() for event classes
+        mock_orchestrator_event = Mock()
+        mock_orchestrator_event.type = "magentic_orchestrator"
+        mock_orchestrator_event.data = MockChatMessage("Plan message")
+        
+        # Output event with AgentResponseUpdate data triggers streaming callback
+        mock_agent_update_data = MockAgentRunUpdateEvent()
+        mock_agent_update_data.text = "Agent streaming update"
+        mock_output_event = Mock()
+        mock_output_event.type = "output"
+        mock_output_event.executor_id = "agent_1"
+        mock_output_event.data = mock_agent_update_data
+        
+        mock_response_data = MockGroupChatResponseReceivedEvent()
+        mock_response_data.round_index = 1
+        mock_response_data.participant_name = "agent_1"
+        mock_response_data.data = MockChatMessage("Agent response")
+        mock_response_event = Mock()
+        mock_response_event.type = "group_chat"
+        mock_response_event.data = mock_response_data
+        
+        # Final output event
+        mock_final_output = Mock()
+        mock_final_output.type = "output"
+        mock_final_output.executor_id = None
+        mock_final_output.data = MockChatMessage("Final result")
+        
         mock_events = [
-            MockMagenticOrchestratorMessageEvent(),
-            MockMagenticAgentDeltaEvent(),
-            MockMagenticAgentMessageEvent(),
-            MockMagenticFinalResultEvent(),
-            MockWorkflowOutputEvent(MockChatMessage("Final result"))
+            mock_orchestrator_event,
+            mock_output_event,
+            mock_response_event,
+            mock_final_output,
         ]
-        mock_workflow.run_stream = AsyncGeneratorMock(mock_events)
+        mock_workflow.run = AsyncGeneratorMock(mock_events)
         mock_workflow.executors = {
             "magentic_orchestrator": Mock(_conversation=[]),
             "agent_1": Mock(_chat_history=[])
@@ -544,9 +636,8 @@ class TestOrchestrationManager(IsolatedAsyncioTestCase):
             input_task=input_task
         )
 
-        # Verify callbacks were called
+        # Verify streaming callback was called (for AgentRunUpdateEvent)
         streaming_agent_response_callback.assert_called()
-        agent_response_callback.assert_called()
         
         # Verify final result was sent
         connection_config.send_status_update_async.assert_called()
@@ -570,8 +661,8 @@ class TestOrchestrationManager(IsolatedAsyncioTestCase):
         """Test run_orchestration when workflow execution fails."""
         # Set up mock workflow that raises exception
         mock_workflow = Mock()
-        mock_workflow.run_stream = AsyncGeneratorMock([])
-        mock_workflow.run_stream = Mock(side_effect=Exception("Workflow execution failed"))
+        mock_workflow.run = AsyncGeneratorMock([])
+        mock_workflow.run = Mock(side_effect=Exception("Workflow execution failed"))
         mock_workflow.executors = {}
         
         orchestration_config.get_current_orchestration.return_value = mock_workflow
@@ -605,7 +696,7 @@ class TestOrchestrationManager(IsolatedAsyncioTestCase):
             "magentic_orchestrator": mock_orchestrator_executor,
             "agent_1": mock_agent_executor
         }
-        mock_workflow.run_stream = AsyncGeneratorMock([])
+        mock_workflow.run = AsyncGeneratorMock([])
         
         orchestration_config.get_current_orchestration.return_value = mock_workflow
         
@@ -634,7 +725,7 @@ class TestOrchestrationManager(IsolatedAsyncioTestCase):
         mock_workflow.executors = {
             "magentic_orchestrator": mock_executor
         }
-        mock_workflow.run_stream = AsyncGeneratorMock([])
+        mock_workflow.run = AsyncGeneratorMock([])
         
         orchestration_config.get_current_orchestration.return_value = mock_workflow
         
@@ -661,7 +752,7 @@ class TestOrchestrationManager(IsolatedAsyncioTestCase):
         mock_workflow.executors = {
             "magentic_orchestrator": mock_executor
         }
-        mock_workflow.run_stream = AsyncGeneratorMock([])
+        mock_workflow.run = AsyncGeneratorMock([])
         
         orchestration_config.get_current_orchestration.return_value = mock_workflow
         
@@ -675,14 +766,14 @@ class TestOrchestrationManager(IsolatedAsyncioTestCase):
         )
         
         # Verify workflow still executed
-        mock_workflow.run_stream.assert_called_once()
+        mock_workflow.run.assert_called_once()
 
     async def test_run_orchestration_event_processing_error(self):
         """Test handling of errors during event processing."""
         # Set up workflow with events that cause processing errors
         mock_workflow = Mock()
         mock_events = [MockMagenticAgentDeltaEvent()]
-        mock_workflow.run_stream = AsyncGeneratorMock(mock_events)
+        mock_workflow.run = AsyncGeneratorMock(mock_events)
         mock_workflow.executors = {}
         
         # Make streaming callback raise exception
@@ -724,7 +815,7 @@ class TestOrchestrationManager(IsolatedAsyncioTestCase):
     async def test_run_orchestration_string_input_task(self):
         """Test run_orchestration with string input task."""
         mock_workflow = Mock()
-        mock_workflow.run_stream = AsyncGeneratorMock([])
+        mock_workflow.run = AsyncGeneratorMock([])
         mock_workflow.executors = {}
         
         orchestration_config.get_current_orchestration.return_value = mock_workflow
@@ -738,12 +829,12 @@ class TestOrchestrationManager(IsolatedAsyncioTestCase):
         )
         
         # Verify workflow was called with the string
-        mock_workflow.run_stream.assert_called_once_with("Simple string task")
+        mock_workflow.run.assert_called_once_with("Simple string task", stream=True)
 
     async def test_run_orchestration_websocket_error_handling(self):
         """Test handling of WebSocket sending errors."""
         mock_workflow = Mock()
-        mock_workflow.run_stream = AsyncGeneratorMock([])
+        mock_workflow.run = AsyncGeneratorMock([])
         mock_workflow.executors = {}
         
         # Make WebSocket sending fail
@@ -773,17 +864,49 @@ class TestOrchestrationManager(IsolatedAsyncioTestCase):
         """Test processing of all event types."""
         mock_workflow = Mock()
         
+        # Source dispatches on event.type (string), not isinstance() for event classes
+        mock_orchestrator_event = Mock()
+        mock_orchestrator_event.type = "magentic_orchestrator"
+        mock_orchestrator_event.data = MockChatMessage("Plan message")
+        
+        # Output event with AgentResponseUpdate triggers streaming callback
+        mock_agent_update_data = MockAgentRunUpdateEvent()
+        mock_agent_update_data.text = "Agent streaming update"
+        mock_output_event = Mock()
+        mock_output_event.type = "output"
+        mock_output_event.executor_id = "agent_1"
+        mock_output_event.data = mock_agent_update_data
+        
+        mock_request_data = MockGroupChatRequestSentEvent()
+        mock_request_data.participant_name = "agent_1"
+        mock_request_data.round_index = 1
+        mock_request_event = Mock()
+        mock_request_event.type = "group_chat"
+        mock_request_event.data = mock_request_data
+        
+        mock_response_data = MockGroupChatResponseReceivedEvent()
+        mock_response_data.round_index = 1
+        mock_response_data.participant_name = "agent_1"
+        mock_response_data.data = MockChatMessage("Agent response")
+        mock_response_event = Mock()
+        mock_response_event.type = "group_chat"
+        mock_response_event.data = mock_response_data
+        
+        mock_executor_completed = Mock()
+        mock_executor_completed.type = "executor_completed"
+        mock_executor_completed.executor_id = "agent_1"
+        
         # Create all possible event types
         events = [
-            MockMagenticOrchestratorMessageEvent(),
-            MockMagenticAgentDeltaEvent(),
-            MockMagenticAgentMessageEvent(),
-            MockMagenticFinalResultEvent(),
-            MockWorkflowOutputEvent(),
-            Mock()  # Unknown event type
+            mock_orchestrator_event,
+            mock_output_event,
+            mock_request_event,
+            mock_response_event,
+            mock_executor_completed,
+            Mock()  # Unknown event type - should be safely ignored
         ]
         
-        mock_workflow.run_stream = AsyncGeneratorMock(events)
+        mock_workflow.run = AsyncGeneratorMock(events)
         mock_workflow.executors = {}
         
         orchestration_config.get_current_orchestration.return_value = mock_workflow
@@ -797,11 +920,281 @@ class TestOrchestrationManager(IsolatedAsyncioTestCase):
             input_task=input_task
         )
         
-        # Verify all appropriate callbacks were made
+        # Verify streaming callback was called (for output event with AgentResponseUpdate data)
         streaming_agent_response_callback.assert_called()
-        agent_response_callback.assert_called()
+
+
+class TestExtractResponseText(IsolatedAsyncioTestCase):
+    """Test _extract_response_text method for various input types."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.manager = OrchestrationManager()
+
+    def test_extract_response_text_none(self):
+        """Test extracting text from None returns empty string."""
+        result = self.manager._extract_response_text(None)
+        self.assertEqual(result, "")
+
+    def test_extract_response_text_chat_message(self):
+        """Test extracting text from ChatMessage."""
+        msg = MockChatMessage("Hello world")
+        result = self.manager._extract_response_text(msg)
+        self.assertEqual(result, "Hello world")
+
+    def test_extract_response_text_chat_message_empty_text(self):
+        """Test extracting text from ChatMessage with empty text."""
+        msg = MockChatMessage("")
+        result = self.manager._extract_response_text(msg)
+        self.assertEqual(result, "")
+
+    def test_extract_response_text_object_with_text_attr(self):
+        """Test extracting text from object with text attribute."""
+        obj = Mock()
+        obj.text = "Agent response"
+        result = self.manager._extract_response_text(obj)
+        self.assertEqual(result, "Agent response")
+
+    def test_extract_response_text_object_with_empty_text(self):
+        """Test extracting text from object with empty text attribute."""
+        # Use spec to ensure only specified attributes exist
+        obj = Mock(spec_set=['text'])
+        obj.text = ""
+        result = self.manager._extract_response_text(obj)
+        self.assertEqual(result, "")
+
+    def test_extract_response_text_agent_executor_response_with_agent_response(self):
+        """Test extracting text from AgentExecutorResponse with agent_response.text."""
+        agent_resp = Mock(spec_set=['text'])
+        agent_resp.text = "Agent executor response"
+        
+        executor_resp = Mock(spec_set=['agent_response'])
+        executor_resp.agent_response = agent_resp
+        
+        result = self.manager._extract_response_text(executor_resp)
+        self.assertEqual(result, "Agent executor response")
+
+    def test_extract_response_text_agent_executor_response_fallback_to_conversation(self):
+        """Test extracting text from AgentExecutorResponse falling back to full_conversation."""
+        agent_resp = Mock(spec_set=['text'])
+        agent_resp.text = None
+        
+        last_msg = MockChatMessage("Last conversation message")
+        
+        executor_resp = Mock(spec_set=['agent_response', 'full_conversation'])
+        executor_resp.agent_response = agent_resp
+        executor_resp.full_conversation = [MockChatMessage("First"), last_msg]
+        
+        result = self.manager._extract_response_text(executor_resp)
+        self.assertEqual(result, "Last conversation message")
+
+    def test_extract_response_text_agent_executor_response_empty_conversation(self):
+        """Test extracting text from AgentExecutorResponse with empty conversation."""
+        agent_resp = Mock(spec_set=['text'])
+        agent_resp.text = None
+        
+        executor_resp = Mock(spec_set=['agent_response', 'full_conversation'])
+        executor_resp.agent_response = agent_resp
+        executor_resp.full_conversation = []
+        
+        result = self.manager._extract_response_text(executor_resp)
+        self.assertEqual(result, "")
+
+    def test_extract_response_text_list_of_chat_messages(self):
+        """Test extracting text from list of ChatMessages."""
+        messages = [
+            MockChatMessage("First message"),
+            MockChatMessage("Second message"),
+            MockChatMessage("Last message")
+        ]
+        result = self.manager._extract_response_text(messages)
+        # Should return the last non-empty message
+        self.assertEqual(result, "Last message")
+
+    def test_extract_response_text_list_with_mixed_types(self):
+        """Test extracting text from list with mixed types."""
+        obj = Mock()
+        obj.text = "Object text"
+        
+        messages = [
+            MockChatMessage("Chat message"),
+            obj
+        ]
+        result = self.manager._extract_response_text(messages)
+        self.assertEqual(result, "Object text")
+
+    def test_extract_response_text_empty_list(self):
+        """Test extracting text from empty list."""
+        result = self.manager._extract_response_text([])
+        self.assertEqual(result, "")
+
+    def test_extract_response_text_list_with_empty_items(self):
+        """Test extracting text from list where all items have empty text."""
+        messages = [
+            MockChatMessage(""),
+            MockChatMessage("")
+        ]
+        result = self.manager._extract_response_text(messages)
+        self.assertEqual(result, "")
+
+    def test_extract_response_text_unknown_type(self):
+        """Test extracting text from unknown type returns empty string."""
+        # Create object without text attribute
+        obj = Mock(spec=[])
+        result = self.manager._extract_response_text(obj)
+        self.assertEqual(result, "")
+
+    def test_extract_response_text_nested_list(self):
+        """Test extracting text handles nested structures correctly."""
+        # Test that recursive extraction works
+        inner_list = [
+            MockChatMessage("Inner message")
+        ]
+        outer_list = [inner_list]
+        result = self.manager._extract_response_text(outer_list)
+        self.assertEqual(result, "Inner message")
+
+
+class TestWorkflowOutputEventHandling(IsolatedAsyncioTestCase):
+    """Test WorkflowOutputEvent handling with different data types."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        # Reset mocks
+        orchestration_config.orchestrations.clear()
+        orchestration_config.get_current_orchestration.return_value = None
+        connection_config.send_status_update_async.reset_mock()
+        agent_response_callback.reset_mock()
+        streaming_agent_response_callback.reset_mock()
+        
+        self.orchestration_manager = OrchestrationManager()
+        self.test_user_id = "test_user_123"
+
+    async def test_workflow_output_with_list_of_chat_messages(self):
+        """Test WorkflowOutputEvent with list of ChatMessage objects."""
+        mock_workflow = Mock()
+        
+        # Create list of ChatMessages
+        messages = [
+            MockChatMessage("First response"),
+            MockChatMessage("Second response"),
+            MockChatMessage("Final response")
+        ]
+        output_event = MockWorkflowOutputEvent(messages)
+        
+        mock_workflow.run = AsyncGeneratorMock([output_event])
+        mock_workflow.executors = {}
+        
+        orchestration_config.get_current_orchestration.return_value = mock_workflow
+        
+        input_task = Mock()
+        input_task.description = "Test list output"
+        
+        # Should process without raising an exception
+        await self.orchestration_manager.run_orchestration(
+            user_id=self.test_user_id,
+            input_task=input_task
+        )
+        
+        # Should have sent status update for final result
+        connection_config.send_status_update_async.assert_called()
+
+    async def test_workflow_output_with_mixed_list(self):
+        """Test WorkflowOutputEvent with list containing non-ChatMessage items."""
+        mock_workflow = Mock()
+        
+        # Create list with mixed types (ChatMessage and other objects)
+        messages = [
+            MockChatMessage("Chat message"),
+            "plain string item",  # Not a ChatMessage
+            123  # Integer item
+        ]
+        output_event = MockWorkflowOutputEvent(messages)
+        
+        mock_workflow.run = AsyncGeneratorMock([output_event])
+        mock_workflow.executors = {}
+        
+        orchestration_config.get_current_orchestration.return_value = mock_workflow
+        
+        input_task = Mock()
+        input_task.description = "Test mixed list output"
+        
+        # Should handle mixed list without error
+        await self.orchestration_manager.run_orchestration(
+            user_id=self.test_user_id,
+            input_task=input_task
+        )
+        
+        connection_config.send_status_update_async.assert_called()
+
+    async def test_workflow_output_with_object_with_text(self):
+        """Test WorkflowOutputEvent with object that has text attribute."""
+        mock_workflow = Mock()
+        
+        # Create object with text attribute
+        obj_with_text = Mock(spec_set=['text'])
+        obj_with_text.text = "Object response"
+        output_event = MockWorkflowOutputEvent(obj_with_text)
+        
+        mock_workflow.run = AsyncGeneratorMock([output_event])
+        mock_workflow.executors = {}
+        
+        orchestration_config.get_current_orchestration.return_value = mock_workflow
+        
+        input_task = Mock()
+        input_task.description = "Test object output"
+        
+        await self.orchestration_manager.run_orchestration(
+            user_id=self.test_user_id,
+            input_task=input_task
+        )
+        
+        connection_config.send_status_update_async.assert_called()
+
+    async def test_workflow_output_with_unknown_type(self):
+        """Test WorkflowOutputEvent with unknown data type."""
+        mock_workflow = Mock()
+        
+        # Create object without text attribute that will be str() converted
+        output_event = MockWorkflowOutputEvent(12345)
+        
+        mock_workflow.run = AsyncGeneratorMock([output_event])
+        mock_workflow.executors = {}
+        
+        orchestration_config.get_current_orchestration.return_value = mock_workflow
+        
+        input_task = Mock()
+        input_task.description = "Test unknown type output"
+        
+        await self.orchestration_manager.run_orchestration(
+            user_id=self.test_user_id,
+            input_task=input_task
+        )
+        
+        connection_config.send_status_update_async.assert_called()
+
+    async def test_workflow_output_with_empty_list(self):
+        """Test WorkflowOutputEvent with empty list."""
+        mock_workflow = Mock()
+        
+        output_event = MockWorkflowOutputEvent([])
+        
+        mock_workflow.run = AsyncGeneratorMock([output_event])
+        mock_workflow.executors = {}
+        
+        orchestration_config.get_current_orchestration.return_value = mock_workflow
+        
+        input_task = Mock()
+        input_task.description = "Test empty list output"
+        
+        await self.orchestration_manager.run_orchestration(
+            user_id=self.test_user_id,
+            input_task=input_task
+        )
+        
+        # Empty list should still result in a status update being sent
+        connection_config.send_status_update_async.assert_called()
 
 
 if __name__ == '__main__':
-    import unittest
-    unittest.main()
+    main()

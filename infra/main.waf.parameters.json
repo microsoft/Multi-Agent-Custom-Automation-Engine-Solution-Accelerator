@@ -74,6 +74,9 @@
     "virtualMachineAdminPassword": {
       "value": "${AZURE_ENV_VM_ADMIN_PASSWORD}"
     },
+    "virtualMachineSize": {
+      "value": "${AZURE_ENV_VM_SIZE}"
+    },
     "existingLogAnalyticsWorkspaceId": {
       "value": "${AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID}"
     },
@@ -88,25 +91,6 @@
     },
     "MCPContainerRegistryHostname": {
       "value": "${AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT}"
-    },
-    "allowedFqdnList": {
-      "value": [
-        "mcr.microsoft.com",
-        "openai.azure.com",
-        "cognitiveservices.azure.com",
-        "login.microsoftonline.com",
-        "management.azure.com",
-        "aiinfra.azure.com",
-        "aiinfra.azure.net",
-        "aiinfra.azureedge.net",
-        "blob.core.windows.net",
-        "database.windows.net",
-        "vault.azure.net",
-        "monitoring.azure.com",
-        "dc.services.visualstudio.com",
-        "azconfig.io",
-        "azconfig.azure.net"
-      ]
     }
   }
 }

@@ -43,6 +43,8 @@ class SearchConfig:
     connection_name: str | None = None
     endpoint: str | None = None
     index_name: str | None = None
+    search_query_type: str = "simple"  # Options: "simple", "vector_simple", "vector", "semantic", "hybrid"
+    top_k: int = 5  # Number of results to return
 
     @classmethod
     def from_env(cls, index_name: str) -> "SearchConfig":
@@ -58,5 +60,7 @@ class SearchConfig:
         return cls(
             connection_name=connection_name,
             endpoint=endpoint,
-            index_name=index_name
+            index_name=index_name,
+            search_query_type="simple",  # Use simple query type (keyword search)
+            top_k=5
         )

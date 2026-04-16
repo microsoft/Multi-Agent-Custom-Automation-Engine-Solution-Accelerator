@@ -4,7 +4,7 @@ import logging
 import sys
 import time
 import uuid
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
+from unittest.mock import Mock, patch, AsyncMock
 import pytest
 
 # Mock the dependencies before importing the module under test
@@ -55,9 +55,13 @@ sys.modules['v4.models.messages'].UserClarificationResponse = mock_user_clarific
 sys.modules['v4.models.messages'].TimeoutNotification = mock_timeout_notification
 sys.modules['v4.models.messages'].WebsocketMessageType = mock_websocket_message_type
 
-
 # Now import the module under test
-from backend.v4.magentic_agents.proxy_agent import ProxyAgent, create_proxy_agent
+import backend.v4.magentic_agents.proxy_agent as proxy_agent_module
+
+
+def test_module_imports():
+    """Ensure the proxy_agent module imports correctly and is referenced in tests."""
+    assert proxy_agent_module is not None
 
 
 class TestProxyAgentComplexScenarios:
@@ -123,9 +127,8 @@ class TestProxyAgentComplexScenarios:
 
     def test_timeout_and_error_scenarios(self):
         """Test timeout and error handling scenarios."""
-        import asyncio
-        
-        
+
+
         # Test that timeout logic would work
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -880,7 +883,6 @@ class TestProxyAgentDirectFunctionTesting:
         mock_orchestration_config.clarifications = {"test-request": None}
         
         # This would test each error path
-        import asyncio
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         

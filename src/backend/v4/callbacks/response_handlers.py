@@ -8,10 +8,7 @@ import time
 import re
 from typing import Any
 
-from agent_framework import ChatMessage
-# Removed: from agent_framework._content import FunctionCallContent  (does not exist)
-
-from agent_framework._workflows._magentic import AgentRunResponseUpdate  # Streaming update type from workflows
+from agent_framework import Message
 
 from v4.config.settings import connection_config
 from v4.models.messages import (
@@ -67,22 +64,22 @@ def _extract_tool_calls_from_contents(contents: list[Any]) -> list[AgentToolCall
 
 def agent_response_callback(
     agent_id: str,
-    message: ChatMessage,
+    message: Message,
     user_id: str | None = None,
 ) -> None:
     """
-    Final (non-streaming) agent response callback using agent_framework ChatMessage.
+    Final (non-streaming) agent response callback using agent_framework Message.
     """
     agent_name = getattr(message, "author_name", None) or agent_id or "Unknown Agent"
     role = getattr(message, "role", "assistant")
 
-    # FIX: Properly extract text from ChatMessage
-    # ChatMessage has a .text property that concatenates all TextContent items
+    # FIX: Properly extract text from Message
+    # Message has a .text property that concatenates all TextContent items
     text = ""
-    if isinstance(message, ChatMessage):
+    if isinstance(message, Message):
         text = message.text  # Use the property directly
     else:
-        # Fallback for non-ChatMessage objects
+        # Fallback for non-Message objects
         text = str(getattr(message, "text", ""))
 
     text = clean_citations(text or "")
@@ -111,26 +108,31 @@ def agent_response_callback(
 
 async def streaming_agent_response_callback(
     agent_id: str,
-    update: AgentRunResponseUpdate,
+    update,  # Streaming update object (e.g. AgentResponseUpdate, ChatMessage)
     is_final: bool,
     user_id: str | None = None,
 ) -> None:
     """
-    Streaming callback for incremental agent output (AgentRunResponseUpdate).
+    Streaming callback for incremental agent output.
     """
     if not user_id:
         return
 
     try:
+        # Handle various streaming update object shapes
         chunk_text = getattr(update, "text", None)
-        if not chunk_text:
-            contents = getattr(update, "contents", []) or []
-            collected = []
-            for item in contents:
-                txt = getattr(item, "text", None)
-                if txt:
-                    collected.append(str(txt))
-            chunk_text = "".join(collected) if collected else ""
+
+        # If text is None, don't fall back to str(update) as that would show object repr
+        # Just skip if there's no actual text content
+        if chunk_text is None:
+            # Check if update is a Message
+            if isinstance(update, Message):
+                chunk_text = update.text or ""
+            elif hasattr(update, "content"):
+                chunk_text = str(update.content) if update.content else ""
+            else:
+                # Skip if no text content available
+                return
 
         cleaned = clean_citations(chunk_text or "")
 

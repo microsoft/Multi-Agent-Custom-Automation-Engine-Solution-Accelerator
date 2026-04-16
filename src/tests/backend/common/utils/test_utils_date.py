@@ -7,15 +7,11 @@ and message date formatting functionality.
 
 import json
 import locale
-import logging
 import unittest
 import sys
 import os
 from datetime import datetime
-from typing import Optional
 from unittest.mock import Mock, patch
-
-import pytest
 
 # Add the backend directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'backend'))
@@ -90,9 +86,6 @@ utils_date_module.parser = parser_mock
 import re as real_re
 utils_date_module.re = real_re
 
-# Import dateutil.parser after mocking to avoid import errors
-from dateutil import parser
-
 
 class TestFormatDateForUser(unittest.TestCase):
     """Test cases for format_date_for_user function."""
@@ -113,6 +106,8 @@ class TestFormatDateForUser(unittest.TestCase):
             else:
                 locale.setlocale(locale.LC_TIME, "")
         except Exception:
+            # Best-effort cleanup: if restoring the locale fails (e.g., unsupported locale),
+            # do not fail tests because of the environment configuration.
             pass
 
     def test_format_date_for_user_valid_iso_date(self):
