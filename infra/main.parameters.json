@@ -11,7 +11,7 @@
     "azureAiServiceLocation": {
       "value": "${AZURE_ENV_AI_SERVICE_LOCATION}"
     },
-    "gptModelDeploymentType": {
+    "deploymentType": {
       "value": "${AZURE_ENV_MODEL_DEPLOYMENT_TYPE}"
     },
     "gptModelName": {
@@ -20,7 +20,7 @@
     "gptModelVersion": {
       "value": "${AZURE_ENV_GPT_MODEL_VERSION}"
     },
-    "gptModelCapacity": {
+    "gptDeploymentCapacity": {
       "value": "${AZURE_ENV_GPT_MODEL_CAPACITY}"
     },
     "gpt4_1ModelDeploymentType": {
@@ -62,7 +62,7 @@
     "existingLogAnalyticsWorkspaceId": {
       "value": "${AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID}"
     },
-    "existingAiFoundryAiProjectResourceId": {
+    "existingFoundryProjectResourceId": {
       "value": "${AZURE_EXISTING_AIPROJECT_RESOURCE_ID}"
     },
     "backendContainerRegistryHostname": {
