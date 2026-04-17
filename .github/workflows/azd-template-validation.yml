@@ -33,7 +33,7 @@ jobs:
           AZURE_ENV_NAME: azd-${{ vars.AZURE_ENV_NAME }}-${{ env.HHMM }}
           AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
           AZURE_ENV_AI_SERVICE_LOCATION: ${{ vars.AZURE_AI_DEPLOYMENT_LOCATION }}
-          AZURE_ENV_MODEL_CAPACITY: 1
+          AZURE_ENV_GPT_MODEL_CAPACITY: 1
           AZURE_ENV_MODEL_4_1_CAPACITY: 1 # keep low to avoid potential quota issues
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
