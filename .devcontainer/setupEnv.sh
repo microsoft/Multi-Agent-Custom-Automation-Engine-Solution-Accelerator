@@ -8,7 +8,7 @@ set -e
 
 echo "Setting up Backend..."
 cd ./src/backend
-uv sync --frozen
+uv sync --frozen --extra dev
 cd ../../
 
 echo "Setting up Frontend..."
