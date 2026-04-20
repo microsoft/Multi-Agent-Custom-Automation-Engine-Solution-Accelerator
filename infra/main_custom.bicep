@@ -70,7 +70,7 @@ param gptReasoningModelName string = 'o4-mini'
 @description('Optional. Version of the GPT Reasoning model to deploy. Defaults to 2025-04-16.')
 param gptReasoningModelVersion string = '2025-04-16'
 
-@description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2025-01-01-preview.')
+@description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2024-12-01-preview.')
 param azureopenaiVersion string = '2024-12-01-preview'
 
 @description('Optional. Version of the Azure AI Agent API version. Defaults to 2025-01-01-preview.')
@@ -1338,7 +1338,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
           }
           {
             name: 'AZURE_AI_SEARCH_ENDPOINT'
-            value: searchService.outputs.endpoint
+            value: searchServiceUpdate.outputs.endpoint
           }
           {
             name: 'AZURE_COGNITIVE_SERVICES'
@@ -1724,10 +1724,20 @@ var aiSearchIndexNameForRFPSummary = 'macae-rfp-summary-index'
 var aiSearchIndexNameForRFPRisk = 'macae-rfp-risk-index'
 var aiSearchIndexNameForRFPCompliance = 'macae-rfp-compliance-index'
 
-module searchService 'br/public:avm/res/search/search-service:0.11.1' = {
-  name: take('avm.res.search.search-service.${solutionSuffix}', 64)
+resource searchService 'Microsoft.Search/searchServices@2024-06-01-preview' = {
+  name: searchServiceName
+  location: location
+  sku: {
+    name: enableScalability ? 'standard' : 'basic'
+  }
+}
+
+// Separate module for Search Service to enable managed identity and update other properties, as this reduces deployment time
+module searchServiceUpdate 'br/public:avm/res/search/search-service:0.11.1' = {
+  name: take('avm.res.search.update.${solutionSuffix}', 64)
   params: {
     name: searchServiceName
+    location: location
     disableLocalAuth: true
     hostingMode: 'default'
     managedIdentities: {
@@ -1789,9 +1799,12 @@ module searchService 'br/public:avm/res/search/search-service:0.11.1' = {
     //     ]
     //   : []
   }
+  dependsOn: [
+    searchService
+  ]
 }
 
-// ========== Search Service - AI Project Connection ========== //
+// ========== Search Service - AI Project Connection ==========//
 
 var aiSearchConnectionName = 'aifp-srch-connection-${solutionSuffix}'
 module aiSearchFoundryConnection 'modules/aifp-connections.bicep' = {
@@ -1801,9 +1814,9 @@ module aiSearchFoundryConnection 'modules/aifp-connections.bicep' = {
     aiFoundryProjectName: aiFoundryAiProjectName
     aiFoundryName: aiFoundryAiServicesResourceName
     aifSearchConnectionName: aiSearchConnectionName
-    searchServiceResourceId: searchService.outputs.resourceId
-    searchServiceLocation: searchService.outputs.location
-    searchServiceName: searchService.outputs.name
+    searchServiceResourceId: searchService.id
+    searchServiceLocation: searchService.location
+    searchServiceName: searchService.name
   }
   dependsOn: [
     aiFoundryAiServices
@@ -1871,8 +1884,8 @@ output webSiteDefaultHostname string = webSite.outputs.defaultHostname
 
 output AZURE_STORAGE_BLOB_URL string = avmStorageAccount.outputs.serviceEndpoints.blob
 output AZURE_STORAGE_ACCOUNT_NAME string = storageAccountName
-output AZURE_AI_SEARCH_ENDPOINT string = searchService.outputs.endpoint
-output AZURE_AI_SEARCH_NAME string = searchService.outputs.name
+output AZURE_AI_SEARCH_ENDPOINT string = searchServiceUpdate.outputs.endpoint
+output AZURE_AI_SEARCH_NAME string = searchService.name
 
 output COSMOSDB_ENDPOINT string = 'https://${cosmosDbResourceName}.documents.azure.com:443/'
 output COSMOSDB_DATABASE string = cosmosDbDatabaseName
@@ -1896,7 +1909,7 @@ output AI_FOUNDRY_RESOURCE_ID string = !useExistingAiFoundryAiProject
   ? aiFoundryAiServices.outputs.resourceId
   : existingAiFoundryAiProjectResourceId
 output COSMOSDB_ACCOUNT_NAME string = cosmosDbResourceName
-output AZURE_SEARCH_ENDPOINT string = searchService.outputs.endpoint
+output AZURE_SEARCH_ENDPOINT string = searchServiceUpdate.outputs.endpoint
 output AZURE_CLIENT_ID string = userAssignedIdentity!.outputs.clientId
 output AZURE_TENANT_ID string = tenant().tenantId
 output AZURE_AI_SEARCH_CONNECTION_NAME string = aiSearchConnectionName
