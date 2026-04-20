@@ -54,7 +54,14 @@ jobs:
       - name: Run tests with coverage
         if: env.skip_tests == 'false'
         run: |
-          pytest --cov=src/backend --cov-report=term-missing --cov-report=xml --junitxml=pytest.xml --ignore=tests/e2e-test/tests --omit="*/tests/*"
+          cat > .coveragerc << 'EOF'
+          [run]
+          source = src/backend
+          omit =
+              */tests/*
+              */test_*
+          EOF
+          pytest --cov --cov-config=.coveragerc --cov-report=term-missing --cov-report=xml --junitxml=pytest.xml --ignore=tests/e2e-test/tests
 
       - name: Pytest Coverage Comment
         if: |
