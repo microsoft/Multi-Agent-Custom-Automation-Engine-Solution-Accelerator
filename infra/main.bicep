@@ -1518,6 +1518,9 @@ module webSite 'modules/web-sites.bicep' = {
     location: location
     kind: 'app,linux,container'
     serverFarmResourceId: webServerFarm.?outputs.resourceId
+    managedIdentities: {
+      systemAssigned: true
+    }
     siteConfig: {
       linuxFxVersion: 'DOCKER|${frontendContainerRegistryHostname}/${frontendContainerImageName}:${frontendContainerImageTag}'
       minTlsVersion: '1.2'
@@ -1682,6 +1685,7 @@ module searchServiceUpdate 'br/public:avm/res/search/search-service:0.11.1' = {
   name: take('avm.res.search.update.${solutionSuffix}', 64)
   params: {
     name: searchServiceName
+    location: location
     disableLocalAuth: true
     hostingMode: 'default'
     managedIdentities: {
