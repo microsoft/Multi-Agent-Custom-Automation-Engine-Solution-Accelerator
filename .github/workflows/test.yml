@@ -35,16 +35,21 @@ on:
       - 'src/**/pyproject.toml'
       - '.github/workflows/test.yml'
 
+permissions:
+  contents: read
+  actions: read
+  pull-requests: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
@@ -71,9 +76,9 @@ jobs:
         run: |
           # Run test_app.py first (isolation required)
           python -m pytest src/tests/backend/test_app.py --cov=src/backend --cov-config=.coveragerc -q
-          
+
           # Run remaining backend tests with coverage append
-          python -m pytest src/tests/backend --cov=src/backend --cov-append --cov-report=term --cov-report=xml --cov-config=.coveragerc --ignore=src/tests/backend/test_app.py
+          python -m pytest src/tests/backend --cov=src/backend --cov-append --cov-report=term --cov-report=xml --junitxml=pytest.xml --cov-config=.coveragerc --ignore=src/tests/backend/test_app.py
 
       - name: Check coverage threshold
         if: env.skip_tests == 'false'
@@ -90,6 +95,18 @@ jobs:
             echo "::error::coverage.xml not found"
             exit 1
           fi
+
+      - name: Pytest Coverage Comment
+        if: |
+          always() &&
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.fork == false &&
+          env.skip_tests == 'false'
+        uses: MishaKav/pytest-coverage-comment@26f986d2599c288bb62f623d29c2da98609e9cd4  # v1.6.0
+        with:
+          pytest-xml-coverage-path: coverage.xml
+          junitxml-path: pytest.xml
+          report-only-changed-files: true
 
       - name: Skip coverage report if no tests
         if: env.skip_tests == 'true'

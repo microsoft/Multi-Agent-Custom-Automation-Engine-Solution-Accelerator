@@ -16,7 +16,7 @@ class BIABPage(BasePage):
     AI_TEXT = "//span[.='AI-generated content may be incorrect']"
     CONTOSO_LOGO = "//span[.='Contoso']"
     NEW_TASK_PROMPT = "//div[@class='tab tab-new-task']"
-    SEND_BUTTON = "//button[@class='fui-Button r1alrhcs home-input-send-button ___w3o4yv0 fhovq9v f1p3nwhy f11589ue f1q5o8ev f1pdflbu fkfq4zb f1t94bn6 f1s2uweq fr80ssc f1ukrpxl fecsdlb fnwyq0v ft1hn21 fuxngvv fy5bs14 fsv2rcd f1h0usnq fs4ktlq f16h9ulv fx2bmrt f1omzyqd f1dfjoow f1j98vj9 fj8yq94 f4xjyn1 f1et0tmh f9ddjv3 f1wi8ngl f18ktai2 fwbmr0d f44c6la']"
+    SEND_BUTTON = "//button[contains(@class, 'home-input-send-button')]"
     PROMPT_INPUT = "//textarea[@placeholder=\"Tell us what needs planning, building, or connecting—we'll handle the rest.\"]"
     QUICK_TASK = "//div[@role='group']"
     CURRENT_TEAM = "//button[contains(.,'Current Team')]"
@@ -46,7 +46,7 @@ class BIABPage(BasePage):
     HR_HELPER_AGENT = "//span[normalize-space()='HR Helper Agent']"
     TECH_SUPPORT_AGENT = "//span[normalize-space()='Technical Support Agent']"
     INPUT_CLARIFICATION = "//textarea[@placeholder='Type your message here...']"
-    SEND_BUTTON_CLARIFICATION = "//button[@class='fui-Button r1alrhcs home-input-send-button ___w3o4yv0 fhovq9v f1p3nwhy f11589ue f1q5o8ev f1pdflbu fkfq4zb f1t94bn6 f1s2uweq fr80ssc f1ukrpxl fecsdlb fnwyq0v ft1hn21 fuxngvv fy5bs14 fsv2rcd f1h0usnq fs4ktlq f16h9ulv fx2bmrt f1omzyqd f1dfjoow f1j98vj9 fj8yq94 f4xjyn1 f1et0tmh f9ddjv3 f1wi8ngl f18ktai2 fwbmr0d f44c6la']"
+    SEND_BUTTON_CLARIFICATION = "//button[contains(@class, 'home-input-send-button')]"
     HR_COMPLETED_TASK = "//div[@title='onboard new employee']"
     RETAIL_COMPLETED_TASK = "//div[contains(@title,'Analyze the satisfaction of Emily Thompson with Contoso.  If needed, provide a plan to increase her satisfaction.')]"
     ORDER_DATA = "//span[normalize-space()='Order Data']"
@@ -439,6 +439,33 @@ class BIABPage(BasePage):
                 logger.info("Waiting for plan processing to complete...")
                 self.page.locator(self.PROCESSING_PLAN).wait_for(state="hidden", timeout=200000)
                 logger.info("✓ Plan processing completed")
+
+                # Handle subsequent clarification requests (e.g., additional user preferences)
+                logger.info("Checking if additional clarification is requested...")
+                try:
+                    second_clarification = self.page.locator(self.INPUT_CLARIFICATION)
+                    if second_clarification.is_visible(timeout=5000) and second_clarification.is_enabled():
+                        logger.info("⚠ Additional clarification requested - Responding with 'Not applicable'")
+                        second_clarification.fill("Not applicable")
+                        self.page.wait_for_timeout(1000)
+                        logger.info("✓ 'Not applicable' entered")
+
+                        self.page.locator(self.SEND_BUTTON_CLARIFICATION).click()
+                        self.page.wait_for_timeout(2000)
+                        logger.info("✓ Additional clarification submitted")
+
+                        try:
+                            expect(self.page.locator(self.PROCESSING_PLAN)).to_be_visible(timeout=15000)
+                            logger.info("✓ 'Processing your plan' message is visible after additional clarification")
+                            self.page.locator(self.PROCESSING_PLAN).wait_for(state="hidden", timeout=200000)
+                            logger.info("✓ Plan processing completed after additional clarification")
+                        except Exception as proc_e:
+                            logger.info(f"Processing message not detected after additional clarification: {proc_e}")
+                            self.page.wait_for_timeout(3000)
+                    else:
+                        logger.info("✓ No additional clarification required")
+                except (TimeoutError, Exception) as e:
+                    logger.info(f"✓ No additional clarification detected - proceeding normally: {e}")
             else:
                 logger.info("✓ No clarification required - task completed successfully")
         except (TimeoutError, Exception) as e:
@@ -519,15 +546,16 @@ class BIABPage(BasePage):
 
         logger.info("Validating retail customer response...")
         
-        # Wait for AI Thinking Process to complete (if visible)
+        # Wait briefly for any AI Thinking Process to settle, then proceed
         logger.info("Checking if AI is still thinking...")
         try:
-            if self.page.locator(self.AI_THINKING_PROCESS).is_visible(timeout=5000):
-                logger.info("AI Thinking Process detected, waiting for it to complete...")
-                self.page.locator(self.AI_THINKING_PROCESS).wait_for(state="hidden", timeout=120000)
-                logger.info("✓ AI Thinking Process completed")
-                # Add buffer time after thinking completes
-                self.page.wait_for_timeout(3000)
+            if self.page.locator(self.AI_THINKING_PROCESS).is_visible(timeout=3000):
+                logger.info("AI Thinking Process detected, waiting briefly for it to complete...")
+                try:
+                    self.page.locator(self.AI_THINKING_PROCESS).wait_for(state="hidden", timeout=10000)
+                    logger.info("✓ AI Thinking Process completed")
+                except Exception:
+                    logger.info("AI Thinking Process still visible - element persists in DOM, proceeding to response validation")
         except Exception as e:
             logger.info("AI Thinking Process not detected or already completed")
         
@@ -586,15 +614,16 @@ class BIABPage(BasePage):
 
         logger.info("Validating product marketing response...")
         
-        # Wait for AI Thinking Process to complete (if visible)
+        # Wait briefly for any AI Thinking Process to settle, then proceed
         logger.info("Checking if AI is still thinking...")
         try:
-            if self.page.locator(self.AI_THINKING_PROCESS).is_visible(timeout=5000):
-                logger.info("AI Thinking Process detected, waiting for it to complete...")
-                self.page.locator(self.AI_THINKING_PROCESS).wait_for(state="hidden", timeout=120000)
-                logger.info("✓ AI Thinking Process completed")
-                # Add buffer time after thinking completes
-                self.page.wait_for_timeout(3000)
+            if self.page.locator(self.AI_THINKING_PROCESS).is_visible(timeout=3000):
+                logger.info("AI Thinking Process detected, waiting briefly for it to complete...")
+                try:
+                    self.page.locator(self.AI_THINKING_PROCESS).wait_for(state="hidden", timeout=10000)
+                    logger.info("✓ AI Thinking Process completed")
+                except Exception:
+                    logger.info("AI Thinking Process still visible - element persists in DOM, proceeding to response validation")
         except Exception as e:
             logger.info("AI Thinking Process not detected or already completed")
         
@@ -645,15 +674,16 @@ class BIABPage(BasePage):
 
         logger.info("Validating HR response...")
         
-        # Wait for AI Thinking Process to complete (if visible)
+        # Wait briefly for any AI Thinking Process to settle, then proceed
         logger.info("Checking if AI is still thinking...")
         try:
-            if self.page.locator(self.AI_THINKING_PROCESS).is_visible(timeout=5000):
-                logger.info("AI Thinking Process detected, waiting for it to complete...")
-                self.page.locator(self.AI_THINKING_PROCESS).wait_for(state="hidden", timeout=120000)
-                logger.info("✓ AI Thinking Process completed")
-                # Add buffer time after thinking completes
-                self.page.wait_for_timeout(3000)
+            if self.page.locator(self.AI_THINKING_PROCESS).is_visible(timeout=3000):
+                logger.info("AI Thinking Process detected, waiting briefly for it to complete...")
+                try:
+                    self.page.locator(self.AI_THINKING_PROCESS).wait_for(state="hidden", timeout=10000)
+                    logger.info("✓ AI Thinking Process completed")
+                except Exception:
+                    logger.info("AI Thinking Process still visible - element persists in DOM, proceeding to response validation")
         except Exception as e:
             logger.info("AI Thinking Process not detected or already completed")
         
@@ -706,15 +736,16 @@ class BIABPage(BasePage):
 
         logger.info("Validating RFP response...")
         
-        # Wait for AI Thinking Process to complete (if visible)
+        # Wait briefly for any AI Thinking Process to settle, then proceed
         logger.info("Checking if AI is still thinking...")
         try:
-            if self.page.locator(self.AI_THINKING_PROCESS).is_visible(timeout=5000):
-                logger.info("AI Thinking Process detected, waiting for it to complete...")
-                self.page.locator(self.AI_THINKING_PROCESS).wait_for(state="hidden", timeout=120000)
-                logger.info("✓ AI Thinking Process completed")
-                # Add buffer time after thinking completes
-                self.page.wait_for_timeout(3000)
+            if self.page.locator(self.AI_THINKING_PROCESS).is_visible(timeout=3000):
+                logger.info("AI Thinking Process detected, waiting briefly for it to complete...")
+                try:
+                    self.page.locator(self.AI_THINKING_PROCESS).wait_for(state="hidden", timeout=10000)
+                    logger.info("✓ AI Thinking Process completed")
+                except Exception:
+                    logger.info("AI Thinking Process still visible - element persists in DOM, proceeding to response validation")
         except Exception as e:
             logger.info("AI Thinking Process not detected or already completed")
         
@@ -751,15 +782,16 @@ class BIABPage(BasePage):
 
         logger.info("Validating Contract Compliance response...")
         
-        # Wait for AI Thinking Process to complete (if visible)
+        # Wait briefly for any AI Thinking Process to settle, then proceed
         logger.info("Checking if AI is still thinking...")
         try:
-            if self.page.locator(self.AI_THINKING_PROCESS).is_visible(timeout=5000):
-                logger.info("AI Thinking Process detected, waiting for it to complete...")
-                self.page.locator(self.AI_THINKING_PROCESS).wait_for(state="hidden", timeout=120000)
-                logger.info("✓ AI Thinking Process completed")
-                # Add buffer time after thinking completes
-                self.page.wait_for_timeout(3000)
+            if self.page.locator(self.AI_THINKING_PROCESS).is_visible(timeout=3000):
+                logger.info("AI Thinking Process detected, waiting briefly for it to complete...")
+                try:
+                    self.page.locator(self.AI_THINKING_PROCESS).wait_for(state="hidden", timeout=10000)
+                    logger.info("✓ AI Thinking Process completed")
+                except Exception:
+                    logger.info("AI Thinking Process still visible - element persists in DOM, proceeding to response validation")
         except Exception as e:
             logger.info("AI Thinking Process not detected or already completed")
         

@@ -363,8 +363,8 @@ source .venv/bin/activate  # Linux/WSL2
 # or
 .\.venv\Scripts\Activate.ps1  # Windows PowerShell
 
-# Install dependencies
-uv sync --python 3.12
+# Install dependencies (--extra dev includes pytest for testing)
+uv sync --python 3.12 --extra dev
 ```
 
 **Windows users**: If you encounter issues with the `uv` command not being found, use the Python Launcher instead:
@@ -373,11 +373,11 @@ uv sync --python 3.12
 # Create virtual environment
 py -3.12 -m uv venv .venv
 
-# Install dependencies
-py -3.12 -m uv sync
+# Install dependencies (--extra dev includes pytest for testing)
+py -3.12 -m uv sync --extra dev
 ```
 
-> **⚠️ Important**: Always run `uv sync` (or `py -3.12 -m uv sync` on Windows) after creating the virtual environment to install all required dependencies. Missing dependencies will cause runtime errors like `ModuleNotFoundError: No module named 'pydantic'` or DNS resolution failures.
+> **⚠️ Important**: Always run `uv sync --extra dev` (or `py -3.12 -m uv sync --extra dev` on Windows) after creating the virtual environment to install all required dependencies. Missing dependencies will cause runtime errors like `ModuleNotFoundError: No module named 'pydantic'` or DNS resolution failures.
 
 ### 4.4. Run the Backend
 
