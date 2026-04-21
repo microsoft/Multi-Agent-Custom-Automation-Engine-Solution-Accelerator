@@ -284,7 +284,7 @@ jobs:
           echo "Final EXP status: $EXP_ENABLED"
           
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Login to Azure
         uses: azure/login@v2

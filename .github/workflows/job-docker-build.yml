@@ -28,7 +28,7 @@ jobs:
       IMAGE_TAG: ${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Generate Unique Docker Image Tag
         id: generate_docker_tag
@@ -45,7 +45,7 @@ jobs:
           echo "Generated unique Docker tag: $UNIQUE_TAG"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -58,7 +58,7 @@ jobs:
         run: az acr login --name ${{ secrets.ACR_TEST_LOGIN_SERVER }}
 
       - name: Build and optionally push Backend Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         env:
           DOCKER_BUILD_SUMMARY: false
         with:
@@ -70,7 +70,7 @@ jobs:
             ${{ secrets.ACR_TEST_LOGIN_SERVER }}/macaebackend:${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}_${{ github.run_number }}
 
       - name: Build and optionally push Frontend Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         env:
           DOCKER_BUILD_SUMMARY: false
         with:
@@ -81,7 +81,7 @@ jobs:
             ${{ secrets.ACR_TEST_LOGIN_SERVER }}/macaefrontend:${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}
             ${{ secrets.ACR_TEST_LOGIN_SERVER }}/macaefrontend:${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}_${{ github.run_number }}
       - name: Build and optionally push MCP Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         env:
           DOCKER_BUILD_SUMMARY: false
         with:
