@@ -1,4 +1,4 @@
-# Automation Proof Of Concept for BIAB Accelerator
+# Automation Proof Of Concept for MACAE Accelerator
 
 Write end-to-end tests for your web apps with [Playwright](https://github.com/microsoft/playwright-python) and [pytest](https://docs.pytest.org/en/stable/).
 
