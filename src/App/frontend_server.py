@@ -1,9 +1,11 @@
+import asyncio
 import os
 
 import httpx
 import uvicorn
+import websockets
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -92,6 +94,43 @@ if PROXY_API_REQUESTS:
             status_code=response.status_code,
             headers=dict(response.headers),
         )
+
+    @app.websocket("/api/{path:path}")
+    async def proxy_websocket(websocket: WebSocket, path: str):
+        """Proxy WebSocket connections to the private backend over VNet."""
+        await websocket.accept()
+
+        # Build the backend WebSocket URL
+        backend_ws_url = BACKEND_API_URL.replace("https://", "wss://").replace("http://", "ws://")
+        query_string = str(websocket.query_params)
+        target_url = f"{backend_ws_url}/api/{path}"
+        if query_string:
+            target_url = f"{target_url}?{query_string}"
+
+        try:
+            async with websockets.connect(target_url) as backend_ws:
+
+                async def forward_to_backend():
+                    try:
+                        while True:
+                            data = await websocket.receive_text()
+                            await backend_ws.send(data)
+                    except WebSocketDisconnect:
+                        await backend_ws.close()
+
+                async def forward_to_client():
+                    try:
+                        async for message in backend_ws:
+                            await websocket.send_text(message)
+                    except websockets.exceptions.ConnectionClosed:
+                        await websocket.close()
+
+                await asyncio.gather(forward_to_backend(), forward_to_client())
+        except Exception:
+            try:
+                await websocket.close()
+            except Exception:
+                pass
 
 
 @app.get("/{full_path:path}")
