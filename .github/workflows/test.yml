@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - demo-v4
       - dev-v4
     paths:
       - 'src/backend/**/*.py'
@@ -22,6 +23,7 @@ on:
       - synchronize
     branches:
       - main
+      - demo-v4
       - dev-v4
     paths:
       - 'src/backend/**/*.py'
