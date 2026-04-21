@@ -18,7 +18,7 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
-      - uses: codfish/semantic-release-action@v3
+      - uses: codfish/semantic-release-action@v4
         id: semantic
         with:
           tag-format: 'v${version}'

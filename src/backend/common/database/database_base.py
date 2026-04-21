@@ -6,11 +6,12 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Type
 
-import v3.models.messages as messages
+import v4.models.messages as messages
 
-from ..models.messages_kernel import (
+from ..models.messages_af import (
     AgentMessageData,
     BaseDataModel,
+    CurrentTeamAgent,
     Plan,
     Step,
     TeamConfiguration,
@@ -192,6 +193,7 @@ class DatabaseBase(ABC):
 
     @abstractmethod
     async def set_current_team(self, current_team: UserCurrentTeam) -> None:
+        """Set the current team for a user."""
         pass
 
     @abstractmethod
@@ -201,26 +203,27 @@ class DatabaseBase(ABC):
 
     @abstractmethod
     async def delete_plan_by_plan_id(self, plan_id: str) -> bool:
-        """Retrieve the current team for a user."""
+        """Delete a plan by plan_id and return True if deleted."""
         pass
 
     @abstractmethod
     async def add_mplan(self, mplan: messages.MPlan) -> None:
-        """Add a team configuration to the database."""
+        """Add an mplan configuration to the database."""
         pass
 
     @abstractmethod
     async def update_mplan(self, mplan: messages.MPlan) -> None:
-        """Update a team configuration in the database."""
+        """Update an mplan configuration in the database."""
         pass
 
     @abstractmethod
     async def get_mplan(self, plan_id: str) -> Optional[messages.MPlan]:
-        """Retrieve a mplan configuration by plan_id."""
+        """Retrieve an mplan configuration by plan_id."""
         pass
 
     @abstractmethod
     async def add_agent_message(self, message: AgentMessageData) -> None:
+        """Add an agent message to the database."""
         pass
 
     @abstractmethod
@@ -230,5 +233,22 @@ class DatabaseBase(ABC):
 
     @abstractmethod
     async def get_agent_messages(self, plan_id: str) -> Optional[AgentMessageData]:
-        """Retrieve an agent message by message_id."""
+        """Retrieve agent messages by plan_id."""
+        pass
+
+    @abstractmethod
+    async def add_team_agent(self, team_agent: CurrentTeamAgent) -> None:
+        """Add an agent message to the database."""
+        pass
+
+    @abstractmethod
+    async def delete_team_agent(self, team_id: str, agent_name: str) -> None:
+        """Delete a team agent from the database."""
+        pass
+
+    @abstractmethod
+    async def get_team_agent(
+        self, team_id: str, agent_name: str
+    ) -> Optional[CurrentTeamAgent]:
+        """Retrieve a team agent by team_id and agent_name."""
         pass

@@ -1,5 +1,13 @@
 [flake8]
 max-line-length = 88
 extend-ignore = E501
-exclude = .venv, frontend, src/backend/tests
+exclude = 
+    .venv,
+    frontend,
+    src/frontend,
+    src/backend/tests,
+    *.tsx,
+    *.ts,
+    *.jsx,
+    *.js
 ignore = E203, W503, G004, G200, E402

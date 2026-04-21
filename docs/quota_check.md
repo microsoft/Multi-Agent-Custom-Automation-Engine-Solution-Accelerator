@@ -5,17 +5,22 @@ Before deploying the accelerator, **ensure sufficient quota availability** for t
 
 ### Login if you have not done so already
 ```
-azd auth login
+az login
+```
+
+If using VS Code Web:
+```
+az login --use-device-code
 ```
 
 
 ### 📌 Default Models & Capacities:
 ```
-gpt-4o:150
+gpt4.1:150,o4-mini:50,gpt4.1-mini:50
 ```
 ### 📌 Default Regions:
 ```
-eastus, uksouth, eastus2, northcentralus, swedencentral, westus, westus2, southcentralus, canadacentral
+australiaeast, eastus2, francecentral, japaneast, norwayeast, swedencentral, uksouth, westus
 ```
 ### Usage Scenarios:
 - No parameters passed → Default models and capacities will be checked in default regions.
@@ -37,19 +42,23 @@ eastus, uksouth, eastus2, northcentralus, swedencentral, westus, westus2, southc
    ```
 ✔️ Check specific model(s) in default regions:
   ```
-  ./quota_check_params.sh --models gpt-4o:150
+  ./quota_check_params.sh --models gpt4.1:150
   ```
 ✔️ Check default models in specific region(s):
   ```
-./quota_check_params.sh --regions eastus,westus
+./quota_check_params.sh --regions eastus2,westus
   ```
 ✔️ Passing Both models and regions:  
   ```
-  ./quota_check_params.sh --models gpt-4o:150 --regions eastus,westus2
+  ./quota_check_params.sh --models gpt4.1:150 --regions eastus2,westus
   ```
 ✔️ All parameters combined:
   ```
- ./quota_check_params.sh --models gpt-4o:150 --regions eastus,westus --verbose
+ ./quota_check_params.sh --models gpt4.1:150 --regions eastus2,westus --verbose
+  ```
+✔️ Multiple models with single region:
+  ```
+ ./quota_check_params.sh --models gpt4.1:150,gpt4.1-mini:50 --regions eastus2 --verbose
   ```
 
 ### **Sample Output**
@@ -75,7 +84,7 @@ The final table lists regions with available quota. You can select any of these 
       
 ### **If using VS Code or Codespaces**
 1. Open the terminal in VS Code or Codespaces.
-2. If you're using VS Code, click the dropdown on the right side of the terminal window, and select `Git Bash`.
+2. If you're using VS Code, click the dropdown on the right side of the terminal window, and select `Git Bash` / `bash`.
    ![git_bash](images/git_bash.png)
 3. Navigate to the `scripts` folder where the script files are located and make the script as executable:
    ```sh
@@ -98,4 +107,5 @@ The final table lists regions with available quota. You can select any of these 
     curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
     az login
     ```
+    > Note: Use `az login --use-device-code` in VS Code Web.
 6. Rerun the script after installing Azure CLI.

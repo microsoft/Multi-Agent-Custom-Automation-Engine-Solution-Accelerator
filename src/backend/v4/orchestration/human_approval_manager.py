@@ -1,0 +1,425 @@
+"""
+Human-in-the-loop Magentic Manager for employee onboarding orchestration.
+Extends StandardMagenticManager (agent_framework version) to add approval gates before plan execution.
+"""
+
+import asyncio
+import logging
+from typing import Any, Optional
+
+import v4.models.messages as messages
+from agent_framework import AgentResponse, Message
+from agent_framework_orchestrations._magentic import (
+    MagenticContext,
+    StandardMagenticManager,
+    ORCHESTRATOR_FINAL_ANSWER_PROMPT,
+    ORCHESTRATOR_TASK_LEDGER_PLAN_PROMPT,
+    ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT,
+)
+
+from v4.config.settings import connection_config, orchestration_config
+from v4.models.models import MPlan
+from v4.orchestration.helper.plan_to_mplan_converter import PlanToMPlanConverter
+
+logger = logging.getLogger(__name__)
+
+
+class HumanApprovalMagenticManager(StandardMagenticManager):
+    """
+    Extended Magentic manager (agent_framework) that requires human approval before executing plan steps.
+    Provides interactive approval for each step in the orchestration plan.
+    """
+
+    approval_enabled: bool = True
+    magentic_plan: Optional[MPlan] = None
+    current_user_id: str  # populated in __init__
+
+    def __init__(self, user_id: str, agent, *args, **kwargs):
+        """
+        Initialize the HumanApprovalMagenticManager.
+        Args:
+            user_id: ID of the user to associate with this orchestration instance.
+            agent: The manager ChatAgent for orchestration (required by new API).
+            *args: Additional positional arguments for the parent StandardMagenticManager.
+            **kwargs: Additional keyword arguments for the parent StandardMagenticManager.
+        """
+
+        plan_append = """
+
+IMPORTANT: Never ask the user for information or clarification until all agents on the team have been asked first.
+
+EXAMPLE: If the user request involves product information, first ask all agents on the team to provide the information.
+Do not ask the user unless all agents have been consulted and the information is still missing.
+
+Plan steps should always include a bullet point, followed by an agent name, followed by a description of the action
+to be taken. If a step involves multiple actions, separate them into distinct steps with an agent included in each step.
+If the step is taken by an agent that is not part of the team, such as the MagenticManager, please always list the MagenticManager as the agent for that step. At any time, if more information is needed from the user, use the ProxyAgent to request this information.
+
+CRITICAL: Each agent should only be called ONCE to perform their task. Do NOT call the same agent multiple times.
+After an agent has provided their response, move on to the next agent in the plan.
+
+Here is an example of a well-structured plan:
+- **EnhancedResearchAgent** to gather authoritative data on the latest industry trends and best practices in employee onboarding
+- **EnhancedResearchAgent** to gather authoritative data on Innovative onboarding techniques that enhance new hire engagement and retention.
+- **DocumentCreationAgent** to draft a comprehensive onboarding plan that includes a detailed schedule of onboarding activities and milestones.
+- **DocumentCreationAgent** to draft a comprehensive onboarding plan that includes a checklist of resources and materials needed for effective onboarding.
+- **ProxyAgent** to review the drafted onboarding plan for clarity and completeness.
+- **MagenticManager** to finalize the onboarding plan and prepare it for presentation to stakeholders.
+"""
+
+        # Add progress ledger prompt to prevent re-calling agents
+        progress_append = """
+CRITICAL RULE: DO NOT call the same agent more than once unless absolutely necessary.
+If an agent has already provided a response, consider their task COMPLETE and move to the next agent.
+Only re-call an agent if their previous response was explicitly an error or failure.
+"""
+
+        final_append = """
+DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final answer and end with a polite closing.
+"""
+
+        kwargs["task_ledger_plan_prompt"] = (
+            ORCHESTRATOR_TASK_LEDGER_PLAN_PROMPT + plan_append
+        )
+        kwargs["task_ledger_plan_update_prompt"] = (
+            ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT + plan_append
+        )
+        kwargs["final_answer_prompt"] = ORCHESTRATOR_FINAL_ANSWER_PROMPT + final_append
+
+        # Override progress ledger prompt to discourage re-calling agents
+        from agent_framework_orchestrations._magentic import ORCHESTRATOR_PROGRESS_LEDGER_PROMPT
+        kwargs["progress_ledger_prompt"] = ORCHESTRATOR_PROGRESS_LEDGER_PROMPT + progress_append
+
+        self.current_user_id = user_id
+        # New API: StandardMagenticManager takes agent as first positional argument
+        super().__init__(agent, *args, **kwargs)
+
+    async def _complete(self, messages: list[Message]) -> Message:
+        """Override to pass session=None, making each LLM call stateless.
+
+        The base class passes session=self._session which triggers
+        InMemoryHistoryProvider auto-injection and previous_response_id
+        chaining in rc4. This causes message payloads to grow with every
+        internal call (facts, plan, progress ledger, etc.), burning through
+        TPM quota (429 errors) and confusing the orchestrator LLM's routing
+        decisions (e.g. skipping ProxyAgent for user clarification).
+
+        Passing session=None restores the old stateless behavior where each
+        call only sends the messages explicitly provided.
+        """
+        from openai import RateLimitError
+
+        max_retries = 5
+        base_delay = 2.0  # seconds
+
+        for attempt in range(max_retries):
+            try:
+                response: AgentResponse = await self._agent.run(messages, session=None)
+                if not response.messages:
+                    raise RuntimeError("Agent returned no messages in response.")
+                if len(response.messages) > 1:
+                    logger.warning("Agent returned multiple messages; using the last one.")
+                return response.messages[-1]
+            except Exception as exc:
+                inner = getattr(exc, "inner_exception", None)
+                is_rate_limit = isinstance(inner, RateLimitError) or "429" in str(exc)
+                if is_rate_limit and attempt < max_retries - 1:
+                    delay = base_delay * (2 ** attempt)
+                    logger.warning(
+                        "Rate limit hit (attempt %d/%d). Retrying in %.1fs...",
+                        attempt + 1, max_retries, delay,
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+                raise
+        # If we get here, all retry attempts have been exhausted without a successful response.
+        raise RuntimeError(
+            f"Agent failed to complete after {max_retries} attempts due to repeated errors."
+        )
+
+    async def plan(self, magentic_context: MagenticContext) -> Any:
+        """
+        Override the plan method to create the plan first, then ask for approval before execution.
+        Returns the original plan ChatMessage if approved, otherwise raises.
+        """
+        # Normalize task text
+        task_text = getattr(magentic_context.task, "text", str(magentic_context.task))
+
+        logger.info("\n Human-in-the-Loop Magentic Manager Creating Plan:")
+        logger.info("   Task: %s", task_text)
+        logger.info("-" * 60)
+
+        logger.info(" Creating execution plan...")
+        plan_message = await super().plan(magentic_context)
+        logger.info(
+            " Plan created (assistant message length=%d)",
+            len(plan_message.text) if plan_message and plan_message.text else 0,
+        )
+
+        # Build structured MPlan from task ledger
+        if self.task_ledger is None:
+            raise RuntimeError("task_ledger not set after plan()")
+
+        self.magentic_plan = self.plan_to_obj(magentic_context, self.task_ledger)
+        self.magentic_plan.user_id = self.current_user_id  # annotate with user
+
+        approval_message = messages.PlanApprovalRequest(
+            plan=self.magentic_plan,
+            status="PENDING_APPROVAL",
+            context=(
+                {
+                    "task": task_text,
+                    "participant_descriptions": magentic_context.participant_descriptions,
+                }
+                if hasattr(magentic_context, "participant_descriptions")
+                else {}
+            ),
+        )
+
+        try:
+            orchestration_config.plans[self.magentic_plan.id] = self.magentic_plan
+        except Exception as e:
+            logger.error("Error processing plan approval: %s", e)
+
+        # Send approval request
+        await connection_config.send_status_update_async(
+            message=approval_message,
+            user_id=self.current_user_id,
+            message_type=messages.WebsocketMessageType.PLAN_APPROVAL_REQUEST,
+        )
+
+        # Await user response
+        approval_response = await self._wait_for_user_approval(approval_message.plan.id)
+
+        if approval_response and approval_response.approved:
+            logger.info("Plan approved - proceeding with execution...")
+            return plan_message
+        else:
+            logger.debug("Plan execution cancelled by user")
+            await connection_config.send_status_update_async(
+                {
+                    "type": messages.WebsocketMessageType.PLAN_APPROVAL_RESPONSE,
+                    "data": approval_response,
+                },
+                user_id=self.current_user_id,
+                message_type=messages.WebsocketMessageType.PLAN_APPROVAL_RESPONSE,
+            )
+            raise Exception("Plan execution cancelled by user")
+
+    async def replan(self, magentic_context: MagenticContext) -> Any:
+        """
+        Override to add websocket messages for replanning events.
+        """
+        logger.info("\nHuman-in-the-Loop Magentic Manager replanned:")
+        replan_message = await super().replan(magentic_context=magentic_context)
+        logger.info(
+            "Replanned message length: %d",
+            len(replan_message.text) if replan_message and replan_message.text else 0,
+        )
+        return replan_message
+
+    async def create_progress_ledger(self, magentic_context: MagenticContext):
+        """
+        Check for max rounds exceeded and send final message if so, else defer to base.
+        After base evaluation, prevent premature satisfaction by ensuring all planned
+        agents have responded before allowing is_request_satisfied=True.
+
+        Returns:
+            Progress ledger object (type depends on agent_framework version)
+        """
+        if magentic_context.round_count >= orchestration_config.max_rounds:
+            final_message = messages.FinalResultMessage(
+                content="Process terminated: Maximum rounds exceeded",
+                status="terminated",
+                summary=f"Stopped after {magentic_context.round_count} rounds (max: {orchestration_config.max_rounds})",
+            )
+
+            await connection_config.send_status_update_async(
+                message=final_message,
+                user_id=self.current_user_id,
+                message_type=messages.WebsocketMessageType.FINAL_RESULT_MESSAGE,
+            )
+
+            # Call base class to get the proper ledger type, then raise to terminate
+            ledger = await super().create_progress_ledger(magentic_context)
+
+            # Override key fields to signal termination
+            ledger.is_request_satisfied.answer = True
+            ledger.is_request_satisfied.reason = "Maximum rounds exceeded"
+            ledger.is_in_loop.answer = False
+            ledger.is_in_loop.reason = "Terminating"
+            ledger.is_progress_being_made.answer = False
+            ledger.is_progress_being_made.reason = "Terminating"
+            ledger.next_speaker.answer = ""
+            ledger.next_speaker.reason = "Task complete"
+            ledger.instruction_or_question.answer = "Process terminated due to maximum rounds exceeded"
+            ledger.instruction_or_question.reason = "Task complete"
+
+            return ledger
+
+        # Delegate to base for normal progress ledger creation
+        ledger = await super().create_progress_ledger(magentic_context)
+
+        # --- Premature satisfaction guard ---
+        # If the LLM says the request is satisfied, verify that all planned
+        # (non-proxy, non-manager) agents have actually responded before allowing
+        # the workflow to terminate.  This addresses the bug where the orchestrator
+        # marks satisfied=True after a single comprehensive agent response.
+        if ledger.is_request_satisfied.answer:
+            uncalled = self._get_uncalled_agents(magentic_context)
+            if uncalled:
+                next_agent = uncalled[0]
+                logger.info(
+                    "Progress ledger marked satisfied but %d agent(s) have not responded yet: %s. "
+                    "Overriding to continue with '%s'.",
+                    len(uncalled),
+                    uncalled,
+                    next_agent,
+                )
+                ledger.is_request_satisfied.answer = False
+                ledger.is_request_satisfied.reason = (
+                    f"Not all agents have responded yet. Waiting for: {', '.join(uncalled)}"
+                )
+                ledger.is_progress_being_made.answer = True
+                ledger.is_progress_being_made.reason = "Continuing to consult remaining agents"
+                ledger.next_speaker.answer = next_agent
+                ledger.next_speaker.reason = f"{next_agent} has not yet been consulted"
+                # Always override instruction with task-relevant prompt so that
+                # data agents (Azure AI Search, RAG) execute meaningful queries
+                # instead of receiving a stale finalization instruction.
+                task_text = getattr(magentic_context.task, "text", str(magentic_context.task))
+                ledger.instruction_or_question.answer = (
+                    f"Using your available tools and data sources, provide your response for the following task: {task_text}"
+                )
+                ledger.instruction_or_question.reason = (
+                    f"Routing to {next_agent} who has not yet contributed"
+                )
+
+        return ledger
+
+    @staticmethod
+    def _get_uncalled_agents(magentic_context: MagenticContext) -> list[str]:
+        """Return agent names from participant_descriptions that have not yet
+        authored a message in the chat_history (excluding ProxyAgent and the
+        MagenticManager)."""
+        skip_names = {"ProxyAgent", "MagenticManager", "magentic_manager"}
+
+        all_agents = [
+            name for name in magentic_context.participant_descriptions
+            if name not in skip_names
+        ]
+
+        # Collect author names that appear in chat_history
+        responded = set()
+        for msg in magentic_context.chat_history:
+            author = getattr(msg, "author_name", None)
+            if author:
+                responded.add(author)
+
+        return [name for name in all_agents if name not in responded]
+
+    async def _wait_for_user_approval(
+        self, m_plan_id: Optional[str] = None
+    ) -> Optional[messages.PlanApprovalResponse]:
+        """
+        Wait for user approval response using event-driven pattern with timeout handling.
+        """
+        logger.info("Waiting for user approval for plan: %s", m_plan_id)
+
+        if not m_plan_id:
+            logger.error("No plan ID provided for approval")
+            return messages.PlanApprovalResponse(approved=False, m_plan_id=m_plan_id)
+
+        orchestration_config.set_approval_pending(m_plan_id)
+
+        try:
+            approved = await orchestration_config.wait_for_approval(m_plan_id)
+            logger.info("Approval received for plan %s: %s", m_plan_id, approved)
+            return messages.PlanApprovalResponse(approved=approved, m_plan_id=m_plan_id)
+
+        except asyncio.TimeoutError:
+            logger.debug(
+                "Approval timeout for plan %s - notifying user and terminating process",
+                m_plan_id,
+            )
+
+            timeout_message = messages.TimeoutNotification(
+                timeout_type="approval",
+                request_id=m_plan_id,
+                message=f"Plan approval request timed out after {orchestration_config.default_timeout} seconds. Please try again.",
+                timestamp=asyncio.get_event_loop().time(),
+                timeout_duration=orchestration_config.default_timeout,
+            )
+
+            try:
+                await connection_config.send_status_update_async(
+                    message=timeout_message,
+                    user_id=self.current_user_id,
+                    message_type=messages.WebsocketMessageType.TIMEOUT_NOTIFICATION,
+                )
+                logger.info(
+                    "Timeout notification sent to user %s for plan %s",
+                    self.current_user_id,
+                    m_plan_id,
+                )
+            except Exception as e:
+                logger.error("Failed to send timeout notification: %s", e)
+
+            orchestration_config.cleanup_approval(m_plan_id)
+            return None
+
+        except KeyError as e:
+            logger.debug("Plan ID not found: %s - terminating process silently", e)
+            return None
+
+        except asyncio.CancelledError:
+            logger.debug("Approval request %s was cancelled", m_plan_id)
+            orchestration_config.cleanup_approval(m_plan_id)
+            return None
+
+        except Exception as e:
+            logger.debug(
+                "Unexpected error waiting for approval: %s - terminating process silently",
+                e,
+            )
+            orchestration_config.cleanup_approval(m_plan_id)
+            return None
+
+        finally:
+            if (
+                m_plan_id in orchestration_config.approvals
+                and orchestration_config.approvals[m_plan_id] is None
+            ):
+                logger.debug("Final cleanup for pending approval plan %s", m_plan_id)
+                orchestration_config.cleanup_approval(m_plan_id)
+
+    async def prepare_final_answer(
+        self, magentic_context: MagenticContext
+    ) -> Message:
+        """
+        Override to ensure final answer is prepared after all steps are executed.
+        """
+        logger.info("\n Magentic Manager - Preparing final answer...")
+        return await super().prepare_final_answer(magentic_context)
+
+    def plan_to_obj(self, magentic_context: MagenticContext, ledger) -> MPlan:
+        """Convert the generated plan from the ledger into a structured MPlan object."""
+        if (
+            ledger is None
+            or not hasattr(ledger, "plan")
+            or not hasattr(ledger, "facts")
+        ):
+            raise ValueError(
+                "Invalid ledger structure; expected plan and facts attributes."
+            )
+
+        task_text = getattr(magentic_context.task, "text", str(magentic_context.task))
+
+        return_plan: MPlan = PlanToMPlanConverter.convert(
+            plan_text=getattr(ledger.plan, "text", ""),
+            facts=getattr(ledger.facts, "text", ""),
+            team=list(magentic_context.participant_descriptions.keys()),
+            task=task_text,
+        )
+
+        return return_plan

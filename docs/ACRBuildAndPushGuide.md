@@ -74,6 +74,29 @@ If you want to update image tag and image manually you can follow below steps:
 ![alt text](./images/AppServiceContainer.png)
 
 
+**MCP Server :**
+
+```bash
+az acr login --name <containerregname>
+docker build --no-cache -f src/mcp_server/Dockerfile -t <acrloginserver>/<repo>:<tagname> ./src/mcp_server
+docker push <acrloginserver>/<repo>:<tagname>
+```
+
+If you want to update image tag and image manually you can follow below steps:
+- Go to your **Container App** in the [Azure Portal](https://portal.azure.com/#home).
+- In the left menu, select **Containers**.
+- Under your container, update:
+
+    - Image source → Azure Container Registry / Docker Hub.
+
+    - Image name → myapp/mcp.
+
+    - Tag → change to the new one you pushed (e.g., v2).
+
+- Click **Save** → this will create a new revision automatically with the updated image.
+
+![alt text](./images/mcpContainer.png)
+
 ## ✅ Verification
 
 Run the following command to verify that images were pushed successfully:

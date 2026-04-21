@@ -6,8 +6,12 @@ from typing import Optional
 from azure.ai.projects.aio import AIProjectClient
 from azure.cosmos import CosmosClient
 from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
+from azure.identity.aio import (
+    DefaultAzureCredential as DefaultAzureCredentialAsync,
+    ManagedIdentityCredential as ManagedIdentityCredentialAsync,
+)
 from dotenv import load_dotenv
-from semantic_kernel import Kernel
+
 
 # Load environment variables from .env file
 load_dotenv()
@@ -33,9 +37,6 @@ class AppConfig:
             "APPLICATIONINSIGHTS_CONNECTION_STRING"
         )
         self.APP_ENV = self._get_required("APP_ENV", "prod")
-        # self.AZURE_AI_MODEL_DEPLOYMENT_NAME = self._get_required(
-        #     "AZURE_AI_MODEL_DEPLOYMENT_NAME", "gpt-4o"
-        # )
 
         self.AZURE_COGNITIVE_SERVICES = self._get_optional(
             "AZURE_COGNITIVE_SERVICES", "https://cognitiveservices.azure.com/.default"
@@ -48,6 +49,10 @@ class AppConfig:
         # Azure OpenAI settings
         self.AZURE_OPENAI_DEPLOYMENT_NAME = self._get_required(
             "AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o"
+        )
+
+        self.AZURE_OPENAI_RAI_DEPLOYMENT_NAME = self._get_required(
+            "AZURE_OPENAI_RAI_DEPLOYMENT_NAME", "gpt-4.1"
         )
         self.AZURE_OPENAI_API_VERSION = self._get_required(
             "AZURE_OPENAI_API_VERSION", "2024-11-20"
@@ -73,6 +78,11 @@ class AppConfig:
         # Azure Search settings
         self.AZURE_SEARCH_ENDPOINT = self._get_optional("AZURE_AI_SEARCH_ENDPOINT")
 
+        # Logging settings
+        self.AZURE_BASIC_LOGGING_LEVEL = self._get_optional("AZURE_BASIC_LOGGING_LEVEL", "INFO")
+        self.AZURE_PACKAGE_LOGGING_LEVEL = self._get_optional("AZURE_PACKAGE_LOGGING_LEVEL", "WARNING")
+        self.AZURE_LOGGING_PACKAGES = self._get_optional("AZURE_LOGGING_PACKAGES")
+
         # Optional MCP server endpoint (for local MCP server or remote)
         # Example: http://127.0.0.1:8000/mcp
         self.MCP_SERVER_ENDPOINT = self._get_optional("MCP_SERVER_ENDPOINT")
@@ -86,9 +96,6 @@ class AppConfig:
         self.CLIENT_ID = self._get_optional("AZURE_CLIENT_ID")
         self.AZURE_AI_SEARCH_CONNECTION_NAME = self._get_optional(
             "AZURE_AI_SEARCH_CONNECTION_NAME"
-        )
-        self.AZURE_AI_SEARCH_INDEX_NAME = self._get_optional(
-            "AZURE_AI_SEARCH_INDEX_NAME"
         )
         self.AZURE_AI_SEARCH_ENDPOINT = self._get_optional("AZURE_AI_SEARCH_ENDPOINT")
         self.AZURE_AI_SEARCH_API_KEY = self._get_optional("AZURE_AI_SEARCH_API_KEY")
@@ -110,7 +117,8 @@ class AppConfig:
         """
         Returns an Azure credential based on the application environment.
 
-        If the environment is 'dev', it uses DefaultAzureCredential.
+        If the environment is 'dev', it uses DefaultAzureCredential with exclude_environment_credential=True
+        to avoid EnvironmentCredential exceptions in Application Insights traces.
         Otherwise, it uses ManagedIdentityCredential.
 
         Args:
@@ -120,9 +128,28 @@ class AppConfig:
             Credential object: Either DefaultAzureCredential or ManagedIdentityCredential.
         """
         if self.APP_ENV == "dev":
-            return DefaultAzureCredential()  # CodeQL [SM05139]: DefaultAzureCredential is safe here
+            return DefaultAzureCredential(exclude_environment_credential=True)  # CodeQL [SM05139]: DefaultAzureCredential is safe here
         else:
             return ManagedIdentityCredential(client_id=client_id)
+
+    def get_azure_credential_async(self, client_id=None):
+        """
+        Returns an async Azure credential based on the application environment.
+
+        If the environment is 'dev', it uses DefaultAzureCredential (async) with exclude_environment_credential=True
+        to avoid EnvironmentCredential exceptions in Application Insights traces.
+        Otherwise, it uses ManagedIdentityCredential (async).
+
+        Args:
+            client_id (str, optional): The client ID for the Managed Identity Credential.
+
+        Returns:
+            Async Credential object: Either DefaultAzureCredentialAsync or ManagedIdentityCredentialAsync.
+        """
+        if self.APP_ENV == "dev":
+            return DefaultAzureCredentialAsync(exclude_environment_credential=True)
+        else:
+            return ManagedIdentityCredentialAsync(client_id=client_id)
 
     def get_azure_credentials(self):
         """Retrieve Azure credentials, either from environment variables or managed identity."""
@@ -214,17 +241,6 @@ class AppConfig:
                 exc,
             )
             raise
-
-    def create_kernel(self):
-        """Creates a new Semantic Kernel instance.
-
-        Returns:
-            A new Semantic Kernel instance
-        """
-        # Create a new kernel instance without manually configuring OpenAI services
-        # The agents will be created using Azure AI Agent Project pattern instead
-        kernel = Kernel()
-        return kernel
 
     def get_ai_project_client(self):
         """Create and return an AIProjectClient for Azure AI Foundry using from_connection_string.

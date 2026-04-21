@@ -54,7 +54,7 @@ az acr login --name <e.g. macaeacr2t62qyozi76bs>
 
 ## Build and push the image
 
-Build the frontend and backend Docker images and push them to your Azure Container Registry. Run the following from the src/backend and the src/frontend directory contexts:
+Build the frontend and backend Docker images and push them to your Azure Container Registry. Run the following from the src/backend and the src/App directory contexts:
 
 ```sh
 az acr build \
