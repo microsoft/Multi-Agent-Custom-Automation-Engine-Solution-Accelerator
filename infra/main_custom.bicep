@@ -1140,8 +1140,8 @@ module containerAppEnvironment 'br/public:avm/res/app/managed-environment:0.11.2
     tags: tags
     enableTelemetry: enableTelemetry
     // WAF aligned configuration for Private Networking
-    publicNetworkAccess: 'Enabled' // Always enabling the publicNetworkAccess for Container App Environment
-    internal: false //  Must be false when publicNetworkAccess is'Enabled'
+    publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
+    internal: enablePrivateNetworking ? true : false
     infrastructureSubnetResourceId: enablePrivateNetworking ? virtualNetwork.?outputs.?containerSubnetResourceId : null
     // WAF aligned configuration for Monitoring
     appLogsConfiguration: enableMonitoring
@@ -1172,6 +1172,32 @@ module containerAppEnvironment 'br/public:avm/res/app/managed-environment:0.11.2
             workloadProfileType: 'Consumption'
           }
         ]
+  }
+}
+
+// ========== Private DNS Zone for internal Container App Environment ========== //
+// When the CAE is internal, its FQDN is only resolvable within the VNet via this DNS zone.
+module caeDnsZone 'br/public:avm/res/network/private-dns-zone:0.7.1' = if (enablePrivateNetworking) {
+  name: 'avm.res.network.private-dns-zone.cae'
+  params: {
+    name: containerAppEnvironment.outputs.defaultDomain
+    tags: tags
+    enableTelemetry: enableTelemetry
+    a: [
+      {
+        name: '*'
+        aRecords: [
+          { ipv4Address: containerAppEnvironment.outputs.staticIp }
+        ]
+        ttl: 300
+      }
+    ]
+    virtualNetworkLinks: [
+      {
+        name: take('vnetlink-${virtualNetworkResourceName}-cae', 80)
+        virtualNetworkResourceId: virtualNetwork!.outputs.resourceId
+      }
+    ]
   }
 }
 
@@ -1587,6 +1613,7 @@ module webSite 'modules/web-sites.bicep' = {
           BACKEND_API_URL: 'https://${containerApp.outputs.fqdn}'
           AUTH_ENABLED: 'false'
           ENABLE_ORYX_BUILD: 'True'
+          PROXY_API_REQUESTS: enablePrivateNetworking ? 'true' : 'false'
         }
         // WAF aligned configuration for Monitoring
         applicationInsightResourceId: enableMonitoring ? applicationInsights!.outputs.resourceId : null
