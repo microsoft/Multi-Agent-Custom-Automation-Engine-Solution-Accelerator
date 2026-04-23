@@ -1,4 +1,4 @@
-[← Back to *DEPLOYMENT* guide](/docs/DeploymentGuide.md#deployment-steps)
+[← Back to *DEPLOYMENT* guide](DeploymentGuide.md#deployment-steps)
 
 # Reusing an Existing Log Analytics Workspace
 To configure your environment to use an existing Log Analytics Workspace, follow these steps:
@@ -28,4 +28,4 @@ azd env set AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID '<Existing Log Analyt
 Replace `<Existing Log Analytics Workspace Id>` with the value obtained from Step 3.
 
 ### 5. Continue Deployment
-Proceed with the next steps in the [deployment guide](/docs/DeploymentGuide.md#deployment-steps).
+Proceed with the next steps in the [deployment guide](DeploymentGuide.md#deployment-steps).

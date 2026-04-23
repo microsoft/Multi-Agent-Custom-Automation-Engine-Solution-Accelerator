@@ -1,4 +1,4 @@
-[← Back to *DEPLOYMENT* guide](/docs/DeploymentGuide.md#deployment-steps)
+[← Back to *DEPLOYMENT* guide](DeploymentGuide.md#deployment-steps)
 
 # Reusing an Existing Azure AI Foundry Project
 To configure your environment to use an existing Azure AI Foundry Project, follow these steps:
@@ -41,7 +41,7 @@ azd env set AZURE_EXISTING_AIPROJECT_RESOURCE_ID '<Existing Foundry Project Reso
 Replace `<Existing Foundry Project Resource ID>` with the value obtained from Step 5.
 
 ### 7. Continue Deployment
-Proceed with the next steps in the [deployment guide](/docs/DeploymentGuide.md#deployment-steps).
+Proceed with the next steps in the [deployment guide](DeploymentGuide.md#deployment-steps).
 
 > **Note:**  
 > After deployment, if you want to access agents created by the accelerator via the Azure AI Foundry Portal, or if you plan to debug or run the application locally, you must assign yourself either the **Azure AI User** or **Azure AI Developer** role for the Foundry resource.  
