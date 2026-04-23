@@ -49,8 +49,16 @@ param storageAccountRequired bool = false
 @description('Optional. Azure Resource Manager ID of the Virtual network and subnet to be joined by Regional VNET Integration. This must be of the form /subscriptions/{subscriptionName}/resourceGroups/{resourceGroupName}/providers/Microsoft.Network/virtualNetworks/{vnetName}/subnets/{subnetName}.')
 param virtualNetworkSubnetId string?
 
+type outboundVnetRoutingType = {
+  allTraffic: bool?
+  applicationTraffic: bool?
+  backupRestoreTraffic: bool?
+  contentShareTraffic: bool?
+  imagePullTraffic: bool?
+}
+
 @description('Optional. Configuration for outbound virtual network routing. Replaces the legacy vnetContentShareEnabled, vnetImagePullEnabled, and vnetRouteAllEnabled properties.')
-param outboundVnetRouting object?
+param outboundVnetRouting outboundVnetRoutingType?
 
 @description('Optional. Stop SCM (KUDU) site when the app is stopped.')
 param scmSiteAlsoStopped bool = false
@@ -216,7 +224,7 @@ module app_config 'web-sites.config.bicep' = [
       storageAccountResourceId: config.?storageAccountResourceId
       storageAccountUseIdentityAuthentication: config.?storageAccountUseIdentityAuthentication
       properties: config.?properties
-      currentAppSettings: config.?retainCurrentAppSettings ?? true && config.name == 'appsettings'
+      currentAppSettings: (config.?retainCurrentAppSettings ?? true) && config.name == 'appsettings'
         ? list('${app.id}/config/appsettings', '2025-03-01').properties
         : {}
     }

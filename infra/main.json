@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "1910996399983618771"
+      "templateHash": "89830119176385231"
     },
     "name": "Multi-Agent Custom Automation Engine",
     "description": "This module contains the resources required to deploy the [Multi-Agent Custom Automation Engine solution accelerator](https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) for both Sandbox environments and WAF aligned environments.\r\n\r\n> **Note:** This module is not intended for broad, generic use, as it was designed by the Commercial Solution Areas CTO team, as a Microsoft Solution Accelerator. Feature requests and bug fix requests are welcome if they support the needs of this organization but may not be incorporated if they aim to make this module more generic than what it needs to be for its primary use case. This module will likely be updated to leverage AVM resource modules in the future. This may result in breaking changes in upcoming versions when these features are implemented.\r\n"
@@ -27981,9 +27981,9 @@
       },
       "dependsOn": [
         "aiFoundryAiServices",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "virtualNetwork"
       ]
     },
@@ -42570,10 +42570,35 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "5618347784185932314"
+              "templateHash": "15053339789155096730"
             }
           },
           "definitions": {
+            "outboundVnetRoutingType": {
+              "type": "object",
+              "properties": {
+                "allTraffic": {
+                  "type": "bool",
+                  "nullable": true
+                },
+                "applicationTraffic": {
+                  "type": "bool",
+                  "nullable": true
+                },
+                "backupRestoreTraffic": {
+                  "type": "bool",
+                  "nullable": true
+                },
+                "contentShareTraffic": {
+                  "type": "bool",
+                  "nullable": true
+                },
+                "imagePullTraffic": {
+                  "type": "bool",
+                  "nullable": true
+                }
+              }
+            },
             "appSettingsConfigType": {
               "type": "object",
               "properties": {
@@ -43248,7 +43273,7 @@
               }
             },
             "outboundVnetRouting": {
-              "type": "object",
+              "$ref": "#/definitions/outboundVnetRoutingType",
               "nullable": true,
               "metadata": {
                 "description": "Optional. Configuration for outbound virtual network routing. Replaces the legacy vnetContentShareEnabled, vnetImagePullEnabled, and vnetRouteAllEnabled properties."
@@ -43567,7 +43592,7 @@
                   "properties": {
                     "value": "[tryGet(coalesce(parameters('configs'), createArray())[copyIndex()], 'properties')]"
                   },
-                  "currentAppSettings": "[if(coalesce(tryGet(coalesce(parameters('configs'), createArray())[copyIndex()], 'retainCurrentAppSettings'), and(true(), equals(coalesce(parameters('configs'), createArray())[copyIndex()].name, 'appsettings'))), createObject('value', list(format('{0}/config/appsettings', resourceId('Microsoft.Web/sites', parameters('name'))), '2025-03-01').properties), createObject('value', createObject()))]"
+                  "currentAppSettings": "[if(and(coalesce(tryGet(coalesce(parameters('configs'), createArray())[copyIndex()], 'retainCurrentAppSettings'), true()), equals(coalesce(parameters('configs'), createArray())[copyIndex()].name, 'appsettings')), createObject('value', list(format('{0}/config/appsettings', resourceId('Microsoft.Web/sites', parameters('name'))), '2025-03-01').properties), createObject('value', createObject()))]"
                 },
                 "template": {
                   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
