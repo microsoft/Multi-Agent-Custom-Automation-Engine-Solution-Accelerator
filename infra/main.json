@@ -5,11 +5,11 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.41.2.15936",
-      "templateHash": "797205848378228584"
+      "version": "0.42.1.51946",
+      "templateHash": "16089762486144321389"
     },
     "name": "Multi-Agent Custom Automation Engine",
-    "description": "This module contains the resources required to deploy the [Multi-Agent Custom Automation Engine solution accelerator](https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) for both Sandbox environments and WAF aligned environments.\n\n> **Note:** This module is not intended for broad, generic use, as it was designed by the Commercial Solution Areas CTO team, as a Microsoft Solution Accelerator. Feature requests and bug fix requests are welcome if they support the needs of this organization but may not be incorporated if they aim to make this module more generic than what it needs to be for its primary use case. This module will likely be updated to leverage AVM resource modules in the future. This may result in breaking changes in upcoming versions when these features are implemented.\n"
+    "description": "This module contains the resources required to deploy the [Multi-Agent Custom Automation Engine solution accelerator](https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) for both Sandbox environments and WAF aligned environments.\r\n\r\n> **Note:** This module is not intended for broad, generic use, as it was designed by the Commercial Solution Areas CTO team, as a Microsoft Solution Accelerator. Feature requests and bug fix requests are welcome if they support the needs of this organization but may not be incorporated if they aim to make this module more generic than what it needs to be for its primary use case. This module will likely be updated to leverage AVM resource modules in the future. This may result in breaking changes in upcoming versions when these features are implemented.\r\n"
   },
   "parameters": {
     "solutionName": {
@@ -117,7 +117,7 @@
         "description": "Optional. Version of the GPT Reasoning model to deploy. Defaults to 2025-04-16."
       }
     },
-    "azureopenaiVersion": {
+    "azureOpenaiAPIVersion": {
       "type": "string",
       "defaultValue": "2024-12-01-preview",
       "metadata": {
@@ -143,7 +143,7 @@
         "description": "Optional. GPT model deployment type. Defaults to GlobalStandard."
       }
     },
-    "gptModelDeploymentType": {
+    "deploymentType": {
       "type": "string",
       "defaultValue": "GlobalStandard",
       "allowedValues": [
@@ -167,7 +167,7 @@
         "description": "Optional. GPT model deployment type. Defaults to GlobalStandard."
       }
     },
-    "gptModelCapacity": {
+    "gptDeploymentCapacity": {
       "type": "int",
       "defaultValue": 50,
       "metadata": {
@@ -226,21 +226,21 @@
         "description": "Optional. Enable private networking for applicable resources, aligned with the Well Architected Framework recommendations. Defaults to false."
       }
     },
-    "virtualMachineAdminUsername": {
+    "vmAdminUsername": {
       "type": "securestring",
       "nullable": true,
       "metadata": {
         "description": "Optional. The user name for the administrator account of the virtual machine. Allows to customize credentials if `enablePrivateNetworking` is set to true."
       }
     },
-    "virtualMachineAdminPassword": {
+    "vmAdminPassword": {
       "type": "securestring",
       "nullable": true,
       "metadata": {
         "description": "Optional. The password for the administrator account of the virtual machine. Allows to customize credentials if `enablePrivateNetworking` is set to true."
       }
     },
-    "virtualMachineSize": {
+    "vmSize": {
       "type": "string",
       "defaultValue": "Standard_D2s_v5",
       "metadata": {
@@ -324,7 +324,7 @@
         "description": "Optional. Resource ID of an existing Log Analytics Workspace."
       }
     },
-    "existingAiFoundryAiProjectResourceId": {
+    "existingFoundryProjectResourceId": {
       "type": "string",
       "defaultValue": "",
       "metadata": {
@@ -446,18 +446,18 @@
       "[variables('dnsZoneIndex').openAI]",
       "[variables('dnsZoneIndex').aiServices]"
     ],
-    "useExistingAiFoundryAiProject": "[not(empty(parameters('existingAiFoundryAiProjectResourceId')))]",
-    "aiFoundryAiServicesResourceGroupName": "[if(variables('useExistingAiFoundryAiProject'), split(parameters('existingAiFoundryAiProjectResourceId'), '/')[4], resourceGroup().name)]",
-    "aiFoundryAiServicesSubscriptionId": "[if(variables('useExistingAiFoundryAiProject'), split(parameters('existingAiFoundryAiProjectResourceId'), '/')[2], subscription().subscriptionId)]",
-    "aiFoundryAiServicesResourceName": "[if(variables('useExistingAiFoundryAiProject'), split(parameters('existingAiFoundryAiProjectResourceId'), '/')[8], format('aif-{0}', variables('solutionSuffix')))]",
-    "aiFoundryAiProjectResourceName": "[if(variables('useExistingAiFoundryAiProject'), split(parameters('existingAiFoundryAiProjectResourceId'), '/')[10], format('proj-{0}', variables('solutionSuffix')))]",
+    "useExistingAiFoundryAiProject": "[not(empty(parameters('existingFoundryProjectResourceId')))]",
+    "aiFoundryAiServicesResourceGroupName": "[if(variables('useExistingAiFoundryAiProject'), split(parameters('existingFoundryProjectResourceId'), '/')[4], resourceGroup().name)]",
+    "aiFoundryAiServicesSubscriptionId": "[if(variables('useExistingAiFoundryAiProject'), split(parameters('existingFoundryProjectResourceId'), '/')[2], subscription().subscriptionId)]",
+    "aiFoundryAiServicesResourceName": "[if(variables('useExistingAiFoundryAiProject'), split(parameters('existingFoundryProjectResourceId'), '/')[8], format('aif-{0}', variables('solutionSuffix')))]",
+    "aiFoundryAiProjectResourceName": "[if(variables('useExistingAiFoundryAiProject'), split(parameters('existingFoundryProjectResourceId'), '/')[10], format('proj-{0}', variables('solutionSuffix')))]",
     "aiFoundryAiServicesModelDeployment": {
       "format": "OpenAI",
       "name": "[parameters('gptModelName')]",
       "version": "[parameters('gptModelVersion')]",
       "sku": {
-        "name": "[parameters('gptModelDeploymentType')]",
-        "capacity": "[parameters('gptModelCapacity')]"
+        "name": "[parameters('deploymentType')]",
+        "capacity": "[parameters('gptDeploymentCapacity')]"
       },
       "raiPolicyName": "Microsoft.Default"
     },
@@ -4926,8 +4926,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.41.2.15936",
-              "templateHash": "8667922205584012198"
+              "version": "0.42.1.51946",
+              "templateHash": "5267722400216362160"
             }
           },
           "definitions": {
@@ -10451,7 +10451,7 @@
           "intent": {
             "value": {
               "vmSizes": [
-                "[parameters('virtualMachineSize')]"
+                "[parameters('vmSize')]"
               ]
             }
           }
@@ -10809,13 +10809,13 @@
             "value": "Windows"
           },
           "vmSize": {
-            "value": "[parameters('virtualMachineSize')]"
+            "value": "[parameters('vmSize')]"
           },
           "adminUsername": {
-            "value": "[coalesce(parameters('virtualMachineAdminUsername'), 'JumpboxAdminUser')]"
+            "value": "[coalesce(parameters('vmAdminUsername'), 'JumpboxAdminUser')]"
           },
           "adminPassword": {
-            "value": "[coalesce(parameters('virtualMachineAdminPassword'), 'JumpboxAdminP@ssw0rd1234!')]"
+            "value": "[coalesce(parameters('vmAdminPassword'), 'JumpboxAdminP@ssw0rd1234!')]"
           },
           "patchMode": {
             "value": "AutomaticByPlatform"
@@ -22458,8 +22458,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.41.2.15936",
-              "templateHash": "8365054813170845685"
+              "version": "0.42.1.51946",
+              "templateHash": "16866311185741009453"
             }
           },
           "definitions": {
@@ -26260,8 +26260,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.41.2.15936",
-              "templateHash": "5789718034225488560"
+              "version": "0.42.1.51946",
+              "templateHash": "16351752584270870112"
             }
           },
           "parameters": {
@@ -31219,7 +31219,7 @@
                   },
                   {
                     "name": "AZURE_OPENAI_API_VERSION",
-                    "value": "[parameters('azureopenaiVersion')]"
+                    "value": "[parameters('azureOpenaiAPIVersion')]"
                   },
                   {
                     "name": "APPLICATIONINSIGHTS_INSTRUMENTATION_KEY",
@@ -35246,8 +35246,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.41.2.15936",
-              "templateHash": "14525082674956141939"
+              "version": "0.42.1.51946",
+              "templateHash": "5572169610777886184"
             }
           },
           "definitions": {
@@ -36259,8 +36259,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.41.2.15936",
-                      "templateHash": "1185169597469996118"
+                      "version": "0.42.1.51946",
+                      "templateHash": "7209561163082212668"
                     },
                     "name": "Site App Settings",
                     "description": "This module deploys a Site App Setting."
@@ -45432,8 +45432,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.41.2.15936",
-              "templateHash": "8488390916703184584"
+              "version": "0.42.1.51946",
+              "templateHash": "2863054153194448335"
             }
           },
           "parameters": {
@@ -48748,7 +48748,7 @@
     },
     "AZURE_OPENAI_API_VERSION": {
       "type": "string",
-      "value": "[parameters('azureopenaiVersion')]"
+      "value": "[parameters('azureOpenaiAPIVersion')]"
     },
     "AZURE_AI_SUBSCRIPTION_ID": {
       "type": "string",
@@ -48772,7 +48772,7 @@
     },
     "AI_FOUNDRY_RESOURCE_ID": {
       "type": "string",
-      "value": "[if(not(variables('useExistingAiFoundryAiProject')), reference('aiFoundryAiServices').outputs.resourceId.value, parameters('existingAiFoundryAiProjectResourceId'))]"
+      "value": "[if(not(variables('useExistingAiFoundryAiProject')), reference('aiFoundryAiServices').outputs.resourceId.value, parameters('existingFoundryProjectResourceId'))]"
     },
     "COSMOSDB_ACCOUNT_NAME": {
       "type": "string",

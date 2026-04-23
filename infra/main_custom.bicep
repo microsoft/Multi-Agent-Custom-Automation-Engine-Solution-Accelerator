@@ -71,7 +71,7 @@ param gptReasoningModelName string = 'o4-mini'
 param gptReasoningModelVersion string = '2025-04-16'
 
 @description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2024-12-01-preview.')
-param azureopenaiVersion string = '2024-12-01-preview'
+param azureOpenaiAPIVersion string = '2024-12-01-preview'
 
 @description('Optional. Version of the Azure AI Agent API version. Defaults to 2025-01-01-preview.')
 param azureAiAgentAPIVersion string = '2025-01-01-preview'
@@ -90,7 +90,7 @@ param gpt4_1ModelDeploymentType string = 'GlobalStandard'
   'GlobalStandard'
 ])
 @description('Optional. GPT model deployment type. Defaults to GlobalStandard.')
-param gptModelDeploymentType string = 'GlobalStandard'
+param deploymentType string = 'GlobalStandard'
 
 @minLength(1)
 @allowed([
@@ -101,7 +101,7 @@ param gptModelDeploymentType string = 'GlobalStandard'
 param gptReasoningModelDeploymentType string = 'GlobalStandard'
 
 @description('Optional. AI model deployment token capacity. Defaults to 50 for optimal performance.')
-param gptModelCapacity int = 50
+param gptDeploymentCapacity int = 50
 
 @description('Optional. AI model deployment token capacity. Defaults to 150 for optimal performance.')
 param gpt4_1ModelCapacity int = 150
@@ -126,14 +126,14 @@ param enablePrivateNetworking bool = false
 
 @secure()
 @description('Optional. The user name for the administrator account of the virtual machine. Allows to customize credentials if `enablePrivateNetworking` is set to true.')
-param virtualMachineAdminUsername string?
+param vmAdminUsername string?
 
 @description('Optional. The password for the administrator account of the virtual machine. Allows to customize credentials if `enablePrivateNetworking` is set to true.')
 @secure()
-param virtualMachineAdminPassword string?
+param vmAdminPassword string?
 
 @description('Optional. The size of the virtual machine. Defaults to Standard_D2s_v5.')
-param virtualMachineSize string = 'Standard_D2s_v5'
+param vmSize string = 'Standard_D2s_v5'
 // These parameters are changed for testing - please reset as part of publication
 
 @description('Optional. The Container Registry hostname where the docker images for the backend are located.')
@@ -170,7 +170,7 @@ param enableTelemetry bool = true
 param existingLogAnalyticsWorkspaceId string = ''
 
 @description('Optional. Resource ID of an existing Ai Foundry AI Services resource.')
-param existingAiFoundryAiProjectResourceId string = ''
+param existingFoundryProjectResourceId string = ''
 
 // ============== //
 // Variables      //
@@ -599,7 +599,7 @@ module proximityPlacementGroup 'br/public:avm/res/compute/proximity-placement-gr
     tags: tags
     enableTelemetry: enableTelemetry
     availabilityZone: virtualMachineAvailabilityZone
-    intent: { vmSizes: [virtualMachineSize] }
+    intent: { vmSizes: [vmSize] }
   }
 }
 
@@ -614,9 +614,9 @@ module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.17.0' = if (e
     enableTelemetry: enableTelemetry
     computerName: take(virtualMachineResourceName, 15)
     osType: 'Windows'
-    vmSize: virtualMachineSize
-    adminUsername: virtualMachineAdminUsername ?? 'JumpboxAdminUser'
-    adminPassword: virtualMachineAdminPassword ?? 'JumpboxAdminP@ssw0rd1234!'
+    vmSize: vmSize
+    adminUsername: vmAdminUsername ?? 'JumpboxAdminUser'
+    adminPassword: vmAdminPassword ?? 'JumpboxAdminP@ssw0rd1234!'
     patchMode: 'AutomaticByPlatform'
     bypassPlatformSafetyChecksOnUserSchedule: true
     maintenanceConfigurationResourceId: maintenanceConfiguration!.outputs.resourceId
@@ -758,26 +758,26 @@ module avmPrivateDnsZones 'br/public:avm/res/network/private-dns-zone:0.7.1' = [
 // ========== AI Foundry: AI Services ========== //
 // WAF best practices for Open AI: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/azure-openai
 
-var useExistingAiFoundryAiProject = !empty(existingAiFoundryAiProjectResourceId)
+var useExistingAiFoundryAiProject = !empty(existingFoundryProjectResourceId)
 var aiFoundryAiServicesResourceGroupName = useExistingAiFoundryAiProject
-  ? split(existingAiFoundryAiProjectResourceId, '/')[4]
+  ? split(existingFoundryProjectResourceId, '/')[4]
   : resourceGroup().name
 var aiFoundryAiServicesSubscriptionId = useExistingAiFoundryAiProject
-  ? split(existingAiFoundryAiProjectResourceId, '/')[2]
+  ? split(existingFoundryProjectResourceId, '/')[2]
   : subscription().subscriptionId
 var aiFoundryAiServicesResourceName = useExistingAiFoundryAiProject
-  ? split(existingAiFoundryAiProjectResourceId, '/')[8]
+  ? split(existingFoundryProjectResourceId, '/')[8]
   : 'aif-${solutionSuffix}'
 var aiFoundryAiProjectResourceName = useExistingAiFoundryAiProject
-  ? split(existingAiFoundryAiProjectResourceId, '/')[10]
+  ? split(existingFoundryProjectResourceId, '/')[10]
   : 'proj-${solutionSuffix}' // AI Project resource id: /subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.CognitiveServices/accounts/<ai-services-name>/projects/<project-name>
 var aiFoundryAiServicesModelDeployment = {
   format: 'OpenAI'
   name: gptModelName
   version: gptModelVersion
   sku: {
-    name: gptModelDeploymentType
-    capacity: gptModelCapacity
+    name: deploymentType
+    capacity: gptDeploymentCapacity
   }
   raiPolicyName: 'Microsoft.Default'
 }
@@ -1320,7 +1320,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
           }
           {
             name: 'AZURE_OPENAI_API_VERSION'
-            value: azureopenaiVersion
+            value: azureOpenaiAPIVersion
           }
           {
             name: 'APPLICATIONINSIGHTS_INSTRUMENTATION_KEY'
@@ -1921,7 +1921,7 @@ output AZURE_OPENAI_ENDPOINT string = 'https://${aiFoundryAiServicesResourceName
 output AZURE_OPENAI_MODEL_NAME string = aiFoundryAiServicesModelDeployment.name
 output AZURE_OPENAI_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDeployment.name
 output AZURE_OPENAI_RAI_DEPLOYMENT_NAME string = aiFoundryAiServices4_1ModelDeployment.name
-output AZURE_OPENAI_API_VERSION string = azureopenaiVersion
+output AZURE_OPENAI_API_VERSION string = azureOpenaiAPIVersion
 // output APPLICATIONINSIGHTS_INSTRUMENTATION_KEY string = applicationInsights.outputs.instrumentationKey
 // output AZURE_AI_PROJECT_ENDPOINT string = aiFoundryAiServices.outputs.aiProjectInfo.apiEndpoint
 output AZURE_AI_SUBSCRIPTION_ID string = subscription().subscriptionId
@@ -1934,7 +1934,7 @@ output AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDep
 output APP_ENV string = 'Prod'
 output AI_FOUNDRY_RESOURCE_ID string = !useExistingAiFoundryAiProject
   ? aiFoundryAiServices.outputs.resourceId
-  : existingAiFoundryAiProjectResourceId
+  : existingFoundryProjectResourceId
 output COSMOSDB_ACCOUNT_NAME string = cosmosDbResourceName
 output AZURE_SEARCH_ENDPOINT string = searchServiceUpdate.outputs.endpoint
 output AZURE_CLIENT_ID string = userAssignedIdentity!.outputs.clientId
