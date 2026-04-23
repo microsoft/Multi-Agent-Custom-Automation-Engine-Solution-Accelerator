@@ -10,8 +10,20 @@ import sys
 import unittest
 from unittest.mock import AsyncMock, Mock, patch
 
-# Add the backend directory to the Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'backend'))
+# Add src to the Python path so 'from backend.v4...' imports resolve correctly
+_src_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..'))
+if _src_path not in sys.path:
+    sys.path.insert(0, _src_path)
+
+# Clear stale mocks that other tests inject at module level, so that subsequent imports
+# of messages.py (which imports common.models.messages_af) resolve to real modules.
+from types import ModuleType as _ModuleType
+for _k in ['backend.v4.models.messages', 'v4.models.messages']:
+    sys.modules.pop(_k, None)
+for _k in ['common', 'common.models', 'common.models.messages_af',
+            'common.config', 'common.config.app_config']:
+    if _k in sys.modules and not isinstance(sys.modules[_k], _ModuleType):
+        del sys.modules[_k]
 
 # Set up required environment variables before any imports
 os.environ.update({

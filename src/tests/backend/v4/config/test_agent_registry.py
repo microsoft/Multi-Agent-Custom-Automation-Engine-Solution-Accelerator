@@ -13,8 +13,15 @@ import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 from weakref import WeakSet
 
-# Add the backend directory to the Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'backend'))
+# Add src to the Python path so 'from backend.v4...' imports resolve correctly
+_src_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..'))
+if _src_path not in sys.path:
+    sys.path.insert(0, _src_path)
+
+# test_app.py injects a stub ModuleType for agent_registry (missing AgentRegistry) when
+# it runs before these v4 tests. Pop it so we get a fresh import from the real file.
+for _k in ['backend.v4.config.agent_registry', 'v4.config.agent_registry']:
+    sys.modules.pop(_k, None)
 
 from backend.v4.config.agent_registry import AgentRegistry, agent_registry
 

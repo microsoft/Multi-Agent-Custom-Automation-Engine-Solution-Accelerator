@@ -10,13 +10,31 @@ import sys
 import unittest
 import re
 
-# Set up environment variables (removed manual path modification as pytest config handles it)
+# Add src to the Python path so 'from backend.v4...' imports resolve correctly
+# (pytest rootdir adds the workspace root, but 'backend' lives under 'src', not the root)
+_src_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', '..'))
+if _src_path not in sys.path:
+    sys.path.insert(0, _src_path)
+
+# Set up environment variables
 os.environ.update({
     'APPLICATIONINSIGHTS_CONNECTION_STRING': 'InstrumentationKey=test-key',
     'AZURE_AI_SUBSCRIPTION_ID': 'test-subscription',
     'AZURE_AI_RESOURCE_GROUP': 'test-rg',
     'AZURE_AI_PROJECT_NAME': 'test-project',
 })
+
+# Force-clear stale mock entries for the v4 namespace before importing.
+# Multiple test modules run before this one set sys.modules['v4'] = Mock(), which
+# causes `from v4.models.models import MStep` (in plan_to_mplan_converter.py) to
+# resolve MStep as a Mock attribute. Popping the whole v4 subtree lets Python
+# re-import the real package from the backend CWD.
+for _k in list(sys.modules.keys()):
+    if _k == 'v4' or _k.startswith('v4.'):
+        sys.modules.pop(_k, None)
+for _k in ['backend.v4.models.models', 'backend.v4.models',
+           'backend.v4.models.messages']:
+    sys.modules.pop(_k, None)
 
 # Import the models first (from backend path)
 from backend.v4.models.models import MPlan, MStep, PlanStatus

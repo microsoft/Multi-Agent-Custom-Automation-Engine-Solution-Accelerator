@@ -61,8 +61,6 @@ sys.modules['opentelemetry.sdk'] = Mock()
 sys.modules['opentelemetry.sdk.trace'] = Mock()
 sys.modules['opentelemetry.sdk.trace.export'] = Mock()
 sys.modules['opentelemetry.trace'] = Mock()
-sys.modules['pydantic'] = Mock()
-sys.modules['pydantic_settings'] = Mock()
 
 # Mock the specific problematic modules
 sys.modules['common.database.database_base'] = Mock(DatabaseBase=Mock)
