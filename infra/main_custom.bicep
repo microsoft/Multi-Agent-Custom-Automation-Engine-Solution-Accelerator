@@ -234,7 +234,7 @@ param createdBy string = contains(deployer(), 'userPrincipalName')
   : deployer().objectId
 var deployerPrincipalType = contains(deployer(), 'userPrincipalName') ? 'User' : 'ServicePrincipal'
 
-resource resourceGroupTags 'Microsoft.Resources/tags@2021-04-01' = {
+resource resourceGroupTags 'Microsoft.Resources/tags@2023-07-01' = {
   name: 'default'
   properties: {
     tags: union(
@@ -252,7 +252,7 @@ resource resourceGroupTags 'Microsoft.Resources/tags@2021-04-01' = {
 }
 
 #disable-next-line no-deployments-resources
-resource avmTelemetry 'Microsoft.Resources/deployments@2024-03-01' = if (enableTelemetry) {
+resource avmTelemetry 'Microsoft.Resources/deployments@2025-04-01' = if (enableTelemetry) {
   name: '46d3xbcp.ptn.sa-multiagentcustauteng.${replace('-..--..-', '.', '-')}.${substring(uniqueString(deployment().name, location), 0, 4)}'
   properties: {
     mode: 'Incremental'
@@ -277,7 +277,7 @@ var existingLawSubscription = useExistingLogAnalytics ? split(existingLogAnalyti
 var existingLawResourceGroup = useExistingLogAnalytics ? split(existingLogAnalyticsWorkspaceId, '/')[4] : ''
 var existingLawName = useExistingLogAnalytics ? split(existingLogAnalyticsWorkspaceId, '/')[8] : ''
 
-resource existingLogAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2020-08-01' existing = if (useExistingLogAnalytics) {
+resource existingLogAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2025-07-01' existing = if (useExistingLogAnalytics) {
   name: existingLawName
   scope: resourceGroup(existingLawSubscription, existingLawResourceGroup)
 }
@@ -286,7 +286,7 @@ resource existingLogAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces
 // WAF best practices for Log Analytics: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/azure-log-analytics
 // WAF PSRules for Log Analytics: https://azure.github.io/PSRule.Rules.Azure/en/rules/resource/#azure-monitor-logs
 var logAnalyticsWorkspaceResourceName = 'log-${solutionSuffix}'
-module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0.12.0' = if (enableMonitoring && !useExistingLogAnalytics) {
+module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0.15.0' = if (enableMonitoring && !useExistingLogAnalytics) {
   name: take('avm.res.operational-insights.workspace.${logAnalyticsWorkspaceResourceName}', 64)
   params: {
     name: logAnalyticsWorkspaceResourceName
@@ -298,7 +298,7 @@ module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0
     features: { enableLogAccessUsingOnlyResourcePermissions: true }
     diagnosticSettings: [{ useThisWorkspace: true }]
     // WAF aligned configuration for Redundancy
-    dailyQuotaGb: enableRedundancy ? 150 : null //WAF recommendation: 150 GB per day is a good starting point for most workloads
+    dailyQuotaGb: enableRedundancy ? '150' : null //WAF recommendation: 150 GB per day is a good starting point for most workloads
     replication: enableRedundancy
       ? {
           enabled: true
@@ -362,7 +362,7 @@ var logAnalyticsWorkspaceId = useExistingLogAnalytics
 // WAF best practices for Application Insights: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/application-insights
 // WAF PSRules for  Application Insights: https://azure.github.io/PSRule.Rules.Azure/en/rules/resource/#application-insights
 var applicationInsightsResourceName = 'appi-${solutionSuffix}'
-module applicationInsights 'br/public:avm/res/insights/component:0.6.0' = if (enableMonitoring) {
+module applicationInsights 'br/public:avm/res/insights/component:0.7.1' = if (enableMonitoring) {
   name: take('avm.res.insights.component.${applicationInsightsResourceName}', 64)
   params: {
     name: applicationInsightsResourceName
@@ -381,7 +381,7 @@ module applicationInsights 'br/public:avm/res/insights/component:0.6.0' = if (en
 // ========== User Assigned Identity ========== //
 // WAF best practices for identity and access management: https://learn.microsoft.com/en-us/azure/well-architected/security/identity-access
 var userAssignedIdentityResourceName = 'id-${solutionSuffix}'
-module userAssignedIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.4.1' = {
+module userAssignedIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.5.0' = {
   name: take('avm.res.managed-identity.user-assigned-identity.${userAssignedIdentityResourceName}', 64)
   params: {
     name: userAssignedIdentityResourceName
@@ -411,7 +411,7 @@ var bastionResourceName = 'bas-${solutionSuffix}'
 // ========== Bastion host ========== //
 // WAF best practices for virtual networks: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/virtual-network
 // WAF recommendations for networking and connectivity: https://learn.microsoft.com/en-us/azure/well-architected/security/networking
-module bastionHost 'br/public:avm/res/network/bastion-host:0.7.0' = if (enablePrivateNetworking) {
+module bastionHost 'br/public:avm/res/network/bastion-host:0.8.2' = if (enablePrivateNetworking) {
   name: take('avm.res.network.bastion-host.${bastionResourceName}', 64)
   params: {
     name: bastionResourceName
@@ -438,7 +438,7 @@ module bastionHost 'br/public:avm/res/network/bastion-host:0.7.0' = if (enablePr
 // ========== Virtual machine ========== //
 // WAF best practices for virtual machines: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/virtual-machines
 var maintenanceConfigurationResourceName = 'mc-${solutionSuffix}'
-module maintenanceConfiguration 'br/public:avm/res/maintenance/maintenance-configuration:0.3.1' = if (enablePrivateNetworking) {
+module maintenanceConfiguration 'br/public:avm/res/maintenance/maintenance-configuration:0.4.0' = if (enablePrivateNetworking) {
   name: take('avm.res.compute.virtual-machine.${maintenanceConfigurationResourceName}', 64)
   params: {
     name: maintenanceConfigurationResourceName
@@ -478,7 +478,7 @@ var dataCollectionRulesResourceName = 'dcr-${solutionSuffix}'
 var dataCollectionRulesLocation = useExistingLogAnalytics
   ? existingLogAnalyticsWorkspace!.location
   : logAnalyticsWorkspace!.outputs.location
-module windowsVmDataCollectionRules 'br/public:avm/res/insights/data-collection-rule:0.6.1' = if (enablePrivateNetworking && enableMonitoring) {
+module windowsVmDataCollectionRules 'br/public:avm/res/insights/data-collection-rule:0.11.0' = if (enablePrivateNetworking && enableMonitoring) {
   name: take('avm.res.insights.data-collection-rule.${dataCollectionRulesResourceName}', 64)
   params: {
     name: dataCollectionRulesResourceName
@@ -591,7 +591,7 @@ module windowsVmDataCollectionRules 'br/public:avm/res/insights/data-collection-
 }
 
 var proximityPlacementGroupResourceName = 'ppg-${solutionSuffix}'
-module proximityPlacementGroup 'br/public:avm/res/compute/proximity-placement-group:0.4.0' = if (enablePrivateNetworking) {
+module proximityPlacementGroup 'br/public:avm/res/compute/proximity-placement-group:0.4.1' = if (enablePrivateNetworking) {
   name: take('avm.res.compute.proximity-placement-group.${proximityPlacementGroupResourceName}', 64)
   params: {
     name: proximityPlacementGroupResourceName
@@ -605,7 +605,7 @@ module proximityPlacementGroup 'br/public:avm/res/compute/proximity-placement-gr
 
 var virtualMachineResourceName = 'vm-${solutionSuffix}'
 var virtualMachineAvailabilityZone = 1
-module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.17.0' = if (enablePrivateNetworking) {
+module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.22.0' = if (enablePrivateNetworking) {
   name: take('avm.res.compute.virtual-machine.${virtualMachineResourceName}', 64)
   params: {
     name: virtualMachineResourceName
@@ -735,7 +735,7 @@ var aiRelatedDnsZoneIndices = [
 // - Excludes AI-related zones when using with an existing Foundry project
 // ===================================================
 @batchSize(5)
-module avmPrivateDnsZones 'br/public:avm/res/network/private-dns-zone:0.7.1' = [
+module avmPrivateDnsZones 'br/public:avm/res/network/private-dns-zone:0.8.1' = [
   for (zone, i) in privateDnsZones: if (enablePrivateNetworking && (!useExistingAiFoundryAiProject || !contains(
     aiRelatedDnsZoneIndices,
     i
@@ -803,7 +803,7 @@ var aiFoundryAiServicesReasoningModelDeployment = {
 }
 var aiFoundryAiProjectDescription = 'AI Foundry Project'
 
-resource existingAiFoundryAiServices 'Microsoft.CognitiveServices/accounts@2025-06-01' existing = if (useExistingAiFoundryAiProject) {
+resource existingAiFoundryAiServices 'Microsoft.CognitiveServices/accounts@2025-12-01' existing = if (useExistingAiFoundryAiProject) {
   name: aiFoundryAiServicesResourceName
   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
 }
@@ -970,7 +970,7 @@ module aiFoundryAiServices 'br:mcr.microsoft.com/bicep/avm/res/cognitive-service
   }
 }
 
-module aiFoundryPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.8.1' = if (enablePrivateNetworking && !useExistingAiFoundryAiProject) {
+module aiFoundryPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.12.0' = if (enablePrivateNetworking && !useExistingAiFoundryAiProject) {
   name: take('pep-${aiFoundryAiServicesResourceName}-deployment', 64)
   params: {
     name: 'pep-${aiFoundryAiServicesResourceName}'
@@ -1006,7 +1006,7 @@ module aiFoundryPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.8.
   }
 }
 
-resource existingAiFoundryAiServicesProject 'Microsoft.CognitiveServices/accounts/projects@2025-06-01' existing = if (useExistingAiFoundryAiProject) {
+resource existingAiFoundryAiServicesProject 'Microsoft.CognitiveServices/accounts/projects@2025-12-01' existing = if (useExistingAiFoundryAiProject) {
   name: aiFoundryAiProjectResourceName
   parent: existingAiFoundryAiServices
 }
@@ -1041,7 +1041,7 @@ var cosmosDbResourceName = 'cosmos-${solutionSuffix}'
 var cosmosDbDatabaseName = 'macae'
 var cosmosDbDatabaseMemoryContainerName = 'memory'
 
-module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
+module cosmosDb 'br/public:avm/res/document-db/database-account:0.19.0' = {
   name: take('avm.res.document-db.database-account.${cosmosDbResourceName}', 64)
   params: {
     // Required parameters
@@ -1064,7 +1064,7 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
         ]
       }
     ]
-    dataPlaneRoleDefinitions: [
+    sqlRoleDefinitions: [
       {
         // Cosmos DB Built-in Data Contributor: https://docs.azure.cn/en-us/cosmos-db/nosql/security/reference-data-plane-roles#cosmos-db-built-in-data-contributor
         roleName: 'Cosmos DB SQL Data Contributor'
@@ -1104,7 +1104,7 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
     // WAF aligned configuration for Redundancy
     zoneRedundant: enableRedundancy ? true : false
     capabilitiesToAdd: enableRedundancy ? null : ['EnableServerless']
-    automaticFailover: enableRedundancy ? true : false
+    enableAutomaticFailover: enableRedundancy ? true : false
     failoverLocations: enableRedundancy
       ? [
           {
@@ -1132,7 +1132,7 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
 // WAF best practices for container apps: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/azure-container-apps
 // PSRule for Container App: https://azure.github.io/PSRule.Rules.Azure/en/rules/resource/#container-app
 var containerAppEnvironmentResourceName = 'cae-${solutionSuffix}'
-module containerAppEnvironment 'br/public:avm/res/app/managed-environment:0.11.2' = {
+module containerAppEnvironment 'br/public:avm/res/app/managed-environment:0.13.1' = {
   name: take('avm.res.app.managed-environment.${containerAppEnvironmentResourceName}', 64)
   params: {
     name: containerAppEnvironmentResourceName
@@ -1147,10 +1147,7 @@ module containerAppEnvironment 'br/public:avm/res/app/managed-environment:0.11.2
     appLogsConfiguration: enableMonitoring
       ? {
           destination: 'log-analytics'
-          logAnalyticsConfiguration: {
-            customerId: logAnalyticsWorkspaceId
-            sharedKey: logAnalyticsPrimarySharedKey
-          }
+          logAnalyticsWorkspaceResourceId: logAnalyticsWorkspaceResourceId
         }
       : null
     appInsightsConnectionString: enableMonitoring ? applicationInsights!.outputs.connectionString : null
@@ -1176,7 +1173,7 @@ module containerAppEnvironment 'br/public:avm/res/app/managed-environment:0.11.2
 }
 
 // ========== Container Registry ========== //
-module containerRegistry 'br/public:avm/res/container-registry/registry:0.9.1' = {
+module containerRegistry 'br/public:avm/res/container-registry/registry:0.12.0' = {
   name: 'registryDeployment'
   params: {
     name: 'cr${solutionSuffix}'
@@ -1208,7 +1205,7 @@ var acrPullRole = subscriptionResourceId(
 // WAF best practices for container apps: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/azure-container-apps
 // PSRule for Container App: https://azure.github.io/PSRule.Rules.Azure/en/rules/resource/#container-app
 var containerAppResourceName = 'ca-${solutionSuffix}'
-module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
+module containerApp 'br/public:avm/res/app/container-app:0.22.0' = {
   name: take('avm.res.app.container-app.${containerAppResourceName}', 64)
   params: {
     name: containerAppResourceName
@@ -1431,7 +1428,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
 // WAF best practices for container apps: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/azure-container-apps
 // PSRule for Container App: https://azure.github.io/PSRule.Rules.Azure/en/rules/resource/#container-app
 var containerAppMcpResourceName = 'ca-mcp-${solutionSuffix}'
-module containerAppMcp 'br/public:avm/res/app/container-app:0.18.1' = {
+module containerAppMcp 'br/public:avm/res/app/container-app:0.22.0' = {
   name: take('avm.res.app.container-app.${containerAppMcpResourceName}', 64)
   params: {
     name: containerAppMcpResourceName
@@ -1534,7 +1531,7 @@ module containerAppMcp 'br/public:avm/res/app/container-app:0.18.1' = {
 // WAF best practices for Web Application Services: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/app-service-web-apps
 // PSRule for Web Server Farm: https://azure.github.io/PSRule.Rules.Azure/en/rules/resource/#app-service
 var webServerFarmResourceName = 'asp-${solutionSuffix}'
-module webServerFarm 'br/public:avm/res/web/serverfarm:0.5.0' = {
+module webServerFarm 'br/public:avm/res/web/serverfarm:0.7.0' = {
   name: take('avm.res.web.serverfarm.${webServerFarmResourceName}', 64)
   params: {
     name: webServerFarmResourceName
@@ -1594,8 +1591,10 @@ module webSite 'modules/web-sites.bicep' = {
     ]
     diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : null
     // WAF aligned configuration for Private Networking
-    vnetRouteAllEnabled: enablePrivateNetworking ? true : false
-    vnetImagePullEnabled: enablePrivateNetworking ? true : false
+    outboundVnetRouting: enablePrivateNetworking ? {
+      applicationTraffic: true
+      imagePullTraffic: true
+    } : null
     virtualNetworkSubnetId: enablePrivateNetworking ? virtualNetwork!.outputs.webserverfarmSubnetResourceId : null
     publicNetworkAccess: 'Enabled' // Always enabling the public network access for Web App
     e2eEncryptionEnabled: true
@@ -1614,7 +1613,7 @@ param storageContainerNameRFPCompliance string = 'rfp-compliance-dataset'
 param storageContainerNameContractSummary string = 'contract-summary-dataset'
 param storageContainerNameContractRisk string = 'contract-risk-dataset'
 param storageContainerNameContractCompliance string = 'contract-compliance-dataset'
-module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
+module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.32.0' = {
   name: take('avm.res.storage.storage-account.${storageAccountName}', 64)
   params: {
     name: storageAccountName
@@ -1724,7 +1723,7 @@ var aiSearchIndexNameForRFPSummary = 'macae-rfp-summary-index'
 var aiSearchIndexNameForRFPRisk = 'macae-rfp-risk-index'
 var aiSearchIndexNameForRFPCompliance = 'macae-rfp-compliance-index'
 
-resource searchService 'Microsoft.Search/searchServices@2024-06-01-preview' = {
+resource searchService 'Microsoft.Search/searchServices@2025-05-01' = {
   name: searchServiceName
   location: location
   sku: {
@@ -1733,13 +1732,13 @@ resource searchService 'Microsoft.Search/searchServices@2024-06-01-preview' = {
 }
 
 // Separate module for Search Service to enable managed identity and update other properties, as this reduces deployment time
-module searchServiceUpdate 'br/public:avm/res/search/search-service:0.11.1' = {
+module searchServiceUpdate 'br/public:avm/res/search/search-service:0.12.0' = {
   name: take('avm.res.search.update.${solutionSuffix}', 64)
   params: {
     name: searchServiceName
     location: location
     disableLocalAuth: true
-    hostingMode: 'default'
+    hostingMode: 'Default'
     managedIdentities: {
       systemAssigned: true
     }
@@ -1825,7 +1824,7 @@ module aiSearchFoundryConnection 'modules/aifp-connections.bicep' = {
 
 // ========== KeyVault ========== //
 var keyVaultName = 'kv-${solutionSuffix}'
-module keyvault 'br/public:avm/res/key-vault/vault:0.12.1' = {
+module keyvault 'br/public:avm/res/key-vault/vault:0.13.3' = {
   name: take('avm.res.key-vault.vault.${keyVaultName}', 64)
   params: {
     name: keyVaultName
