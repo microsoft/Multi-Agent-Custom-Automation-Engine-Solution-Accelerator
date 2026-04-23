@@ -309,6 +309,19 @@ jobs:
           echo "WEBAPP_URL=$WEBAPP_URL" >> $GITHUB_ENV
           echo "WEBAPP_URL=$WEBAPP_URL" >> $GITHUB_OUTPUT
 
+      - name: Refresh Azure login # token expires for WAF deployments due to long deployment time
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Refresh AZD login # token expires for WAF deployments due to long deployment time
+        shell: bash
+        run: |
+          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          azd auth login --client-id "${{ secrets.AZURE_CLIENT_ID }}" --federated-credential-provider "github" --tenant-id "${{ secrets.AZURE_TENANT_ID }}"
+
       - name: Run Post deployment scripts
         env:
           INPUT_RESOURCE_GROUP_NAME: ${{ inputs.RESOURCE_GROUP_NAME }}
