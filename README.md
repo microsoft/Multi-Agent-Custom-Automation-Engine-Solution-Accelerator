@@ -44,6 +44,8 @@ The solution leverages Azure OpenAI Service, Azure Container Apps, Azure Cosmos 
 
 <br/>
 
+## Features
+
 ### Key features
 <details open>
   <summary>Click to learn more about the key features this solution enables</summary>
@@ -63,6 +65,8 @@ The solution leverages Azure OpenAI Service, Azure Container Apps, Azure Cosmos 
 </details>
 
 <br /><br />
+## Getting Started
+
 <h2><img src="./docs/images/readme/quick-deploy.png" width="48" />
 Quick deploy
 </h2>
@@ -87,6 +91,8 @@ Follow the quick deploy steps on the deployment guide to deploy this solution to
 
 <br/>
 
+## Guidance
+
 ### Prerequisites and Costs
 
 To deploy this solution accelerator, ensure you have access to an [Azure subscription](https://azure.microsoft.com/free/) with the necessary permissions to create **resource groups and resources**. Follow the steps in [Azure Account Set Up](./docs/AzureAccountSetUp.md).
@@ -98,6 +104,9 @@ Here are some example regions where the services are available: East US, East US
 Pricing varies per region and usage, so it isn't possible to predict exact costs for your usage. The majority of the Azure resources used in this infrastructure are on usage-based pricing tiers. However, Azure Container Registry has a fixed cost per registry per day.
 
 Use the [Azure pricing calculator](https://azure.microsoft.com/en-us/pricing/calculator) to calculate the cost of this solution in your subscription. [Review a sample pricing sheet for the architecture](https://azure.com/e/86d0eefbe4dd4a23981c1d3d4f6fe7ed).
+
+## Resources
+
 | Product | Description | Cost |
 |---|---|---|
 | [Azure OpenAI Service](https://learn.microsoft.com/azure/ai-services/openai/) | Powers the AI agents for task automation | [Pricing](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/) |
