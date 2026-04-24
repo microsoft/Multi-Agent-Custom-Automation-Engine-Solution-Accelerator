@@ -35,7 +35,7 @@ var deployerInfo = deployer()
 var deployingUserPrincipalId = deployerInfo.objectId
 
 // Restricting deployment to only supported Azure OpenAI regions validated with GPT-4o model
-@allowed(['australiaeast', 'eastus2', 'francecentral', 'japaneast', 'norwayeast', 'swedencentral', 'uksouth', 'westus'])
+@allowed(['australiaeast', 'eastus', 'eastus2', 'francecentral', 'japaneast', 'norwayeast', 'swedencentral', 'uksouth', 'westus'])
 @metadata({
   azd: {
     type: 'location'
@@ -108,6 +108,18 @@ param gpt4_1ModelCapacity int = 150
 
 @description('Optional. AI model deployment token capacity. Defaults to 50 for optimal performance.')
 param gptReasoningModelCapacity int = 50
+
+@description('Optional. Deployment name for the image generation model in Azure AI Foundry. Defaults to gpt-image-1.5-1.')
+param imageModelDeploymentName string = 'gpt-image-1.5-1'
+
+@description('Optional. Model name for the image generation model. Defaults to gpt-image-1.')
+param imageModelName string = 'gpt-image-1'
+
+@description('Optional. Version of the image generation model. Defaults to 2025-04-15.')
+param imageModelVersion string = '2025-04-15'
+
+@description('Optional. AI model deployment token capacity for image generation. Defaults to 1.')
+param imageModelCapacity int = 1
 
 @description('Optional. The tags to apply to all deployed Azure resources.')
 param tags resourceInput<'Microsoft.Resources/resourceGroups@2025-04-01'>.tags = {}
@@ -802,6 +814,17 @@ var aiFoundryAiServicesReasoningModelDeployment = {
   }
   raiPolicyName: 'Microsoft.Default'
 }
+var aiFoundryAiServicesImageModelDeployment = {
+  format: 'OpenAI'
+  name: imageModelDeploymentName
+  modelName: imageModelName
+  version: imageModelVersion
+  sku: {
+    name: 'GlobalStandard'
+    capacity: imageModelCapacity
+  }
+  raiPolicyName: 'Microsoft.Default'
+}
 var aiFoundryAiProjectDescription = 'AI Foundry Project'
 
 resource existingAiFoundryAiServices 'Microsoft.CognitiveServices/accounts@2025-06-01' existing = if (useExistingAiFoundryAiProject) {
@@ -852,6 +875,19 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
         sku: {
           name: aiFoundryAiServicesReasoningModelDeployment.sku.name
           capacity: aiFoundryAiServicesReasoningModelDeployment.sku.capacity
+        }
+      }
+      {
+        name: aiFoundryAiServicesImageModelDeployment.name
+        model: {
+          format: aiFoundryAiServicesImageModelDeployment.format
+          name: aiFoundryAiServicesImageModelDeployment.modelName
+          version: aiFoundryAiServicesImageModelDeployment.version
+        }
+        raiPolicyName: aiFoundryAiServicesImageModelDeployment.raiPolicyName
+        sku: {
+          name: aiFoundryAiServicesImageModelDeployment.sku.name
+          capacity: aiFoundryAiServicesImageModelDeployment.sku.capacity
         }
       }
     ]
@@ -927,6 +963,19 @@ module aiFoundryAiServices 'br:mcr.microsoft.com/bicep/avm/res/cognitive-service
         sku: {
           name: aiFoundryAiServicesReasoningModelDeployment.sku.name
           capacity: aiFoundryAiServicesReasoningModelDeployment.sku.capacity
+        }
+      }
+      {
+        name: aiFoundryAiServicesImageModelDeployment.name
+        model: {
+          format: aiFoundryAiServicesImageModelDeployment.format
+          name: aiFoundryAiServicesImageModelDeployment.modelName
+          version: aiFoundryAiServicesImageModelDeployment.version
+        }
+        raiPolicyName: aiFoundryAiServicesImageModelDeployment.raiPolicyName
+        sku: {
+          name: aiFoundryAiServicesImageModelDeployment.sku.name
+          capacity: aiFoundryAiServicesImageModelDeployment.sku.capacity
         }
       }
     ]
@@ -1042,6 +1091,7 @@ var aiFoundryAiProjectPrincipalId = useExistingAiFoundryAiProject
 var cosmosDbResourceName = 'cosmos-${solutionSuffix}'
 var cosmosDbDatabaseName = 'macae'
 var cosmosDbDatabaseMemoryContainerName = 'memory'
+var cosmosDbDatabaseProductImagesContainerName = 'product-images'
 
 module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
   name: take('avm.res.document-db.database-account.${cosmosDbResourceName}', 64)
@@ -1059,6 +1109,14 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.15.0' = {
             name: cosmosDbDatabaseMemoryContainerName
             paths: [
               '/session_id'
+            ]
+            kind: 'Hash'
+            version: 2
+          }
+          {
+            name: cosmosDbDatabaseProductImagesContainerName
+            paths: [
+              '/id'
             ]
             kind: 'Hash'
             version: 2
@@ -1347,6 +1405,10 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
             value: '["o3","o4-mini","gpt-4.1","gpt-4.1-mini"]'
           }
           {
+            name: 'AZURE_OPENAI_IMAGE_DEPLOYMENT_NAME'
+            value: imageModelDeploymentName
+          }
+          {
             name: 'AZURE_STORAGE_BLOB_URL'
             value: avmStorageAccount.outputs.serviceEndpoints.blob
           }
@@ -1562,6 +1624,7 @@ param storageContainerNameRFPCompliance string = 'rfp-compliance-dataset'
 param storageContainerNameContractSummary string = 'contract-summary-dataset'
 param storageContainerNameContractRisk string = 'contract-risk-dataset'
 param storageContainerNameContractCompliance string = 'contract-compliance-dataset'
+param storageContainerNameContentGenProducts string = 'content-gen-products'
 module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
   name: take('avm.res.storage.storage-account.${storageAccountName}', 64)
   params: {
@@ -1651,6 +1714,10 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
           name: storageContainerNameContractCompliance
           publicAccess: 'None'
         }
+        {
+          name: storageContainerNameContentGenProducts
+          publicAccess: 'None'
+        }
       ]
       deleteRetentionPolicyDays: 9
       deleteRetentionPolicyEnabled: true
@@ -1670,6 +1737,7 @@ var aiSearchIndexNameForRetailOrder = 'macae-retail-order-index'
 var aiSearchIndexNameForRFPSummary = 'macae-rfp-summary-index'
 var aiSearchIndexNameForRFPRisk = 'macae-rfp-risk-index'
 var aiSearchIndexNameForRFPCompliance = 'macae-rfp-compliance-index'
+var aiSearchIndexNameForContentGenProducts = 'macae-content-gen-products-index'
 
 resource searchService 'Microsoft.Search/searchServices@2024-06-01-preview' = {
   name: searchServiceName
@@ -1864,6 +1932,7 @@ output REASONING_MODEL_NAME string = aiFoundryAiServicesReasoningModelDeployment
 output MCP_SERVER_NAME string = 'MacaeMcpServer'
 output MCP_SERVER_DESCRIPTION string = 'MCP server with greeting, HR, and planning tools'
 output SUPPORTED_MODELS string = '["o3","o4-mini","gpt-4.1","gpt-4.1-mini"]'
+output AZURE_OPENAI_IMAGE_DEPLOYMENT_NAME string = aiFoundryAiServicesImageModelDeployment.name
 output BACKEND_URL string = 'https://${containerApp.outputs.fqdn}'
 output AZURE_AI_PROJECT_ENDPOINT string = aiFoundryAiProjectEndpoint
 output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiProjectEndpoint
@@ -1887,4 +1956,7 @@ output AZURE_AI_SEARCH_INDEX_NAME_RFP_COMPLIANCE string = aiSearchIndexNameForRF
 output AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_SUMMARY string = aiSearchIndexNameForContractSummary
 output AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_RISK string = aiSearchIndexNameForContractRisk
 output AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_COMPLIANCE string = aiSearchIndexNameForContractCompliance
+output AZURE_STORAGE_CONTAINER_NAME_CONTENT_GEN_PRODUCTS string = storageContainerNameContentGenProducts
+output AZURE_AI_SEARCH_INDEX_NAME_CONTENT_GEN_PRODUCTS string = aiSearchIndexNameForContentGenProducts
+output COSMOSDB_CONTAINER_PRODUCT_IMAGES string = cosmosDbDatabaseProductImagesContainerName
 

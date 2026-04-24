@@ -11,6 +11,7 @@ from common.database.database_base import DatabaseBase
 from common.models.messages_af import TeamConfiguration
 from v4.common.services.team_service import TeamService
 from v4.magentic_agents.foundry_agent import FoundryAgentTemplate
+from v4.magentic_agents.image_agent import ImageAgent
 from v4.magentic_agents.models.agent_models import MCPConfig, SearchConfig
 # from v4.magentic_agents.models.agent_models import (BingConfig, MCPConfig,
 #                                                     SearchConfig)
@@ -72,6 +73,21 @@ class MagenticAgentFactory:
         if not deployment_name and agent_obj.name.lower() == "proxyagent":
             self.logger.info("Creating ProxyAgent")
             return ProxyAgent(user_id=user_id)
+
+        # Image generation agents are handled by ImageAgent (bypass text model validation)
+        agent_type = getattr(agent_obj, "type", "") or ""
+        if agent_type.lower() == "image":
+            self.logger.info(
+                "Creating ImageAgent '%s' with deployment '%s'",
+                agent_obj.name,
+                deployment_name,
+            )
+            return ImageAgent(
+                agent_name=agent_obj.name,
+                agent_description=getattr(agent_obj, "description", ""),
+                deployment_name=deployment_name,
+                user_id=user_id,
+            )
 
         # Validate supported models
         supported_models = json.loads(config.SUPPORTED_MODELS)

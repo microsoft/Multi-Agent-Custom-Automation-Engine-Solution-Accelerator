@@ -16,6 +16,7 @@ $blobContainerForRFPCompliance = ""
 $blobContainerForContractSummary = ""
 $blobContainerForContractRisk = ""
 $blobContainerForContractCompliance = ""
+$blobContainerForContentGenProducts = ""
 $aiSearch = ""
 $aiSearchIndexForRetailCustomer = ""
 $aiSearchIndexForRetailOrder = ""
@@ -25,6 +26,10 @@ $aiSearchIndexForRFPCompliance = ""
 $aiSearchIndexForContractSummary = ""
 $aiSearchIndexForContractRisk = ""
 $aiSearchIndexForContractCompliance = ""
+$aiSearchIndexForContentGenProducts = ""
+$cosmosDbEndpoint = ""
+$cosmosDbDatabase = ""
+$cosmosDbProductImagesContainer = ""
 $azSubscriptionId = ""
 $stIsPublicAccessDisabled = $false
 $srchIsPublicAccessDisabled = $false
@@ -130,6 +135,14 @@ function Get-ValuesFromAzdEnv {
     $script:aiSearchIndexForContractSummary = $(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_SUMMARY)
     $script:aiSearchIndexForContractRisk = $(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_RISK)
     $script:aiSearchIndexForContractCompliance = $(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_COMPLIANCE)
+    $blobContainerEnvVal = $(azd env get-value AZURE_STORAGE_CONTAINER_NAME_CONTENT_GEN_PRODUCTS)
+    $script:blobContainerForContentGenProducts = if ($blobContainerEnvVal) { $blobContainerEnvVal } else { "content-gen-products" }
+    $aiSearchIndexEnvVal = $(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_CONTENT_GEN_PRODUCTS)
+    $script:aiSearchIndexForContentGenProducts = if ($aiSearchIndexEnvVal) { $aiSearchIndexEnvVal } else { "macae-content-gen-products-index" }
+    $script:cosmosDbEndpoint = $(azd env get-value COSMOSDB_ENDPOINT)
+    $script:cosmosDbDatabase = $(azd env get-value COSMOSDB_DATABASE)
+    $cosmosContainerEnvVal = $(azd env get-value COSMOSDB_CONTAINER_PRODUCT_IMAGES)
+    $script:cosmosDbProductImagesContainer = if ($cosmosContainerEnvVal) { $cosmosContainerEnvVal } else { "product-images" }
     $script:ResourceGroup = $(azd env get-value AZURE_RESOURCE_GROUP)
     
     # Validate that we got all required values
@@ -201,6 +214,11 @@ function Get-ValuesFromAzDeployment {
     $script:aiSearchIndexForContractSummary = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_INDEX_NAME_CONTRACT_SUMMARY" -FallbackKey "azureAiSearchIndexNameContractSummary"
     $script:aiSearchIndexForContractRisk = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_INDEX_NAME_CONTRACT_RISK" -FallbackKey "azureAiSearchIndexNameContractRisk"
     $script:aiSearchIndexForContractCompliance = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_INDEX_NAME_CONTRACT_COMPLIANCE" -FallbackKey "azureAiSearchIndexNameContractCompliance"
+    $script:blobContainerForContentGenProducts = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_STORAGE_CONTAINER_NAME_CONTENT_GEN_PRODUCTS" -FallbackKey "azureStorageContainerNameContentGenProducts"
+    $script:aiSearchIndexForContentGenProducts = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_INDEX_NAME_CONTENT_GEN_PRODUCTS" -FallbackKey "azureAiSearchIndexNameContentGenProducts"
+    $script:cosmosDbEndpoint = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "cosmosdB_ENDPOINT" -FallbackKey "cosmosdbEndpoint"
+    $script:cosmosDbDatabase = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "cosmosdB_DATABASE" -FallbackKey "cosmosdbDatabase"
+    $script:cosmosDbProductImagesContainer = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "cosmosdB_CONTAINER_PRODUCT_IMAGES" -FallbackKey "cosmosdbContainerProductImages"
     $script:aiSearch = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_NAME" -FallbackKey "azureAiSearchName"
     $script:backendUrl = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "backenD_URL" -FallbackKey "backendUrl"
     
@@ -266,6 +284,12 @@ function Get-ValuesUsingSolutionSuffix {
     $script:aiSearchIndexForContractRisk = "contract-risk-doc-index"
     $script:aiSearchIndexForContractCompliance = "contract-compliance-doc-index"
     
+    $script:blobContainerForContentGenProducts = "content-gen-products"
+    $script:aiSearchIndexForContentGenProducts = "macae-content-gen-products-index"
+    $script:cosmosDbEndpoint = "https://cosmos-$solutionSuffix.documents.azure.com:443/"
+    $script:cosmosDbDatabase = "macae"
+    $script:cosmosDbProductImagesContainer = "product-images"
+    
     $script:directoryPath = "data/agent_teams"
     
     # Validate that we got all critical values
@@ -280,6 +304,9 @@ function Get-ValuesUsingSolutionSuffix {
 
 # Main script execution with cleanup handling
 try {
+# Navigate to the repository root so all relative paths resolve correctly
+Push-Location (Join-Path $PSScriptRoot "../..")
+
 # Authenticate with Azure
 try {
     $null = az account show 2>$null
@@ -395,7 +422,8 @@ Write-Host "2. Retail Customer Satisfaction"
 Write-Host "3. HR Employee Onboarding"
 Write-Host "4. Marketing Press Release"
 Write-Host "5. Contract Compliance Review"
-Write-Host "6. All"
+Write-Host "6. Content Generation"
+Write-Host "7. All"
 Write-Host "==============================================="
 Write-Host ""
 
@@ -404,7 +432,7 @@ do {
     $useCaseSelection = Read-Host "Please enter the number of the use case you would like to install."
     
     # Handle both numeric and text input for 'all'
-    if ($useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
+    if ($useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
         $selectedUseCase = "All"
         $useCaseValid = $true
         Write-Host "Selected: All use cases will be installed."
@@ -439,9 +467,15 @@ do {
         Write-Host "Selected: Contract Compliance Review"
         Write-Host "Note: If you choose to install a single use case, installation of other use cases will require re-running this script."
     }
+    elseif ($useCaseSelection -eq "6") {
+        $selectedUseCase = "Content Generation"
+        $useCaseValid = $true
+        Write-Host "Selected: Content Generation"
+        Write-Host "Note: If you choose to install a single use case, installation of other use cases will require re-running this script."
+    }
     else {
         $useCaseValid = $false
-        Write-Host "Invalid selection. Please enter a number from 1-6." -ForegroundColor Red
+        Write-Host "Invalid selection. Please enter a number from 1-7." -ForegroundColor Red
     }
 } while (-not $useCaseValid)
 
@@ -526,7 +560,7 @@ $isSampleDataFailed = $false
 $failedTeamConfigs = 0
 
 # Use Case 3 -----=--
-if($useCaseSelection -eq "3" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
+if($useCaseSelection -eq "3" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
     Write-Host "Uploading Team Configuration for HR Employee Onboarding..."
     $directoryPath = "data/agent_teams"
     $teamId = "00000000-0000-0000-0000-000000000001"
@@ -545,7 +579,7 @@ if($useCaseSelection -eq "3" -or $useCaseSelection -eq "all" -or $useCaseSelecti
 }
 
 # Use Case 4 -----=--
-if($useCaseSelection -eq "4" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
+if($useCaseSelection -eq "4" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
     Write-Host "Uploading Team Configuration for Marketing Press Release..."
     $directoryPath = "data/agent_teams"
     $teamId = "00000000-0000-0000-0000-000000000002"
@@ -566,7 +600,7 @@ if($useCaseSelection -eq "4" -or $useCaseSelection -eq "all" -or $useCaseSelecti
 $stIsPublicAccessDisabled = $false
 $srchIsPublicAccessDisabled = $false
 # Enable public access for resources
-if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5"  -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6"){
+if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "6"  -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7"){
     if ($ResourceGroup) {
         # Check if resource group has Type=WAF tag
         $rgTypeTag = (az group show --name $ResourceGroup --query "tags.Type" -o tsv 2>$null)
@@ -658,7 +692,7 @@ if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection 
 
 
 
-if($useCaseSelection -eq "1" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
+if($useCaseSelection -eq "1" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
     Write-Host "Uploading Team Configuration for RFP Evaluation..."
     $directoryPath = "data/agent_teams"
     $teamId = "00000000-0000-0000-0000-000000000004"
@@ -732,7 +766,7 @@ if($useCaseSelection -eq "1" -or $useCaseSelection -eq "all" -or $useCaseSelecti
 }
 
 
-if($useCaseSelection -eq "5" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
+if($useCaseSelection -eq "5" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
     Write-Host "Uploading Team Configuration for Contract Compliance Review..."
     $directoryPath = "data/agent_teams"
     $teamId = "00000000-0000-0000-0000-000000000005"
@@ -805,7 +839,7 @@ if($useCaseSelection -eq "5" -or $useCaseSelection -eq "all" -or $useCaseSelecti
     Write-Host "Python script to index data for Contract Compliance Review successfully executed."
 }
 
-if($useCaseSelection -eq "2" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
+if($useCaseSelection -eq "2" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
     Write-Host "Uploading Team Configuration for Retail Customer Satisfaction..."
     $directoryPath = "data/agent_teams"
     $teamId = "00000000-0000-0000-0000-000000000003"
@@ -862,11 +896,62 @@ if($useCaseSelection -eq "2" -or $useCaseSelection -eq "all" -or $useCaseSelecti
     Write-Host "Python script to index data for Retail Customer Satisfaction successfully executed."
 }
 
+# Use Case 6 -----=--
+if($useCaseSelection -eq "6" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
+    Write-Host "Uploading Team Configuration for Content Generation..."
+    $directoryPath = "data/agent_teams"
+    $teamId = "00000000-0000-0000-0000-000000000006"
+    try {
+        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $directoryPath, $userPrincipalId, $teamId -Wait -NoNewWindow -PassThru
+        if ($process.ExitCode -ne 0) {
+            Write-Host "Error: Team configuration for Content Generation upload failed."
+            $isTeamConfigFailed = $true
+            $failedTeamConfigs += 1
+        }
+    } catch {
+        Write-Host "Error: Uploading team configuration failed."
+        $isTeamConfigFailed = $true
+        $failedTeamConfigs += 1
+    }
+    Write-Host "Uploaded Team Configuration for Content Generation..."
+
+    # Upload product images to CosmosDB
+    Write-Host "Uploading product images to CosmosDB for Content Generation..."
+    $imagesDirectoryPath = "data/datasets/content_gen/images"
+    $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_images_to_cosmos.py", $cosmosDbEndpoint, $cosmosDbDatabase, $cosmosDbProductImagesContainer, $imagesDirectoryPath -Wait -NoNewWindow -PassThru
+    if ($process.ExitCode -ne 0) {
+        Write-Host "Error: Failed to upload product images to CosmosDB."
+        $isSampleDataFailed = $true
+    } else {
+        Write-Host "Product images uploaded to CosmosDB successfully."
+    }
+
+    # Upload products.csv to blob storage
+    $directoryPath = "data/datasets/content_gen/data"
+    Write-Host "Uploading product data to blob storage for Content Generation..."
+    $result = az storage blob upload-batch --account-name $storageAccount --destination $blobContainerForContentGenProducts --source $directoryPath --auth-mode login --pattern "*" --overwrite --output none
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Error: Failed to upload files to blob storage."
+        $isSampleDataFailed = $true
+    } else {
+        # Run the Python script to index data
+        Write-Host "Running the python script to index data for Content Generation..."
+        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/index_datasets.py", $storageAccount, $blobContainerForContentGenProducts, $aiSearch, $aiSearchIndexForContentGenProducts -Wait -NoNewWindow -PassThru
+        if ($process.ExitCode -ne 0) {
+            Write-Host "Error: Indexing python script execution failed."
+            $isSampleDataFailed = $true
+        } else {
+            Write-Host "Python script to index data for Content Generation successfully executed."
+        }
+    }
+}
+
 if ($isTeamConfigFailed -or $isSampleDataFailed) {
     Write-Host "`nOne or more tasks failed. Please check the error messages above."
     exit 1
 } else {
-    if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6"){
+    if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "6" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7"){
         Write-Host "`nTeam configuration upload and sample data processing completed successfully."
     }else {
         Write-Host "`nTeam configuration upload completed successfully."
@@ -875,6 +960,7 @@ if ($isTeamConfigFailed -or $isSampleDataFailed) {
 }
 
 } finally {
+    Pop-Location
     # Cleanup: Restore network access
     Write-Host ""
     Restore-NetworkAccess

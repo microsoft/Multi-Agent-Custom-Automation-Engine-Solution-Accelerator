@@ -166,7 +166,8 @@ class OrchestrationManager:
                 agent=manager_agent,  # New API: pass agent instead of chat_client
                 max_round_count=orchestration_config.max_rounds,
                 max_stall_count=3,
-                max_reset_count=2
+                max_reset_count=2,
+                team_plan=getattr(team_config, "plan", "") or "",
             )
             cls.logger.info(
                 "Created HumanApprovalMagenticManager for user '%s' with max_rounds=%d",

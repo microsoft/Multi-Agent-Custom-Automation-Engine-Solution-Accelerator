@@ -91,7 +91,7 @@ class OrchestrationConfig:
         self.approvals: Dict[str, bool] = {}  # m_plan_id -> approval status (None pending)
         self.sockets: Dict[str, WebSocket] = {}  # user_id -> WebSocket
         self.clarifications: Dict[str, str] = {}  # m_plan_id -> clarification response
-        self.max_rounds: int = 20  # Maximum replanning rounds
+        self.max_rounds: int = 30  # Maximum replanning rounds
 
         # Event-driven notification system for approvals and clarifications
         self._approval_events: Dict[str, asyncio.Event] = {}

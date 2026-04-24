@@ -34,17 +34,24 @@ class HumanApprovalMagenticManager(StandardMagenticManager):
     magentic_plan: Optional[MPlan] = None
     current_user_id: str  # populated in __init__
 
-    def __init__(self, user_id: str, agent, *args, **kwargs):
+    def __init__(self, user_id: str, agent, *args, team_plan: str = "", **kwargs):
         """
         Initialize the HumanApprovalMagenticManager.
         Args:
             user_id: ID of the user to associate with this orchestration instance.
             agent: The manager ChatAgent for orchestration (required by new API).
+            team_plan: Optional workflow instructions from the team configuration's plan field.
             *args: Additional positional arguments for the parent StandardMagenticManager.
             **kwargs: Additional keyword arguments for the parent StandardMagenticManager.
         """
 
-        plan_append = """
+        plan_append = ""
+
+        # Inject team-specific workflow instructions first so the manager's plan follows them
+        if team_plan and team_plan.strip():
+            plan_append += f"\n\n## TEAM WORKFLOW INSTRUCTIONS — FOLLOW EXACTLY\n{team_plan.strip()}\n"
+
+        plan_append += """
 
 IMPORTANT: Never ask the user for information or clarification until all agents on the team have been asked first.
 

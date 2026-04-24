@@ -51,6 +51,10 @@ class AppConfig:
             "AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o"
         )
 
+        self.AZURE_OPENAI_IMAGE_DEPLOYMENT_NAME = self._get_optional(
+            "AZURE_OPENAI_IMAGE_DEPLOYMENT_NAME", "gpt-image-1.5-1"
+        )
+
         self.AZURE_OPENAI_RAI_DEPLOYMENT_NAME = self._get_required(
             "AZURE_OPENAI_RAI_DEPLOYMENT_NAME", "gpt-4.1"
         )
