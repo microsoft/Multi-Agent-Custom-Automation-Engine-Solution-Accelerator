@@ -45,11 +45,13 @@ fi
 
 # Check soft-deleted Cognitive Services accounts
 printf "Checking soft-deleted Cognitive Services accounts...\n"
-cs_output=$(az cognitiveservices account list-deleted --query "[?starts_with(name, 'aif-${SANITIZED_NAME}')].[name, location, resourceGroup, deletionDate]" -o tsv 2>/dev/null)
+cs_output=$(az cognitiveservices account list-deleted --query "[?starts_with(name, 'aif-${SANITIZED_NAME}')].[name, location, id, properties.deletionDate]" -o tsv 2>/dev/null)
 
 if [ -n "$cs_output" ]; then
-    echo "$cs_output" | while IFS='	' read -r name location rg deletion_date; do
+    echo "$cs_output" | while IFS='	' read -r name location id deletion_date; do
         if [ -n "$name" ]; then
+            # Extract resourceGroup from id: .../resourceGroups/<RG>/deletedAccounts/...
+            rg=$(echo "$id" | sed -n 's|.*/resourceGroups/\([^/]*\)/.*|\1|p')
             echo "CognitiveServices	${name}	${location}	${rg}	${deletion_date}" >> "$RESOURCE_FILE"
         fi
     done
@@ -168,13 +170,23 @@ while IFS='	' read -r type name location rg deletion_date; do
         printf "\033[0;36mPurging %s: %s (location: %s)...\033[0m\n" "$type" "$name" "$location"
 
         if [ "$type" = "KeyVault" ]; then
-            az keyvault purge --name "$name" --location "$location" 2>/dev/null
+            purge_output=$(az keyvault purge --name "$name" --location "$location" 2>&1)
+            purge_rc=$?
         elif [ "$type" = "CognitiveServices" ]; then
-            az cognitiveservices account purge --name "$name" --location "$location" --resource-group "$rg" 2>/dev/null
+            purge_output=$(az cognitiveservices account purge --name "$name" --location "$location" --resource-group "$rg" 2>&1)
+            purge_rc=$?
         fi
 
-        if [ $? -ne 0 ]; then
-            printf "\033[0;31m  Failed to purge %s. Please purge manually.\033[0m\n" "$name"
+        if [ "$purge_rc" -ne 0 ]; then
+            case "$purge_output" in
+                *"not allowed"*|*"purge protection"*)
+                    printf "\033[0;31m  Purge protection is enabled on '%s'. Cannot purge.\033[0m\n" "$name"
+                    printf "\033[1;33m  You must wait for the retention period to expire, or use a different AZURE_ENV_NAME.\033[0m\n"
+                    ;;
+                *)
+                    printf "\033[0;31m  Failed to purge %s. Error: %s\033[0m\n" "$name" "$purge_output"
+                    ;;
+            esac
             FAILED=true
         else
             printf "\033[0;32m  Successfully purged %s.\033[0m\n" "$name"

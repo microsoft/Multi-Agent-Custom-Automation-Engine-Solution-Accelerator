@@ -54,16 +54,21 @@ if ($LASTEXITCODE -eq 0 -and $kvJson -ne '[]' -and -not [string]::IsNullOrWhiteS
 
 # Check soft-deleted Cognitive Services accounts
 Write-Host "Checking soft-deleted Cognitive Services accounts..." -ForegroundColor White
-$csJson = az cognitiveservices account list-deleted --query "[?starts_with(name, 'aif-$sanitizedName')].{name:name, location:location, resourceGroup:resourceGroup, deletionDate:deletionDate}" -o json 2>&1
+$csJson = az cognitiveservices account list-deleted --query "[?starts_with(name, 'aif-$sanitizedName')].{name:name, location:location, id:id, deletionDate:properties.deletionDate}" -o json 2>&1
 if ($LASTEXITCODE -eq 0 -and $csJson -ne '[]' -and -not [string]::IsNullOrWhiteSpace($csJson)) {
     $csList = $csJson | ConvertFrom-Json
     foreach ($cs in $csList) {
+        # Extract resourceGroup from the id path: .../resourceGroups/<RG>/deletedAccounts/...
+        $rgName = ""
+        if ($cs.id -match '/resourceGroups/([^/]+)/') {
+            $rgName = $Matches[1]
+        }
         $resources += [PSCustomObject]@{
             Index        = 0
             Type         = "Cognitive Services"
             Name         = $cs.name
             Location     = $cs.location
-            ResourceGroup = $cs.resourceGroup
+            ResourceGroup = $rgName
             DeletionDate = $cs.deletionDate
         }
     }
@@ -146,14 +151,21 @@ foreach ($r in $selectedResources) {
     Write-Host "Purging $($r.Type): $($r.Name) (location: $($r.Location))..." -ForegroundColor Cyan
 
     if ($r.Type -eq "Key Vault") {
-        az keyvault purge --name $r.Name --location $r.Location 2>&1 | Out-Null
+        $purgeOutput = az keyvault purge --name $r.Name --location $r.Location 2>&1
     }
     elseif ($r.Type -eq "Cognitive Services") {
-        az cognitiveservices account purge --name $r.Name --location $r.Location --resource-group $r.ResourceGroup 2>&1 | Out-Null
+        $purgeOutput = az cognitiveservices account purge --name $r.Name --location $r.Location --resource-group $r.ResourceGroup 2>&1
     }
 
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "  Failed to purge $($r.Name). Please purge manually." -ForegroundColor Red
+        $outputStr = "$purgeOutput"
+        if ($outputStr -match "not allowed|purge protection") {
+            Write-Host "  Purge protection is enabled on '$($r.Name)'. Cannot purge." -ForegroundColor Red
+            Write-Host "  You must wait for the retention period to expire, or use a different AZURE_ENV_NAME." -ForegroundColor Yellow
+        }
+        else {
+            Write-Host "  Failed to purge $($r.Name). Error: $outputStr" -ForegroundColor Red
+        }
         $failed = $true
     }
     else {

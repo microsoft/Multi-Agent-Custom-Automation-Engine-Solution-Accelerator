@@ -47,7 +47,7 @@ Write-Host "  1. Check for soft-deleted Key Vaults:" -ForegroundColor White
 Write-Host "       az keyvault list-deleted --query `"[?starts_with(name, 'kv-$sanitizedName')].[name, properties.location, properties.deletionDate]`" -o table" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  2. Check for soft-deleted Cognitive Services accounts:" -ForegroundColor White
-Write-Host "       az cognitiveservices account list-deleted --query `"[?starts_with(name, 'aif-$sanitizedName')].[name, location, resourceGroup, deletionDate]`" -o table" -ForegroundColor Cyan
+Write-Host "       az cognitiveservices account list-deleted --query `"[?starts_with(name, 'aif-$sanitizedName')].[id, name, location, properties.deletionDate]`" -o table" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  3. If soft-deleted Key Vaults are found, purge them:" -ForegroundColor White
 Write-Host "       az keyvault purge --name <name> --location <location>" -ForegroundColor Cyan
