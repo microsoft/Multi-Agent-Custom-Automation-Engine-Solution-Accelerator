@@ -195,8 +195,9 @@ const renderAgentMessages = (
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypePrism]}
+                  urlTransform={(url: string) => url}
                   components={{
-                      a: ({ node, ...props }) => (
+                      a: ({ node: _node, ...props }) => (
                         <a
                           {...props}
                           style={{
@@ -209,6 +210,12 @@ const renderAgentMessages = (
                           onMouseLeave={(e) => {
                             e.currentTarget.style.textDecoration = 'none';
                           }}
+                        />
+                      ),
+                      img: ({ node: _imgNode, ...props }) => (
+                        <img
+                          {...props}
+                          style={{ maxWidth: '100%', borderRadius: '8px', marginTop: '8px' }}
                         />
                       )
                     }}

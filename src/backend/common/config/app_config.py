@@ -95,6 +95,12 @@ class AppConfig:
         )
         self.AZURE_AI_SEARCH_ENDPOINT = self._get_optional("AZURE_AI_SEARCH_ENDPOINT")
         self.AZURE_AI_SEARCH_API_KEY = self._get_optional("AZURE_AI_SEARCH_API_KEY")
+
+        # Storage settings
+        self.AZURE_STORAGE_BLOB_URL = self._get_optional("AZURE_STORAGE_BLOB_URL")
+        self.AZURE_STORAGE_IMAGES_CONTAINER = self._get_optional(
+            "AZURE_STORAGE_IMAGES_CONTAINER", "generated-images"
+        )
         # self.BING_CONNECTION_NAME = self._get_optional("BING_CONNECTION_NAME")
 
         test_team_json = self._get_optional("TEST_TEAM_JSON")

@@ -14,6 +14,7 @@ dependencies = [
     "azure-monitor-events-extension==0.1.0",
     "azure-monitor-opentelemetry==1.7.0",
     "azure-search-documents==11.5.3",
+    "azure-storage-blob==12.25.1",
     "fastapi==0.116.1",
     "openai==1.105.0",
     "opentelemetry-api==1.36.0",
