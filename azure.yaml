@@ -5,6 +5,54 @@ metadata:
 requiredVersions:
   azd: '>= 1.18.0 != 1.23.9'
 hooks:
+  preprovision:
+    # =======================================================================
+    # PRE-PROVISION HOOKS — Uncomment ONE option at a time (windows + posix)
+    # =======================================================================
+    #
+    # --- Option 1: Bicep Version Check (Manual) ---
+    # Shows user the minimum Bicep version requirement and steps to check/update.
+    windows:
+      run: infra/scripts/azd_scripts/check-bicep-version.ps1
+      shell: pwsh
+      interactive: true
+    posix:
+      run: infra/scripts/azd_scripts/check-bicep-version.sh
+      shell: sh
+      interactive: true
+    #
+    # --- Option 2: Bicep Version Check (Automated) ---
+    # Checks Bicep version automatically and offers to install/upgrade.
+    # windows:
+    #   run: infra/scripts/azd_scripts/ensure-bicep-version.ps1
+    #   shell: pwsh
+    #   interactive: true
+    # posix:
+    #   run: infra/scripts/azd_scripts/ensure-bicep-version.sh
+    #   shell: sh
+    #   interactive: true
+    #
+    # --- Option 3: Soft-Delete Check (Manual) ---
+    # Shows user steps to check and purge soft-deleted Key Vault / Cognitive Services.
+    # windows:
+    #   run: infra/scripts/azd_scripts/check-soft-delete.ps1
+    #   shell: pwsh
+    #   interactive: true
+    # posix:
+    #   run: infra/scripts/azd_scripts/check-soft-delete.sh
+    #   shell: sh
+    #   interactive: true
+    #
+    # --- Option 4: Soft-Delete Check (Automated) ---
+    # Detects soft-deleted resources and offers to purge them.
+    # windows:
+    #   run: infra/scripts/azd_scripts/ensure-soft-delete.ps1
+    #   shell: pwsh
+    #   interactive: true
+    # posix:
+    #   run: infra/scripts/azd_scripts/ensure-soft-delete.sh
+    #   shell: sh
+    #   interactive: true
   postdeploy:
     windows:
       run: |
