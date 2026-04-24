@@ -463,6 +463,7 @@ if [[ -n "$solutionSuffix" ]]; then
         --query "properties.configuration.ingress.external" -o tsv 2>/dev/null)
     hasIpRestrictions=$(az containerapp show --name "$containerAppName" --resource-group "$ResourceGroup" \
         --query "length(properties.configuration.ingress.ipSecurityRestrictions || \`[]\`)" -o tsv 2>/dev/null)
+    hasIpRestrictions=${hasIpRestrictions:-0}
     proxyEnabled=$(az webapp config appsettings list --name "app-${solutionSuffix}" --resource-group "$ResourceGroup" \
         --query "[?name=='PROXY_API_REQUESTS'].value" -o tsv 2>/dev/null)
     if [[ "$isExternal" == "false" ]] || [[ "$hasIpRestrictions" -gt 0 ]] || [[ "$proxyEnabled" == "true" ]]; then
