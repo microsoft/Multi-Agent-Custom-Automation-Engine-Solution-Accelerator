@@ -25,6 +25,17 @@ import "../styles/PlanPage.css"
 // Create API service instance
 const apiService = new APIService();
 
+const formatElapsedTime = (totalSeconds: number): string => {
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    if (minutes <= 0) {
+        return `${seconds}sec`;
+    }
+
+    return `${minutes}min ${seconds}sec`;
+};
+
 /**
  * Page component for displaying a specific plan
  * Accessible via the route /plan/{plan_id}
@@ -54,6 +65,7 @@ const PlanPage: React.FC = () => {
     const [streamingMessageBuffer, setStreamingMessageBuffer] = useState<string>("");
     const [showBufferingText, setShowBufferingText] = useState<boolean>(false);
     const [agentMessages, setAgentMessages] = useState<AgentMessageData[]>([]);
+    const taskExecutionStartRef = useRef<number | null>(null);
     const formatErrorMessage = useCallback((content: string): string => {
         // Split content by newlines and add proper indentation
         const lines = content.split('\n');
@@ -191,6 +203,7 @@ const PlanPage: React.FC = () => {
         setStreamingMessageBuffer("");
         setShowBufferingText(false);
         setAgentMessages([]);
+        taskExecutionStartRef.current = null;
     }, [
         setInput,
         setPlanData,
@@ -224,6 +237,12 @@ const PlanPage: React.FC = () => {
             }
         }, 100);
     }, []);
+
+    useEffect(() => {
+        if (showProcessingPlanSpinner && taskExecutionStartRef.current === null) {
+            taskExecutionStartRef.current = Date.now();
+        }
+    }, [showProcessingPlanSpinner]);
 
 
     //WebsocketMessageType.PLAN_APPROVAL_REQUEST
@@ -336,26 +355,38 @@ const PlanPage: React.FC = () => {
                 console.warn('⚠️ Final result message missing data:', finalMessage);
                 return;
             }
+
+            const finalPayload = finalMessage?.data ?? finalMessage;
+            const elapsedSeconds = taskExecutionStartRef.current
+                ? Math.max(0, Math.round((Date.now() - taskExecutionStartRef.current) / 1000))
+                : null;
+            const completionTimeText = elapsedSeconds !== null
+                ? `Total completion time: ${formatElapsedTime(elapsedSeconds)}`
+                : '';
             const agentMessageData = {
                 agent: AgentType.GROUP_CHAT_MANAGER,
                 agent_type: AgentMessageType.AI_AGENT,
                 timestamp: Date.now(),
                 steps: [],   // intentionally always empty
                 next_steps: [],  // intentionally always empty
-                content: "🎉🎉 " + (finalMessage.data?.content || ''),
+                content:
+                    "🎉🎉 " +
+                    (completionTimeText ? `${completionTimeText}\n\n` : '') +
+                    (finalPayload?.content || ''),
                 raw_data: finalMessage,
             } as AgentMessageData;
 
 
             console.log('✅ Parsed final result message:', agentMessageData);
             // we ignore the terminated message 
-            if (finalMessage?.data?.status === PlanStatus.COMPLETED) {
+            if (finalPayload?.status === PlanStatus.COMPLETED || finalPayload?.status === "completed") {
 
                 setShowBufferingText(true);
                 setShowProcessingPlanSpinner(false);
                 setAgentMessages(prev => [...prev, agentMessageData]);
                 setSelectedTeam(planData?.team || null);
                 scrollToBottom();
+                taskExecutionStartRef.current = null;
                 // Persist the agent message
                 const is_final = true;
                 if (planData?.plan) {

@@ -1,6 +1,17 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Spinner } from "@fluentui/react-components";
 
+const formatElapsedTime = (totalSeconds: number): string => {
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    if (minutes <= 0) {
+        return `${seconds}sec`;
+    }
+
+    return `${minutes}min ${seconds}sec`;
+};
+
 // Simple thinking message to show while creating plan
 const renderThinkingState = (waitingForPlan: boolean) => {
     if (!waitingForPlan) return null;
@@ -83,7 +94,7 @@ const PlanExecutionMessage: React.FC = () => {
         stageMessage = 'Finalizing responses...';
     }
 
-    const elapsedSuffix = elapsed > 0 ? ` (${elapsed}s)` : '';
+    const elapsedSuffix = elapsed > 0 ? ` (${formatElapsedTime(elapsed)})` : '';
 
     return (
         <div style={{
