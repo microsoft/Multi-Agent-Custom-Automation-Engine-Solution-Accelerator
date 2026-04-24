@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import base64
 import logging
 import uuid
 from typing import Any, AsyncIterable, Awaitable
 
+import aiohttp
 from agent_framework import (
     AgentResponse,
     AgentResponseUpdate,
@@ -17,7 +19,8 @@ from agent_framework import (
 )
 from agent_framework._types import ResponseStream
 from azure.identity import get_bearer_token_provider
-from openai import AsyncAzureOpenAI
+from azure.storage.blob.aio import BlobServiceClient as AsyncBlobServiceClient
+from azure.storage.blob import ContentSettings
 
 from common.config.app_config import config
 from v4.config.settings import connection_config
@@ -27,6 +30,40 @@ logger = logging.getLogger(__name__)
 
 # API version required for gpt-image-1
 _IMAGE_API_VERSION = "2025-04-01-preview"
+
+
+async def _upload_image_to_blob(png_bytes: bytes, image_id: str) -> str | None:
+    """
+    Upload PNG bytes to Azure Blob Storage and return the blob path (not a public URL).
+    Returns the blob name on success, None on failure.
+    """
+    blob_url = config.AZURE_STORAGE_BLOB_URL
+    container = config.AZURE_STORAGE_IMAGES_CONTAINER
+    if not blob_url:
+        logger.warning("AZURE_STORAGE_BLOB_URL not configured; skipping blob upload")
+        return None
+    try:
+        credential = config.get_azure_credential(config.AZURE_CLIENT_ID)
+        async with AsyncBlobServiceClient(account_url=blob_url.rstrip("/"), credential=credential) as blob_service:
+            container_client = blob_service.get_container_client(container)
+            # Create container if it doesn't exist
+            try:
+                await container_client.create_container()
+                logger.info("Created blob container '%s'", container)
+            except Exception:
+                pass  # Already exists
+            blob_name = f"{image_id}.png"
+            blob_client = container_client.get_blob_client(blob_name)
+            await blob_client.upload_blob(
+                png_bytes,
+                overwrite=True,
+                content_settings=ContentSettings(content_type="image/png"),
+            )
+        logger.info("Uploaded image '%s' to blob container '%s'", blob_name, container)
+        return blob_name
+    except Exception as exc:
+        logger.error("Failed to upload image to blob: %s", exc)
+        return None
 
 
 class ImageAgent(BaseAgent):
@@ -50,21 +87,18 @@ class ImageAgent(BaseAgent):
         self.agent_name = agent_name
         self.deployment_name = deployment_name
         self.user_id = user_id or ""
-        self._openai_client: AsyncAzureOpenAI | None = None
+        self._token_provider = get_bearer_token_provider(
+            config.get_azure_credential(config.AZURE_CLIENT_ID),
+            "https://cognitiveservices.azure.com/.default",
+        )
 
-    def _get_client(self) -> AsyncAzureOpenAI:
-        """Lazily create and cache the Azure OpenAI async client."""
-        if self._openai_client is None:
-            token_provider = get_bearer_token_provider(
-                config.get_azure_credential(config.AZURE_CLIENT_ID),
-                "https://cognitiveservices.azure.com/.default",
-            )
-            self._openai_client = AsyncAzureOpenAI(
-                azure_endpoint=config.AZURE_OPENAI_ENDPOINT,
-                azure_ad_token_provider=token_provider,
-                api_version=_IMAGE_API_VERSION,
-            )
-        return self._openai_client
+    def _get_image_url(self) -> str:
+        """Build the Azure OpenAI images/generations URL for this deployment."""
+        endpoint = config.AZURE_OPENAI_ENDPOINT.rstrip("/")
+        return (
+            f"{endpoint}/openai/deployments/{self.deployment_name}"
+            f"/images/generations?api-version={_IMAGE_API_VERSION}"
+        )
 
     def create_session(self, *, session_id: str | None = None, **kwargs: Any) -> AgentSession:
         return AgentSession(session_id=session_id, **kwargs)
@@ -111,18 +145,25 @@ class ImageAgent(BaseAgent):
         )
 
         try:
-            client = self._get_client()
-            result = await client.images.generate(
-                model=self.deployment_name,
-                prompt=prompt,
-                n=1,
-                size="1024x1024",
-                response_format="b64_json",
-            )
+            token = self._token_provider()
+            headers = {
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+            }
+            body = {"prompt": prompt, "n": 1, "size": "1024x1024"}
 
-            b64_data = result.data[0].b64_json
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    self._get_image_url(), json=body, headers=headers
+                ) as resp:
+                    if not resp.ok:
+                        error_text = await resp.text()
+                        raise ValueError(f"Error code: {resp.status} - {error_text}")
+                    result_json = await resp.json()
+
+            b64_data = result_json["data"][0].get("b64_json") or result_json["data"][0].get("b64")
             if not b64_data:
-                raise ValueError("Image generation returned empty b64_json")
+                raise ValueError(f"Image generation returned no b64 data. Response: {result_json}")
 
             logger.info(
                 "ImageAgent '%s': image generated successfully (%d base64 chars)",
@@ -130,18 +171,36 @@ class ImageAgent(BaseAgent):
                 len(b64_data),
             )
 
-            # Send the image DIRECTLY to the user via WebSocket.
-            # The base64 string is ~100K tokens — far too large to pass back through
-            # the agent conversation context (the manager LLM would hit its context window).
-            # By pushing it straight to the WebSocket we guarantee the user sees the image
-            # while the orchestrator only receives a short acknowledgement.
-            image_markdown = f"![Generated Marketing Image](data:image/png;base64,{b64_data})"
+            # Upload to blob and send a backend proxy URL instead of raw base64
+            image_id = str(uuid.uuid4())
+            png_bytes = base64.b64decode(b64_data)
+            blob_name = await _upload_image_to_blob(png_bytes, image_id)
+
+            if blob_name:
+                backend_url = config.FRONTEND_SITE_NAME.replace(
+                    config.FRONTEND_SITE_NAME,
+                    (config.FRONTEND_SITE_NAME or "").rstrip("/"),
+                )
+                # Build the image URL pointing at the backend proxy endpoint
+                backend_base = (config.AZURE_AI_AGENT_ENDPOINT or "").rstrip("/")
+                # Use BACKEND_URL env var if available, fall back to deriving from endpoint
+                import os
+                backend_origin = os.environ.get("BACKEND_URL", "").rstrip("/")
+                if not backend_origin:
+                    backend_origin = backend_base
+                image_src = f"{backend_origin}/api/v4/images/{blob_name}"
+                image_content = f"![Generated Marketing Image]({image_src})"
+            else:
+                # Fallback: embed base64 directly
+                image_content = f"![Generated Marketing Image](data:image/png;base64,{b64_data})"
+
+            # Send the image URL to the user via WebSocket.
             if self.user_id:
                 try:
                     img_msg = AgentMessage(
                         agent_name=self.agent_name,
                         timestamp=str(__import__("time").time()),
-                        content=image_markdown,
+                        content=image_content,
                     )
                     await connection_config.send_status_update_async(
                         img_msg,

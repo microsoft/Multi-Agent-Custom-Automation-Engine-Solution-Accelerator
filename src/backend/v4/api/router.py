@@ -17,6 +17,7 @@ from common.models.messages_af import (
     TeamSelectionRequest,
 )
 from common.utils.event_utils import track_event_if_configured
+from common.config.app_config import config
 from common.utils.utils_af import (
     find_first_available_team,
     rai_success,
@@ -1522,3 +1523,30 @@ async def get_plan_by_id(
     except Exception as e:
         logging.error(f"Error retrieving plan: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error occurred")
+
+@app_v4.get("/images/{blob_name:path}")
+async def get_generated_image(blob_name: str):
+    """Proxy a generated image from Azure Blob Storage."""
+    from fastapi.responses import Response
+    from azure.storage.blob import BlobServiceClient
+
+    blob_url = config.AZURE_STORAGE_BLOB_URL
+    container = config.AZURE_STORAGE_IMAGES_CONTAINER
+    if not blob_url:
+        raise HTTPException(status_code=503, detail="Image storage not configured")
+
+    # Validate blob_name to prevent path traversal
+    import re
+    if not re.match(r'^[\w\-]+\.png$', blob_name):
+        raise HTTPException(status_code=400, detail="Invalid image name")
+
+    try:
+        credential = config.get_azure_credential(config.AZURE_CLIENT_ID)
+        blob_service = BlobServiceClient(account_url=blob_url.rstrip("/"), credential=credential)
+        blob_client = blob_service.get_blob_client(container=container, blob=blob_name)
+        stream = blob_client.download_blob()
+        data = stream.readall()
+        return Response(content=data, media_type="image/png")
+    except Exception as exc:
+        logging.error(f"Error retrieving image '{blob_name}': {exc}")
+        raise HTTPException(status_code=404, detail="Image not found")
