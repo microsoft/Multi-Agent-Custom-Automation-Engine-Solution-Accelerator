@@ -9,12 +9,12 @@ hooks:
   preprovision:
     windows:
       shell: pwsh
-      run: ./infra/scripts/precheck.ps1
+      run: ./scripts/precheck.ps1
       interactive: true
       continueOnError: false
     posix:
       shell: sh
-      run: bash ./infra/scripts/precheck.sh
+      run: bash ./scripts/precheck.sh
       interactive: true
       continueOnError: false
   postdeploy:
