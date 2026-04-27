@@ -4,7 +4,7 @@ azure-cosmos==4.9.0
 azure-monitor-opentelemetry==1.8.5
 azure-monitor-events-extension==0.1.0
 azure-identity==1.24.0
-python-dotenv==1.1.1
+python-dotenv==1.2.2
 python-multipart==0.0.26
 opentelemetry-api==1.39.0
 opentelemetry-sdk==1.39.0
