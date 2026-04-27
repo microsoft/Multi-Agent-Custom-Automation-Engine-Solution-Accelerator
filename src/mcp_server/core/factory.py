@@ -19,6 +19,7 @@ class Domain(Enum):
     RETAIL = "retail"
     GENERAL = "general"
     DATA = "data"
+    IMAGE = "image"
 
 
 class MCPToolBase(ABC):

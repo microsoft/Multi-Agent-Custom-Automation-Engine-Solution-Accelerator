@@ -36,6 +36,13 @@ class MCPServerConfig(BaseSettings):
     # Dataset path - added to handle the environment variable
     dataset_path: str = Field(default="./datasets")
 
+    # Image-generation settings (used by ImageService)
+    azure_openai_endpoint: Optional[str] = Field(default=None)
+    azure_openai_image_deployment: str = Field(default="gpt-5-mini")
+    azure_storage_blob_url: Optional[str] = Field(default=None)
+    azure_storage_images_container: str = Field(default="generated-images")
+    azure_client_id: Optional[str] = Field(default=None)
+
 
 # Global configuration instance
 config = MCPServerConfig()
