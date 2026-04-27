@@ -22,7 +22,7 @@ This document provides step-by-step instructions to configure Azure App Registra
 ![Add Provider](./images/azure-app-service-auth-setup/AppAuthIdentityProvider.png)
 
 4. Select the first option `Microsoft Entra Id` from the drop-down list and select `client secret expiration` under App registration.
-> NOTE: If `Create new app registration` is disabled, then go to [Create new app registration](/docs/create_new_app_registration.md) and come back to this step to complete the app authentication.
+> NOTE: If `Create new app registration` is disabled, then go to [Create new app registration](create_new_app_registration.md) and come back to this step to complete the app authentication.
 
 ![Add Provider](./images/azure-app-service-auth-setup/AppAuthIdentityProviderAdd.png)
 

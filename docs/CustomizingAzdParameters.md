@@ -10,11 +10,11 @@ By default this template will use the environment name as the prefix to prevent 
 | ------------------------------- | ------ | ----------------- | --------------------------------------------------------------------------------------------------- |
 | `AZURE_ENV_NAME`                | string | `macae`           | Used as a prefix for all resource names to ensure uniqueness across environments.                   |
 | `AZURE_LOCATION`                | string | `<User selects during deployment>`   | Location of the Azure resources. Controls where the infrastructure will be deployed.                |
-| `AZURE_ENV_OPENAI_LOCATION`     | string | `<User selects during deployment>`   | Specifies the region for OpenAI resource deployment.                                                |
+| `AZURE_ENV_AI_SERVICE_LOCATION`     | string | `<User selects during deployment>`   | Specifies the region for OpenAI resource deployment.                                                |
 | `AZURE_ENV_MODEL_DEPLOYMENT_TYPE` | string | `GlobalStandard` | Defines the deployment type for the AI model (e.g., Standard, GlobalStandard).                     |
-| `AZURE_ENV_MODEL_NAME`          | string | `gpt-4.1-mini`          | Specifies the name of the GPT model to be deployed.                                                |
-| `AZURE_ENV_MODEL_VERSION`       | string | `2025-04-14`      | Version of the GPT model to be used for deployment.                                                |
-| `AZURE_ENV_MODEL_CAPACITY`       | int | `50`      | Sets the GPT model capacity.                                                |
+| `AZURE_ENV_GPT_MODEL_NAME`          | string | `gpt-4.1-mini`          | Specifies the name of the GPT model to be deployed.                                                |
+| `AZURE_ENV_GPT_MODEL_VERSION`       | string | `2025-04-14`      | Version of the GPT model to be used for deployment.                                                |
+| `AZURE_ENV_GPT_MODEL_CAPACITY`       | int | `50`      | Sets the GPT model capacity.                                                |
 | `AZURE_ENV_MODEL_4_1_DEPLOYMENT_TYPE` | string | `GlobalStandard` | Defines the deployment type for the AI model (e.g., Standard, GlobalStandard).                     |
 | `AZURE_ENV_MODEL_4_1_NAME`          | string | `gpt-4.1`          | Specifies the name of the GPT model to be deployed.                                                |
 | `AZURE_ENV_MODEL_4_1_VERSION`       | string | `2025-04-14`      | Version of the GPT model to be used for deployment.                                                |
@@ -25,8 +25,8 @@ By default this template will use the environment name as the prefix to prevent 
 | `AZURE_ENV_REASONING_MODEL_CAPACITY`       | int | `50`      | Sets the reasoning GPT model capacity.                                                |
 | `AZURE_ENV_IMAGETAG`            | string | `latest_v3`          | Docker image tag used for container deployments.                                                   |
 | `AZURE_ENV_ENABLE_TELEMETRY`    | bool   | `true`            | Enables telemetry for monitoring and diagnostics.                                                  |
-| `AZURE_EXISTING_AI_PROJECT_RESOURCE_ID`          | string | `<Existing Workspace Id>`          | Set this if you want to reuse an AI Foundry Project instead of creating a new one.                                                |       
-| `AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID` | string  | Guide to get your [Existing Workspace ID](/docs/re-use-log-analytics.md) | Set this if you want to reuse an existing Log Analytics Workspace instead of creating a new one.     |
+| `AZURE_EXISTING_AIPROJECT_RESOURCE_ID`          | string | `<Existing Workspace Id>`          | Set this if you want to reuse an AI Foundry Project instead of creating a new one.                                                |       
+| `AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID` | string  | Guide to get your [Existing Workspace ID](re-use-log-analytics.md) | Set this if you want to reuse an existing Log Analytics Workspace instead of creating a new one.     |
 | `AZURE_ENV_VM_ADMIN_USERNAME`  | string | `take(newGuid(), 20)`               | The administrator username for the virtual machine.         |
 | `AZURE_ENV_VM_ADMIN_PASSWORD`  | string | `newGuid()`               | The administrator password for the virtual machine.         |
 | `AZURE_ENV_VM_SIZE`  | string | `Standard_D2s_v5`               | The size of the virtual machine deployed with private networking.         |
@@ -43,7 +43,7 @@ azd env set <PARAMETER_NAME> <VALUE>
 
 Set the Log Analytics Workspace Id if you need to reuse the existing workspace which is already existing
 ```shell
-azd env set AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID '/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.OperationalInsights/workspaces/<workspace-name>'
+azd env set AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID '/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.OperationalInsights/workspaces/<workspace-name>'
 ```
 
 **Example:**
