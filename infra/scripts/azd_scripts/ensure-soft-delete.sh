@@ -23,6 +23,14 @@ printf "\033[1;33m==============================================================
 printf "\033[0;32m SOFT-DELETE RESOURCE CHECK\n"
 printf "\033[1;33m===============================================================\033[0m\n"
 printf "\n"
+
+# Check if user is logged in to Azure CLI
+if ! az account show > /dev/null 2>&1; then
+    printf "\033[0;31mYou are not logged in to Azure CLI.\033[0m\n"
+    printf "\033[1;33mPlease run 'az login' before deploying.\033[0m\n"
+    exit 1
+fi
+
 printf "\033[0;36mChecking for soft-deleted resources that may conflict with deployment...\033[0m\n"
 printf "\n"
 

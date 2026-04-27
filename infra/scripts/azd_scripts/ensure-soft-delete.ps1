@@ -29,6 +29,15 @@ Write-Host "===============================================================" -Fo
 Write-Host " SOFT-DELETE RESOURCE CHECK" -ForegroundColor Green
 Write-Host "===============================================================" -ForegroundColor Yellow
 Write-Host ""
+
+# Check if user is logged in to Azure CLI
+az account show 2>&1 | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "You are not logged in to Azure CLI." -ForegroundColor Red
+    Write-Host "Please run 'az login' before deploying." -ForegroundColor Yellow
+    exit 1
+}
+
 Write-Host "Checking for soft-deleted resources that may conflict with deployment..." -ForegroundColor Cyan
 Write-Host ""
 
