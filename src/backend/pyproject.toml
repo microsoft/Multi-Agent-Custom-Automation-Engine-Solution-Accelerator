@@ -21,7 +21,7 @@ dependencies = [
     "opentelemetry-instrumentation-fastapi==0.60b0",
     "opentelemetry-instrumentation-openai==0.46.2",
     "opentelemetry-sdk==1.39.0",
-    "python-dotenv==1.1.1",
+    "python-dotenv==1.2.2",
     "python-multipart==0.0.26",
     "uvicorn==0.35.0",
     "pylint-pydantic==0.3.5",
