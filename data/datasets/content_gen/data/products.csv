@@ -1,0 +1,13 @@
+id,sku,product_name,description,tags,price,category,image_url,image_description
+CP-0001,CP-0001,Snow Veil,"A soft, airy white with minimal undertones that brightens any room with a clean, serene finish.","soft white, airy, minimal, clean, bright",45.99,Paint,,
+CP-0002,CP-0002,Cloud Drift,"A pale blue-grey that evokes calm overcast skies, perfect for creating a peaceful, restful atmosphere.","blue-grey, calm, restful, cool, peaceful",47.99,Paint,,
+CP-0003,CP-0003,Ember Glow,"A warm terracotta-orange inspired by the last light of sunset, adding energy and warmth to living spaces.","terracotta, warm, orange, sunset, earthy",49.99,Paint,,
+CP-0004,CP-0004,Forest Canopy,"A deep, rich green that brings the outside in, evoking lush woodland and natural tranquillity.","deep green, forest, natural, rich, earthy",51.99,Paint,,
+CP-0005,CP-0005,Dusk Mauve,"A dusty rose-purple twilight tone that adds sophistication and a touch of romance to any space.","mauve, rose, purple, dusty, sophisticated",47.99,Paint,,
+CP-0006,CP-0006,Stone Harbour,"A mid-tone warm grey with subtle sandy undertones, ideal for contemporary coastal interiors.","grey, warm, sandy, coastal, contemporary",45.99,Paint,,
+CP-0007,CP-0007,Midnight Ink,"A near-black navy blue with depth and drama, making a bold statement as an accent or feature wall.","navy, dark, dramatic, bold, deep blue",53.99,Paint,,
+CP-0008,CP-0008,Buttercream,"A soft, warm off-white with gentle yellow undertones, creating a cosy and welcoming feel.","off-white, warm, yellow undertone, cosy, welcoming",45.99,Paint,,
+CP-0009,CP-0009,Sage Mist,"A muted, greyish sage green that pairs beautifully with natural wood tones and linen textures.","sage, muted green, grey-green, natural, linen",49.99,Paint,,
+CP-0010,CP-0010,Copper Clay,"A rich, burnished clay tone with copper warmth, inspired by artisan ceramics and desert landscapes.","clay, copper, warm, earthy, artisan",51.99,Paint,,
+CP-0011,CP-0011,Arctic Haze,"A frosty cool white with the faintest hint of blue, reflecting light beautifully in north-facing rooms.","cool white, icy, frosty, blue-tinted, light-reflecting",45.99,Paint,,
+CP-0012,CP-0012,Rosewood Blush,"A warm, dusty pink with rosewood depth, bringing femininity and warmth without being overpowering.","pink, dusty, rosewood, warm, blush",47.99,Paint,,
