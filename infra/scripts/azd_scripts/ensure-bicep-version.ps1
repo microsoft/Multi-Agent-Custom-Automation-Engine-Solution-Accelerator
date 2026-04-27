@@ -72,8 +72,12 @@ if (-not $bicepInstalled -or [string]::IsNullOrWhiteSpace($bicepVersionOutput)) 
     }
 }
 
-# Parse version from output like "Bicep CLI version 0.33.93 (1933ecab67)"
-$versionMatch = [regex]::Match($bicepVersionOutput, '(\d+\.\d+\.\d+)')
+# Parse version from the "Bicep CLI version X.Y.Z" line (ignore upgrade notice line)
+$versionLine = ($bicepVersionOutput -split "`n" | Where-Object { $_ -match 'Bicep CLI version' }) | Select-Object -First 1
+if (-not $versionLine) {
+    $versionLine = $bicepVersionOutput
+}
+$versionMatch = [regex]::Match($versionLine, '(\d+\.\d+\.\d+)')
 if (-not $versionMatch.Success) {
     Write-Host "Could not parse Bicep version from output: $bicepVersionOutput" -ForegroundColor Red
     Write-Host "Please check your Bicep installation manually." -ForegroundColor Yellow

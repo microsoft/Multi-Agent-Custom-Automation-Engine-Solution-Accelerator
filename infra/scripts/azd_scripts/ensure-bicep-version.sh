@@ -65,8 +65,8 @@ if [ $bicep_exit_code -ne 0 ] || [ -z "$bicep_output" ]; then
     done
 fi
 
-# Parse version from output like "Bicep CLI version 0.33.93 (1933ecab67)"
-current_version=$(echo "$bicep_output" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+# Parse version from the "Bicep CLI version X.Y.Z" line (ignore upgrade notice line)
+current_version=$(echo "$bicep_output" | grep 'Bicep CLI version' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
 
 if [ -z "$current_version" ]; then
     printf "\033[0;31mCould not parse Bicep version from output: %s\033[0m\n" "$bicep_output"
