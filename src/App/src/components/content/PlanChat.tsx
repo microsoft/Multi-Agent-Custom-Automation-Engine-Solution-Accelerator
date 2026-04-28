@@ -20,6 +20,8 @@ interface SimplifiedPlanChatProps extends PlanChatProps {
   showBufferingText: boolean;
   agentMessages: AgentMessageData[];
   showProcessingPlanSpinner: boolean;
+  processingElapsedSeconds: number;
+  processingStatusMessage: string;
   showApprovalButtons: boolean;
   handleApprovePlan: () => Promise<void>;
   handleRejectPlan: () => Promise<void>;
@@ -43,6 +45,8 @@ const PlanChat: React.FC<SimplifiedPlanChatProps> = ({
   showBufferingText,
   agentMessages,
   showProcessingPlanSpinner,
+  processingElapsedSeconds,
+  processingStatusMessage,
   showApprovalButtons,
   handleApprovePlan,
   handleRejectPlan,
@@ -84,7 +88,7 @@ const PlanChat: React.FC<SimplifiedPlanChatProps> = ({
         {renderPlanResponse(planApprovalRequest, handleApprovePlan, handleRejectPlan, processingApproval, showApprovalButtons)}
         {renderAgentMessages(agentMessages)}
 
-        {showProcessingPlanSpinner && renderPlanExecutionMessage()}
+        {showProcessingPlanSpinner && renderPlanExecutionMessage(processingElapsedSeconds, processingStatusMessage)}
         {/* Streaming plan updates */}
         {showBufferingText && (
           <StreamingBufferMessage

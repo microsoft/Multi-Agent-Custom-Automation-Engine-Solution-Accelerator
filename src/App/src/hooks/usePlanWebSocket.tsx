@@ -15,6 +15,7 @@ import {
     selectPlanData,
     selectContinueWithWebsocketFlow,
     selectPlanApproved,
+    selectShowProcessingPlanSpinner,
     approvalRequestReceived,
     planCompletedFinal,
 } from '@/store/slices/planSlice';
@@ -43,10 +44,9 @@ import {
     ProcessedPlanData,
 } from '@/models';
 import { APIService } from '@/api/apiService';
+import { ToastIntent } from '@/components/toast/InlineToaster';
 
 const apiService = new APIService();
-
-import { ToastIntent } from '@/components/toast/InlineToaster';
 
 interface UsePlanWebSocketProps {
     planId: string | undefined;
@@ -54,6 +54,16 @@ interface UsePlanWebSocketProps {
     formatErrorMessage: (content: string) => string;
     showToast: (content: React.ReactNode, intent?: ToastIntent, options?: { dismissible?: boolean; timeoutMs?: number | null }) => number;
 }
+
+const formatElapsedTime = (elapsedSeconds: number): string => {
+    if (elapsedSeconds < 60) {
+        return `${elapsedSeconds}s`;
+    }
+
+    const minutes = Math.floor(elapsedSeconds / 60);
+    const seconds = elapsedSeconds % 60;
+    return `${minutes}min ${seconds}sec`;
+};
 
 /**
  * Creates an AgentMessageResponse and persists it, then optionally reloads the task list.
@@ -96,8 +106,16 @@ export function usePlanWebSocket({
     const dispatch = useAppDispatch();
     const planData = useAppSelector(selectPlanData);
     const planApproved = useAppSelector(selectPlanApproved);
+    const showProcessingPlanSpinner = useAppSelector(selectShowProcessingPlanSpinner);
     const continueWithWebsocketFlow = useAppSelector(selectContinueWithWebsocketFlow);
     const streamingMessageBuffer = useAppSelector(selectStreamingMessageBuffer);
+    const processingStartedAtRef = React.useRef<number | null>(null);
+
+    useEffect(() => {
+        if (showProcessingPlanSpinner && processingStartedAtRef.current === null) {
+            processingStartedAtRef.current = Date.now();
+        }
+    }, [showProcessingPlanSpinner]);
 
     // ── PLAN_APPROVAL_REQUEST ─────────────────────────────────────
     useEffect(() => {
@@ -132,6 +150,7 @@ export function usePlanWebSocket({
             WebsocketMessageType.AGENT_MESSAGE_STREAMING,
             (msg: any) => {
                 const line = PlanDataService.simplifyHumanClarification(msg.data.content);
+                dispatch(setShowProcessingPlanSpinner(false));
                 dispatch(setShowBufferingText(true));
                 dispatch(appendToStreamingBuffer(line));
             },
@@ -158,6 +177,7 @@ export function usePlanWebSocket({
                 dispatch(addAgentMessage(agentMessageData));
                 dispatch(setShowBufferingText(false));
                 dispatch(setShowProcessingPlanSpinner(false));
+                processingStartedAtRef.current = null;
                 dispatch(setSubmittingChatDisableInput(false));
                 scrollToBottom();
                 persistAgentMessage(agentMessageData, planData, dispatch);
@@ -178,13 +198,20 @@ export function usePlanWebSocket({
             WebsocketMessageType.FINAL_RESULT_MESSAGE,
             (finalMessage: any) => {
                 if (!finalMessage) return;
+                const completionElapsedSeconds = processingStartedAtRef.current
+                    ? Math.max(Math.round((Date.now() - processingStartedAtRef.current) / 1000), 0)
+                    : null;
+                const completionTimeLine = completionElapsedSeconds !== null
+                    ? `\n\nTotal completion time: ${formatElapsedTime(completionElapsedSeconds)}`
+                    : '';
+
                 const agentMessageData: AgentMessageData = {
                     agent: AgentType.GROUP_CHAT_MANAGER,
                     agent_type: AgentMessageType.AI_AGENT,
                     timestamp: Date.now(),
                     steps: [],
                     next_steps: [],
-                    content: '\u{1F389}\u{1F389} ' + (finalMessage.data?.content || ''),
+                    content: '\u{1F389}\u{1F389} ' + (finalMessage.data?.content || '') + completionTimeLine,
                     raw_data: finalMessage,
                 };
                 if (finalMessage?.data?.status === PlanStatus.COMPLETED) {
@@ -193,6 +220,7 @@ export function usePlanWebSocket({
                     dispatch(setSelectedTeam(planData?.team || null));
                     /* P0: single compound action replaces setShowProcessingPlanSpinner(false) + markPlanCompleted() */
                     dispatch(planCompletedFinal());
+                    processingStartedAtRef.current = null;
                     scrollToBottom();
                     webSocketService.disconnect();
                     persistAgentMessage(agentMessageData, planData, dispatch, true, streamingMessageBuffer);
@@ -232,6 +260,7 @@ export function usePlanWebSocket({
                 };
                 dispatch(addAgentMessage(errorAgent));
                 dispatch(setShowProcessingPlanSpinner(false));
+                processingStartedAtRef.current = null;
                 dispatch(setShowBufferingText(false));
                 dispatch(setSubmittingChatDisableInput(false));
                 scrollToBottom();
@@ -255,7 +284,7 @@ export function usePlanWebSocket({
                         agentMessageData?.content,
                     );
                     dispatch(addAgentMessage(agentMessageData));
-                    dispatch(setShowProcessingPlanSpinner(true));
+                    dispatch(setShowProcessingPlanSpinner(false));
                     scrollToBottom();
                     persistAgentMessage(agentMessageData, planData, dispatch);
                 }

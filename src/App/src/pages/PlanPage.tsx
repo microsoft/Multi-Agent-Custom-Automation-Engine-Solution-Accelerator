@@ -78,6 +78,30 @@ import '../styles/PlanPage.css';
 // Singleton API service
 const apiService = new APIService();
 
+const getPlanProcessingStatusMessage = (elapsedSeconds: number): string => {
+    if (elapsedSeconds < 10) {
+        return 'Analyzing creative brief...';
+    }
+
+    if (elapsedSeconds < 25) {
+        return 'Generating marketing copy...';
+    }
+
+    if (elapsedSeconds < 35) {
+        return 'Creating image prompt...';
+    }
+
+    if (elapsedSeconds < 55) {
+        return 'Generating image with AI...';
+    }
+
+    if (elapsedSeconds < 70) {
+        return 'Running compliance check...';
+    }
+
+    return 'Finalizing content...';
+};
+
 /* ================================================================
  *  PlanPage — refactored to use Redux + extracted hooks
  * ================================================================ */
@@ -114,6 +138,8 @@ const PlanPage: React.FC = () => {
 
     /* ── Cancellation alert hook ────────────────────────────── */
     const [pendingNavigation, setPendingNavigation] = React.useState<(() => void) | null>(null);
+    const [processingElapsedSeconds, setProcessingElapsedSeconds] = React.useState<number>(0);
+    const processingStatusMessage = getPlanProcessingStatusMessage(processingElapsedSeconds);
 
     const { isPlanActive } = usePlanCancellationAlert({
         planData,
@@ -288,6 +314,21 @@ const PlanPage: React.FC = () => {
         return () => clearInterval(interval);
     }, [loading, dispatch]);
 
+    /* ── Plan execution elapsed timer ───────────────────────── */
+    useEffect(() => {
+        if (!showProcessingPlanSpinner) {
+            setProcessingElapsedSeconds(0);
+            return;
+        }
+
+        setProcessingElapsedSeconds(0);
+        const interval = setInterval(() => {
+            setProcessingElapsedSeconds((currentSeconds: number) => currentSeconds + 1);
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [showProcessingPlanSpinner]);
+
     /* ── Initial plan load ──────────────────────────────────── */
     useEffect(() => {
         if (!planId) {
@@ -366,6 +407,8 @@ const PlanPage: React.FC = () => {
                                 showBufferingText={showBufferingText}
                                 agentMessages={agentMessages}
                                 showProcessingPlanSpinner={showProcessingPlanSpinner}
+                                processingElapsedSeconds={processingElapsedSeconds}
+                                processingStatusMessage={processingStatusMessage}
                                 showApprovalButtons={showApprovalButtons}
                                 processingApproval={processingApproval}
                                 handleApprovePlan={handleApprovePlan}
