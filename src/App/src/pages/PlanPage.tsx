@@ -79,27 +79,23 @@ import '../styles/PlanPage.css';
 const apiService = new APIService();
 
 const getPlanProcessingStatusMessage = (elapsedSeconds: number): string => {
-    if (elapsedSeconds < 10) {
-        return 'Analyzing creative brief...';
+    if (elapsedSeconds < 8) {
+        return 'Processing your plan and coordinating with AI agents...';
     }
 
-    if (elapsedSeconds < 25) {
-        return 'Generating marketing copy...';
+    if (elapsedSeconds < 20) {
+        return 'Assigning tasks to specialized agents...';
     }
 
     if (elapsedSeconds < 35) {
-        return 'Creating image prompt...';
+        return 'Agents are analyzing and researching...';
     }
 
-    if (elapsedSeconds < 55) {
-        return 'Generating image with AI...';
+    if (elapsedSeconds < 50) {
+        return 'Compiling results from agents...';
     }
 
-    if (elapsedSeconds < 70) {
-        return 'Running compliance check...';
-    }
-
-    return 'Finalizing content...';
+    return 'Finalizing responses...';
 };
 
 /* ================================================================
