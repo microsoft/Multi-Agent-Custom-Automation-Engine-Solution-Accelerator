@@ -2,14 +2,8 @@
 Test configuration for agent tests.
 """
 
-import sys
-from pathlib import Path
-
 import pytest
 
-# Add the agents path
-agents_path = Path(__file__).parent.parent.parent / "backend" / "v4" / "magentic_agents"
-sys.path.insert(0, str(agents_path))
 
 @pytest.fixture
 def agent_env_vars():

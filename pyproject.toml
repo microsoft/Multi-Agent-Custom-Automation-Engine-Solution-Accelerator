@@ -1,0 +1,46 @@
+# Root-level pyproject.toml — test and coverage configuration only.
+#
+# This file exists because pytest and coverage run from the repo root, but the
+# application code lives under src/backend/, src/frontend/, and src/mcp_server/,
+# each with their own pyproject.toml for packaging.
+#
+# Consolidates three former config files:
+#   - pytest.ini          → [tool.pytest.ini_options]
+#   - .coveragerc         → [tool.coverage.*]
+#   - conftest.py hack    → pythonpath (replaced sys.path.insert at runtime)
+
+[tool.pytest.ini_options]
+# Load the pytest-asyncio plugin (required for async test functions).
+addopts = "-p pytest_asyncio"
+
+# Add src/ to sys.path so tests can import backend modules as
+# `from backend.xxx import ...` without runtime sys.path hacks.
+pythonpath = ["src"]
+
+[tool.coverage.run]
+source = ["."]
+omit = [
+    "src/mcp_server/*",
+    "src/tests/mcp_server/*",
+    "src/tests/agents/*",
+    "src/**/__init__.py",
+    "tests/e2e-test/*",
+    "*/venv/*",
+    "*/env/*",
+    "*/.pytest_cache/*",
+    "*/node_modules/*",
+]
+
+[tool.coverage.paths]
+source = [
+    "src/backend",
+    "*/site-packages",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+]
