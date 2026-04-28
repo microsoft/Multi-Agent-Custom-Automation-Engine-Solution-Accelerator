@@ -130,6 +130,7 @@ if PROXY_API_REQUESTS:
             try:
                 await websocket.close()
             except Exception:
+                # Ignore errors during cleanup - websocket may already be closed
                 pass
 
 
