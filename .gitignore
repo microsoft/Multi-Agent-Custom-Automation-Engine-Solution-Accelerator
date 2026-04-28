@@ -1,3 +1,9 @@
+# Local specifications / task tracking
+localspec/
+
+# Azurite local storage emulator
+__azurite_db_*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
