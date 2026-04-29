@@ -1,10 +1,18 @@
 """Unit tests for event_utils module."""
 
 import logging
-import sys
 import os
-from unittest.mock import Mock, patch, MagicMock
+import sys
+from pathlib import Path
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
+
+# The backend app code uses internal imports like `from common.config.app_config
+# import config` which require src/backend on sys.path.
+backend_path = str(Path(__file__).resolve().parents[4] / "backend")
+if backend_path not in sys.path:
+    sys.path.insert(0, backend_path)
 
 # Mock external dependencies at module level
 sys.modules['azure'] = Mock()
@@ -23,9 +31,6 @@ sys.modules['azure.cosmos.aio'] = Mock()
 sys.modules['azure.keyvault'] = Mock()
 sys.modules['azure.keyvault.secrets'] = Mock()
 sys.modules['azure.keyvault.secrets.aio'] = Mock()
-
-# Add the backend directory to the Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'backend'))
 
 # Set required environment variables for testing
 os.environ.setdefault('APPLICATIONINSIGHTS_CONNECTION_STRING', 'test_connection_string')
@@ -246,10 +251,11 @@ class TestEventUtilsIntegration:
             logging.root.removeHandler(handler)
     
     @patch('backend.common.utils.event_utils.track_event')
-    def test_track_event_with_real_config_module(self, mock_track_event):
-        """Test track_event_if_configured with real config module (mocked at track_event level)."""
-        # Note: config is already loaded from the real module due to our imports
-        # We just need to ensure track_event is mocked to avoid actual Azure calls
+    @patch('backend.common.utils.event_utils.config')
+    def test_track_event_with_real_config_module(self, mock_config, mock_track_event):
+        """Test track_event_if_configured end-to-end with a configured connection string."""
+        # Simulate a configured Application Insights connection string
+        mock_config.APPLICATIONINSIGHTS_CONNECTION_STRING = "InstrumentationKey=test-key"
         
         event_name = "integration_test_event"
         event_data = {"integration": "test", "timestamp": "2025-12-08"}
@@ -257,8 +263,7 @@ class TestEventUtilsIntegration:
         # Execute
         track_event_if_configured(event_name, event_data)
         
-        # Since we have APPLICATIONINSIGHTS_CONNECTION_STRING set in environment,
-        # track_event should be called
+        # With a truthy connection string, track_event should be called
         mock_track_event.assert_called_once_with(event_name, event_data)
     
     @patch('backend.common.utils.event_utils.track_event')

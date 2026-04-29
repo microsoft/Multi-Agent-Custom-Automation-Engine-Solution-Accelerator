@@ -1,11 +1,15 @@
 """Unit tests for backend.middleware.health_check module."""
 import asyncio
 import logging
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
 import pytest
 
 # Import the module under test
-from backend.middleware.health_check import HealthCheckResult, HealthCheckSummary, HealthCheckMiddleware
+from backend.middleware import health_check as health_check_module
+from backend.middleware.health_check import (HealthCheckMiddleware,
+                                             HealthCheckResult,
+                                             HealthCheckSummary)
 
 
 class TestHealthCheckResult:
@@ -343,7 +347,7 @@ class TestHealthCheckMiddleware:
         checks = {"exception": exception_check}
         middleware = HealthCheckMiddleware(self.mock_app, checks)
         
-        with patch('backend.middleware.health_check.logging.error') as mock_logger:
+        with patch.object(health_check_module.logging, 'error') as mock_logger:
             result = await middleware.check()
             
             assert result.status is False
@@ -368,7 +372,7 @@ class TestHealthCheckMiddleware:
         checks = {"non_coroutine": non_coroutine_check}
         middleware = HealthCheckMiddleware(self.mock_app, checks)
         
-        with patch('backend.middleware.health_check.logging.error') as mock_logger:
+        with patch.object(health_check_module.logging, 'error') as mock_logger:
             result = await middleware.check()
             
             assert result.status is False
@@ -417,7 +421,7 @@ class TestHealthCheckMiddleware:
             mock_check.return_value = mock_status
             
             # Mock PlainTextResponse
-            with patch('backend.middleware.health_check.PlainTextResponse') as mock_response:
+            with patch.object(health_check_module, 'PlainTextResponse') as mock_response:
                 mock_response_instance = Mock()
                 mock_response.return_value = mock_response_instance
                 
@@ -475,7 +479,7 @@ class TestHealthCheckMiddleware:
             mock_status.status = False  # Failing status
             mock_check.return_value = mock_status
             
-            with patch('backend.middleware.health_check.PlainTextResponse') as mock_response:
+            with patch.object(health_check_module, 'PlainTextResponse') as mock_response:
                 mock_response_instance = Mock()
                 mock_response.return_value = mock_response_instance
                 
@@ -504,8 +508,8 @@ class TestHealthCheckMiddleware:
             mock_status.status = True
             mock_check.return_value = mock_status
             
-            with patch('backend.middleware.health_check.JSONResponse') as mock_json_response:
-                with patch('backend.middleware.health_check.jsonable_encoder') as mock_encoder:
+            with patch.object(health_check_module, 'JSONResponse') as mock_json_response:
+                with patch.object(health_check_module, 'jsonable_encoder') as mock_encoder:
                     mock_response_instance = Mock()
                     mock_json_response.return_value = mock_response_instance
                     mock_encoded_data = {"encoded": "data"}
