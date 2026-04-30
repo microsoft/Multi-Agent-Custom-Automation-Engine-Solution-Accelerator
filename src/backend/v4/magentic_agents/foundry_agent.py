@@ -225,12 +225,24 @@ class FoundryAgentTemplate(AzureAgentBase):
     # -------------------------
     async def _after_open(self) -> None:
         """Initialize ChatAgent after connections are established."""
-        if self.use_reasoning:
-            self.logger.info("Initializing agent in Reasoning mode.")
-            temp = None
+        # Reasoning / GPT-5 / o-series models reject the `temperature` parameter.
+        # Build kwargs so we can OMIT temperature entirely (passing None is also rejected).
+        model_lc = (self.model_deployment_name or "").lower()
+        unsupports_temperature = (
+            model_lc.startswith("gpt-5")
+            or model_lc.startswith("o1")
+            or model_lc.startswith("o3")
+            or model_lc.startswith("o4")
+        )
+        if self.use_reasoning or unsupports_temperature:
+            self.logger.info(
+                "Initializing agent in Reasoning mode (temperature disabled for model '%s').",
+                self.model_deployment_name,
+            )
+            temp_kwargs: dict = {}
         else:
             self.logger.info("Initializing agent in Foundry mode.")
-            temp = 0.1
+            temp_kwargs = {"temperature": 0.1}
 
         try:
             chatClient = await self.get_database_team_agent()
@@ -254,8 +266,8 @@ class FoundryAgentTemplate(AzureAgentBase):
                     name=self.agent_name,
                     description=self.agent_description,
                     tool_choice="required",  # Force usage
-                    temperature=temp,
                     model_id=self.model_deployment_name,
+                    **temp_kwargs,
                 )
             else:
                 # use MCP path
@@ -269,8 +281,8 @@ class FoundryAgentTemplate(AzureAgentBase):
                     description=self.agent_description,
                     tools=tools if tools else None,
                     tool_choice="auto" if tools else "none",
-                    temperature=temp,
                     model_id=self.model_deployment_name,
+                    **temp_kwargs,
                 )
             self.logger.info("Initialized ChatAgent '%s'", self.agent_name)
 

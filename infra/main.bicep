@@ -70,6 +70,20 @@ param gptReasoningModelName string = 'o4-mini'
 @description('Optional. Version of the GPT Reasoning model to deploy. Defaults to 2025-04-16.')
 param gptReasoningModelVersion string = '2025-04-16'
 
+@minLength(1)
+@description('Optional. Name of the GPT-5-mini model to deploy. Used for image-capable / reasoning agents.')
+param gpt5MiniModelName string = 'gpt-5-mini'
+
+@description('Optional. Version of the GPT-5-mini model to deploy. Defaults to 2025-08-07.')
+param gpt5MiniModelVersion string = '2025-08-07'
+
+@minLength(1)
+@description('Optional. Name of the image-generation model to deploy. Defaults to gpt-image-1.')
+param gptImageModelName string = 'gpt-image-1'
+
+@description('Optional. Version of the image-generation model to deploy. Defaults to 2025-04-15.')
+param gptImageModelVersion string = '2025-04-15'
+
 @description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2024-12-01-preview.')
 param azureopenaiVersion string = '2024-12-01-preview'
 
@@ -108,6 +122,28 @@ param gpt4_1ModelCapacity int = 150
 
 @description('Optional. AI model deployment token capacity. Defaults to 50 for optimal performance.')
 param gptReasoningModelCapacity int = 50
+
+@minLength(1)
+@allowed([
+  'Standard'
+  'GlobalStandard'
+])
+@description('Optional. GPT-5-mini model deployment type. Defaults to GlobalStandard.')
+param gpt5MiniModelDeploymentType string = 'GlobalStandard'
+
+@description('Optional. GPT-5-mini model deployment token capacity. Defaults to 50.')
+param gpt5MiniModelCapacity int = 50
+
+@minLength(1)
+@allowed([
+  'Standard'
+  'GlobalStandard'
+])
+@description('Optional. GPT image model deployment type. Defaults to GlobalStandard.')
+param gptImageModelDeploymentType string = 'GlobalStandard'
+
+@description('Optional. GPT image model deployment capacity (images per minute). Defaults to 1.')
+param gptImageModelCapacity int = 1
 
 @description('Optional. The tags to apply to all deployed Azure resources.')
 param tags resourceInput<'Microsoft.Resources/resourceGroups@2025-04-01'>.tags = {}
@@ -801,6 +837,26 @@ var aiFoundryAiServicesReasoningModelDeployment = {
   }
   raiPolicyName: 'Microsoft.Default'
 }
+var aiFoundryAiServices5MiniModelDeployment = {
+  format: 'OpenAI'
+  name: gpt5MiniModelName
+  version: gpt5MiniModelVersion
+  sku: {
+    name: gpt5MiniModelDeploymentType
+    capacity: gpt5MiniModelCapacity
+  }
+  raiPolicyName: 'Microsoft.Default'
+}
+var aiFoundryAiServicesImageModelDeployment = {
+  format: 'OpenAI'
+  name: gptImageModelName
+  version: gptImageModelVersion
+  sku: {
+    name: gptImageModelDeploymentType
+    capacity: gptImageModelCapacity
+  }
+  raiPolicyName: 'Microsoft.Default'
+}
 var aiFoundryAiProjectDescription = 'AI Foundry Project'
 
 resource existingAiFoundryAiServices 'Microsoft.CognitiveServices/accounts@2025-06-01' existing = if (useExistingAiFoundryAiProject) {
@@ -851,6 +907,32 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
         sku: {
           name: aiFoundryAiServicesReasoningModelDeployment.sku.name
           capacity: aiFoundryAiServicesReasoningModelDeployment.sku.capacity
+        }
+      }
+      {
+        name: aiFoundryAiServices5MiniModelDeployment.name
+        model: {
+          format: aiFoundryAiServices5MiniModelDeployment.format
+          name: aiFoundryAiServices5MiniModelDeployment.name
+          version: aiFoundryAiServices5MiniModelDeployment.version
+        }
+        raiPolicyName: aiFoundryAiServices5MiniModelDeployment.raiPolicyName
+        sku: {
+          name: aiFoundryAiServices5MiniModelDeployment.sku.name
+          capacity: aiFoundryAiServices5MiniModelDeployment.sku.capacity
+        }
+      }
+      {
+        name: aiFoundryAiServicesImageModelDeployment.name
+        model: {
+          format: aiFoundryAiServicesImageModelDeployment.format
+          name: aiFoundryAiServicesImageModelDeployment.name
+          version: aiFoundryAiServicesImageModelDeployment.version
+        }
+        raiPolicyName: aiFoundryAiServicesImageModelDeployment.raiPolicyName
+        sku: {
+          name: aiFoundryAiServicesImageModelDeployment.sku.name
+          capacity: aiFoundryAiServicesImageModelDeployment.sku.capacity
         }
       }
     ]
@@ -926,6 +1008,32 @@ module aiFoundryAiServices 'br:mcr.microsoft.com/bicep/avm/res/cognitive-service
         sku: {
           name: aiFoundryAiServicesReasoningModelDeployment.sku.name
           capacity: aiFoundryAiServicesReasoningModelDeployment.sku.capacity
+        }
+      }
+      {
+        name: aiFoundryAiServices5MiniModelDeployment.name
+        model: {
+          format: aiFoundryAiServices5MiniModelDeployment.format
+          name: aiFoundryAiServices5MiniModelDeployment.name
+          version: aiFoundryAiServices5MiniModelDeployment.version
+        }
+        raiPolicyName: aiFoundryAiServices5MiniModelDeployment.raiPolicyName
+        sku: {
+          name: aiFoundryAiServices5MiniModelDeployment.sku.name
+          capacity: aiFoundryAiServices5MiniModelDeployment.sku.capacity
+        }
+      }
+      {
+        name: aiFoundryAiServicesImageModelDeployment.name
+        model: {
+          format: aiFoundryAiServicesImageModelDeployment.format
+          name: aiFoundryAiServicesImageModelDeployment.name
+          version: aiFoundryAiServicesImageModelDeployment.version
+        }
+        raiPolicyName: aiFoundryAiServicesImageModelDeployment.raiPolicyName
+        sku: {
+          name: aiFoundryAiServicesImageModelDeployment.sku.name
+          capacity: aiFoundryAiServicesImageModelDeployment.sku.capacity
         }
       }
     ]
