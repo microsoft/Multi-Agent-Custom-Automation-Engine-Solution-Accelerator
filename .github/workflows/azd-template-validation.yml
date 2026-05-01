@@ -15,12 +15,12 @@ jobs:
     name: azd template validation
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set timestamp
         run: echo "HHMM=$(date -u +'%H%M')" >> $GITHUB_ENV
 
-      - uses: microsoft/template-validation-action@v0.4.3
+      - uses: microsoft/template-validation-action@v0.4.4
         with:
           validateAzd: ${{ vars.TEMPLATE_VALIDATE_AZD }}
           validateTests: ${{ vars.TEMPLATE_VALIDATE_TESTS }}
