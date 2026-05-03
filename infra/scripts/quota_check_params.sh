@@ -52,6 +52,12 @@ DEFAULT_MODEL_CAPACITY="gpt4.1:150,o4-mini:50,gpt4.1-mini:50"
 IFS=',' read -r -a MODEL_CAPACITY_PAIRS <<< "$DEFAULT_MODEL_CAPACITY"
 
 echo "🔄 Fetching available Azure subscriptions..."
+
+# Allow callers to bypass interactive subscription selection by pre-setting
+# the AZURE_SUBSCRIPTION_ID environment variable (used by precheck/azd hooks).
+if [ -n "${AZURE_SUBSCRIPTION_ID:-}" ]; then
+    echo "✅ Using pre-set AZURE_SUBSCRIPTION_ID: $AZURE_SUBSCRIPTION_ID"
+else
 SUBSCRIPTIONS=$(az account list --query "[?state=='Enabled'].{Name:name, ID:id}" --output tsv)
 SUB_COUNT=$(echo "$SUBSCRIPTIONS" | wc -l)
 
@@ -84,6 +90,7 @@ else
             echo "❌ Invalid selection. Please enter a valid number from the list."
         fi
     done
+fi
 fi
 
 

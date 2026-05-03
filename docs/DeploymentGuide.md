@@ -277,13 +277,40 @@ To optimize costs and integrate with your existing Azure infrastructure, you can
 
 </details>
 
-## Step 4: Deploy the Solution
+## Step 4: Run the Deployment Pre-Check (Recommended)
+
+Before kicking off `azd up`, run the standalone pre-check script to validate your environment, identity, regions, RBAC roles, resource providers, and Azure OpenAI quota in one shot. The script is **not** wired into `azd up` — it is a manual, read-only diagnostic you can run as many times as you like.
+
+Run the script that matches your shell, from the repository root:
+
+```bash
+# Linux / macOS / Codespaces / WSL
+bash scripts/precheck.sh
+```
+
+```powershell
+# Windows (PowerShell 7+)
+pwsh scripts/precheck.ps1
+```
+
+**What it checks (15 sections):** environment detection, `azd` / Azure CLI / Bicep / Python / Node / Docker tooling, `jq` (bash only), Azure login + subscription, tenant match (cross-tenant + Guest user detection), RBAC roles (Contributor + UAA/RBAC Admin, or Owner), app registration permission, required resource providers, `azd` environment variables, presence of deployment hook scripts, and an Azure OpenAI quota report across the recommended regions.
+
+**Exit codes:**
+
+| Exit Code | Meaning |
+|-----------|---------|
+| `0` | All checks passed (warnings allowed) — safe to proceed to Step 5 |
+| `1` | One or more critical checks failed — fix the issues listed in the summary and re-run before invoking `azd up` |
+
+For the full list of checks, severities, and remediation steps, see [DeploymentPreChecks.md](./DeploymentPreChecks.md).
+
+## Step 5: Deploy the Solution
 
 💡 **Before You Start:** If you encounter any issues during deployment, check our [Troubleshooting Guide](./TroubleShootingSteps.md) for common solutions.
 
 ⚠️ **Critical: Redeployment Warning** - If you have previously run `azd up` in this folder (i.e., a `.azure` folder exists), you must [create a fresh environment](#creating-a-new-environment) to avoid conflicts and deployment failures.
 
-### 4.1 Authenticate with Azure
+### 5.1 Authenticate with Azure
 
 ```shell
 azd auth login
@@ -301,7 +328,7 @@ azd auth login --tenant-id <tenant-id>
 2. Navigate to **Microsoft Entra ID** from the left-hand menu
 3. Under the **Overview** section, locate the **Tenant ID** field. Copy the value displayed
 
-### 4.2 Start Deployment
+### 5.2 Start Deployment
 **NOTE:** If you are running the latest azd version (version 1.23.9), please run the following command. 
 ```bash 
 azd config set provision.preflight off
@@ -326,7 +353,7 @@ azd up
 
 **⚠️ Deployment Issues:** If you encounter errors or timeouts, try a different region as there may be capacity constraints. For detailed error solutions, see our [Troubleshooting Guide](./TroubleShootingSteps.md).
 
-### 4.3 Get Application URL
+### 5.3 Get Application URL
 
 After successful deployment:
 1. Open [Azure Portal](https://portal.azure.com/)
@@ -334,11 +361,11 @@ After successful deployment:
 3. Find the Frontend App Service
 4. Copy the **Default domain**
 
-⚠️ **Important:** Complete [Post-Deployment Steps](#step-5-post-deployment-configuration) before accessing the application.
+⚠️ **Important:** Complete [Post-Deployment Steps](#step-6-post-deployment-configuration) before accessing the application.
 
-## Step 5: Post-Deployment Configuration
+## Step 6: Post-Deployment Configuration
 
-### 5.1 Run Post Deployment Script
+### 6.1 Run Post Deployment Script
 
 1. You can upload Team Configurations using command printed in the terminal. The command will look like one of the following. Run the appropriate command for your shell from the project root:
 
@@ -358,24 +385,24 @@ After successful deployment:
 ![Usecase selection](./images/Usecase_selection.png)
 
 
-### 5.2 Configure Authentication (Optional)
+### 6.2 Configure Authentication (Optional)
 
 1. Follow [App Authentication Configuration](./azure_app_service_auth_setup.md)
 2. Wait up to 10 minutes for authentication changes to take effect
 
-### 5.3 Verify Deployment
+### 6.3 Verify Deployment
 
-1. Access your application using the URL from Step 4.3
+1. Access your application using the URL from Step 5.3
 2. Confirm the application loads successfully
 <!-- 3. Verify you can sign in with your authenticated account -->
 
-### 5.4 Test the Application
+### 6.4 Test the Application
 
 **Quick Test Steps:**
 
-1. **Access the application** using the URL from Step 4.3
+1. **Access the application** using the URL from Step 5.3
 2. **Sign in** with your authenticated account
-3. **Select a use case** from the available scenarios you uploaded in Step 5.1
+3. **Select a use case** from the available scenarios you uploaded in Step 6.1
 4. **Ask a sample question** relevant to the selected use case
 5. **Verify the response** includes appropriate multi-agent collaboration
 6. **Check the logs** in Azure Portal to confirm backend processing
@@ -383,7 +410,7 @@ After successful deployment:
 📖 **Detailed Instructions:** See the complete [Sample Workflow](./SampleQuestions.md) guide for step-by-step testing procedures and sample questions for each use case.
 
 
-## Step 6: Clean Up (Optional)
+## Step 7: Clean Up (Optional)
 
 ### Remove All Resources
 

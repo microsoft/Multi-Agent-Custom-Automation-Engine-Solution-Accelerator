@@ -270,21 +270,22 @@ check_jq() {
 check_docker() {
   print_section "Docker"
 
-  # Docker is managed in Codespace/DevContainer, only critical for local
+  # Docker is required in Codespace/DevContainer environments where containers
+  # back the dev workflow. On Local (host) machines we skip the check because
+  # Docker is not needed for 'azd up' itself.
   if [ "$ENVIRONMENT" = "Local" ]; then
-    if check_tool_exists "docker" "Docker" "false"; then
-      if docker info &>/dev/null; then
-        print_ok "Docker is running"
-      else
-        add_warning "Docker is installed but the daemon is not running. It may be needed for container builds."
-        print_warn "Docker daemon is not running"
-      fi
-    fi
+    print_info "Docker check skipped (Local environment)"
   else
     if command -v docker &>/dev/null; then
-      print_ok "Docker is available (managed by $ENVIRONMENT)"
+      if docker info &>/dev/null; then
+        print_ok "Docker is running (managed by $ENVIRONMENT)"
+      else
+        add_warning "Docker is installed but the daemon is not running in $ENVIRONMENT. It may be needed for container builds."
+        print_warn "Docker daemon is not running"
+      fi
     else
-      print_info "Docker check skipped ($ENVIRONMENT environment)"
+      add_warning "Docker is not installed in $ENVIRONMENT. It may be needed for container builds."
+      print_warn "Docker is not installed"
     fi
   fi
   printf "\n"
@@ -434,6 +435,262 @@ check_azure_subscription() {
   printf "\n"
 }
 
+# ── Check tenant match (TroubleShootingSteps: CrossTenantDeploymentNotPermitted)
+# Catches two foot-guns:
+#   1. Subscription tenantId != homeTenantId (cross-tenant subscription).
+#   2. Signed-in user is a Guest in the subscription's tenant.
+check_tenant_match() {
+  print_section "Azure Tenant Match"
+
+  if ! az account show &>/dev/null; then
+    print_info "Skipping tenant match check (not logged in to Azure)"
+    printf "\n"
+    return
+  fi
+
+  local tenant_id home_tenant_id
+  tenant_id=$(az account show --query "tenantId" -o tsv 2>/dev/null)
+  home_tenant_id=$(az account show --query "homeTenantId" -o tsv 2>/dev/null)
+
+  if [ -n "$tenant_id" ] && [ -n "$home_tenant_id" ] && [ "$tenant_id" != "$home_tenant_id" ]; then
+    print_warn "Subscription tenant ($tenant_id) differs from its home tenant ($home_tenant_id)."
+    print_info "  This is a cross-tenant subscription and may trigger 'CrossTenantDeploymentNotPermitted'."
+    add_warning "Subscription is cross-tenant (tenantId != homeTenantId). Deployment may fail with CrossTenantDeploymentNotPermitted."
+  else
+    print_ok "Subscription tenant matches its home tenant ($tenant_id)"
+  fi
+
+  local user_type
+  user_type=$(az ad signed-in-user show --query userType -o tsv 2>/dev/null || true)
+
+  # Graph returns userType=null for many native Member accounts; only an
+  # explicit "Guest" string indicates an external/guest identity.
+  if [ "$user_type" = "Guest" ]; then
+    local upn
+    upn=$(az account show --query "user.name" -o tsv 2>/dev/null)
+    print_warn "Signed-in user '$upn' is a Guest in tenant $tenant_id."
+    print_info "  Guest accounts often lack directory permissions required by 'azd up' (role assignments, app registrations)."
+    add_warning "Signed-in user is a Guest in the subscription's tenant; deployment may fail on role assignment or app-registration steps."
+  else
+    print_ok "Signed-in user is a Member of tenant $tenant_id"
+  fi
+
+  printf "\n"
+}
+
+# ── Check subscription role assignments (DeploymentGuide §1.1) ──────────────
+# Roles required to deploy this solution end-to-end. Owner satisfies all.
+# Informational (warnings only) because callers may rely on inherited
+# Management Group assignments not visible at subscription scope.
+
+check_azure_roles() {
+  print_section "Azure RBAC Roles (DeploymentGuide §1.1)"
+
+  if ! az account show &>/dev/null; then
+    print_info "Skipping role check (not logged in to Azure)"
+    printf "\n"
+    return
+  fi
+
+  local sub_id
+  sub_id=$(az account show --query "id" -o tsv 2>/dev/null)
+
+  # Resolve caller object id (user, SPN, or managed identity)
+  local caller_oid
+  caller_oid=$(az ad signed-in-user show --query id -o tsv 2>/dev/null || true)
+  if [ -z "$caller_oid" ]; then
+    caller_oid=$(az account show --query "user.name" -o tsv 2>/dev/null || true)
+  fi
+
+  if [ -z "$caller_oid" ]; then
+    print_warn "Could not determine signed-in identity object id; skipping role enumeration."
+    add_warning "Unable to verify subscription RBAC roles (could not resolve signed-in identity)."
+    printf "\n"
+    return
+  fi
+
+  local scope="/subscriptions/$sub_id"
+  local roles_json
+  roles_json=$(az role assignment list --assignee "$caller_oid" --scope "$scope" --include-inherited --include-groups --output json 2>/dev/null || true)
+
+  if [ -z "$roles_json" ] || [ "$roles_json" = "[]" ]; then
+    print_warn "Could not list role assignments for the signed-in identity at subscription scope."
+    print_info "If 'azd up' fails with authorization errors, request 'Contributor' + 'User Access Administrator' (or 'Owner') on subscription $sub_id."
+    add_warning "Unable to verify subscription RBAC roles (insufficient permission or no assignments found)."
+    printf "\n"
+    return
+  fi
+
+  local role_names
+  if command -v jq &>/dev/null; then
+    role_names=$(echo "$roles_json" | jq -r '.[].roleDefinitionName')
+  else
+    # Crude fallback parse
+    role_names=$(echo "$roles_json" | grep -oE '"roleDefinitionName"\s*:\s*"[^"]+"' | sed -E 's/.*"([^"]+)"$/\1/')
+  fi
+
+  local has_owner=false has_contributor=false has_access_admin=false
+  while IFS= read -r r; do
+    [ -z "$r" ] && continue
+    case "$r" in
+      "Owner") has_owner=true ;;
+      "Contributor") has_contributor=true ;;
+      "User Access Administrator"|"Role Based Access Control Administrator") has_access_admin=true ;;
+    esac
+  done <<< "$role_names"
+
+  if [ "$has_owner" = true ]; then
+    print_ok "'Owner' role assigned (covers all required permissions)"
+  else
+    if [ "$has_contributor" = true ]; then
+      print_ok "'Contributor' assigned (Create and manage Azure resources)"
+    else
+      print_warn "'Contributor' not found (Create and manage Azure resources)"
+    fi
+    if [ "$has_access_admin" = true ]; then
+      print_ok "'User Access Administrator' or 'Role Based Access Control Administrator' assigned"
+    else
+      print_warn "Neither 'User Access Administrator' nor 'Role Based Access Control Administrator' found (Manage RBAC)"
+    fi
+
+    if [ "$has_contributor" != true ] || [ "$has_access_admin" != true ]; then
+      add_warning "Signed-in identity is missing one or more required roles at subscription scope ($sub_id). Required: 'Contributor' + ('User Access Administrator' or 'Role Based Access Control Administrator'), or 'Owner'."
+      print_info "Request the missing roles or have an Owner run 'azd up'. See DeploymentGuide §1.1."
+    fi
+  fi
+  printf "\n"
+}
+
+# ── Check App Registration creation permission (DeploymentGuide §1.1) ──────
+
+APP_CREATOR_ROLES=("Global Administrator" "Application Administrator" "Application Developer" "Cloud Application Administrator")
+
+check_app_registration_permission() {
+  print_section "App Registration Permission (DeploymentGuide §1.1)"
+
+  if ! az account show &>/dev/null; then
+    print_info "Skipping app registration check (not logged in to Azure)"
+    printf "\n"
+    return
+  fi
+
+  # Skip for service principals / managed identities
+  local user_type user_name
+  user_type=$(az account show --query "user.type" -o tsv 2>/dev/null || true)
+  user_name=$(az account show --query "user.name" -o tsv 2>/dev/null || echo "current user")
+  if [ -n "$user_type" ] && [ "$user_type" != "user" ]; then
+    print_info "Signed in as '$user_type'; skipping interactive app registration check."
+    printf "\n"
+    return
+  fi
+
+  # Path 1: Caller holds a directory role that explicitly grants app creation.
+  local roles_granting=() member_readable=false
+  local member_json
+  member_json=$(az rest --method GET --url "https://graph.microsoft.com/v1.0/me/memberOf?\$select=id,displayName" --output json 2>/dev/null || true)
+  if [ -n "$member_json" ] && command -v jq &>/dev/null; then
+    member_readable=true
+    while IFS= read -r role_name; do
+      [ -z "$role_name" ] && continue
+      for granting in "${APP_CREATOR_ROLES[@]}"; do
+        if [ "$role_name" = "$granting" ]; then
+          roles_granting+=("$role_name")
+          break
+        fi
+      done
+    done < <(echo "$member_json" | jq -r '.value[] | select(."@odata.type"=="#microsoft.graph.directoryRole") | .displayName')
+  fi
+
+  if [ ${#roles_granting[@]} -gt 0 ]; then
+    print_ok "$user_name can create app registrations via directory role: ${roles_granting[*]}"
+    printf "\n"
+    return
+  fi
+
+  # Path 2: Tenant default permission lets every user create app registrations.
+  local policy_json allowed_to_create=""
+  policy_json=$(az rest --method GET --url "https://graph.microsoft.com/v1.0/policies/authorizationPolicy" --output json 2>/dev/null || true)
+  if [ -n "$policy_json" ]; then
+    if command -v jq &>/dev/null; then
+      allowed_to_create=$(echo "$policy_json" | jq -r '.defaultUserRolePermissions.allowedToCreateApps // empty')
+    else
+      allowed_to_create=$(echo "$policy_json" | grep -oE '"allowedToCreateApps"\s*:\s*(true|false)' | head -n1 | grep -oE '(true|false)')
+    fi
+  fi
+
+  if [ "$allowed_to_create" = "true" ]; then
+    print_ok "$user_name can create app registrations (granted by tenant default user permissions)"
+    printf "\n"
+    return
+  fi
+
+  if [ "$allowed_to_create" = "false" ]; then
+    print_warn "$user_name cannot create app registrations: tenant restricts creation to privileged roles and you do not hold any of: ${APP_CREATOR_ROLES[*]}."
+    add_warning "App registration creation may be blocked for $user_name. If 'azd up' fails creating an Entra ID app, request 'Application Developer' (or higher) in the tenant. See DeploymentGuide §1.1."
+  else
+    if [ "$member_readable" = true ]; then
+      print_warn "Could not verify app registration permission for $user_name (no granting directory role assigned and tenant default policy is not readable from this account)."
+    else
+      print_warn "Could not verify app registration permission for $user_name (insufficient Graph permission to inspect directory roles or tenant policy)."
+    fi
+    add_warning "Unable to verify app registration creation permission for $user_name. If 'azd up' fails creating an Entra ID app, request 'Application Developer' (or higher) in the tenant. See DeploymentGuide §1.1."
+  fi
+  printf "\n"
+}
+
+# ── Check resource providers are registered (DeploymentGuide §1.2) ──────────
+
+REQUIRED_PROVIDERS=(
+  "Microsoft.CognitiveServices"
+  "Microsoft.Search"
+  "Microsoft.App"
+  "Microsoft.ContainerRegistry"
+  "Microsoft.DocumentDB"
+  "Microsoft.KeyVault"
+  "Microsoft.Storage"
+  "Microsoft.Web"
+  "Microsoft.OperationalInsights"
+  "Microsoft.Insights"
+  "Microsoft.ManagedIdentity"
+)
+
+check_resource_providers() {
+  print_section "Azure Resource Providers (DeploymentGuide §1.2)"
+
+  if ! az account show &>/dev/null; then
+    print_info "Skipping provider check (not logged in to Azure)"
+    printf "\n"
+    return
+  fi
+
+  local sub_id
+  sub_id=$(az account show --query "id" -o tsv 2>/dev/null)
+  local unregistered=()
+
+  for ns in "${REQUIRED_PROVIDERS[@]}"; do
+    local state
+    state=$(az provider show --namespace "$ns" --query "registrationState" -o tsv 2>/dev/null || true)
+    if [ "$state" = "Registered" ]; then
+      print_ok "$ns is Registered"
+    elif [ -n "$state" ]; then
+      print_warn "$ns is '$state' (expected 'Registered')"
+      unregistered+=("$ns")
+    else
+      print_warn "$ns: could not determine registration state"
+      unregistered+=("$ns")
+    fi
+  done
+
+  if [ ${#unregistered[@]} -gt 0 ]; then
+    add_warning "The following resource providers are not 'Registered' on subscription $sub_id: ${unregistered[*]}. Register with: az provider register --namespace <Namespace>"
+    print_info "To register all at once:"
+    for ns in "${unregistered[@]}"; do
+      printf "    az provider register --namespace %s\n" "$ns"
+    done
+  fi
+  printf "\n"
+}
+
 # ── Check hook scripts exist ────────────────────────────────────────────────
 
 check_hook_scripts() {
@@ -466,6 +723,9 @@ check_hook_scripts() {
 
 # ── Check model quota (optional, runs if Azure is authenticated) ─────────
 
+# Path to the canonical bash quota check script (sibling of the PowerShell version)
+QUOTA_CHECK_SCRIPT="infra/scripts/quota_check_params.sh"
+
 check_model_quota() {
   print_section "Azure OpenAI Model Quota (Optional)"
 
@@ -476,71 +736,41 @@ check_model_quota() {
     return
   fi
 
-  if ! command -v jq &>/dev/null; then
-    print_info "Skipping quota check (jq not installed)"
+  if [ ! -f "$QUOTA_CHECK_SCRIPT" ]; then
+    print_warn "Quota check script not found at '$QUOTA_CHECK_SCRIPT'. Skipping."
     printf "\n"
     return
   fi
 
-  local openai_location
-  openai_location=$(azd env get-value AZURE_ENV_OPENAI_LOCATION 2>/dev/null || echo "")
-
-  if [ -z "$openai_location" ]; then
-    print_info "Skipping quota check (AZURE_ENV_OPENAI_LOCATION not set)"
-    printf "\n"
-    return
-  fi
-
-  local sub_id
-  sub_id=$(az account show --query "id" -o tsv 2>/dev/null)
-
-  if [ -z "$sub_id" ]; then
-    print_info "Skipping quota check (could not determine subscription ID)"
-    printf "\n"
-    return
-  fi
-
-  print_info "Checking Azure OpenAI model quota in '$openai_location'..."
-  print_info "This may take a moment..."
-
-  # Check quota for default models: gpt-4.1-mini (50), gpt-4.1 (150), o4-mini (50)
-  local models=("gpt-4.1-mini:50:GlobalStandard" "gpt-4.1:150:GlobalStandard" "o4-mini:50:GlobalStandard")
-  local quota_errors=()
-
-  for model_info in "${models[@]}"; do
-    local model_name="${model_info%%:*}"
-    local remaining="${model_info#*:}"
-    local capacity="${remaining%%:*}"
-    local deployment_type="${remaining##*:}"
-    local model_type="OpenAI.$deployment_type.$model_name"
-
-    local model_data
-    model_data=$(az cognitiveservices usage list --location "$openai_location" --query "[?name.value=='$model_type']" --output json 2>/dev/null)
-
-    if [ -n "$model_data" ] && [ "$model_data" != "[]" ]; then
-      local current_value
-      current_value=$(echo "$model_data" | jq -r '.[0].currentValue // 0' | cut -d'.' -f1)
-      local limit
-      limit=$(echo "$model_data" | jq -r '.[0].limit // 0' | cut -d'.' -f1)
-      local available=$((limit - current_value))
-
-      if [ "$available" -ge "$capacity" ]; then
-        print_ok "$model_name: $available available (need $capacity) in $openai_location"
-      else
-        quota_errors+=("$model_name: only $available available but $capacity required in $openai_location")
-        print_fail "$model_name: insufficient quota ($available available, $capacity required)"
-      fi
-    else
-      print_warn "$model_name: could not retrieve quota info for $openai_location"
+  # If the user has selected a specific region (env var or azd), pass it through.
+  local regions_arg=""
+  if [ -n "${AZURE_ENV_OPENAI_LOCATION:-}" ]; then
+    regions_arg="$AZURE_ENV_OPENAI_LOCATION"
+  else
+    local azd_value
+    azd_value=$(azd env get-value AZURE_ENV_OPENAI_LOCATION 2>/dev/null || true)
+    if [ -n "$azd_value" ] && [[ "$azd_value" != ERROR* ]]; then
+      regions_arg="$azd_value"
     fi
-  done
+  fi
 
-  if [ ${#quota_errors[@]} -gt 0 ]; then
-    add_error "Insufficient Azure OpenAI model quota. Details:"
-    for qe in "${quota_errors[@]}"; do
-      add_error "  - $qe"
-    done
-    add_error "Request quota increase: https://aka.ms/oai/stuquotarequest or try a different region: azd env set AZURE_ENV_OPENAI_LOCATION '<region>'"
+  print_info "Running '$QUOTA_CHECK_SCRIPT' (DeploymentGuide §1.3)..."
+  if [ -n "$regions_arg" ]; then
+    print_info "Targeting selected region: $regions_arg"
+  else
+    print_info "No region selected. Using script defaults (8 regions, 3 models)."
+  fi
+  printf "\n"
+
+  # Pre-set AZURE_SUBSCRIPTION_ID so the script never prompts when multiple
+  # subscriptions are enabled.
+  local active_id
+  active_id=$(az account show --query id -o tsv 2>/dev/null | tr -d '[:space:]')
+
+  if [ -n "$regions_arg" ]; then
+    AZURE_SUBSCRIPTION_ID="$active_id" bash "$QUOTA_CHECK_SCRIPT" --regions "$regions_arg" || true
+  else
+    AZURE_SUBSCRIPTION_ID="$active_id" bash "$QUOTA_CHECK_SCRIPT" || true
   fi
   printf "\n"
 }
@@ -561,6 +791,10 @@ main() {
   check_jq
   check_docker
   check_azure_subscription
+  check_tenant_match
+  check_azure_roles
+  check_app_registration_permission
+  check_resource_providers
   check_azd_env
   check_hook_scripts
   check_model_quota

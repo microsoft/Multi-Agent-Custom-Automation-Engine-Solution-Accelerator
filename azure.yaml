@@ -6,17 +6,6 @@ requiredVersions:
   azd: '>= 1.18.0 != 1.23.9'
   bicep: '>= 0.33.0'
 hooks:
-  preprovision:
-    windows:
-      shell: pwsh
-      run: ./scripts/precheck.ps1
-      interactive: true
-      continueOnError: false
-    posix:
-      shell: sh
-      run: bash ./scripts/precheck.sh
-      interactive: true
-      continueOnError: false
   postdeploy:
     windows:
       run: |

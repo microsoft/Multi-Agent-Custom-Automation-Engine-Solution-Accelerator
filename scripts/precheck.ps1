@@ -302,34 +302,32 @@ function Test-Node {
 function Test-Docker {
     Write-Section "Docker"
 
+    # Docker is required in Codespace/DevContainer environments where containers
+    # back the dev workflow. On Local (host) machines we skip the check because
+    # Docker is not needed for 'azd up' itself.
     if ($script:Environment -eq "Local") {
+        Write-Info "Docker check skipped (Local environment)"
+    }
+    else {
         if (Test-CommandExists "docker") {
             try {
                 $dockerInfo = docker info 2>&1
                 if ($LASTEXITCODE -eq 0) {
-                    Write-OK "Docker is running"
+                    Write-OK "Docker is running (managed by $($script:Environment))"
                 }
                 else {
-                    Add-CheckWarning "Docker is installed but the daemon is not running. It may be needed for container builds."
+                    Add-CheckWarning "Docker is installed but the daemon is not running in $($script:Environment). It may be needed for container builds."
                     Write-Warn "Docker daemon is not running"
                 }
             }
             catch {
-                Add-CheckWarning "Docker is installed but could not verify daemon status."
+                Add-CheckWarning "Docker is installed but could not verify daemon status in $($script:Environment)."
                 Write-Warn "Docker daemon status unknown"
             }
         }
         else {
-            Add-CheckWarning "Docker is not installed. It may be needed for container builds."
-            Write-Warn "Docker is not installed (optional)"
-        }
-    }
-    else {
-        if (Test-CommandExists "docker") {
-            Write-OK "Docker is available (managed by $($script:Environment))"
-        }
-        else {
-            Write-Info "Docker check skipped ($($script:Environment) environment)"
+            Add-CheckWarning "Docker is not installed in $($script:Environment). It may be needed for container builds."
+            Write-Warn "Docker is not installed"
         }
     }
     Write-Host ""
@@ -455,6 +453,315 @@ function Test-AzureSubscription {
     Write-Host ""
 }
 
+# ── Check tenant match (TroubleShootingSteps: CrossTenantDeploymentNotPermitted)
+# Catches two foot-guns:
+#   1. The subscription is from a different tenant than the one it currently
+#      lives in (homeTenantId != tenantId). Cross-tenant subscriptions can
+#      block deployment with `CrossTenantDeploymentNotPermitted`.
+#   2. The signed-in user is a Guest in the subscription's tenant. Guest
+#      identities frequently lack the directory permissions needed for
+#      role assignments and app-registration creation done by `azd up`.
+function Test-TenantMatch {
+    Write-Section "Azure Tenant Match"
+
+    try {
+        $accountInfo = az account show --output json 2>$null | ConvertFrom-Json
+    }
+    catch {
+        $accountInfo = $null
+    }
+    if (-not $accountInfo) {
+        Write-Info "Skipping tenant match check (not logged in to Azure)"
+        Write-Host ""
+        return
+    }
+
+    $tenantId = $accountInfo.tenantId
+    $homeTenantId = $accountInfo.homeTenantId
+
+    if ($tenantId -and $homeTenantId -and ($tenantId -ne $homeTenantId)) {
+        Write-Warn "Subscription tenant ($tenantId) differs from its home tenant ($homeTenantId)."
+        Write-Info  "  This is a cross-tenant subscription and may trigger 'CrossTenantDeploymentNotPermitted'."
+        Add-CheckWarning "Subscription is cross-tenant (tenantId != homeTenantId). Deployment may fail with CrossTenantDeploymentNotPermitted."
+    }
+    else {
+        Write-OK "Subscription tenant matches its home tenant ($tenantId)"
+    }
+
+    # Detect Guest user in the subscription's tenant
+    $userType = $null
+    try {
+        $userType = (az ad signed-in-user show --query userType -o tsv 2>$null)
+        if ($LASTEXITCODE -ne 0) { $userType = $null }
+    }
+    catch { $userType = $null }
+
+    # Graph returns userType=null for many native Member accounts; only an
+    # explicit "Guest" string indicates an external/guest identity.
+    if ($userType -eq "Guest") {
+        $upn = $accountInfo.user.name
+        Write-Warn "Signed-in user '$upn' is a Guest in tenant $tenantId."
+        Write-Info  "  Guest accounts often lack directory permissions required by 'azd up' (role assignments, app registrations)."
+        Add-CheckWarning "Signed-in user is a Guest in the subscription's tenant; deployment may fail on role assignment or app-registration steps."
+    }
+    else {
+        Write-OK "Signed-in user is a Member of tenant $tenantId"
+    }
+
+    Write-Host ""
+}
+
+# ── Check subscription role assignments (DeploymentGuide §1.1) ──────────────
+
+# Roles required to deploy this solution end-to-end. Owner satisfies all of
+# these. The check is informational (warning, not hard error) because the
+# caller may rely on inherited Management Group assignments that are not
+# returned by `az role assignment list` without elevated permissions.
+$RequiredRoles = @(
+    @{ Name = "Contributor"; Purpose = "Create and manage Azure resources" }
+    @{ Name = "User Access Administrator"; Purpose = "Manage role assignments (RBAC)" }
+    @{ Name = "Role Based Access Control Administrator"; Purpose = "Configure RBAC permissions" }
+)
+
+function Test-AzureRoles {
+    Write-Section "Azure RBAC Roles (DeploymentGuide §1.1)"
+
+    try {
+        $accountInfo = az account show --output json 2>$null | ConvertFrom-Json
+    }
+    catch {
+        $accountInfo = $null
+    }
+    if (-not $accountInfo) {
+        Write-Info "Skipping role check (not logged in to Azure)"
+        Write-Host ""
+        return
+    }
+
+    # Resolve the caller's object id (works for users, SPNs, and managed identities)
+    $callerOid = $null
+    try {
+        $callerOid = (az ad signed-in-user show --query id -o tsv 2>$null)
+        if ($LASTEXITCODE -ne 0) { $callerOid = $null }
+    }
+    catch { $callerOid = $null }
+
+    if (-not $callerOid) {
+        # Service principal / managed identity path
+        try {
+            $callerOid = (az account show --query "user.name" -o tsv 2>$null)
+        }
+        catch { $callerOid = $null }
+    }
+
+    if (-not $callerOid) {
+        Write-Warn "Could not determine signed-in identity object id; skipping role enumeration."
+        Add-CheckWarning "Unable to verify subscription RBAC roles (could not resolve signed-in identity)."
+        Write-Host ""
+        return
+    }
+
+    $scope = "/subscriptions/$($accountInfo.id)"
+    $assignments = $null
+    try {
+        $assignments = az role assignment list --assignee $callerOid --scope $scope --include-inherited --include-groups --output json 2>$null | ConvertFrom-Json
+    }
+    catch {
+        $assignments = $null
+    }
+
+    if (-not $assignments) {
+        Write-Warn "Could not list role assignments for the signed-in identity at subscription scope."
+        Write-Info "If 'azd up' fails with authorization errors, request 'Contributor' + 'User Access Administrator' (or 'Owner') on subscription $($accountInfo.id)."
+        Add-CheckWarning "Unable to verify subscription RBAC roles (insufficient permission to read role assignments)."
+        Write-Host ""
+        return
+    }
+
+    $roleNames = @($assignments | ForEach-Object { $_.roleDefinitionName })
+    $hasOwner = $roleNames -contains "Owner"
+
+    if ($hasOwner) {
+        Write-OK "'Owner' role assigned (covers all required permissions)"
+    }
+    else {
+        $missing = @()
+        foreach ($r in $RequiredRoles) {
+            if ($roleNames -contains $r.Name) {
+                Write-OK "'$($r.Name)' assigned ($($r.Purpose))"
+            }
+            else {
+                $missing += $r.Name
+                Write-Warn "'$($r.Name)' not found ($($r.Purpose))"
+            }
+        }
+
+        # User Access Administrator and RBAC Admin are interchangeable for our needs
+        $hasAccessAdmin = ($roleNames -contains "User Access Administrator") -or ($roleNames -contains "Role Based Access Control Administrator")
+        $hasContributor = $roleNames -contains "Contributor"
+
+        if (-not $hasContributor -or -not $hasAccessAdmin) {
+            Add-CheckWarning "Signed-in identity is missing one or more required roles at subscription scope ($($accountInfo.id)). Required: 'Contributor' + ('User Access Administrator' or 'Role Based Access Control Administrator'), or 'Owner'. Missing: $($missing -join ', ')."
+            Write-Info "Request the missing roles or have an Owner run 'azd up'. See DeploymentGuide §1.1."
+        }
+    }
+    Write-Host ""
+}
+
+# ── Check resource providers are registered (DeploymentGuide §1.2) ──────────
+
+# Providers that this solution uses. Unregistered providers will cause
+# 'azd up' to fail with cryptic 'NoRegisteredProviderFound' errors.
+$RequiredProviders = @(
+    "Microsoft.CognitiveServices",
+    "Microsoft.Search",
+    "Microsoft.App",
+    "Microsoft.ContainerRegistry",
+    "Microsoft.DocumentDB",
+    "Microsoft.KeyVault",
+    "Microsoft.Storage",
+    "Microsoft.Web",
+    "Microsoft.OperationalInsights",
+    "Microsoft.Insights",
+    "Microsoft.ManagedIdentity"
+)
+
+function Test-ResourceProviders {
+    Write-Section "Azure Resource Providers (DeploymentGuide §1.2)"
+
+    try {
+        $accountInfo = az account show --output json 2>$null | ConvertFrom-Json
+    }
+    catch {
+        $accountInfo = $null
+    }
+    if (-not $accountInfo) {
+        Write-Info "Skipping provider check (not logged in to Azure)"
+        Write-Host ""
+        return
+    }
+
+    $unregistered = @()
+    foreach ($ns in $RequiredProviders) {
+        $state = $null
+        try {
+            $state = (az provider show --namespace $ns --query "registrationState" -o tsv 2>$null)
+            if ($LASTEXITCODE -ne 0) { $state = $null }
+        }
+        catch { $state = $null }
+
+        if ($state -eq "Registered") {
+            Write-OK "$ns is Registered"
+        }
+        elseif ($state) {
+            Write-Warn "$ns is '$state' (expected 'Registered')"
+            $unregistered += $ns
+        }
+        else {
+            Write-Warn "${ns}: could not determine registration state"
+            $unregistered += $ns
+        }
+    }
+
+    if ($unregistered.Count -gt 0) {
+        Add-CheckWarning "The following resource providers are not 'Registered' on subscription $($accountInfo.id): $($unregistered -join ', '). Register with: az provider register --namespace <Namespace>"
+        Write-Info "To register all at once: $($unregistered | ForEach-Object { 'az provider register --namespace ' + $_ } | Out-String)"
+    }
+    Write-Host ""
+}
+
+# ── Check App Registration creation permission (DeploymentGuide §1.1) ──────
+
+# Directory roles that grant app registration creation rights.
+$AppCreatorRoles = @(
+    "Global Administrator",
+    "Application Administrator",
+    "Application Developer",
+    "Cloud Application Administrator"
+)
+
+function Test-AppRegistrationPermission {
+    Write-Section "App Registration Permission (DeploymentGuide §1.1)"
+
+    try {
+        $accountInfo = az account show --output json 2>$null | ConvertFrom-Json
+    }
+    catch {
+        $accountInfo = $null
+    }
+    if (-not $accountInfo) {
+        Write-Info "Skipping app registration check (not logged in to Azure)"
+        Write-Host ""
+        return
+    }
+
+    # Skip for service principals / managed identities — their app-creation
+    # rights come from Graph API permissions, which can't be reliably probed.
+    $userType = $accountInfo.user.type
+    if ($userType -and $userType -ne "user") {
+        Write-Info "Signed in as '$userType'; skipping interactive app registration check."
+        Write-Host ""
+        return
+    }
+
+    $userName = $accountInfo.user.name
+
+    # Path 1: Caller holds a directory role that explicitly grants app creation.
+    $rolesGranting = @()
+    $memberOfReadable = $false
+    try {
+        $memberOf = az rest --method GET --url "https://graph.microsoft.com/v1.0/me/memberOf?`$select=id,displayName,@odata.type" --output json 2>$null | ConvertFrom-Json
+        if ($memberOf -and $memberOf.value) {
+            $memberOfReadable = $true
+            foreach ($entry in $memberOf.value) {
+                $type = $entry.'@odata.type'
+                if ($type -eq "#microsoft.graph.directoryRole" -and ($AppCreatorRoles -contains $entry.displayName)) {
+                    $rolesGranting += $entry.displayName
+                }
+            }
+        }
+    }
+    catch { }
+
+    if ($rolesGranting.Count -gt 0) {
+        Write-OK "$userName can create app registrations via directory role: $($rolesGranting -join ', ')"
+        Write-Host ""
+        return
+    }
+
+    # Path 2: Tenant default permission lets every user create app registrations.
+    $allowedToCreateApps = $null
+    try {
+        $policy = az rest --method GET --url "https://graph.microsoft.com/v1.0/policies/authorizationPolicy" --output json 2>$null | ConvertFrom-Json
+        if ($policy) {
+            $allowedToCreateApps = $policy.defaultUserRolePermissions.allowedToCreateApps
+        }
+    }
+    catch { $allowedToCreateApps = $null }
+
+    if ($allowedToCreateApps -eq $true) {
+        Write-OK "$userName can create app registrations (granted by tenant default user permissions)"
+        Write-Host ""
+        return
+    }
+
+    if ($allowedToCreateApps -eq $false) {
+        Write-Warn "$userName cannot create app registrations: tenant restricts creation to privileged roles and you do not hold any of: $($AppCreatorRoles -join ', ')."
+        Add-CheckWarning "App registration creation may be blocked for $userName. If 'azd up' fails creating an Entra ID app, request 'Application Developer' (or higher) in the tenant. See DeploymentGuide §1.1."
+    }
+    else {
+        # Tenant policy unreadable. Decide based on whether we could even read directory roles.
+        if ($memberOfReadable) {
+            Write-Warn "Could not verify app registration permission for $userName (no granting directory role assigned and tenant default policy is not readable from this account)."
+        }
+        else {
+            Write-Warn "Could not verify app registration permission for $userName (insufficient Graph permission to inspect directory roles or tenant policy)."
+        }
+        Add-CheckWarning "Unable to verify app registration creation permission for $userName. If 'azd up' fails creating an Entra ID app, request 'Application Developer' (or higher) in the tenant. See DeploymentGuide §1.1."
+    }
+    Write-Host ""
+}
+
 # ── Check hook scripts exist ────────────────────────────────────────────────
 
 function Test-HookScripts {
@@ -485,6 +792,12 @@ function Test-HookScripts {
 
 # ── Check model quota ───────────────────────────────────────────────────────
 
+# ── Recommended OpenAI regions (from docs/DeploymentGuide.md) ───────────────
+$RecommendedOpenAIRegions = @("eastus", "eastus2", "australiaeast", "japaneast", "uksouth", "francecentral")
+
+# Path to the canonical PowerShell quota check script (sibling of the bash version)
+$QuotaCheckScript = "infra/scripts/quota_check_params.ps1"
+
 function Test-ModelQuota {
     Write-Section "Azure OpenAI Model Quota (Optional)"
 
@@ -503,68 +816,62 @@ function Test-ModelQuota {
         return
     }
 
-    try {
-        $openaiLocation = (azd env get-value AZURE_ENV_OPENAI_LOCATION 2>$null)
-        if (-not $openaiLocation) {
-            Write-Info "Skipping quota check (AZURE_ENV_OPENAI_LOCATION not set)"
-            Write-Host ""
-            return
-        }
-        $openaiLocation = $openaiLocation.Trim()
-    }
-    catch {
-        Write-Info "Skipping quota check (AZURE_ENV_OPENAI_LOCATION not set)"
+    if (-not (Test-Path $QuotaCheckScript)) {
+        Write-Warn "Quota check script not found at '$QuotaCheckScript'. Skipping."
         Write-Host ""
         return
     }
 
-    $subId = $accountInfo.id
-
-    Write-Info "Checking Azure OpenAI model quota in '$openaiLocation'..."
-    Write-Info "This may take a moment..."
-
-    # Default models: gpt-4.1-mini (50), gpt-4.1 (150), o4-mini (50)
-    $models = @(
-        @{Name = "gpt-4.1-mini"; Capacity = 50; Type = "GlobalStandard" }
-        @{Name = "gpt-4.1"; Capacity = 150; Type = "GlobalStandard" }
-        @{Name = "o4-mini"; Capacity = 50; Type = "GlobalStandard" }
-    )
-
-    $quotaErrors = @()
-
-    foreach ($model in $models) {
-        $modelType = "OpenAI.$($model.Type).$($model.Name)"
-        try {
-            $modelData = az cognitiveservices usage list --location $openaiLocation --query "[?name.value=='$modelType']" --output json 2>$null | ConvertFrom-Json
-
-            if ($modelData -and $modelData.Count -gt 0) {
-                $currentValue = [int]($modelData[0].currentValue)
-                $limit = [int]($modelData[0].limit)
-                $available = $limit - $currentValue
-
-                if ($available -ge $model.Capacity) {
-                    Write-OK "$($model.Name): $available available (need $($model.Capacity)) in $openaiLocation"
-                }
-                else {
-                    $quotaErrors += "$($model.Name): only $available available but $($model.Capacity) required in $openaiLocation"
-                    Write-Fail "$($model.Name): insufficient quota ($available available, $($model.Capacity) required)"
-                }
+    # If the user has selected a specific region, pass it through; otherwise use
+    # the script's defaults (8 recommended regions, 3 default models).
+    $regionsArg = $null
+    if ($env:AZURE_ENV_OPENAI_LOCATION) {
+        $regionsArg = $env:AZURE_ENV_OPENAI_LOCATION.Trim()
+    }
+    else {
+        $azdValue = & azd env get-value AZURE_ENV_OPENAI_LOCATION 2>$null
+        if ($LASTEXITCODE -eq 0 -and $azdValue) {
+            $candidate = $azdValue.ToString().Trim()
+            if ($candidate -and ($candidate -notmatch '^\s*ERROR')) {
+                $regionsArg = $candidate
             }
-            else {
-                Write-Warn "$($model.Name): could not retrieve quota info for $openaiLocation"
-            }
-        }
-        catch {
-            Write-Warn "$($model.Name): error checking quota - $($_.Exception.Message)"
         }
     }
 
-    if ($quotaErrors.Count -gt 0) {
-        Add-CheckError "Insufficient Azure OpenAI model quota. Details:"
-        foreach ($qe in $quotaErrors) {
-            Add-CheckError "  - $qe"
+    Write-Info "Running '$QuotaCheckScript' (DeploymentGuide §1.3)..."
+    if ($regionsArg) {
+        Write-Info "Targeting selected region: $regionsArg"
+    }
+    else {
+        Write-Info "No region selected. Using script defaults (8 regions, 3 models)."
+    }
+    Write-Host ""
+
+    # Pre-set AZURE_SUBSCRIPTION_ID so the script never prompts when multiple
+    # subscriptions are enabled.
+    $previousSubId = $env:AZURE_SUBSCRIPTION_ID
+    $env:AZURE_SUBSCRIPTION_ID = $accountInfo.id
+    try {
+        if ($regionsArg) {
+            & pwsh -NoProfile -File $QuotaCheckScript -Regions $regionsArg
+            if (-not $?) {
+                & powershell -NoProfile -File $QuotaCheckScript -Regions $regionsArg
+            }
         }
-        Add-CheckError "Request quota increase: https://aka.ms/oai/stuquotarequest or try a different region: azd env set AZURE_ENV_OPENAI_LOCATION '<region>'"
+        else {
+            & pwsh -NoProfile -File $QuotaCheckScript
+            if (-not $?) {
+                & powershell -NoProfile -File $QuotaCheckScript
+            }
+        }
+    }
+    finally {
+        if ($null -eq $previousSubId) {
+            Remove-Item Env:\AZURE_SUBSCRIPTION_ID -ErrorAction SilentlyContinue
+        }
+        else {
+            $env:AZURE_SUBSCRIPTION_ID = $previousSubId
+        }
     }
     Write-Host ""
 }
@@ -584,6 +891,10 @@ function Main {
     Test-Node
     Test-Docker
     Test-AzureSubscription
+    Test-TenantMatch
+    Test-AzureRoles
+    Test-AppRegistrationPermission
+    Test-ResourceProviders
     Test-AzdEnvironment
     Test-HookScripts
     Test-ModelQuota

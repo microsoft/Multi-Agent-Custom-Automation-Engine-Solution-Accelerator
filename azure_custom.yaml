@@ -45,17 +45,6 @@ services:
           continueOnError: false
 
 hooks:
-  preprovision:
-    windows:
-      shell: pwsh
-      run: ./scripts/precheck.ps1
-      interactive: true
-      continueOnError: false
-    posix:
-      shell: sh
-      run: bash ./scripts/precheck.sh
-      interactive: true
-      continueOnError: false
   postdeploy:
     windows:
       run: |
