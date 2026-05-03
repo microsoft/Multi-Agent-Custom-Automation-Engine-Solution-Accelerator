@@ -314,16 +314,21 @@ check_azd_env() {
 
   local has_env=false
 
-  # Check if azd env exists
+  # Check if an azd environment exists. Parse 'azd env list --output json'
+  # directly; do NOT fall back to 'azd env get-values' because that command
+  # prompts interactively when no default environment is selected and will
+  # hang the script in non-interactive shells.
   if azd env list &>/dev/null; then
-    local env_name
-    env_name=$(azd env list --output json 2>/dev/null | grep -oP '"Name"\s*:\s*"\K[^"]+' | head -1)
-    if [ -z "$env_name" ]; then
-      env_name=$(azd env get-values 2>/dev/null | head -1 | cut -d= -f2 | tr -d '"' 2>/dev/null)
+    local env_list_json env_name=""
+    env_list_json=$(azd env list --output json 2>/dev/null || echo "[]")
+    if command -v jq &>/dev/null; then
+      env_name=$(echo "$env_list_json" | jq -r '.[0].Name // .[0].name // empty' 2>/dev/null)
+    else
+      env_name=$(echo "$env_list_json" | grep -oiE '"name"[[:space:]]*:[[:space:]]*"[^"]+"' | head -1 | sed -E 's/.*"([^"]+)"$/\1/')
     fi
 
     if [ -n "$env_name" ]; then
-      print_ok "azd environment is configured"
+      print_ok "azd environment is configured ($env_name)"
       has_env=true
     fi
   fi
@@ -335,9 +340,24 @@ check_azd_env() {
     return
   fi
 
+  # Helper: read an azd env value safely.
+  # 'azd env get-value' writes "key not found" / "environment not specified"
+  # errors to STDOUT (not stderr) but exits non-zero, so we must gate on the
+  # exit code, not on the captured string.
+  _azd_env_get() {
+    local _key="$1" _val _rc=0
+    _val=$(azd env get-value "$_key" 2>/dev/null) || _rc=$?
+    if [ "$_rc" -ne 0 ]; then
+      printf ''
+      return 0
+    fi
+    # Trim surrounding whitespace/newlines
+    printf '%s' "$_val" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
+  }
+
   # Validate AZURE_LOCATION
   local azure_location
-  azure_location=$(azd env get-value AZURE_LOCATION 2>/dev/null || echo "")
+  azure_location=$(_azd_env_get AZURE_LOCATION)
 
   if [ -n "$azure_location" ]; then
     local location_lower
@@ -362,7 +382,7 @@ check_azd_env() {
 
   # Validate AZURE_ENV_OPENAI_LOCATION
   local openai_location
-  openai_location=$(azd env get-value AZURE_ENV_OPENAI_LOCATION 2>/dev/null || echo "")
+  openai_location=$(_azd_env_get AZURE_ENV_OPENAI_LOCATION)
 
   if [ -n "$openai_location" ]; then
     local ai_loc_lower
@@ -387,7 +407,7 @@ check_azd_env() {
 
   # Check optional but important env vars and warn if they look problematic
   local model_deployment_type
-  model_deployment_type=$(azd env get-value AZURE_ENV_MODEL_DEPLOYMENT_TYPE 2>/dev/null || echo "")
+  model_deployment_type=$(_azd_env_get AZURE_ENV_MODEL_DEPLOYMENT_TYPE)
   if [ -n "$model_deployment_type" ]; then
     if [ "$model_deployment_type" != "Standard" ] && [ "$model_deployment_type" != "GlobalStandard" ]; then
       add_error "AZURE_ENV_MODEL_DEPLOYMENT_TYPE='$model_deployment_type' is invalid. Must be 'Standard' or 'GlobalStandard'. Fix: azd env set AZURE_ENV_MODEL_DEPLOYMENT_TYPE 'GlobalStandard'"
@@ -398,7 +418,7 @@ check_azd_env() {
   fi
 
   local model_41_deployment_type
-  model_41_deployment_type=$(azd env get-value AZURE_ENV_MODEL_4_1_DEPLOYMENT_TYPE 2>/dev/null || echo "")
+  model_41_deployment_type=$(_azd_env_get AZURE_ENV_MODEL_4_1_DEPLOYMENT_TYPE)
   if [ -n "$model_41_deployment_type" ]; then
     if [ "$model_41_deployment_type" != "Standard" ] && [ "$model_41_deployment_type" != "GlobalStandard" ]; then
       add_error "AZURE_ENV_MODEL_4_1_DEPLOYMENT_TYPE='$model_41_deployment_type' is invalid. Must be 'Standard' or 'GlobalStandard'. Fix: azd env set AZURE_ENV_MODEL_4_1_DEPLOYMENT_TYPE 'GlobalStandard'"
@@ -409,7 +429,7 @@ check_azd_env() {
   fi
 
   local reasoning_deployment_type
-  reasoning_deployment_type=$(azd env get-value AZURE_ENV_REASONING_MODEL_DEPLOYMENT_TYPE 2>/dev/null || echo "")
+  reasoning_deployment_type=$(_azd_env_get AZURE_ENV_REASONING_MODEL_DEPLOYMENT_TYPE)
   if [ -n "$reasoning_deployment_type" ]; then
     if [ "$reasoning_deployment_type" != "Standard" ] && [ "$reasoning_deployment_type" != "GlobalStandard" ]; then
       add_error "AZURE_ENV_REASONING_MODEL_DEPLOYMENT_TYPE='$reasoning_deployment_type' is invalid. Must be 'Standard' or 'GlobalStandard'. Fix: azd env set AZURE_ENV_REASONING_MODEL_DEPLOYMENT_TYPE 'GlobalStandard'"
@@ -763,10 +783,17 @@ check_model_quota() {
   if [ -n "${AZURE_ENV_OPENAI_LOCATION:-}" ]; then
     regions_arg="$AZURE_ENV_OPENAI_LOCATION"
   else
-    local azd_value
-    azd_value=$(azd env get-value AZURE_ENV_OPENAI_LOCATION 2>/dev/null || true)
-    if [ -n "$azd_value" ] && [[ "$azd_value" != ERROR* ]]; then
-      regions_arg="$azd_value"
+    # 'azd env get-value' writes its "ERROR: ensuring environment exists"
+    # message to STDOUT (not stderr) when no env is selected, so we cannot
+    # rely on '2>/dev/null' alone. Use the exit code as the source of truth
+    # and only consume stdout when the command succeeded.
+    local azd_value azd_rc=0
+    azd_value=$(azd env get-value AZURE_ENV_OPENAI_LOCATION 2>/dev/null) || azd_rc=$?
+    if [ "$azd_rc" -eq 0 ]; then
+      azd_value="$(printf '%s' "$azd_value" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+      if [ -n "$azd_value" ]; then
+        regions_arg="$azd_value"
+      fi
     fi
   fi
 
