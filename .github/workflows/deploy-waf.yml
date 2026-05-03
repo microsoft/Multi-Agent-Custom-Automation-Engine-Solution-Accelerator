@@ -27,7 +27,7 @@ jobs:
       GPT41_MINI_MIN_CAPACITY: 1
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -128,7 +128,7 @@ jobs:
               solutionName=${{ env.SOLUTION_PREFIX }} \
               location="${{ env.AZURE_LOCATION }}" \
               azureAiServiceLocation='${{ env.AZURE_LOCATION }}' \
-              gptModelCapacity=${{ env.GPT_MIN_CAPACITY }} \
+              gptDeploymentCapacity=${{ env.GPT_MIN_CAPACITY }} \
               gpt4_1ModelCapacity=${{ env.GPT41_MINI_MIN_CAPACITY }} \
               gptReasoningModelCapacity=${{ env.O4_MINI_MIN_CAPACITY }} \
               enableTelemetry=true \
