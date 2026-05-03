@@ -2,21 +2,37 @@
 # =============================================================================
 # Deployment Pre-Check Script (Bash/Posix)
 # =============================================================================
-# This script runs as a preprovision hook during 'azd up' to validate that
-# all prerequisites are met before provisioning begins.
+# Standalone diagnostic that validates everything required for a successful
+# 'azd up' run. This script is NOT registered as an azd hook — operators run
+# it manually before invoking 'azd up'.
 #
-# It checks:
-#   1. Environment detection (Local, Codespace, Dev Container)
-#   2. Required CLI tools and versions (azd, az, bicep, python, npm, node, jq)
-#   3. Azure authentication (logged in, subscription accessible)
-#   4. azd environment variables (AZURE_LOCATION, AZURE_ENV_OPENAI_LOCATION)
-#   5. Allowed Azure region validation
-#   6. Hook script existence (prepackage, postdeploy scripts)
-#   7. Azure OpenAI model quota availability
+# Checks performed (in order):
+#    1. Environment detection (Local, Codespace, Dev Container)
+#    2. azd CLI presence and version
+#    3. Azure CLI presence and version
+#    4. Bicep CLI presence and version
+#    5. Python presence and version
+#    6. Node + npm presence and versions
+#    7. jq presence (required for JSON parsing in this script and the
+#       quota helper)
+#    8. Docker presence (skipped on Local; required in Codespace/Dev
+#       Container)
+#    9. Azure authentication (logged in, subscription accessible)
+#   10. Tenant match (cross-tenant subscription / Guest user detection)
+#   11. Azure RBAC roles (Contributor + UAA/RBAC Admin, or Owner)
+#   12. App registration permission (directory role or tenant default policy)
+#   13. Required Azure resource providers registered
+#   14. azd environment variables (AZURE_LOCATION, AZURE_ENV_OPENAI_LOCATION,
+#       deployment-type flags) and allowed-region validation
+#   15. Deployment hook scripts exist (prepackage, postdeploy, quota helpers)
+#   16. Azure OpenAI model quota report (delegates to
+#       infra/scripts/quota_check_params.sh)
 #
 # Exit codes:
-#   0 - All checks passed
-#   1 - One or more checks failed (details printed)
+#   0 - All critical checks passed (warnings allowed)
+#   1 - One or more critical checks failed (details printed)
+#
+# See docs/DeploymentPreChecks.md for the full reference.
 # =============================================================================
 
 set -o pipefail
