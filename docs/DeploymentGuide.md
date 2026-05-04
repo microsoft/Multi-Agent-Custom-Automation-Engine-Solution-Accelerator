@@ -281,6 +281,8 @@ To optimize costs and integrate with your existing Azure infrastructure, you can
 
 Before kicking off `azd up`, run the standalone pre-check script to validate your environment, identity, regions, RBAC roles, resource providers, and Azure OpenAI quota in one shot. The script is **not** wired into `azd up` — it is a manual, read-only diagnostic you can run as many times as you like.
 
+> **Note:** Make sure you are signed in to Azure CLI before running the script. Run `az login` (or `az login --use-device-code` in VS Code Web / Codespaces / WSL, and `az login --tenant <tenant-id>` for a specific tenant) and confirm the correct subscription is selected with `az account show`. The pre-check is read-only and relies on this active Azure CLI session to inspect identity, RBAC roles, resource providers, and quota.
+
 Run the script that matches your shell, from the repository root:
 
 ```bash
