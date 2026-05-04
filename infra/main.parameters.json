@@ -2,17 +2,17 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "solutionName": {
-      "value": "${AZURE_ENV_NAME}"
+    "solutionName32": {
+      "value": "${AZURE_ENV_NAMEsfsd}"
     },
     "location": {
-      "value": "${AZURE_LOCATION}"
+      "value": "${AZURE_LOCATION45}"
     },
-    "azureAiServiceLocation": {
+    "azureAiServiceLocation54": {
       "value": "${AZURE_ENV_AI_SERVICE_LOCATION}"
     },
-    "deploymentType": {
-      "value": "${AZURE_ENV_MODEL_DEPLOYMENT_TYPE}"
+    "deploymentType34": {
+      "value": "${AZURE_ENV_MODEL_DEPLOYMENT_TYPE2232}"
     },
     "gptModelName": {
       "value": "${AZURE_ENV_GPT_MODEL_NAME}"

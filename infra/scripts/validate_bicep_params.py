@@ -485,43 +485,63 @@ def generate_html_report(
         )
 
         if r.issues:
-            parts.append(
-                '<tr><td style="padding:0;">'
-                '<table role="presentation" width="100%" cellpadding="0"'
-                ' cellspacing="0" style="font-size:12px;">'
-                '<tr style="background-color:#f5f5f5;">'
-                '<th style="text-align:left;padding:6px 10px;'
-                'border-bottom:1px solid #e0e0e0;width:65px;">Severity</th>'
-                '<th style="text-align:left;padding:6px 10px;'
-                'border-bottom:1px solid #e0e0e0;width:180px;">Parameter</th>'
-                '<th style="text-align:left;padding:6px 10px;'
-                'border-bottom:1px solid #e0e0e0;">Details</th></tr>'
-            )
-            for idx, issue in enumerate(r.issues):
-                bg = "#ffffff" if idx % 2 == 0 else "#fafafa"
-                if issue.severity == "ERROR":
-                    sev_html = (
-                        '<span style="color:#D32F2F;font-weight:600;">'
-                        '&#9679; ERROR</span>'
-                    )
-                else:
-                    sev_html = (
-                        '<span style="color:#F57C00;font-weight:600;">'
-                        '&#9679; WARN</span>'
-                    )
+            # --- Errors section ---
+            if errors:
                 parts.append(
-                    f'<tr style="background-color:{bg};">'
-                    f'<td style="padding:5px 10px;border-bottom:1px solid #eee;'
-                    f'vertical-align:top;">{sev_html}</td>'
-                    f'<td style="padding:5px 10px;border-bottom:1px solid #eee;'
-                    f'vertical-align:top;font-family:Consolas,monospace;'
-                    f'font-size:11px;word-break:break-all;">'
-                    f'{_html_escape(issue.param_name)}</td>'
-                    f'<td style="padding:5px 10px;border-bottom:1px solid #eee;'
-                    f'vertical-align:top;">{_html_escape(issue.message)}</td>'
-                    f'</tr>'
+                    '<tr><td style="padding:8px 12px 4px 12px;">'
+                    '<strong style="font-size:12px;color:#D32F2F;">'
+                    '&#9679; Errors</strong></td></tr>'
+                    '<tr><td style="padding:0 12px;">'
+                    '<table role="presentation" width="100%" cellpadding="0"'
+                    ' cellspacing="0" style="font-size:12px;border:1px solid #f5c6cb;">'
+                    '<tr style="background-color:#FFEBEE;">'
+                    '<th style="text-align:left;padding:6px 10px;'
+                    'border-bottom:1px solid #f5c6cb;width:180px;">Parameter</th>'
+                    '<th style="text-align:left;padding:6px 10px;'
+                    'border-bottom:1px solid #f5c6cb;">Details</th></tr>'
                 )
-            parts.append("</table></td></tr>")
+                for idx, issue in enumerate(errors):
+                    bg = "#ffffff" if idx % 2 == 0 else "#fff5f5"
+                    parts.append(
+                        f'<tr style="background-color:{bg};">'
+                        f'<td style="padding:5px 10px;border-bottom:1px solid #f5c6cb;'
+                        f'vertical-align:top;font-family:Consolas,monospace;'
+                        f'font-size:11px;word-break:break-all;">'
+                        f'{_html_escape(issue.param_name)}</td>'
+                        f'<td style="padding:5px 10px;border-bottom:1px solid #f5c6cb;'
+                        f'vertical-align:top;">{_html_escape(issue.message)}</td>'
+                        f'</tr>'
+                    )
+                parts.append("</table></td></tr>")
+
+            # --- Warnings section ---
+            if warnings:
+                parts.append(
+                    '<tr><td style="padding:8px 12px 4px 12px;">'
+                    '<strong style="font-size:12px;color:#F57C00;">'
+                    '&#9679; Warnings</strong></td></tr>'
+                    '<tr><td style="padding:0 12px 8px 12px;">'
+                    '<table role="presentation" width="100%" cellpadding="0"'
+                    ' cellspacing="0" style="font-size:12px;border:1px solid #ffe0b2;">'
+                    '<tr style="background-color:#FFF3E0;">'
+                    '<th style="text-align:left;padding:6px 10px;'
+                    'border-bottom:1px solid #ffe0b2;width:180px;">Parameter</th>'
+                    '<th style="text-align:left;padding:6px 10px;'
+                    'border-bottom:1px solid #ffe0b2;">Details</th></tr>'
+                )
+                for idx, issue in enumerate(warnings):
+                    bg = "#ffffff" if idx % 2 == 0 else "#fffaf0"
+                    parts.append(
+                        f'<tr style="background-color:{bg};">'
+                        f'<td style="padding:5px 10px;border-bottom:1px solid #ffe0b2;'
+                        f'vertical-align:top;font-family:Consolas,monospace;'
+                        f'font-size:11px;word-break:break-all;">'
+                        f'{_html_escape(issue.param_name)}</td>'
+                        f'<td style="padding:5px 10px;border-bottom:1px solid #ffe0b2;'
+                        f'vertical-align:top;">{_html_escape(issue.message)}</td>'
+                        f'</tr>'
+                    )
+                parts.append("</table></td></tr>")
         else:
             parts.append(
                 '<tr><td style="padding:10px 12px;color:#2E7D32;'
