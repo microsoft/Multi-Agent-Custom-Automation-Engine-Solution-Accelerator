@@ -241,8 +241,14 @@ class AppConfig:
                 )
 
             endpoint = self.AZURE_AI_AGENT_ENDPOINT
+            # Extended HTTP timeouts to reduce transient "Request timed out"
+            # responses that cause the Magentic orchestrator to reset.
             self._ai_project_client = AIProjectClient(
-                endpoint=endpoint, credential=credential
+                endpoint=endpoint,
+                credential=credential,
+                connection_timeout=30,
+                read_timeout=180,
+                retry_total=5,
             )
 
             return self._ai_project_client

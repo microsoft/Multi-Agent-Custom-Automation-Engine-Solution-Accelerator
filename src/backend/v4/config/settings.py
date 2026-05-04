@@ -91,6 +91,8 @@ class OrchestrationConfig:
         self.sockets: Dict[str, WebSocket] = {}  # user_id -> WebSocket
         self.clarifications: Dict[str, str] = {}  # m_plan_id -> clarification response
         self.max_rounds: int = 20  # Maximum replanning rounds
+        # Track in-flight orchestration tasks per user so a new plan cancels any old one
+        self.active_tasks: Dict[str, asyncio.Task] = {}  # user_id -> running asyncio.Task
 
         # Event-driven notification system for approvals and clarifications
         self._approval_events: Dict[str, asyncio.Event] = {}

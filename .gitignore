@@ -471,3 +471,5 @@ data/sample_code/
 # Bicep local files
 *.local*.bicepparam
 *.local*.parameters.json
+# Local debug/ops scripts (not for repo)
+scripts/

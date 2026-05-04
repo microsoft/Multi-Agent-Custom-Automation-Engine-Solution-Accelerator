@@ -70,10 +70,15 @@ class MCPEnabledBase:
         self.creds = DefaultAzureCredential()
         if self._stack:
             await self._stack.enter_async_context(self.creds)
-        # Create AgentsClient
+        # Create AgentsClient with extended HTTP timeouts to reduce transient
+        # "Request timed out" responses on /threads/{id}/messages that cause the
+        # Magentic orchestrator to reset and re-run prior agents.
         self.client = AgentsClient(
             endpoint=self.project_endpoint,
             credential=self.creds,
+            connection_timeout=30,
+            read_timeout=180,
+            retry_total=5,
         )
         if self._stack:
             await self._stack.enter_async_context(self.client)

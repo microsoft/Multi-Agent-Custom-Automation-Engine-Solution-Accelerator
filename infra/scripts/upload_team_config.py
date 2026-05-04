@@ -52,6 +52,7 @@ files_to_process = [
     ("retail.json", "00000000-0000-0000-0000-000000000003"),
     ("rfp_analysis_team.json", "00000000-0000-0000-0000-000000000004"),
     ("contract_compliance_team.json", "00000000-0000-0000-0000-000000000005"),
+    ("ad_copy_team.json", "00000000-0000-0000-0000-000000000006"),
 ]
 
 upload_endpoint = backend_url.rstrip('/') + '/api/v4/upload_team_config'
@@ -65,15 +66,20 @@ for filename, team_id in files_to_process:
             print(f"Uploading file:  {filename}")
             team_exists = check_team_exists(backend_url, team_id, user_principal_id)            
             if team_exists:
+                # Delete existing team to allow re-upload with updated config
+                print(f"Team (ID: {team_id}) already exists. Deleting to re-upload with latest config...")
+                delete_endpoint = backend_url.rstrip('/') + f'/api/v4/team_configs/{team_id}'
+                headers = {
+                    'x-ms-client-principal-id': user_principal_id
+                }
                 try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        team_data = json.load(f)
-                        team_name = team_data.get('name', 'Unknown')
-                        print(f"Team '{team_name}' (ID: {team_id}) already exists!")
-                        continue
+                    delete_response = requests.delete(delete_endpoint, headers=headers)
+                    if delete_response.status_code == 200:
+                        print(f"Successfully deleted existing team (ID: {team_id}).")
+                    else:
+                        print(f"Warning: Could not delete existing team (ID: {team_id}). Status: {delete_response.status_code}. Will attempt upload anyway.")
                 except Exception as e:
-                    print(f"Error reading {filename}: {str(e)}")
-                    continue
+                    print(f"Warning: Exception deleting team (ID: {team_id}): {str(e)}. Will attempt upload anyway.")
 
             try:
                 with open(file_path, 'rb') as file_data:

@@ -3,9 +3,9 @@ import { AgentMessageData, AgentMessageType } from "@/models";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypePrism from "rehype-prism";
-import { Body1, Tag, makeStyles, tokens } from "@fluentui/react-components";
+import { Body1, Tag, makeStyles, tokens, Button } from "@fluentui/react-components";
 import { TaskService } from "@/services";
-import { PersonRegular } from "@fluentui/react-icons";
+import { PersonRegular, ArrowDownloadRegular } from "@fluentui/react-icons";
 import { getAgentIcon, getAgentDisplayName } from '@/utils/agentIconUtils';
 
 interface StreamingAgentMessageProps {
@@ -213,10 +213,41 @@ const renderAgentMessages = (
                         />
                       ),
                       img: ({ node: _imgNode, ...props }) => (
-                        <img
-                          {...props}
-                          style={{ maxWidth: '100%', borderRadius: '8px', marginTop: '8px' }}
-                        />
+                        <div style={{ position: 'relative', display: 'inline-block', marginTop: '8px' }}>
+                          <img
+                            {...props}
+                            style={{ maxWidth: '100%', borderRadius: '8px', display: 'block' }}
+                          />
+                          <Button
+                            appearance="subtle"
+                            icon={<ArrowDownloadRegular />}
+                            style={{
+                              position: 'absolute',
+                              top: '8px',
+                              right: '8px',
+                              minWidth: '32px',
+                              width: '32px',
+                              height: '32px',
+                              padding: '4px',
+                              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                              color: 'white',
+                              borderRadius: '4px',
+                            }}
+                            onClick={() => {
+                              const url = props.src;
+                              if (url) {
+                                const link = document.createElement('a');
+                                link.href = url;
+                                link.download = `ad-image-${Date.now()}.png`;
+                                link.target = '_blank';
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                              }
+                            }}
+                            title="Download image"
+                          />
+                        </div>
                       )
                     }}
                 >
