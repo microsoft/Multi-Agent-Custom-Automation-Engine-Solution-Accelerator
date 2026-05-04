@@ -16,11 +16,11 @@ if _src_path not in sys.path:
     sys.path.insert(0, _src_path)
 
 # Clear stale mocks that other tests inject at module level, so that subsequent imports
-# of messages.py (which imports common.models.messages_af) resolve to real modules.
+# of messages.py (which imports common.models.messages) resolve to real modules.
 from types import ModuleType as _ModuleType
 for _k in ['backend.v4.models.messages', 'v4.models.messages']:
     sys.modules.pop(_k, None)
-for _k in ['common', 'common.models', 'common.models.messages_af',
+for _k in ['common', 'common.models', 'common.models.messages',
             'common.config', 'common.config.app_config']:
     if _k in sys.modules and not isinstance(sys.modules[_k], _ModuleType):
         del sys.modules[_k]
@@ -80,7 +80,7 @@ sys.modules['common'] = Mock()
 sys.modules['common.config'] = Mock()
 sys.modules['common.config.app_config'] = Mock()
 sys.modules['common.models'] = Mock()
-sys.modules['common.models.messages_af'] = Mock()
+sys.modules['common.models.messages'] = Mock()
 
 # Create comprehensive mock objects
 mock_azure_openai_chat_client = Mock()
@@ -109,7 +109,7 @@ mock_config.get_azure_credentials.return_value = Mock()
 sys.modules['agent_framework'].azure.AzureOpenAIChatClient = mock_azure_openai_chat_client
 sys.modules['agent_framework'].ChatOptions = mock_chat_options
 sys.modules['common.config.app_config'].config = mock_config
-sys.modules['common.models.messages_af'].TeamConfiguration = mock_team_configuration
+sys.modules['common.models.messages'].TeamConfiguration = mock_team_configuration
 
 # Now import from backend with proper path
 from backend.v4.config.settings import (

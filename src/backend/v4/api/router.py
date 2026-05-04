@@ -8,7 +8,7 @@ import v4.models.messages as messages
 from v4.models.messages import WebsocketMessageType
 from auth.auth_utils import get_authenticated_user_details
 from common.database.database_factory import DatabaseFactory
-from common.models.messages_af import (
+from common.models.messages import (
     InputTask,
     Plan,
     PlanStatus,
@@ -16,7 +16,7 @@ from common.models.messages_af import (
 )
 from common.utils.event_utils import track_event_if_configured
 from common.config.app_config import config
-from common.utils.utils_af import (
+from common.utils.team_utils import (
     find_first_available_team,
     rai_success,
     rai_validate_team_config,
@@ -108,7 +108,7 @@ async def init_team(
 
     # Get first available team from 4 to 1 (RFP -> Retail -> Marketing -> HR)
     # Falls back to HR if no teams are available.
-    print(f"Init team called, team_switched={team_switched}")
+    logger.debug("Init team called, team_switched=%s", team_switched)
     try:
         authenticated_user = get_authenticated_user_details(
             request_headers=request.headers
@@ -131,7 +131,7 @@ async def init_team(
 
         # If no teams available and no current team, return empty state to allow custom team upload
         if not init_team_id and not user_current_team:
-            print("No teams found in database. System ready for custom team upload.")
+            logger.info("No teams found in database. System ready for custom team upload.")
             return {
                 "status": "No teams configured. Please upload a team configuration to get started.",
                 "team_id": None,
@@ -142,9 +142,9 @@ async def init_team(
         # Use current team if available, otherwise use found team
         if user_current_team:
             init_team_id = user_current_team.team_id
-            print(f"Using user's current team: {init_team_id}")
+            logger.debug("Using user's current team: %s", init_team_id)
         elif init_team_id:
-            print(f"Using first available team: {init_team_id}")
+            logger.debug("Using first available team: %s", init_team_id)
             user_current_team = await team_service.handle_team_selection(
                 user_id=user_id, team_id=init_team_id
             )
@@ -158,7 +158,7 @@ async def init_team(
         if team_configuration is None:
             # If team doesn't exist, clear current team and return empty state
             await memory_store.delete_current_team(user_id)
-            print(f"Team configuration '{init_team_id}' not found. Cleared current team.")
+            logger.warning("Team configuration '%s' not found. Cleared current team.", init_team_id)
             return {
                 "status": "Current team configuration not found. Please select or upload a team configuration.",
                 "team_id": None,
@@ -316,7 +316,7 @@ async def process_request(
             },
         )
     except Exception as e:
-        print(f"Error creating plan: {e}")
+        logger.error("Error creating plan: %s", e)
         track_event_if_configured(
             "PlanCreationFailed",
             {
@@ -424,13 +424,13 @@ async def plan_approval(
                 orchestration_config.set_approval_result(
                     human_feedback.m_plan_id, human_feedback.approved
                 )
-                print("Plan approval received:", human_feedback)
+                logger.debug("Plan approval received: %s", human_feedback)
 
                 try:
                     result = await PlanService.handle_plan_approval(
                         human_feedback, user_id
                     )
-                    print("Plan approval processed:", result)
+                    logger.debug("Plan approval processed: %s", result)
 
                 except ValueError as ve:
                     logger.error(f"ValueError processing plan approval: {ve}")
@@ -618,11 +618,11 @@ async def user_clarification(
                 result = await PlanService.handle_human_clarification(
                     human_feedback, user_id
                 )
-                print("Human clarification processed:", result)
+                logger.debug("Human clarification processed: %s", result)
             except ValueError as ve:
-                print(f"ValueError processing human clarification: {ve}")
+                logger.error("ValueError processing human clarification: %s", ve)
             except Exception as e:
-                print(f"Error processing human clarification: {e}")
+                logger.error("Error processing human clarification: %s", e)
             track_event_if_configured(
                 "HumanClarificationReceived",
                 {
@@ -707,11 +707,11 @@ async def agent_message_user(
     try:
 
         result = await PlanService.handle_agent_messages(agent_message, user_id)
-        print("Agent message processed:", result)
+        logger.debug("Agent message processed: %s", result)
     except ValueError as ve:
-        print(f"ValueError processing agent message: {ve}")
+        logger.error("ValueError processing agent message: %s", ve)
     except Exception as e:
-        print(f"Error processing agent message: {e}")
+        logger.error("Error processing agent message: %s", e)
 
     track_event_if_configured(
         "AgentMessageReceived",
@@ -839,12 +839,12 @@ async def upload_team_config(
         )
 
         # Validate search indexes
-        logger.info(f"🔍 Validating search indexes for user: {user_id}")
+        logger.info(f"Validating search indexes for user: {user_id}")
         search_valid, search_errors = await team_service.validate_team_search_indexes(
             json_data
         )
         if not search_valid:
-            logger.warning(f"❌ Search validation failed for user {user_id}: {search_errors}")
+            logger.warning(f"Search validation failed for user {user_id}: {search_errors}")
             error_message = (
                 f"Search index validation failed:\n\n{chr(10).join([f'• {error}' for error in search_errors])}\n\n"
                 f"Please ensure all referenced search indexes exist in your Azure AI Search service."
@@ -860,7 +860,7 @@ async def upload_team_config(
             )
             raise HTTPException(status_code=400, detail=error_message)
 
-        logger.info(f"✅ Search validation passed for user: {user_id}")
+        logger.info(f"Search validation passed for user: {user_id}")
         track_event_if_configured(
             "Team configuration search validation passed",
             {"status": "passed", "user_id": user_id, "filename": file.filename},
@@ -876,7 +876,7 @@ async def upload_team_config(
 
         # Save the configuration
         try:
-            print("Saving team configuration...", team_id)
+            logger.debug("Saving team configuration for team_id=%s", team_id)
             if team_id:
                 team_config.team_id = team_id
                 team_config.id = team_id  # Ensure id is also set for updates

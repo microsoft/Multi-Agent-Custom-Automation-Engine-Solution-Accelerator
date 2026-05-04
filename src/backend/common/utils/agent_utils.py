@@ -5,7 +5,7 @@ import string
 from typing import Optional
 
 from common.database.database_base import DatabaseBase
-from common.models.messages_af import TeamConfiguration
+from common.models.messages import TeamConfiguration
 
 
 def generate_assistant_id(prefix: str = "asst_", length: int = 24) -> str:

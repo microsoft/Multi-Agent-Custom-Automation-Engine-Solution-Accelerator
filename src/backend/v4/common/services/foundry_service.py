@@ -2,7 +2,6 @@ import logging
 import re
 from typing import Any, Dict, List
 
-# from git import List
 import aiohttp
 from azure.ai.projects.aio import AIProjectClient
 from common.config.app_config import config

@@ -10,7 +10,7 @@ from agent_framework_azure_ai import \
 from azure.ai.projects.models import ConnectionType
 from common.config.app_config import config
 from common.database.database_base import DatabaseBase
-from common.models.messages_af import TeamConfiguration
+from common.models.messages import TeamConfiguration
 from v4.common.services.team_service import TeamService
 from v4.config.agent_registry import agent_registry
 from v4.magentic_agents.common.lifecycle import AzureAgentBase

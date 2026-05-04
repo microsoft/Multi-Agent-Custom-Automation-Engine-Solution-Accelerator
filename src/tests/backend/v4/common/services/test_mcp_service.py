@@ -44,7 +44,7 @@ sys.modules['azure.ai.projects'] = azure_ai_projects_module
 sys.modules['azure.ai.projects.aio'] = azure_ai_projects_aio_module
 
 # Mock other problematic modules and imports
-sys.modules['common.models.messages_af'] = MagicMock()
+sys.modules['common.models.messages'] = MagicMock()
 sys.modules['v4'] = MagicMock()
 sys.modules['v4.common'] = MagicMock()
 sys.modules['v4.common.services'] = MagicMock()

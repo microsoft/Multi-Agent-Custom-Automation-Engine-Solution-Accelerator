@@ -8,7 +8,7 @@ import v4.models.messages as messages
 from azure.cosmos.aio import CosmosClient
 from azure.cosmos.aio._database import DatabaseProxy
 
-from ..models.messages_af import (
+from ..models.messages import (
     AgentMessage,
     AgentMessageData,
     BaseDataModel,
@@ -328,7 +328,7 @@ class CosmosDBClient(DatabaseBase):
         try:
             # First find the team to get its document id and partition key
             team = await self.get_team(team_id)
-            print(team)
+            self.logger.debug("delete_team: resolved team document id=%s", team.id if team else None)
             if team:
                 await self.delete_item(item_id=team.id, partition_key=team.session_id)
             return True
@@ -411,7 +411,7 @@ class CosmosDBClient(DatabaseBase):
             {"name": "@data_type", "value": DataType.user_current_team},
         ]
         items = self.container.query_items(query=query, parameters=params)
-        print("Items to delete:", items)
+        self.logger.debug("delete_current_team: querying items for user_id=%s", user_id)
         if items:
             async for doc in items:
                 try:
@@ -443,7 +443,7 @@ class CosmosDBClient(DatabaseBase):
             {"name": "@plan_id", "value": plan_id},
         ]
         items = self.container.query_items(query=query, parameters=params)
-        print("Items to delete planid:", items)
+        self.logger.debug("delete_plan_by_plan_id: querying items for plan_id=%s", plan_id)
         if items:
             async for doc in items:
                 try:
@@ -508,7 +508,7 @@ class CosmosDBClient(DatabaseBase):
             {"name": "@data_type", "value": DataType.current_team_agent},
         ]
         items = self.container.query_items(query=query, parameters=params)
-        print("Items to delete:", items)
+        self.logger.debug("delete_team_agent: querying items for team_id=%s agent_name=%s", team_id, agent_name)
         if items:
             async for doc in items:
                 try:

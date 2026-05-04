@@ -9,7 +9,6 @@ import re
 from typing import Any
 
 from agent_framework import ChatMessage
-# Removed: from agent_framework._content import FunctionCallContent  (does not exist)
 
 from agent_framework._workflows._magentic import AgentRunResponseUpdate  # Streaming update type from workflows
 

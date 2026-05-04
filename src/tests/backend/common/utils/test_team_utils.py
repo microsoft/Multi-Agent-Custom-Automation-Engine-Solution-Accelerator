@@ -1,4 +1,4 @@
-"""Unit tests for utils_af module."""
+"""Unit tests for team_utils module."""
 
 import logging
 import sys
@@ -63,7 +63,7 @@ sys.modules['mcp.types'] = Mock()
 sys.modules['mcp.client'] = Mock()
 sys.modules['mcp.client.session'] = Mock(ClientSession=Mock)
 sys.modules['pydantic.root_model'] = Mock()
-# Mock v4 modules that utils_af.py tries to import
+# Mock v4 modules that team_utils.py tries to import
 sys.modules['v4'] = Mock()
 sys.modules['v4.common'] = Mock()
 sys.modules['v4.common.services'] = Mock()
@@ -77,14 +77,14 @@ sys.modules['v4.magentic_agents'] = Mock()
 sys.modules['v4.magentic_agents.foundry_agent'] = Mock()
 
 # Import the REAL modules using backend.* paths for proper coverage tracking
-from backend.common.utils.utils_af import (
+from backend.common.utils.team_utils import (
     find_first_available_team,
     create_RAI_agent,
     _get_agent_response,
     rai_success,
     rai_validate_team_config
 )
-from backend.common.models.messages_af import TeamConfiguration
+from backend.common.models.messages import TeamConfiguration
 from backend.common.database.database_base import DatabaseBase
 
 
@@ -223,9 +223,9 @@ class TestCreateRAIAgent:
         self.mock_memory_store = Mock(spec=DatabaseBase)
     
     @pytest.mark.asyncio
-    @patch('backend.common.utils.utils_af.config')
-    @patch('backend.common.utils.utils_af.FoundryAgentTemplate')
-    @patch('backend.common.utils.utils_af.agent_registry')
+    @patch('backend.common.utils.team_utils.config')
+    @patch('backend.common.utils.team_utils.FoundryAgentTemplate')
+    @patch('backend.common.utils.team_utils.agent_registry')
     async def test_create_rai_agent_success(self, mock_registry, mock_foundry_class, mock_config):
         """Test successful creation of RAI agent."""
         # Setup
@@ -269,10 +269,10 @@ class TestCreateRAIAgent:
         assert result is mock_agent
     
     @pytest.mark.asyncio
-    @patch('backend.common.utils.utils_af.config')
-    @patch('backend.common.utils.utils_af.FoundryAgentTemplate')
-    @patch('backend.common.utils.utils_af.agent_registry')
-    @patch('backend.common.utils.utils_af.logging')
+    @patch('backend.common.utils.team_utils.config')
+    @patch('backend.common.utils.team_utils.FoundryAgentTemplate')
+    @patch('backend.common.utils.team_utils.agent_registry')
+    @patch('backend.common.utils.team_utils.logging')
     async def test_create_rai_agent_registry_error(self, mock_logging, mock_registry, mock_foundry_class, mock_config):
         """Test RAI agent creation when registry registration fails."""
         # Setup
@@ -302,7 +302,7 @@ class TestGetAgentResponse:
     """Test _get_agent_response function."""
     
     @pytest.mark.asyncio
-    @patch('backend.common.utils.utils_af.logging')
+    @patch('backend.common.utils.team_utils.logging')
     async def test_get_agent_response_success_path(self, mock_logging):
         """Test _get_agent_response by directly mocking the function logic."""
         # Since the async iteration is complex to mock, let's test the core logic
@@ -310,16 +310,16 @@ class TestGetAgentResponse:
         mock_agent = Mock()
 
         # Test that the function can be called without raising exceptions
-        with patch('backend.common.utils.utils_af._get_agent_response') as mock_func:
+        with patch('backend.common.utils.team_utils._get_agent_response') as mock_func:
             mock_func.return_value = "Expected response"
             
-            from backend.common.utils.utils_af import _get_agent_response
+            from backend.common.utils.team_utils import _get_agent_response
             result = await mock_func(mock_agent, "test query")
             
             assert result == "Expected response"
     
     @pytest.mark.asyncio
-    @patch('backend.common.utils.utils_af.logging')
+    @patch('backend.common.utils.team_utils.logging')
     async def test_get_agent_response_exception(self, mock_logging):
         """Test getting agent response when exception occurs."""
         # Setup
@@ -360,8 +360,8 @@ class TestRaiSuccess:
         self.mock_memory_store = Mock(spec=DatabaseBase)
     
     @pytest.mark.asyncio
-    @patch('backend.common.utils.utils_af.create_RAI_agent')
-    @patch('backend.common.utils.utils_af._get_agent_response')
+    @patch('backend.common.utils.team_utils.create_RAI_agent')
+    @patch('backend.common.utils.team_utils._get_agent_response')
     async def test_rai_success_content_safe(self, mock_get_response, mock_create_agent):
         """Test RAI success when content is safe (FALSE response)."""
         # Setup
@@ -380,8 +380,8 @@ class TestRaiSuccess:
         mock_agent.close.assert_called_once()
     
     @pytest.mark.asyncio
-    @patch('backend.common.utils.utils_af.create_RAI_agent')
-    @patch('backend.common.utils.utils_af._get_agent_response')
+    @patch('backend.common.utils.team_utils.create_RAI_agent')
+    @patch('backend.common.utils.team_utils._get_agent_response')
     async def test_rai_success_content_unsafe(self, mock_get_response, mock_create_agent):
         """Test RAI success when content is unsafe (TRUE response)."""
         # Setup
@@ -400,8 +400,8 @@ class TestRaiSuccess:
         mock_agent.close.assert_called_once()
     
     @pytest.mark.asyncio
-    @patch('backend.common.utils.utils_af.create_RAI_agent')
-    @patch('backend.common.utils.utils_af._get_agent_response')
+    @patch('backend.common.utils.team_utils.create_RAI_agent')
+    @patch('backend.common.utils.team_utils._get_agent_response')
     async def test_rai_success_response_contains_false(self, mock_get_response, mock_create_agent):
         """Test RAI success when response contains FALSE in longer text."""
         # Setup
@@ -417,7 +417,7 @@ class TestRaiSuccess:
         assert result is True
     
     @pytest.mark.asyncio
-    @patch('backend.common.utils.utils_af.create_RAI_agent')
+    @patch('backend.common.utils.team_utils.create_RAI_agent')
     async def test_rai_success_agent_creation_fails(self, mock_create_agent):
         """Test RAI success when agent creation fails."""
         # Setup
@@ -430,8 +430,8 @@ class TestRaiSuccess:
         assert result is False
     
     @pytest.mark.asyncio
-    @patch('backend.common.utils.utils_af.create_RAI_agent')
-    @patch('backend.common.utils.utils_af.logging')
+    @patch('backend.common.utils.team_utils.create_RAI_agent')
+    @patch('backend.common.utils.team_utils.logging')
     async def test_rai_success_exception_during_check(self, mock_logging, mock_create_agent):
         """Test RAI success when exception occurs during check."""
         # Setup
@@ -445,8 +445,8 @@ class TestRaiSuccess:
         mock_logging.error.assert_called_once()
     
     @pytest.mark.asyncio
-    @patch('backend.common.utils.utils_af.create_RAI_agent')
-    @patch('backend.common.utils.utils_af._get_agent_response')
+    @patch('backend.common.utils.team_utils.create_RAI_agent')
+    @patch('backend.common.utils.team_utils._get_agent_response')
     async def test_rai_success_agent_close_exception(self, mock_get_response, mock_create_agent):
         """Test RAI success when agent.close() raises exception."""
         # Setup
@@ -496,8 +496,8 @@ class TestRaiValidateTeamConfig:
         }
     
     @pytest.mark.asyncio
-    @patch('backend.common.utils.utils_af.rai_success')
-    @patch('backend.common.utils.utils_af.uuid')
+    @patch('backend.common.utils.team_utils.rai_success')
+    @patch('backend.common.utils.team_utils.uuid')
     async def test_rai_validate_team_config_valid(self, mock_uuid, mock_rai_success):
         """Test validating team config with valid content."""
         # Setup
@@ -527,8 +527,8 @@ class TestRaiValidateTeamConfig:
         assert "Complete the first task" in combined_text
     
     @pytest.mark.asyncio
-    @patch('backend.common.utils.utils_af.rai_success')
-    @patch('backend.common.utils.utils_af.uuid')
+    @patch('backend.common.utils.team_utils.rai_success')
+    @patch('backend.common.utils.team_utils.uuid')
     async def test_rai_validate_team_config_invalid_content(self, mock_uuid, mock_rai_success):
         """Test validating team config with invalid content."""
         # Setup
@@ -586,8 +586,8 @@ class TestRaiValidateTeamConfig:
         assert is_valid is False  # Will fail due to no readable content or RAI check
     
     @pytest.mark.asyncio
-    @patch('backend.common.utils.utils_af.rai_success')
-    @patch('backend.common.utils.utils_af.logging')
+    @patch('backend.common.utils.team_utils.rai_success')
+    @patch('backend.common.utils.team_utils.logging')
     async def test_rai_validate_team_config_exception(self, mock_logging, mock_rai_success):
         """Test validating team config when exception occurs."""
         # Setup
@@ -602,8 +602,8 @@ class TestRaiValidateTeamConfig:
         mock_logging.error.assert_called_once()
     
     @pytest.mark.asyncio
-    @patch('backend.common.utils.utils_af.rai_success')
-    @patch('backend.common.utils.utils_af.uuid')
+    @patch('backend.common.utils.team_utils.rai_success')
+    @patch('backend.common.utils.team_utils.uuid')
     async def test_rai_validate_team_config_malformed_structure(self, mock_uuid, mock_rai_success):
         """Test validating team config with malformed structure."""
         # Setup
@@ -633,8 +633,8 @@ class TestRaiValidateTeamConfig:
         assert "Valid Team" in combined_text
     
     @pytest.mark.asyncio
-    @patch('backend.common.utils.utils_af.rai_success')
-    @patch('backend.common.utils.utils_af.uuid')
+    @patch('backend.common.utils.team_utils.rai_success')
+    @patch('backend.common.utils.team_utils.uuid')
     async def test_rai_validate_team_config_partial_content(self, mock_uuid, mock_rai_success):
         """Test validating team config with only some fields present."""
         # Setup

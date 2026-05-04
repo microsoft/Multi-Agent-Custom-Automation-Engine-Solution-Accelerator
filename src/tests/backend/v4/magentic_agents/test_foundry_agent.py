@@ -64,7 +64,7 @@ sys.modules['opentelemetry.trace'] = Mock()
 
 # Mock the specific problematic modules
 sys.modules['common.database.database_base'] = Mock(DatabaseBase=Mock)
-sys.modules['common.models.messages_af'] = Mock(TeamConfiguration=Mock, AgentMessageType=Mock)
+sys.modules['common.models.messages'] = Mock(TeamConfiguration=Mock, AgentMessageType=Mock)
 sys.modules['v4.models.messages'] = Mock()
 sys.modules['v4.common.services.team_service'] = Mock(TeamService=Mock)
 sys.modules['v4.config.agent_registry'] = Mock(agent_registry=Mock)

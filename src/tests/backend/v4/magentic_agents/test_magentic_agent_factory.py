@@ -14,7 +14,7 @@ sys.modules['common.config.app_config'] = Mock()
 sys.modules['common.database'] = Mock()
 sys.modules['common.database.database_base'] = Mock()
 sys.modules['common.models'] = Mock()
-sys.modules['common.models.messages_af'] = Mock()
+sys.modules['common.models.messages'] = Mock()
 sys.modules['v4'] = Mock()
 sys.modules['v4.common'] = Mock()
 sys.modules['v4.common.services'] = Mock()
@@ -41,7 +41,7 @@ mock_proxy_agent = Mock()
 # Set up the mock modules
 sys.modules['common.config.app_config'].config = mock_config
 sys.modules['common.database.database_base'].DatabaseBase = mock_database_base
-sys.modules['common.models.messages_af'].TeamConfiguration = mock_team_configuration
+sys.modules['common.models.messages'].TeamConfiguration = mock_team_configuration
 sys.modules['v4.common.services.team_service'].TeamService = mock_team_service
 sys.modules['v4.magentic_agents.foundry_agent'].FoundryAgentTemplate = mock_foundry_agent_template
 sys.modules['v4.magentic_agents.models.agent_models'].MCPConfig = mock_mcp_config

@@ -46,7 +46,7 @@ sys.modules['azure.ai.projects'] = azure_ai_projects_module
 sys.modules['azure.ai.projects.aio'] = azure_ai_projects_aio_module
 
 # Mock other problematic modules and imports
-sys.modules['common.models.messages_af'] = MagicMock()
+sys.modules['common.models.messages'] = MagicMock()
 sys.modules['v4'] = MagicMock()
 sys.modules['v4.common'] = MagicMock()
 sys.modules['v4.common.services'] = MagicMock()
@@ -76,7 +76,7 @@ mock_event_utils = MagicMock()
 sys.modules['common.utils.event_utils'] = mock_event_utils
 
 # Create mock message types and enums
-mock_messages_af = MagicMock()
+mock_messages = MagicMock()
 
 # Create mock enums
 class MockAgentType:
@@ -105,11 +105,11 @@ class MockAgentMessageData:
         self.steps = steps
         self.next_steps = next_steps
 
-mock_messages_af.AgentType = MockAgentType
-mock_messages_af.AgentMessageType = MockAgentMessageType
-mock_messages_af.PlanStatus = MockPlanStatus
-mock_messages_af.AgentMessageData = MockAgentMessageData
-sys.modules['common.models.messages_af'] = mock_messages_af
+mock_messages.AgentType = MockAgentType
+mock_messages.AgentMessageType = MockAgentMessageType
+mock_messages.PlanStatus = MockPlanStatus
+mock_messages.AgentMessageData = MockAgentMessageData
+sys.modules['common.models.messages'] = mock_messages
 
 # Create mock v4.models.messages module
 mock_v4_messages = MagicMock()
@@ -123,7 +123,7 @@ mock_orchestration_config = MagicMock()
 mock_orchestration_config.plans = {}
 
 with patch.dict('sys.modules', {
-    'common.models.messages_af': mock_messages_af,
+    'common.models.messages': mock_messages,
     'v4.models.messages': mock_v4_messages,
     'v4.config.settings': MagicMock(orchestration_config=mock_orchestration_config),
     'common.database.database_factory': mock_database_factory,

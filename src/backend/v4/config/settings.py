@@ -9,12 +9,11 @@ import logging
 from typing import Dict, Optional, Any
 
 from common.config.app_config import config
-from common.models.messages_af import TeamConfiguration
+from common.models.messages import TeamConfiguration
 from fastapi import WebSocket
 
 # agent_framework substitutes
 from agent_framework.azure import AzureOpenAIChatClient
-# from agent_framework_azure_ai import AzureOpenAIChatClient
 from agent_framework import ChatOptions
 
 from v4.models.messages import MPlan, WebsocketMessageType
@@ -68,7 +67,7 @@ class MCPConfig:
         self.url = config.MCP_SERVER_ENDPOINT
         self.name = config.MCP_SERVER_NAME
         self.description = config.MCP_SERVER_DESCRIPTION
-        logger.info(f"🔧 MCP Config initialized - URL: {self.url}, Name: {self.name}")
+        logger.info(f"MCP Config initialized - URL: {self.url}, Name: {self.name}")
 
     def get_headers(self, token: str):
         """Get MCP headers with authentication token."""
@@ -77,7 +76,7 @@ class MCPConfig:
             if token
             else {}
         )
-        logger.debug(f"📋 MCP Headers created: {headers}")
+        logger.debug(f"MCP Headers created: {headers}")
         return headers
 
 

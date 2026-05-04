@@ -11,7 +11,7 @@ from azure.core.exceptions import (
 from azure.search.documents.indexes import SearchIndexClient
 from common.config.app_config import config
 from common.database.database_base import DatabaseBase
-from common.models.messages_af import (
+from common.models.messages import (
     StartingTask,
     TeamAgent,
     TeamConfiguration,

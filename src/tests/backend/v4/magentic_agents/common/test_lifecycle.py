@@ -19,9 +19,9 @@ sys.modules['common'] = Mock()
 sys.modules['common.database'] = Mock()
 sys.modules['common.database.database_base'] = Mock()
 sys.modules['common.models'] = Mock()
-sys.modules['common.models.messages_af'] = Mock()
+sys.modules['common.models.messages'] = Mock()
 sys.modules['common.utils'] = Mock()
-sys.modules['common.utils.utils_agents'] = Mock()
+sys.modules['common.utils.agent_utils'] = Mock()
 sys.modules['v4'] = Mock()
 sys.modules['v4.common'] = Mock()
 sys.modules['v4.common.services'] = Mock()
@@ -54,15 +54,15 @@ sys.modules['agent_framework_azure_ai'].AzureAIAgentClient = mock_azure_ai_agent
 sys.modules['azure.ai.agents.aio'].AgentsClient = mock_agents_client
 sys.modules['azure.identity.aio'].DefaultAzureCredential = mock_default_azure_credential
 sys.modules['common.database.database_base'].DatabaseBase = mock_database_base
-sys.modules['common.models.messages_af'].CurrentTeamAgent = mock_current_team_agent
-sys.modules['common.models.messages_af'].TeamConfiguration = mock_team_configuration
+sys.modules['common.models.messages'].CurrentTeamAgent = mock_current_team_agent
+sys.modules['common.models.messages'].TeamConfiguration = mock_team_configuration
 sys.modules['v4.common.services.team_service'].TeamService = mock_team_service
 sys.modules['v4.config.agent_registry'].agent_registry = mock_agent_registry
 sys.modules['v4.magentic_agents.models.agent_models'].MCPConfig = mock_mcp_config
 
 # Mock utility functions
-sys.modules['common.utils.utils_agents'].generate_assistant_id = Mock(return_value="test-agent-id-123")
-sys.modules['common.utils.utils_agents'].get_database_team_agent_id = AsyncMock(return_value="test-db-agent-id")
+sys.modules['common.utils.agent_utils'].generate_assistant_id = Mock(return_value="test-agent-id-123")
+sys.modules['common.utils.agent_utils'].get_database_team_agent_id = AsyncMock(return_value="test-db-agent-id")
 
 # Import the module under test
 from backend.v4.magentic_agents.common.lifecycle import MCPEnabledBase, AzureAgentBase

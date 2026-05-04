@@ -19,7 +19,7 @@ from agent_framework import (
 )
 
 from common.config.app_config import config
-from common.models.messages_af import TeamConfiguration
+from common.models.messages import TeamConfiguration
 
 from common.database.database_base import DatabaseBase
 

@@ -21,7 +21,7 @@ sys.modules['v4.models.messages'] = Mock()
 
 # Import the REAL modules using backend.* paths for proper coverage tracking
 from backend.common.database.database_base import DatabaseBase
-from backend.common.models.messages_af import (
+from backend.common.models.messages import (
     AgentMessageData,
     BaseDataModel,
     CurrentTeamAgent,

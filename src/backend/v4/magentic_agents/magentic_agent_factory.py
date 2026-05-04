@@ -8,12 +8,10 @@ from typing import List, Optional, Union
 
 from common.config.app_config import config
 from common.database.database_base import DatabaseBase
-from common.models.messages_af import TeamConfiguration
+from common.models.messages import TeamConfiguration
 from v4.common.services.team_service import TeamService
 from v4.magentic_agents.foundry_agent import FoundryAgentTemplate
 from v4.magentic_agents.models.agent_models import MCPConfig, SearchConfig
-# from v4.magentic_agents.models.agent_models import (BingConfig, MCPConfig,
-#                                                     SearchConfig)
 from v4.magentic_agents.proxy_agent import ProxyAgent
 
 
@@ -175,7 +173,7 @@ class MagenticAgentFactory:
                     self._agent_list.append(agent)  # Keep track for cleanup
 
                     self.logger.info(
-                        "✅ Agent %d/%d created: %s",
+                        "Agent %d/%d created: %s",
                         i,
                         len(team_config_input.agents),
                         agent_cfg.name

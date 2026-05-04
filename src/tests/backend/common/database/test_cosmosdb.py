@@ -32,7 +32,7 @@ sys.modules['v4.models.messages'] = Mock()
 
 # Import the REAL modules using backend.* paths for proper coverage tracking
 from backend.common.database.cosmosdb import CosmosDBClient
-from backend.common.models.messages_af import (
+from backend.common.models.messages import (
     AgentMessage,
     AgentMessageData,
     BaseDataModel,

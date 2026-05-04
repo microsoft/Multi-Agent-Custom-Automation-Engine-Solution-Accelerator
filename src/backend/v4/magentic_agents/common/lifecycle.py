@@ -10,13 +10,12 @@ from agent_framework import (
     MCPStreamableHTTPTool,
 )
 
-# from agent_framework.azure import AzureAIAgentClient
 from agent_framework_azure_ai import AzureAIAgentClient
 from azure.ai.agents.aio import AgentsClient
 from azure.identity.aio import DefaultAzureCredential
 from common.database.database_base import DatabaseBase
-from common.models.messages_af import CurrentTeamAgent, TeamConfiguration
-from common.utils.utils_agents import (
+from common.models.messages import CurrentTeamAgent, TeamConfiguration
+from common.utils.agent_utils import (
     generate_assistant_id,
     get_database_team_agent_id,
 )

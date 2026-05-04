@@ -4,7 +4,7 @@ from dataclasses import asdict
 
 import v4.models.messages as messages
 from common.database.database_factory import DatabaseFactory
-from common.models.messages_af import (
+from common.models.messages import (
     AgentMessageData,
     AgentMessageType,
     AgentType,
@@ -22,7 +22,7 @@ def build_agent_message_from_user_clarification(
     """
     Convert a UserClarificationResponse (human feedback) into an AgentMessageData.
     """
-    # NOTE: AgentMessageType enum currently defines values with trailing commas in messages_af.py.
+    # NOTE: AgentMessageType enum currently defines values with trailing commas in messages.py.
     # e.g. HUMAN_AGENT = "Human_Agent",  -> value becomes ('Human_Agent',)
     # Consider fixing that enum (remove trailing commas) so .value is a string.
     return AgentMessageData(
@@ -43,7 +43,7 @@ def build_agent_message_from_agent_message_response(
     user_id: str,
 ) -> AgentMessageData:
     """
-    Convert a messages.AgentMessageResponse into common.models.messages_af.AgentMessageData.
+    Convert a messages.AgentMessageResponse into common.models.messages.AgentMessageData.
     This is defensive: it tolerates missing fields and different timestamp formats.
     """
     # Robust timestamp parsing (accepts seconds or ms or missing)

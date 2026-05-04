@@ -62,7 +62,7 @@ class AgentRegistry:
             self.logger.info("No agents to clean up")
             return
 
-        self.logger.info(f"🧹 Starting cleanup of {len(all_agents)} total agents")
+        self.logger.info(f"Starting cleanup of {len(all_agents)} total agents")
 
         # Log agent details for debugging
         for i, agent in enumerate(all_agents):
@@ -78,29 +78,29 @@ class AgentRegistry:
                 cleanup_tasks.append(self._safe_close_agent(agent))
             else:
                 agent_name = getattr(agent, 'agent_name', getattr(agent, 'name', type(agent).__name__))
-                self.logger.warning(f"⚠️ Agent {agent_name} has no close() method - just unregistering from registry")
+                self.logger.warning(f"Agent {agent_name} has no close() method - just unregistering from registry")
                 self.unregister_agent(agent)
 
         if cleanup_tasks:
-            self.logger.info(f"🔄 Executing {len(cleanup_tasks)} cleanup tasks...")
+            self.logger.info(f"Executing {len(cleanup_tasks)} cleanup tasks...")
             results = await asyncio.gather(*cleanup_tasks, return_exceptions=True)
 
             # Log any exceptions that occurred during cleanup
             success_count = 0
             for i, result in enumerate(results):
                 if isinstance(result, Exception):
-                    self.logger.error(f"❌ Error cleaning up agent {i}: {result}")
+                    self.logger.error(f"Error cleaning up agent {i}: {result}")
                 else:
                     success_count += 1
 
-            self.logger.info(f"✅ Successfully cleaned up {success_count}/{len(cleanup_tasks)} agents")
+            self.logger.info(f"Successfully cleaned up {success_count}/{len(cleanup_tasks)} agents")
 
         # Clear all tracking
         with self._lock:
             self._all_agents.clear()
             self._agent_metadata.clear()
 
-        self.logger.info("🎉 Completed cleanup of all agents")
+        self.logger.info("Completed cleanup of all agents")
 
     async def _safe_close_agent(self, agent: Any) -> None:
         """Safely close an agent with error handling."""

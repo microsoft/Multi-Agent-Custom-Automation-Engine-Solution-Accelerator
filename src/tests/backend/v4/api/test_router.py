@@ -99,10 +99,10 @@ class TestRouterCoverage(unittest.TestCase):
             'common.database': Mock(),
             'common.database.database_factory': Mock(),
             'common.models': Mock(),
-            'common.models.messages_af': Mock(),
+            'common.models.messages': Mock(),
             'common.utils': Mock(),
             'common.utils.event_utils': Mock(),
-            'common.utils.utils_af': Mock(),
+            'common.utils.team_utils': Mock(),
             'fastapi': Mock(),
             'v4.common': Mock(),
             'v4.common.services': Mock(),
@@ -115,10 +115,10 @@ class TestRouterCoverage(unittest.TestCase):
         }
         
         # Configure Pydantic models
-        self.mock_modules['common.models.messages_af'].InputTask = MockInputTask
-        self.mock_modules['common.models.messages_af'].Plan = MockPlan
-        self.mock_modules['common.models.messages_af'].TeamSelectionRequest = MockTeamSelectionRequest
-        self.mock_modules['common.models.messages_af'].PlanStatus = MockPlanStatus
+        self.mock_modules['common.models.messages'].InputTask = MockInputTask
+        self.mock_modules['common.models.messages'].Plan = MockPlan
+        self.mock_modules['common.models.messages'].TeamSelectionRequest = MockTeamSelectionRequest
+        self.mock_modules['common.models.messages'].PlanStatus = MockPlanStatus
         
         # Configure FastAPI
         self.mock_modules['fastapi'].APIRouter = MockAPIRouter
@@ -144,11 +144,11 @@ class TestRouterCoverage(unittest.TestCase):
         self.mock_modules['auth.auth_utils'].get_authenticated_user_details = Mock(
             return_value={"user_principal_id": "test-user-123"}
         )
-        self.mock_modules['common.utils.utils_af'].find_first_available_team = Mock(
+        self.mock_modules['common.utils.team_utils'].find_first_available_team = Mock(
             return_value="team-123"
         )
-        self.mock_modules['common.utils.utils_af'].rai_success = Mock(return_value=True)
-        self.mock_modules['common.utils.utils_af'].rai_validate_team_config = Mock(return_value=True)
+        self.mock_modules['common.utils.team_utils'].rai_success = Mock(return_value=True)
+        self.mock_modules['common.utils.team_utils'].rai_validate_team_config = Mock(return_value=True)
         self.mock_modules['common.utils.event_utils'].track_event_if_configured = Mock()
         
         # Configure database

@@ -302,7 +302,7 @@ class TestAgentRegistry(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(len(self.registry._agent_metadata), 0)
             
             # Verify logging
-            mock_logger.info.assert_any_call("🎉 Completed cleanup of all agents")
+            mock_logger.info.assert_any_call("Completed cleanup of all agents")
 
     async def test_cleanup_all_agents_without_close_method(self):
         """Test cleanup of agents without close method."""

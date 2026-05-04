@@ -47,13 +47,13 @@ os.environ.setdefault("AZURE_OPENAI_RAI_DEPLOYMENT_NAME", "test-rai-deployment")
 
 
 # Clear any module-level Mock pollution from earlier tests in the suite.
-# common.models.* gets mocked by test_utils_agents.py, test_response_handlers.py, etc.
+# common.models.* gets mocked by test_agent_utils.py, test_response_handlers.py, etc.
 # backend.v4.models.messages gets mocked below (in the isolation block) and must be
-# cleared so app.py can import the real UserLanguage from common.models.messages_af.
+# cleared so app.py can import the real UserLanguage from common.models.messages.
 from types import ModuleType as _ModuleType
 for _ma_key in [
-    'common', 'common.models', 'common.models.messages_af',
-    'backend.common.models.messages_af',
+    'common', 'common.models', 'common.models.messages',
+    'backend.common.models.messages',
     'common.config', 'common.config.app_config',
 ]:
     if _ma_key in sys.modules and not isinstance(sys.modules[_ma_key], _ModuleType):
@@ -106,7 +106,7 @@ if not _has_real_router:
 
 # Now import backend.app
 from backend.app import app, user_browser_language_endpoint, lifespan
-from backend.common.models.messages_af import UserLanguage
+from backend.common.models.messages import UserLanguage
 
 
 def test_app_initialization():

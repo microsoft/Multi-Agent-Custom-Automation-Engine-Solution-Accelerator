@@ -203,7 +203,7 @@ class MockTeamConfiguration:
         self.name = name
         self.deployment_name = deployment_name
 
-sys.modules['common.models.messages_af'] = Mock(TeamConfiguration=MockTeamConfiguration)
+sys.modules['common.models.messages'] = Mock(TeamConfiguration=MockTeamConfiguration)
 
 class MockDatabaseBase:
     """Mock DatabaseBase."""

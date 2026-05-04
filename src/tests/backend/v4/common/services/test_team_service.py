@@ -79,7 +79,7 @@ sys.modules['azure.search.documents'] = mock_azure_search.documents
 sys.modules['azure.search.documents.indexes'] = mock_search_indexes
 
 # Mock other problematic modules and imports
-sys.modules['common.models.messages_af'] = MagicMock()
+sys.modules['common.models.messages'] = MagicMock()
 sys.modules['v4'] = MagicMock()
 sys.modules['v4.common'] = MagicMock()
 sys.modules['v4.common.services'] = MagicMock()
@@ -154,12 +154,12 @@ class MockDatabaseBase:
         pass
 
 # Set up mock models
-mock_messages_af = MagicMock()
-mock_messages_af.TeamAgent = MockTeamAgent
-mock_messages_af.StartingTask = MockStartingTask
-mock_messages_af.TeamConfiguration = MockTeamConfiguration
-mock_messages_af.UserCurrentTeam = MockUserCurrentTeam
-sys.modules['common.models.messages_af'] = mock_messages_af
+mock_messages = MagicMock()
+mock_messages.TeamAgent = MockTeamAgent
+mock_messages.StartingTask = MockStartingTask
+mock_messages.TeamConfiguration = MockTeamConfiguration
+mock_messages.UserCurrentTeam = MockUserCurrentTeam
+sys.modules['common.models.messages'] = mock_messages
 
 mock_database_base.DatabaseBase = MockDatabaseBase
 
@@ -175,7 +175,7 @@ with patch.dict('sys.modules', {
     'azure.search.documents.indexes': mock_search_indexes,
     'common.config.app_config': mock_config_module,
     'common.database.database_base': mock_database_base,
-    'common.models.messages_af': mock_messages_af,
+    'common.models.messages': mock_messages,
     'v4.common.services.foundry_service': mock_foundry_service,
 }):
     team_service_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', '..', 'backend', 'v4', 'common', 'services', 'team_service.py')
