@@ -377,26 +377,24 @@ def generate_html_report(
 
     parts: list[str] = []
 
-    # --- Document wrapper & styles ---
+    # --- Document wrapper (Outlook-compatible, no gradient/border-radius/box-shadow) ---
     parts.append(
         '<!DOCTYPE html><html><head><meta charset="utf-8"></head>'
         '<body style="margin:0;padding:0;font-family:Segoe UI,Helvetica,Arial,sans-serif;'
-        'background:#f4f4f4;">'
+        'background-color:#ffffff;">'
         '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"'
-        ' style="background:#f4f4f4;padding:24px 0;">'
-        "<tr><td align=\"center\">"
-        '<table role="presentation" width="640" cellpadding="0" cellspacing="0"'
-        ' style="background:#ffffff;border-radius:8px;overflow:hidden;'
-        'box-shadow:0 2px 8px rgba(0,0,0,0.08);">'
+        ' style="background-color:#ffffff;">'
+        '<tr><td align="center" style="padding:0;">'
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"'
+        ' style="max-width:680px;background-color:#ffffff;">'
     )
 
-    # --- Header banner ---
+    # --- Header banner (solid color, Outlook-safe) ---
     parts.append(
-        f'<tr><td style="background:linear-gradient(135deg,#0078D4,#005A9E);'
-        f'padding:28px 32px;color:#ffffff;">'
-        f'<h1 style="margin:0 0 4px 0;font-size:22px;font-weight:600;">'
+        f'<tr><td style="background-color:#0078D4;padding:20px 24px;color:#ffffff;">'
+        f'<h1 style="margin:0 0 4px 0;font-size:20px;font-weight:600;color:#ffffff;">'
         f'Bicep Parameter Validation Report</h1>'
-        f'<p style="margin:0;font-size:14px;opacity:0.9;">'
+        f'<p style="margin:0;font-size:13px;color:#ffffff;">'
         f'{_html_escape(accelerator_name) if accelerator_name else "Accelerator"}'
         f' &mdash; Automated Check</p>'
         f'</td></tr>'
@@ -404,86 +402,84 @@ def generate_html_report(
 
     # --- Summary card ---
     parts.append(
-        f'<tr><td style="padding:24px 32px 16px 32px;">'
+        f'<tr><td style="padding:16px 24px 12px 24px;">'
         f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0"'
-        f' style="background:{status_bg};border-left:4px solid {status_color};'
-        f'border-radius:4px;padding:16px 20px;">'
-        f'<tr><td>'
-        f'<span style="font-size:18px;font-weight:600;color:{status_color};">'
+        f' style="background-color:{status_bg};border-left:4px solid {status_color};">'
+        f'<tr><td style="padding:12px 16px;">'
+        f'<span style="font-size:16px;font-weight:600;color:{status_color};">'
         f'{status_icon} Overall Status: {overall_status}</span>'
         f'</td></tr>'
-        f'<tr><td style="padding-top:10px;">'
+        f'<tr><td style="padding:4px 16px 12px 16px;">'
         f'<table role="presentation" cellpadding="0" cellspacing="0"><tr>'
     )
     # Accelerator name pill
     if accelerator_name:
         parts.append(
-            f'<td style="padding-right:16px;">'
-            f'<span style="font-size:12px;color:#666;">Accelerator</span><br>'
-            f'<strong style="font-size:14px;">{_html_escape(accelerator_name)}'
+            f'<td style="padding-right:20px;vertical-align:top;">'
+            f'<span style="font-size:11px;color:#666;">Accelerator</span><br>'
+            f'<strong style="font-size:13px;">{_html_escape(accelerator_name)}'
             f'</strong></td>'
         )
     # Scan directory pill
     if scan_dir:
         parts.append(
-            f'<td style="padding-right:16px;">'
-            f'<span style="font-size:12px;color:#666;">Scan Directory</span><br>'
-            f'<strong style="font-size:14px;">{_html_escape(scan_dir)}/</strong>'
+            f'<td style="padding-right:20px;vertical-align:top;">'
+            f'<span style="font-size:11px;color:#666;">Scan Directory</span><br>'
+            f'<strong style="font-size:13px;">{_html_escape(scan_dir)}/</strong>'
             f'</td>'
         )
     # Error count pill
     err_pill_color = "#D32F2F" if total_errors > 0 else "#2E7D32"
     parts.append(
-        f'<td style="padding-right:16px;">'
-        f'<span style="font-size:12px;color:#666;">Errors</span><br>'
-        f'<strong style="font-size:14px;color:{err_pill_color};">'
+        f'<td style="padding-right:20px;vertical-align:top;">'
+        f'<span style="font-size:11px;color:#666;">Errors</span><br>'
+        f'<strong style="font-size:13px;color:{err_pill_color};">'
         f'{total_errors}</strong></td>'
     )
     # Warning count pill
     warn_pill_color = "#F57C00" if total_warnings > 0 else "#2E7D32"
     parts.append(
-        f'<td>'
-        f'<span style="font-size:12px;color:#666;">Warnings</span><br>'
-        f'<strong style="font-size:14px;color:{warn_pill_color};">'
+        f'<td style="vertical-align:top;">'
+        f'<span style="font-size:11px;color:#666;">Warnings</span><br>'
+        f'<strong style="font-size:13px;color:{warn_pill_color};">'
         f'{total_warnings}</strong></td>'
     )
     parts.append("</tr></table></td></tr></table></td></tr>")
 
     # --- Per-pair detail sections ---
-    parts.append('<tr><td style="padding:8px 32px 0 32px;">')
+    parts.append('<tr><td style="padding:8px 24px 0 24px;">')
     for r in results:
         errors = [i for i in r.issues if i.severity == "ERROR"]
         warnings = [i for i in r.issues if i.severity == "WARNING"]
 
         if not r.issues:
             badge = (
-                '<span style="display:inline-block;padding:2px 10px;'
-                'border-radius:12px;font-size:12px;font-weight:600;'
-                'color:#2E7D32;background:#E8F5E9;">PASS</span>'
+                '<span style="display:inline-block;padding:2px 8px;'
+                'font-size:11px;font-weight:700;'
+                'color:#2E7D32;background-color:#E8F5E9;">PASS</span>'
             )
         elif errors:
             badge = (
-                '<span style="display:inline-block;padding:2px 10px;'
-                'border-radius:12px;font-size:12px;font-weight:600;'
-                'color:#D32F2F;background:#FFEBEE;">FAIL</span>'
+                '<span style="display:inline-block;padding:2px 8px;'
+                'font-size:11px;font-weight:700;'
+                'color:#D32F2F;background-color:#FFEBEE;">FAIL</span>'
             )
         else:
             badge = (
-                '<span style="display:inline-block;padding:2px 10px;'
-                'border-radius:12px;font-size:12px;font-weight:600;'
-                'color:#F57C00;background:#FFF3E0;">WARN</span>'
+                '<span style="display:inline-block;padding:2px 8px;'
+                'font-size:11px;font-weight:700;'
+                'color:#F57C00;background-color:#FFF3E0;">WARN</span>'
             )
 
         parts.append(
             f'<table role="presentation" width="100%" cellpadding="0"'
-            f' cellspacing="0" style="margin-bottom:16px;border:1px solid #e0e0e0;'
-            f'border-radius:6px;overflow:hidden;">'
-            f'<tr><td style="background:#fafafa;padding:12px 16px;'
+            f' cellspacing="0" style="margin-bottom:12px;border:1px solid #e0e0e0;">'
+            f'<tr><td style="background-color:#fafafa;padding:10px 12px;'
             f'border-bottom:1px solid #e0e0e0;">'
             f'{badge} '
-            f'<strong style="font-size:14px;">'
+            f'<strong style="font-size:13px;">'
             f'{_html_escape(r.pair)}</strong>'
-            f'<span style="float:right;font-size:12px;color:#888;">'
+            f'<span style="float:right;font-size:11px;color:#888;">'
             f'{len(errors)} error(s), {len(warnings)} warning(s)</span>'
             f'</td></tr>'
         )
@@ -492,13 +488,13 @@ def generate_html_report(
             parts.append(
                 '<tr><td style="padding:0;">'
                 '<table role="presentation" width="100%" cellpadding="0"'
-                ' cellspacing="0" style="font-size:13px;">'
-                '<tr style="background:#f5f5f5;">'
-                '<th style="text-align:left;padding:8px 12px;'
-                'border-bottom:1px solid #e0e0e0;width:70px;">Severity</th>'
-                '<th style="text-align:left;padding:8px 12px;'
-                'border-bottom:1px solid #e0e0e0;width:200px;">Parameter</th>'
-                '<th style="text-align:left;padding:8px 12px;'
+                ' cellspacing="0" style="font-size:12px;">'
+                '<tr style="background-color:#f5f5f5;">'
+                '<th style="text-align:left;padding:6px 10px;'
+                'border-bottom:1px solid #e0e0e0;width:65px;">Severity</th>'
+                '<th style="text-align:left;padding:6px 10px;'
+                'border-bottom:1px solid #e0e0e0;width:180px;">Parameter</th>'
+                '<th style="text-align:left;padding:6px 10px;'
                 'border-bottom:1px solid #e0e0e0;">Details</th></tr>'
             )
             for idx, issue in enumerate(r.issues):
@@ -514,22 +510,22 @@ def generate_html_report(
                         '&#9679; WARN</span>'
                     )
                 parts.append(
-                    f'<tr style="background:{bg};">'
-                    f'<td style="padding:6px 12px;border-bottom:1px solid #eee;'
+                    f'<tr style="background-color:{bg};">'
+                    f'<td style="padding:5px 10px;border-bottom:1px solid #eee;'
                     f'vertical-align:top;">{sev_html}</td>'
-                    f'<td style="padding:6px 12px;border-bottom:1px solid #eee;'
+                    f'<td style="padding:5px 10px;border-bottom:1px solid #eee;'
                     f'vertical-align:top;font-family:Consolas,monospace;'
-                    f'font-size:12px;word-break:break-all;">'
+                    f'font-size:11px;word-break:break-all;">'
                     f'{_html_escape(issue.param_name)}</td>'
-                    f'<td style="padding:6px 12px;border-bottom:1px solid #eee;'
+                    f'<td style="padding:5px 10px;border-bottom:1px solid #eee;'
                     f'vertical-align:top;">{_html_escape(issue.message)}</td>'
                     f'</tr>'
                 )
             parts.append("</table></td></tr>")
         else:
             parts.append(
-                '<tr><td style="padding:12px 16px;color:#2E7D32;'
-                'font-size:13px;">All parameters validated successfully.'
+                '<tr><td style="padding:10px 12px;color:#2E7D32;'
+                'font-size:12px;">All parameters validated successfully.'
                 '</td></tr>'
             )
 
@@ -542,21 +538,21 @@ def generate_html_report(
     if run_url:
         footer_parts.append(
             f'<a href="{_html_escape(run_url)}" style="display:inline-block;'
-            f'padding:8px 20px;background:#0078D4;color:#ffffff;'
-            f'text-decoration:none;border-radius:4px;font-size:13px;'
+            f'padding:8px 16px;background-color:#0078D4;color:#ffffff;'
+            f'text-decoration:none;font-size:12px;'
             f'font-weight:600;">View Workflow Run</a>'
         )
     if has_errors:
         footer_parts.append(
-            '<p style="margin:12px 0 0 0;font-size:13px;color:#555;">'
+            '<p style="margin:10px 0 0 0;font-size:12px;color:#555;">'
             'Please fix the parameter mapping issues at your earliest convenience.</p>'
         )
     footer_parts.append(
-        '<p style="margin:12px 0 0 0;font-size:13px;color:#999;">'
+        '<p style="margin:10px 0 0 0;font-size:12px;color:#999;">'
         'Best regards,<br>Your Automation Team</p>'
     )
     parts.append(
-        f'<tr><td style="padding:16px 32px 28px 32px;border-top:1px solid #e0e0e0;">'
+        f'<tr><td style="padding:14px 24px 20px 24px;border-top:1px solid #e0e0e0;">'
         f'{"".join(footer_parts)}</td></tr>'
     )
 
