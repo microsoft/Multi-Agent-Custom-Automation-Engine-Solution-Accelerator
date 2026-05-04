@@ -395,7 +395,7 @@ Write-Host "2. Retail Customer Satisfaction"
 Write-Host "3. HR Employee Onboarding"
 Write-Host "4. Marketing Press Release"
 Write-Host "5. Contract Compliance Review"
-Write-Host "6. All"
+Write-Host "7. All"
 Write-Host "==============================================="
 Write-Host ""
 
@@ -404,7 +404,7 @@ do {
     $useCaseSelection = Read-Host "Please enter the number of the use case you would like to install."
     
     # Handle both numeric and text input for 'all'
-    if ($useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
+    if ($useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
         $selectedUseCase = "All"
         $useCaseValid = $true
         Write-Host "Selected: All use cases will be installed."
@@ -439,9 +439,13 @@ do {
         Write-Host "Selected: Contract Compliance Review"
         Write-Host "Note: If you choose to install a single use case, installation of other use cases will require re-running this script."
     }
+    elseif ($useCaseSelection -eq "6") {
+        $useCaseValid = $false
+        Write-Host "Invalid selection. Please enter a number from 1-5 or 7." -ForegroundColor Red
+    }
     else {
         $useCaseValid = $false
-        Write-Host "Invalid selection. Please enter a number from 1-6." -ForegroundColor Red
+        Write-Host "Invalid selection. Please enter a number from 1-5 or 7." -ForegroundColor Red
     }
 } while (-not $useCaseValid)
 
@@ -526,7 +530,7 @@ $isSampleDataFailed = $false
 $failedTeamConfigs = 0
 
 # Use Case 3 -----=--
-if($useCaseSelection -eq "3" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
+if($useCaseSelection -eq "3" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
     Write-Host "Uploading Team Configuration for HR Employee Onboarding..."
     $directoryPath = "data/agent_teams"
     $teamId = "00000000-0000-0000-0000-000000000001"
@@ -545,7 +549,7 @@ if($useCaseSelection -eq "3" -or $useCaseSelection -eq "all" -or $useCaseSelecti
 }
 
 # Use Case 4 -----=--
-if($useCaseSelection -eq "4" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
+if($useCaseSelection -eq "4" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
     Write-Host "Uploading Team Configuration for Marketing Press Release..."
     $directoryPath = "data/agent_teams"
     $teamId = "00000000-0000-0000-0000-000000000002"
@@ -566,7 +570,7 @@ if($useCaseSelection -eq "4" -or $useCaseSelection -eq "all" -or $useCaseSelecti
 $stIsPublicAccessDisabled = $false
 $srchIsPublicAccessDisabled = $false
 # Enable public access for resources
-if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5"  -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6"){
+if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "6" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7"){
     if ($ResourceGroup) {
         # Check if resource group has Type=WAF tag
         $rgTypeTag = (az group show --name $ResourceGroup --query "tags.Type" -o tsv 2>$null)
@@ -658,7 +662,7 @@ if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection 
 
 
 
-if($useCaseSelection -eq "1" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
+if($useCaseSelection -eq "1" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
     Write-Host "Uploading Team Configuration for RFP Evaluation..."
     $directoryPath = "data/agent_teams"
     $teamId = "00000000-0000-0000-0000-000000000004"
@@ -732,7 +736,7 @@ if($useCaseSelection -eq "1" -or $useCaseSelection -eq "all" -or $useCaseSelecti
 }
 
 
-if($useCaseSelection -eq "5" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
+if($useCaseSelection -eq "5" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
     Write-Host "Uploading Team Configuration for Contract Compliance Review..."
     $directoryPath = "data/agent_teams"
     $teamId = "00000000-0000-0000-0000-000000000005"
@@ -805,7 +809,7 @@ if($useCaseSelection -eq "5" -or $useCaseSelection -eq "all" -or $useCaseSelecti
     Write-Host "Python script to index data for Contract Compliance Review successfully executed."
 }
 
-if($useCaseSelection -eq "2" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
+if($useCaseSelection -eq "2" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
     Write-Host "Uploading Team Configuration for Retail Customer Satisfaction..."
     $directoryPath = "data/agent_teams"
     $teamId = "00000000-0000-0000-0000-000000000003"
@@ -866,7 +870,7 @@ if ($isTeamConfigFailed -or $isSampleDataFailed) {
     Write-Host "`nOne or more tasks failed. Please check the error messages above."
     exit 1
 } else {
-    if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6"){
+    if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7"){
         Write-Host "`nTeam configuration upload and sample data processing completed successfully."
     }else {
         Write-Host "`nTeam configuration upload completed successfully."

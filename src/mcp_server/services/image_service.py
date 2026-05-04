@@ -9,10 +9,17 @@ Foundry-hosted agents can embed in their markdown responses.
 import base64
 import logging
 import uuid
+from datetime import datetime, timedelta, timezone
 
 import httpx
 from azure.identity import DefaultAzureCredential, ManagedIdentityCredential, get_bearer_token_provider
-from azure.storage.blob import BlobServiceClient, ContentSettings, PublicAccess
+from azure.storage.blob import (
+    BlobSasPermissions,
+    BlobServiceClient,
+    ContentSettings,
+    PublicAccess,
+    generate_blob_sas,
+)
 
 from config.settings import config
 from core.factory import Domain, MCPToolBase
@@ -20,6 +27,7 @@ from core.factory import Domain, MCPToolBase
 logger = logging.getLogger(__name__)
 
 _IMAGE_API_VERSION = "2025-04-01-preview"
+_SAS_VALIDITY_DAYS = 7
 
 
 def _get_credential():
@@ -59,7 +67,28 @@ def _upload_png_and_get_url(png_bytes: bytes) -> str:
         overwrite=True,
         content_settings=ContentSettings(content_type="image/png"),
     )
-    return f"{account_url}/{container_name}/{blob_name}"
+
+    blob_url = f"{account_url}/{container_name}/{blob_name}"
+    try:
+        now = datetime.now(timezone.utc)
+        # User-delegation key requires MI/AAD auth; valid up to 7 days.
+        delegation_key = blob_service.get_user_delegation_key(
+            key_start_time=now - timedelta(minutes=5),
+            key_expiry_time=now + timedelta(days=_SAS_VALIDITY_DAYS),
+        )
+        sas = generate_blob_sas(
+            account_name=blob_service.account_name,
+            container_name=container_name,
+            blob_name=blob_name,
+            user_delegation_key=delegation_key,
+            permission=BlobSasPermissions(read=True),
+            expiry=now + timedelta(days=_SAS_VALIDITY_DAYS),
+            start=now - timedelta(minutes=5),
+        )
+        return f"{blob_url}?{sas}"
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to generate user-delegation SAS, returning bare URL: %s", exc)
+        return blob_url
 
 
 class ImageService(MCPToolBase):

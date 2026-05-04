@@ -332,9 +332,26 @@ async def process_request(
     try:
 
         async def run_orchestration_task():
-            await OrchestrationManager().run_orchestration(user_id, input_task)
+            try:
+                await OrchestrationManager().run_orchestration(user_id, input_task)
+            finally:
+                # Clear our slot if we're still the registered active task
+                current = orchestration_config.active_tasks.get(user_id)
+                if current is not None and current.done():
+                    orchestration_config.active_tasks.pop(user_id, None)
 
-        background_tasks.add_task(run_orchestration_task)
+        # Cancel any in-flight orchestration for this user before starting a new one
+        prior_task = orchestration_config.active_tasks.get(user_id)
+        if prior_task is not None and not prior_task.done():
+            try:
+                prior_task.cancel()
+            except Exception:
+                pass
+            orchestration_config.active_tasks.pop(user_id, None)
+
+        # Schedule new task and register it so subsequent requests can cancel it
+        new_task = asyncio.create_task(run_orchestration_task())
+        orchestration_config.active_tasks[user_id] = new_task
 
         return {
             "status": "Request started successfully",

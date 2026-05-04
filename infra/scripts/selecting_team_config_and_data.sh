@@ -408,7 +408,7 @@ echo "2. Retail Customer Satisfaction"
 echo "3. HR Employee Onboarding"
 echo "4. Marketing Press Release"
 echo "5. Contract Compliance Review"
-echo "6. All"
+echo "7. All"
 echo "==============================================="
 echo ""
 
@@ -418,7 +418,7 @@ while [[ "$useCaseValid" != true ]]; do
     read -p "Please enter the number of the use case you would like to install: " useCaseSelection
     
     # Handle both numeric and text input for 'all'
-    if [[ "$useCaseSelection" == "all" || "$useCaseSelection" == "6" ]]; then
+    if [[ "$useCaseSelection" == "all" || "$useCaseSelection" == "7" ]]; then
         selectedUseCase="All"
         useCaseValid=true
         echo "Selected: All use cases will be installed."
@@ -447,9 +447,12 @@ while [[ "$useCaseValid" != true ]]; do
         useCaseValid=true
         echo "Selected: Contract Compliance Review"
         echo "Note: If you choose to install a single use case, installation of other use cases will require re-running this script."
+    elif [[ "$useCaseSelection" == "6" ]]; then
+        useCaseValid=false
+        echo -e "\033[31mInvalid selection. Please enter a number from 1-5 or 7.\033[0m"
     else
         useCaseValid=false
-        echo -e "\033[31mInvalid selection. Please enter a number from 1-6.\033[0m"
+        echo -e "\033[31mInvalid selection. Please enter a number from 1-5 or 7.\033[0m"
     fi
 done
 
@@ -523,7 +526,7 @@ isSampleDataFailed=false
 failedTeamConfigs=0
 
 # Use Case 3 - HR Employee Onboarding
-if [[ "$useCaseSelection" == "3" || "$useCaseSelection" == "all" || "$useCaseSelection" == "6" ]]; then
+if [[ "$useCaseSelection" == "3" || "$useCaseSelection" == "all" || "$useCaseSelection" == "7" ]]; then
     echo "Uploading Team Configuration for HR Employee Onboarding..."
     directoryPath="data/agent_teams"
     teamId="00000000-0000-0000-0000-000000000001"
@@ -538,7 +541,7 @@ if [[ "$useCaseSelection" == "3" || "$useCaseSelection" == "all" || "$useCaseSel
 fi
 
 # Use Case 4 - Marketing Press Release
-if [[ "$useCaseSelection" == "4" || "$useCaseSelection" == "all" || "$useCaseSelection" == "6" ]]; then
+if [[ "$useCaseSelection" == "4" || "$useCaseSelection" == "all" || "$useCaseSelection" == "7" ]]; then
     echo "Uploading Team Configuration for Marketing Press Release..."
     directoryPath="data/agent_teams"
     teamId="00000000-0000-0000-0000-000000000002"
@@ -553,7 +556,7 @@ if [[ "$useCaseSelection" == "4" || "$useCaseSelection" == "all" || "$useCaseSel
 fi
 
 # Enable public access for resources
-if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "2" || "$useCaseSelection" == "5" || "$useCaseSelection" == "all" || "$useCaseSelection" == "6" ]]; then
+if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "2" || "$useCaseSelection" == "5" || "$useCaseSelection" == "6" || "$useCaseSelection" == "all" || "$useCaseSelection" == "7" ]]; then
     if [[ -n "$ResourceGroup" ]]; then
         # Check if resource group has Type=WAF tag
         rgTypeTag=$(az group show --name "$ResourceGroup" --query "tags.Type" -o tsv 2>/dev/null)
@@ -643,7 +646,7 @@ if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "2" || "$useCaseSelec
 fi
 
 # Use Case 1 - RFP Evaluation
-if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "all" || "$useCaseSelection" == "6" ]]; then
+if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "all" || "$useCaseSelection" == "7" ]]; then
     echo "Uploading Team Configuration for RFP Evaluation..."
     directoryPath="data/agent_teams"
     teamId="00000000-0000-0000-0000-000000000004"
@@ -706,7 +709,7 @@ if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "all" || "$useCaseSel
 fi
 
 # Use Case 5 - Contract Compliance Review
-if [[ "$useCaseSelection" == "5" || "$useCaseSelection" == "all" || "$useCaseSelection" == "6" ]]; then
+if [[ "$useCaseSelection" == "5" || "$useCaseSelection" == "all" || "$useCaseSelection" == "7" ]]; then
     echo "Uploading Team Configuration for Contract Compliance Review..."
     directoryPath="data/agent_teams"
     teamId="00000000-0000-0000-0000-000000000005"
@@ -769,7 +772,7 @@ if [[ "$useCaseSelection" == "5" || "$useCaseSelection" == "all" || "$useCaseSel
 fi
 
 # Use Case 2 - Retail Customer Satisfaction
-if [[ "$useCaseSelection" == "2" || "$useCaseSelection" == "all" || "$useCaseSelection" == "6" ]]; then
+if [[ "$useCaseSelection" == "2" || "$useCaseSelection" == "all" || "$useCaseSelection" == "7" ]]; then
     echo "Uploading Team Configuration for Retail Customer Satisfaction..."
     directoryPath="data/agent_teams"
     teamId="00000000-0000-0000-0000-000000000003"
@@ -821,7 +824,7 @@ if [[ "$isTeamConfigFailed" == true || "$isSampleDataFailed" == true ]]; then
     echo "One or more tasks failed. Please check the error messages above."
     exit 1
 else
-    if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "2" || "$useCaseSelection" == "5" || "$useCaseSelection" == "all" || "$useCaseSelection" == "6" ]]; then
+    if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "2" || "$useCaseSelection" == "5" || "$useCaseSelection" == "all" || "$useCaseSelection" == "7" ]]; then
         echo ""
         echo "Team configuration upload and sample data processing completed successfully."
     else
