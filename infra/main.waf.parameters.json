@@ -56,7 +56,7 @@
     "MCPContainerImageTag": {
       "value": "${AZURE_ENV_IMAGE_TAG=latest_v4}"
     },
-    "enableTelemetry12": {
+    "enableTelemetry": {
       "value": "${AZURE_ENV_ENABLE_TELEMETRY}"
     },
     "enableMonitoring": {
@@ -68,7 +68,7 @@
     "enableScalability": {
       "value": true
     },
-    "vmAdminUsername23": {
+    "vmAdminUsername": {
       "value": "${AZURE_ENV_VM_ADMIN_USERNAME}"
     },
     "vmAdminPassword": {
@@ -77,7 +77,7 @@
     "vmSize": {
       "value": "${AZURE_ENV_VM_SIZE}"
     },
-    "existingLogAnalyticsWorkspaceId45": {
+    "existingLogAnalyticsWorkspaceId": {
       "value": "${AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID}"
     },
     "existingFoundryProjectResourceId": {
