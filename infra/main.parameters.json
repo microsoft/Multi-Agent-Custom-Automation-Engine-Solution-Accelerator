@@ -48,13 +48,13 @@
       "value": "${AZURE_ENV_REASONING_MODEL_CAPACITY}"
     },
     "backendContainerImageTag": {
-      "value": "${AZURE_ENV_IMAGE_TAG}"
+      "value": "${AZURE_ENV_IMAGE_TAG=latest_v4}"
     },
     "frontendContainerImageTag": {
-      "value": "${AZURE_ENV_IMAGE_TAG}"
+      "value": "${AZURE_ENV_IMAGE_TAG=latest_v4}"
     },
     "MCPContainerImageTag": {
-      "value": "${AZURE_ENV_IMAGE_TAG}"
+      "value": "${AZURE_ENV_IMAGE_TAG=latest_v4}"
     },
     "enableTelemetry": {
       "value": "${AZURE_ENV_ENABLE_TELEMETRY}"

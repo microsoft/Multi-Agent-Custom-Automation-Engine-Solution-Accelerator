@@ -2,7 +2,7 @@
 
 By default this template will use the environment name as the prefix to prevent naming collisions within Azure. The parameters below show the default values. You only need to run the statements below if you need to change the values. 
 
-> To override any of the parameters, run `azd env set <PARAMETER_NAME> <VALUE>` before running `azd up`. On the first azd command, it will prompt you for the environment name. Be sure to choose 3-20 characters alphanumeric unique name. 
+> To override any of the parameters, run `azd env set <PARAMETER_NAME> <VALUE>` before running `azd up`. On the first azd command, it will prompt you for the environment name. Be sure to choose 3-16 characters alphanumeric unique name.
 
 ## Parameters
 
@@ -23,7 +23,7 @@ By default this template will use the environment name as the prefix to prevent 
 | `AZURE_ENV_REASONING_MODEL_NAME`          | string | `o4-mini`          | Specifies the name of the reasoning GPT model to be deployed.                                                |
 | `AZURE_ENV_REASONING_MODEL_VERSION`       | string | `2025-04-16`      | Version of the reasoning GPT model to be used for deployment.                                                |
 | `AZURE_ENV_REASONING_MODEL_CAPACITY`       | int | `50`      | Sets the reasoning GPT model capacity.                                                |
-| `AZURE_ENV_IMAGETAG`            | string | `latest_v3`          | Docker image tag used for container deployments.                                                   |
+| `AZURE_ENV_IMAGETAG`            | string | `latest_v4`          | Docker image tag used for container deployments.                                                   |
 | `AZURE_ENV_ENABLE_TELEMETRY`    | bool   | `true`            | Enables telemetry for monitoring and diagnostics.                                                  |
 | `AZURE_EXISTING_AIPROJECT_RESOURCE_ID`          | string | `<Existing Workspace Id>`          | Set this if you want to reuse an AI Foundry Project instead of creating a new one.                                                |       
 | `AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID` | string  | Guide to get your [Existing Workspace ID](re-use-log-analytics.md) | Set this if you want to reuse an existing Log Analytics Workspace instead of creating a new one.     |
