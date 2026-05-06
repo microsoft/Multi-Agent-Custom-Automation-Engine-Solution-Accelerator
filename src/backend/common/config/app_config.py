@@ -8,7 +8,6 @@ from azure.cosmos import CosmosClient
 from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
 from dotenv import load_dotenv
 
-
 # Load environment variables from .env file
 load_dotenv()
 
@@ -88,6 +87,9 @@ class AppConfig:
         self.MCP_SERVER_DESCRIPTION = self._get_optional(
             "MCP_SERVER_DESCRIPTION", "MCP server with greeting and planning tools"
         )
+        # Foundry project connection ID for the MCP server (optional — only needed
+        # when the MCP server requires a managed-connection credential in Foundry).
+        self.MCP_SERVER_CONNECTION_ID = self._get_optional("MCP_SERVER_CONNECTION_ID")
         self.TENANT_ID = self._get_optional("AZURE_TENANT_ID")
         self.CLIENT_ID = self._get_optional("AZURE_CLIENT_ID")
         self.AZURE_AI_SEARCH_CONNECTION_NAME = self._get_optional(

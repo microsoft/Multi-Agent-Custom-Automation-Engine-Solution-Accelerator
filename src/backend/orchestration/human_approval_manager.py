@@ -8,17 +8,18 @@ import logging
 from typing import Any, Optional
 
 import models.messages as messages
-from agent_framework import ChatMessage
-from agent_framework._workflows._magentic import (
+from agent_framework.orchestrations import (
     MagenticContext,
     StandardMagenticManager,
+)
+from agent_framework_orchestrations._magentic import (
     ORCHESTRATOR_FINAL_ANSWER_PROMPT,
     ORCHESTRATOR_TASK_LEDGER_PLAN_PROMPT,
     ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT,
 )
-
-from orchestration.connection_config import connection_config, orchestration_config
 from models.plan_models import MPlan
+from orchestration.connection_config import (connection_config,
+                                             orchestration_config)
 from orchestration.helper.plan_to_mplan_converter import PlanToMPlanConverter
 
 logger = logging.getLogger(__name__)

@@ -15,13 +15,12 @@ from common.utils.team_utils import (find_first_available_team, rai_success,
                                      rai_validate_team_config)
 from fastapi import (APIRouter, BackgroundTasks, File, HTTPException, Query,
                      Request, UploadFile, WebSocket, WebSocketDisconnect)
+from models.messages import WebsocketMessageType
+from orchestration.connection_config import (connection_config,
+                                             orchestration_config, team_config)
+from orchestration.orchestration_manager import OrchestrationManager
 from services.plan_service import PlanService
 from services.team_service import TeamService
-from orchestration.connection_config import (connection_config,
-                                              orchestration_config,
-                                              team_config)
-from models.messages import WebsocketMessageType
-from orchestration.orchestration_manager import OrchestrationManager
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

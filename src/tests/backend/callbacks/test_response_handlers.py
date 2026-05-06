@@ -2,10 +2,11 @@
 
 import asyncio
 import logging
-import sys
 import os
+import sys
 import time
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
 import pytest
 
 # Add the backend directory to the Python path
@@ -124,12 +125,9 @@ sys.modules['models.messages'] = Mock(
 
 # Now import our module under test
 from backend.callbacks.response_handlers import (
-    clean_citations,
-    _is_function_call_item,
-    _extract_tool_calls_from_contents,
-    agent_response_callback,
-    streaming_agent_response_callback,
-)
+    _extract_tool_calls_from_contents, _is_function_call_item,
+    agent_response_callback, clean_citations,
+    streaming_agent_response_callback)
 
 # Access mocked modules that we'll use in tests
 connection_config = sys.modules['orchestration.connection_config'].connection_config

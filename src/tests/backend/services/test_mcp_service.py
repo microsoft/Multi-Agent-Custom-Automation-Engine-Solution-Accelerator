@@ -3,9 +3,9 @@
 
 import os
 import sys
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
 from aiohttp import ClientError
 
 # Add src/backend to sys.path
@@ -28,8 +28,8 @@ mock_config_module = MagicMock()
 mock_config_module.config = mock_config
 sys.modules['common.config.app_config'] = mock_config_module
 
-from backend.services.mcp_service import MCPService
 import backend.services.mcp_service as mcp_service_module
+from backend.services.mcp_service import MCPService
 
 
 class TestMCPService:

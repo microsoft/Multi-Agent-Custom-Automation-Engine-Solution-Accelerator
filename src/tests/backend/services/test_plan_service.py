@@ -1,15 +1,15 @@
 # Copyright (c) Microsoft. All rights reserved.
 """Tests for services/plan_service.py."""
 
-import os
-import sys
 import json
 import logging
-
-import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
+import os
+import sys
 from dataclasses import dataclass
 from typing import Any, List
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 # Add src/backend to sys.path so flat imports inside plan_service resolve
 _backend_path = os.path.abspath(
@@ -83,13 +83,10 @@ mock_orchestration_module.orchestration_config = mock_orchestration_config
 sys.modules['orchestration'] = MagicMock()
 sys.modules['orchestration.connection_config'] = mock_orchestration_module
 
-from backend.services.plan_service import (
-    PlanService,
-    build_agent_message_from_user_clarification,
-    build_agent_message_from_agent_message_response,
-)
 import backend.services.plan_service as plan_service_module
-
+from backend.services.plan_service import (
+    PlanService, build_agent_message_from_agent_message_response,
+    build_agent_message_from_user_clarification)
 
 # ---------------------------------------------------------------------------
 # Test data helpers

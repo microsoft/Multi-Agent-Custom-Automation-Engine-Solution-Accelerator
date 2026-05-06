@@ -1,9 +1,9 @@
 # Copyright (c) Microsoft. All rights reserved.
 """Tests for models/messages.py — all message dataclasses."""
 
+import dataclasses
 import os
 import sys
-import dataclasses
 
 import pytest
 
@@ -16,21 +16,15 @@ _backend_path = os.path.abspath(
 if _backend_path not in sys.path:
     sys.path.insert(0, _backend_path)
 
+from backend.models.messages import (AgentMessage, AgentMessageStreaming,
+                                     AgentStreamEnd, AgentStreamStart,
+                                     AgentToolCall, AgentToolMessage,
+                                     PlanApprovalRequest, PlanApprovalResponse,
+                                     ReplanApprovalRequest,
+                                     ReplanApprovalResponse,
+                                     UserClarificationRequest,
+                                     UserClarificationResponse)
 from backend.models.plan_models import MPlan, MStep, PlanStatus
-from backend.models.messages import (
-    AgentMessage,
-    AgentMessageStreaming,
-    AgentStreamEnd,
-    AgentStreamStart,
-    AgentToolCall,
-    AgentToolMessage,
-    PlanApprovalRequest,
-    PlanApprovalResponse,
-    ReplanApprovalRequest,
-    ReplanApprovalResponse,
-    UserClarificationRequest,
-    UserClarificationResponse,
-)
 
 
 class TestAgentMessage:

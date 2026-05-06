@@ -3,20 +3,13 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
-from azure.core.exceptions import (
-    ClientAuthenticationError,
-    HttpResponseError,
-    ResourceNotFoundError,
-)
+from azure.core.exceptions import (ClientAuthenticationError,
+                                   HttpResponseError, ResourceNotFoundError)
 from azure.search.documents.indexes import SearchIndexClient
 from common.config.app_config import config
 from common.database.database_base import DatabaseBase
-from common.models.messages import (
-    StartingTask,
-    TeamAgent,
-    TeamConfiguration,
-    UserCurrentTeam,
-)
+from common.models.messages import (StartingTask, TeamAgent, TeamConfiguration,
+                                    UserCurrentTeam)
 from services.foundry_service import FoundryService
 
 

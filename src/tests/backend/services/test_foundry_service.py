@@ -3,9 +3,9 @@
 
 import os
 import sys
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
 
 # Add src/backend to sys.path
 _backend_path = os.path.abspath(
@@ -49,8 +49,8 @@ mock_config_module = MagicMock()
 mock_config_module.config = mock_config
 sys.modules['common.config.app_config'] = mock_config_module
 
-from backend.services.foundry_service import FoundryService
 import backend.services.foundry_service as foundry_service_module
+from backend.services.foundry_service import FoundryService
 
 
 class MockConnection:

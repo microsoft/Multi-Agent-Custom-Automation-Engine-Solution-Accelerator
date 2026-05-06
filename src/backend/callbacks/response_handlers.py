@@ -8,13 +8,11 @@ import re
 import time
 from typing import Any
 
-from agent_framework import ChatMessage
-from agent_framework._workflows._magentic import \
-    AgentRunResponseUpdate  # Streaming update type from workflows
-from orchestration.connection_config import connection_config
+from agent_framework import AgentResponseUpdate, Message
 from models.messages import (AgentMessage, AgentMessageStreaming,
-                              AgentToolCall, AgentToolMessage,
-                              WebsocketMessageType)
+                             AgentToolCall, AgentToolMessage,
+                             WebsocketMessageType)
+from orchestration.connection_config import connection_config
 
 logger = logging.getLogger(__name__)
 
@@ -61,23 +59,17 @@ def _extract_tool_calls_from_contents(contents: list[Any]) -> list[AgentToolCall
 
 def agent_response_callback(
     agent_id: str,
-    message: ChatMessage,
+    message: Message,
     user_id: str | None = None,
 ) -> None:
     """
-    Final (non-streaming) agent response callback using agent_framework ChatMessage.
+    Final (non-streaming) agent response callback using agent_framework Message.
     """
     agent_name = getattr(message, "author_name", None) or agent_id or "Unknown Agent"
     role = getattr(message, "role", "assistant")
 
-    # FIX: Properly extract text from ChatMessage
-    # ChatMessage has a .text property that concatenates all TextContent items
-    text = ""
-    if isinstance(message, ChatMessage):
-        text = message.text  # Use the property directly
-    else:
-        # Fallback for non-ChatMessage objects
-        text = str(getattr(message, "text", ""))
+    # Message has a .text property that concatenates all TextContent items
+    text = message.text if message is not None else ""
 
     text = clean_citations(text or "")
 
@@ -105,12 +97,12 @@ def agent_response_callback(
 
 async def streaming_agent_response_callback(
     agent_id: str,
-    update: AgentRunResponseUpdate,
+    update: AgentResponseUpdate,
     is_final: bool,
     user_id: str | None = None,
 ) -> None:
     """
-    Streaming callback for incremental agent output (AgentRunResponseUpdate).
+    Streaming callback for incremental agent output (AgentResponseUpdate).
     """
     if not user_id:
         return

@@ -3,11 +3,11 @@ Tests for backend.api.router module.
 Simple approach to achieve router coverage without complex mocking.
 """
 
+import asyncio
 import os
 import sys
 import unittest
 from unittest.mock import Mock, patch
-import asyncio
 
 # Set up environment
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'backend'))

@@ -6,9 +6,9 @@ bullet-style plan text into MPlan objects with agent assignment and action extra
 """
 
 import os
+import re
 import sys
 import unittest
-import re
 
 # Add src to the Python path so 'from backend...' imports resolve correctly
 # (4 levels up from tests/backend/orchestration/helper/ → src/)
@@ -51,7 +51,8 @@ if _need_mock:
     sys.modules['models.plan_models'] = mock_models_plan_models
 
 # Now import the converter
-from backend.orchestration.helper.plan_to_mplan_converter import PlanToMPlanConverter
+from backend.orchestration.helper.plan_to_mplan_converter import \
+    PlanToMPlanConverter
 
 
 class TestPlanToMPlanConverter(unittest.TestCase):

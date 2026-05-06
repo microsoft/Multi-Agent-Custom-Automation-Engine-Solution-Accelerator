@@ -3,11 +3,11 @@
 
 import os
 import sys
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
-import pytest
-from unittest.mock import patch, MagicMock, AsyncMock, Mock
 import aiohttp
-from aiohttp import ClientTimeout, ClientSession
+import pytest
+from aiohttp import ClientSession, ClientTimeout
 
 # Add src/backend to sys.path so flat imports inside base_api_service resolve
 _backend_path = os.path.abspath(
@@ -31,8 +31,8 @@ mock_config_module = MagicMock()
 mock_config_module.config = mock_config
 sys.modules['common.config.app_config'] = mock_config_module
 
-from backend.services.base_api_service import BaseAPIService
 import backend.services.base_api_service as base_api_service_module
+from backend.services.base_api_service import BaseAPIService
 
 
 class TestBaseAPIService:

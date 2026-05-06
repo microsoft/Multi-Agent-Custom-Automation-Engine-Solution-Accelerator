@@ -4,12 +4,8 @@ from dataclasses import asdict
 
 import models.messages as messages
 from common.database.database_factory import DatabaseFactory
-from common.models.messages import (
-    AgentMessageData,
-    AgentMessageType,
-    AgentType,
-    PlanStatus,
-)
+from common.models.messages import (AgentMessageData, AgentMessageType,
+                                    AgentType, PlanStatus)
 from common.utils.event_utils import track_event_if_configured
 from orchestration.connection_config import orchestration_config
 

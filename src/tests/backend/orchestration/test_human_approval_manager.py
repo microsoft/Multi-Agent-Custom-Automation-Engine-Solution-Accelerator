@@ -9,7 +9,7 @@ import os
 import sys
 import unittest
 from typing import Any, Optional
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -210,7 +210,8 @@ sys.modules['orchestration.helper.plan_to_mplan_converter'] = Mock(
 )
 
 # Now import the module under test
-from backend.orchestration.human_approval_manager import HumanApprovalMagenticManager
+from backend.orchestration.human_approval_manager import \
+    HumanApprovalMagenticManager
 
 # Get mocked references for tests
 connection_config = sys.modules['orchestration.connection_config'].connection_config

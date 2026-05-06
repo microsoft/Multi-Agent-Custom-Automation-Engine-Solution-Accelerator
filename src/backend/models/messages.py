@@ -6,11 +6,9 @@ from dataclasses import asdict, dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel
-
 from common.models.messages import AgentMessageType
 from models.plan_models import MPlan, PlanStatus
-
+from pydantic import BaseModel
 
 # ---------------------------------------------------------------------------
 # Dataclass message payloads
@@ -117,3 +115,36 @@ class UserClarificationResponse:
     answer: str = ""
     plan_id: str = ""
     m_plan_id: str = ""
+
+
+class WebsocketMessageType(str, Enum):
+    """Types of WebSocket messages sent over the WebSocket connection."""
+    SYSTEM_MESSAGE = "system_message"
+    AGENT_MESSAGE = "agent_message"
+    AGENT_STREAM_START = "agent_stream_start"
+    AGENT_STREAM_END = "agent_stream_end"
+    AGENT_MESSAGE_STREAMING = "agent_message_streaming"
+    AGENT_TOOL_MESSAGE = "agent_tool_message"
+    PLAN_APPROVAL_REQUEST = "plan_approval_request"
+    PLAN_APPROVAL_RESPONSE = "plan_approval_response"
+    REPLAN_APPROVAL_REQUEST = "replan_approval_request"
+    REPLAN_APPROVAL_RESPONSE = "replan_approval_response"
+    USER_CLARIFICATION_REQUEST = "user_clarification_request"
+    USER_CLARIFICATION_RESPONSE = "user_clarification_response"
+    FINAL_RESULT_MESSAGE = "final_result_message"
+    TIMEOUT_NOTIFICATION = "timeout_notification"
+    ERROR_MESSAGE = "error_message"
+
+
+@dataclass(slots=True)
+class AgentMessageResponse:
+    """Response message representing an agent's contribution to a plan (stream or final)."""
+    plan_id: str
+    agent: str
+    content: str
+    agent_type: AgentMessageType
+    is_final: bool = False
+    raw_data: str | None = None
+    streaming_message: str | None = None
+    steps: List[Any] = field(default_factory=list)
+    next_steps: List[Any] = field(default_factory=list)

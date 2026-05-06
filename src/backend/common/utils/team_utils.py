@@ -6,11 +6,9 @@ from common.config.app_config import config
 
 from common.database.database_base import DatabaseBase
 from common.models.messages import TeamConfiguration
-from v4.common.services.team_service import TeamService
-from v4.config.agent_registry import agent_registry
-from v4.magentic_agents.foundry_agent import (
-    FoundryAgentTemplate,
-)
+from services.team_service import TeamService
+from config.agent_registry import agent_registry
+from agents.agent_template import AgentTemplate
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +54,7 @@ async def find_first_available_team(team_service: TeamService, user_id: str) -> 
 
 async def create_RAI_agent(
     team: TeamConfiguration, memory_store: DatabaseBase
-) -> FoundryAgentTemplate:
+) -> AgentTemplate:
     """Create and initialize a FoundryAgentTemplate for Responsible AI (RAI) checks."""
     agent_name = "RAIAgent"
     agent_description = "A comprehensive research assistant for integration testing"
@@ -91,7 +89,7 @@ async def create_RAI_agent(
     team.team_id = "rai_team"  # Use a fixed team ID for RAI agent
     team.name = "RAI Team"
     team.description = "Team responsible for Responsible AI checks"
-    agent = FoundryAgentTemplate(
+    agent = AgentTemplate(
         agent_name=agent_name,
         agent_description=agent_description,
         agent_instructions=agent_instructions,
@@ -118,7 +116,7 @@ async def create_RAI_agent(
     return agent
 
 
-async def _get_agent_response(agent: FoundryAgentTemplate, query: str) -> str:
+async def _get_agent_response(agent: AgentTemplate, query: str) -> str:
     """
     Stream the agent response fully and return concatenated text.
 
@@ -152,7 +150,7 @@ async def rai_success(
     Run a RAI compliance check on the provided description using the RAIAgent.
     Returns True if content is safe (should proceed), False if it should be blocked.
     """
-    agent: FoundryAgentTemplate | None = None
+    agent: AgentTemplate | None = None
     try:
         agent = await create_RAI_agent(team_config, memory_store)
         if not agent:

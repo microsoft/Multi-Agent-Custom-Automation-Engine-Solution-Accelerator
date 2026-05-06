@@ -2,17 +2,16 @@
 import logging
 from contextlib import asynccontextmanager
 
+from api.router import app_router
 from azure.monitor.opentelemetry import configure_azure_monitor
 from common.config.app_config import config
 from common.models.messages import UserLanguage
+from config.agent_registry import agent_registry
 # FastAPI imports
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 # Local imports
 from middleware.health_check import HealthCheckMiddleware
-from api.router import app_router
-from v4.api.router import app_v4
-from config.agent_registry import agent_registry
 
 # Azure monitoring
 
@@ -86,8 +85,6 @@ app.add_middleware(
 
 # Configure health check
 app.add_middleware(HealthCheckMiddleware, password="", checks={})
-# v4 endpoints (legacy — kept for Phase 8 parity testing)
-app.include_router(app_v4)
 # new flat-structure endpoints
 app.include_router(app_router)
 logging.info("Added health check middleware")

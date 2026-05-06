@@ -3,9 +3,9 @@
 
 import os
 import sys
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
 
 # Add src/backend to sys.path
 _backend_path = os.path.abspath(
@@ -68,6 +68,7 @@ sys.modules['common.database.database_base'] = mock_database_base_module
 from dataclasses import dataclass, field
 from typing import Any, List, Optional
 
+
 @dataclass
 class MockTeamAgent:
     input_key: str = ""
@@ -127,9 +128,8 @@ mock_foundry_service_module = MagicMock()
 sys.modules.setdefault('services', MagicMock())
 sys.modules['services.foundry_service'] = mock_foundry_service_module
 
-from backend.services.team_service import TeamService
 import backend.services.team_service as team_service_module
-
+from backend.services.team_service import TeamService
 
 # ---------------------------------------------------------------------------
 # Test helpers

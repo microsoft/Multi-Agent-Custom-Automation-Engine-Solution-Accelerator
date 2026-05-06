@@ -26,6 +26,7 @@ class MCPConfig:
     description: str = ""
     tenant_id: str = ""
     client_id: str = ""
+    connection_id: str | None = None
 
     @classmethod
     def from_env(cls) -> "MCPConfig":
@@ -45,6 +46,7 @@ class MCPConfig:
             description=description,
             tenant_id=tenant_id,
             client_id=client_id,
+            connection_id=config.MCP_SERVER_CONNECTION_ID,
         )
 
     def get_headers(self, token: str) -> dict:
