@@ -59,7 +59,6 @@ _mock_proxy_agent_mod = Mock()
 _mock_proxy_agent_mod.ProxyAgent = mock_proxy_agent_cls
 sys.modules["agents.proxy_agent"] = _mock_proxy_agent_mod
 
-sys.modules.setdefault("config", Mock())  # parent package stub
 _mock_mcp_config_mod = Mock()
 _mock_mcp_config_mod.MCPConfig = mock_mcp_config_cls
 _mock_mcp_config_mod.SearchConfig = mock_search_config_cls

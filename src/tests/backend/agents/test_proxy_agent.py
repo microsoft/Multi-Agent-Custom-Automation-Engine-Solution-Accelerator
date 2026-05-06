@@ -63,7 +63,6 @@ mock_orchestration_config.default_timeout = 300
 mock_connection_config_mod = Mock()
 mock_connection_config_mod.connection_config = mock_connection_config
 mock_connection_config_mod.orchestration_config = mock_orchestration_config
-sys.modules.setdefault("orchestration", Mock())
 sys.modules["orchestration.connection_config"] = mock_connection_config_mod
 
 # v4.models.messages stubs

@@ -1,12 +1,15 @@
-"""Unit tests for agents.agent_template (AgentTemplate — GA agent_framework 1.2.2).
+﻿"""Unit tests for agents.agent_template — MAF 1.0 section 6 pattern.
 
-Ported from src/tests/backend/v4/magentic_agents/test_foundry_agent.py.
-Key changes:
-  - FoundryAgentTemplate → AgentTemplate
-  - agent.search attribute → agent.search_config
-  - _azure_server_agent_id removed (no server-side agent in GA path)
-  - _collect_tools() removed (inlined in AgentTemplate._open_mcp_path)
-  - agent_framework mocks reflect new GA type names
+Covers:
+  - Get path: list_agents() returns matching agent → create_agent() NOT called
+  - Create path: list_agents() returns nothing → create_agent() IS called
+  - Toolbox: created with correct tools per config flags
+  - No toolbox when no tools configured
+  - FoundryAgent is never referenced (import removed from module)
+  - open() is idempotent
+  - close() clears all state
+  - Context manager support
+  - invoke() streaming
 """
 
 import logging
@@ -16,26 +19,26 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 # ---------------------------------------------------------------------------
-# Module stubs (avoid Azure SDK / Cosmos DB at import time)
-# pytest's pythonpath=["src"] means modules are imported as backend.xxx
-# The AgentTemplate code uses short absolute imports (from agents.x import ...);
-# those are resolved via sys.modules when the parent backend.* module is loaded.
+# Module stubs — prevent Azure SDK / Cosmos DB imports at collection time
 # ---------------------------------------------------------------------------
 
-# --- agent_framework
 _mock_agent_fw = Mock()
 sys.modules["agent_framework"] = _mock_agent_fw
 
-# --- agent_framework_foundry
 _mock_af_foundry = Mock()
 sys.modules["agent_framework_foundry"] = _mock_af_foundry
 
-# --- azure.identity.aio  (keep azure hierarchy intact)
+# azure hierarchy
 sys.modules.setdefault("azure", Mock())
 sys.modules.setdefault("azure.identity", Mock())
 sys.modules.setdefault("azure.identity.aio", Mock())
+sys.modules.setdefault("azure.ai", Mock())
+sys.modules.setdefault("azure.ai.projects", Mock())
+sys.modules.setdefault("azure.ai.projects.aio", Mock())
+_mock_projects_models = Mock()
+sys.modules["azure.ai.projects.models"] = _mock_projects_models
 
-# --- common.*
+# common.*
 sys.modules.setdefault("common", Mock())
 sys.modules.setdefault("common.config", Mock())
 sys.modules.setdefault("common.config.app_config", Mock())
@@ -46,44 +49,88 @@ sys.modules.setdefault("common.models.messages", Mock())
 sys.modules.setdefault("common.utils", Mock())
 sys.modules.setdefault("common.utils.agent_utils", Mock())
 
-# --- config.*  (short-path as used by agent_template.py)
+# config.*
 _mock_config_agent_registry = Mock()
 _mock_agent_registry = Mock()
 _mock_config_agent_registry.agent_registry = _mock_agent_registry
-sys.modules.setdefault("config", Mock())
 sys.modules["config.agent_registry"] = _mock_config_agent_registry
 
-_mock_mcp_config_cls = Mock()
-_mock_search_config_cls = Mock()
 _mock_config_mcp_config = Mock()
-_mock_config_mcp_config.MCPConfig = _mock_mcp_config_cls
-_mock_config_mcp_config.SearchConfig = _mock_search_config_cls
+_mock_config_mcp_config.MCPConfig = Mock()
+_mock_config_mcp_config.SearchConfig = Mock()
 sys.modules["config.mcp_config"] = _mock_config_mcp_config
 
-# Now import the module under test (full backend.* path as per project convention)
-from backend.agents.agent_template import AgentTemplate
+from backend.agents.agent_template import AgentTemplate  # noqa: E402
 
 # ---------------------------------------------------------------------------
-# Helpers — mock fixtures with proper shape
+# Async-iterator helpers
+# ---------------------------------------------------------------------------
+
+
+async def _async_iter(items):
+    """Yield each item as an async iterator (for mocking list_agents())."""
+    for item in items:
+        yield item
+
+
+# ---------------------------------------------------------------------------
+# Test data builders
 # ---------------------------------------------------------------------------
 
 
 def _make_mcp_config(**kw):
     m = Mock()
-    m.url = kw.get("url", "https://test-mcp.example.com")
+    m.url = kw.get("url", "https://mcp.example.com")
     m.name = kw.get("name", "TestMCP")
-    m.description = kw.get("description", "Test MCP Server")
-    m.tenant_id = kw.get("tenant_id", "tenant-123")
-    m.client_id = kw.get("client_id", "client-456")
+    m.description = kw.get("description", "Test MCP")
+    m.connection_id = kw.get("connection_id", None)
     return m
 
 
 def _make_search_config(**kw):
     m = Mock()
-    m.connection_name = kw.get("connection_name", "TestConnection")
-    m.endpoint = kw.get("endpoint", "https://test-search.example.com")
+    m.connection_name = kw.get("connection_name", "search-conn")
     m.index_name = kw.get("index_name", "test-index")
     return m
+
+
+def _make_agent_record(name="TestAgent", model="test-model", instructions="Portal instructions"):
+    r = Mock()
+    r.name = name
+    r.model = model
+    r.instructions = instructions
+    return r
+
+
+# ---------------------------------------------------------------------------
+# Shared patching helpers
+# ---------------------------------------------------------------------------
+
+
+def _make_project_client_mock(agent_records=None):
+    """Return a mock AIProjectClient that yields agent_records from list_agents()."""
+    records = agent_records or []
+    client = AsyncMock()
+    client.__aenter__ = AsyncMock(return_value=client)
+    client.__aexit__ = AsyncMock(return_value=False)
+    client.agents.list_agents = Mock(return_value=_async_iter(records))
+    client.agents.create_agent = AsyncMock(return_value=_make_agent_record())
+    client.beta.toolboxes.create_toolbox_version = AsyncMock()
+    return client
+
+
+def _make_credential_mock():
+    cred = AsyncMock()
+    cred.__aenter__ = AsyncMock(return_value=cred)
+    cred.__aexit__ = AsyncMock(return_value=False)
+    return cred
+
+
+def _make_agent_cm_mock(inner=None):
+    cm = AsyncMock()
+    cm.__aenter__ = AsyncMock(return_value=inner or Mock())
+    cm.__aexit__ = AsyncMock(return_value=False)
+    return cm
 
 
 # ---------------------------------------------------------------------------
@@ -92,11 +139,11 @@ def _make_search_config(**kw):
 
 
 @pytest.fixture
-def basic_kwargs() -> dict:
+def basic_kwargs():
     return dict(
         agent_name="TestAgent",
         agent_description="Test Description",
-        agent_instructions="Test Instructions",
+        agent_instructions="Bootstrap instructions",
         use_reasoning=False,
         model_deployment_name="test-model",
         project_endpoint="https://test.project.azure.com/",
@@ -109,29 +156,27 @@ def mcp_config():
 
 
 @pytest.fixture
+def mcp_config_with_connection():
+    return _make_mcp_config(connection_id="mcp-connection-id")
+
+
+@pytest.fixture
 def search_config():
     return _make_search_config()
 
 
-@pytest.fixture
-def search_config_no_index():
-    return _make_search_config(index_name=None)
-
-
 # ---------------------------------------------------------------------------
-# Tests
+# TestAgentTemplateInit
 # ---------------------------------------------------------------------------
 
 
 class TestAgentTemplateInit:
-    """Tests for AgentTemplate.__init__."""
-
     def test_minimal_params(self, basic_kwargs):
         agent = AgentTemplate(**basic_kwargs)
 
         assert agent.agent_name == "TestAgent"
         assert agent.agent_description == "Test Description"
-        assert agent.agent_instructions == "Test Instructions"
+        assert agent.agent_instructions == "Bootstrap instructions"
         assert agent.use_reasoning is False
         assert agent.model_deployment_name == "test-model"
         assert agent.project_endpoint == "https://test.project.azure.com/"
@@ -139,175 +184,284 @@ class TestAgentTemplateInit:
         assert agent.mcp_cfg is None
         assert agent.search_config is None
         assert agent._agent is None
-        assert agent._use_azure_search is False
+        assert agent._stack is None
         assert isinstance(agent.logger, logging.Logger)
 
     def test_all_params(self, basic_kwargs, mcp_config, search_config):
-        # basic_kwargs includes use_reasoning=False; override it here
-        kw = {k: v for k, v in basic_kwargs.items() if k != "use_reasoning"}
         agent = AgentTemplate(
-            **kw,
-            use_reasoning=True,
+            **{**basic_kwargs, "use_reasoning": True},
             enable_code_interpreter=True,
             mcp_config=mcp_config,
             search_config=search_config,
         )
-
         assert agent.use_reasoning is True
         assert agent.enable_code_interpreter is True
         assert agent.mcp_cfg is mcp_config
         assert agent.search_config is search_config
-        assert agent._use_azure_search is True  # search_config has index_name
 
-    def test_search_config_no_index_does_not_trigger_azure_search(
-        self, basic_kwargs, search_config_no_index
-    ):
-        agent = AgentTemplate(**basic_kwargs, search_config=search_config_no_index)
-        assert agent._use_azure_search is False
-
-
-class TestIsAzureSearchRequested:
-    """Tests for AgentTemplate._is_azure_search_requested."""
-
-    def test_no_search_config(self, basic_kwargs):
-        agent = AgentTemplate(**basic_kwargs)
-        assert agent._is_azure_search_requested() is False
-
-    def test_with_valid_index(self, basic_kwargs, search_config):
+    def test_no_use_azure_search_attribute(self, basic_kwargs, search_config):
+        """The old _use_azure_search attribute must not exist in the new pattern."""
         agent = AgentTemplate(**basic_kwargs, search_config=search_config)
-        assert agent._is_azure_search_requested() is True
+        assert not hasattr(agent, "_use_azure_search")
 
-    def test_no_index_name(self, basic_kwargs, search_config_no_index):
-        agent = AgentTemplate(**basic_kwargs, search_config=search_config_no_index)
-        assert agent._is_azure_search_requested() is False
+
+# ---------------------------------------------------------------------------
+# TestBuildTools
+# ---------------------------------------------------------------------------
+
+
+class TestBuildTools:
+    def test_no_tools_returns_empty(self, basic_kwargs):
+        agent = AgentTemplate(**basic_kwargs)
+        with patch("backend.agents.agent_template.MCPTool") as mock_mcp, \
+             patch("backend.agents.agent_template.AzureAISearchTool") as mock_search, \
+             patch("backend.agents.agent_template.CodeInterpreterTool") as mock_ci:
+            result = agent._build_tools()
+        assert result == []
+        mock_mcp.assert_not_called()
+        mock_search.assert_not_called()
+        mock_ci.assert_not_called()
+
+    def test_mcp_tool_added(self, basic_kwargs, mcp_config):
+        agent = AgentTemplate(**basic_kwargs, mcp_config=mcp_config)
+        mock_tool = Mock()
+        with patch("backend.agents.agent_template.MCPTool", return_value=mock_tool) as mock_cls:
+            result = agent._build_tools()
+        assert mock_tool in result
+        call_kw = mock_cls.call_args[1]
+        assert call_kw["server_label"] == mcp_config.name
+        assert call_kw["server_url"] == mcp_config.url
+        assert call_kw["require_approval"] == "never"
+        assert "project_connection_id" not in call_kw  # no connection_id on this fixture
+
+    def test_mcp_tool_includes_connection_id_when_set(self, basic_kwargs, mcp_config_with_connection):
+        agent = AgentTemplate(**basic_kwargs, mcp_config=mcp_config_with_connection)
+        with patch("backend.agents.agent_template.MCPTool") as mock_cls:
+            agent._build_tools()
+        call_kw = mock_cls.call_args[1]
+        assert call_kw["project_connection_id"] == "mcp-connection-id"
+
+    def test_search_tool_added(self, basic_kwargs, search_config):
+        agent = AgentTemplate(**basic_kwargs, search_config=search_config)
+        mock_tool = Mock()
+        with patch("backend.agents.agent_template.AzureAISearchTool", return_value=mock_tool) as mock_cls:
+            result = agent._build_tools()
+        assert mock_tool in result
+        call_kw = mock_cls.call_args[1]
+        assert call_kw["index_connection_id"] == search_config.connection_name
+        assert call_kw["index_name"] == search_config.index_name
+
+    def test_search_tool_skipped_when_no_index(self, basic_kwargs):
+        sc = _make_search_config(index_name=None)
+        agent = AgentTemplate(**basic_kwargs, search_config=sc)
+        with patch("backend.agents.agent_template.AzureAISearchTool") as mock_cls:
+            agent._build_tools()
+        mock_cls.assert_not_called()
+
+    def test_code_interpreter_added(self, basic_kwargs):
+        agent = AgentTemplate(**basic_kwargs, enable_code_interpreter=True)
+        mock_tool = Mock()
+        with patch("backend.agents.agent_template.CodeInterpreterTool", return_value=mock_tool):
+            result = agent._build_tools()
+        assert mock_tool in result
+
+    def test_all_three_tools(self, basic_kwargs, mcp_config, search_config):
+        agent = AgentTemplate(
+            **basic_kwargs,
+            mcp_config=mcp_config,
+            search_config=search_config,
+            enable_code_interpreter=True,
+        )
+        with patch("backend.agents.agent_template.MCPTool", return_value=Mock()), \
+             patch("backend.agents.agent_template.AzureAISearchTool", return_value=Mock()), \
+             patch("backend.agents.agent_template.CodeInterpreterTool", return_value=Mock()):
+            result = agent._build_tools()
+        assert len(result) == 3
+
+
+# ---------------------------------------------------------------------------
+# TestAgentTemplateOpen
+# ---------------------------------------------------------------------------
 
 
 class TestAgentTemplateOpen:
-    """Tests for AgentTemplate.open() (MCP path)."""
-
     @pytest.mark.asyncio
-    async def test_open_mcp_path_creates_agent(self, basic_kwargs):
-        """open() on MCP path initialises FoundryChatClient + Agent and registers."""
-        mock_inner = Mock()
-        mock_agent_cm = AsyncMock()
-        mock_agent_cm.__aenter__ = AsyncMock(return_value=mock_inner)
-        mock_agent_cm.__aexit__ = AsyncMock(return_value=False)
-
-        mock_credential = AsyncMock()
-        mock_credential.__aenter__ = AsyncMock(return_value=mock_credential)
-        mock_credential.__aexit__ = AsyncMock(return_value=False)
+    async def test_open_creates_agent_when_not_found(self, basic_kwargs):
+        """list_agents() returns nothing → create_agent() called with bootstrap config."""
+        project_client = _make_project_client_mock(agent_records=[])
+        cred = _make_credential_mock()
+        agent_cm = _make_agent_cm_mock()
+        chat_client_mock = Mock()
+        chat_client_mock.get_toolbox = AsyncMock(return_value=Mock())
 
         with (
-            patch("backend.agents.agent_template.DefaultAzureCredential", return_value=mock_credential),
-            patch("backend.agents.agent_template.FoundryChatClient", return_value=Mock()),
-            patch("backend.agents.agent_template.Agent", return_value=mock_agent_cm),
-            patch("backend.agents.agent_template.agent_registry") as mock_reg,
+            patch("backend.agents.agent_template.DefaultAzureCredential", return_value=cred),
+            patch("backend.agents.agent_template.AIProjectClient", return_value=project_client),
+            patch("backend.agents.agent_template.FoundryChatClient", return_value=chat_client_mock),
+            patch("backend.agents.agent_template.Agent", return_value=agent_cm),
+            patch("backend.agents.agent_template.agent_registry"),
         ):
             agent = AgentTemplate(**basic_kwargs)
             result = await agent.open()
 
+        project_client.agents.create_agent.assert_called_once()
+        call_kw = project_client.agents.create_agent.call_args[1]
+        assert call_kw["name"] == "TestAgent"
+        assert call_kw["instructions"] == "Bootstrap instructions"
+        assert call_kw["model"] == "test-model"
         assert result is agent
         assert agent._agent is not None
+
+    @pytest.mark.asyncio
+    async def test_open_reuses_agent_when_found(self, basic_kwargs):
+        """list_agents() returns matching agent → create_agent() NOT called."""
+        existing = _make_agent_record(name="TestAgent", instructions="Portal instructions")
+        project_client = _make_project_client_mock(agent_records=[existing])
+        cred = _make_credential_mock()
+        agent_cm = _make_agent_cm_mock()
+        chat_client_mock = Mock()
+        chat_client_mock.get_toolbox = AsyncMock(return_value=Mock())
+
+        with (
+            patch("backend.agents.agent_template.DefaultAzureCredential", return_value=cred),
+            patch("backend.agents.agent_template.AIProjectClient", return_value=project_client),
+            patch("backend.agents.agent_template.FoundryChatClient", return_value=chat_client_mock),
+            patch("backend.agents.agent_template.Agent", return_value=agent_cm) as mock_agent_cls,
+            patch("backend.agents.agent_template.agent_registry"),
+        ):
+            agent = AgentTemplate(**basic_kwargs)
+            await agent.open()
+
+        project_client.agents.create_agent.assert_not_called()
+        # Agent() must receive portal instructions, not bootstrap instructions
+        call_kw = mock_agent_cls.call_args[1]
+        assert call_kw["instructions"] == "Portal instructions"
+
+    @pytest.mark.asyncio
+    async def test_open_no_toolbox_when_no_tools(self, basic_kwargs):
+        """No tools configured → toolbox is NOT created and Agent gets tools=None."""
+        project_client = _make_project_client_mock()
+        cred = _make_credential_mock()
+        agent_cm = _make_agent_cm_mock()
+        chat_client_mock = Mock()
+
+        with (
+            patch("backend.agents.agent_template.DefaultAzureCredential", return_value=cred),
+            patch("backend.agents.agent_template.AIProjectClient", return_value=project_client),
+            patch("backend.agents.agent_template.FoundryChatClient", return_value=chat_client_mock),
+            patch("backend.agents.agent_template.Agent", return_value=agent_cm) as mock_agent_cls,
+            patch("backend.agents.agent_template.agent_registry"),
+        ):
+            agent = AgentTemplate(**basic_kwargs)
+            await agent.open()
+
+        project_client.beta.toolboxes.create_toolbox_version.assert_not_called()
+        call_kw = mock_agent_cls.call_args[1]
+        assert call_kw["tools"] is None
+
+    @pytest.mark.asyncio
+    async def test_open_creates_toolbox_with_mcp(self, basic_kwargs, mcp_config):
+        """MCP configured → toolbox created and wired to Agent."""
+        project_client = _make_project_client_mock()
+        cred = _make_credential_mock()
+        agent_cm = _make_agent_cm_mock()
+        mock_toolbox = Mock()
+        chat_client_mock = Mock()
+        chat_client_mock.get_toolbox = AsyncMock(return_value=mock_toolbox)
+
+        with (
+            patch("backend.agents.agent_template.DefaultAzureCredential", return_value=cred),
+            patch("backend.agents.agent_template.AIProjectClient", return_value=project_client),
+            patch("backend.agents.agent_template.FoundryChatClient", return_value=chat_client_mock),
+            patch("backend.agents.agent_template.Agent", return_value=agent_cm) as mock_agent_cls,
+            patch("backend.agents.agent_template.MCPTool", return_value=Mock()),
+            patch("backend.agents.agent_template.agent_registry"),
+        ):
+            agent = AgentTemplate(**basic_kwargs, mcp_config=mcp_config)
+            await agent.open()
+
+        project_client.beta.toolboxes.create_toolbox_version.assert_called_once()
+        call_kw = project_client.beta.toolboxes.create_toolbox_version.call_args[1]
+        assert call_kw["toolbox_name"] == "macae-TestAgent-tools"
+        chat_client_mock.get_toolbox.assert_called_once_with("macae-TestAgent-tools")
+        agent_call_kw = mock_agent_cls.call_args[1]
+        assert agent_call_kw["tools"] == [mock_toolbox]
+
+    @pytest.mark.asyncio
+    async def test_open_registers_agent(self, basic_kwargs):
+        project_client = _make_project_client_mock()
+        cred = _make_credential_mock()
+        agent_cm = _make_agent_cm_mock()
+
+        with (
+            patch("backend.agents.agent_template.DefaultAzureCredential", return_value=cred),
+            patch("backend.agents.agent_template.AIProjectClient", return_value=project_client),
+            patch("backend.agents.agent_template.FoundryChatClient", return_value=Mock()),
+            patch("backend.agents.agent_template.Agent", return_value=agent_cm),
+            patch("backend.agents.agent_template.agent_registry") as mock_reg,
+        ):
+            agent = AgentTemplate(**basic_kwargs)
+            await agent.open()
+
         mock_reg.register_agent.assert_called_once_with(agent)
 
     @pytest.mark.asyncio
-    async def test_open_azure_search_path(self, basic_kwargs, search_config):
-        """open() on Azure Search path calls FoundryAgent."""
-        mock_fa = AsyncMock()
-        mock_fa.__aenter__ = AsyncMock(return_value=Mock())
-        mock_fa.__aexit__ = AsyncMock(return_value=False)
-
-        mock_credential = AsyncMock()
-        mock_credential.__aenter__ = AsyncMock(return_value=mock_credential)
-        mock_credential.__aexit__ = AsyncMock(return_value=False)
-
-        with (
-            patch("backend.agents.agent_template.DefaultAzureCredential", return_value=mock_credential),
-            patch("backend.agents.agent_template.FoundryAgent", return_value=mock_fa) as mock_fa_cls,
-            patch("backend.agents.agent_template.agent_registry"),
-        ):
-            agent = AgentTemplate(**basic_kwargs, search_config=search_config)
-            await agent.open()
-
-        mock_fa_cls.assert_called_once()
-        kw = mock_fa_cls.call_args[1]
-        assert kw["agent_name"] == "TestAgent"
-        assert kw["project_endpoint"] == "https://test.project.azure.com/"
-
-    @pytest.mark.asyncio
     async def test_open_is_idempotent(self, basic_kwargs):
-        """Calling open() twice does not re-initialise the agent."""
-        mock_agent_cm = AsyncMock()
-        mock_agent_cm.__aenter__ = AsyncMock(return_value=Mock())
-        mock_agent_cm.__aexit__ = AsyncMock(return_value=False)
-
-        mock_credential = AsyncMock()
-        mock_credential.__aenter__ = AsyncMock(return_value=mock_credential)
-        mock_credential.__aexit__ = AsyncMock(return_value=False)
+        project_client = _make_project_client_mock()
+        cred = _make_credential_mock()
+        agent_cm = _make_agent_cm_mock()
 
         with (
-            patch("backend.agents.agent_template.DefaultAzureCredential", return_value=mock_credential),
+            patch("backend.agents.agent_template.DefaultAzureCredential", return_value=cred),
+            patch("backend.agents.agent_template.AIProjectClient", return_value=project_client),
             patch("backend.agents.agent_template.FoundryChatClient", return_value=Mock()),
-            patch("backend.agents.agent_template.Agent", return_value=mock_agent_cm),
+            patch("backend.agents.agent_template.Agent", return_value=agent_cm),
             patch("backend.agents.agent_template.agent_registry"),
         ):
             agent = AgentTemplate(**basic_kwargs)
             r1 = await agent.open()
             r2 = await agent.open()
 
+        # list_agents() called only once (second open() returns early)
+        project_client.agents.list_agents.assert_called_once()
         assert r1 is r2
 
     @pytest.mark.asyncio
-    async def test_open_with_mcp_tool(self, basic_kwargs, mcp_config):
-        """open() with mcp_config attaches MCPStreamableHTTPTool."""
-        mock_mcp_tool = AsyncMock()
-        mock_mcp_tool.__aenter__ = AsyncMock(return_value=mock_mcp_tool)
-        mock_mcp_tool.__aexit__ = AsyncMock(return_value=False)
-
-        mock_agent_cm = AsyncMock()
-        mock_agent_cm.__aenter__ = AsyncMock(return_value=Mock())
-        mock_agent_cm.__aexit__ = AsyncMock(return_value=False)
-
-        mock_credential = AsyncMock()
-        mock_credential.__aenter__ = AsyncMock(return_value=mock_credential)
-        mock_credential.__aexit__ = AsyncMock(return_value=False)
+    async def test_open_cleans_up_on_error(self, basic_kwargs):
+        cred = _make_credential_mock()
+        project_client = _make_project_client_mock()
+        project_client.agents.list_agents = Mock(side_effect=RuntimeError("boom"))
 
         with (
-            patch("backend.agents.agent_template.DefaultAzureCredential", return_value=mock_credential),
-            patch("backend.agents.agent_template.MCPStreamableHTTPTool", return_value=mock_mcp_tool) as mock_mcp_cls,
-            patch("backend.agents.agent_template.FoundryChatClient", return_value=Mock()),
-            patch("backend.agents.agent_template.Agent", return_value=mock_agent_cm) as mock_agent_cls,
+            patch("backend.agents.agent_template.DefaultAzureCredential", return_value=cred),
+            patch("backend.agents.agent_template.AIProjectClient", return_value=project_client),
             patch("backend.agents.agent_template.agent_registry"),
         ):
-            agent = AgentTemplate(**basic_kwargs, mcp_config=mcp_config)
-            await agent.open()
+            agent = AgentTemplate(**basic_kwargs)
+            with pytest.raises(RuntimeError, match="boom"):
+                await agent.open()
 
-        mock_mcp_cls.assert_called_once_with(
-            name=mcp_config.name,
-            description=mcp_config.description,
-            url=mcp_config.url,
-        )
-        kw = mock_agent_cls.call_args[1]
-        assert mock_mcp_tool in kw["tools"]
+        assert agent._stack is None
+        assert agent._agent is None
+
+
+# ---------------------------------------------------------------------------
+# TestAgentTemplateClose
+# ---------------------------------------------------------------------------
 
 
 class TestAgentTemplateClose:
-    """Tests for AgentTemplate.close()."""
-
     @pytest.mark.asyncio
     async def test_close_clears_state(self, basic_kwargs):
-        mock_agent_cm = AsyncMock()
-        mock_agent_cm.__aenter__ = AsyncMock(return_value=Mock())
-        mock_agent_cm.__aexit__ = AsyncMock(return_value=False)
-
-        mock_credential = AsyncMock()
-        mock_credential.__aenter__ = AsyncMock(return_value=mock_credential)
-        mock_credential.__aexit__ = AsyncMock(return_value=False)
+        project_client = _make_project_client_mock()
+        cred = _make_credential_mock()
+        agent_cm = _make_agent_cm_mock()
 
         with (
-            patch("backend.agents.agent_template.DefaultAzureCredential", return_value=mock_credential),
+            patch("backend.agents.agent_template.DefaultAzureCredential", return_value=cred),
+            patch("backend.agents.agent_template.AIProjectClient", return_value=project_client),
             patch("backend.agents.agent_template.FoundryChatClient", return_value=Mock()),
-            patch("backend.agents.agent_template.Agent", return_value=mock_agent_cm),
+            patch("backend.agents.agent_template.Agent", return_value=agent_cm),
             patch("backend.agents.agent_template.agent_registry") as mock_reg,
         ):
             agent = AgentTemplate(**basic_kwargs)
@@ -322,32 +476,32 @@ class TestAgentTemplateClose:
     @pytest.mark.asyncio
     async def test_close_safe_when_not_opened(self, basic_kwargs):
         agent = AgentTemplate(**basic_kwargs)
-        await agent.close()  # should not raise
+        await agent.close()  # must not raise
 
     @pytest.mark.asyncio
     async def test_context_manager(self, basic_kwargs):
-        mock_agent_cm = AsyncMock()
-        mock_agent_cm.__aenter__ = AsyncMock(return_value=Mock())
-        mock_agent_cm.__aexit__ = AsyncMock(return_value=False)
-
-        mock_credential = AsyncMock()
-        mock_credential.__aenter__ = AsyncMock(return_value=mock_credential)
-        mock_credential.__aexit__ = AsyncMock(return_value=False)
+        project_client = _make_project_client_mock()
+        cred = _make_credential_mock()
+        agent_cm = _make_agent_cm_mock()
 
         with (
-            patch("backend.agents.agent_template.DefaultAzureCredential", return_value=mock_credential),
+            patch("backend.agents.agent_template.DefaultAzureCredential", return_value=cred),
+            patch("backend.agents.agent_template.AIProjectClient", return_value=project_client),
             patch("backend.agents.agent_template.FoundryChatClient", return_value=Mock()),
-            patch("backend.agents.agent_template.Agent", return_value=mock_agent_cm),
+            patch("backend.agents.agent_template.Agent", return_value=agent_cm),
             patch("backend.agents.agent_template.agent_registry"),
         ):
             async with AgentTemplate(**basic_kwargs) as agent:
                 assert agent._agent is not None
-            assert agent._agent is None
+        assert agent._agent is None
+
+
+# ---------------------------------------------------------------------------
+# TestAgentTemplateInvoke
+# ---------------------------------------------------------------------------
 
 
 class TestAgentTemplateInvoke:
-    """Tests for AgentTemplate.invoke()."""
-
     @pytest.mark.asyncio
     async def test_invoke_before_open_raises(self, basic_kwargs):
         agent = AgentTemplate(**basic_kwargs)
@@ -357,9 +511,7 @@ class TestAgentTemplateInvoke:
 
     @pytest.mark.asyncio
     async def test_invoke_streams_updates(self, basic_kwargs):
-        """invoke() yields each update from the inner agent."""
-        update1 = Mock()
-        update2 = Mock()
+        update1, update2 = Mock(), Mock()
 
         async def _fake_run(message, *, stream=False):
             for u in [update1, update2]:
@@ -367,19 +519,15 @@ class TestAgentTemplateInvoke:
 
         mock_inner = Mock()
         mock_inner.run = _fake_run
-
-        mock_agent_cm = AsyncMock()
-        mock_agent_cm.__aenter__ = AsyncMock(return_value=mock_inner)
-        mock_agent_cm.__aexit__ = AsyncMock(return_value=False)
-
-        mock_credential = AsyncMock()
-        mock_credential.__aenter__ = AsyncMock(return_value=mock_credential)
-        mock_credential.__aexit__ = AsyncMock(return_value=False)
+        project_client = _make_project_client_mock()
+        cred = _make_credential_mock()
+        agent_cm = _make_agent_cm_mock(inner=mock_inner)
 
         with (
-            patch("backend.agents.agent_template.DefaultAzureCredential", return_value=mock_credential),
+            patch("backend.agents.agent_template.DefaultAzureCredential", return_value=cred),
+            patch("backend.agents.agent_template.AIProjectClient", return_value=project_client),
             patch("backend.agents.agent_template.FoundryChatClient", return_value=Mock()),
-            patch("backend.agents.agent_template.Agent", return_value=mock_agent_cm),
+            patch("backend.agents.agent_template.Agent", return_value=agent_cm),
             patch("backend.agents.agent_template.agent_registry"),
         ):
             agent = AgentTemplate(**basic_kwargs)
@@ -390,4 +538,5 @@ class TestAgentTemplateInvoke:
             collected.append(update)
 
         assert collected == [update1, update2]
+
 
