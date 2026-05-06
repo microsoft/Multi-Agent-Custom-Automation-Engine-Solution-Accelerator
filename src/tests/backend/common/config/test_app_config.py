@@ -442,7 +442,10 @@ class TestAppConfigClientMethods:
             
             mock_ai_client.assert_called_once_with(
                 endpoint="https://test.ai.azure.com",
-                credential=mock_credential
+                credential=mock_credential,
+                connection_timeout=30,
+                read_timeout=180,
+                retry_total=5,
             )
             assert result == mock_ai_instance
 

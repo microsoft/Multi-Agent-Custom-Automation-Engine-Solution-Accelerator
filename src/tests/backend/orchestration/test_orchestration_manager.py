@@ -10,7 +10,7 @@ import sys
 import uuid
 from typing import List, Optional
 from unittest import IsolatedAsyncioTestCase
-from unittest.mock import AsyncMock, Mock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
@@ -277,7 +277,7 @@ class MockAgentFactory:
         
         return [agent1, agent2]
 
-sys.modules['agents'] = Mock()
+sys.modules.setdefault('agents', Mock())
 sys.modules['agents.agent_factory'] = Mock(
     AgentFactory=MockAgentFactory
 )
