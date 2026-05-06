@@ -63,7 +63,6 @@ sys.modules["config.mcp_config"] = _mock_config_mcp_config
 # Now import the module under test (full backend.* path as per project convention)
 from backend.agents.agent_template import AgentTemplate
 
-
 # ---------------------------------------------------------------------------
 # Helpers — mock fixtures with proper shape
 # ---------------------------------------------------------------------------

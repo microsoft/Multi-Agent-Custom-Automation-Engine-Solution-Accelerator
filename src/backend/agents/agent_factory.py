@@ -11,21 +11,16 @@ import logging
 from types import SimpleNamespace
 from typing import List, Optional, Union
 
+from agents.agent_template import AgentTemplate
+from agents.proxy_agent import ProxyAgent
 from common.config.app_config import config
 from common.database.database_base import DatabaseBase
 from common.models.messages import TeamConfiguration
-
-from agents.agent_template import AgentTemplate
-from agents.proxy_agent import ProxyAgent
 from config.mcp_config import MCPConfig, SearchConfig
 
 
 class UnsupportedModelError(Exception):
     """Raised when the configured model is not in the supported-models list."""
-
-
-class InvalidConfigurationError(Exception):
-    """Raised when the agent JSON configuration is invalid."""
 
 
 class AgentFactory:
@@ -82,7 +77,6 @@ class AgentFactory:
 
         Raises:
             UnsupportedModelError:      If the deployment name is not in SUPPORTED_MODELS.
-            InvalidConfigurationError:  If reasoning + incompatible tools are requested.
         """
         deployment_name = getattr(agent_obj, "deployment_name", None)
 
@@ -100,17 +94,6 @@ class AgentFactory:
             )
 
         use_reasoning = self._extract_use_reasoning(agent_obj)
-
-        # Reasoning models cannot be combined with Bing or code tools
-        if use_reasoning:
-            use_bing = getattr(agent_obj, "use_bing", False)
-            coding_tools = getattr(agent_obj, "coding_tools", False)
-            if use_bing or coding_tools:
-                raise InvalidConfigurationError(
-                    f"Agent '{agent_obj.name}' has use_reasoning=True but also requests "
-                    f"use_bing={use_bing} or coding_tools={coding_tools}, which are "
-                    "incompatible with reasoning models."
-                )
 
         # Build optional tool configs
         index_name = getattr(agent_obj, "index_name", None)
@@ -193,7 +176,7 @@ class AgentFactory:
                     len(team_config_input.agents),
                     agent_cfg.name,
                 )
-            except (UnsupportedModelError, InvalidConfigurationError) as exc:
+            except UnsupportedModelError as exc:
                 self.logger.warning(
                     "Skipping agent %d/%d '%s' — configuration error: %s",
                     i,

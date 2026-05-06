@@ -6,16 +6,14 @@ Handles Azure OpenAI, MCP, and environment setup (agent_framework version).
 import asyncio
 import json
 import logging
-from typing import Dict, Optional, Any
+from typing import Any, Dict, Optional
 
+from agent_framework import ChatOptions
+# agent_framework substitutes
+from agent_framework.azure import AzureOpenAIChatClient
 from common.config.app_config import config
 from common.models.messages import TeamConfiguration
 from fastapi import WebSocket
-
-# agent_framework substitutes
-from agent_framework.azure import AzureOpenAIChatClient
-from agent_framework import ChatOptions
-
 from v4.models.messages import MPlan, WebsocketMessageType
 
 logger = logging.getLogger(__name__)

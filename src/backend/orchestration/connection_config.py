@@ -16,10 +16,8 @@ import json
 import logging
 from typing import Any, Dict, Optional
 
-from fastapi import WebSocket
-
 from common.models.messages import TeamConfiguration
-
+from fastapi import WebSocket
 # TODO (Phase 4): replace with flat-layout imports once models/ package exists
 from v4.models.messages import WebsocketMessageType
 from v4.models.models import MPlan

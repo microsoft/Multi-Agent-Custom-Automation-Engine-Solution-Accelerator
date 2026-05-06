@@ -1,10 +1,11 @@
 """Unit tests for team_utils module."""
 
 import logging
-import sys
 import os
+import sys
 import uuid
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
 import pytest
 
 # Add the backend directory to the Python path
@@ -76,16 +77,14 @@ sys.modules['v4.config.agent_registry'] = Mock()
 sys.modules['v4.magentic_agents'] = Mock()
 sys.modules['v4.magentic_agents.foundry_agent'] = Mock()
 
-# Import the REAL modules using backend.* paths for proper coverage tracking
-from backend.common.utils.team_utils import (
-    find_first_available_team,
-    create_RAI_agent,
-    _get_agent_response,
-    rai_success,
-    rai_validate_team_config
-)
-from backend.common.models.messages import TeamConfiguration
 from backend.common.database.database_base import DatabaseBase
+from backend.common.models.messages import TeamConfiguration
+# Import the REAL modules using backend.* paths for proper coverage tracking
+from backend.common.utils.team_utils import (_get_agent_response,
+                                             create_RAI_agent,
+                                             find_first_available_team,
+                                             rai_success,
+                                             rai_validate_team_config)
 
 
 class TestFindFirstAvailableTeam:

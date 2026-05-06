@@ -16,22 +16,15 @@ import uuid
 from typing import Any, AsyncIterable, Awaitable
 
 import aiohttp
-from agent_framework import (
-    AgentResponse,
-    AgentResponseUpdate,
-    BaseAgent,
-    Message,
-    Content,
-    AgentSession,
-)
+from agent_framework import (AgentResponse, AgentResponseUpdate, AgentSession,
+                             BaseAgent, Content, Message)
 from agent_framework._types import ResponseStream
 from azure.identity import get_bearer_token_provider
-from azure.storage.blob.aio import BlobServiceClient as AsyncBlobServiceClient
 from azure.storage.blob import ContentSettings
-
+from azure.storage.blob.aio import BlobServiceClient as AsyncBlobServiceClient
 from common.config.app_config import config
-from orchestration.connection_config import connection_config
 from common.models.messages import AgentMessage
+from orchestration.connection_config import connection_config
 from v4.models.messages import WebsocketMessageType
 
 logger = logging.getLogger(__name__)

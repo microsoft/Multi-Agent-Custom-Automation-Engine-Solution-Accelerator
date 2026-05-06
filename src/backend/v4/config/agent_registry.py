@@ -4,7 +4,7 @@
 import asyncio
 import logging
 import threading
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 from weakref import WeakSet
 
 

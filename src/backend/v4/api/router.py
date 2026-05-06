@@ -5,40 +5,21 @@ import uuid
 from typing import Optional
 
 import v4.models.messages as messages
-from v4.models.messages import WebsocketMessageType
 from auth.auth_utils import get_authenticated_user_details
-from common.database.database_factory import DatabaseFactory
-from common.models.messages import (
-    InputTask,
-    Plan,
-    PlanStatus,
-    TeamSelectionRequest,
-)
-from common.utils.event_utils import track_event_if_configured
 from common.config.app_config import config
-from common.utils.team_utils import (
-    find_first_available_team,
-    rai_success,
-    rai_validate_team_config,
-)
-from fastapi import (
-    APIRouter,
-    BackgroundTasks,
-    File,
-    HTTPException,
-    Query,
-    Request,
-    UploadFile,
-    WebSocket,
-    WebSocketDisconnect,
-)
+from common.database.database_factory import DatabaseFactory
+from common.models.messages import (InputTask, Plan, PlanStatus,
+                                    TeamSelectionRequest)
+from common.utils.event_utils import track_event_if_configured
+from common.utils.team_utils import (find_first_available_team, rai_success,
+                                     rai_validate_team_config)
+from fastapi import (APIRouter, BackgroundTasks, File, HTTPException, Query,
+                     Request, UploadFile, WebSocket, WebSocketDisconnect)
 from v4.common.services.plan_service import PlanService
 from v4.common.services.team_service import TeamService
-from v4.config.settings import (
-    connection_config,
-    orchestration_config,
-    team_config,
-)
+from v4.config.settings import (connection_config, orchestration_config,
+                                team_config)
+from v4.models.messages import WebsocketMessageType
 from v4.orchestration.orchestration_manager import OrchestrationManager
 
 router = APIRouter()
@@ -1450,8 +1431,8 @@ async def get_plan_by_id(
 @app_v4.get("/images/{blob_name:path}")
 async def get_generated_image(blob_name: str):
     """Proxy a generated image from Azure Blob Storage."""
-    from fastapi.responses import Response
     from azure.storage.blob import BlobServiceClient
+    from fastapi.responses import Response
 
     blob_url = config.AZURE_STORAGE_BLOB_URL
     container = config.AZURE_STORAGE_IMAGES_CONTAINER

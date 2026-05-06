@@ -86,7 +86,6 @@ sys.modules["v4.models.messages"] = mock_v4_messages
 # Now import the module under test (full backend.* path as per project convention)
 from backend.agents.proxy_agent import ProxyAgent
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

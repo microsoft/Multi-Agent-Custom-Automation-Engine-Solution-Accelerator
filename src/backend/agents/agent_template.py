@@ -15,16 +15,10 @@ import logging
 from contextlib import AsyncExitStack
 from typing import AsyncGenerator, Optional
 
-from agent_framework import (
-    Agent,
-    AgentResponseUpdate,
-    Content,
-    MCPStreamableHTTPTool,
-    Message,
-)
-from agent_framework_foundry import FoundryChatClient, FoundryAgent
+from agent_framework import (Agent, AgentResponseUpdate, Content,
+                             MCPStreamableHTTPTool, Message)
+from agent_framework_foundry import FoundryAgent, FoundryChatClient
 from azure.identity.aio import DefaultAzureCredential
-
 from common.database.database_base import DatabaseBase
 from common.models.messages import CurrentTeamAgent, TeamConfiguration
 from common.utils.agent_utils import get_database_team_agent_id

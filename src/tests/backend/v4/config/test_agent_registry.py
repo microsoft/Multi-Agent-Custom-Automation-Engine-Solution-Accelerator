@@ -453,7 +453,7 @@ class TestAgentRegistry(unittest.IsolatedAsyncioTestCase):
         """Test thread safety of agent unregistration."""
         import threading
         import time
-        
+
         # Register agents first
         agents = [MockAgent(f"Agent{i}") for i in range(5)]
         for agent in agents:
@@ -509,8 +509,9 @@ class TestGlobalAgentRegistry(unittest.TestCase):
     def test_global_registry_singleton_behavior(self):
         """Test that the global registry behaves as expected."""
         # Import the global instance
-        from backend.v4.config.agent_registry import agent_registry as global_registry
-        
+        from backend.v4.config.agent_registry import \
+            agent_registry as global_registry
+
         # Should be the same instance
         self.assertIs(agent_registry, global_registry)
 

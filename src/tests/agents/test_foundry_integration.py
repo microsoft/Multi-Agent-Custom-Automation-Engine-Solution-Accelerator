@@ -28,9 +28,11 @@ if _env_file.exists():
 
 sys.path.insert(0, str(backend_path))
 
-from backend.v4.magentic_agents.foundry_agent import FoundryAgentTemplate
-from backend.v4.magentic_agents.models.agent_models import MCPConfig, SearchConfig
 from common.config.app_config import config as _app_config
+
+from backend.v4.magentic_agents.foundry_agent import FoundryAgentTemplate
+from backend.v4.magentic_agents.models.agent_models import (MCPConfig,
+                                                            SearchConfig)
 
 
 def _reset_cached_clients():

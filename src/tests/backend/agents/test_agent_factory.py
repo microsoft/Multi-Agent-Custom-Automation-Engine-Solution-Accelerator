@@ -66,8 +66,7 @@ _mock_mcp_config_mod.SearchConfig = mock_search_config_cls
 sys.modules["config.mcp_config"] = _mock_mcp_config_mod
 
 # Now import the module under test (full backend.* path as per project convention)
-from backend.agents.agent_factory import AgentFactory, UnsupportedModelError, InvalidConfigurationError
-
+from backend.agents.agent_factory import AgentFactory, UnsupportedModelError
 
 # ---------------------------------------------------------------------------
 # Helper builder
@@ -174,30 +173,6 @@ class TestCreateAgentFromConfig:
                 self.team_config,
                 self.memory_store,
             )
-
-    @pytest.mark.asyncio
-    async def test_reasoning_with_bing_raises(self):
-        """use_reasoning=True with use_bing=True raises InvalidConfigurationError."""
-        with pytest.raises(InvalidConfigurationError) as exc_info:
-            await self.factory.create_agent_from_config(
-                "user123",
-                _agent_obj(use_reasoning=True, use_bing=True),
-                self.team_config,
-                self.memory_store,
-            )
-        assert "incompatible with reasoning models" in str(exc_info.value)
-
-    @pytest.mark.asyncio
-    async def test_reasoning_with_coding_tools_raises(self):
-        """use_reasoning=True with coding_tools=True raises InvalidConfigurationError."""
-        with pytest.raises(InvalidConfigurationError) as exc_info:
-            await self.factory.create_agent_from_config(
-                "user123",
-                _agent_obj(use_reasoning=True, coding_tools=True),
-                self.team_config,
-                self.memory_store,
-            )
-        assert "incompatible with reasoning models" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_basic_agent_created(self):
@@ -329,16 +304,6 @@ class TestGetAgents:
         result = await self.factory.get_agents(
             "user123",
             self._team_config(_agent_obj(deployment_name="unsupported-model")),
-            self.memory_store,
-        )
-        assert len(result) == 0
-
-    @pytest.mark.asyncio
-    async def test_invalid_config_is_skipped(self):
-        """Agent with reasoning + bing is skipped; result is empty."""
-        result = await self.factory.get_agents(
-            "user123",
-            self._team_config(_agent_obj(use_reasoning=True, use_bing=True)),
             self.memory_store,
         )
         assert len(result) == 0

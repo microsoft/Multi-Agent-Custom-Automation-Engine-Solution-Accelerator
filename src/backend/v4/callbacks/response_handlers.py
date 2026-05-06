@@ -4,22 +4,17 @@ Enhanced response callbacks (agent_framework version) for employee onboarding ag
 
 import asyncio
 import logging
-import time
 import re
+import time
 from typing import Any
 
 from agent_framework import ChatMessage
-
-from agent_framework._workflows._magentic import AgentRunResponseUpdate  # Streaming update type from workflows
-
+from agent_framework._workflows._magentic import \
+    AgentRunResponseUpdate  # Streaming update type from workflows
 from v4.config.settings import connection_config
-from v4.models.messages import (
-    AgentMessage,
-    AgentMessageStreaming,
-    AgentToolCall,
-    AgentToolMessage,
-    WebsocketMessageType,
-)
+from v4.models.messages import (AgentMessage, AgentMessageStreaming,
+                                AgentToolCall, AgentToolMessage,
+                                WebsocketMessageType)
 
 logger = logging.getLogger(__name__)
 
