@@ -17,6 +17,10 @@ addopts = "-p pytest_asyncio"
 # `from backend.xxx import ...` without runtime sys.path hacks.
 pythonpath = ["src"]
 
+markers = [
+    "integration: marks tests as requiring a live Azure / Foundry environment (deselect with -m 'not integration')",
+]
+
 [tool.coverage.run]
 source = ["."]
 omit = [
