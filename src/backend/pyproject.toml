@@ -6,23 +6,40 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "azure-ai-evaluation==1.11.0",
+    # agent-framework-foundry requires azure-ai-inference>=1.0.0b9,<1.0.0b10
     "azure-ai-inference==1.0.0b9",
-    "azure-ai-projects==1.0.0",
-    "azure-ai-agents==1.2.0b5",
+    # OLD (restore to revert): "azure-ai-projects==1.0.0",
+    "azure-ai-projects==2.1.0",
+    # OLD (restore to revert): "azure-ai-agents==1.2.0b5",
+    # NOTE: azure-ai-agents is not required by the new agent-framework-foundry path.
+    # It was needed by v4/ via AgentsClient. Can be restored for v4/ rollback.
+    # "azure-ai-agents==1.1.0",  # GA — conflicts with agent-framework-azure-ai==1.0.0rc6
     "azure-cosmos==4.9.0",
     "azure-identity==1.24.0",
     "azure-monitor-events-extension==0.1.0",
-    "azure-monitor-opentelemetry==1.7.0",
+    # OLD (restore to revert): "azure-monitor-opentelemetry==1.7.0",
+    "azure-monitor-opentelemetry==1.8.7",
     "azure-search-documents==11.5.3",
     "azure-storage-blob==12.25.1",
     "fastapi==0.116.1",
-    "openai==1.105.0",
-    "opentelemetry-api==1.36.0",
-    "opentelemetry-exporter-otlp-proto-grpc==1.36.0",
-    "opentelemetry-exporter-otlp-proto-http==1.36.0",
-    "opentelemetry-instrumentation-fastapi==0.57b0",
-    "opentelemetry-instrumentation-openai==0.46.2",
-    "opentelemetry-sdk==1.36.0",
+    # OLD (restore to revert): "openai==1.105.0",
+    # NOTE: openai v2 has breaking API changes vs v1; required by azure-ai-projects>=2.1.0
+    "openai==2.34.0",
+    # agent-framework-core requires opentelemetry-api>=1.39.0
+    # azure-monitor-opentelemetry==1.8.7 pins opentelemetry-sdk==1.40 exactly → use 1.40.0
+    # OLD (restore to revert): "opentelemetry-api==1.36.0",
+    "opentelemetry-api==1.40.0",
+    # OLD (restore to revert): "opentelemetry-exporter-otlp-proto-grpc==1.36.0",
+    "opentelemetry-exporter-otlp-proto-grpc==1.40.0",
+    # OLD (restore to revert): "opentelemetry-exporter-otlp-proto-http==1.36.0",
+    "opentelemetry-exporter-otlp-proto-http==1.40.0",
+    # OLD (restore to revert): "opentelemetry-instrumentation-fastapi==0.57b0",
+    # azure-monitor-opentelemetry==1.8.7 requires opentelemetry-instrumentation-fastapi==0.61b0
+    "opentelemetry-instrumentation-fastapi==0.61b0",
+    # OLD (restore to revert): "opentelemetry-instrumentation-openai==0.46.2",
+    "opentelemetry-instrumentation-openai==0.60.0",
+    # OLD (restore to revert): "opentelemetry-sdk==1.36.0",
+    "opentelemetry-sdk==1.40.0",
     "pytest==8.4.1",
     "pytest-asyncio==0.24.0",
     "pytest-cov==5.0.0",
@@ -31,8 +48,17 @@ dependencies = [
     "uvicorn==0.35.0",
     "pylint-pydantic==0.3.5",
     "pexpect==4.9.0",
-    "mcp==1.23.0",
+    # agent-framework-core requires mcp>=1.24.0
+    # OLD (restore to revert): "mcp==1.23.0",
+    "mcp==1.27.0",
     "werkzeug==3.1.5",
     "azure-core==1.38.0",
-    "agent-framework>=1.0.0b251105",
+    # ── Agent Framework ────────────────────────────────────────────────────────
+    # OLD (restore to revert): "agent-framework>=1.0.0b251105",
+    "agent-framework==1.2.2",                # GA umbrella — pulls agent-framework-core[all]
+    "agent-framework-foundry==1.2.2",        # FoundryChatClient + AIProjectClient integration
+    # TODO: Remove when v4/ directory is deleted (Phase 9)
+    # NOTE: agent-framework-azure-ai==1.0.0rc6 requires azure-ai-agents>=1.2.0b5,<1.2.0b6
+    #       which conflicts with the GA azure-ai-agents==1.1.0. Kept as comment for rollback only.
+    # "agent-framework-azure-ai==1.0.0rc6",  # Legacy bridge — required by v4/ code only
 ]
