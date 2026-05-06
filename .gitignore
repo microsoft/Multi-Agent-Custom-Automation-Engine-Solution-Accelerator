@@ -8,6 +8,10 @@ __pycache__/
 .env
 .env_*
 appsettings.json
+
+# Local dev setup artifacts
+.macae_*.pid
+start_all_services.sh
 # Distribution / packaging
 .Python
 build/
