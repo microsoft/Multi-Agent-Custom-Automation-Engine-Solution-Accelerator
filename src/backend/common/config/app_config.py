@@ -6,6 +6,10 @@ from typing import Optional
 from azure.ai.projects.aio import AIProjectClient
 from azure.cosmos import CosmosClient
 from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
+from azure.identity.aio import (
+    DefaultAzureCredential as DefaultAzureCredentialAsync,
+    ManagedIdentityCredential as ManagedIdentityCredentialAsync,
+)
 from dotenv import load_dotenv
 
 
@@ -95,12 +99,6 @@ class AppConfig:
         )
         self.AZURE_AI_SEARCH_ENDPOINT = self._get_optional("AZURE_AI_SEARCH_ENDPOINT")
         self.AZURE_AI_SEARCH_API_KEY = self._get_optional("AZURE_AI_SEARCH_API_KEY")
-
-        # Storage settings
-        self.AZURE_STORAGE_BLOB_URL = self._get_optional("AZURE_STORAGE_BLOB_URL")
-        self.AZURE_STORAGE_IMAGES_CONTAINER = self._get_optional(
-            "AZURE_STORAGE_IMAGES_CONTAINER", "generated-images"
-        )
         # self.BING_CONNECTION_NAME = self._get_optional("BING_CONNECTION_NAME")
 
         test_team_json = self._get_optional("TEST_TEAM_JSON")
@@ -119,7 +117,8 @@ class AppConfig:
         """
         Returns an Azure credential based on the application environment.
 
-        If the environment is 'dev', it uses DefaultAzureCredential.
+        If the environment is 'dev', it uses DefaultAzureCredential with exclude_environment_credential=True
+        to avoid EnvironmentCredential exceptions in Application Insights traces.
         Otherwise, it uses ManagedIdentityCredential.
 
         Args:
@@ -129,9 +128,28 @@ class AppConfig:
             Credential object: Either DefaultAzureCredential or ManagedIdentityCredential.
         """
         if self.APP_ENV == "dev":
-            return DefaultAzureCredential()  # CodeQL [SM05139]: DefaultAzureCredential is safe here
+            return DefaultAzureCredential(exclude_environment_credential=True)  # CodeQL [SM05139]: DefaultAzureCredential is safe here
         else:
             return ManagedIdentityCredential(client_id=client_id)
+
+    def get_azure_credential_async(self, client_id=None):
+        """
+        Returns an async Azure credential based on the application environment.
+
+        If the environment is 'dev', it uses DefaultAzureCredential (async) with exclude_environment_credential=True
+        to avoid EnvironmentCredential exceptions in Application Insights traces.
+        Otherwise, it uses ManagedIdentityCredential (async).
+
+        Args:
+            client_id (str, optional): The client ID for the Managed Identity Credential.
+
+        Returns:
+            Async Credential object: Either DefaultAzureCredentialAsync or ManagedIdentityCredentialAsync.
+        """
+        if self.APP_ENV == "dev":
+            return DefaultAzureCredentialAsync(exclude_environment_credential=True)
+        else:
+            return ManagedIdentityCredentialAsync(client_id=client_id)
 
     def get_azure_credentials(self):
         """Retrieve Azure credentials, either from environment variables or managed identity."""
@@ -241,14 +259,8 @@ class AppConfig:
                 )
 
             endpoint = self.AZURE_AI_AGENT_ENDPOINT
-            # Extended HTTP timeouts to reduce transient "Request timed out"
-            # responses that cause the Magentic orchestrator to reset.
             self._ai_project_client = AIProjectClient(
-                endpoint=endpoint,
-                credential=credential,
-                connection_timeout=30,
-                read_timeout=180,
-                retry_total=5,
+                endpoint=endpoint, credential=credential
             )
 
             return self._ai_project_client

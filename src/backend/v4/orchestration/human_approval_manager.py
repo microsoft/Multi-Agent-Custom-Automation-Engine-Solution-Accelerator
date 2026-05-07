@@ -8,8 +8,8 @@ import logging
 from typing import Any, Optional
 
 import v4.models.messages as messages
-from agent_framework import ChatMessage
-from agent_framework._workflows._magentic import (
+from agent_framework import AgentResponse, Message
+from agent_framework_orchestrations._magentic import (
     MagenticContext,
     StandardMagenticManager,
     ORCHESTRATOR_FINAL_ANSWER_PROMPT,
@@ -34,11 +34,12 @@ class HumanApprovalMagenticManager(StandardMagenticManager):
     magentic_plan: Optional[MPlan] = None
     current_user_id: str  # populated in __init__
 
-    def __init__(self, user_id: str, *args, **kwargs):
+    def __init__(self, user_id: str, agent, *args, **kwargs):
         """
         Initialize the HumanApprovalMagenticManager.
         Args:
             user_id: ID of the user to associate with this orchestration instance.
+            agent: The manager ChatAgent for orchestration (required by new API).
             *args: Additional positional arguments for the parent StandardMagenticManager.
             **kwargs: Additional keyword arguments for the parent StandardMagenticManager.
         """
@@ -50,62 +51,31 @@ IMPORTANT: Never ask the user for information or clarification until all agents 
 EXAMPLE: If the user request involves product information, first ask all agents on the team to provide the information.
 Do not ask the user unless all agents have been consulted and the information is still missing.
 
-CLARIFYING QUESTIONS POLICY (CRITICAL — ZERO QUESTIONS):
-- NEVER ask the user clarifying questions. NEVER include a ProxyAgent step in any plan. NEVER pause the workflow to request information from the user.
-- The team's coordinator/brief-parsing agent MUST silently apply sensible defaults for any missing fields and proceed.
-- Forbidden phrases that MUST NOT appear anywhere in any agent message: "I need you to confirm", "mandatory clarifications", "Transferred to ProxyAgent", "adopt the persona", "permission to perform", "open-web", "external sources", "verify", "could you confirm", "please provide".
-- The ProxyAgent must never be invoked. If you are tempted to use ProxyAgent, instead pick a default and continue.
-
-CLARIFICATION QUESTION LIMITS (HARD CAPS — strictly enforced):
-- Ask EXACTLY 0 questions. Do not ask 1. Do not ask 2. Do not ask any number of questions. Always proceed with sensible defaults.
-- FORBIDDEN question topics (NEVER ask the user about any of these — use defaults or route to a research agent):
-  * Whether a product/color/SKU/brand is "real", "verifiable", "an actual brand", or needs verification. Treat ANY product or color name the user gives as legitimate and proceed.
-  * Permission to do open-web / internet / Bing / Google / external research. NEVER ask for it. NEVER perform it. ResearchAgent uses the internal catalog / search index ONLY.
-  * Spelling/exact-match of a product or color name. If the user wrote "Arctic Hazel" and the catalog has "Arctic Haze", USE the catalog match silently. Do not ask.
-  * Brand/manufacturer references, paint brand, product line, technical specs (LRV/VOC/washable/scrubbable). Use catalog data or omit.
-  * Manufacturer/product page URLs, brand websites, official documentation links, or any external links. NEVER ask the user to provide URLs.
-  * Technical Data Sheets (TDS), Safety Data Sheets (SDS), certification documents, warranty documents, or any external attachments.
-  * Verifying LRV, VOC, sheens, finishes, sizes, coverage, drying times, eco certifications, retail availability, MSRP, container sizes, surface prep, substrates, or brand logo licensing rules.
-  * Whether the user wants to "verify" or "confirm" any product attribute. The catalog is the single source of truth — accept what it returns and proceed.
-  * Trademark/naming restrictions. Do not ask. Use the name as given.
-  * Social platform (Instagram/Facebook/Pinterest/Stories) — default to Instagram feed (1:1).
-  * Image subject details (dog breed, coat color, pose, room style, furnishing, props). The ImageAgent decides these.
-  * Wall usage (full wall vs accent vs trim) — default to single accent wall.
-  * Aspect ratio — default to 1:1 Instagram square.
-  * Brand voice/tone preferences — use the brand voice guidelines from the team config.
-  * Brand assets, logos, fonts, CTA wording, hashtag lists, tracking links, file formats, accessibility standards, deadlines, approval rounds, stock vs AI imagery, budgets.
-  * Anything ResearchAgent or the catalog can answer.
-- The user is NOT a resource. Do NOT ask the user. Make a reasonable default and proceed.
-
 Plan steps should always include a bullet point, followed by an agent name, followed by a description of the action
 to be taken. If a step involves multiple actions, separate them into distinct steps with an agent included in each step.
-If the step is taken by an agent that is not part of the team, such as the MagenticManager, please always list the MagenticManager as the agent for that step. Never use ProxyAgent. Never ask the user for more information.
+If the step is taken by an agent that is not part of the team, such as the MagenticManager, please always list the MagenticManager as the agent for that step. At any time, if more information is needed from the user, use the ProxyAgent to request this information.
 
-MANDATORY AGENT INVOCATION RULES (CRITICAL — read carefully):
-- Every step in the plan MUST be executed by invoking its named agent. The MagenticManager MUST NOT synthesize, fabricate, summarize, or hallucinate the output of any other agent's step.
-- The MagenticManager is FORBIDDEN from generating content on behalf of other agents (no fake image URLs, no invented research, no inline copywriting, no compliance verdicts of its own). Only the named agent for a step may produce that step's output.
-- If a step's agent has not yet been invoked and produced a real message, the workflow is NOT complete. Do not skip ahead to the final answer.
-- NEVER invent placeholder URLs (e.g. example.com, *.png with fake hashes). If an image is required, the ImageAgent MUST be invoked and its returned markdown image link MUST be used verbatim. Do not paraphrase or replace the URL.
-- If the team config lists an ImageAgent, an ImageAgent invocation that returns a rendered image is REQUIRED before ComplianceAgent and before the final answer. Treat any final answer that lacks a real ImageAgent-produced image as INCOMPLETE.
-- If the team config lists a ComplianceAgent, a ComplianceAgent invocation reviewing the actual produced text and image is REQUIRED before the final answer.
-- The MagenticManager's only job at the end is to compile the verbatim outputs already produced by the named agents into a single user-facing response. It must not add, alter, or replace agent-produced content.
+CRITICAL: Each agent should only be called ONCE to perform their task. Do NOT call the same agent multiple times.
+After an agent has provided their response, move on to the next agent in the plan.
 
 Here is an example of a well-structured plan:
 - **EnhancedResearchAgent** to gather authoritative data on the latest industry trends and best practices in employee onboarding
 - **EnhancedResearchAgent** to gather authoritative data on Innovative onboarding techniques that enhance new hire engagement and retention.
 - **DocumentCreationAgent** to draft a comprehensive onboarding plan that includes a detailed schedule of onboarding activities and milestones.
 - **DocumentCreationAgent** to draft a comprehensive onboarding plan that includes a checklist of resources and materials needed for effective onboarding.
+- **ProxyAgent** to review the drafted onboarding plan for clarity and completeness.
 - **MagenticManager** to finalize the onboarding plan and prepare it for presentation to stakeholders.
 """
 
-        final_append = """
+        # Add progress ledger prompt to prevent re-calling agents
+        progress_append = """
+CRITICAL RULE: DO NOT call the same agent more than once unless absolutely necessary.
+If an agent has already provided a response, consider their task COMPLETE and move to the next agent.
+Only re-call an agent if their previous response was explicitly an error or failure.
+"""
 
-CRITICAL FINAL ANSWER RULES:
-- Compile the final answer ONLY from messages that named agents actually produced earlier in this conversation. Quote them verbatim where appropriate.
-- DO NOT fabricate, invent, or paraphrase any image URL, product detail, research finding, copywriting output, or compliance verdict. If a piece of content was never produced by an agent, omit it and note that the corresponding step did not run.
-- DO NOT use placeholder URLs such as https://example.com/... — only include image URLs that the ImageAgent actually returned.
-- If a required step (e.g., ImageAgent or ComplianceAgent) did not produce real output, do NOT pretend it did. Either re-route to that agent or state plainly that the step is missing.
-- DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final answer and end with a polite closing.
+        final_append = """
+DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final answer and end with a polite closing.
 """
 
         kwargs["task_ledger_plan_prompt"] = (
@@ -116,8 +86,56 @@ CRITICAL FINAL ANSWER RULES:
         )
         kwargs["final_answer_prompt"] = ORCHESTRATOR_FINAL_ANSWER_PROMPT + final_append
 
+        # Override progress ledger prompt to discourage re-calling agents
+        from agent_framework_orchestrations._magentic import ORCHESTRATOR_PROGRESS_LEDGER_PROMPT
+        kwargs["progress_ledger_prompt"] = ORCHESTRATOR_PROGRESS_LEDGER_PROMPT + progress_append
+
         self.current_user_id = user_id
-        super().__init__(*args, **kwargs)
+        # New API: StandardMagenticManager takes agent as first positional argument
+        super().__init__(agent, *args, **kwargs)
+
+    async def _complete(self, messages: list[Message]) -> Message:
+        """Override to pass session=None, making each LLM call stateless.
+
+        The base class passes session=self._session which triggers
+        InMemoryHistoryProvider auto-injection and previous_response_id
+        chaining in rc4. This causes message payloads to grow with every
+        internal call (facts, plan, progress ledger, etc.), burning through
+        TPM quota (429 errors) and confusing the orchestrator LLM's routing
+        decisions (e.g. skipping ProxyAgent for user clarification).
+
+        Passing session=None restores the old stateless behavior where each
+        call only sends the messages explicitly provided.
+        """
+        from openai import RateLimitError
+
+        max_retries = 5
+        base_delay = 2.0  # seconds
+
+        for attempt in range(max_retries):
+            try:
+                response: AgentResponse = await self._agent.run(messages, session=None)
+                if not response.messages:
+                    raise RuntimeError("Agent returned no messages in response.")
+                if len(response.messages) > 1:
+                    logger.warning("Agent returned multiple messages; using the last one.")
+                return response.messages[-1]
+            except Exception as exc:
+                inner = getattr(exc, "inner_exception", None)
+                is_rate_limit = isinstance(inner, RateLimitError) or "429" in str(exc)
+                if is_rate_limit and attempt < max_retries - 1:
+                    delay = base_delay * (2 ** attempt)
+                    logger.warning(
+                        "Rate limit hit (attempt %d/%d). Retrying in %.1fs...",
+                        attempt + 1, max_retries, delay,
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+                raise
+        # If we get here, all retry attempts have been exhausted without a successful response.
+        raise RuntimeError(
+            f"Agent failed to complete after {max_retries} attempts due to repeated errors."
+        )
 
     async def plan(self, magentic_context: MagenticContext) -> Any:
         """
@@ -203,6 +221,8 @@ CRITICAL FINAL ANSWER RULES:
     async def create_progress_ledger(self, magentic_context: MagenticContext):
         """
         Check for max rounds exceeded and send final message if so, else defer to base.
+        After base evaluation, prevent premature satisfaction by ensuring all planned
+        agents have responded before allowing is_request_satisfied=True.
 
         Returns:
             Progress ledger object (type depends on agent_framework version)
@@ -238,7 +258,65 @@ CRITICAL FINAL ANSWER RULES:
             return ledger
 
         # Delegate to base for normal progress ledger creation
-        return await super().create_progress_ledger(magentic_context)
+        ledger = await super().create_progress_ledger(magentic_context)
+
+        # --- Premature satisfaction guard ---
+        # If the LLM says the request is satisfied, verify that all planned
+        # (non-proxy, non-manager) agents have actually responded before allowing
+        # the workflow to terminate.  This addresses the bug where the orchestrator
+        # marks satisfied=True after a single comprehensive agent response.
+        if ledger.is_request_satisfied.answer:
+            uncalled = self._get_uncalled_agents(magentic_context)
+            if uncalled:
+                next_agent = uncalled[0]
+                logger.info(
+                    "Progress ledger marked satisfied but %d agent(s) have not responded yet: %s. "
+                    "Overriding to continue with '%s'.",
+                    len(uncalled),
+                    uncalled,
+                    next_agent,
+                )
+                ledger.is_request_satisfied.answer = False
+                ledger.is_request_satisfied.reason = (
+                    f"Not all agents have responded yet. Waiting for: {', '.join(uncalled)}"
+                )
+                ledger.is_progress_being_made.answer = True
+                ledger.is_progress_being_made.reason = "Continuing to consult remaining agents"
+                ledger.next_speaker.answer = next_agent
+                ledger.next_speaker.reason = f"{next_agent} has not yet been consulted"
+                # Always override instruction with task-relevant prompt so that
+                # data agents (Azure AI Search, RAG) execute meaningful queries
+                # instead of receiving a stale finalization instruction.
+                task_text = getattr(magentic_context.task, "text", str(magentic_context.task))
+                ledger.instruction_or_question.answer = (
+                    f"Using your available tools and data sources, provide your response for the following task: {task_text}"
+                )
+                ledger.instruction_or_question.reason = (
+                    f"Routing to {next_agent} who has not yet contributed"
+                )
+
+        return ledger
+
+    @staticmethod
+    def _get_uncalled_agents(magentic_context: MagenticContext) -> list[str]:
+        """Return agent names from participant_descriptions that have not yet
+        authored a message in the chat_history (excluding ProxyAgent and the
+        MagenticManager)."""
+        skip_names = {"ProxyAgent", "MagenticManager", "magentic_manager"}
+
+        all_agents = [
+            name for name in magentic_context.participant_descriptions
+            if name not in skip_names
+        ]
+
+        # Collect author names that appear in chat_history
+        responded = set()
+        for msg in magentic_context.chat_history:
+            author = getattr(msg, "author_name", None)
+            if author:
+                responded.add(author)
+
+        return [name for name in all_agents if name not in responded]
 
     async def _wait_for_user_approval(
         self, m_plan_id: Optional[str] = None
@@ -317,7 +395,7 @@ CRITICAL FINAL ANSWER RULES:
 
     async def prepare_final_answer(
         self, magentic_context: MagenticContext
-    ) -> ChatMessage:
+    ) -> Message:
         """
         Override to ensure final answer is prepared after all steps are executed.
         """

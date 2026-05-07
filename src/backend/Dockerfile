@@ -9,12 +9,16 @@ ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 WORKDIR /app
 
 # Install the project's dependencies using the lockfile and settings
-COPY uv.lock pyproject.toml /app/
-RUN uv sync --frozen --no-install-project --no-dev
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --frozen --no-install-project --no-dev
+#RUN uv sync --frozen --no-install-project --no-dev
 
 # Backend app setup
 COPY . /app  
-RUN uv sync --frozen --no-dev
+RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-dev
+#RUN uv sync --frozen --no-dev
 
 
 FROM base
