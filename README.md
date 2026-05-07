@@ -93,7 +93,7 @@ To deploy this solution accelerator, ensure you have access to an [Azure subscri
 
 Check the [Azure Products by Region](https://azure.microsoft.com/en-us/explore/global-infrastructure/products-by-region/table) page and select a **region** where the following services are available: Azure OpenAI Service, Azure AI Search, and Azure Semantic Search.
 
-Here are some example regions where the services are available: East US, East US2, Japan East, UK South, Sweden Central.
+Here are some example regions where the services are available: Australia East, East US2, France Central, Japan East, Norway East, Sweden Central, UK South, West US.
 
 Pricing varies per region and usage, so it isn't possible to predict exact costs for your usage. The majority of the Azure resources used in this infrastructure are on usage-based pricing tiers. However, Azure Container Registry has a fixed cost per registry per day.
 
