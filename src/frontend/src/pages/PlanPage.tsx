@@ -273,10 +273,10 @@ const PlanPage: React.FC = () => {
             
             //console.log('📋 Streaming Message', streamingMessage);
             // if is final true clear buffer and add final message to agent messages
-            const line = PlanDataService.simplifyHumanClarification(streamingMessage.data.content);
+            const line = PlanDataService.simplifyHumanClarification(streamingMessage.data?.content || streamingMessage.content || '');
             setShowBufferingText(true);
             setStreamingMessageBuffer(prev => prev + line);
-            //scrollToBottom();
+            scrollToBottom();
 
         });
 

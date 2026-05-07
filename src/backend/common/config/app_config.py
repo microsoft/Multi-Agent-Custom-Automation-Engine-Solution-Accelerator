@@ -9,7 +9,8 @@ from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-load_dotenv()
+# override=True ensures .env values take precedence over any pre-existing process env vars
+load_dotenv(override=True)
 
 
 class AppConfig:

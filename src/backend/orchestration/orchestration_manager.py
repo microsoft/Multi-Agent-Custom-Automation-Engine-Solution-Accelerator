@@ -26,7 +26,7 @@ from callbacks.response_handlers import (agent_response_callback,
 from common.config.app_config import config
 from common.database.database_base import DatabaseBase
 from common.models.messages import TeamConfiguration
-from models.messages import WebsocketMessageType
+from models.messages import AgentMessageStreaming, WebsocketMessageType
 from orchestration.connection_config import (connection_config,
                                              orchestration_config)
 from orchestration.human_approval_manager import HumanApprovalMagenticManager
@@ -113,8 +113,9 @@ class OrchestrationManager:
             if not name:
                 name = f"agent_{len(participant_list) + 1}"
 
-            # Agents implementing SupportsAgentRun are used directly
-            participant_list.append(ag)
+            # AgentTemplate wraps the MAF Agent in ._agent; unwrap it.
+            inner = getattr(ag, "_agent", None) or ag
+            participant_list.append(inner)
             cls.logger.debug("Added participant '%s'", name)
 
         # Assemble and build the Magentic workflow
@@ -124,6 +125,7 @@ class OrchestrationManager:
             manager=manager,
             max_round_count=orchestration_config.max_rounds,
             checkpoint_storage=storage,
+            intermediate_outputs=True,
         ).build()
 
         cls.logger.info(
@@ -222,10 +224,19 @@ class OrchestrationManager:
         try:
             # MAF 1.x GA: workflow.run(message, stream=True) returns an async stream of WorkflowEvent
             final_output: str | None = None
+            current_streaming_agent: str | None = None
 
             self.logger.info("Starting workflow execution...")
             async for event in workflow.run(task_text, stream=True):
                 try:
+                    # Diagnostic: log every event so we can see what the workflow emits
+                    data_type = type(event.data).__name__ if event.data is not None else "None"
+                    executor = getattr(event, "executor_id", None) or "?"
+                    self.logger.warning(
+                        "[EVENT] type=%s  data_type=%s  executor=%s",
+                        event.type, data_type, executor,
+                    )
+
                     # Magentic orchestrator events (plan created, replanned, progress ledger)
                     if event.type == "magentic_orchestrator":
                         orch_event: MagenticOrchestratorEvent = event.data
@@ -233,48 +244,80 @@ class OrchestrationManager:
                             "[ORCHESTRATOR:%s]", orch_event.event_type.value
                         )
 
-                    # Streaming agent response chunks (AgentResponseUpdate)
-                    elif event.type == "data" and isinstance(event.data, AgentResponseUpdate):
-                        update: AgentResponseUpdate = event.data
-                        agent_id = update.agent_id or event.executor_id or "unknown"
-                        try:
-                            await streaming_agent_response_callback(
-                                agent_id,
-                                update,
-                                False,
-                                user_id,
-                            )
-                        except Exception as cb_err:
-                            self.logger.error(
-                                "Error in streaming callback for agent %s: %s",
-                                agent_id, cb_err,
-                            )
-
-                    # Complete agent response (AgentResponse)
-                    elif event.type == "data" and isinstance(event.data, AgentResponse):
-                        response: AgentResponse = event.data
-                        agent_id = response.agent_id or event.executor_id or "unknown"
-                        if response.messages:
+                    # Agent invoked — send a header marker into the streaming
+                    # buffer so the UI shows which agent is "thinking".
+                    elif (
+                        event.type == "executor_invoked"
+                        and event.executor_id
+                        and event.executor_id != "magentic_orchestrator"
+                    ):
+                        agent_id = event.executor_id
+                        if agent_id != current_streaming_agent:
+                            current_streaming_agent = agent_id
+                            display_name = agent_id.replace("_", " ")
+                            header_text = f"\n\n---\n### 🤖 {display_name}\n\n"
                             try:
-                                agent_response_callback(
-                                    agent_id, response.messages[0], user_id
+                                await connection_config.send_status_update_async(
+                                    AgentMessageStreaming(
+                                        agent_name=agent_id,
+                                        content=header_text,
+                                        is_final=False,
+                                    ),
+                                    user_id,
+                                    message_type=WebsocketMessageType.AGENT_MESSAGE_STREAMING,
                                 )
                             except Exception as cb_err:
                                 self.logger.error(
-                                    "Error in agent callback for agent %s: %s",
+                                    "Error sending agent header for %s: %s",
                                     agent_id, cb_err,
                                 )
 
-                    # Workflow output (final result)
+                    # Streaming output — participant agents emit AgentResponseUpdate
+                    # chunks into the "thinking" buffer. Orchestrator chunks are
+                    # also streamed so the user can see progress.
                     elif event.type == "output":
+                        executor = event.executor_id or "unknown"
                         output_data = event.data
-                        if isinstance(output_data, (AgentResponse,)):
-                            final_output = output_data.text or str(output_data)
-                        elif isinstance(output_data, Message):
-                            final_output = output_data.text or str(output_data)
-                        elif output_data is not None:
-                            final_output = str(output_data)
-                        self.logger.debug("Received workflow output event")
+
+                        if isinstance(output_data, AgentResponseUpdate):
+                            try:
+                                await streaming_agent_response_callback(
+                                    executor, output_data, False, user_id,
+                                )
+                            except Exception as cb_err:
+                                self.logger.error(
+                                    "Error in streaming callback for %s: %s",
+                                    executor, cb_err,
+                                )
+
+                    # Executor completed — carries the agent's final response as
+                    # a list of Message objects. For participant agents this is
+                    # sent as an AGENT_MESSAGE (the clean, non-streaming result).
+                    # For the orchestrator this becomes the final consolidated output.
+                    elif (
+                        event.type == "executor_completed"
+                        and isinstance(event.data, list)
+                        and event.executor_id
+                    ):
+                        agent_id = event.executor_id
+                        if agent_id == "magentic_orchestrator":
+                            # Extract final consolidated result from orchestrator
+                            for msg in event.data:
+                                if isinstance(msg, Message) and msg.text:
+                                    final_output = msg.text
+                        else:
+                            # Per-agent final result
+                            for msg in event.data:
+                                if isinstance(msg, Message) and msg.text:
+                                    try:
+                                        agent_response_callback(
+                                            agent_id, msg, user_id
+                                        )
+                                    except Exception as cb_err:
+                                        self.logger.error(
+                                            "Error in agent callback for %s: %s",
+                                            agent_id, cb_err,
+                                        )
 
                 except Exception as e:
                     self.logger.error(
@@ -284,7 +327,7 @@ class OrchestrationManager:
                     )
 
             # Extract final result
-            final_text = final_output if final_output else ""
+            final_text = final_output or ""
 
             # Log results
             self.logger.info("\nAgent responses:")

@@ -15,11 +15,12 @@ logger = logging.getLogger(__name__)
 
 async def find_first_available_team(team_service: TeamService, user_id: str) -> str:
     """
-    Check teams in priority order and return the first available team ID.
-    First tries default teams in priority order, then falls back to any available team.
-    Priority: RFP (4) -> Retail (3) -> Marketing (2) -> HR (1) -> Any available team
+    Return the first available team ID.
+    Fetches all teams then prefers standard IDs in priority order; falls back to
+    any available team (supports custom/non-standard team IDs).
+    Priority among standard IDs: RFP (4) -> Retail (3) -> Marketing (2) -> HR (1)
     """
-    # Standard team priority order
+    # Standard team priority order (highest priority first)
     team_priority_order = [
         "00000000-0000-0000-0000-000000000004",  # RFP
         "00000000-0000-0000-0000-000000000003",  # Retail
@@ -27,29 +28,29 @@ async def find_first_available_team(team_service: TeamService, user_id: str) -> 
         "00000000-0000-0000-0000-000000000001",  # HR
     ]
 
-    # First, check standard teams in priority order
-    for team_id in team_priority_order:
-        try:
-            team_config = await team_service.get_team_configuration(team_id, user_id)
-            if team_config is not None:
-                logger.debug("Found available standard team: %s", team_id)
-                return team_id
-        except Exception as e:
-            logger.warning("Error checking team %s: %s", team_id, e)
-            continue
-
-    # If no standard teams found, check for any available teams
     try:
         all_teams = await team_service.get_all_team_configurations()
-        if all_teams:
-            first_team = all_teams[0]
-            logger.debug("Found available custom team: %s", first_team.team_id)
-            return first_team.team_id
     except Exception as e:
-        logger.warning("Error checking for any available teams: %s", e)
+        logger.warning("Error fetching all team configurations: %s", e)
+        all_teams = []
 
-    logger.warning("No teams found in database")
-    return None
+    if not all_teams:
+        logger.warning("No teams found in database")
+        return None
+
+    all_team_ids = {t.team_id: t for t in all_teams}
+    logger.debug("Available team IDs: %s", list(all_team_ids.keys()))
+
+    # Prefer standard IDs in priority order
+    for team_id in team_priority_order:
+        if team_id in all_team_ids:
+            logger.debug("Found available standard team: %s", team_id)
+            return team_id
+
+    # Fall back to first available (custom/non-standard ID)
+    first_team = all_teams[0]
+    logger.debug("No standard team found; using first available team: %s", first_team.team_id)
+    return first_team.team_id
 
 
 async def create_RAI_agent(

@@ -67,6 +67,7 @@ class SearchConfig:
     connection_name: str | None = None
     endpoint: str | None = None
     index_name: str | None = None
+    search_query_type: str = "simple"
 
     @classmethod
     def from_env(cls, index_name: str) -> "SearchConfig":
