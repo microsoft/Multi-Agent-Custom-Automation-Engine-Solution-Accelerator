@@ -224,6 +224,7 @@ class OrchestrationManager:
         try:
             # MAF 1.x GA: workflow.run(message, stream=True) returns an async stream of WorkflowEvent
             final_output: str | None = None
+            orchestrator_chunks: list[str] = []
             current_streaming_agent: str | None = None
 
             self.logger.info("Starting workflow execution...")
@@ -244,42 +245,45 @@ class OrchestrationManager:
                             "[ORCHESTRATOR:%s]", orch_event.event_type.value
                         )
 
-                    # Agent invoked — send a header marker into the streaming
-                    # buffer so the UI shows which agent is "thinking".
-                    elif (
-                        event.type == "executor_invoked"
-                        and event.executor_id
-                        and event.executor_id != "magentic_orchestrator"
-                    ):
-                        agent_id = event.executor_id
-                        if agent_id != current_streaming_agent:
-                            current_streaming_agent = agent_id
-                            display_name = agent_id.replace("_", " ")
-                            header_text = f"\n\n---\n### 🤖 {display_name}\n\n"
-                            try:
-                                await connection_config.send_status_update_async(
-                                    AgentMessageStreaming(
-                                        agent_name=agent_id,
-                                        content=header_text,
-                                        is_final=False,
-                                    ),
-                                    user_id,
-                                    message_type=WebsocketMessageType.AGENT_MESSAGE_STREAMING,
-                                )
-                            except Exception as cb_err:
-                                self.logger.error(
-                                    "Error sending agent header for %s: %s",
-                                    agent_id, cb_err,
-                                )
-
                     # Streaming output — participant agents emit AgentResponseUpdate
                     # chunks into the "thinking" buffer. Orchestrator chunks are
-                    # also streamed so the user can see progress.
+                    # also streamed AND accumulated for the final result fallback.
+                    # Agent name headers are sent on the first chunk from each new
+                    # agent so that agents with no output get no header.
                     elif event.type == "output":
                         executor = event.executor_id or "unknown"
                         output_data = event.data
 
                         if isinstance(output_data, AgentResponseUpdate):
+                            # Accumulate orchestrator chunks for final result
+                            if executor == "magentic_orchestrator" and output_data.text:
+                                orchestrator_chunks.append(output_data.text)
+
+                            # Inject agent header on first chunk from a new agent
+                            if (
+                                executor != "magentic_orchestrator"
+                                and executor != current_streaming_agent
+                            ):
+                                current_streaming_agent = executor
+                                display_name = executor.replace("_", " ")
+                                header_text = f"\n\n---\n### {display_name}\n\n"
+                                try:
+                                    await connection_config.send_status_update_async(
+                                        AgentMessageStreaming(
+                                            agent_name=executor,
+                                            content=header_text,
+                                            is_final=False,
+                                        ),
+                                        user_id,
+                                        message_type=WebsocketMessageType.AGENT_MESSAGE_STREAMING,
+                                    )
+                                except Exception as cb_err:
+                                    self.logger.error(
+                                        "Error sending agent header for %s: %s",
+                                        executor, cb_err,
+                                    )
+
+                            # Stream chunk to thinking buffer
                             try:
                                 await streaming_agent_response_callback(
                                     executor, output_data, False, user_id,
@@ -326,8 +330,9 @@ class OrchestrationManager:
                         exc_info=True,
                     )
 
-            # Extract final result
-            final_text = final_output or ""
+            # Use executor_completed Message if available; otherwise fall back to
+            # accumulated orchestrator streaming chunks.
+            final_text = final_output or "".join(orchestrator_chunks)
 
             # Log results
             self.logger.info("\nAgent responses:")
