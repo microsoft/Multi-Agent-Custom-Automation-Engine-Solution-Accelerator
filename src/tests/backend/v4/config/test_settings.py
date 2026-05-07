@@ -344,9 +344,9 @@ class TestOrchestrationConfig(IsolatedAsyncioTestCase):
         cancel_task_handle = asyncio.create_task(cancel_task())
         
         with self.assertRaises(asyncio.CancelledError):
-            _ = await task
+            await task
         
-        await cancel_task_handle
+        _ = await cancel_task_handle
         self.assertTrue(task.cancelled())
 
     async def test_wait_for_clarification_cancelled(self):
@@ -365,9 +365,9 @@ class TestOrchestrationConfig(IsolatedAsyncioTestCase):
         cancel_task_handle = asyncio.create_task(cancel_task())
         
         with self.assertRaises(asyncio.CancelledError):
-            _ = await task
+            await task
         
-        await cancel_task_handle
+        _ = await cancel_task_handle
         self.assertTrue(task.cancelled())
 
     def test_cleanup_approval(self):

@@ -20,7 +20,7 @@
 
 ![Redirect URL](images/azure-app-service-auth-setup/AddRedirectURL.png)
 
-6. Click on `+ Add a platform`.
+6. Click on `+Add redirect URI`.
 
 ![+ Add platform](images/azure-app-service-auth-setup/AddPlatform.png)
 

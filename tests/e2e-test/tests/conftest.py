@@ -125,8 +125,9 @@ def pytest_runtest_setup(item):
     logger = logging.getLogger()
     logger.addHandler(handler)
 
-    # Save handler and stream
-    log_streams[item.nodeid] = (handler, stream)
+    # Save handler, stream, and original nodeid using item id (not nodeid)
+    # so retrieval works even if the test mutates node._nodeid during execution
+    log_streams[id(item)] = (handler, stream, item.nodeid)
 
 
 
