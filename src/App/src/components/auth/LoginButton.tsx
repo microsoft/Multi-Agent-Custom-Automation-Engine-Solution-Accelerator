@@ -6,7 +6,7 @@ import {
   MenuPopover,
   MenuList,
   MenuItem,
-  Button,
+  MenuButton,
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
@@ -14,10 +14,12 @@ import { Person20Regular, SignOut24Regular } from '@fluentui/react-icons';
 import { useAppSelector } from '../../store/hooks';
 
 const useStyles = makeStyles({
-  userButton: {
+  menuButton: {
     minWidth: 'auto',
     paddingLeft: tokens.spacingHorizontalXS,
-    paddingRight: tokens.spacingHorizontalXS,
+    paddingRight: tokens.spacingHorizontalS,
+    border: 'none',
+    background: 'transparent',
   },
   menuItem: {
     paddingLeft: tokens.spacingHorizontalM,
@@ -41,7 +43,6 @@ const useStyles = makeStyles({
     display: 'flex',
     alignItems: 'center',
     gap: tokens.spacingHorizontalS,
-    cursor: 'pointer',
   },
   displayName: {
     fontSize: tokens.fontSizeBase300,
@@ -81,7 +82,7 @@ const LoginButton: React.FC<LoginButtonProps> = ({ showName = false }) => {
     window.location.href = logoutUrl;
   }, []);
 
-  const displayName = isAuthenticated ? userName || userId || 'User' : 'User';
+  const displayName = isAuthenticated ? userName || userId || 'User' : 'Guest';
 
   if (!isAuthenticated) {
     return (
@@ -101,16 +102,23 @@ const LoginButton: React.FC<LoginButtonProps> = ({ showName = false }) => {
   return (
     <Menu positioning="above-end">
       <MenuTrigger disableButtonEnhancement>
-        <div className={styles.triggerContainer} role="button" tabIndex={0} title={`Signed in as ${displayName}`}>
-          <Avatar
-            name={displayName}
-            initials={getUserInitials(displayName)}
-            size={28}
-            color="colorful"
-            style={{ fontWeight: 'bold' }}
-          />
-          {showName && <span className={styles.displayName}>{displayName}</span>}
-        </div>
+        <MenuButton
+          appearance="subtle"
+          className={styles.menuButton}
+          title={`Signed in as ${displayName}`}
+          aria-label={`User menu for ${displayName}`}
+          icon={
+            <Avatar
+              name={displayName}
+              initials={getUserInitials(displayName)}
+              size={28}
+              color="colorful"
+              style={{ fontWeight: 'bold' }}
+            />
+          }
+        >
+           {showName ? <span className={styles.displayName}>{displayName}</span> : undefined}
+        </MenuButton>
       </MenuTrigger>
 
       <MenuPopover>

@@ -3,6 +3,7 @@
  */
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '../store';
+import { getUserInfo } from '../../api/config';
 
 export interface AppState {
     /** Has the runtime config been loaded from /config? */
@@ -28,29 +29,19 @@ const initialState: AppState = {
     userEmail: '',
 };
 
-type AuthClaim = { typ: string; val: string };
-type AuthPayload = Array<{ user_id: string; user_claims: AuthClaim[] }>;
-
 export const fetchCurrentUser = createAsyncThunk(
     'app/fetchCurrentUser',
-    async () => {
+    async (_arg, { rejectWithValue }) => {
         try {
-            const response = await fetch('/.auth/me');
-            if (!response.ok) {
-                return { userId: 'anonymous', userName: '', userEmail: '' };
+            const userInfo = await getUserInfo();
+
+            if (!userInfo.user_id) {
+                return rejectWithValue('No user identity found');
             }
-            const payload: AuthPayload = await response.json();
 
-            const userClaims = payload[0]?.user_claims || [];
-            const objectIdClaim = userClaims.find(
-                (claim) =>
-                    claim.typ === 'http://schemas.microsoft.com/identity/claims/objectidentifier'
-            );
-            const nameClaim = userClaims.find(
-                (claim) => claim.typ === 'name'
-            );
-
-            let emailVal = '';
+            // Extract email from claims (preferred_username, email, or UPN)
+            const userClaims = userInfo.user_claims || [];
+            let emailVal = userInfo.user_email || '';
             for (const claim of userClaims) {
                 if (claim.typ === 'preferred_username' ||
                     claim.typ === 'email' ||
@@ -62,12 +53,12 @@ export const fetchCurrentUser = createAsyncThunk(
             }
 
             return {
-                userId: objectIdClaim?.val || payload[0]?.user_id || 'anonymous',
-                userName: nameClaim?.val || '',
+                userId: userInfo.user_id || 'anonymous',
+                userName: userInfo.user_first_last_name || '',
                 userEmail: emailVal,
             };
-        } catch {
-            return { userId: 'anonymous', userName: '', userEmail: '' };
+        } catch (error) {
+            return rejectWithValue('Failed to fetch user info');
         }
     }
 );
