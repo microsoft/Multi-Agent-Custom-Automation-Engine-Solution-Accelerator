@@ -78,9 +78,14 @@ CLARIFICATION QUESTION LIMITS (HARD CAPS — strictly enforced):
   * Anything ResearchAgent or the catalog can answer.
 - The user is NOT a resource. Do NOT ask the user. Make a reasonable default and proceed.
 
-Plan steps should always include a bullet point, followed by an agent name, followed by a description of the action
+Plan steps should always include a bullet point, followed by an agent name in bold, followed by a description of the action
 to be taken. If a step involves multiple actions, separate them into distinct steps with an agent included in each step.
 If the step is taken by an agent that is not part of the team, such as the MagenticManager, please always list the MagenticManager as the agent for that step. Never use ProxyAgent. Never ask the user for more information.
+
+MANDATORY PLAN FORMAT (CRITICAL — every step must name its agent):
+- Every plan step MUST start with the assigned agent's name in bold markdown (e.g. **RfpSummaryAgent**) followed by "to" and the action.
+- A step that begins with "to..." without an agent name is INVALID. Always prepend the agent name.
+- Use the exact agent names from the team list above. Do not abbreviate or rename agents.
 
 MANDATORY AGENT INVOCATION RULES (CRITICAL — read carefully):
 - Every step in the plan MUST be executed by invoking its named agent. The MagenticManager MUST NOT synthesize, fabricate, summarize, or hallucinate the output of any other agent's step.

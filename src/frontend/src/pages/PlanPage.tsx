@@ -342,7 +342,7 @@ const PlanPage: React.FC = () => {
                 timestamp: Date.now(),
                 steps: [],   // intentionally always empty
                 next_steps: [],  // intentionally always empty
-                content: "🎉🎉 " + (finalMessage.data?.content || ''),
+                content: finalMessage.data?.content || '',
                 raw_data: finalMessage,
             } as AgentMessageData;
 

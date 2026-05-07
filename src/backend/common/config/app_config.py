@@ -75,7 +75,7 @@ class AppConfig:
         self.AZURE_SEARCH_ENDPOINT = self._get_optional("AZURE_AI_SEARCH_ENDPOINT")
 
         # Logging settings
-        self.AZURE_BASIC_LOGGING_LEVEL = self._get_optional("AZURE_BASIC_LOGGING_LEVEL", "INFO")
+        self.AZURE_BASIC_LOGGING_LEVEL = self._get_optional("AZURE_BASIC_LOGGING_LEVEL", "WARNING")
         self.AZURE_PACKAGE_LOGGING_LEVEL = self._get_optional("AZURE_PACKAGE_LOGGING_LEVEL", "WARNING")
         self.AZURE_LOGGING_PACKAGES = self._get_optional("AZURE_LOGGING_PACKAGES")
 
