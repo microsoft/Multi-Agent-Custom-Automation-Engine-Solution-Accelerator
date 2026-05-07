@@ -72,7 +72,7 @@ Follow the quick deploy steps on the deployment guide to deploy this solution to
 
 > **Note:** This solution accelerator requires **Azure Developer CLI (azd) version 1.18.0 or higher**. Please ensure you have the latest version installed before proceeding with deployment. [Download azd here](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/install-azd).
 
-> **Note:** This solution accelerator also requires **Bicep CLI version 0.33.0 or higher** for compiling infrastructure templates. [Install Bicep](https://learn.microsoft.com/azure/azure-resource-manager/bicep/install).
+> **Note:** If deploying from a **local environment** (Option D in the deployment guide), this solution accelerator requires **Bicep CLI version 0.33.0 or higher** to compile infrastructure templates. [Install Bicep](https://learn.microsoft.com/azure/azure-resource-manager/bicep/install).
 
 [Click here to launch the deployment guide](./docs/DeploymentGuide.md)
 <br/><br/>
