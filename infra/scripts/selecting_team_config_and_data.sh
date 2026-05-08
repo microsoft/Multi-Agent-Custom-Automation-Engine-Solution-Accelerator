@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Resolve repo root (this script lives in infra/scripts/) and cd there so
+# that relative paths like 'infra/scripts/...' and 'content_packs/...' resolve
+# correctly regardless of the caller's working directory.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR/../.." || exit 1
+
 # Parse command line arguments
 ResourceGroup=""
 while [[ $# -gt 0 ]]; do
@@ -525,13 +531,12 @@ isTeamConfigFailed=false
 isSampleDataFailed=false
 failedTeamConfigs=0
 
-# Use Case 3 - HR Employee Onboarding
+# Use Case 3 - HR Employee Onboarding (content pack, no datasets)
 if [[ "$useCaseSelection" == "3" || "$useCaseSelection" == "all" || "$useCaseSelection" == "7" ]]; then
-    echo "Uploading Team Configuration for HR Employee Onboarding..."
-    directoryPath="data/agent_teams"
-    teamId="00000000-0000-0000-0000-000000000001"
-    
-    if $pythonCmd infra/scripts/upload_team_config.py "$backendUrl" "$directoryPath" "$userPrincipalId" "$teamId"; then
+    echo "Provisioning HR Employee Onboarding content pack..."
+    packPath="content_packs/hr_onboarding"
+
+    if $pythonCmd infra/scripts/upload_team_config.py "$backendUrl" "$packPath" "$userPrincipalId" "content-packs"; then
         echo "Successfully uploaded team configuration for HR Employee Onboarding."
     else
         echo "Error: Team configuration for HR Employee Onboarding upload failed."
@@ -540,13 +545,12 @@ if [[ "$useCaseSelection" == "3" || "$useCaseSelection" == "all" || "$useCaseSel
     fi
 fi
 
-# Use Case 4 - Marketing Press Release
+# Use Case 4 - Marketing Press Release (content pack, no datasets)
 if [[ "$useCaseSelection" == "4" || "$useCaseSelection" == "all" || "$useCaseSelection" == "7" ]]; then
-    echo "Uploading Team Configuration for Marketing Press Release..."
-    directoryPath="data/agent_teams"
-    teamId="00000000-0000-0000-0000-000000000002"
-    
-    if $pythonCmd infra/scripts/upload_team_config.py "$backendUrl" "$directoryPath" "$userPrincipalId" "$teamId"; then
+    echo "Provisioning Marketing Press Release content pack..."
+    packPath="content_packs/marketing_press_release"
+
+    if $pythonCmd infra/scripts/upload_team_config.py "$backendUrl" "$packPath" "$userPrincipalId" "content-packs"; then
         echo "Successfully uploaded team configuration for Marketing Press Release."
     else
         echo "Error: Team configuration for Marketing Press Release upload failed."
@@ -645,177 +649,100 @@ if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "2" || "$useCaseSelec
     fi
 fi
 
-# Use Case 1 - RFP Evaluation
+# Use Case 1 - RFP Evaluation (content pack)
 if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "all" || "$useCaseSelection" == "7" ]]; then
-    echo "Uploading Team Configuration for RFP Evaluation..."
-    directoryPath="data/agent_teams"
-    teamId="00000000-0000-0000-0000-000000000004"
-    
-    if $pythonCmd infra/scripts/upload_team_config.py "$backendUrl" "$directoryPath" "$userPrincipalId" "$teamId"; then
-        echo "Uploaded Team Configuration for RFP Evaluation..."
+    echo "Provisioning RFP Evaluation content pack..."
+    packPath="content_packs/rfp_evaluation"
+
+    if $pythonCmd infra/scripts/upload_team_config.py "$backendUrl" "$packPath" "$userPrincipalId" "content-packs"; then
+        echo "Uploaded Team Configuration for RFP Evaluation."
     else
         echo "Error: Team configuration for RFP Evaluation upload failed."
         ((failedTeamConfigs++))
         isTeamConfigFailed=true
     fi
 
-    directoryPath="data/datasets/rfp/summary"
-    # Upload sample files to blob storage
-    echo "Uploading sample files to blob storage for RFP Evaluation..."
-    if ! az storage blob upload-batch --account-name "$storageAccount" --destination "$blobContainerForRFPSummary" --source "$directoryPath" --auth-mode login --pattern "*" --overwrite --output none; then
-        echo "Error: Failed to upload files to blob storage."
-        isSampleDataFailed=true
-        exit 1
-    fi
-
-    directoryPath="data/datasets/rfp/risk"
-    if ! az storage blob upload-batch --account-name "$storageAccount" --destination "$blobContainerForRFPRisk" --source "$directoryPath" --auth-mode login --pattern "*" --overwrite --output none; then
-        echo "Error: Failed to upload files to blob storage."
-        isSampleDataFailed=true
-        exit 1
-    fi
-
-    directoryPath="data/datasets/rfp/compliance"
-    if ! az storage blob upload-batch --account-name "$storageAccount" --destination "$blobContainerForRFPCompliance" --source "$directoryPath" --auth-mode login --pattern "*" --overwrite --output none; then
-        echo "Error: Failed to upload files to blob storage."
-        isSampleDataFailed=true
-        exit 1
-    fi
-    echo "Files uploaded successfully to blob storage."
-
-    # Run the Python script to index data
-    echo "Running the python script to index data for RFP Evaluation"
-    if $pythonCmd infra/scripts/index_datasets.py "$storageAccount" "$blobContainerForRFPSummary" "$aiSearch" "$aiSearchIndexForRFPSummary"; then
-        echo "Python script to index data for RFP Summary successfully executed."
+    if $pythonCmd infra/scripts/provision_content_pack.py "$aiSearch" "$packPath" "$storageAccount"; then
+        echo "RFP Evaluation content pack indexes provisioned."
     else
-        echo "Error: Indexing python script execution failed for RFP Summary."
+        echo "Error: Provisioning RFP content pack indexes failed."
         isSampleDataFailed=true
     fi
-
-    if $pythonCmd infra/scripts/index_datasets.py "$storageAccount" "$blobContainerForRFPRisk" "$aiSearch" "$aiSearchIndexForRFPRisk"; then
-        echo "Python script to index data for RFP Risk successfully executed."
-    else
-        echo "Error: Indexing python script execution failed for RFP Risk."
-        isSampleDataFailed=true
-    fi
-
-    if $pythonCmd infra/scripts/index_datasets.py "$storageAccount" "$blobContainerForRFPCompliance" "$aiSearch" "$aiSearchIndexForRFPCompliance"; then
-        echo "Python script to index data for RFP Compliance successfully executed."
-    else
-        echo "Error: Indexing python script execution failed for RFP Compliance."
-        isSampleDataFailed=true
-    fi
-    echo "Python script to index data for RFP Evaluation successfully executed."
 fi
 
-# Use Case 5 - Contract Compliance Review
+# Use Case 5 - Contract Compliance Review (content pack)
 if [[ "$useCaseSelection" == "5" || "$useCaseSelection" == "all" || "$useCaseSelection" == "7" ]]; then
-    echo "Uploading Team Configuration for Contract Compliance Review..."
-    directoryPath="data/agent_teams"
-    teamId="00000000-0000-0000-0000-000000000005"
-    
-    if $pythonCmd infra/scripts/upload_team_config.py "$backendUrl" "$directoryPath" "$userPrincipalId" "$teamId"; then
-        echo "Uploaded Team Configuration for Contract Compliance Review..."
+    echo "Provisioning Contract Compliance Review content pack..."
+    packPath="content_packs/contract_compliance"
+
+    if $pythonCmd infra/scripts/upload_team_config.py "$backendUrl" "$packPath" "$userPrincipalId" "content-packs"; then
+        echo "Uploaded Team Configuration for Contract Compliance Review."
     else
         echo "Error: Team configuration for Contract Compliance Review upload failed."
         ((failedTeamConfigs++))
         isTeamConfigFailed=true
     fi
 
-    directoryPath="data/datasets/contract_compliance/summary"
-    # Upload sample files to blob storage
-    echo "Uploading sample files to blob storage for Contract Compliance Review..."
-    if ! az storage blob upload-batch --account-name "$storageAccount" --destination "$blobContainerForContractSummary" --source "$directoryPath" --auth-mode login --pattern "*" --overwrite --output none; then
-        echo "Error: Failed to upload files to blob storage."
-        isSampleDataFailed=true
-        exit 1
-    fi
-
-    directoryPath="data/datasets/contract_compliance/risk"
-    if ! az storage blob upload-batch --account-name "$storageAccount" --destination "$blobContainerForContractRisk" --source "$directoryPath" --auth-mode login --pattern "*" --overwrite --output none; then
-        echo "Error: Failed to upload files to blob storage."
-        isSampleDataFailed=true
-        exit 1
-    fi
-
-    directoryPath="data/datasets/contract_compliance/compliance"
-    if ! az storage blob upload-batch --account-name "$storageAccount" --destination "$blobContainerForContractCompliance" --source "$directoryPath" --auth-mode login --pattern "*" --overwrite --output none; then
-        echo "Error: Failed to upload files to blob storage."
-        isSampleDataFailed=true
-        exit 1
-    fi
-    echo "Files uploaded successfully to blob storage."
-
-    # Run the Python script to index data
-    echo "Running the python script to index data for Contract Compliance Review"
-    if $pythonCmd infra/scripts/index_datasets.py "$storageAccount" "$blobContainerForContractSummary" "$aiSearch" "$aiSearchIndexForContractSummary"; then
-        echo "Python script to index data for Contract Summary successfully executed."
+    if $pythonCmd infra/scripts/provision_content_pack.py "$aiSearch" "$packPath" "$storageAccount"; then
+        echo "Contract Compliance Review content pack provisioning complete."
     else
-        echo "Error: Indexing python script execution failed for Contract Summary."
+        echo "Error: Provisioning Contract Compliance content pack indexes failed."
         isSampleDataFailed=true
     fi
-
-    if $pythonCmd infra/scripts/index_datasets.py "$storageAccount" "$blobContainerForContractRisk" "$aiSearch" "$aiSearchIndexForContractRisk"; then
-        echo "Python script to index data for Contract Risk successfully executed."
-    else
-        echo "Error: Indexing python script execution failed for Contract Risk."
-        isSampleDataFailed=true
-    fi
-
-    if $pythonCmd infra/scripts/index_datasets.py "$storageAccount" "$blobContainerForContractCompliance" "$aiSearch" "$aiSearchIndexForContractCompliance"; then
-        echo "Python script to index data for Contract Compliance successfully executed."
-    else
-        echo "Error: Indexing python script execution failed for Contract Compliance."
-        isSampleDataFailed=true
-    fi
-    echo "Python script to index data for Contract Compliance Review successfully executed."
 fi
 
-# Use Case 2 - Retail Customer Satisfaction
+# Use Case 2 - Retail Customer Satisfaction (content pack)
 if [[ "$useCaseSelection" == "2" || "$useCaseSelection" == "all" || "$useCaseSelection" == "7" ]]; then
-    echo "Uploading Team Configuration for Retail Customer Satisfaction..."
-    directoryPath="data/agent_teams"
-    teamId="00000000-0000-0000-0000-000000000003"
-    
-    if $pythonCmd infra/scripts/upload_team_config.py "$backendUrl" "$directoryPath" "$userPrincipalId" "$teamId"; then
-        echo "Uploaded Team Configuration for Retail Customer Satisfaction..."
+    echo "Provisioning Retail Customer Satisfaction content pack..."
+    packPath="content_packs/retail_customer"
+
+    if $pythonCmd infra/scripts/upload_team_config.py "$backendUrl" "$packPath" "$userPrincipalId" "content-packs"; then
+        echo "Uploaded Team Configuration for Retail Customer Satisfaction."
     else
         echo "Error: Team configuration for Retail Customer Satisfaction upload failed."
         ((failedTeamConfigs++))
         isTeamConfigFailed=true
     fi
 
-    directoryPath="data/datasets/retail/customer"
-    # Upload sample files to blob storage
-    echo "Uploading sample files to blob storage for Retail Customer Satisfaction..."
-    if ! az storage blob upload-batch --account-name "$storageAccount" --destination "retail-dataset-customer" --source "$directoryPath" --auth-mode login --pattern "*" --overwrite --output none; then
-        echo "Error: Failed to upload files to blob storage."
+    if $pythonCmd infra/scripts/provision_content_pack.py "$aiSearch" "$packPath" "$storageAccount"; then
+        echo "Retail Customer Satisfaction content pack indexes provisioned."
+    else
+        echo "Error: Provisioning Retail content pack indexes failed."
         isSampleDataFailed=true
-        exit 1
     fi
-    
-    directoryPath="data/datasets/retail/order"
-    if ! az storage blob upload-batch --account-name "$storageAccount" --destination "retail-dataset-order" --source "data/datasets/retail/order" --auth-mode login --pattern "*" --overwrite --output none; then
-        echo "Error: Failed to upload files to blob storage."
-        isSampleDataFailed=true
-        exit 1
-    fi
-    echo "Files uploaded successfully to blob storage."
+fi
 
-    # Run the Python script to index data
-    echo "Running the python script to index data for Retail Customer Satisfaction"
-    if ! $pythonCmd infra/scripts/index_datasets.py "$storageAccount" "retail-dataset-customer" "$aiSearch" "macae-retail-customer-index"; then
-        echo "Error: Indexing python script execution failed."
-        isSampleDataFailed=true
-        exit 1
+# Use Case 6 / All - Content packs auto-discovery
+# A pack may contain:
+#   - agent_teams/*.json  -> uploaded as team configurations (always)
+#   - pack.json           -> declares pack-level resources (search indexes,
+#                            blob uploads, blob indexes) provisioned via
+#                            infra/scripts/provision_content_pack.py
+# Option 6 provisions only the content_gen pack; option 7/all provisions every
+# pack discovered under content_packs/.
+if [[ "$useCaseSelection" == "6" || "$useCaseSelection" == "all" || "$useCaseSelection" == "7" ]]; then
+    if [[ "$useCaseSelection" == "6" ]]; then
+        echo "Provisioning Content Generation content pack..."
+        packPath="content_packs/content_gen"
+    else
+        echo "Provisioning all content_packs/* packs..."
+        packPath="content_packs"
     fi
-    
-    if ! $pythonCmd infra/scripts/index_datasets.py "$storageAccount" "retail-dataset-order" "$aiSearch" "macae-retail-order-index"; then
-        echo "Error: Indexing python script execution failed."
-        isSampleDataFailed=true
-        exit 1
+
+    if $pythonCmd infra/scripts/upload_team_config.py "$backendUrl" "$packPath" "$userPrincipalId" "content-packs"; then
+        echo "Content pack team configurations uploaded."
+    else
+        echo "Warning: One or more content pack team configurations failed to upload."
+        isTeamConfigFailed=true
     fi
-    echo "Python script to index data for Retail Customer Satisfaction successfully executed."
+
+    echo "Provisioning content pack search indexes..."
+    if $pythonCmd infra/scripts/provision_content_pack.py "$aiSearch" "$packPath" "$storageAccount"; then
+        echo "Content pack indexes provisioned."
+    else
+        echo "Warning: One or more content pack indexes failed to provision."
+        isSampleDataFailed=true
+    fi
 fi
 
 
@@ -824,7 +751,7 @@ if [[ "$isTeamConfigFailed" == true || "$isSampleDataFailed" == true ]]; then
     echo "One or more tasks failed. Please check the error messages above."
     exit 1
 else
-    if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "2" || "$useCaseSelection" == "5" || "$useCaseSelection" == "all" || "$useCaseSelection" == "7" ]]; then
+    if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "2" || "$useCaseSelection" == "5" || "$useCaseSelection" == "6" || "$useCaseSelection" == "all" || "$useCaseSelection" == "7" ]]; then
         echo ""
         echo "Team configuration upload and sample data processing completed successfully."
     else

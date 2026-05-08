@@ -1,0 +1,24 @@
+{
+  "name": "rfp_evaluation",
+  "description": "RFP Evaluation pack: summary, risk, and compliance analysis over RFP/proposal PDFs.",
+  "blob_indexes": [
+    {
+      "index_name": "macae-rfp-summary-index",
+      "container": "rfp-summary-dataset",
+      "source": "datasets/summary",
+      "pattern": "*"
+    },
+    {
+      "index_name": "macae-rfp-risk-index",
+      "container": "rfp-risk-dataset",
+      "source": "datasets/risk",
+      "pattern": "*"
+    },
+    {
+      "index_name": "macae-rfp-compliance-index",
+      "container": "rfp-compliance-dataset",
+      "source": "datasets/compliance",
+      "pattern": "*"
+    }
+  ]
+}

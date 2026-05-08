@@ -23,10 +23,12 @@ param solutionUniqueText string = take(uniqueString(subscription().id, resourceG
   'centralus'
   'eastasia'
   'eastus2'
+  'francecentral'
   'japaneast'
   'northeurope'
   'southeastasia'
   'uksouth'
+  'westus3'
 ])
 param location string
 
@@ -35,7 +37,7 @@ var deployerInfo = deployer()
 var deployingUserPrincipalId = deployerInfo.objectId
 
 // Restricting deployment to only supported Azure OpenAI regions validated with GPT-4o model
-@allowed(['australiaeast', 'eastus2', 'francecentral', 'japaneast', 'norwayeast', 'swedencentral', 'uksouth', 'westus'])
+@allowed(['australiaeast', 'eastus2', 'francecentral', 'japaneast', 'norwayeast', 'swedencentral', 'uksouth', 'westus', 'westus3'])
 @metadata({
   azd: {
     type: 'location'
@@ -73,8 +75,8 @@ param gptReasoningModelVersion string = '2025-04-16'
 @description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2025-01-01-preview.')
 param azureopenaiVersion string = '2024-12-01-preview'
 
-@description('Optional. Version of the Azure AI Agent API version. Defaults to 2025-01-01-preview.')
-param azureAiAgentAPIVersion string = '2025-01-01-preview'
+@description('Optional. Version of the Azure AI Agent API version. Defaults to v1.')
+param azureAiAgentAPIVersion string = 'v1'
 
 @minLength(1)
 @allowed([
@@ -190,11 +192,13 @@ var cosmosDbZoneRedundantHaRegionPairs = {
   eastasia: 'southeastasia'
   eastus: 'centralus'
   eastus2: 'centralus'
+  francecentral: 'westeurope'
   japaneast: 'australiaeast'
   northeurope: 'westeurope'
   southeastasia: 'eastasia'
   uksouth: 'westeurope'
   westeurope: 'northeurope'
+  westus3: 'westus2'
 }
 // Paired location calculated based on 'location' parameter. This location will be used by applicable resources if `enableScalability` is set to `true`
 var cosmosDbHaLocation = cosmosDbZoneRedundantHaRegionPairs[location]
@@ -206,11 +210,13 @@ var replicaRegionPairs = {
   eastasia: 'japaneast'
   eastus: 'centralus'
   eastus2: 'centralus'
+  francecentral: 'westeurope'
   japaneast: 'eastasia'
   northeurope: 'westeurope'
   southeastasia: 'eastasia'
   uksouth: 'westeurope'
   westeurope: 'northeurope'
+  westus3: 'westus2'
 }
 var replicaLocation = replicaRegionPairs[location]
 

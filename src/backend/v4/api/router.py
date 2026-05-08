@@ -371,9 +371,32 @@ async def process_request(
     try:
 
         async def run_orchestration_task():
-            await OrchestrationManager().run_orchestration(user_id, input_task)
+            try:
+                await OrchestrationManager().run_orchestration(user_id, input_task)
+            except asyncio.CancelledError:
+                logging.getLogger(__name__).info(
+                    "Orchestration task for user '%s' (plan %s) cancelled by newer request",
+                    user_id, plan_id,
+                )
+                raise
+            finally:
+                # Clear our slot only if we are still the registered task
+                current = orchestration_config.run_tasks.get(user_id)
+                if current is asyncio.current_task():
+                    orchestration_config.run_tasks.pop(user_id, None)
 
-        background_tasks.add_task(run_orchestration_task)
+        # Cancel any in-flight orchestration task for this user so events from
+        # a previously-running plan don't leak into the new plan's stream.
+        prior = orchestration_config.run_tasks.pop(user_id, None)
+        if prior is not None and not prior.done():
+            logging.getLogger(__name__).info(
+                "Cancelling prior orchestration task for user '%s' before starting plan %s",
+                user_id, plan_id,
+            )
+            prior.cancel()
+
+        task = asyncio.create_task(run_orchestration_task())
+        orchestration_config.run_tasks[user_id] = task
 
         return {
             "status": "Request started successfully",

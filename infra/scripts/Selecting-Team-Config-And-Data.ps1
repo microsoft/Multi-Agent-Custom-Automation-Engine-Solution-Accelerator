@@ -4,6 +4,12 @@ param(
     [string]$ResourceGroup
 )
 
+# Resolve repo root (this script lives in infra/scripts/) and run from there so
+# that relative paths like 'infra/scripts/...' and 'content_packs/...' resolve
+# correctly regardless of the caller's working directory.
+$repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..')
+Set-Location $repoRoot
+
 # Variables
 $directoryPath = ""
 $backendUrl = ""
@@ -532,42 +538,40 @@ $isTeamConfigFailed = $false
 $isSampleDataFailed = $false
 $failedTeamConfigs = 0
 
-# Use Case 3 -----=--
+# Use Case 3 - HR Employee Onboarding (content pack, no datasets)
 if($useCaseSelection -eq "3" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
-    Write-Host "Uploading Team Configuration for HR Employee Onboarding..."
-    $directoryPath = "data/agent_teams"
-    $teamId = "00000000-0000-0000-0000-000000000001"
+    Write-Host "Provisioning HR Employee Onboarding content pack..."
+    $packPath = "content_packs/hr_onboarding"
     try {
-        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $directoryPath, $userPrincipalId, $teamId -Wait -NoNewWindow -PassThru
+        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $packPath, $userPrincipalId, "content-packs" -Wait -NoNewWindow -PassThru
         if ($process.ExitCode -ne 0) {
             Write-Host "Error: Team configuration for HR Employee Onboarding upload failed."
             $isTeamConfigFailed = $true
+            $failedTeamConfigs += 1
         }
     } catch {
         Write-Host "Error: Uploading team configuration failed."
         $isTeamConfigFailed = $true
         $failedTeamConfigs += 1
     }
-
 }
 
-# Use Case 4 -----=--
+# Use Case 4 - Marketing Press Release (content pack, no datasets)
 if($useCaseSelection -eq "4" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
-    Write-Host "Uploading Team Configuration for Marketing Press Release..."
-    $directoryPath = "data/agent_teams"
-    $teamId = "00000000-0000-0000-0000-000000000002"
+    Write-Host "Provisioning Marketing Press Release content pack..."
+    $packPath = "content_packs/marketing_press_release"
     try {
-        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $directoryPath, $userPrincipalId, $teamId -Wait -NoNewWindow -PassThru
+        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $packPath, $userPrincipalId, "content-packs" -Wait -NoNewWindow -PassThru
         if ($process.ExitCode -ne 0) {
             Write-Host "Error: Team configuration for Marketing Press Release upload failed."
             $isTeamConfigFailed = $true
+            $failedTeamConfigs += 1
         }
     } catch {
         Write-Host "Error: Uploading team configuration failed."
         $isTeamConfigFailed = $true
         $failedTeamConfigs += 1
     }
-
 }
 
 $stIsPublicAccessDisabled = $false
@@ -666,11 +670,12 @@ if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection 
 
 
 if($useCaseSelection -eq "1" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
-    Write-Host "Uploading Team Configuration for RFP Evaluation..."
-    $directoryPath = "data/agent_teams"
-    $teamId = "00000000-0000-0000-0000-000000000004"
+    # RFP Evaluation is provisioned via the unified content-pack pipeline.
+    Write-Host "Provisioning RFP Evaluation content pack..."
+    $packPath = "content_packs/rfp_evaluation"
+
     try {
-        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $directoryPath, $userPrincipalId, $teamId -Wait -NoNewWindow -PassThru
+        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $packPath, $userPrincipalId, "content-packs" -Wait -NoNewWindow -PassThru
         if ($process.ExitCode -ne 0) {
             Write-Host "Error: Team configuration for RFP Evaluation upload failed."
             $failedTeamConfigs += 1
@@ -680,71 +685,30 @@ if($useCaseSelection -eq "1" -or $useCaseSelection -eq "all" -or $useCaseSelecti
         Write-Host "Error: Uploading team configuration failed."
         $isTeamConfigFailed = $true
     }
-    Write-Host "Uploaded Team Configuration for RFP Evaluation..."
+    Write-Host "Uploaded Team Configuration for RFP Evaluation."
 
-    $directoryPath = "data/datasets/rfp/summary"
-    # Upload sample files to blob storage
-    Write-Host "Uploading sample files to blob storage for RFP Evaluation..."
-    $result = az storage blob upload-batch --account-name $storageAccount --destination $blobContainerForRFPSummary --source $directoryPath --auth-mode login --pattern "*" --overwrite --output none
-
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Error: Failed to upload files to blob storage."
-        $isSampleDataFailed = $true
-        exit 1
-    }
-
-    $directoryPath = "data/datasets/rfp/risk"
-    $result = az storage blob upload-batch --account-name $storageAccount --destination $blobContainerForRFPRisk --source $directoryPath --auth-mode login --pattern "*" --overwrite --output none
-
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Error: Failed to upload files to blob storage."
-        $isSampleDataFailed = $true
-        exit 1
-    }
-
-    $directoryPath = "data/datasets/rfp/compliance"
-    # Upload sample files to blob storage
-    $result = az storage blob upload-batch --account-name $storageAccount --destination $blobContainerForRFPCompliance --source $directoryPath --auth-mode login --pattern "*" --overwrite --output none
-
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Error: Failed to upload files to blob storage."
-        $isSampleDataFailed = $true
-        exit 1
-    }
-    Write-Host "Files uploaded successfully to blob storage."
-
-    # Run the Python script to index data
-    Write-Host "Running the python script to index data for RFP Evaluation"
-    $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/index_datasets.py", $storageAccount, $blobContainerForRFPSummary , $aiSearch, $aiSearchIndexForRFPSummary -Wait -NoNewWindow -PassThru
-
-    if ($process.ExitCode -ne 0) {
-        Write-Host "Error: Indexing python script execution failed."
+    try {
+        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/provision_content_pack.py", $aiSearch, $packPath, $storageAccount -Wait -NoNewWindow -PassThru
+        if ($process.ExitCode -ne 0) {
+            Write-Host "Error: Provisioning RFP content pack indexes failed."
+            $isSampleDataFailed = $true
+        }
+    } catch {
+        Write-Host "Error: Provisioning RFP content pack indexes failed: $_"
         $isSampleDataFailed = $true
     }
-
-    $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/index_datasets.py", $storageAccount, $blobContainerForRFPRisk , $aiSearch, $aiSearchIndexForRFPRisk -Wait -NoNewWindow -PassThru
-
-    if ($process.ExitCode -ne 0) {
-        Write-Host "Error: Indexing python script execution failed."
-        $isSampleDataFailed = $true
-    }
-
-    $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/index_datasets.py", $storageAccount, $blobContainerForRFPCompliance , $aiSearch, $aiSearchIndexForRFPCompliance -Wait -NoNewWindow -PassThru
-
-    if ($process.ExitCode -ne 0) {
-        Write-Host "Error: Indexing python script execution failed."
-        $isSampleDataFailed = $true
-    }
-    Write-Host "Python script to index data for RFP Evaluation successfully executed."
+    Write-Host "RFP Evaluation content pack provisioning complete."
 }
 
 
 if($useCaseSelection -eq "5" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
-    Write-Host "Uploading Team Configuration for Contract Compliance Review..."
-    $directoryPath = "data/agent_teams"
-    $teamId = "00000000-0000-0000-0000-000000000005"
+    # Contract Compliance Review is now a content pack. Provision its team config + indexes
+    # via the unified content-pack pipeline.
+    Write-Host "Provisioning Contract Compliance Review content pack..."
+    $packPath = "content_packs/contract_compliance"
+
     try {
-        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $directoryPath, $userPrincipalId, $teamId -Wait -NoNewWindow -PassThru
+        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $packPath, $userPrincipalId, "content-packs" -Wait -NoNewWindow -PassThru
         if ($process.ExitCode -ne 0) {
             Write-Host "Error: Team configuration for Contract Compliance Review upload failed."
             $failedTeamConfigs += 1
@@ -754,70 +718,29 @@ if($useCaseSelection -eq "5" -or $useCaseSelection -eq "all" -or $useCaseSelecti
         Write-Host "Error: Uploading team configuration failed."
         $isTeamConfigFailed = $true
     }
-    Write-Host "Uploaded Team Configuration for Contract Compliance Review..."
+    Write-Host "Uploaded Team Configuration for Contract Compliance Review."
 
-    $directoryPath = "data/datasets/contract_compliance/summary"
-    # Upload sample files to blob storage
-    Write-Host "Uploading sample files to blob storage for Contract Compliance Review..."
-    $result = az storage blob upload-batch --account-name $storageAccount --destination $blobContainerForContractSummary --source $directoryPath --auth-mode login --pattern "*" --overwrite --output none
-
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Error: Failed to upload files to blob storage."
-        $isSampleDataFailed = $true
-        exit 1
-    }
-
-    $directoryPath = "data/datasets/contract_compliance/risk"
-    $result = az storage blob upload-batch --account-name $storageAccount --destination $blobContainerForContractRisk --source $directoryPath --auth-mode login --pattern "*" --overwrite --output none
-
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Error: Failed to upload files to blob storage."
-        $isSampleDataFailed = $true
-        exit 1
-    }
-
-    $directoryPath = "data/datasets/contract_compliance/compliance"
-
-    $result = az storage blob upload-batch --account-name $storageAccount --destination $blobContainerForContractCompliance --source $directoryPath --auth-mode login --pattern "*" --overwrite --output none
-
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Error: Failed to upload files to blob storage."
-        $isSampleDataFailed = $true
-        exit 1
-    }
-    Write-Host "Files uploaded successfully to blob storage."
-
-    # Run the Python script to index data
-    Write-Host "Running the python script to index data for Contract Compliance Review"
-    $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/index_datasets.py", $storageAccount, $blobContainerForContractSummary , $aiSearch, $aiSearchIndexForContractSummary -Wait -NoNewWindow -PassThru
-
-    if ($process.ExitCode -ne 0) {
-        Write-Host "Error: Indexing python script execution failed."
+    try {
+        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/provision_content_pack.py", $aiSearch, $packPath, $storageAccount -Wait -NoNewWindow -PassThru
+        if ($process.ExitCode -ne 0) {
+            Write-Host "Error: Provisioning Contract Compliance content pack indexes failed."
+            $isSampleDataFailed = $true
+        }
+    } catch {
+        Write-Host "Error: Provisioning Contract Compliance content pack indexes failed: $_"
         $isSampleDataFailed = $true
     }
-
-    $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/index_datasets.py", $storageAccount, $blobContainerForContractRisk , $aiSearch, $aiSearchIndexForContractRisk -Wait -NoNewWindow -PassThru
-
-    if ($process.ExitCode -ne 0) {
-        Write-Host "Error: Indexing python script execution failed."
-        $isSampleDataFailed = $true
-    }
-
-    $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/index_datasets.py", $storageAccount, $blobContainerForContractCompliance , $aiSearch, $aiSearchIndexForContractCompliance -Wait -NoNewWindow -PassThru
-
-    if ($process.ExitCode -ne 0) {
-        Write-Host "Error: Indexing python script execution failed."
-        $isSampleDataFailed = $true
-    }
-    Write-Host "Python script to index data for Contract Compliance Review successfully executed."
+    Write-Host "Contract Compliance Review content pack provisioning complete."
 }
 
 if($useCaseSelection -eq "2" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
-    Write-Host "Uploading Team Configuration for Retail Customer Satisfaction..."
-    $directoryPath = "data/agent_teams"
-    $teamId = "00000000-0000-0000-0000-000000000003"
+    # Retail Customer Satisfaction is now a content pack at
+    # content_packs/retail_customer/. Provision via the unified pipeline.
+    Write-Host "Provisioning Retail Customer Satisfaction content pack..."
+    $packPath = "content_packs/retail_customer"
+
     try {
-        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $directoryPath, $userPrincipalId, $teamId -Wait -NoNewWindow -PassThru
+        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $packPath, $userPrincipalId, "content-packs" -Wait -NoNewWindow -PassThru
         if ($process.ExitCode -ne 0) {
             Write-Host "Error: Team configuration for Retail Customer Satisfaction upload failed."
             $failedTeamConfigs += 1
@@ -827,46 +750,19 @@ if($useCaseSelection -eq "2" -or $useCaseSelection -eq "all" -or $useCaseSelecti
         Write-Host "Error: Uploading team configuration failed."
         $isTeamConfigFailed = $true
     }
-    Write-Host "Uploaded Team Configuration for Retail Customer Satisfaction..."
+    Write-Host "Uploaded Team Configuration for Retail Customer Satisfaction."
 
-    $directoryPath = "data/datasets/retail/customer"
-    # Upload sample files to blob storage
-    Write-Host "Uploading sample files to blob storage for Retail Customer Satisfaction ..."
-    $result = az storage blob upload-batch --account-name $storageAccount --destination "retail-dataset-customer" --source $directoryPath --auth-mode login --pattern "*" --overwrite --output none
-
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Error: Failed to upload files to blob storage."
+    try {
+        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/provision_content_pack.py", $aiSearch, $packPath, $storageAccount -Wait -NoNewWindow -PassThru
+        if ($process.ExitCode -ne 0) {
+            Write-Host "Error: Provisioning Retail content pack indexes failed."
+            $isSampleDataFailed = $true
+        }
+    } catch {
+        Write-Host "Error: Provisioning Retail content pack indexes failed: $_"
         $isSampleDataFailed = $true
-        exit 1
     }
-
-    $directoryPath = "data/datasets/retail/order"
-    $result = az storage blob upload-batch --account-name $storageAccount --destination "retail-dataset-order" --source "data/datasets/retail/order" --auth-mode login --pattern "*" --overwrite --output none
-
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Error: Failed to upload files to blob storage."
-        $isSampleDataFailed = $true
-        exit 1
-    }
-    Write-Host "Files uploaded successfully to blob storage."
-
-    # Run the Python script to index data
-    Write-Host "Running the python script to index data for Retail Customer Satisfaction"
-    $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/index_datasets.py", $storageAccount, "retail-dataset-customer", $aiSearch, "macae-retail-customer-index" -Wait -NoNewWindow -PassThru
-
-    if ($process.ExitCode -ne 0) {
-        Write-Host "Error: Indexing python script execution failed."
-        $isSampleDataFailed = $true
-        exit 1
-    }
-    $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/index_datasets.py", $storageAccount, "retail-dataset-order" , $aiSearch, "macae-retail-order-index" -Wait -NoNewWindow -PassThru
-
-    if ($process.ExitCode -ne 0) {
-        Write-Host "Error: Indexing python script execution failed."
-        $isSampleDataFailed = $true
-        exit 1
-    }
-    Write-Host "Python script to index data for Retail Customer Satisfaction successfully executed."
+    Write-Host "Retail Customer Satisfaction content pack provisioning complete."
 }
 
 # Auto-discover and provision every content pack under content_packs/*.
