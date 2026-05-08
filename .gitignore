@@ -473,3 +473,15 @@ data/sample_code/
 *.local*.parameters.json
 # Local debug/ops scripts (not for repo)
 scripts/
+# Local debug/log dumps (terminal output captures, plan inspections, image scratch)
+be*.json
+be*.txt
+backend_logs*.txt
+mcp*.json
+mcp*.txt
+mcp_logs*.txt
+plan_*.json
+plan_full*.txt
+plan.json
+upload_resp.json
+generated_image.png

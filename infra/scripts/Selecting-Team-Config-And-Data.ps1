@@ -395,6 +395,7 @@ Write-Host "2. Retail Customer Satisfaction"
 Write-Host "3. HR Employee Onboarding"
 Write-Host "4. Marketing Press Release"
 Write-Host "5. Contract Compliance Review"
+Write-Host "6. Content Generation"
 Write-Host "7. All"
 Write-Host "==============================================="
 Write-Host ""
@@ -440,12 +441,14 @@ do {
         Write-Host "Note: If you choose to install a single use case, installation of other use cases will require re-running this script."
     }
     elseif ($useCaseSelection -eq "6") {
-        $useCaseValid = $false
-        Write-Host "Invalid selection. Please enter a number from 1-5 or 7." -ForegroundColor Red
+        $selectedUseCase = "Content Generation"
+        $useCaseValid = $true
+        Write-Host "Selected: Content Generation"
+        Write-Host "Note: If you choose to install a single use case, installation of other use cases will require re-running this script."
     }
     else {
         $useCaseValid = $false
-        Write-Host "Invalid selection. Please enter a number from 1-5 or 7." -ForegroundColor Red
+        Write-Host "Invalid selection. Please enter a number from 1-6 or 7." -ForegroundColor Red
     }
 } while (-not $useCaseValid)
 
@@ -569,7 +572,7 @@ if($useCaseSelection -eq "4" -or $useCaseSelection -eq "all" -or $useCaseSelecti
 
 $stIsPublicAccessDisabled = $false
 $srchIsPublicAccessDisabled = $false
-# Enable public access for resources
+# Enable public access for resources (only for use cases that upload sample data to storage/search)
 if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "6" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7"){
     if ($ResourceGroup) {
         # Check if resource group has Type=WAF tag
@@ -866,11 +869,55 @@ if($useCaseSelection -eq "2" -or $useCaseSelection -eq "all" -or $useCaseSelecti
     Write-Host "Python script to index data for Retail Customer Satisfaction successfully executed."
 }
 
+# Auto-discover and provision every content pack under content_packs/*.
+# A pack may contain:
+#   - agent_teams/*.json  -> uploaded as team configurations (always)
+#   - pack.json           -> declares pack-level resources (e.g. AI Search
+#                            indexes built from datasets/data/*.csv) and is
+#                            applied via infra/scripts/provision_content_pack.py
+# Option 6 provisions only the content_gen pack; option 7/all provisions every
+# pack discovered. Adding a new pack folder + pack.json is enough to extend this.
+if($useCaseSelection -eq "6" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
+    if ($useCaseSelection -eq "6") {
+        Write-Host "Provisioning Content Generation content pack..."
+        $packPath = "content_packs/content_gen"
+    } else {
+        Write-Host "Provisioning all content_packs/* packs..."
+        $packPath = "content_packs"
+    }
+
+    # 1. Upload team configurations declared by the pack(s).
+    $teamId = "content-packs"
+    try {
+        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $packPath, $userPrincipalId, $teamId -Wait -NoNewWindow -PassThru
+        if ($process.ExitCode -ne 0) {
+            Write-Host "Warning: One or more content pack team configurations failed to upload."
+            $isTeamConfigFailed = $true
+        }
+    } catch {
+        Write-Host "Warning: Uploading content pack team configurations failed: $_"
+        $isTeamConfigFailed = $true
+    }
+
+    # 2. Provision pack-declared search indexes (and any future pack resources).
+    Write-Host "Provisioning content pack search indexes..."
+    try {
+        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/provision_content_pack.py", $aiSearch, $packPath, $storageAccount -Wait -NoNewWindow -PassThru
+        if ($process.ExitCode -ne 0) {
+            Write-Host "Warning: One or more content pack indexes failed to provision."
+            $isSampleDataFailed = $true
+        }
+    } catch {
+        Write-Host "Warning: Provisioning content pack indexes failed: $_"
+        $isSampleDataFailed = $true
+    }
+}
+
 if ($isTeamConfigFailed -or $isSampleDataFailed) {
     Write-Host "`nOne or more tasks failed. Please check the error messages above."
     exit 1
 } else {
-    if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7"){
+    if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "6" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7"){
         Write-Host "`nTeam configuration upload and sample data processing completed successfully."
     }else {
         Write-Host "`nTeam configuration upload completed successfully."

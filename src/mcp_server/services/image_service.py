@@ -135,6 +135,11 @@ class ImageService(MCPToolBase):
             body = {"prompt": prompt, "n": 1, "size": size}
 
             logger.info("Generating image (deployment=%s, size=%s, prompt_len=%d)", deployment, size, len(prompt))
+            # Log the full prompt at INFO so we can audit what the agent actually sent.
+            # Truncate to keep log lines bounded.
+            _MAX_PROMPT_LOG = 4000
+            _logged_prompt = prompt if len(prompt) <= _MAX_PROMPT_LOG else prompt[:_MAX_PROMPT_LOG] + f"...[truncated, total={len(prompt)}]"
+            logger.info("Image prompt: %s", _logged_prompt)
             async with httpx.AsyncClient(timeout=120.0) as client:
                 resp = await client.post(url, json=body, headers=headers)
                 if resp.status_code >= 400:

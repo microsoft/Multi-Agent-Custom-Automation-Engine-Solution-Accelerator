@@ -60,6 +60,11 @@ class MCPToolFactory:
         for service in self._services.values():
             service.register_tools(self._mcp_server)
 
+        # Install per-request domain filtering (driven by `?domains=` query param).
+        from .domain_filter import DomainFilterMiddleware
+
+        self._mcp_server.add_middleware(DomainFilterMiddleware())
+
         return self._mcp_server
 
     def get_services_by_domain(self, domain: Domain) -> Optional[MCPToolBase]:

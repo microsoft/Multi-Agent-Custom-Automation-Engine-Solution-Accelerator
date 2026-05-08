@@ -1363,7 +1363,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
           }
           {
             name: 'SUPPORTED_MODELS'
-            value: '["o3","o4-mini","gpt-4.1","gpt-4.1-mini"]'
+            value: '["o3","o4-mini","gpt-4.1","gpt-4.1-mini","gpt-5-mini"]'
           }
           {
             name: 'AZURE_AI_SEARCH_API_KEY'
@@ -1519,6 +1519,26 @@ module containerAppMcp 'br/public:avm/res/app/container-app:0.18.1' = {
             name: 'DATASET_PATH'
             value: './datasets'
           }
+          {
+            name: 'AZURE_OPENAI_ENDPOINT'
+            value: 'https://${aiFoundryAiServicesResourceName}.openai.azure.com/'
+          }
+          {
+            name: 'AZURE_OPENAI_IMAGE_DEPLOYMENT'
+            value: gptImageModelName
+          }
+          {
+            name: 'AZURE_STORAGE_BLOB_URL'
+            value: avmStorageAccount.outputs.serviceEndpoints.blob
+          }
+          {
+            name: 'AZURE_STORAGE_IMAGES_CONTAINER'
+            value: storageContainerNameGeneratedImages
+          }
+          {
+            name: 'AZURE_CLIENT_ID'
+            value: userAssignedIdentity!.outputs.clientId
+          }
         ]
       }
     ]
@@ -1606,6 +1626,10 @@ param storageContainerNameRFPCompliance string = 'rfp-compliance-dataset'
 param storageContainerNameContractSummary string = 'contract-summary-dataset'
 param storageContainerNameContractRisk string = 'contract-risk-dataset'
 param storageContainerNameContractCompliance string = 'contract-compliance-dataset'
+param storageContainerNameGeneratedImages string = 'generated-images'
+
+@description('Optional. Image-generation model deployment name (used by MCP image_service). Defaults to gpt-image-1.')
+param gptImageModelName string = 'gpt-image-1'
 module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
   name: take('avm.res.storage.storage-account.${storageAccountName}', 64)
   params: {
@@ -1693,6 +1717,10 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
         }
         {
           name: storageContainerNameContractCompliance
+          publicAccess: 'None'
+        }
+        {
+          name: storageContainerNameGeneratedImages
           publicAccess: 'None'
         }
       ]
@@ -1907,7 +1935,7 @@ output AZURE_COGNITIVE_SERVICES string = 'https://cognitiveservices.azure.com/.d
 output REASONING_MODEL_NAME string = aiFoundryAiServicesReasoningModelDeployment.name
 output MCP_SERVER_NAME string = 'MacaeMcpServer'
 output MCP_SERVER_DESCRIPTION string = 'MCP server with greeting, HR, and planning tools'
-output SUPPORTED_MODELS string = '["o3","o4-mini","gpt-4.1","gpt-4.1-mini"]'
+output SUPPORTED_MODELS string = '["o3","o4-mini","gpt-4.1","gpt-4.1-mini","gpt-5-mini"]'
 output AZURE_AI_SEARCH_API_KEY string = '<Deployed-Search-ApiKey>'
 output BACKEND_URL string = 'https://${containerApp.outputs.fqdn}'
 output AZURE_AI_PROJECT_ENDPOINT string = aiFoundryAiProjectEndpoint
