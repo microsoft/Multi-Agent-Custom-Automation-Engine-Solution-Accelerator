@@ -1134,7 +1134,10 @@ module containerAppEnvironment 'br/public:avm/res/app/managed-environment:0.13.1
   params: {
     name: containerAppEnvironmentResourceName
     location: location
-    tags: tags
+    tags: {
+      ...resourceGroup().tags
+      ...tags
+    }
     enableTelemetry: enableTelemetry
     // WAF aligned configuration for Private Networking
     publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
