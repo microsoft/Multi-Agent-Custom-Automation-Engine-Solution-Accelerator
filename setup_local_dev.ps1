@@ -5,20 +5,21 @@
 # Automation Engine Solution Accelerator on Windows.
 #
 # Usage:
-#   .\setup_local_dev.ps1 [-ResourceGroup <name>] [-Subscription <id>] [-AzdEnvName <name>] [-AssignRbac] [-SkipVscode]
+#   .\setup_local_dev.ps1 [-ResourceGroup <name>] [-Subscription <id>] [-AssignRbac] [-SkipVscode] [-SkipPrereqs]
 #
 # Examples:
-#   .\setup_local_dev.ps1 -ResourceGroup "my-resource-group"
-#   .\setup_local_dev.ps1 -AzdEnvName "my-azd-env"
+#   .\setup_local_dev.ps1                                    # auto-detects config from .azure/ folder
+#   .\setup_local_dev.ps1 -ResourceGroup "rg-macae-dev"      # fetch config from Azure deployment outputs
 #   .\setup_local_dev.ps1 -ResourceGroup "rg-macae-dev" -AssignRbac
+#   .\setup_local_dev.ps1 -ResourceGroup "rg-macae-dev" -SkipPrereqs
 # ==============================================================================
 
 param(
     [string]$ResourceGroup = "",
     [string]$Subscription = "",
-    [string]$AzdEnvName = "",
     [switch]$AssignRbac,
-    [switch]$SkipVscode
+    [switch]$SkipVscode,
+    [switch]$SkipPrereqs
 )
 
 $ErrorActionPreference = "Stop"
@@ -59,6 +60,11 @@ function Test-CommandExists {
 function Check-Prerequisites {
     Write-LogStep "Step 1: Checking Prerequisites"
 
+    if ($SkipPrereqs) {
+        Write-LogInfo "Skipping prerequisite checks (-SkipPrereqs passed)."
+        return
+    }
+
     $missing = @()
 
     # Python 3.12+
@@ -80,18 +86,19 @@ function Check-Prerequisites {
         $missing += "Python.Python.3.12"
     }
 
-    # Node.js
+    # Node.js (npm is bundled with Node — no separate check needed)
     if (Test-CommandExists "node") {
         Write-LogSuccess "Node.js found: $(node --version)"
     } else {
         $missing += "OpenJS.NodeJS.LTS"
     }
 
-    # npm
-    if (Test-CommandExists "npm") {
+    # npm — only warn separately if Node is installed but npm somehow isn't
+    if ((Test-CommandExists "node") -and -not (Test-CommandExists "npm")) {
+        Write-LogWarn "npm not found despite Node.js being installed — try reinstalling Node.js"
+        $missing += "OpenJS.NodeJS.LTS"
+    } elseif (Test-CommandExists "npm") {
         Write-LogSuccess "npm found: $(npm --version)"
-    } else {
-        $missing += "npm (install Node.js)"
     }
 
     # uv
@@ -120,7 +127,19 @@ function Check-Prerequisites {
         return
     }
 
-    Write-LogError "Missing prerequisites: $($missing -join ', ')"
+    # Build friendly display names for the error summary
+    $friendlyNames = $missing | ForEach-Object {
+        switch -Regex ($_) {
+            "Python"    { "Python 3.12" }
+            "NodeJS"    { "Node.js (LTS)" }
+            "npm"       { "npm" }
+            "uv"        { "uv (Python package manager)" }
+            "AzureCLI"  { "Azure CLI" }
+            "Git"       { "Git" }
+            default     { $_ }
+        }
+    }
+    Write-LogError "Missing prerequisites: $($friendlyNames -join ', ')"
     Write-Host ""
     Write-LogWarn "Please install the following before proceeding:"
     Write-Host ""
@@ -145,12 +164,13 @@ function Check-Prerequisites {
             }
             "uv" {
                 Write-Host "  ┌─ uv (Python package manager) ─────────────────────────────────"
-                Write-Host "  │  Quick install options:"
-                Write-Host "  │    Option 1: py -3.12 -m pip install uv"
-                Write-Host "  │    Option 2: winget install astral-sh.uv"
-                Write-Host "  │    Option 3: irm https://astral.sh/uv/install.ps1 | iex"
+                Write-Host "  │  Quick install options (recommended → fallback):"
+                Write-Host "  │    Option 1 (recommended): winget install astral-sh.uv"
+                Write-Host "  │    Option 2: irm https://astral.sh/uv/install.ps1 | iex"
+                Write-Host "  │    Option 3 (if Python already installed): py -3.12 -m pip install uv"
                 Write-Host "  │  Docs: https://docs.astral.sh/uv/getting-started/installation/"
                 Write-Host "  │  Verify: uv --version"
+                Write-Host "  │  Note: Restart your terminal after install so PATH updates take effect."
                 Write-Host "  └──────────────────────────────────────────────────────────────"
             }
             "AzureCLI" {
@@ -227,138 +247,161 @@ function Check-AzureAuth {
 function Fetch-Configuration {
     Write-LogStep "Step 3: Fetching Azure Configuration"
 
-    $configSource = ""
-
-    # Priority 1: Resource group provided via parameter
+    # PATH 1: Resource group explicitly provided — fetch from Azure deployment outputs
     if ($ResourceGroup) {
-        $configSource = "rg"
-    }
-    # Priority 2: azd env provided
-    elseif ($AzdEnvName) {
-        $configSource = "azd"
-    }
-    # Priority 3: Existing .env with valid values - use silently
-    elseif (Test-Path (Join-Path $BackendDir ".env")) {
-        $envContent = Get-Content (Join-Path $BackendDir ".env") -Raw -ErrorAction SilentlyContinue
-        if ($envContent -match "COSMOSDB_ENDPOINT=https://") {
-            Write-LogInfo "Existing .env file found with valid configuration. Using it."
-            $configSource = "existing"
-        }
+        Write-LogInfo "Resource group provided. Fetching config from Azure deployment outputs..."
+        Fetch-FromResourceGroup
+        return
     }
 
-    # If still not determined, ask for RG name
-    if (-not $configSource) {
-        Write-Host ""
-        Write-LogInfo "No resource group provided and no existing .env found."
-        Write-LogInfo "Please provide your Azure Resource Group name (from your deployment)."
-        $script:ResourceGroup = Read-Host "Resource Group name"
-        if (-not $script:ResourceGroup) {
-            Write-LogError "Resource group name is required."
-            Write-LogInfo "Usage: .\setup_local_dev.ps1 -ResourceGroup <name>"
-            exit 1
-        }
-        $configSource = "rg"
-    }
+    # PATH 2: No RG given — look for .azure/<env>/.env written by 'azd up' / local deployment
+    Write-LogInfo "No -ResourceGroup provided. Looking for existing config in .azure/ folder..."
 
-    switch ($configSource) {
-        "azd" { Fetch-FromAzd }
-        "rg" { Fetch-FromResourceGroup }
-        "existing" {
-            if (Test-Path (Join-Path $BackendDir ".env")) {
-                Write-LogSuccess "Using existing .env file"
-            } else {
-                Copy-Item (Join-Path $BackendDir ".env.sample") (Join-Path $BackendDir ".env")
-                Write-LogWarn "Created .env from template. Please fill in values and re-run."
-                exit 0
+    $azdDir = Join-Path $ScriptDir ".azure"
+    $azdEnvFile = $null
+    $detectedEnvName = ""
+
+    # First try config.json defaultEnvironment (most reliable — set by last 'azd up')
+    $configJson = Join-Path $azdDir "config.json"
+    if (Test-Path $configJson) {
+        try {
+            $cfg = Get-Content $configJson -Raw | ConvertFrom-Json
+            if ($cfg.defaultEnvironment) {
+                $candidate = Join-Path $azdDir "$($cfg.defaultEnvironment)\.env"
+                if (Test-Path $candidate) {
+                    $azdEnvFile = $candidate
+                    $detectedEnvName = $cfg.defaultEnvironment
+                }
             }
+        } catch {}
+    }
+
+    # Fallback: pick the most recently modified .env across all .azure/<env>/ folders
+    if (-not $azdEnvFile) {
+        $latest = Get-ChildItem -Path $azdDir -Filter ".env" -Recurse -ErrorAction SilentlyContinue |
+                  Sort-Object LastWriteTime -Descending |
+                  Select-Object -First 1
+        if ($latest) {
+            $azdEnvFile = $latest.FullName
+            $detectedEnvName = $latest.Directory.Name
         }
     }
-}
 
-function Fetch-FromAzd {
-    Write-LogInfo "Fetching from azd environment: $AzdEnvName"
+    if ($azdEnvFile) {
+        Write-LogSuccess "Found deployment config '$detectedEnvName': $azdEnvFile"
+        $azdFileValues = Get-Content $azdEnvFile -Raw
 
-    if (-not (Test-CommandExists "azd")) {
-        Write-LogError "azd CLI not found. Install from https://aka.ms/azd"
-        exit 1
+        # Extract resource group so RBAC step works
+        if ($azdFileValues -match 'AZURE_RESOURCE_GROUP="?([^"\r\n]+)"?') {
+            $script:ResourceGroup = $Matches[1]
+            Write-LogInfo "  Resource Group : $($script:ResourceGroup)"
+        }
+
+        Generate-EnvFile $azdFileValues
+        return
     }
 
-    $azdValues = azd env get-values --environment $AzdEnvName 2>$null
-    if (-not $azdValues) {
-        Write-LogError "Failed to get values from azd environment '$AzdEnvName'"
+    # PATH 3: No .env found — prompt user for RG name then fetch from Azure
+    Write-Host ""
+    Write-LogWarn "No .azure/ config found and no -ResourceGroup provided."
+    Write-LogInfo "Please enter your Azure Resource Group name (created during deployment):"
+    $script:ResourceGroup = Read-Host "Resource Group name"
+    if (-not $script:ResourceGroup) {
+        Write-LogError "Resource group name is required."
+        Write-LogInfo "Usage: .\setup_local_dev.ps1 -ResourceGroup <name>"
         exit 1
     }
-
-    Generate-EnvFile ($azdValues -join "`n")
+    Fetch-FromResourceGroup
 }
 
 function Fetch-FromResourceGroup {
-    Write-LogInfo "Fetching from Resource Group: $ResourceGroup"
+    Write-LogInfo "Fetching configuration from Resource Group: $ResourceGroup"
 
-    # Validate RG
+    # Validate RG exists
     $rgExists = az group show --name $ResourceGroup 2>$null
     if (-not $rgExists) {
         Write-LogError "Resource group '$ResourceGroup' not found"
         exit 1
     }
 
-    # Find backend container app
-    $containerApps = az containerapp list --resource-group $ResourceGroup --query "[].name" -o tsv 2>$null
-    $backendApp = ""
+    # --- Strategy 1: Deployment outputs (single call, exact values from main.bicep) ---
+    $deploymentName = az group show --name $ResourceGroup --query "tags.DeploymentName" -o tsv 2>$null
+    if ($deploymentName) {
+        Write-LogInfo "Found deployment '$deploymentName' — reading outputs..."
+        $outputsJson = az deployment group show `
+            --resource-group $ResourceGroup `
+            --name $deploymentName `
+            --query "properties.outputs" -o json 2>$null
 
-    if ($containerApps) {
-        foreach ($app in ($containerApps -split "`n")) {
-            $app = $app.Trim()
-            if ($app -like "ca-mcp-*") { continue }
-            $hasCosmos = az containerapp show --name $app --resource-group $ResourceGroup `
-                --query "properties.template.containers[0].env[?name=='COSMOSDB_ENDPOINT'].value" -o tsv 2>$null
-            if ($hasCosmos) {
-                $backendApp = $app
-                break
+        if ($outputsJson) {
+            $outputs = $outputsJson | ConvertFrom-Json
+            $lines = @()
+            foreach ($prop in $outputs.PSObject.Properties) {
+                $key   = $prop.Name.ToUpper()   # bicep outputs are already UPPER_CASE
+                $value = $prop.Value.value
+                if ($key -and ($null -ne $value) -and $value -ne '') {
+                    $lines += "$key=$value"
+                }
+            }
+            if ($lines.Count -gt 0) {
+                Write-LogSuccess "Read $($lines.Count) values from deployment outputs."
+                Generate-EnvFile ($lines -join "`n")
+                return
             }
         }
-    }
-
-    if ($backendApp) {
-        Write-LogSuccess "Found backend container app: $backendApp"
-        $envJson = az containerapp show --name $backendApp --resource-group $ResourceGroup `
-            --query "properties.template.containers[0].env" -o json 2>$null
-
-        $envVars = $envJson | ConvertFrom-Json
-        $lines = @()
-        foreach ($e in $envVars) {
-            if ($e.name -and $e.value) {
-                $lines += "$($e.name)=$($e.value)"
-            }
-        }
-        Generate-EnvFile ($lines -join "`n")
+        Write-LogWarn "Deployment outputs empty or unreadable — falling back to resource queries."
     } else {
-        Write-LogWarn "No backend container app found. Discovering resources..."
-        Fetch-FromResources
+        Write-LogInfo "No DeploymentName tag on resource group — querying resources directly."
     }
-}
 
-function Fetch-FromResources {
-    $subId = az account show --query id -o tsv
+    # --- Strategy 2: Query each resource type individually (fallback) ---
+    Write-LogInfo "Querying Azure resources..."
+    $subId    = az account show --query id -o tsv
     $tenantId = az account show --query tenantId -o tsv
 
+    # CosmosDB
     $cosmosName = az cosmosdb list --resource-group $ResourceGroup --query "[0].name" -o tsv 2>$null
+    if ($cosmosName) { Write-LogSuccess "  CosmosDB        : $cosmosName" }
+    else             { Write-LogWarn    "  CosmosDB        : not found" }
+
+    # AI Services
     $aiServicesName = az cognitiveservices account list --resource-group $ResourceGroup `
         --query "[?kind=='AIServices' || kind=='CognitiveServices'].name | [0]" -o tsv 2>$null
+    if ($aiServicesName) { Write-LogSuccess "  AI Services     : $aiServicesName" }
+    else                 { Write-LogWarn    "  AI Services     : not found" }
+
+    # AI Foundry Project
     $aiProjectName = az cognitiveservices account list --resource-group $ResourceGroup `
         --query "[?kind=='AIProject'].name | [0]" -o tsv 2>$null
+    if ($aiProjectName) { Write-LogSuccess "  AI Project      : $aiProjectName" }
+    else                { Write-LogWarn    "  AI Project      : not found (manual config needed)" }
+
+    # Search Service
     $searchName = az search service list --resource-group $ResourceGroup --query "[0].name" -o tsv 2>$null
-    $appInsightsKey = az monitor app-insights component list --resource-group $ResourceGroup `
+    if ($searchName) { Write-LogSuccess "  Search Service  : $searchName" }
+    else             { Write-LogWarn    "  Search Service  : not found" }
+
+    # Application Insights
+    $appInsightsKey  = az monitor app-insights component list --resource-group $ResourceGroup `
         --query "[0].instrumentationKey" -o tsv 2>$null
     $appInsightsConn = az monitor app-insights component list --resource-group $ResourceGroup `
         --query "[0].connectionString" -o tsv 2>$null
-    $storageName = az storage account list --resource-group $ResourceGroup --query "[0].name" -o tsv 2>$null
+    if ($appInsightsKey) { Write-LogSuccess "  App Insights    : found" }
+    else                 { Write-LogWarn    "  App Insights    : not found" }
 
-    $cosmosEndpoint = if ($cosmosName) { "https://$cosmosName.documents.azure.com:443/" } else { "" }
-    $aiEndpoint = if ($aiServicesName) { "https://$aiServicesName.openai.azure.com/" } else { "" }
-    $searchEndpoint = if ($searchName) { "https://$searchName.search.windows.net" } else { "" }
-    $storageUrl = if ($storageName) { "https://$storageName.blob.core.windows.net/" } else { "" }
-    $projectEndpoint = if ($aiServicesName -and $aiProjectName) { "https://$aiServicesName.services.ai.azure.com/api/projects/$aiProjectName" } else { "" }
+    # Storage Account
+    $storageName = az storage account list --resource-group $ResourceGroup --query "[0].name" -o tsv 2>$null
+    if ($storageName) { Write-LogSuccess "  Storage Account : $storageName" }
+    else              { Write-LogWarn    "  Storage Account : not found" }
+
+    # Build endpoint URLs
+    $cosmosEndpoint  = if ($cosmosName)     { "https://$cosmosName.documents.azure.com:443/" } else { "" }
+    $aiEndpoint      = if ($aiServicesName) { "https://$aiServicesName.openai.azure.com/" }    else { "" }
+    $searchEndpoint  = if ($searchName)     { "https://$searchName.search.windows.net" }        else { "" }
+    $storageUrl      = if ($storageName)    { "https://$storageName.blob.core.windows.net/" }   else { "" }
+    $projectEndpoint = if ($aiServicesName -and $aiProjectName) {
+        "https://$aiServicesName.services.ai.azure.com/api/projects/$aiProjectName"
+    } else { "" }
 
     $envLines = @"
 COSMOSDB_ENDPOINT=$cosmosEndpoint
@@ -647,13 +690,16 @@ function Setup-Backend {
         }
     }
 
-    if (-not (Test-Path ".venv")) {
+    # Check for activate script, not just the directory (handles broken/incomplete venvs)
+    if (-not (Test-Path ".venv\Scripts\activate")) {
+        if (Test-Path ".venv") { Write-LogWarn "Existing .venv is incomplete (no activate script), recreating..." }
         Write-LogInfo "Creating virtual environment..."
-        uv venv .venv
+        uv venv --seed .venv
+    } else {
+        Write-LogInfo "Virtual environment already exists"
     }
 
     Write-LogInfo "Installing dependencies..."
-    # Use --no-cache to avoid stale lock issues on Windows
     uv sync --python 3.12 --extra dev
 
     Write-LogSuccess "Backend setup complete"
@@ -665,9 +711,13 @@ function Setup-McpServer {
 
     Push-Location $McpDir
 
-    if (-not (Test-Path ".venv")) {
+    # Check for activate script, not just the directory (handles broken/incomplete venvs)
+    if (-not (Test-Path ".venv\Scripts\activate")) {
+        if (Test-Path ".venv") { Write-LogWarn "Existing .venv is incomplete (no activate script), recreating..." }
         Write-LogInfo "Creating virtual environment..."
-        uv venv .venv
+        uv venv --seed .venv
+    } else {
+        Write-LogInfo "Virtual environment already exists"
     }
 
     Write-LogInfo "Installing dependencies..."
@@ -682,13 +732,17 @@ function Setup-Frontend {
 
     Push-Location $FrontendDir
 
-    if (-not (Test-Path ".venv")) {
+    # Check for activate script, not just the directory (handles broken/incomplete venvs)
+    if (-not (Test-Path ".venv\Scripts\activate")) {
+        if (Test-Path ".venv") { Write-LogWarn "Existing .venv is incomplete (no activate script), recreating..." }
         Write-LogInfo "Creating Python virtual environment..."
-        python -m venv .venv
+        python -m venv --clear .venv
+    } else {
+        Write-LogInfo "Python virtual environment already exists"
     }
 
     Write-LogInfo "Installing Python dependencies..."
-    & ".\.venv\Scripts\pip.exe" install -q -r requirements.txt
+    & ".venv\Scripts\pip.exe" install -q -r requirements.txt
 
     Write-LogInfo "Installing npm dependencies..."
     npm install
