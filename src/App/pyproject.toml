@@ -9,6 +9,6 @@ dependencies = [
     "uvicorn[standard]>=0.38.0",
     "jinja2",
     "azure-identity",
-    "python-dotenv",
+    "python-dotenv==1.2.2",
     "python-multipart",
 ]
