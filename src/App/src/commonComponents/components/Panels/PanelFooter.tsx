@@ -4,7 +4,7 @@ const PanelFooter: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
     <div
       style={{
-        padding: "24px 16px",
+        padding: "24px 8px",
         width:'100%'
       }}
     >
