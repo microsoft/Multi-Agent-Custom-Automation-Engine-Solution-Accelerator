@@ -5,8 +5,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.39.26.7824",
-      "templateHash": "6973968965982796675"
+      "version": "0.43.8.12551",
+      "templateHash": "16253002153134395573"
     },
     "name": "Multi-Agent Custom Automation Engine",
     "description": "This module contains the resources required to deploy the [Multi-Agent Custom Automation Engine solution accelerator](https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) for both Sandbox environments and WAF aligned environments.\r\n\r\n> **Note:** This module is not intended for broad, generic use, as it was designed by the Commercial Solution Areas CTO team, as a Microsoft Solution Accelerator. Feature requests and bug fix requests are welcome if they support the needs of this organization but may not be incorporated if they aim to make this module more generic than what it needs to be for its primary use case. This module will likely be updated to leverage AVM resource modules in the future. This may result in breaking changes in upcoming versions when these features are implemented.\r\n"
@@ -4991,8 +4991,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "16466396517695720401"
+              "version": "0.43.8.12551",
+              "templateHash": "9540091515555271756"
             }
           },
           "definitions": {
@@ -24308,8 +24308,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "3729960794136576463"
+              "version": "0.43.8.12551",
+              "templateHash": "7866379492866507946"
             }
           },
           "definitions": {
@@ -24616,7 +24616,7 @@
               },
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.CognitiveServices/accounts/{0}', parameters('name'))]",
+              "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('name'))]",
               "name": "[coalesce(tryGet(coalesce(variables('formattedRoleAssignments'), createArray())[copyIndex()], 'name'), guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('name')), coalesce(variables('formattedRoleAssignments'), createArray())[copyIndex()].principalId, coalesce(variables('formattedRoleAssignments'), createArray())[copyIndex()].roleDefinitionId))]",
               "properties": {
                 "roleDefinitionId": "[coalesce(variables('formattedRoleAssignments'), createArray())[copyIndex()].roleDefinitionId]",
@@ -28012,8 +28012,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "2511165232243944989"
+              "version": "0.43.8.12551",
+              "templateHash": "2868048678223903575"
             }
           },
           "parameters": {
@@ -42561,8 +42561,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "17255929531929846207"
+              "version": "0.43.8.12551",
+              "templateHash": "18345308984648474640"
             }
           },
           "definitions": {
@@ -43518,7 +43518,7 @@
               },
               "type": "Microsoft.Insights/diagnosticSettings",
               "apiVersion": "2021-05-01-preview",
-              "scope": "[format('Microsoft.Web/sites/{0}', parameters('name'))]",
+              "scope": "[resourceId('Microsoft.Web/sites', parameters('name'))]",
               "name": "[coalesce(tryGet(coalesce(parameters('diagnosticSettings'), createArray())[copyIndex()], 'name'), format('{0}-diagnosticSettings', parameters('name')))]",
               "properties": {
                 "copy": [
@@ -43593,8 +43593,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.39.26.7824",
-                      "templateHash": "5308269420307571977"
+                      "version": "0.43.8.12551",
+                      "templateHash": "1009721598684973971"
                     },
                     "name": "Site App Settings",
                     "description": "This module deploys a Site App Setting."
@@ -54840,8 +54840,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "5805872877074593071"
+              "version": "0.43.8.12551",
+              "templateHash": "9739523049889844356"
             }
           },
           "parameters": {
