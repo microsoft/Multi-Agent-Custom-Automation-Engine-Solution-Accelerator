@@ -1,0 +1,16 @@
+work_order_id,asset_id,opened_date,priority,status,maintenance_type,component,estimated_downtime_hours,assigned_team,technician_contact,safety_flag,due_date,notes
+WO-RE-0001,RENEW-ASSET-001,2026-04-29,medium,in_progress,corrective,nacelle_heater,4,Northeast Wind O&M,tech.northeast1@example.invalid,false,2026-05-10,Investigate intermittent icing alarm.
+WO-RE-0002,RENEW-ASSET-002,2026-05-01,low,scheduled,preventive,inverter_block_a,2,Southwest Solar O&M,tech.southwest2@example.invalid,false,2026-05-16,Quarterly thermal scan.
+WO-RE-0003,RENEW-ASSET-003,2026-05-02,medium,scheduled,preventive,battery_hvac,6,Storage Reliability,tech.storage3@example.invalid,false,2026-05-14,HVAC filter replacement before summer peak.
+WO-RE-0004,RENEW-ASSET-004,2026-04-20,high,in_progress,corrective,blade_pitch_system,12,Midwest Wind O&M,tech.midwest4@example.invalid,true,2026-05-08,OSHA safety review required before climb.
+WO-RE-0005,RENEW-ASSET-005,2026-04-25,low,open,vegetation,combiner_access,3,Southeast Solar O&M,tech.southeast5@example.invalid,false,2026-05-18,Vegetation encroachment near block C.
+WO-RE-0006,RENEW-ASSET-006,2026-04-30,high,blocked,corrective,breaker_controls,10,Storage Reliability,tech.storage6@example.invalid,true,2026-05-07,Edge case: blocked pending interconnection outage window.
+WO-RE-0007,RENEW-ASSET-007,2026-04-18,high,overdue,corrective,gearbox,18,ERCOT Wind O&M,tech.ercot7@example.invalid,true,2026-05-02,Edge case: overdue high-priority gearbox inspection.
+WO-RE-0008,RENEW-ASSET-008,2026-05-03,medium,in_progress,commissioning,inverter_block_d,8,Western Solar Commissioning,tech.west8@example.invalid,false,2026-05-12,Commissioning punch list for reactive power test.
+WO-RE-0009,RENEW-ASSET-009,2026-05-04,low,scheduled,preventive,battery_management_system,3,Storage Reliability,tech.storage9@example.invalid,false,2026-05-21,Firmware version confirmation.
+WO-RE-0010,RENEW-ASSET-010,2026-04-15,high,in_progress,planned_outage,pitch_system,36,Western Wind O&M,tech.west10@example.invalid,true,2026-05-09,Main outage work package.
+WO-RE-0011,RENEW-ASSET-011,2026-03-30,medium,open,asset_life_extension,main_transformer,24,Midwest Solar O&M,tech.midwest11@example.invalid,false,2026-05-30,Retirement review transformer assessment.
+WO-RE-0012,RENEW-ASSET-012,2026-05-01,medium,blocked,commissioning,metering,5,Storage Commissioning,,false,2026-05-15,Edge case: technician contact pending vendor assignment.
+WO-RE-0013,RENEW-ASSET-013,2026-04-28,medium,open,corrective,yaw_drive,7,Northeast Wind O&M,tech.northeast13@example.invalid,false,2026-05-11,Winter storm post-event check.
+WO-RE-0014,RENEW-ASSET-014,2026-04-22,medium,scheduled,diagnostic,inverter_controls,4,Southwest Solar O&M,tech.southwest14@example.invalid,false,2026-05-13,Curtailment signal validation.
+WO-RE-0015,RENEW-ASSET-015,2026-05-05,low,scheduled,preventive,dc_cabling,2,Storage Reliability,tech.storage15@example.invalid,false,2026-05-25,Annual infrared inspection.

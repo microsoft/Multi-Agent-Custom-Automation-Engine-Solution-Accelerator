@@ -9,12 +9,13 @@
  */
 import { useCallback, useEffect, useRef } from 'react';
 import { useAppDispatch } from '@/store/hooks';
-import { ProcessedPlanData } from '@/models';
+import { AgentMessageType, PlanStatus, ProcessedPlanData } from '@/models';
 import {
     fetchPlanData,
     resetPlan,
 } from '@/store/slices/planSlice';
 import {
+    addAgentMessage,
     setAgentMessages,
     resetChat,
 } from '@/store/slices/chatSlice';
@@ -73,7 +74,20 @@ export function usePlanActions() {
                     dispatch(setAgentMessages(planResult.messages));
                 }
 
-                if (planResult?.streaming_message?.trim()) {
+                if (
+                    planResult?.plan?.overall_status === PlanStatus.FAILED &&
+                    planResult?.streaming_message?.trim()
+                ) {
+                    dispatch(addAgentMessage({
+                        agent: 'system',
+                        agent_type: AgentMessageType.SYSTEM_AGENT,
+                        timestamp: Date.now(),
+                        steps: [],
+                        next_steps: [],
+                        content: `Warning: ${planResult.streaming_message}`,
+                        raw_data: planResult.streaming_message,
+                    }));
+                } else if (planResult?.streaming_message?.trim()) {
                     dispatch(setStreamingMessageBuffer(planResult.streaming_message));
                     dispatch(setShowBufferingText(true));
                 }

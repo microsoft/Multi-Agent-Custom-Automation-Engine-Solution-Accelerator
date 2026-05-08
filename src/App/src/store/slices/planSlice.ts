@@ -160,6 +160,15 @@ const planSlice = createSlice({
                 (state.planData as any).plan.overall_status = PlanStatus.COMPLETED;
             }
         },
+        /** Single dispatch when FINAL_RESULT_MESSAGE arrives with an error status */
+        planFailedFinal(state) {
+            state.showProcessingPlanSpinner = false;
+            state.waitingForPlan = false;
+            state.showApprovalButtons = false;
+            if (state.planData?.plan) {
+                (state.planData as any).plan.overall_status = PlanStatus.FAILED;
+            }
+        },
 
         /** Reset everything back to initial state (used when navigating to a new plan) */
         resetPlan() {
@@ -184,7 +193,10 @@ const planSlice = createSlice({
                 }
 
                 if (planResult?.plan?.overall_status !== PlanStatus.COMPLETED) {
-                    state.continueWithWebsocketFlow = true;
+                    state.continueWithWebsocketFlow = ![
+                        PlanStatus.FAILED,
+                        PlanStatus.CANCELED,
+                    ].includes(planResult?.plan?.overall_status as PlanStatus);
                 }
 
                 // Mark plan as already approved if it's past the approval stage
@@ -229,6 +241,7 @@ export const {
     planApprovalRejected,
     approvalRequestReceived,
     planCompletedFinal,
+    planFailedFinal,
     resetPlan,
 } = planSlice.actions;
 

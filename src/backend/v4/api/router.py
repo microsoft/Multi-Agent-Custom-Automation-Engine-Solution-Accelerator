@@ -335,12 +335,13 @@ async def process_request(
         # Ensure orchestration is initialized before running
         # Force rebuild for each new task since Magentic workflows cannot be reused after completion
         team_service = TeamService(memory_store)
-        await OrchestrationManager.get_current_or_new_orchestration(
+        workflow = await OrchestrationManager.get_current_or_new_orchestration(
             user_id=user_id,
             team_config=team,
             team_switched=False,
             team_service=team_service,
             force_rebuild=True,  # Always rebuild workflow for new tasks
+            plan_id=plan_id,
         )
 
         track_event_if_configured(
@@ -371,7 +372,9 @@ async def process_request(
     try:
 
         async def run_orchestration_task():
-            await OrchestrationManager().run_orchestration(user_id, input_task)
+            await OrchestrationManager().run_orchestration(
+                user_id, input_task, plan_id, workflow=workflow
+            )
 
         background_tasks.add_task(run_orchestration_task)
 

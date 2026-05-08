@@ -64,6 +64,17 @@ The generated industry team config must satisfy the same backend/frontend contra
 - Explicit compliance reminders in relevant agent `system_message` values.
 - Synthetic sample data only unless the user explicitly provides safe customer-owned data.
 
+### GA repeatability rules
+
+For GA/demo-ready packs, make activation deterministic:
+
+- Use a stable, explicit `team_id`; deployment handoff must upload with that same ID instead of relying on generated IDs.
+- Include 3-4 `starting_tasks` with concise `name` values and complete prompts so the Home page can render Quick task cards immediately after team selection.
+- Keep each RAG agent's `index_name` matched to exactly one generated dataset and document that mapping in `SCHEMA_MAPPING.md`.
+- Do not depend on packaged postdeploy scripts to discover a custom industry pack. Handoff must list the exact team JSON path, dataset paths, Search index names, and upload/index commands for this pack only.
+- Add an expected smoke-test contract to `ACTIVATION_HANDOFF.md`: `/api/v4/init_team` returns the generated `team_id`, six-or-fewer agents, and non-empty `starting_tasks`; the UI shows the selected team and Quick task cards.
+- If deployment targets Azure resources with private networking or governance policies, defer all connectivity decisions to `deploy-adaptation`; do not recommend enabling public access in generated docs.
+
 ## Step D - Schema Mapping and Sample Data
 
 `docs/adaptations/<industry>/SCHEMA_MAPPING.md` must include:

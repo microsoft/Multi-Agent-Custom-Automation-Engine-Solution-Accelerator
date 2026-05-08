@@ -84,6 +84,19 @@ az bicep build --file infra/main_custom.bicep --stdout > /dev/null
 
 Do not print secrets from azd env output. Confirm the target is non-production or approved production.
 
+### GA private-networking preflight
+
+Before assuming uploads or smoke tests can reach Cosmos DB, Search, Blob, or backend APIs, record the live network state:
+
+```bash
+az cosmosdb show -g <resource-group> -n <cosmos-account> --query '{publicNetworkAccess:publicNetworkAccess,ipRules:ipRules,virtualNetworkRules:virtualNetworkRules,privateEndpointConnections:privateEndpointConnections[].privateEndpoint.id}' -o json
+az containerapp env show -g <resource-group> -n <container-app-env> --query '{name:name,infraSubnet:properties.vnetConfiguration.infrastructureSubnetId,publicNetworkAccess:properties.publicNetworkAccess,defaultDomain:properties.defaultDomain}' -o json
+az containerapp show -g <resource-group> -n <backend-app> --query '{fqdn:properties.configuration.ingress.fqdn,envId:properties.environmentId,outboundIpAddresses:properties.outboundIpAddresses}' -o json
+az webapp config appsettings list -g <resource-group> -n <frontend-app> --query "[?name=='BACKEND_API_URL' || name=='PROXY_API_REQUESTS'].{name:name,value:value}" -o table
+```
+
+If Cosmos `publicNetworkAccess` is `Disabled`, do not treat failed local upload/query commands as application failures. The backend must reach Cosmos through a private path, and local CLI/MCP data-plane calls may remain blocked by design.
+
 ## Step 5 - Validate Before Deploy
 
 Run the relevant validators:
@@ -139,6 +152,19 @@ Choose the narrowest safe activation:
 
 Destructive sample/demo reset, if confirmed, happens immediately before loading the replacement data and never earlier.
 
+### Private-networking remediation path
+
+When governance or policy disables Cosmos public access without usable private connectivity:
+
+1. Do not enable public access or add broad IP firewall rules unless the user explicitly chooses a temporary demo exception.
+2. Prefer the durable path: create or use a VNet with a delegated Container Apps subnet, a private endpoint subnet, a Cosmos DB Private Endpoint for `Sql`, and `privatelink.documents.azure.com` private DNS linked to that VNet.
+3. Check whether the existing Container Apps environment already has `infrastructureSubnetId`. If it is missing, do not try to convert it in place; Azure Container Apps environment network type cannot be changed after creation.
+4. For an existing non-VNet environment, create a new VNet-integrated Container Apps environment and clone backend/MCP apps using the existing images, managed identity, registry identity, env vars, ingress, resource sizing, and scale rules.
+5. Update backend env vars that reference peer service FQDNs, such as `MCP_SERVER_ENDPOINT`, to point at the cloned peer in the same new environment.
+6. Smoke-test the new backend API directly before switching the frontend.
+7. Switch the frontend `BACKEND_API_URL` only after the new backend proves it can read `/api/v4/init_team` and `/api/v4/team_configs`.
+8. Keep old backend/MCP apps intact until the new path is verified and rollback is unnecessary.
+
 ## Step 8 - Smoke Test and Rollback
 
 Smoke checks:
@@ -150,5 +176,23 @@ Smoke checks:
 - A representative prompt creates a plan with the intended `team_id`.
 - RAG agents retrieve from the intended Search indexes.
 - Old sample entities are absent only when a reset was explicitly confirmed.
+
+For GA readiness, include these concrete checks:
+
+```bash
+APP=https://<frontend-host>
+CONFIG=$(curl -fsS "$APP/config")
+API_URL=$(printf '%s' "$CONFIG" | jq -r '.API_URL')
+curl -fsS "$API_URL/v4/init_team" | jq '{team_id, team_name:.team.name, agent_count:(.team.agents|length), starting_task_count:(.team.starting_tasks|length), starting_task_names:[.team.starting_tasks[]?.name]}'
+```
+
+Then verify in a browser that:
+
+- The current team label shows the intended team name.
+- Quick task cards are visible.
+- Card layout uses the available content width rather than collapsing into one narrow column.
+- Console has no relevant errors.
+
+If the browser shows "No team selected" or "Select a team to see available tasks," first test backend `/api/v4/init_team` and `/api/v4/team_configs`; do not debug CSS until the selected team and `starting_tasks` are present.
 
 Rollback uses the snapshot/plan from Step 6: restore previous team JSON, restore prior dataset files or Search documents, redeploy prior image tag, or revert infra/app changes. Avoid `azd down` except as an explicitly confirmed teardown of a disposable environment.

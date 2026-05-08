@@ -1,0 +1,16 @@
+settlement_id,asset_id,market_date,market,settlement_type,settled_mwh,price_per_mwh,total_value_usd,variance_usd,settlement_status,invoice_reference,notes
+SETTLE-RE-001,RENEW-ASSET-001,2026-05-01,day_ahead,energy,2050.0,41.25,84562.50,1250.00,settled,SYN-INV-0001,Demo financial value.
+SETTLE-RE-002,RENEW-ASSET-002,2026-05-01,day_ahead,energy,1590.0,36.80,58512.00,-430.00,settled,SYN-INV-0002,
+SETTLE-RE-003,RENEW-ASSET-003,2026-05-01,real_time,ancillary,310.0,52.40,16244.00,210.00,settled,SYN-INV-0003,
+SETTLE-RE-004,RENEW-ASSET-004,2026-05-01,day_ahead,energy,3725.0,39.10,145647.50,-2100.00,estimated,SYN-INV-0004,Ramp-rate adjustment pending.
+SETTLE-RE-005,RENEW-ASSET-005,2026-05-01,day_ahead,energy,575.0,35.75,20556.25,0.00,settled,SYN-INV-0005,
+SETTLE-RE-006,RENEW-ASSET-006,2026-05-01,real_time,capacity,190.0,48.00,9120.00,-3200.00,contested,SYN-INV-0006,Edge case: export cap dispute.
+SETTLE-RE-007,RENEW-ASSET-007,2026-05-01,real_time,energy,2710.0,43.50,117885.00,-5400.00,estimated,SYN-INV-0007,Gearbox availability adjustment.
+SETTLE-RE-008,RENEW-ASSET-008,2026-05-01,day_ahead,energy,790.0,37.20,29388.00,-1850.00,estimated,SYN-INV-0008,Commissioning derate.
+SETTLE-RE-009,RENEW-ASSET-009,2026-05-01,real_time,ancillary,590.0,55.00,32450.00,860.00,settled,SYN-INV-0009,
+SETTLE-RE-010,RENEW-ASSET-010,2026-05-01,day_ahead,energy,0.0,40.00,0.00,-18200.00,settled,SYN-INV-0010,Edge case: planned outage zero settlement.
+SETTLE-RE-011,RENEW-ASSET-011,2026-05-01,day_ahead,energy,330.0,34.40,11352.00,-210.00,settled,SYN-INV-0011,
+SETTLE-RE-012,RENEW-ASSET-012,2026-05-01,real_time,capacity,0.0,46.00,0.00,-1500.00,estimated,SYN-INV-0012,Edge case: pending interconnection produced no settlement.
+SETTLE-RE-013,RENEW-ASSET-013,2026-05-01,day_ahead,energy,640.0,42.10,26944.00,-975.00,estimated,SYN-INV-0013,Weather derate variance.
+SETTLE-RE-014,RENEW-ASSET-014,2026-05-01,day_ahead,energy,910.0,-5.25,-4777.50,-12500.00,contested,SYN-INV-0014,Edge case: negative price and curtailment dispute.
+SETTLE-RE-015,RENEW-ASSET-015,2026-05-01,real_time,ancillary,395.0,50.20,19829.00,310.00,settled,SYN-INV-0015,

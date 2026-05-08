@@ -1,0 +1,16 @@
+obligation_id,site_id,framework,requirement_area,due_date,status,evidence_owner,evidence_location,risk_level,renewal_frequency,escalation_required,notes
+COMP-RE-001,SITE-WIND-NE-01,NERC CIP,critical cyber asset review,2026-06-15,on_track,Compliance Ops,synthetic://evidence/nerc/site-wind-ne-01,medium,annual,false,Use synthetic evidence URI only.
+COMP-RE-002,SITE-SOLAR-SW-01,ISO 55001,asset maintenance plan,2026-07-01,on_track,Asset Management,synthetic://evidence/iso55001/site-solar-sw-01,low,annual,false,
+COMP-RE-003,SITE-BESS-W-01,FERC/market rules,market participation attestation,2026-05-20,on_track,Market Operations,synthetic://evidence/ferc/site-bess-w-01,medium,quarterly,false,
+COMP-RE-004,SITE-WIND-MW-02,OSHA/safety,climb safety verification,2026-05-07,at_risk,Safety Office,synthetic://evidence/osha/site-wind-mw-02,high,monthly,true,Edge case: same-day safety evidence due.
+COMP-RE-005,SITE-SOLAR-SE-02,Environmental permitting,vegetation and habitat inspection,2026-05-25,on_track,Environmental Affairs,synthetic://evidence/env/site-solar-se-02,medium,quarterly,false,
+COMP-RE-006,SITE-BESS-NE-02,NERC CIP,communications change review,2026-05-05,overdue,Compliance Ops,synthetic://evidence/nerc/site-bess-ne-02,high,change_based,true,Edge case: overdue communications evidence.
+COMP-RE-007,SITE-WIND-TX-03,ISO 55001,critical spare strategy,2026-06-30,on_track,Asset Management,synthetic://evidence/iso55001/site-wind-tx-03,medium,annual,false,
+COMP-RE-008,SITE-SOLAR-CA-03,FERC/market rules,commissioning market registration,2026-05-31,at_risk,Market Operations,synthetic://evidence/ferc/site-solar-ca-03,medium,one_time,true,Commissioning tests not complete.
+COMP-RE-009,SITE-BESS-TX-04,GDPR/privacy,operator contact minimization,2026-06-10,on_track,Privacy Office,synthetic://evidence/privacy/site-bess-tx-04,low,annual,false,Synthetic contact fields only.
+COMP-RE-010,SITE-WIND-CA-04,OSHA/safety,outage work package approval,2026-05-09,on_track,Safety Office,synthetic://evidence/osha/site-wind-ca-04,high,outage_based,false,
+COMP-RE-011,SITE-SOLAR-MW-04,Environmental permitting,retirement review permit screen,2026-07-15,open,Environmental Affairs,synthetic://evidence/env/site-solar-mw-04,medium,one_time,false,
+COMP-RE-012,SITE-BESS-SE-05,NERC CIP,interconnection security checklist,2026-06-01,missing_evidence,Compliance Ops,,high,one_time,true,Edge case: evidence location intentionally missing.
+COMP-RE-013,SITE-WIND-NE-05,OSHA/safety,storm recovery tailboard,2026-05-12,on_track,Safety Office,synthetic://evidence/osha/site-wind-ne-05,medium,event_based,false,
+COMP-RE-014,SITE-SOLAR-SW-06,FERC/market rules,curtailment notice review,2026-05-18,at_risk,Market Operations,synthetic://evidence/ferc/site-solar-sw-06,high,monthly,true,Repeated congestion and curtailment notices.
+COMP-RE-015,SITE-BESS-MW-06,ISO 55001,battery lifecycle inspection,2026-08-30,on_track,Asset Management,synthetic://evidence/iso55001/site-bess-mw-06,low,annual,false,

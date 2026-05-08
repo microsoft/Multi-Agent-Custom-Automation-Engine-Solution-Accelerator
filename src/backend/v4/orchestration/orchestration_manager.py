@@ -1,6 +1,7 @@
 """Orchestration manager (agent_framework version) handling multi-agent Magentic workflow creation and execution."""
 
 import asyncio
+import inspect
 import logging
 import re
 import uuid
@@ -25,8 +26,9 @@ from agent_framework_orchestrations._magentic import (
 )
 
 from common.config.app_config import config
-from common.models.messages_af import TeamConfiguration
+from common.models.messages_af import PlanStatus, TeamConfiguration
 
+from common.database.database_factory import DatabaseFactory
 from common.database.database_base import DatabaseBase
 
 from v4.common.services.team_service import TeamService
@@ -96,6 +98,207 @@ class OrchestrationManager:
 
         return ""
 
+    @staticmethod
+    def _plan_status_for_final_result(final_status: str) -> PlanStatus:
+        """Map WebSocket final-result status strings to persisted plan statuses."""
+        raw_status = (
+            final_status.value if hasattr(final_status, "value") else final_status
+        )
+        normalized_status = str(raw_status or "").lower()
+        if normalized_status == "completed":
+            return PlanStatus.completed
+        if normalized_status in {"canceled", "cancelled"}:
+            return PlanStatus.canceled
+        return PlanStatus.failed
+
+    @classmethod
+    async def _persist_terminal_plan_status(
+        cls, user_id: str, plan_id: Optional[str], final_status: str, content: str
+    ) -> None:
+        """Persist terminal orchestration state before the UI receives a final result."""
+        if not plan_id:
+            cls.logger.warning(
+                "Unable to persist terminal orchestration status %s; no plan_id was provided",
+                final_status,
+            )
+            return
+
+        memory_store = None
+        try:
+            memory_store = await DatabaseFactory.get_database(
+                user_id=user_id, force_new=True
+            )
+            plan = await memory_store.get_plan_by_plan_id(plan_id=plan_id)
+            if not plan:
+                cls.logger.warning(
+                    "Unable to persist terminal orchestration status %s; plan %s was not found",
+                    final_status,
+                    plan_id,
+                )
+                return
+
+            plan.overall_status = cls._plan_status_for_final_result(final_status)
+            plan.streaming_message = content or (
+                f"Plan ended with terminal status: {final_status}"
+            )
+            await memory_store.update_plan(plan)
+            cls.logger.info(
+                "Persisted terminal orchestration status %s for plan %s",
+                plan.overall_status,
+                plan_id,
+            )
+        except Exception:
+            cls.logger.exception(
+                "Failed to persist terminal orchestration status %s for plan %s",
+                final_status,
+                plan_id,
+            )
+        finally:
+            if memory_store:
+                try:
+                    await memory_store.close()
+                except Exception:
+                    cls.logger.exception(
+                        "Failed to close terminal-status database client"
+                    )
+
+    @staticmethod
+    def _get_manager_plan_id(manager) -> Optional[str]:
+        manager_plan_id = getattr(manager, "persisted_plan_id", None)
+        if manager_plan_id:
+            return manager_plan_id
+
+        magentic_plan = getattr(manager, "magentic_plan", None)
+        if magentic_plan:
+            return getattr(magentic_plan, "plan_id", None)
+
+        return None
+
+    @staticmethod
+    def _get_workflow_terminal_manager(workflow):
+        if workflow is None:
+            return None
+        return getattr(workflow, "__dict__", {}).get("_terminal_manager")
+
+    @classmethod
+    def _workflow_has_plan_scope(cls, workflow) -> bool:
+        manager = cls._get_workflow_terminal_manager(workflow)
+        return cls._get_manager_plan_id(manager) is not None
+
+    @classmethod
+    async def _close_workflow_participants(cls, workflow, reason: str) -> None:
+        """Close participant resources for workflows that are no longer in use."""
+        workflow_state = getattr(workflow, "__dict__", {})
+        if workflow_state.get("_resources_closed"):
+            return
+
+        cleanup_handles = list(workflow_state.get("_cleanup_handles") or [])
+        if not cleanup_handles:
+            participants = workflow_state.get("_participants", {}) or {}
+            cleanup_handles = list(participants.values())
+
+        seen_handle_ids = set()
+        for handle in cleanup_handles:
+            if handle is None or id(handle) in seen_handle_ids:
+                continue
+            seen_handle_ids.add(id(handle))
+
+            handle_name = getattr(
+                handle, "agent_name", getattr(handle, "name", type(handle).__name__)
+            )
+            if handle_name == "ProxyAgent":
+                continue
+
+            close_fn = getattr(handle, "close", None)
+            if callable(close_fn):
+                try:
+                    close_result = close_fn()
+                    if inspect.isawaitable(close_result):
+                        await close_result
+                    cls.logger.debug("Closed resource '%s' (%s)", handle_name, reason)
+                except Exception as e:
+                    cls.logger.error("Error closing resource '%s': %s", handle_name, e)
+
+        try:
+            workflow._resources_closed = True
+        except Exception:
+            cls.logger.debug("Unable to mark workflow resources closed", exc_info=True)
+
+    @classmethod
+    def _get_non_completed_terminal_manager(cls, workflow, plan_id: Optional[str]):
+        manager = cls._get_workflow_terminal_manager(workflow)
+        has_terminal_result = getattr(
+            manager, "has_emitted_non_completed_terminal_result", None
+        )
+        if (
+            not manager
+            or not callable(has_terminal_result)
+            or not has_terminal_result()
+        ):
+            return None
+
+        manager_plan_id = cls._get_manager_plan_id(manager)
+        if plan_id and manager_plan_id == plan_id:
+            return manager
+
+        cls.logger.info(
+            "Ignoring terminal final result state for plan '%s' from manager scoped to plan '%s'",
+            plan_id,
+            manager_plan_id,
+        )
+        return None
+
+    @classmethod
+    async def _validate_explicit_workflow_plan(
+        cls, user_id: str, plan_id: Optional[str], workflow
+    ) -> None:
+        if not plan_id:
+            return
+
+        manager = cls._get_workflow_terminal_manager(workflow)
+        manager_plan_id = getattr(manager, "persisted_plan_id", None)
+        if manager_plan_id == plan_id:
+            return
+
+        raise ValueError(
+            "Explicit orchestration workflow plan mismatch: "
+            f"expected plan '{plan_id}', got '{manager_plan_id or 'unknown'}' "
+            f"for user '{user_id}'"
+        )
+
+    async def _send_orchestration_error(
+        self, user_id: str, plan_id: Optional[str], error: Exception, workflow=None
+    ) -> None:
+        """Persist and notify the UI about an orchestration failure."""
+        terminal_manager = self._get_non_completed_terminal_manager(workflow, plan_id)
+        if terminal_manager:
+            self.logger.info(
+                "Skipping error final result for user '%s' because terminal status '%s' was already sent",
+                user_id,
+                terminal_manager.terminal_final_result_status,
+            )
+            return
+
+        error_content = f"Error during orchestration: {str(error)}"
+        await self._persist_terminal_plan_status(
+            user_id, plan_id, "error", error_content
+        )
+        try:
+            await connection_config.send_status_update_async(
+                {
+                    "type": WebsocketMessageType.FINAL_RESULT_MESSAGE,
+                    "data": {
+                        "content": error_content,
+                        "status": "error",
+                        "timestamp": asyncio.get_event_loop().time(),
+                    },
+                },
+                user_id,
+                message_type=WebsocketMessageType.FINAL_RESULT_MESSAGE,
+            )
+        except Exception as send_error:
+            self.logger.error("Failed to send error status: %s", send_error)
+
     # ---------------------------
     # Orchestration construction
     # ---------------------------
@@ -106,6 +309,7 @@ class OrchestrationManager:
         team_config: TeamConfiguration,
         memory_store: DatabaseBase,
         user_id: str | None = None,
+        plan_id: Optional[str] = None,
     ):
         """
         Initialize a Magentic workflow with:
@@ -166,7 +370,9 @@ class OrchestrationManager:
                 agent=manager_agent,  # New API: pass agent instead of chat_client
                 max_round_count=orchestration_config.max_rounds,
                 max_stall_count=3,
-                max_reset_count=2
+                max_reset_count=2,
+                terminal_status_persistor=cls._persist_terminal_plan_status,
+                persisted_plan_id=plan_id,
             )
             cls.logger.info(
                 "Created HumanApprovalMagenticManager for user '%s' with max_rounds=%d",
@@ -216,6 +422,8 @@ class OrchestrationManager:
 
         # Build workflow
         workflow = builder.build()
+        workflow._terminal_manager = manager
+        workflow._cleanup_handles = [*agents, manager, manager_agent, chat_client]
         cls.logger.info(
             "Built Magentic workflow with %d participants and event callbacks",
             len(participants),
@@ -234,6 +442,7 @@ class OrchestrationManager:
         team_switched: bool,
         team_service: TeamService = None,
         force_rebuild: bool = False,
+        plan_id: Optional[str] = None,
     ):
         """
         Return an existing workflow for the user or create a new one if:
@@ -250,19 +459,17 @@ class OrchestrationManager:
                 cls.logger.info(
                     "Rebuilding orchestration for user '%s' (reason: %s)", user_id, reason
                 )
-                # Close prior agents (same logic as old version)
-                for agent in getattr(current, "_participants", {}).values():
-                    agent_name = getattr(
-                        agent, "agent_name", getattr(agent, "name", "")
+                if cls._workflow_has_plan_scope(current):
+                    current_plan_id = cls._get_manager_plan_id(
+                        cls._get_workflow_terminal_manager(current)
                     )
-                    if agent_name != "ProxyAgent":
-                        close_coro = getattr(agent, "close", None)
-                        if callable(close_coro):
-                            try:
-                                await close_coro()
-                                cls.logger.debug("Closed agent '%s'", agent_name)
-                            except Exception as e:
-                                cls.logger.error("Error closing agent: %s", e)
+                    cls.logger.info(
+                        "Deferring close of replaced workflow for user '%s' plan '%s' until its run completes",
+                        user_id,
+                        current_plan_id,
+                    )
+                else:
+                    await cls._close_workflow_participants(current, reason)
 
             factory = MagenticAgentFactory(team_service=team_service)
             try:
@@ -280,32 +487,57 @@ class OrchestrationManager:
             try:
                 cls.logger.info("Initializing new orchestration for user '%s'", user_id)
                 workflow = await cls.init_orchestration(
-                    agents, team_config, team_service.memory_context, user_id
+                    agents,
+                    team_config,
+                    team_service.memory_context,
+                    user_id=user_id,
+                    plan_id=plan_id,
                 )
                 orchestration_config.orchestrations[user_id] = workflow
+                return workflow
             except Exception as e:
                 cls.logger.error(
                     "Failed to initialize orchestration for user '%s': %s", user_id, e
                 )
                 raise
-        return orchestration_config.get_current_orchestration(user_id)
+        return current
 
     # ---------------------------
     # Execution
     # ---------------------------
-    async def run_orchestration(self, user_id: str, input_task) -> None:
+    async def run_orchestration(
+        self, user_id: str, input_task, plan_id: Optional[str] = None, workflow=None
+    ) -> None:
         """
         Execute the Magentic workflow for the provided user and task description.
         """
+        explicit_workflow = workflow is not None
         job_id = str(uuid.uuid4())
         orchestration_config.set_approval_pending(job_id)
         self.logger.info(
             "Starting orchestration job '%s' for user '%s'", job_id, user_id
         )
 
-        workflow = orchestration_config.get_current_orchestration(user_id)
+        if workflow is not None:
+            try:
+                await self._validate_explicit_workflow_plan(user_id, plan_id, workflow)
+            except ValueError as validation_error:
+                try:
+                    await self._send_orchestration_error(
+                        user_id, plan_id, validation_error, workflow
+                    )
+                finally:
+                    await self._close_workflow_participants(
+                        workflow, "explicit orchestration validation failed"
+                    )
+                raise
+        else:
+            workflow = orchestration_config.get_current_orchestration(user_id)
+
         if workflow is None:
-            raise ValueError("Orchestration not initialized for user.")
+            error = ValueError("Orchestration not initialized for user.")
+            await self._send_orchestration_error(user_id, plan_id, error)
+            raise error
         # Fresh thread per participant to avoid cross-run state bleed
         executors = getattr(workflow, "executors", {})
         self.logger.debug("Executor keys at run start: %s", list(executors.keys()))
@@ -522,7 +754,19 @@ class OrchestrationManager:
             self.logger.info("\nFinal result:\n%s", final_text)
             self.logger.info("=" * 50)
 
+            manager = self._get_non_completed_terminal_manager(workflow, plan_id)
+            if manager:
+                self.logger.info(
+                    "Skipping completed final result for user '%s' because terminal status '%s' was already sent",
+                    user_id,
+                    manager.terminal_final_result_status,
+                )
+                return
+
             # Send final result via WebSocket
+            await self._persist_terminal_plan_status(
+                user_id, plan_id, "completed", final_text
+            )
             await connection_config.send_status_update_async(
                 {
                     "type": WebsocketMessageType.FINAL_RESULT_MESSAGE,
@@ -545,20 +789,10 @@ class OrchestrationManager:
                 self.logger.error("Error attributes: %s", e.__dict__)
             self.logger.info("=" * 50)
 
-            # Send error status to user
-            try:
-                await connection_config.send_status_update_async(
-                    {
-                        "type": WebsocketMessageType.FINAL_RESULT_MESSAGE,
-                        "data": {
-                            "content": f"Error during orchestration: {str(e)}",
-                            "status": "error",
-                            "timestamp": asyncio.get_event_loop().time(),
-                        },
-                    },
-                    user_id,
-                    message_type=WebsocketMessageType.FINAL_RESULT_MESSAGE,
-                )
-            except Exception as send_error:
-                self.logger.error("Failed to send error status: %s", send_error)
+            await self._send_orchestration_error(user_id, plan_id, e, workflow)
             raise
+        finally:
+            if explicit_workflow:
+                await self._close_workflow_participants(
+                    workflow, "explicit orchestration run finished"
+                )

@@ -89,27 +89,13 @@
 
 .home-input-quick-tasks {
   display: grid !important;
-  grid-template-columns: 1fr 1fr 1fr 1fr !important;
-  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
+  gap: 12px;
 }
 
-
-
-/* Responsive design for smaller screens */
-@media (max-width: 768px) {
-  .home-input-quick-tasks {
-    flex-wrap: wrap !important;
-  }
-  
-  .home-input-quick-tasks .fui-Card {
-    flex: 1 1 calc(50% - 6px) !important; 
-  }
-}
-
-@media (max-width: 480px) {
-  .home-input-quick-tasks .fui-Card {
-    flex: 1 1 100% !important;
-  }
+.home-input-quick-tasks .fui-Card {
+  min-width: 0 !important;
+  height: 100%;
 }
 
 /* Focus visible for accessibility */

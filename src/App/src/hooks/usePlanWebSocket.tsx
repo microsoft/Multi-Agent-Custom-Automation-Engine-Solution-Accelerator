@@ -17,6 +17,7 @@ import {
     selectPlanApproved,
     approvalRequestReceived,
     planCompletedFinal,
+    planFailedFinal,
 } from '@/store/slices/planSlice';
 import {
     setSubmittingChatDisableInput,
@@ -177,17 +178,20 @@ export function usePlanWebSocket({
         const unsub = webSocketService.on(
             WebsocketMessageType.FINAL_RESULT_MESSAGE,
             (finalMessage: any) => {
-                if (!finalMessage) return;
+                if (!finalMessage?.data) return;
+                const status = finalMessage.data.status;
+                const content = finalMessage.data.content || '';
+                const completed = status === PlanStatus.COMPLETED;
                 const agentMessageData: AgentMessageData = {
-                    agent: AgentType.GROUP_CHAT_MANAGER,
-                    agent_type: AgentMessageType.AI_AGENT,
+                    agent: completed ? AgentType.GROUP_CHAT_MANAGER : 'system',
+                    agent_type: completed ? AgentMessageType.AI_AGENT : AgentMessageType.SYSTEM_AGENT,
                     timestamp: Date.now(),
                     steps: [],
                     next_steps: [],
-                    content: '\u{1F389}\u{1F389} ' + (finalMessage.data?.content || ''),
+                    content: completed ? '\u{1F389}\u{1F389} ' + content : formatErrorMessage(content || 'Plan execution failed. Please try again.'),
                     raw_data: finalMessage,
                 };
-                if (finalMessage?.data?.status === PlanStatus.COMPLETED) {
+                if (completed) {
                     dispatch(setShowBufferingText(true));
                     dispatch(addAgentMessage(agentMessageData));
                     dispatch(setSelectedTeam(planData?.team || null));
@@ -196,11 +200,19 @@ export function usePlanWebSocket({
                     scrollToBottom();
                     webSocketService.disconnect();
                     persistAgentMessage(agentMessageData, planData, dispatch, true, streamingMessageBuffer);
+                } else {
+                    dispatch(setShowBufferingText(false));
+                    dispatch(addAgentMessage(agentMessageData));
+                    dispatch(planFailedFinal());
+                    dispatch(setSubmittingChatDisableInput(false));
+                    scrollToBottom();
+                    webSocketService.disconnect();
+                    showToast(content || 'Plan execution failed. Please try again.', 'error');
                 }
             },
         );
         return unsub;
-    }, [dispatch, scrollToBottom, planData, streamingMessageBuffer]);
+    }, [dispatch, scrollToBottom, planData, streamingMessageBuffer, formatErrorMessage, showToast]);
 
     // ── ERROR_MESSAGE ─────────────────────────────────────────────
     useEffect(() => {

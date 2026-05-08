@@ -269,7 +269,16 @@ class MockTeamConfiguration:
         self.name = name
         self.deployment_name = deployment_name
 
-sys.modules['common.models.messages_af'] = Mock(TeamConfiguration=MockTeamConfiguration)
+class MockPlanStatus:
+    """Mock persisted plan status enum values used by orchestration manager."""
+    completed = "completed"
+    failed = "failed"
+    canceled = "canceled"
+
+sys.modules['common.models.messages_af'] = Mock(
+    PlanStatus=MockPlanStatus,
+    TeamConfiguration=MockTeamConfiguration
+)
 
 class MockDatabaseBase:
     """Mock DatabaseBase."""
@@ -277,6 +286,14 @@ class MockDatabaseBase:
 
 sys.modules['common.database'] = Mock()
 sys.modules['common.database.database_base'] = Mock(DatabaseBase=MockDatabaseBase)
+
+class MockDatabaseFactory:
+    """Mock database factory for terminal plan status persistence."""
+    get_database = AsyncMock()
+
+sys.modules['common.database.database_factory'] = Mock(
+    DatabaseFactory=MockDatabaseFactory
+)
 
 # Mock v4 modules
 class MockTeamService:
@@ -326,6 +343,9 @@ class MockHumanApprovalMagenticManager:
         self.user_id = user_id
         self.agent = agent
         self.max_round_count = kwargs.get('max_round_count', 10)
+        self.persisted_plan_id = kwargs.get('persisted_plan_id')
+        self.terminal_final_result_status = None
+        self.has_emitted_non_completed_terminal_result = Mock(return_value=False)
 
 sys.modules['v4.orchestration'] = Mock()
 sys.modules['v4.orchestration.human_approval_manager'] = Mock(
@@ -373,6 +393,7 @@ class TestOrchestrationManager(IsolatedAsyncioTestCase):
         """Set up test fixtures before each test method."""
         # Reset mocks
         orchestration_config.orchestrations.clear()
+        orchestration_config.get_current_orchestration.reset_mock()
         orchestration_config.get_current_orchestration.return_value = None
         orchestration_config.set_approval_pending.reset_mock()
         connection_config.send_status_update_async.reset_mock()
@@ -543,6 +564,127 @@ class TestOrchestrationManager(IsolatedAsyncioTestCase):
             mock_init.assert_called_once()
             self.assertEqual(orchestration_config.orchestrations[self.test_user_id], mock_new_workflow)
 
+    async def test_force_rebuild_defers_plan_scoped_workflow_close_until_run_completion(self):
+        """Test captured workflow A is not closed by rebuild B before A runs."""
+        workflow_a = Mock()
+        agent_a = MockAgent(agent_name="TestAgent")
+        workflow_a._cleanup_handles = [agent_a]
+        workflow_a_manager = Mock()
+        workflow_a_manager.persisted_plan_id = "plan-a"
+        workflow_a_manager.has_emitted_non_completed_terminal_result.return_value = False
+        workflow_a._terminal_manager = workflow_a_manager
+        orchestration_config.get_current_orchestration.return_value = workflow_a
+
+        workflow_b = Mock()
+        with patch.object(OrchestrationManager, 'init_orchestration', new_callable=AsyncMock) as mock_init:
+            mock_init.return_value = workflow_b
+
+            await OrchestrationManager.get_current_or_new_orchestration(
+                user_id=self.test_user_id,
+                team_config=self.test_team_config,
+                team_switched=False,
+                team_service=self.test_team_service,
+                force_rebuild=True,
+                plan_id="plan-b",
+            )
+
+        agent_a.close.assert_not_called()
+        self.assertEqual(orchestration_config.orchestrations[self.test_user_id], workflow_b)
+
+        final_output = Mock()
+        final_output.type = "output"
+        final_output.executor_id = None
+        final_output.data = MockChatMessage("Workflow A completed")
+
+        ran_workflow_a = False
+
+        async def run_workflow_a(*args, **kwargs):
+            nonlocal ran_workflow_a
+            ran_workflow_a = True
+            agent_a.close.assert_not_called()
+            yield final_output
+
+        workflow_a.run = run_workflow_a
+        workflow_a.executors = {}
+
+        input_task = Mock()
+        input_task.description = "Test task description"
+
+        await self.orchestration_manager.run_orchestration(
+            user_id=self.test_user_id,
+            input_task=input_task,
+            plan_id="plan-a",
+            workflow=workflow_a,
+        )
+
+        self.assertTrue(ran_workflow_a)
+        agent_a.close.assert_awaited_once()
+
+    async def test_run_orchestration_closes_production_cleanup_handles(self):
+        """Test explicit workflow cleanup uses attached handles without SDK _participants."""
+        workflow = Mock()
+        cleanup_agent = MockAgent(agent_name="CleanupAgent")
+        workflow._cleanup_handles = [cleanup_agent]
+        workflow_manager = Mock()
+        workflow_manager.persisted_plan_id = "plan-cleanup"
+        workflow_manager.has_emitted_non_completed_terminal_result.return_value = False
+        workflow._terminal_manager = workflow_manager
+
+        final_output = Mock()
+        final_output.type = "output"
+        final_output.executor_id = None
+        final_output.data = MockChatMessage("Cleanup workflow completed")
+        workflow.run = AsyncGeneratorMock([final_output])
+        workflow.executors = {}
+
+        input_task = Mock()
+        input_task.description = "Test cleanup handles"
+
+        with patch.object(
+            OrchestrationManager,
+            '_persist_terminal_plan_status',
+            new_callable=AsyncMock,
+        ):
+            await self.orchestration_manager.run_orchestration(
+                user_id=self.test_user_id,
+                input_task=input_task,
+                plan_id="plan-cleanup",
+                workflow=workflow,
+            )
+
+        cleanup_agent.close.assert_awaited_once()
+
+    async def test_run_orchestration_closes_explicit_workflow_on_cancellation(self):
+        """Test explicit workflow cleanup runs when workflow execution is cancelled."""
+        workflow = Mock()
+        cleanup_agent = MockAgent(agent_name="CleanupAgent")
+        workflow._cleanup_handles = [cleanup_agent]
+        workflow_manager = Mock()
+        workflow_manager.persisted_plan_id = "plan-cancelled"
+        workflow_manager.has_emitted_non_completed_terminal_result.return_value = False
+        workflow._terminal_manager = workflow_manager
+
+        async def cancelled_run(*args, **kwargs):
+            raise asyncio.CancelledError()
+            yield
+
+        workflow.run = cancelled_run
+        workflow.executors = {}
+
+        input_task = Mock()
+        input_task.description = "Test cancellation cleanup"
+
+        with self.assertRaises(asyncio.CancelledError):
+            await self.orchestration_manager.run_orchestration(
+                user_id=self.test_user_id,
+                input_task=input_task,
+                plan_id="plan-cancelled",
+                workflow=workflow,
+            )
+
+        cleanup_agent.close.assert_awaited_once()
+        connection_config.send_status_update_async.assert_not_called()
+
     async def test_get_current_or_new_orchestration_agent_creation_failure(self):
         """Test handling agent creation failure."""
         orchestration_config.get_current_orchestration.return_value = None
@@ -641,6 +783,240 @@ class TestOrchestrationManager(IsolatedAsyncioTestCase):
         
         # Verify final result was sent
         connection_config.send_status_update_async.assert_called()
+
+    async def test_run_orchestration_persists_completed_before_final_message(self):
+        """Test completed final result is persisted before the final WebSocket send."""
+        mock_workflow = Mock()
+        plan_id = "completed-plan-id"
+        manager = Mock()
+        manager.persisted_plan_id = plan_id
+        manager.has_emitted_non_completed_terminal_result.return_value = False
+        mock_workflow._terminal_manager = manager
+
+        mock_final_output = Mock()
+        mock_final_output.type = "output"
+        mock_final_output.executor_id = None
+        mock_final_output.data = MockChatMessage("Persisted final result")
+
+        mock_workflow.run = AsyncGeneratorMock([mock_final_output])
+        mock_workflow.executors = {}
+
+        input_task = Mock()
+        input_task.description = "Test completed persistence"
+
+        async def persist_completed(user_id, persisted_plan_id, status, content):
+            self.assertEqual(connection_config.send_status_update_async.await_count, 0)
+            self.assertEqual(user_id, self.test_user_id)
+            self.assertEqual(persisted_plan_id, plan_id)
+            self.assertEqual(status, "completed")
+            self.assertEqual(content, "Persisted final result")
+
+        with patch.object(
+            OrchestrationManager,
+            '_persist_terminal_plan_status',
+            new_callable=AsyncMock,
+        ) as mock_persist:
+            mock_persist.side_effect = persist_completed
+            await self.orchestration_manager.run_orchestration(
+                user_id=self.test_user_id,
+                input_task=input_task,
+                plan_id=plan_id,
+                workflow=mock_workflow,
+            )
+
+        mock_persist.assert_awaited_once_with(
+            self.test_user_id, plan_id, "completed", "Persisted final result"
+        )
+        connection_config.send_status_update_async.assert_called_once()
+        message = connection_config.send_status_update_async.call_args.args[0]
+        self.assertEqual(message["data"]["status"], "completed")
+
+    async def test_run_orchestration_skips_completed_after_terminal_final_result(self):
+        """Test max-round terminal final result is not followed by completed final result."""
+        # Set up mock workflow with a final output that would normally send completed.
+        mock_workflow = Mock()
+        mock_final_output = Mock()
+        mock_final_output.type = "output"
+        mock_final_output.executor_id = None
+        mock_final_output.data = MockChatMessage("Late final result")
+
+        mock_workflow.run = AsyncGeneratorMock([mock_final_output])
+        mock_workflow.executors = {}
+        orchestration_config.get_current_orchestration.return_value = mock_workflow
+
+        plan_id = "old-plan-id"
+        manager = Mock()
+        manager.persisted_plan_id = plan_id
+        manager.terminal_final_result_status = "terminated"
+        manager.has_emitted_non_completed_terminal_result.return_value = True
+        mock_workflow._terminal_manager = manager
+
+        rebuilt_manager = Mock()
+        rebuilt_manager.persisted_plan_id = "rebuilt-plan-id"
+        rebuilt_manager.terminal_final_result_status = None
+        rebuilt_manager.has_emitted_non_completed_terminal_result.return_value = False
+        orchestration_config.orchestrations[self.test_user_id] = Mock(
+            _terminal_manager=rebuilt_manager
+        )
+
+        input_task = Mock()
+        input_task.description = "Test task description"
+
+        await self.orchestration_manager.run_orchestration(
+            user_id=self.test_user_id,
+            input_task=input_task,
+            plan_id=plan_id,
+        )
+
+        connection_config.send_status_update_async.assert_not_called()
+
+    async def test_run_orchestration_ignores_other_workflow_terminal_state(self):
+        """Test a rebuilt same-user workflow does not suppress an older run."""
+        mock_workflow = Mock()
+        mock_final_output = Mock()
+        mock_final_output.type = "output"
+        mock_final_output.executor_id = None
+        mock_final_output.data = MockChatMessage("Old workflow final result")
+
+        mock_workflow.run = AsyncGeneratorMock([mock_final_output])
+        mock_workflow.executors = {}
+        orchestration_config.get_current_orchestration.return_value = mock_workflow
+
+        plan_id = "old-plan-id"
+        old_manager = Mock()
+        old_manager.persisted_plan_id = plan_id
+        old_manager.terminal_final_result_status = None
+        old_manager.has_emitted_non_completed_terminal_result.return_value = False
+        mock_workflow._terminal_manager = old_manager
+
+        rebuilt_manager = Mock()
+        rebuilt_manager.persisted_plan_id = "rebuilt-plan-id"
+        rebuilt_manager.terminal_final_result_status = "terminated"
+        rebuilt_manager.has_emitted_non_completed_terminal_result.return_value = True
+        orchestration_config.orchestrations[self.test_user_id] = Mock(
+            _terminal_manager=rebuilt_manager
+        )
+
+        input_task = Mock()
+        input_task.description = "Test task description"
+
+        await self.orchestration_manager.run_orchestration(
+            user_id=self.test_user_id,
+            input_task=input_task,
+            plan_id=plan_id,
+        )
+
+        connection_config.send_status_update_async.assert_called_once()
+        message = connection_config.send_status_update_async.call_args.args[0]
+        self.assertEqual(message["data"]["status"], "completed")
+
+    async def test_run_orchestration_does_not_skip_for_terminal_plan_mismatch(self):
+        """Test terminal state must belong to the same plan before suppressing final send."""
+        mock_workflow = Mock()
+        mock_final_output = Mock()
+        mock_final_output.type = "output"
+        mock_final_output.executor_id = None
+        mock_final_output.data = MockChatMessage("Plan-specific final result")
+
+        mock_workflow.run = AsyncGeneratorMock([mock_final_output])
+        mock_workflow.executors = {}
+        orchestration_config.get_current_orchestration.return_value = mock_workflow
+
+        manager = Mock()
+        manager.persisted_plan_id = "different-plan-id"
+        manager.terminal_final_result_status = "terminated"
+        manager.has_emitted_non_completed_terminal_result.return_value = True
+        mock_workflow._terminal_manager = manager
+
+        input_task = Mock()
+        input_task.description = "Test task description"
+
+        await self.orchestration_manager.run_orchestration(
+            user_id=self.test_user_id,
+            input_task=input_task,
+            plan_id="current-plan-id",
+        )
+
+        connection_config.send_status_update_async.assert_called_once()
+        message = connection_config.send_status_update_async.call_args.args[0]
+        self.assertEqual(message["data"]["status"], "completed")
+
+    async def test_run_orchestration_uses_explicit_workflow_after_rebuild(self):
+        """Test request A runs captured workflow A after request B overwrites current workflow."""
+        plan_id = "plan-a"
+
+        workflow_a = Mock()
+        workflow_a_final_output = Mock()
+        workflow_a_final_output.type = "output"
+        workflow_a_final_output.executor_id = None
+        workflow_a_final_output.data = MockChatMessage("Workflow A final result")
+        workflow_a.run = AsyncGeneratorMock([workflow_a_final_output])
+        workflow_a.executors = {}
+        workflow_a_manager = Mock()
+        workflow_a_manager.persisted_plan_id = plan_id
+        workflow_a_manager.has_emitted_non_completed_terminal_result.return_value = False
+        workflow_a._terminal_manager = workflow_a_manager
+
+        workflow_b = Mock()
+        workflow_b.run = AsyncGeneratorMock([])
+        workflow_b.executors = {}
+        workflow_b_manager = Mock()
+        workflow_b_manager.persisted_plan_id = "plan-b"
+        workflow_b_manager.has_emitted_non_completed_terminal_result.return_value = False
+        workflow_b._terminal_manager = workflow_b_manager
+        orchestration_config.orchestrations[self.test_user_id] = workflow_b
+        orchestration_config.get_current_orchestration.return_value = workflow_b
+
+        input_task = Mock()
+        input_task.description = "Test task description"
+
+        await self.orchestration_manager.run_orchestration(
+            user_id=self.test_user_id,
+            input_task=input_task,
+            plan_id=plan_id,
+            workflow=workflow_a,
+        )
+
+        workflow_a.run.assert_called_once()
+        self.assertEqual(workflow_b.run.call_count, 0)
+        orchestration_config.get_current_orchestration.assert_not_called()
+        connection_config.send_status_update_async.assert_called_once()
+        message = connection_config.send_status_update_async.call_args.args[0]
+        self.assertEqual(message["data"]["content"], "Workflow A final result")
+        self.assertEqual(message["data"]["status"], "completed")
+
+    async def test_run_orchestration_rejects_explicit_workflow_plan_mismatch(self):
+        """Test explicit workflow plan mismatch persists/sends error instead of running."""
+        workflow = Mock()
+        workflow.run = AsyncGeneratorMock([])
+        workflow.executors = {}
+        manager = Mock()
+        manager.persisted_plan_id = "different-plan-id"
+        manager.has_emitted_non_completed_terminal_result.return_value = False
+        workflow._terminal_manager = manager
+
+        input_task = Mock()
+        input_task.description = "Test task description"
+
+        with patch.object(
+            OrchestrationManager,
+            '_persist_terminal_plan_status',
+            new_callable=AsyncMock,
+        ) as mock_persist:
+            with self.assertRaises(ValueError) as context:
+                await self.orchestration_manager.run_orchestration(
+                    user_id=self.test_user_id,
+                    input_task=input_task,
+                    plan_id="expected-plan-id",
+                    workflow=workflow,
+                )
+
+        self.assertIn("Explicit orchestration workflow plan mismatch", str(context.exception))
+        self.assertEqual(workflow.run.call_count, 0)
+        mock_persist.assert_awaited_once()
+        connection_config.send_status_update_async.assert_called_once()
+        message = connection_config.send_status_update_async.call_args.args[0]
+        self.assertEqual(message["data"]["status"], "error")
 
     async def test_run_orchestration_no_workflow(self):
         """Test run_orchestration when no workflow exists."""

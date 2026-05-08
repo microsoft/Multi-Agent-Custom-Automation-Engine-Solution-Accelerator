@@ -1,0 +1,16 @@
+event_id,site_id,event_date,event_type,severity,permit_id,reported_to_agency,remediation_status,wildlife_impact,estimated_cost_usd,community_contact,notes
+ENV-RE-001,SITE-WIND-NE-01,2026-04-21,stormwater_inspection,low,PERMIT-NE-DEMO-001,true,closed,none,1200.00,community.northridge@example.invalid,Routine post-rainfall inspection.
+ENV-RE-002,SITE-SOLAR-SW-01,2026-04-23,dust_control,medium,PERMIT-SW-DEMO-002,true,in_progress,none,5400.00,community.sunmesa@example.invalid,Dust suppression after access road work.
+ENV-RE-003,SITE-BESS-W-01,2026-04-28,hazardous_material_storage,low,PERMIT-W-DEMO-003,true,closed,none,950.00,community.coppervalley@example.invalid,Battery electrolyte storage label correction.
+ENV-RE-004,SITE-WIND-MW-02,2026-04-30,wildlife_monitoring,medium,PERMIT-MW-DEMO-004,true,in_progress,bird_observation,8700.00,community.prairieline@example.invalid,Seasonal monitoring window active.
+ENV-RE-005,SITE-SOLAR-SE-02,2026-05-01,vegetation_management,low,PERMIT-SE-DEMO-005,true,scheduled,habitat_buffer,2500.00,community.pineflats@example.invalid,Habitat buffer flag near inverter block C.
+ENV-RE-006,SITE-BESS-NE-02,2026-05-02,noise_complaint,medium,PERMIT-NE-DEMO-006,true,open,none,1800.00,community.harborpeak@example.invalid,Investigate auxiliary transformer hum.
+ENV-RE-007,SITE-WIND-TX-03,2026-05-03,oil_sheen,high,PERMIT-TX-DEMO-007,true,escalated,none,22000.00,community.gulfplains@example.invalid,Edge case: high severity spill response drill.
+ENV-RE-008,SITE-SOLAR-CA-03,2026-05-04,commissioning_noise,low,PERMIT-W-DEMO-008,false,open,none,650.00,community.silverbasin@example.invalid,Edge case: agency report pending.
+ENV-RE-009,SITE-BESS-TX-04,2026-05-04,thermal_event_review,medium,PERMIT-TX-DEMO-009,true,in_progress,none,7800.00,community.lonestar@example.invalid,Synthetic thermal alarm review.
+ENV-RE-010,SITE-WIND-CA-04,2026-05-05,road_access_erosion,medium,PERMIT-W-DEMO-010,true,scheduled,none,6100.00,community.redwoodcoast@example.invalid,Planned outage access route inspection.
+ENV-RE-011,SITE-SOLAR-MW-04,2026-05-05,decommissioning_screen,medium,PERMIT-MW-DEMO-011,true,open,habitat_buffer,4300.00,community.clearwater@example.invalid,Retirement review environmental screen.
+ENV-RE-012,SITE-BESS-SE-05,2026-05-06,stormwater_inspection,low,PERMIT-SE-DEMO-012,false,open,none,1300.00,,Edge case: community contact optional and report pending.
+ENV-RE-013,SITE-WIND-NE-05,2026-05-06,storm_damage_review,medium,PERMIT-NE-DEMO-013,true,in_progress,bird_observation,9200.00,community.graniteridge@example.invalid,Winter storm follow-up.
+ENV-RE-014,SITE-SOLAR-SW-06,2026-05-07,curtailment_noise_review,low,PERMIT-SW-DEMO-014,true,closed,none,700.00,community.canyonlight@example.invalid,Community inquiry related to inverter cycling.
+ENV-RE-015,SITE-BESS-MW-06,2026-05-07,fire_code_inspection,medium,PERMIT-MW-DEMO-015,true,scheduled,none,5000.00,community.lakeview@example.invalid,Annual fire code inspection.

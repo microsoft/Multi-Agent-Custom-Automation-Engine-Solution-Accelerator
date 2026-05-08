@@ -1,0 +1,16 @@
+interconnection_id,site_id,queue_position,transmission_operator,substation_id,interconnection_status,max_export_mw,curtailment_limit_mw,study_due_date,critical_infrastructure_flag,communications_channel,notes
+IX-RE-001,SITE-WIND-NE-01,42,NorthEast Transmission Demo,DEMO-SUB-NE-17,active,180.0,165.0,2026-09-30,true,secure_ops_portal,Synthetic substation identifier for demo use only.
+IX-RE-002,SITE-SOLAR-SW-01,18,SouthWest Grid Demo,DEMO-SUB-SW-04,active,240.0,235.0,2026-08-15,true,secure_ops_portal,
+IX-RE-003,SITE-BESS-W-01,27,Western Interconnect Demo,DEMO-SUB-W-22,active,120.0,120.0,2026-07-30,true,secure_ops_portal,Four-hour storage export capability confirmed.
+IX-RE-004,SITE-WIND-MW-02,12,Midwest ISO Demo,DEMO-SUB-MW-09,active,305.0,285.0,2026-10-01,true,secure_ops_portal,Ramp-rate constraint under review.
+IX-RE-005,SITE-SOLAR-SE-02,55,Southeast Transmission Demo,DEMO-SUB-SE-12,active,95.0,88.0,2026-11-20,true,secure_ops_portal,Vegetation plan tied to access road.
+IX-RE-006,SITE-BESS-NE-02,63,NorthEast Transmission Demo,DEMO-SUB-NE-18,conditional,80.0,42.0,2026-06-15,true,secure_ops_portal,Edge case: export cap active pending study update.
+IX-RE-007,SITE-WIND-TX-03,9,ERCOT Demo,DEMO-SUB-TX-33,active,220.0,205.0,2026-12-01,true,secure_market_portal,
+IX-RE-008,SITE-SOLAR-CA-03,71,Western Interconnect Demo,DEMO-SUB-W-31,commissioning,150.0,90.0,2026-05-31,true,commissioning_portal,Reactive power test pending.
+IX-RE-009,SITE-BESS-TX-04,24,ERCOT Demo,DEMO-SUB-TX-41,active,200.0,200.0,2026-09-10,true,secure_market_portal,
+IX-RE-010,SITE-WIND-CA-04,38,Western Interconnect Demo,DEMO-SUB-W-27,maintenance_hold,140.0,0.0,2026-07-01,true,secure_ops_portal,Edge case: export disabled during planned outage.
+IX-RE-011,SITE-SOLAR-MW-04,86,Midwest ISO Demo,DEMO-SUB-MW-02,retirement_review,60.0,55.0,2026-12-15,true,secure_ops_portal,Transformer replacement study.
+IX-RE-012,SITE-BESS-SE-05,104,Southeast Transmission Demo,,pending,50.0,0.0,2026-06-30,true,,Edge case: optional substation_id and communications channel pending final notice.
+IX-RE-013,SITE-WIND-NE-05,44,NorthEast Transmission Demo,DEMO-SUB-NE-06,active,75.0,68.0,2026-10-15,true,secure_ops_portal,Storm reliability review.
+IX-RE-014,SITE-SOLAR-SW-06,29,SouthWest Grid Demo,DEMO-SUB-SW-19,curtailment_watch,180.0,120.0,2026-08-01,true,secure_ops_portal,Repeated congestion notices.
+IX-RE-015,SITE-BESS-MW-06,33,Midwest ISO Demo,DEMO-SUB-MW-16,active,100.0,100.0,2026-09-25,true,secure_ops_portal,

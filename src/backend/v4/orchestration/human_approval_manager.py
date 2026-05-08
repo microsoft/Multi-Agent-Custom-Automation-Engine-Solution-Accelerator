@@ -5,7 +5,7 @@ Extends StandardMagenticManager (agent_framework version) to add approval gates 
 
 import asyncio
 import logging
-from typing import Any, Optional
+from typing import Any, Awaitable, Callable, Optional
 
 import v4.models.messages as messages
 from agent_framework import AgentResponse, Message
@@ -32,6 +32,12 @@ class HumanApprovalMagenticManager(StandardMagenticManager):
 
     approval_enabled: bool = True
     magentic_plan: Optional[MPlan] = None
+    terminal_status_persistor: Optional[
+        Callable[[str, Optional[str], str, str], Awaitable[None]]
+    ] = None
+    persisted_plan_id: Optional[str] = None
+    terminal_final_result_emitted: bool = False
+    terminal_final_result_status: Optional[str] = None
     current_user_id: str  # populated in __init__
 
     def __init__(self, user_id: str, agent, *args, **kwargs):
@@ -43,6 +49,9 @@ class HumanApprovalMagenticManager(StandardMagenticManager):
             *args: Additional positional arguments for the parent StandardMagenticManager.
             **kwargs: Additional keyword arguments for the parent StandardMagenticManager.
         """
+
+        self.terminal_status_persistor = kwargs.pop("terminal_status_persistor", None)
+        self.persisted_plan_id = kwargs.pop("persisted_plan_id", None)
 
         plan_append = """
 
@@ -93,6 +102,12 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
         self.current_user_id = user_id
         # New API: StandardMagenticManager takes agent as first positional argument
         super().__init__(agent, *args, **kwargs)
+
+    def has_emitted_non_completed_terminal_result(self) -> bool:
+        """Return True once this manager has already emitted a failed terminal result."""
+        if not self.terminal_final_result_emitted:
+            return False
+        return str(self.terminal_final_result_status or "").lower() != "completed"
 
     async def _complete(self, messages: list[Message]) -> Message:
         """Override to pass session=None, making each LLM call stateless.
@@ -234,11 +249,35 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
                 summary=f"Stopped after {magentic_context.round_count} rounds (max: {orchestration_config.max_rounds})",
             )
 
-            await connection_config.send_status_update_async(
-                message=final_message,
-                user_id=self.current_user_id,
-                message_type=messages.WebsocketMessageType.FINAL_RESULT_MESSAGE,
-            )
+            if not self.terminal_final_result_emitted:
+                if self.terminal_status_persistor:
+                    plan_id = self.persisted_plan_id
+                    if not plan_id and self.magentic_plan:
+                        plan_id = getattr(self.magentic_plan, "plan_id", None)
+                    await self.terminal_status_persistor(
+                        self.current_user_id,
+                        plan_id,
+                        final_message.status,
+                        final_message.content,
+                    )
+                else:
+                    logger.warning(
+                        "No terminal status persistor configured for final status %s",
+                        final_message.status,
+                    )
+
+                await connection_config.send_status_update_async(
+                    message=final_message,
+                    user_id=self.current_user_id,
+                    message_type=messages.WebsocketMessageType.FINAL_RESULT_MESSAGE,
+                )
+                self.terminal_final_result_emitted = True
+                self.terminal_final_result_status = final_message.status
+            else:
+                logger.info(
+                    "Skipping duplicate terminal final result with status %s",
+                    self.terminal_final_result_status,
+                )
 
             # Call base class to get the proper ledger type, then raise to terminate
             ledger = await super().create_progress_ledger(magentic_context)
@@ -375,7 +414,7 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
         except asyncio.CancelledError:
             logger.debug("Approval request %s was cancelled", m_plan_id)
             orchestration_config.cleanup_approval(m_plan_id)
-            return None
+            raise
 
         except Exception as e:
             logger.debug(

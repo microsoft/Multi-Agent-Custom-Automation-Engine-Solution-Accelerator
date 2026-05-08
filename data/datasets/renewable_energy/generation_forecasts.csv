@@ -1,0 +1,16 @@
+forecast_id,asset_id,forecast_date,forecast_window,expected_mwh,p50_mwh,p90_mwh,curtailment_risk,weather_driver,confidence_score,model_version,exception_note
+FCST-2026-001,RENEW-ASSET-001,2026-05-08,day_ahead,2180.0,2210.0,2430.0,medium,strong_northwest_winds,0.81,synthetic-v1,Monitor icing derate after 18:00Z.
+FCST-2026-002,RENEW-ASSET-002,2026-05-08,day_ahead,1675.0,1710.0,1825.0,low,clear_sky_high_irradiance,0.91,synthetic-v1,
+FCST-2026-003,RENEW-ASSET-003,2026-05-08,evening_peak,360.0,380.0,415.0,low,peak_shift_dispatch,0.88,synthetic-v1,State of charge should be reserved for 17:00-21:00.
+FCST-2026-004,RENEW-ASSET-004,2026-05-08,day_ahead,3920.0,4010.0,4360.0,medium,frontal_wind_ramp,0.76,synthetic-v1,Potential ramp-rate constraint at grid node.
+FCST-2026-005,RENEW-ASSET-005,2026-05-08,day_ahead,610.0,640.0,700.0,low,partly_cloudy,0.86,synthetic-v1,
+FCST-2026-006,RENEW-ASSET-006,2026-05-08,evening_peak,210.0,240.0,290.0,high,export_limit_active,0.72,synthetic-v1,Edge case: constrained export cap may reduce usable dispatch.
+FCST-2026-007,RENEW-ASSET-007,2026-05-08,day_ahead,2830.0,2925.0,3180.0,medium,gulf_low_pressure,0.79,synthetic-v1,Gearbox work order may reduce turbine availability.
+FCST-2026-008,RENEW-ASSET-008,2026-05-08,day_ahead,820.0,900.0,1020.0,medium,commissioning_derate,0.64,synthetic-v1,Edge case: low confidence due to commissioning telemetry gaps.
+FCST-2026-009,RENEW-ASSET-009,2026-05-08,evening_peak,620.0,650.0,700.0,low,ancillary_services_dispatch,0.84,synthetic-v1,
+FCST-2026-010,RENEW-ASSET-010,2026-05-08,day_ahead,0.0,0.0,0.0,low,planned_outage,0.98,synthetic-v1,Edge case: zero forecast while maintenance outage is active.
+FCST-2026-011,RENEW-ASSET-011,2026-05-08,day_ahead,340.0,360.0,390.0,medium,cloud_bank,0.73,synthetic-v1,Transformer age creates operational watch condition.
+FCST-2026-012,RENEW-ASSET-012,2026-05-08,evening_peak,0.0,80.0,150.0,high,interconnection_pending,0.55,synthetic-v1,Edge case: commissioning asset lacks final grid node.
+FCST-2026-013,RENEW-ASSET-013,2026-05-08,day_ahead,680.0,720.0,805.0,high,winter_storm_tail,0.61,synthetic-v1,Potential curtailment and icing derate.
+FCST-2026-014,RENEW-ASSET-014,2026-05-08,day_ahead,945.0,1010.0,1140.0,high,transmission_congestion,0.69,synthetic-v1,Repeated curtailment watch.
+FCST-2026-015,RENEW-ASSET-015,2026-05-08,evening_peak,410.0,435.0,480.0,low,peak_shift_dispatch,0.89,synthetic-v1,

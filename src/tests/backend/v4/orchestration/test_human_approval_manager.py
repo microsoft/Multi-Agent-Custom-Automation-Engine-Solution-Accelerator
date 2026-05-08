@@ -431,6 +431,48 @@ class TestHumanApprovalMagenticManager(unittest.IsolatedAsyncioTestCase):
         # Verify final message was sent
         connection_config.send_status_update_async.assert_called()
 
+    async def test_create_progress_ledger_persists_terminal_status_before_final_message(self):
+        """Test max-round termination persists terminal status before notifying UI."""
+        # Setup
+        context = MockMagenticContext(round_count=15)  # Exceeds max_rounds=10
+        self.manager.magentic_plan = Mock()
+        self.manager.magentic_plan.plan_id = "persisted-plan-id"
+
+        async def persist_terminal_status(user_id, plan_id, status, content):
+            self.assertEqual(connection_config.send_status_update_async.await_count, 0)
+            self.assertEqual(user_id, self.user_id)
+            self.assertEqual(plan_id, "persisted-plan-id")
+            self.assertEqual(status, "terminated")
+            self.assertEqual(content, "Process terminated: Maximum rounds exceeded")
+
+        self.manager.terminal_status_persistor = AsyncMock(
+            side_effect=persist_terminal_status
+        )
+
+        # Execute
+        with patch(
+            'backend.v4.orchestration.human_approval_manager.messages.FinalResultMessage',
+            MockFinalResultMessage,
+        ):
+            await self.manager.create_progress_ledger(context)
+
+        # Verify terminal persistence was awaited before the final message was sent.
+        self.manager.terminal_status_persistor.assert_awaited_once()
+        connection_config.send_status_update_async.assert_called()
+        self.assertTrue(self.manager.terminal_final_result_emitted)
+        self.assertEqual(self.manager.terminal_final_result_status, "terminated")
+
+        connection_config.send_status_update_async.reset_mock()
+        self.manager.terminal_status_persistor.reset_mock()
+        with patch(
+            'backend.v4.orchestration.human_approval_manager.messages.FinalResultMessage',
+            MockFinalResultMessage,
+        ):
+            await self.manager.create_progress_ledger(context)
+
+        self.manager.terminal_status_persistor.assert_not_awaited()
+        connection_config.send_status_update_async.assert_not_called()
+
     async def test_wait_for_user_approval_success(self):
         """Test _wait_for_user_approval with successful approval."""
         # Setup
@@ -529,12 +571,11 @@ class TestHumanApprovalMagenticManager(unittest.IsolatedAsyncioTestCase):
         # Setup
         plan_id = "test-plan-123"
         orchestration_config.wait_for_approval.side_effect = asyncio.CancelledError()
-        
-        # Execute
-        result = await self.manager._wait_for_user_approval(plan_id)
-        
-        # Verify
-        self.assertIsNone(result)
+
+        # Execute & Verify
+        with self.assertRaises(asyncio.CancelledError):
+            await self.manager._wait_for_user_approval(plan_id)
+
         orchestration_config.cleanup_approval.assert_called_with(plan_id)
 
     async def test_wait_for_user_approval_unexpected_error(self):
