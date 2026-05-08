@@ -1136,11 +1136,9 @@ module containerAppEnvironment 'br/public:avm/res/app/managed-environment:0.13.1
     location: location
     tags: {
       ...resourceGroup().tags
+      ...existingTags
+      ...allTags
       ...tags
-      TemplateName: 'MACAE'
-      Type: enablePrivateNetworking ? 'WAF' : 'Non-WAF'
-      CreatedBy: createdBy
-      DeploymentName: deployment().name
     }
     enableTelemetry: enableTelemetry
     // WAF aligned configuration for Private Networking
