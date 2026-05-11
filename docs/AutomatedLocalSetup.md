@@ -4,8 +4,8 @@ Two scripts — one for each platform — that automate the entire local develop
 
 | Platform | Script |
 |---|---|
-| Linux / macOS / WSL / Git Bash | `setup_local_dev.sh` |
-| Windows PowerShell | `setup_local_dev.ps1` |
+| Linux / macOS / WSL / Git Bash | `scripts/setup_local_dev.sh` |
+| Windows PowerShell | `scripts/setup_local_dev.ps1` |
 
 ---
 
@@ -49,10 +49,10 @@ az login
 
 ```bash
 # bash (Linux / macOS / WSL / Git Bash)
-bash setup_local_dev.sh --resource-group <resource-group>
+bash scripts/setup_local_dev.sh --resource-group <resource-group>
 
 # PowerShell (Windows)
-.\setup_local_dev.ps1 -ResourceGroup <resource-group>
+.\scripts\setup_local_dev.ps1 -ResourceGroup <resource-group>
 ```
 
 The script will:
@@ -67,7 +67,7 @@ The script will:
 ### Bash
 
 ```bash
-bash setup_local_dev.sh [options]
+bash scripts/setup_local_dev.sh [options]
 
 Options:
   --resource-group, -g <name>   Azure Resource Group (auto-detected from .azure/ if omitted)
@@ -80,7 +80,7 @@ Options:
 ### PowerShell
 
 ```powershell
-.\setup_local_dev.ps1 [options]
+.\scripts\setup_local_dev.ps1 [options]
 
 Options:
   -ResourceGroup <name>         Azure Resource Group (auto-detected from .azure/ if omitted)
@@ -95,27 +95,27 @@ Options:
 
 ```bash
 # Fetch config from Azure and set up everything
-bash setup_local_dev.sh --resource-group rg-macae-dev
+bash scripts/setup_local_dev.sh --resource-group rg-macae-dev
 
 # Use a specific subscription
-bash setup_local_dev.sh --resource-group rg-macae-dev --subscription 00000000-0000-0000-0000-000000000000
+bash scripts/setup_local_dev.sh --resource-group rg-macae-dev --subscription 00000000-0000-0000-0000-000000000000
 
 # Skip VS Code settings (e.g. using a different editor)
-bash setup_local_dev.sh --resource-group rg-macae-dev --skip-vscode
+bash scripts/setup_local_dev.sh --resource-group rg-macae-dev --skip-vscode
 
 # Skip prerequisite checks (useful in CI or if tools are on a non-standard PATH)
-bash setup_local_dev.sh --resource-group rg-macae-dev --skip-prereqs
+bash scripts/setup_local_dev.sh --resource-group rg-macae-dev --skip-prereqs
 ```
 
 ```powershell
 # Fetch config from Azure and set up everything
-.\setup_local_dev.ps1 -ResourceGroup rg-macae-dev
+.\scripts\setup_local_dev.ps1 -ResourceGroup rg-macae-dev
 
 # Use a specific subscription
-.\setup_local_dev.ps1 -ResourceGroup rg-macae-dev -Subscription 00000000-0000-0000-0000-000000000000
+.\scripts\setup_local_dev.ps1 -ResourceGroup rg-macae-dev -Subscription 00000000-0000-0000-0000-000000000000
 
 # Skip VS Code settings
-.\setup_local_dev.ps1 -ResourceGroup rg-macae-dev -SkipVSCode
+.\scripts\setup_local_dev.ps1 -ResourceGroup rg-macae-dev -SkipVSCode
 ```
 
 ---
@@ -125,8 +125,8 @@ bash setup_local_dev.sh --resource-group rg-macae-dev --skip-prereqs
 If you ran `azd up` to deploy, the scripts will automatically find the `.azure/<env>/.env` file and use it — no flags needed:
 
 ```bash
-bash setup_local_dev.sh        # reads .azure/<env>/.env written by azd up
-.\setup_local_dev.ps1          # same
+bash scripts/setup_local_dev.sh        # reads .azure/<env>/.env written by azd up
+.\scripts\setup_local_dev.ps1          # same
 ```
 
 If no `.azure/` folder exists and no `--resource-group` is provided, the script will prompt you to enter the resource group name interactively.
