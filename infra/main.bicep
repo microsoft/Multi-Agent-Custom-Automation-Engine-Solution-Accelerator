@@ -23,12 +23,10 @@ param solutionUniqueText string = take(uniqueString(subscription().id, resourceG
   'centralus'
   'eastasia'
   'eastus2'
-  'francecentral'
   'japaneast'
   'northeurope'
   'southeastasia'
   'uksouth'
-  'westus3'
 ])
 param location string
 
@@ -37,16 +35,14 @@ var deployerInfo = deployer()
 var deployingUserPrincipalId = deployerInfo.objectId
 
 // Restricting deployment to only supported Azure OpenAI regions validated with GPT-4o model
-@allowed(['australiaeast', 'eastus2', 'francecentral', 'japaneast', 'norwayeast', 'swedencentral', 'uksouth', 'westus', 'westus3'])
+@allowed(['australiaeast', 'eastus2', 'francecentral', 'japaneast', 'norwayeast', 'swedencentral', 'uksouth', 'westus'])
 @metadata({
   azd: {
     type: 'location'
     usageName: [
       'OpenAI.GlobalStandard.gpt4.1, 150'
-      'OpenAI.GlobalStandard.gpt4.1-mini, 100'
       'OpenAI.GlobalStandard.o4-mini, 50'
-      'OpenAI.GlobalStandard.gpt-5-mini, 50'
-      'OpenAI.GlobalStandard.gpt-image-1, 1'
+      'OpenAI.GlobalStandard.gpt4.1-mini, 50'
     ]
   }
 })
@@ -91,8 +87,8 @@ param gptImageModelVersion string = '2025-04-15'
 @description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2024-12-01-preview.')
 param azureopenaiVersion string = '2024-12-01-preview'
 
-@description('Optional. Version of the Azure AI Agent API version. Defaults to v1.')
-param azureAiAgentAPIVersion string = 'v1'
+@description('Optional. Version of the Azure AI Agent API version. Defaults to 2025-01-01-preview.')
+param azureAiAgentAPIVersion string = '2025-01-01-preview'
 
 @minLength(1)
 @allowed([
@@ -118,13 +114,13 @@ param gptModelDeploymentType string = 'GlobalStandard'
 @description('Optional. GPT model deployment type. Defaults to GlobalStandard.')
 param gptReasoningModelDeploymentType string = 'GlobalStandard'
 
-@description('Optional. AI model deployment token capacity (in thousands of TPM). Defaults to 100 to avoid 429s under typical multi-agent workloads.')
-param gptModelCapacity int = 100
+@description('Optional. AI model deployment token capacity. Defaults to 50 for optimal performance.')
+param gptModelCapacity int = 50
 
-@description('Optional. AI model deployment token capacity (in thousands of TPM). Defaults to 150 to avoid 429s under typical multi-agent workloads.')
+@description('Optional. AI model deployment token capacity. Defaults to 150 for optimal performance.')
 param gpt4_1ModelCapacity int = 150
 
-@description('Optional. AI model deployment token capacity (in thousands of TPM). Defaults to 50.')
+@description('Optional. AI model deployment token capacity. Defaults to 50 for optimal performance.')
 param gptReasoningModelCapacity int = 50
 
 @minLength(1)
@@ -135,7 +131,7 @@ param gptReasoningModelCapacity int = 50
 @description('Optional. GPT-5-mini model deployment type. Defaults to GlobalStandard.')
 param gpt5MiniModelDeploymentType string = 'GlobalStandard'
 
-@description('Optional. GPT-5-mini model deployment token capacity (in thousands of TPM). Defaults to 50.')
+@description('Optional. GPT-5-mini model deployment token capacity. Defaults to 50.')
 param gpt5MiniModelCapacity int = 50
 
 @minLength(1)
@@ -146,7 +142,7 @@ param gpt5MiniModelCapacity int = 50
 @description('Optional. GPT image model deployment type. Defaults to GlobalStandard.')
 param gptImageModelDeploymentType string = 'GlobalStandard'
 
-@description('Optional. GPT image model deployment capacity (images per minute). Defaults to 1 due to subscription quota limit (max 3 globally). Bump post-deploy with az cli if more is available.')
+@description('Optional. GPT image model deployment capacity (images per minute). Defaults to 1.')
 param gptImageModelCapacity int = 1
 
 @description('Optional. The tags to apply to all deployed Azure resources.')
@@ -231,13 +227,11 @@ var cosmosDbZoneRedundantHaRegionPairs = {
   eastasia: 'southeastasia'
   eastus: 'centralus'
   eastus2: 'centralus'
-  francecentral: 'westeurope'
   japaneast: 'australiaeast'
   northeurope: 'westeurope'
   southeastasia: 'eastasia'
   uksouth: 'westeurope'
   westeurope: 'northeurope'
-  westus3: 'westus2'
 }
 // Paired location calculated based on 'location' parameter. This location will be used by applicable resources if `enableScalability` is set to `true`
 var cosmosDbHaLocation = cosmosDbZoneRedundantHaRegionPairs[location]
@@ -249,13 +243,11 @@ var replicaRegionPairs = {
   eastasia: 'japaneast'
   eastus: 'centralus'
   eastus2: 'centralus'
-  francecentral: 'westeurope'
   japaneast: 'eastasia'
   northeurope: 'westeurope'
   southeastasia: 'eastasia'
   uksouth: 'westeurope'
   westeurope: 'northeurope'
-  westus3: 'westus2'
 }
 var replicaLocation = replicaRegionPairs[location]
 
@@ -867,26 +859,6 @@ var aiFoundryAiServicesImageModelDeployment = {
 }
 var aiFoundryAiProjectDescription = 'AI Foundry Project'
 
-// gpt-image-1 is only available in a subset of regions (e.g. eastus2, swedencentral).
-// Skip the image-model deployment when the AI services region does not support it
-// so that deployments to other regions (e.g. francecentral) succeed.
-var imageModelSupportedRegions = ['eastus2', 'swedencentral', 'westus3', 'uaenorth', 'polandcentral']
-var deployImageModel = contains(imageModelSupportedRegions, azureAiServiceLocation)
-var imageModelDeploymentEntry = {
-  name: aiFoundryAiServicesImageModelDeployment.name
-  model: {
-    format: aiFoundryAiServicesImageModelDeployment.format
-    name: aiFoundryAiServicesImageModelDeployment.name
-    version: aiFoundryAiServicesImageModelDeployment.version
-  }
-  raiPolicyName: aiFoundryAiServicesImageModelDeployment.raiPolicyName
-  sku: {
-    name: aiFoundryAiServicesImageModelDeployment.sku.name
-    capacity: aiFoundryAiServicesImageModelDeployment.sku.capacity
-  }
-}
-var imageModelDeploymentEntries = deployImageModel ? [imageModelDeploymentEntry] : []
-
 resource existingAiFoundryAiServices 'Microsoft.CognitiveServices/accounts@2025-06-01' existing = if (useExistingAiFoundryAiProject) {
   name: aiFoundryAiServicesResourceName
   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
@@ -897,7 +869,7 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
   params: {
     name: existingAiFoundryAiServices.name
-    deployments: concat([
+    deployments: [
       {
         name: aiFoundryAiServicesModelDeployment.name
         model: {
@@ -950,7 +922,20 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
           capacity: aiFoundryAiServices5MiniModelDeployment.sku.capacity
         }
       }
-    ], imageModelDeploymentEntries)
+      {
+        name: aiFoundryAiServicesImageModelDeployment.name
+        model: {
+          format: aiFoundryAiServicesImageModelDeployment.format
+          name: aiFoundryAiServicesImageModelDeployment.name
+          version: aiFoundryAiServicesImageModelDeployment.version
+        }
+        raiPolicyName: aiFoundryAiServicesImageModelDeployment.raiPolicyName
+        sku: {
+          name: aiFoundryAiServicesImageModelDeployment.sku.name
+          capacity: aiFoundryAiServicesImageModelDeployment.sku.capacity
+        }
+      }
+    ]
     roleAssignments: [
       {
         roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
@@ -985,7 +970,7 @@ module aiFoundryAiServices 'br:mcr.microsoft.com/bicep/avm/res/cognitive-service
     apiProperties: {
       //staticsEnabled: false
     }
-    deployments: concat([
+    deployments: [
       {
         name: aiFoundryAiServicesModelDeployment.name
         model: {
@@ -1038,7 +1023,20 @@ module aiFoundryAiServices 'br:mcr.microsoft.com/bicep/avm/res/cognitive-service
           capacity: aiFoundryAiServices5MiniModelDeployment.sku.capacity
         }
       }
-    ], imageModelDeploymentEntries)
+      {
+        name: aiFoundryAiServicesImageModelDeployment.name
+        model: {
+          format: aiFoundryAiServicesImageModelDeployment.format
+          name: aiFoundryAiServicesImageModelDeployment.name
+          version: aiFoundryAiServicesImageModelDeployment.version
+        }
+        raiPolicyName: aiFoundryAiServicesImageModelDeployment.raiPolicyName
+        sku: {
+          name: aiFoundryAiServicesImageModelDeployment.sku.name
+          capacity: aiFoundryAiServicesImageModelDeployment.sku.capacity
+        }
+      }
+    ]
     networkAcls: {
       defaultAction: 'Allow'
       virtualNetworkRules: []
@@ -1438,7 +1436,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
           }
           {
             name: 'SUPPORTED_MODELS'
-            value: '["o3","o4-mini","gpt-4.1","gpt-4.1-mini","gpt-5-mini"]'
+            value: '["o3","o4-mini","gpt-4.1","gpt-4.1-mini"]'
           }
           {
             name: 'AZURE_AI_SEARCH_API_KEY'
@@ -1579,26 +1577,6 @@ module containerAppMcp 'br/public:avm/res/app/container-app:0.18.1' = {
             name: 'DATASET_PATH'
             value: './datasets'
           }
-          {
-            name: 'AZURE_OPENAI_ENDPOINT'
-            value: 'https://${aiFoundryAiServicesResourceName}.openai.azure.com/'
-          }
-          {
-            name: 'AZURE_OPENAI_IMAGE_DEPLOYMENT'
-            value: aiFoundryAiServicesImageModelDeployment.name
-          }
-          {
-            name: 'AZURE_STORAGE_BLOB_URL'
-            value: avmStorageAccount.outputs.serviceEndpoints.blob
-          }
-          {
-            name: 'AZURE_STORAGE_IMAGES_CONTAINER'
-            value: storageContainerNameGeneratedImages
-          }
-          {
-            name: 'AZURE_CLIENT_ID'
-            value: userAssignedIdentity!.outputs.clientId
-          }
         ]
       }
     ]
@@ -1683,7 +1661,6 @@ param storageContainerNameRFPCompliance string = 'rfp-compliance-dataset'
 param storageContainerNameContractSummary string = 'contract-summary-dataset'
 param storageContainerNameContractRisk string = 'contract-risk-dataset'
 param storageContainerNameContractCompliance string = 'contract-compliance-dataset'
-param storageContainerNameGeneratedImages string = 'generated-images'
 module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
   name: take('avm.res.storage.storage-account.${storageAccountName}', 64)
   params: {
@@ -1771,10 +1748,6 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
         }
         {
           name: storageContainerNameContractCompliance
-          publicAccess: 'None'
-        }
-        {
-          name: storageContainerNameGeneratedImages
           publicAccess: 'None'
         }
       ]
@@ -2060,7 +2033,7 @@ output AZURE_COGNITIVE_SERVICES string = 'https://cognitiveservices.azure.com/.d
 output REASONING_MODEL_NAME string = aiFoundryAiServicesReasoningModelDeployment.name
 output MCP_SERVER_NAME string = 'MacaeMcpServer'
 output MCP_SERVER_DESCRIPTION string = 'MCP server with greeting, HR, and planning tools'
-output SUPPORTED_MODELS string = '["o3","o4-mini","gpt-4.1","gpt-4.1-mini","gpt-5-mini"]'
+output SUPPORTED_MODELS string = '["o3","o4-mini","gpt-4.1","gpt-4.1-mini"]'
 output AZURE_AI_SEARCH_API_KEY string = '<Deployed-Search-ApiKey>'
 output BACKEND_URL string = 'https://${containerApp.outputs.fqdn}'
 output AZURE_AI_PROJECT_ENDPOINT string = aiFoundryAiProjectEndpoint
