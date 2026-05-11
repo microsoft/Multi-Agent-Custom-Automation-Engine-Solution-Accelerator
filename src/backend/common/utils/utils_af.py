@@ -124,15 +124,41 @@ async def create_RAI_agent(
     return agent
 
 
-async def _get_agent_response(agent: FoundryAgentTemplate, query: str) -> str:
-    """
-    Stream the agent response fully and return concatenated text.
+def _extract_usage_from_update(update) -> tuple[int, int, int] | None:
+    """Extract (input, output, total) token counts from a streaming update."""
+    contents = getattr(update, "contents", None) or []
+    for item in contents:
+        usage_details = getattr(item, "usage_details", None)
+        if isinstance(usage_details, dict) and usage_details:
+            inp = usage_details.get("input_token_count", 0) or usage_details.get("prompt_tokens", 0) or usage_details.get("input_tokens", 0) or 0
+            out = usage_details.get("output_token_count", 0) or usage_details.get("completion_tokens", 0) or usage_details.get("output_tokens", 0) or 0
+            tot = usage_details.get("total_token_count", 0) or usage_details.get("total_tokens", 0) or (inp + out)
+            if tot > 0:
+                return (inp, out, tot)
+    raw = getattr(update, "raw_representation", None)
+    if raw is not None:
+        usage_obj = getattr(raw, "usage", None)
+        if usage_obj is not None:
+            if isinstance(usage_obj, dict):
+                inp = usage_obj.get("prompt_tokens", 0) or usage_obj.get("input_tokens", 0) or 0
+                out = usage_obj.get("completion_tokens", 0) or usage_obj.get("output_tokens", 0) or 0
+                tot = usage_obj.get("total_tokens", 0) or (inp + out)
+            else:
+                inp = getattr(usage_obj, "prompt_tokens", 0) or getattr(usage_obj, "input_tokens", 0) or 0
+                out = getattr(usage_obj, "completion_tokens", 0) or getattr(usage_obj, "output_tokens", 0) or 0
+                tot = getattr(usage_obj, "total_tokens", 0) or (inp + out)
+            if tot > 0:
+                return (inp, out, tot)
+    return None
 
-    For agent_framework streaming:
-      - Each update may have .text
-      - Or tool/content items in update.contents with .text
+
+async def _get_agent_response(agent: FoundryAgentTemplate, query: str) -> tuple[str, tuple[int, int, int]]:
+    """
+    Stream the agent response fully and return concatenated text along with
+    accumulated token usage as (input_tokens, output_tokens, total_tokens).
     """
     parts: list[str] = []
+    total_inp, total_out, total_tot = 0, 0, 0
     try:
         async for message in agent.invoke(query):
             # Prefer direct text
@@ -145,39 +171,55 @@ async def _get_agent_response(agent: FoundryAgentTemplate, query: str) -> str:
                     txt = getattr(item, "text", None)
                     if txt:
                         parts.append(str(txt))
-        return "".join(parts) if parts else ""
+            # Accumulate token usage from each streaming update
+            usage = _extract_usage_from_update(message)
+            if usage:
+                total_inp += usage[0]
+                total_out += usage[1]
+                total_tot += usage[2]
+        return ("".join(parts) if parts else "", (total_inp, total_out, total_tot))
     except Exception as e:
         logging.error("Error streaming agent response: %s", e)
-        return "TRUE"  # Default to blocking on error
+        return ("TRUE", (total_inp, total_out, total_tot))  # Default to blocking on error
 
 
 async def rai_success(
     description: str, team_config: TeamConfiguration, memory_store: DatabaseBase
-) -> bool:
+) -> tuple[bool, dict]:
     """
     Run a RAI compliance check on the provided description using the RAIAgent.
-    Returns True if content is safe (should proceed), False if it should be blocked.
+    Returns (is_safe, token_usage_dict) where token_usage_dict contains
+    {"input_tokens": int, "output_tokens": int, "total_tokens": int, "model_deployment_name": str}.
     """
     agent: FoundryAgentTemplate | None = None
+    rai_model = config.AZURE_OPENAI_RAI_DEPLOYMENT_NAME or ""
+    empty_usage = {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0, "model_deployment_name": rai_model}
     try:
         agent = await create_RAI_agent(team_config, memory_store)
         if not agent:
             logging.error("Failed to instantiate RAIAgent.")
-            return False
+            return (False, empty_usage)
 
-        response_text = await _get_agent_response(agent, description)
+        response_text, token_tuple = await _get_agent_response(agent, description)
         verdict = response_text.strip().upper()
 
+        usage = {
+            "input_tokens": token_tuple[0],
+            "output_tokens": token_tuple[1],
+            "total_tokens": token_tuple[2],
+            "model_deployment_name": rai_model,
+        }
+
         if "FALSE" in verdict:  # any false in the response
-            logging.info("RAI check passed.")
-            return True
+            logging.info("RAI check passed. Token usage: %s", usage)
+            return (True, usage)
         else:
             logging.info("RAI check failed (blocked). Sample: %s...", description[:60])
-            return False
+            return (False, usage)
 
     except Exception as e:
         logging.error("RAI check error: %s — blocking by default.", e)
-        return False
+        return (False, empty_usage)
     finally:
         # Ensure we close resources
         if agent:
@@ -247,7 +289,8 @@ async def rai_validate_team_config(
             starting_tasks=[],
             user_id=str(uuid.uuid4()),
         )
-        if not await rai_success(combined, team_config, memory_store):
+        is_safe, _usage = await rai_success(combined, team_config, memory_store)
+        if not is_safe:
             return (
                 False,
                 "Team configuration contains inappropriate content and cannot be uploaded.",

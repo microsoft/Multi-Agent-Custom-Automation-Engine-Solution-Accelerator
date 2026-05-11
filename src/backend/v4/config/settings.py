@@ -87,6 +87,7 @@ class OrchestrationConfig:
     def __init__(self):
         # Previously Dict[str, MagenticOrchestration]; now generic workflow objects from MagenticBuilder.build()
         self.orchestrations: Dict[str, Any] = {}  # user_id -> workflow instance
+        self.agent_model_maps: Dict[str, Dict[str, str]] = {}  # user_id -> {agent_name -> model_deployment_name}
         self.plans: Dict[str, MPlan] = {}  # plan_id -> plan details
         self.approvals: Dict[str, bool] = {}  # m_plan_id -> approval status (None pending)
         self.sockets: Dict[str, WebSocket] = {}  # user_id -> WebSocket

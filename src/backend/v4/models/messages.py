@@ -182,6 +182,31 @@ class TimeoutNotification:
         }
 
 
+@dataclass(slots=True)
+class TokenUsageUpdate:
+    """Real-time token usage update for an agent."""
+    agent_name: str
+    input_tokens: int
+    output_tokens: int
+    total_tokens: int
+    cumulative_input_tokens: int = 0
+    cumulative_output_tokens: int = 0
+    cumulative_total_tokens: int = 0
+    model_deployment_name: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "agent_name": self.agent_name,
+            "input_tokens": self.input_tokens,
+            "output_tokens": self.output_tokens,
+            "total_tokens": self.total_tokens,
+            "cumulative_input_tokens": self.cumulative_input_tokens,
+            "cumulative_output_tokens": self.cumulative_output_tokens,
+            "cumulative_total_tokens": self.cumulative_total_tokens,
+            "model_deployment_name": self.model_deployment_name,
+        }
+
+
 class WebsocketMessageType(str, Enum):
     """Types of WebSocket messages."""
     SYSTEM_MESSAGE = "system_message"
@@ -199,3 +224,4 @@ class WebsocketMessageType(str, Enum):
     FINAL_RESULT_MESSAGE = "final_result_message"
     TIMEOUT_NOTIFICATION = "timeout_notification"
     ERROR_MESSAGE = "error_message"
+    TOKEN_USAGE_UPDATE = "token_usage_update"
