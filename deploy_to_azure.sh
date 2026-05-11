@@ -583,7 +583,7 @@ determine_services() {
                 esac
             done
         else
-            log_warn "No service-specific changes detected (no git diff vs HEAD or origin/main)."
+            log_warn "No service-specific changes detected (no uncommitted changes vs HEAD)."
             echo ""
             read -rp "No changes detected. Deploy all services anyway? [y/N]: " confirm
             if [[ "${confirm,,}" == "y" || "${confirm,,}" == "yes" ]]; then

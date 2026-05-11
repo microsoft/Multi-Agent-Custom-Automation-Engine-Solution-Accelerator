@@ -871,7 +871,11 @@ if ($policy -eq "Restricted") {
 Check-Prerequisites
 Check-AzureAuth
 Fetch-Configuration
-Assign-RbacRoles
+if ($AssignRbac) {
+    Assign-RbacRoles
+} else {
+    Write-LogInfo "Skipping RBAC role assignment (use -AssignRbac to enable)"
+}
 Setup-Backend
 Setup-McpServer
 Setup-Frontend

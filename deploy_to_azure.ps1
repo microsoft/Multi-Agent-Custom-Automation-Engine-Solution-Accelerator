@@ -58,7 +58,7 @@ function Invoke-AzRetry {
         if ($LASTEXITCODE -eq 0) { return $out }
         $outStr = $out -join "`n"
         if ($outStr -match 'OperationInProgress|ContainerAppOperation') {
-            Write-LogWarn "Azure operation in progress (attempt $attempt/4), retrying in 30s..." -ForegroundColor Yellow
+            Write-LogWarn "Azure operation in progress (attempt $attempt/4), retrying in 30s..."
             Start-Sleep -Seconds 30; $attempt++
         } elseif ($outStr -match 'RemoteDisconnected|Connection aborted|timed out|ECONNRESET|HTTPSConnectionPool|Max retries exceeded|NewConnectionError|getaddrinfo|Failed to establish') {
             Write-LogWarn "Transient network error (attempt $attempt/4), retrying in 15s..."
@@ -453,7 +453,7 @@ function Determine-Services {
                 }
             }
         } else {
-            Write-LogWarn "No service-specific changes detected (no git diff vs HEAD or origin/main)."
+            Write-LogWarn "No service-specific changes detected (no uncommitted changes vs HEAD)."
             Write-Host ""
             $confirm = Read-Host "No changes detected. Deploy all services anyway? [y/N]"
             if ($confirm -match '^[Yy](es)?$') {

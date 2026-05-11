@@ -117,7 +117,7 @@ confirm() {
 parse_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --resource-group|-r) RESOURCE_GROUP="$2"; shift 2 ;;
+            --resource-group|-g) RESOURCE_GROUP="$2"; shift 2 ;;
             --subscription|-s)   SUBSCRIPTION="$2";   shift 2 ;;
             --assign-rbac)       ASSIGN_RBAC=true;     shift ;;
             --skip-vscode)       SKIP_VSCODE=true;     shift ;;
@@ -954,7 +954,11 @@ fi
 check_prerequisites
 check_azure_auth
 fetch_configuration
-assign_rbac_roles
+if [[ "$ASSIGN_RBAC" == "true" ]]; then
+    assign_rbac_roles
+else
+    log_info "Skipping RBAC role assignment (use --assign-rbac to enable)"
+fi
 setup_backend
 setup_mcp_server
 setup_frontend
