@@ -4,8 +4,8 @@ Two scripts — one for each platform — that build only the Docker images you 
 
 | Platform | Script |
 |---|---|
-| Linux / macOS / WSL | `scripts/deploy_to_azure.sh` |
-| Windows PowerShell | `scripts/deploy_to_azure.ps1` |
+| Linux / macOS / WSL | `infra/scripts/deploy_to_azure.sh` |
+| Windows PowerShell | `infra/scripts/deploy_to_azure.ps1` |
 
 ---
 
@@ -41,10 +41,10 @@ az login
 
 ```bash
 # bash (Linux/macOS/WSL)
-bash scripts/deploy_to_azure.sh -g <resource-group>
+bash infra/scripts/deploy_to_azure.sh -g <resource-group>
 
 # PowerShell (Windows)
-.\scripts\deploy_to_azure.ps1 -ResourceGroup <resource-group>
+.\infra\scripts\deploy_to_azure.ps1 -ResourceGroup <resource-group>
 ```
 
 The script will:
@@ -59,7 +59,7 @@ The script will:
 ### Bash
 
 ```bash
-./scripts/deploy_to_azure.sh -g <resource-group> [options]
+./infra/scripts/deploy_to_azure.sh -g <resource-group> [options]
 
 Required:
   -g, --resource-group <name>   Azure Resource Group name
@@ -79,7 +79,7 @@ Options:
 ### PowerShell
 
 ```powershell
-.\scripts\deploy_to_azure.ps1 -ResourceGroup <name> [options]
+.\infra\scripts\deploy_to_azure.ps1 -ResourceGroup <name> [options]
 
 Required:
   -ResourceGroup <name>         Azure Resource Group name
@@ -101,39 +101,39 @@ Options:
 
 ```bash
 # Deploy only what changed (auto-detected)
-bash scripts/deploy_to_azure.sh -g rg-macae-dev
+bash infra/scripts/deploy_to_azure.sh -g rg-macae-dev
 
 # Deploy only the frontend
-bash scripts/deploy_to_azure.sh -g rg-macae-dev --services frontend
+bash infra/scripts/deploy_to_azure.sh -g rg-macae-dev --services frontend
 
 # Deploy backend and MCP with a specific ACR
-bash scripts/deploy_to_azure.sh -g rg-macae-dev --services backend,mcp --acr myregistry
+bash infra/scripts/deploy_to_azure.sh -g rg-macae-dev --services backend,mcp --acr myregistry
 
 # Preview without making changes
-bash scripts/deploy_to_azure.sh -g rg-macae-dev --dry-run
+bash infra/scripts/deploy_to_azure.sh -g rg-macae-dev --dry-run
 
 # Build images only (no Azure update)
-bash scripts/deploy_to_azure.sh -g rg-macae-dev --build-only
+bash infra/scripts/deploy_to_azure.sh -g rg-macae-dev --build-only
 
 # Update Azure only (images already pushed)
-bash scripts/deploy_to_azure.sh -g rg-macae-dev --deploy-only --tag 20260506-120000-abc1234
+bash infra/scripts/deploy_to_azure.sh -g rg-macae-dev --deploy-only --tag 20260506-120000-abc1234
 
 # Skip AcrPull role assignment (roles already exist)
-bash scripts/deploy_to_azure.sh -g rg-macae-dev --skip-role-assignment
+bash infra/scripts/deploy_to_azure.sh -g rg-macae-dev --skip-role-assignment
 ```
 
 ```powershell
 # Deploy only what changed
-.\scripts\deploy_to_azure.ps1 -ResourceGroup rg-macae-dev
+.\infra\scripts\deploy_to_azure.ps1 -ResourceGroup rg-macae-dev
 
 # Deploy only backend
-.\scripts\deploy_to_azure.ps1 -ResourceGroup rg-macae-dev -Services "backend"
+.\infra\scripts\deploy_to_azure.ps1 -ResourceGroup rg-macae-dev -Services "backend"
 
 # Dry run
-.\scripts\deploy_to_azure.ps1 -ResourceGroup rg-macae-dev -DryRun
+.\infra\scripts\deploy_to_azure.ps1 -ResourceGroup rg-macae-dev -DryRun
 
 # Skip AcrPull role assignment (roles already exist)
-.\scripts\deploy_to_azure.ps1 -ResourceGroup rg-macae-dev -SkipRoleAssignment
+.\infra\scripts\deploy_to_azure.ps1 -ResourceGroup rg-macae-dev -SkipRoleAssignment
 ```
 
 ---
