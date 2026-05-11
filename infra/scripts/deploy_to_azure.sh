@@ -40,6 +40,7 @@ _winpath() {
 # ==============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 RESOURCE_GROUP=""
 ACR_INPUT=""
 SERVICES=""
@@ -55,9 +56,9 @@ MCP_IMAGE_NAME="macaemcp"
 FRONTEND_IMAGE_NAME="macaefrontend"
 
 # Service paths
-BACKEND_DIR="$SCRIPT_DIR/src/backend"
-MCP_DIR="$SCRIPT_DIR/src/mcp_server"
-FRONTEND_DIR="$SCRIPT_DIR/src/App"
+BACKEND_DIR="$REPO_ROOT/src/backend"
+MCP_DIR="$REPO_ROOT/src/mcp_server"
+FRONTEND_DIR="$REPO_ROOT/src/App"
 
 # ==============================================================================
 # Logging

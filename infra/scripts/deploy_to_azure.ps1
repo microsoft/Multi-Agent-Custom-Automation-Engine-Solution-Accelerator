@@ -31,9 +31,10 @@ $ErrorActionPreference = "Stop"
 # ==============================================================================
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$BackendDir = Join-Path $ScriptDir "src\backend"
-$McpDir = Join-Path $ScriptDir "src\mcp_server"
-$FrontendDir = Join-Path $ScriptDir "src\App"
+$RepoRoot = (Resolve-Path (Join-Path $ScriptDir "..\..")).Path
+$BackendDir = Join-Path $RepoRoot "src\backend"
+$McpDir = Join-Path $RepoRoot "src\mcp_server"
+$FrontendDir = Join-Path $RepoRoot "src\App"
 
 $BackendImageName = "macaebackend"
 $McpImageName = "macaemcp"

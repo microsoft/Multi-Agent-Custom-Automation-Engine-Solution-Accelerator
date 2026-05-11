@@ -22,12 +22,13 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# Script directory (repo root)
+# Resolve repo root (script lives in infra/scripts/)
 $ScriptDir = $PSScriptRoot
 if (-not $ScriptDir) { $ScriptDir = Get-Location }
-$BackendDir = Join-Path $ScriptDir "src\backend"
-$McpDir = Join-Path $ScriptDir "src\mcp_server"
-$FrontendDir = Join-Path $ScriptDir "src\App"
+$RepoRoot = (Resolve-Path (Join-Path $RepoRoot "..\..")).Path
+$BackendDir = Join-Path $RepoRoot "src\backend"
+$McpDir = Join-Path $RepoRoot "src\mcp_server"
+$FrontendDir = Join-Path $RepoRoot "src\App"
 
 # ==============================================================================
 # Helper Functions
@@ -255,7 +256,7 @@ function Fetch-Configuration {
     # PATH 2: No RG given — look for .azure/<env>/.env written by 'azd up' / local deployment
     Write-LogInfo "No -ResourceGroup provided. Looking for existing config in .azure/ folder..."
 
-    $azdDir = Join-Path $ScriptDir ".azure"
+    $azdDir = Join-Path $RepoRoot ".azure"
     $azdEnvFile = $null
     $detectedEnvName = ""
 
@@ -761,7 +762,7 @@ function Setup-VSCode {
 
     Write-LogStep "Step 8: Configuring VS Code"
 
-    $vscodeDir = Join-Path $ScriptDir ".vscode"
+    $vscodeDir = Join-Path $RepoRoot ".vscode"
     if (-not (Test-Path $vscodeDir)) { New-Item -ItemType Directory -Path $vscodeDir | Out-Null }
 
     $extensionsFile = Join-Path $vscodeDir "extensions.json"
@@ -854,7 +855,7 @@ Write-Host "╚═════════════════════�
 Write-Host ""
 
 # Verify repo root
-if (-not (Test-Path (Join-Path $ScriptDir "src\backend\app.py"))) {
+if (-not (Test-Path (Join-Path $RepoRoot "src\backend\app.py"))) {
     Write-LogError "This script must be run from the repository root directory"
     exit 1
 }

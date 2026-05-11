@@ -22,9 +22,10 @@ set -euo pipefail
 # ==============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BACKEND_DIR="$SCRIPT_DIR/src/backend"
-MCP_DIR="$SCRIPT_DIR/src/mcp_server"
-FRONTEND_DIR="$SCRIPT_DIR/src/App"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+BACKEND_DIR="$REPO_ROOT/src/backend"
+MCP_DIR="$REPO_ROOT/src/mcp_server"
+FRONTEND_DIR="$REPO_ROOT/src/App"
 
 # ==============================================================================
 # Flags (set by parse_args)
@@ -316,7 +317,7 @@ fetch_configuration() {
     # PATH 2: Look for .azure/<env>/.env written by 'azd up'
     log_info "No --resource-group provided. Looking for existing config in .azure/ folder..."
 
-    local azd_dir="$SCRIPT_DIR/.azure"
+    local azd_dir="$REPO_ROOT/.azure"
     local azd_env_file=""
     local detected_env_name=""
 
@@ -773,7 +774,7 @@ setup_backend() {
     uv sync --python 3.12 --extra dev
 
     log_success "Backend setup complete"
-    cd "$SCRIPT_DIR"
+    cd "$REPO_ROOT"
 }
 
 # ==============================================================================
@@ -798,7 +799,7 @@ setup_mcp_server() {
     uv sync --python 3.12
 
     log_success "MCP Server setup complete"
-    cd "$SCRIPT_DIR"
+    cd "$REPO_ROOT"
 }
 
 # ==============================================================================
@@ -834,7 +835,7 @@ setup_frontend() {
     npm run build
 
     log_success "Frontend setup complete"
-    cd "$SCRIPT_DIR"
+    cd "$REPO_ROOT"
 }
 
 # ==============================================================================
@@ -846,7 +847,7 @@ setup_vscode() {
 
     log_step "Step 8: Configuring VS Code"
 
-    local vscode_dir="$SCRIPT_DIR/.vscode"
+    local vscode_dir="$REPO_ROOT/.vscode"
     mkdir -p "$vscode_dir"
 
     local extensions_file="$vscode_dir/extensions.json"
@@ -943,7 +944,7 @@ echo ""
 
 parse_args "$@"
 
-if [[ ! -f "$SCRIPT_DIR/src/backend/app.py" ]]; then
+if [[ ! -f "$REPO_ROOT/src/backend/app.py" ]]; then
     log_error "This script must be run from the repository root directory"
     exit 1
 fi
