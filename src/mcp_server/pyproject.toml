@@ -24,7 +24,7 @@ dependencies = [
   "python-multipart==0.0.26",
   "httpx==0.28.1",
   "werkzeug==3.1.6",
-  "urllib3==2.6.3",
+  "urllib3==2.7.0",
   "azure-core==1.38.0",
   "cryptography==46.0.7",
   "authlib==1.6.11",
