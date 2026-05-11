@@ -4,7 +4,31 @@ metadata:
   template: multi-agent-custom-automation-engine-solution-accelerator@1.0
 requiredVersions:
   azd: '>= 1.18.0'
+services:
+  backend:
+    project: ./src/backend
+    language: docker
+    host: containerapp
+    docker:
+      remoteBuild: true
+  mcp:
+    project: ./src/mcp_server
+    language: docker
+    host: containerapp
+    docker:
+      remoteBuild: true
 hooks:
+  postprovision:
+    windows:
+      run: ./infra/scripts/Deploy-AI-Models.ps1
+      shell: pwsh
+      interactive: true
+      continueOnError: false
+    posix:
+      run: ./infra/scripts/deploy-ai-models.sh
+      shell: sh
+      interactive: true
+      continueOnError: false
   postdeploy:
     windows:
       run: |

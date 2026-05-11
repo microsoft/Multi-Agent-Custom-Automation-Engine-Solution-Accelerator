@@ -103,8 +103,12 @@ class MagenticAgentFactory:
             if getattr(agent_obj, "use_rag", False)
             else None
         )
+
+        allowed_tools = getattr(agent_obj, "mcp_allowed_tools", None) or None
         mcp_config = (
-            MCPConfig.from_env() if getattr(agent_obj, "use_mcp", False) else None
+            MCPConfig.from_env(allowed_tools=allowed_tools)
+            if getattr(agent_obj, "use_mcp", False)
+            else None
         )
         # bing_config = BingConfig.from_env() if getattr(agent_obj, 'use_bing', False) else None
 

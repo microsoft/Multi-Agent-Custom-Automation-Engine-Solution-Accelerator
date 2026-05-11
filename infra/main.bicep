@@ -23,10 +23,12 @@ param solutionUniqueText string = take(uniqueString(subscription().id, resourceG
   'centralus'
   'eastasia'
   'eastus2'
+  'francecentral'
   'japaneast'
   'northeurope'
   'southeastasia'
   'uksouth'
+  'westus3'
 ])
 param location string
 
@@ -34,8 +36,9 @@ param location string
 var deployerInfo = deployer()
 var deployingUserPrincipalId = deployerInfo.objectId
 
-// Restricting deployment to only supported Azure OpenAI regions validated with GPT-4o model
-@allowed(['australiaeast', 'eastus2', 'francecentral', 'japaneast', 'norwayeast', 'swedencentral', 'uksouth', 'westus'])
+// Restricted to regions that support BOTH the GPT chat models AND the gpt-image-2 image model.
+// Picking a region outside this list would silently skip the image-model deployment (see imageModelSupportedRegions below).
+@allowed(['eastus2', 'swedencentral', 'westus3'])
 @metadata({
   azd: {
     type: 'location'
@@ -46,7 +49,7 @@ var deployingUserPrincipalId = deployerInfo.objectId
     ]
   }
 })
-@description('Required. Location for all AI service resources. This should be one of the supported Azure AI Service locations.')
+@description('Required. Location for all AI service resources. Must support gpt-4.1-mini, o4-mini, gpt-5-mini, AND gpt-image-2.')
 param azureAiServiceLocation string
 
 @minLength(1)
@@ -78,11 +81,11 @@ param gpt5MiniModelName string = 'gpt-5-mini'
 param gpt5MiniModelVersion string = '2025-08-07'
 
 @minLength(1)
-@description('Optional. Name of the image-generation model to deploy. Defaults to gpt-image-1.')
-param gptImageModelName string = 'gpt-image-1'
+@description('Optional. Name of the image-generation model to deploy. Defaults to gpt-image-2 (gpt-image-1.5 has limited regional quota).')
+param gptImageModelName string = 'gpt-image-2'
 
-@description('Optional. Version of the image-generation model to deploy. Defaults to 2025-04-15.')
-param gptImageModelVersion string = '2025-04-15'
+@description('Optional. Version of the image-generation model to deploy. Defaults to 2026-04-21.')
+param gptImageModelVersion string = '2026-04-21'
 
 @description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2024-12-01-preview.')
 param azureopenaiVersion string = '2024-12-01-preview'
@@ -114,8 +117,8 @@ param gptModelDeploymentType string = 'GlobalStandard'
 @description('Optional. GPT model deployment type. Defaults to GlobalStandard.')
 param gptReasoningModelDeploymentType string = 'GlobalStandard'
 
-@description('Optional. AI model deployment token capacity. Defaults to 50 for optimal performance.')
-param gptModelCapacity int = 50
+@description('Optional. AI model deployment token capacity. Defaults to 150 to avoid 429 rate-limit errors during planning workflows that fan out to many agents.')
+param gptModelCapacity int = 150
 
 @description('Optional. AI model deployment token capacity. Defaults to 150 for optimal performance.')
 param gpt4_1ModelCapacity int = 150
@@ -142,8 +145,8 @@ param gpt5MiniModelCapacity int = 50
 @description('Optional. GPT image model deployment type. Defaults to GlobalStandard.')
 param gptImageModelDeploymentType string = 'GlobalStandard'
 
-@description('Optional. GPT image model deployment capacity (images per minute). Defaults to 1.')
-param gptImageModelCapacity int = 1
+@description('Optional. GPT image model deployment capacity (requests per minute). Defaults to 2 to fit westus3 gpt-image-2 quota.')
+param gptImageModelCapacity int = 2
 
 @description('Optional. The tags to apply to all deployed Azure resources.')
 param tags resourceInput<'Microsoft.Resources/resourceGroups@2025-04-01'>.tags = {}
@@ -227,11 +230,13 @@ var cosmosDbZoneRedundantHaRegionPairs = {
   eastasia: 'southeastasia'
   eastus: 'centralus'
   eastus2: 'centralus'
+  francecentral: 'westeurope'
   japaneast: 'australiaeast'
   northeurope: 'westeurope'
   southeastasia: 'eastasia'
   uksouth: 'westeurope'
   westeurope: 'northeurope'
+  westus3: 'westus2'
 }
 // Paired location calculated based on 'location' parameter. This location will be used by applicable resources if `enableScalability` is set to `true`
 var cosmosDbHaLocation = cosmosDbZoneRedundantHaRegionPairs[location]
@@ -243,11 +248,13 @@ var replicaRegionPairs = {
   eastasia: 'japaneast'
   eastus: 'centralus'
   eastus2: 'centralus'
+  francecentral: 'westeurope'
   japaneast: 'eastasia'
   northeurope: 'westeurope'
   southeastasia: 'eastasia'
   uksouth: 'westeurope'
   westeurope: 'northeurope'
+  westus3: 'westus2'
 }
 var replicaLocation = replicaRegionPairs[location]
 
@@ -425,6 +432,34 @@ module userAssignedIdentity 'br/public:avm/res/managed-identity/user-assigned-id
     enableTelemetry: enableTelemetry
   }
 }
+
+// ========== Container Registry ========== //
+// Per-env ACR used by `azd deploy` to push backend + mcp images built from src/.
+// Container apps pull from this registry using the user-assigned managed identity (AcrPull).
+var containerRegistryResourceName = 'acr${solutionSuffix}'
+resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
+  #disable-next-line BCP334
+  name: containerRegistryResourceName
+  location: location
+  tags: tags
+  sku: { name: 'Basic' }
+  properties: {
+    adminUserEnabled: false
+    publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
+  }
+}
+
+resource containerRegistryAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: containerRegistry
+  name: guid(containerRegistry.id, userAssignedIdentityResourceName, '7f951dda-4ed3-4680-a7ca-43fe172d538d')
+  properties: {
+    // AcrPull
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
+    principalId: userAssignedIdentity.outputs.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
 // ========== Virtual Network ========== //
 // WAF best practices for virtual networks: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/virtual-network
 // WAF recommendations for networking and connectivity: https://learn.microsoft.com/en-us/azure/well-architected/security/networking
@@ -859,6 +894,38 @@ var aiFoundryAiServicesImageModelDeployment = {
 }
 var aiFoundryAiProjectDescription = 'AI Foundry Project'
 
+// gpt-image-1 is only available in a subset of regions (e.g. eastus2, swedencentral).
+// Skip the image-model deployment when the AI services region does not support it
+// so that deployments to other regions (e.g. francecentral) succeed.
+var imageModelSupportedRegions = ['eastus2', 'swedencentral', 'westus3', 'uaenorth', 'polandcentral']
+var deployImageModel = contains(imageModelSupportedRegions, azureAiServiceLocation)
+var imageModelDeploymentEntry = {
+  name: aiFoundryAiServicesImageModelDeployment.name
+  format: aiFoundryAiServicesImageModelDeployment.format
+  version: aiFoundryAiServicesImageModelDeployment.version
+  raiPolicyName: aiFoundryAiServicesImageModelDeployment.raiPolicyName
+  sku: {
+    name: aiFoundryAiServicesImageModelDeployment.sku.name
+    capacity: aiFoundryAiServicesImageModelDeployment.sku.capacity
+  }
+}
+// Variant with nested model.* shape, consumed by the existing-services deployments module
+var imageModelDeploymentEntryNested = {
+  name: aiFoundryAiServicesImageModelDeployment.name
+  model: {
+    format: aiFoundryAiServicesImageModelDeployment.format
+    name: aiFoundryAiServicesImageModelDeployment.name
+    version: aiFoundryAiServicesImageModelDeployment.version
+  }
+  raiPolicyName: aiFoundryAiServicesImageModelDeployment.raiPolicyName
+  sku: {
+    name: aiFoundryAiServicesImageModelDeployment.sku.name
+    capacity: aiFoundryAiServicesImageModelDeployment.sku.capacity
+  }
+}
+var imageModelDeploymentEntries = deployImageModel ? [imageModelDeploymentEntry] : []
+var imageModelDeploymentEntriesNested = deployImageModel ? [imageModelDeploymentEntryNested] : []
+
 resource existingAiFoundryAiServices 'Microsoft.CognitiveServices/accounts@2025-06-01' existing = if (useExistingAiFoundryAiProject) {
   name: aiFoundryAiServicesResourceName
   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
@@ -869,7 +936,7 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
   params: {
     name: existingAiFoundryAiServices.name
-    deployments: [
+    deployments: concat([
       {
         name: aiFoundryAiServicesModelDeployment.name
         model: {
@@ -922,20 +989,7 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
           capacity: aiFoundryAiServices5MiniModelDeployment.sku.capacity
         }
       }
-      {
-        name: aiFoundryAiServicesImageModelDeployment.name
-        model: {
-          format: aiFoundryAiServicesImageModelDeployment.format
-          name: aiFoundryAiServicesImageModelDeployment.name
-          version: aiFoundryAiServicesImageModelDeployment.version
-        }
-        raiPolicyName: aiFoundryAiServicesImageModelDeployment.raiPolicyName
-        sku: {
-          name: aiFoundryAiServicesImageModelDeployment.sku.name
-          capacity: aiFoundryAiServicesImageModelDeployment.sku.capacity
-        }
-      }
-    ]
+    ], imageModelDeploymentEntriesNested)
     roleAssignments: [
       {
         roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
@@ -956,148 +1010,146 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
   }
 }
 
-module aiFoundryAiServices 'br:mcr.microsoft.com/bicep/avm/res/cognitive-services/account:0.13.2' = if (!useExistingAiFoundryAiProject) {
-  name: take('avm.res.cognitive-services.account.${aiFoundryAiServicesResourceName}', 64)
-  params: {
-    name: aiFoundryAiServicesResourceName
-    location: azureAiServiceLocation
-    tags: tags
-    sku: 'S0'
-    kind: 'AIServices'
-    disableLocalAuth: true
-    allowProjectManagement: true
+// ---- Inline AI Services account (replaces AVM module to avoid nested-deployment preflight bug) ----
+resource aiFoundryAiServicesAccount 'Microsoft.CognitiveServices/accounts@2025-06-01' = if (!useExistingAiFoundryAiProject) {
+  name: aiFoundryAiServicesResourceName
+  location: azureAiServiceLocation
+  tags: tags
+  kind: 'AIServices'
+  sku: { name: 'S0' }
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: { '${resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', userAssignedIdentityResourceName)}': {} }
+  }
+  dependsOn: [
+    userAssignedIdentity
+  ]
+  properties: {
     customSubDomainName: aiFoundryAiServicesResourceName
-    apiProperties: {
-      //staticsEnabled: false
-    }
-    deployments: [
-      {
-        name: aiFoundryAiServicesModelDeployment.name
-        model: {
-          format: aiFoundryAiServicesModelDeployment.format
-          name: aiFoundryAiServicesModelDeployment.name
-          version: aiFoundryAiServicesModelDeployment.version
-        }
-        raiPolicyName: aiFoundryAiServicesModelDeployment.raiPolicyName
-        sku: {
-          name: aiFoundryAiServicesModelDeployment.sku.name
-          capacity: aiFoundryAiServicesModelDeployment.sku.capacity
-        }
-      }
-      {
-        name: aiFoundryAiServices4_1ModelDeployment.name
-        model: {
-          format: aiFoundryAiServices4_1ModelDeployment.format
-          name: aiFoundryAiServices4_1ModelDeployment.name
-          version: aiFoundryAiServices4_1ModelDeployment.version
-        }
-        raiPolicyName: aiFoundryAiServices4_1ModelDeployment.raiPolicyName
-        sku: {
-          name: aiFoundryAiServices4_1ModelDeployment.sku.name
-          capacity: aiFoundryAiServices4_1ModelDeployment.sku.capacity
-        }
-      }
-      {
-        name: aiFoundryAiServicesReasoningModelDeployment.name
-        model: {
-          format: aiFoundryAiServicesReasoningModelDeployment.format
-          name: aiFoundryAiServicesReasoningModelDeployment.name
-          version: aiFoundryAiServicesReasoningModelDeployment.version
-        }
-        raiPolicyName: aiFoundryAiServicesReasoningModelDeployment.raiPolicyName
-        sku: {
-          name: aiFoundryAiServicesReasoningModelDeployment.sku.name
-          capacity: aiFoundryAiServicesReasoningModelDeployment.sku.capacity
-        }
-      }
-      {
-        name: aiFoundryAiServices5MiniModelDeployment.name
-        model: {
-          format: aiFoundryAiServices5MiniModelDeployment.format
-          name: aiFoundryAiServices5MiniModelDeployment.name
-          version: aiFoundryAiServices5MiniModelDeployment.version
-        }
-        raiPolicyName: aiFoundryAiServices5MiniModelDeployment.raiPolicyName
-        sku: {
-          name: aiFoundryAiServices5MiniModelDeployment.sku.name
-          capacity: aiFoundryAiServices5MiniModelDeployment.sku.capacity
-        }
-      }
-      {
-        name: aiFoundryAiServicesImageModelDeployment.name
-        model: {
-          format: aiFoundryAiServicesImageModelDeployment.format
-          name: aiFoundryAiServicesImageModelDeployment.name
-          version: aiFoundryAiServicesImageModelDeployment.version
-        }
-        raiPolicyName: aiFoundryAiServicesImageModelDeployment.raiPolicyName
-        sku: {
-          name: aiFoundryAiServicesImageModelDeployment.sku.name
-          capacity: aiFoundryAiServicesImageModelDeployment.sku.capacity
-        }
-      }
-    ]
+    allowProjectManagement: true
+    disableLocalAuth: true
+    publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
     networkAcls: {
       defaultAction: 'Allow'
       virtualNetworkRules: []
       ipRules: []
     }
-    managedIdentities: { userAssignedResourceIds: [userAssignedIdentity!.outputs.resourceId] } //To create accounts or projects, you must enable a managed identity on your resource
-    roleAssignments: [
+  }
+}
+
+// Model deployments via deployment script (bypasses ARM preflight validation bug in
+// Model deployments are performed by the azd postprovision hook (see azure.yaml).
+// We can't use Microsoft.CognitiveServices/accounts/deployments resources because
+// the CognitiveServices RP has a preflight bug that rejects gpt-4.1-mini, and we
+// can't use Microsoft.Resources/deploymentScripts because the subscription policy
+// blocks shared-key auth on storage accounts (which deployment scripts require).
+var allModelDeployments = concat([
+  aiFoundryAiServicesModelDeployment
+  aiFoundryAiServices4_1ModelDeployment
+  aiFoundryAiServicesReasoningModelDeployment
+  aiFoundryAiServices5MiniModelDeployment
+], imageModelDeploymentEntries)
+
+// Role assignments on the AI Services account — MI roles
+resource aiServicesRoleAiUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingAiFoundryAiProject) {
+  name: guid(resourceGroup().id, aiFoundryAiServicesResourceName, userAssignedIdentityResourceName, '53ca6127-db72-4b80-b1b0-d745d6d5456d')
+  scope: aiFoundryAiServicesAccount
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '53ca6127-db72-4b80-b1b0-d745d6d5456d') // Azure AI User
+    principalId: userAssignedIdentity.outputs.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource aiServicesRoleAiDeveloper 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingAiFoundryAiProject) {
+  name: guid(resourceGroup().id, aiFoundryAiServicesResourceName, userAssignedIdentityResourceName, '64702f94-c441-49e6-a78b-ef80e0188fee')
+  scope: aiFoundryAiServicesAccount
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '64702f94-c441-49e6-a78b-ef80e0188fee') // Azure AI Developer
+    principalId: userAssignedIdentity.outputs.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource aiServicesRoleOpenAiUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingAiFoundryAiProject) {
+  name: guid(resourceGroup().id, aiFoundryAiServicesResourceName, userAssignedIdentityResourceName, '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd')
+  scope: aiFoundryAiServicesAccount
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd') // Cognitive Services OpenAI User
+    principalId: userAssignedIdentity.outputs.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Role assignments — deployer roles
+resource aiServicesRoleDeployerAiUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingAiFoundryAiProject) {
+  name: guid(resourceGroup().id, aiFoundryAiServicesResourceName, deployingUserPrincipalId, '53ca6127-db72-4b80-b1b0-d745d6d5456d')
+  scope: aiFoundryAiServicesAccount
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '53ca6127-db72-4b80-b1b0-d745d6d5456d') // Azure AI User
+    principalId: deployingUserPrincipalId
+    principalType: deployerPrincipalType
+  }
+}
+
+resource aiServicesRoleDeployerAiDeveloper 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingAiFoundryAiProject) {
+  name: guid(resourceGroup().id, aiFoundryAiServicesResourceName, deployingUserPrincipalId, '64702f94-c441-49e6-a78b-ef80e0188fee')
+  scope: aiFoundryAiServicesAccount
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '64702f94-c441-49e6-a78b-ef80e0188fee') // Azure AI Developer
+    principalId: deployingUserPrincipalId
+    principalType: deployerPrincipalType
+  }
+}
+
+// Diagnostic settings
+resource aiServicesDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (!useExistingAiFoundryAiProject && enableMonitoring) {
+  name: '${aiFoundryAiServicesResourceName}-diag'
+  scope: aiFoundryAiServicesAccount
+  properties: {
+    workspaceId: logAnalyticsWorkspaceResourceId
+    logs: [{ categoryGroup: 'allLogs', enabled: true }]
+    metrics: [{ category: 'AllMetrics', enabled: true }]
+  }
+}
+
+// Private endpoint for AI Services account
+resource aiServicesPrivateEndpoint 'Microsoft.Network/privateEndpoints@2024-05-01' = if (!useExistingAiFoundryAiProject && enablePrivateNetworking) {
+  name: 'pep-${aiFoundryAiServicesResourceName}'
+  location: location
+  properties: {
+    subnet: { id: virtualNetwork!.outputs.backendSubnetResourceId }
+    customNetworkInterfaceName: 'nic-${aiFoundryAiServicesResourceName}'
+    privateLinkServiceConnections: [
       {
-        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
-        principalId: userAssignedIdentity.outputs.principalId
-        principalType: 'ServicePrincipal'
-      }
-      {
-        roleDefinitionIdOrName: '64702f94-c441-49e6-a78b-ef80e0188fee' // Azure AI Developer
-        principalId: userAssignedIdentity.outputs.principalId
-        principalType: 'ServicePrincipal'
-      }
-      {
-        roleDefinitionIdOrName: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd' // Cognitive Services OpenAI User
-        principalId: userAssignedIdentity.outputs.principalId
-        principalType: 'ServicePrincipal'
-      }
-      {
-        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
-        principalId: deployingUserPrincipalId
-        principalType: deployerPrincipalType
-      }
-      {
-        roleDefinitionIdOrName: '64702f94-c441-49e6-a78b-ef80e0188fee' // Azure AI Developer
-        principalId: deployingUserPrincipalId
-        principalType: deployerPrincipalType
+        name: 'pep-${aiFoundryAiServicesResourceName}'
+        properties: {
+          privateLinkServiceId: aiFoundryAiServicesAccount.id
+          groupIds: ['account']
+        }
       }
     ]
-    // WAF aligned configuration for Monitoring
-    diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : null
-    publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
-    privateEndpoints: (enablePrivateNetworking)
-      ? ([
-          {
-            name: 'pep-${aiFoundryAiServicesResourceName}'
-            customNetworkInterfaceName: 'nic-${aiFoundryAiServicesResourceName}'
-            subnetResourceId: virtualNetwork!.outputs.backendSubnetResourceId
-            privateDnsZoneGroup: {
-              privateDnsZoneGroupConfigs: [
-                {
-                  name: 'ai-services-dns-zone-cognitiveservices'
-                  privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.cognitiveServices]!.outputs.resourceId
-                }
-                {
-                  name: 'ai-services-dns-zone-openai'
-                  privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.openAI]!.outputs.resourceId
-                }
-                {
-                  name: 'ai-services-dns-zone-aiservices'
-                  privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.aiServices]!.outputs.resourceId
-                }
-              ]
-            }
-          }
-        ])
-      : []
+  }
+}
+
+resource aiServicesPrivateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2024-05-01' = if (!useExistingAiFoundryAiProject && enablePrivateNetworking) {
+  parent: aiServicesPrivateEndpoint
+  name: 'default'
+  properties: {
+    privateDnsZoneConfigs: [
+      {
+        name: 'ai-services-dns-zone-cognitiveservices'
+        properties: { privateDnsZoneId: avmPrivateDnsZones[dnsZoneIndex.cognitiveServices]!.outputs.resourceId }
+      }
+      {
+        name: 'ai-services-dns-zone-openai'
+        properties: { privateDnsZoneId: avmPrivateDnsZones[dnsZoneIndex.openAI]!.outputs.resourceId }
+      }
+      {
+        name: 'ai-services-dns-zone-aiservices'
+        properties: { privateDnsZoneId: avmPrivateDnsZones[dnsZoneIndex.aiServices]!.outputs.resourceId }
+      }
+    ]
   }
 }
 
@@ -1114,7 +1166,7 @@ module aiFoundryAiServicesProject 'modules/ai-project.bicep' = if (!useExistingA
     tags: tags
     desc: aiFoundryAiProjectDescription
     //Implicit dependencies below
-    aiServicesName: aiFoundryAiServices!.outputs.name
+    aiServicesName: aiFoundryAiServicesAccount.name
   }
 }
 
@@ -1277,11 +1329,17 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
   name: take('avm.res.app.container-app.${containerAppResourceName}', 64)
   params: {
     name: containerAppResourceName
-    tags: tags
+    tags: union(tags, { 'azd-service-name': 'backend' })
     location: location
     enableTelemetry: enableTelemetry
     environmentResourceId: containerAppEnvironment.outputs.resourceId
     managedIdentities: { userAssignedResourceIds: [userAssignedIdentity.outputs.resourceId] }
+    registries: [
+      {
+        server: containerRegistry.properties.loginServer
+        identity: userAssignedIdentity.outputs.resourceId
+      }
+    ]
     ingressTargetPort: 8000
     ingressExternal: true
     activeRevisionsMode: 'Single'
@@ -1436,7 +1494,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
           }
           {
             name: 'SUPPORTED_MODELS'
-            value: '["o3","o4-mini","gpt-4.1","gpt-4.1-mini"]'
+            value: '["o3","o4-mini","gpt-4.1","gpt-4.1-mini","gpt-5-mini"]'
           }
           {
             name: 'AZURE_AI_SEARCH_API_KEY'
@@ -1495,11 +1553,17 @@ module containerAppMcp 'br/public:avm/res/app/container-app:0.18.1' = {
   name: take('avm.res.app.container-app.${containerAppMcpResourceName}', 64)
   params: {
     name: containerAppMcpResourceName
-    tags: tags
+    tags: union(tags, { 'azd-service-name': 'mcp' })
     location: location
     enableTelemetry: enableTelemetry
     environmentResourceId: containerAppEnvironment.outputs.resourceId
     managedIdentities: { userAssignedResourceIds: [userAssignedIdentity.outputs.resourceId] }
+    registries: [
+      {
+        server: containerRegistry.properties.loginServer
+        identity: userAssignedIdentity.outputs.resourceId
+      }
+    ]
     ingressTargetPort: 9000
     ingressExternal: true
     activeRevisionsMode: 'Single'
@@ -1576,6 +1640,26 @@ module containerAppMcp 'br/public:avm/res/app/container-app:0.18.1' = {
           {
             name: 'DATASET_PATH'
             value: './datasets'
+          }
+          {
+            name: 'AZURE_OPENAI_ENDPOINT'
+            value: 'https://${aiFoundryAiServicesResourceName}.openai.azure.com/'
+          }
+          {
+            name: 'AZURE_OPENAI_IMAGE_DEPLOYMENT'
+            value: aiFoundryAiServicesImageModelDeployment.name
+          }
+          {
+            name: 'AZURE_STORAGE_BLOB_URL'
+            value: avmStorageAccount.outputs.serviceEndpoints.blob
+          }
+          {
+            name: 'AZURE_STORAGE_IMAGES_CONTAINER'
+            value: storageContainerNameGeneratedImages
+          }
+          {
+            name: 'AZURE_CLIENT_ID'
+            value: userAssignedIdentity!.outputs.clientId
           }
         ]
       }
@@ -1661,6 +1745,7 @@ param storageContainerNameRFPCompliance string = 'rfp-compliance-dataset'
 param storageContainerNameContractSummary string = 'contract-summary-dataset'
 param storageContainerNameContractRisk string = 'contract-risk-dataset'
 param storageContainerNameContractCompliance string = 'contract-compliance-dataset'
+param storageContainerNameGeneratedImages string = 'generated-images'
 module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
   name: take('avm.res.storage.storage-account.${storageAccountName}', 64)
   params: {
@@ -1748,6 +1833,10 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
         }
         {
           name: storageContainerNameContractCompliance
+          publicAccess: 'None'
+        }
+        {
+          name: storageContainerNameGeneratedImages
           publicAccess: 'None'
         }
       ]
@@ -1930,9 +2019,6 @@ module aiSearchFoundryConnection 'modules/aifp-connections.bicep' = {
     searchServiceName: searchService.outputs.name
     searchApiKey: searchService.outputs.primaryKey
   }
-  dependsOn: [
-    aiFoundryAiServices
-  ]
 }
 
 // ========== KeyVault ========== //
@@ -2022,7 +2108,7 @@ output AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDep
 // output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiProjectEndpoint
 output APP_ENV string = 'Prod'
 output AI_FOUNDRY_RESOURCE_ID string = !useExistingAiFoundryAiProject
-  ? aiFoundryAiServices.outputs.resourceId
+  ? aiFoundryAiServicesAccount.id
   : existingAiFoundryAiProjectResourceId
 output COSMOSDB_ACCOUNT_NAME string = cosmosDbResourceName
 output AZURE_SEARCH_ENDPOINT string = searchService.outputs.endpoint
@@ -2033,13 +2119,21 @@ output AZURE_COGNITIVE_SERVICES string = 'https://cognitiveservices.azure.com/.d
 output REASONING_MODEL_NAME string = aiFoundryAiServicesReasoningModelDeployment.name
 output MCP_SERVER_NAME string = 'MacaeMcpServer'
 output MCP_SERVER_DESCRIPTION string = 'MCP server with greeting, HR, and planning tools'
-output SUPPORTED_MODELS string = '["o3","o4-mini","gpt-4.1","gpt-4.1-mini"]'
+output SUPPORTED_MODELS string = '["o3","o4-mini","gpt-4.1","gpt-4.1-mini","gpt-5-mini"]'
 output AZURE_AI_SEARCH_API_KEY string = '<Deployed-Search-ApiKey>'
 output BACKEND_URL string = 'https://${containerApp.outputs.fqdn}'
+output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerRegistry.properties.loginServer
+output AZURE_CONTAINER_REGISTRY_NAME string = containerRegistry.name
 output AZURE_AI_PROJECT_ENDPOINT string = aiFoundryAiProjectEndpoint
 output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiProjectEndpoint
 output AZURE_AI_AGENT_API_VERSION string = azureAiAgentAPIVersion
 output AZURE_AI_AGENT_PROJECT_CONNECTION_STRING string = '${aiFoundryAiServicesResourceName}.services.ai.azure.com;${aiFoundryAiServicesSubscriptionId};${aiFoundryAiServicesResourceGroupName};${aiFoundryAiProjectResourceName}'
+
+// Outputs consumed by the azd postprovision hook to deploy AI models via az CLI
+// (works around CognitiveServices RP preflight bug + subscription policy that blocks
+// shared-key auth required by Microsoft.Resources/deploymentScripts).
+output AI_FOUNDRY_ACCOUNT_NAME string = aiFoundryAiServicesResourceName
+output AI_MODEL_DEPLOYMENTS string = string(allModelDeployments)
 
 
 output AZURE_STORAGE_CONTAINER_NAME_RETAIL_CUSTOMER string = storageContainerNameRetailCustomer

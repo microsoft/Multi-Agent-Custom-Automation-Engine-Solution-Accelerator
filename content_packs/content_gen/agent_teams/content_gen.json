@@ -119,6 +119,9 @@
       "mcp_domains": [
         "image"
       ],
+      "mcp_allowed_tools": [
+        "generate_marketing_image"
+      ],
       "use_bing": false,
       "use_reasoning": false,
       "index_name": "",

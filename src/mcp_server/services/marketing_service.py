@@ -16,9 +16,23 @@ class MarketingService(MCPToolBase):
 
         @mcp.tool(tags={self.domain.value})
         async def generate_press_release(key_information_for_press_release: str) -> str:
-            """This is a function to draft / write a press release. You must call the function by passing the key information that you want to be included in the press release."""
+            """Draft a press release. Call this tool EXACTLY ONCE per request.
 
-            return f"Look through the conversation history. Identify the content. Now you must generate a press release based on this content {key_information_for_press_release}. Make it approximately 2 paragraphs."
+            The tool returns a directive plus a DONE sentinel. After calling it, you
+            (the agent) must write the press release in your reply using the directive
+            and the conversation context. Do NOT call this tool again for the same
+            request — doing so will waste tokens and the orchestration will rate-limit.
+            """
+
+            return (
+                "PRESS_RELEASE_TASK_ACCEPTED\n"
+                f"Key information: {key_information_for_press_release}\n\n"
+                "INSTRUCTIONS FOR YOU (the calling agent):\n"
+                "1. Write the press release in your NEXT reply (approximately 2 paragraphs).\n"
+                "2. Use the key information above plus relevant context from the conversation history.\n"
+                "3. Do NOT call generate_press_release again. The task is accepted; deliver the prose directly.\n"
+                "STATUS: DONE — proceed to compose the release in your reply."
+            )
 
         @mcp.tool(tags={self.domain.value})
         async def handle_influencer_collaboration(influencer_name: str, campaign_name: str) -> str:

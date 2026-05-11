@@ -175,6 +175,7 @@ class TeamAgent(BaseModel):
     use_bing: bool = False
     use_reasoning: bool = False
     coding_tools: bool = False
+    mcp_allowed_tools: Optional[List[str]] = None
 
 
 class StartingTask(BaseModel):

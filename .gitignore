@@ -481,7 +481,7 @@ mcp*.json
 mcp*.txt
 mcp_logs*.txt
 plan_*.json
-plan_full*.txt
+plan_*.txt
 plan.json
 upload_resp.json
 generated_image.png

@@ -100,9 +100,18 @@ class FoundryAgentTemplate(AzureAgentBase):
             self.logger.info("Code Interpreter requested — handled server-side by AzureAIClient.")
 
         # MCP Tool (from base class)
+        # Unfold the MCPStreamableHTTPTool wrapper into individual FunctionTools
+        # so the Responses-API model sees real per-tool JSON schemas. Passing
+        # the wrapper directly to Agent(tools=[...]) in agent_framework rc4 does
+        # NOT advertise the underlying tool list to the model.
         if self.mcp_tool:
-            tools.append(self.mcp_tool)
-            self.logger.info("Added MCP tool: %s", self.mcp_tool.name)
+            mcp_funcs = list(self.mcp_tool.functions)
+            tools.extend(mcp_funcs)
+            self.logger.info(
+                "Added %d MCP function tool(s) from '%s'",
+                len(mcp_funcs),
+                self.mcp_tool.name,
+            )
 
         self.logger.info("Total tools collected (MCP path): %d", len(tools))
         return tools
@@ -264,6 +273,14 @@ class FoundryAgentTemplate(AzureAgentBase):
                 # MCP path (also used by RAI agent which has no tools)
                 self.logger.info("Initializing agent in MCP mode.")
                 tools = await self._collect_tools()
+                # Force tool invocation when an MCP tool is attached; otherwise
+                # the model may narrate the result instead of calling the tool.
+                if tools and self.mcp_tool:
+                    chosen_tool_choice = "required"
+                elif tools:
+                    chosen_tool_choice = "auto"
+                else:
+                    chosen_tool_choice = "none"
                 self._agent = Agent(
                     id=self.get_agent_id(),
                     client=self.get_chat_client(),
@@ -273,7 +290,7 @@ class FoundryAgentTemplate(AzureAgentBase):
                     tools=tools if tools else None,
                     default_options=ChatOptions(
                         store=False,
-                        tool_choice="auto" if tools else "none",
+                        tool_choice=chosen_tool_choice,
                         temperature=temp,
                     ),
                 )

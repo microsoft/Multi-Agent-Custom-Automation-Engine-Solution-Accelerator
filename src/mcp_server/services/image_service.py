@@ -9,7 +9,9 @@ Foundry-hosted agents can embed in their markdown responses.
 import base64
 import logging
 import uuid
+import asyncio
 from datetime import datetime, timedelta, timezone
+from typing import Literal
 
 import httpx
 from azure.identity import DefaultAzureCredential, ManagedIdentityCredential, get_bearer_token_provider
@@ -99,7 +101,10 @@ class ImageService(MCPToolBase):
 
     def register_tools(self, mcp) -> None:
         @mcp.tool(tags={self.domain.value})
-        async def generate_marketing_image(prompt: str, size: str = "1024x1024") -> str:
+        async def generate_marketing_image(
+            prompt: str,
+            size: Literal["1024x1024", "1024x1536", "1536x1024", "auto"] = "1024x1024",
+        ) -> str:
             """Generate a marketing image from a text prompt.
 
             Use this tool whenever the user asks for an image, picture, photo, banner,
@@ -110,7 +115,10 @@ class ImageService(MCPToolBase):
 
             Args:
                 prompt: A detailed description of the image to generate.
-                size: One of "1024x1024", "1024x1792", or "1792x1024". Defaults to square.
+                size: Image dimensions. Must be one of "1024x1024" (square),
+                    "1024x1536" (portrait), "1536x1024" (landscape), or "auto".
+                    These are the ONLY sizes supported by the underlying gpt-image-1
+                    model. Do NOT pass any other value (e.g. 1792x1024 is invalid).
 
             Returns:
                 A public HTTPS URL to the generated PNG image.
@@ -140,11 +148,29 @@ class ImageService(MCPToolBase):
             _MAX_PROMPT_LOG = 4000
             _logged_prompt = prompt if len(prompt) <= _MAX_PROMPT_LOG else prompt[:_MAX_PROMPT_LOG] + f"...[truncated, total={len(prompt)}]"
             logger.info("Image prompt: %s", _logged_prompt)
-            async with httpx.AsyncClient(timeout=120.0) as client:
-                resp = await client.post(url, json=body, headers=headers)
-                if resp.status_code >= 400:
+
+            # Retry on 429 / 5xx — gpt-image preview models frequently return
+            # EngineOverloaded under load. Backoff: 4s, 12s, 30s.
+            _RETRY_DELAYS = (4.0, 12.0, 30.0)
+            _RETRYABLE_STATUS = {429, 500, 502, 503, 504}
+            result_json = None
+            async with httpx.AsyncClient(timeout=180.0) as client:
+                for attempt in range(len(_RETRY_DELAYS) + 1):
+                    resp = await client.post(url, json=body, headers=headers)
+                    if resp.status_code < 400:
+                        result_json = resp.json()
+                        break
+                    if resp.status_code in _RETRYABLE_STATUS and attempt < len(_RETRY_DELAYS):
+                        delay = _RETRY_DELAYS[attempt]
+                        logger.warning(
+                            "Image generation transient error %s (attempt %d/%d); retrying in %.1fs. Body: %s",
+                            resp.status_code, attempt + 1, len(_RETRY_DELAYS) + 1, delay, resp.text[:300],
+                        )
+                        await asyncio.sleep(delay)
+                        continue
                     raise RuntimeError(f"Image generation failed: {resp.status_code} {resp.text}")
-                result_json = resp.json()
+            if result_json is None:
+                raise RuntimeError("Image generation failed: no response after retries")
 
             data = result_json.get("data") or []
             if not data:

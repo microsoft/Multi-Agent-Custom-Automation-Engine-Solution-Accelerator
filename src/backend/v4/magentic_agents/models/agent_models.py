@@ -14,9 +14,10 @@ class MCPConfig:
     description: str = ""
     tenant_id: str = ""
     client_id: str = ""
+    allowed_tools: list[str] | None = None
 
     @classmethod
-    def from_env(cls) -> "MCPConfig":
+    def from_env(cls, allowed_tools: list[str] | None = None) -> "MCPConfig":
         url = config.MCP_SERVER_ENDPOINT
         name = config.MCP_SERVER_NAME
         description = config.MCP_SERVER_DESCRIPTION
@@ -33,6 +34,7 @@ class MCPConfig:
             description=description,
             tenant_id=tenant_id,
             client_id=client_id,
+            allowed_tools=allowed_tools,
         )
 
 

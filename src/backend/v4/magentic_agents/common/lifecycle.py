@@ -149,8 +149,10 @@ class MCPEnabledBase:
     def get_chat_client(self) -> AzureAIClient:
         """Return the underlying ChatClientProtocol (AzureAIClient).
 
-        Uses agent_name with use_latest_version=True to get the latest agent version.
-        Agent reuse is handled automatically by the SDK via agent_name.
+        Note: do NOT pass ``use_latest_version=True``. With that flag,
+        AzureAIClient reuses the existing Foundry agent_version and silently
+        discards runtime ``tools`` — our MCP FunctionTools would never reach
+        the model.
         """
         if (
             self._agent
@@ -162,10 +164,9 @@ class MCPEnabledBase:
             agent_name=self.agent_name,
             model_deployment_name=self.model_deployment_name,
             credential=self.creds,
-            use_latest_version=True,
         )
         self.logger.info(
-            "Created new AzureAIClient (agent_name=%s, use_latest_version=True)",
+            "Created new AzureAIClient (agent_name=%s)",
             self.agent_name,
         )
         return chat_client
@@ -185,14 +186,26 @@ class MCPEnabledBase:
         if not self.mcp_cfg:
             return
         try:
+            allowed_tools = getattr(self.mcp_cfg, "allowed_tools", None) or None
             mcp_tool = MCPStreamableHTTPTool(
                 name=self.mcp_cfg.name,
                 description=self.mcp_cfg.description,
                 url=self.mcp_cfg.url,
+                allowed_tools=allowed_tools,
             )
             await self._stack.enter_async_context(mcp_tool)
             self.mcp_tool = mcp_tool  # Store for later use
-        except Exception:
+            self.logger.info(
+                "MCP tool initialized for agent '%s' (allowed_tools=%s)",
+                getattr(self, "agent_name", "?"),
+                allowed_tools,
+            )
+        except Exception as e:
+            self.logger.exception(
+                "Failed to initialize MCP tool for agent '%s': %s",
+                getattr(self, "agent_name", "?"),
+                e,
+            )
             self.mcp_tool = None
 
 
