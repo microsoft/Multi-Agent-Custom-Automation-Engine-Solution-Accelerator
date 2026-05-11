@@ -72,7 +72,6 @@ bash setup_local_dev.sh [options]
 Options:
   --resource-group, -g <name>   Azure Resource Group (auto-detected from .azure/ if omitted)
   --subscription, -s <id>       Azure Subscription ID (uses current az account if omitted)
-  --assign-rbac                 Assign Azure RBAC roles to your user account
   --skip-vscode                 Skip writing .vscode/ settings files
   --skip-prereqs                Skip prerequisite checks
   -h, --help                    Show help
@@ -86,7 +85,6 @@ Options:
 Options:
   -ResourceGroup <name>         Azure Resource Group (auto-detected from .azure/ if omitted)
   -Subscription <id>            Azure Subscription ID (uses current az account if omitted)
-  -AssignRbac                   Assign Azure RBAC roles to your user account
   -SkipVSCode                   Skip writing .vscode/ settings files
   -SkipPrereqs                  Skip prerequisite checks
 ```
@@ -98,9 +96,6 @@ Options:
 ```bash
 # Fetch config from Azure and set up everything
 bash setup_local_dev.sh --resource-group rg-macae-dev
-
-# Also assign RBAC roles (required on first setup)
-bash setup_local_dev.sh --resource-group rg-macae-dev --assign-rbac
 
 # Use a specific subscription
 bash setup_local_dev.sh --resource-group rg-macae-dev --subscription 00000000-0000-0000-0000-000000000000
@@ -115,9 +110,6 @@ bash setup_local_dev.sh --resource-group rg-macae-dev --skip-prereqs
 ```powershell
 # Fetch config from Azure and set up everything
 .\setup_local_dev.ps1 -ResourceGroup rg-macae-dev
-
-# Also assign RBAC roles (required on first setup)
-.\setup_local_dev.ps1 -ResourceGroup rg-macae-dev -AssignRbac
 
 # Use a specific subscription
 .\setup_local_dev.ps1 -ResourceGroup rg-macae-dev -Subscription 00000000-0000-0000-0000-000000000000
@@ -143,7 +135,7 @@ If no `.azure/` folder exists and no `--resource-group` is provided, the script 
 
 ## RBAC Roles Assigned
 
-The `--assign-rbac` / `-AssignRbac` flag grants your user account the following roles:
+The script automatically grants your user account the following roles (skips if already assigned):
 
 | Role | Resource | Purpose |
 |---|---|---|
@@ -190,7 +182,7 @@ Then open [http://localhost:3000](http://localhost:3000).
 | `az login` loop | CLI not installed or PATH issue | Install [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) |
 | `.env` values empty | RG has no deployment outputs | Pass `--resource-group` explicitly |
 | `uv: command not found` | uv not installed | `pip install uv` or see [uv docs](https://github.com/astral-sh/uv) |
-| RBAC errors at runtime | Roles not assigned | Re-run with `--assign-rbac`; wait 10 min |
+| RBAC errors at runtime | Roles not propagated | Wait 10 min for Azure propagation; re-run script |
 | `source .venv/Scripts/activate: No such file` | Incomplete venv | Delete `.venv/` folder and re-run the script |
 | Frontend npm errors | Node.js version too old | Upgrade to Node.js 18+ |
 

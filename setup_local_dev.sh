@@ -7,12 +7,11 @@
 #
 # Usage:
 #   bash setup_local_dev.sh [--resource-group <name>] [--subscription <id>] \
-#                           [--assign-rbac] [--skip-vscode] [--skip-prereqs]
+#                           [--skip-vscode] [--skip-prereqs]
 #
 # Examples:
 #   bash setup_local_dev.sh                                        # auto-detects from .azure/
 #   bash setup_local_dev.sh --resource-group "rg-macae-dev"        # fetch from Azure outputs
-#   bash setup_local_dev.sh --resource-group "rg-macae-dev" --assign-rbac
 #   bash setup_local_dev.sh --resource-group "rg-macae-dev" --skip-prereqs
 # ==============================================================================
 
@@ -33,7 +32,6 @@ FRONTEND_DIR="$SCRIPT_DIR/src/App"
 
 RESOURCE_GROUP=""
 SUBSCRIPTION=""
-ASSIGN_RBAC=false
 SKIP_VSCODE=false
 SKIP_PREREQS=false
 
@@ -119,7 +117,6 @@ parse_args() {
         case "$1" in
             --resource-group|-g) RESOURCE_GROUP="$2"; shift 2 ;;
             --subscription|-s)   SUBSCRIPTION="$2";   shift 2 ;;
-            --assign-rbac)       ASSIGN_RBAC=true;     shift ;;
             --skip-vscode)       SKIP_VSCODE=true;     shift ;;
             --skip-prereqs)      SKIP_PREREQS=true;    shift ;;
             -h|--help)
@@ -954,11 +951,7 @@ fi
 check_prerequisites
 check_azure_auth
 fetch_configuration
-if [[ "$ASSIGN_RBAC" == "true" ]]; then
-    assign_rbac_roles
-else
-    log_info "Skipping RBAC role assignment (use --assign-rbac to enable)"
-fi
+assign_rbac_roles
 setup_backend
 setup_mcp_server
 setup_frontend

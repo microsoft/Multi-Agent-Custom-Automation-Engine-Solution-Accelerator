@@ -5,19 +5,17 @@
 # Automation Engine Solution Accelerator on Windows.
 #
 # Usage:
-#   .\setup_local_dev.ps1 [-ResourceGroup <name>] [-Subscription <id>] [-AssignRbac] [-SkipVscode] [-SkipPrereqs]
+#   .\setup_local_dev.ps1 [-ResourceGroup <name>] [-Subscription <id>] [-SkipVscode] [-SkipPrereqs]
 #
 # Examples:
 #   .\setup_local_dev.ps1                                    # auto-detects config from .azure/ folder
 #   .\setup_local_dev.ps1 -ResourceGroup "rg-macae-dev"      # fetch config from Azure deployment outputs
-#   .\setup_local_dev.ps1 -ResourceGroup "rg-macae-dev" -AssignRbac
 #   .\setup_local_dev.ps1 -ResourceGroup "rg-macae-dev" -SkipPrereqs
 # ==============================================================================
 
 param(
     [string]$ResourceGroup = "",
     [string]$Subscription = "",
-    [switch]$AssignRbac,
     [switch]$SkipVscode,
     [switch]$SkipPrereqs
 )
@@ -871,11 +869,7 @@ if ($policy -eq "Restricted") {
 Check-Prerequisites
 Check-AzureAuth
 Fetch-Configuration
-if ($AssignRbac) {
-    Assign-RbacRoles
-} else {
-    Write-LogInfo "Skipping RBAC role assignment (use -AssignRbac to enable)"
-}
+Assign-RbacRoles
 Setup-Backend
 Setup-McpServer
 Setup-Frontend
