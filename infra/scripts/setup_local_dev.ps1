@@ -25,7 +25,7 @@ $ErrorActionPreference = "Stop"
 # Resolve repo root (script lives in infra/scripts/)
 $ScriptDir = $PSScriptRoot
 if (-not $ScriptDir) { $ScriptDir = Get-Location }
-$RepoRoot = (Resolve-Path (Join-Path $RepoRoot "..\..")).Path
+$RepoRoot = (Resolve-Path (Join-Path $ScriptDir "..\..")).Path
 $BackendDir = Join-Path $RepoRoot "src\backend"
 $McpDir = Join-Path $RepoRoot "src\mcp_server"
 $FrontendDir = Join-Path $RepoRoot "src\App"
