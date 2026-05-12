@@ -1,6 +1,7 @@
 import React from "react";
 import PanelLeft from "@/commonComponents/components/Panels/PanelLeft";
 import PanelLeftToolbar from "@/commonComponents/components/Panels/PanelLeftToolbar";
+import PanelFooter from "@/commonComponents/components/Panels/PanelFooter";
 import {
   Body1Strong,
   Toast,
@@ -16,14 +17,12 @@ import {
 import TaskList from "./TaskList";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Plan, PlanPanelLefProps, Task, UserInfo } from "@/models";
+import { Plan, PlanPanelLefProps, Task } from "@/models";
 import { apiService } from "@/api";
 import { TaskService } from "@/store";
 import ContosoLogo from "../../commonComponents/imports/ContosoLogo";
 import "../../styles/PlanPanelLeft.css";
-import PanelFooter from "@/commonComponents/components/Panels/PanelFooter";
-import PanelUserCard from "../../commonComponents/components/Panels/UserCard";
-import { getUserInfoGlobal } from "@/api/config";
+import LoginButton from "../auth/LoginButton";
 import TeamSelector from "../common/TeamSelector";
 import { TeamConfig } from "../../models/Team";
 import TeamSelected from "../common/TeamSelected";
@@ -47,9 +46,6 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
   const [plans, setPlans] = useState<Plan[] | null>(null);
   const [plansLoading, setPlansLoading] = useState<boolean>(false);
   const [plansError, setPlansError] = useState<Error | null>(null);
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(
-    getUserInfoGlobal()
-  );
 
   // Use parent's selected team if provided, otherwise use local state
   const [localSelectedTeam, setLocalSelectedTeam] = useState<TeamConfig | null>(null);
@@ -86,15 +82,14 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
 
   useEffect(() => {
     loadPlansData();
-    setUserInfo(getUserInfoGlobal());
-  }, [loadPlansData, setUserInfo]);
+  }, [loadPlansData]);
 
 
   useEffect(() => {
     if (reloadTasks) {
       loadPlansData(true); // Force refresh when reloadTasks is true
     }
-  }, [loadPlansData, setUserInfo, reloadTasks]);
+  }, [loadPlansData, reloadTasks]);
   useEffect(() => {
     if (plans) {
       const { completed } =
@@ -250,12 +245,7 @@ const PlanPanelLeft: React.FC<PlanPanelLefProps> = ({
 
         <PanelFooter>
           <div className="panel-footer-content">
-            {/* User Card */}
-            <PanelUserCard
-              name={userInfo?.user_first_last_name || "Guest"}
-              // alias={userInfo ? userInfo.user_email : ""}
-              size={32}
-            />
+            <LoginButton showName />
           </div>
         </PanelFooter>
       </PanelLeft>
