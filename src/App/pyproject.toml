@@ -11,4 +11,5 @@ dependencies = [
     "azure-identity",
     "python-dotenv==1.2.2",
     "python-multipart==0.0.27",
+    "urllib3==2.7.0",
 ]
