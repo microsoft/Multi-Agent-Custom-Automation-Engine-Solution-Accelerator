@@ -77,7 +77,11 @@ jobs:
           LOGICAPP_URL: ${{ secrets.EMAILNOTIFICATION_LOGICAPP_URL_TA }}
           ACCELERATOR_NAME: ${{ env.accelerator_name }}
         run: |
-          EMAIL_BODY=$(cat email_body.html)
+          if [ -f email_body.html ]; then
+            EMAIL_BODY=$(cat email_body.html)
+          else
+            EMAIL_BODY="<p>Bicep parameter validation failed but no HTML report was generated. Check the <a href=\"https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\">workflow run</a> for details.</p>"
+          fi
 
           jq -n \
             --arg name "${ACCELERATOR_NAME}" \
@@ -93,7 +97,11 @@ jobs:
           LOGICAPP_URL: ${{ secrets.EMAILNOTIFICATION_LOGICAPP_URL_TA }}
           ACCELERATOR_NAME: ${{ env.accelerator_name }}
         run: |
-          EMAIL_BODY=$(cat email_body.html)
+          if [ -f email_body.html ]; then
+            EMAIL_BODY=$(cat email_body.html)
+          else
+            EMAIL_BODY="<p>Bicep parameter validation passed. Check the <a href=\"https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\">workflow run</a> for details.</p>"
+          fi
 
           jq -n \
             --arg name "${ACCELERATOR_NAME}" \

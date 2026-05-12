@@ -4,14 +4,15 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { HomePage, PlanPage } from './pages';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useAppDispatch } from './store/hooks';
-import { fetchCurrentUser } from './store/slices/appSlice';
+import { hydrateCurrentUser } from './store/slices/appSlice';
+import { getUserInfoGlobal } from './api/config';
 
 function App() {
     useWebSocket();
     const dispatch = useAppDispatch();
 
     useEffect(() => {
-        dispatch(fetchCurrentUser());
+        dispatch(hydrateCurrentUser(getUserInfoGlobal()));
     }, [dispatch]);
     
   return (
