@@ -144,7 +144,10 @@ Before setting is_request_satisfied to true, you MUST verify:
    their work successfully (called their tools, returned results).
 - Each agent handles a DISTINCT domain. One agent's output does NOT satisfy
   another agent's step.
-- Do NOT re-invoke an agent that already completed its step successfully."""
+- Do NOT re-invoke an agent that already completed its step successfully.
+- IGNORE agent-level completion language (e.g. "all steps are complete",
+  "onboarding is done"). An individual agent only knows about its own domain.
+  The workflow is NOT complete until every plan-step agent has been invoked."""
         kwargs["progress_ledger_prompt"] = (
             ORCHESTRATOR_PROGRESS_LEDGER_PROMPT + progress_append
         )

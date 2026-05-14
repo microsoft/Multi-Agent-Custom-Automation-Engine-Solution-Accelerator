@@ -177,8 +177,8 @@ class OrchestrationManager:
                     try:
                         await ui_ctx.aclose()
                         cls.logger.debug("Closed UserInteractionAgent MCP context")
-                    except Exception as e:
-                        cls.logger.error("Error closing UI agent MCP context: %s", e)
+                    except (RuntimeError, Exception) as e:
+                        cls.logger.debug("UI agent MCP cleanup (benign): %s", e)
 
                 # Close prior agents (same logic as old version)
                 for agent in getattr(current, "_participants", {}).values():
@@ -359,6 +359,30 @@ class OrchestrationManager:
             except Exception as send_error:
                 self.logger.error("Failed to send error status: %s", send_error)
             raise
+
+        finally:
+            # Clean up MCP connections to avoid noisy cross-task
+            # RuntimeError from anyio when async generators are GC'd.
+            await self._cleanup_workflow_mcp(user_id)
+
+    async def _cleanup_workflow_mcp(self, user_id: str) -> None:
+        """Close MCP async-generator contexts for the finished workflow."""
+        workflow = orchestration_config.get_current_orchestration(user_id)
+        if workflow is None:
+            return
+
+        # Mark workflow as terminated so next request creates a fresh one
+        workflow._terminated = True
+
+        # Close UserInteractionAgent MCP context
+        ui_ctx = getattr(workflow, "_user_interaction_ctx", None)
+        if ui_ctx is not None:
+            try:
+                await ui_ctx.aclose()
+                self.logger.debug("Closed UserInteractionAgent MCP context")
+            except (RuntimeError, Exception) as e:
+                self.logger.debug("UserInteractionAgent MCP cleanup (benign): %s", e)
+            workflow._user_interaction_ctx = None
 
     # ---------------------------
     # Pre-orchestration clarification
