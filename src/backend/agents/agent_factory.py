@@ -9,10 +9,9 @@ FoundryAgentTemplate (AzureAIAgentClient + ChatAgent, deprecated).
 import json
 import logging
 from types import SimpleNamespace
-from typing import List, Optional, Union
+from typing import List, Optional
 
 from agents.agent_template import AgentTemplate
-from agents.proxy_agent import ProxyAgent
 from common.config.app_config import config
 from common.database.database_base import DatabaseBase
 from common.models.messages import TeamConfiguration
@@ -21,6 +20,41 @@ from config.mcp_config import MCPConfig, SearchConfig
 
 class UnsupportedModelError(Exception):
     """Raised when the configured model is not in the supported-models list."""
+
+
+# ---------------------------------------------------------------------------
+# Universal prompt segment for agents whose team config has user_responses=true.
+# Directs them to request clarification from the chat manager (who routes to
+# UserInteractionAgent) rather than calling ask_user directly.
+# ---------------------------------------------------------------------------
+
+_UNIVERSAL_USER_INTERACTION_PROMPT = """
+
+CRITICAL RULES — READ BEFORE ACTING:
+
+1. NEVER FABRICATE INFORMATION. If a tool requires a parameter you do not have
+   (dates, names, emails, hardware models, salary, preferences), you MUST request
+   it from the user. Do NOT invent values, use placeholders, or guess.
+
+2. GATHER ALL MISSING INFO BEFORE EXECUTING. Before calling action tools, check
+   whether you have every required parameter. If ANY required parameter is missing
+   from the conversation context, state clearly:
+   "I need the following information from the user: [list]"
+   The chat manager will route to UserInteractionAgent to collect answers.
+
+3. PRESENT OPTIONS TO THE USER. If you have optional steps or overridable
+   defaults, include them in your clarification request so the user can decide.
+
+4. EXECUTE ONLY AFTER ANSWERS ARRIVE. Once user answers are in conversation
+   history, proceed with execution using the real values provided.
+
+5. REQUEST CLARIFICATION VIA THE MANAGER. Do NOT call ask_user yourself — only
+   the UserInteractionAgent can communicate with the user. If mid-execution you
+   discover a genuinely required value is still missing, state:
+   "I need the following information from the user: [specific questions]"
+
+6. Do NOT re-ask anything already answered in the conversation history.
+"""
 
 
 class AgentFactory:
@@ -63,27 +97,22 @@ class AgentFactory:
         agent_obj: SimpleNamespace,
         team_config: TeamConfiguration,
         memory_store: DatabaseBase,
-    ) -> Union[AgentTemplate, ProxyAgent]:
+    ) -> AgentTemplate:
         """Create and open a single agent from a SimpleNamespace config object.
 
         Args:
-            user_id:      The requesting user ID (passed to ProxyAgent).
+            user_id:      The requesting user ID.
             agent_obj:    Per-agent config parsed from the team JSON.
             team_config:  The parent team configuration.
             memory_store: Cosmos DB store for agent persistence.
 
         Returns:
-            An initialized ``AgentTemplate`` or ``ProxyAgent``.
+            An initialized ``AgentTemplate``.
 
         Raises:
             UnsupportedModelError:      If the deployment name is not in SUPPORTED_MODELS.
         """
         deployment_name = getattr(agent_obj, "deployment_name", None)
-
-        # ProxyAgent does not need a deployment
-        if not deployment_name and getattr(agent_obj, "name", "").lower() == "proxyagent":
-            self.logger.info("Creating ProxyAgent (user_id=%s).", user_id)
-            return ProxyAgent(user_id=user_id)
 
         # Validate model
         supported_models = json.loads(config.SUPPORTED_MODELS)
@@ -102,11 +131,19 @@ class AgentFactory:
             if getattr(agent_obj, "use_rag", False)
             else None
         )
-        mcp_config: Optional[MCPConfig] = (
-            MCPConfig.from_env()
-            if getattr(agent_obj, "use_mcp", False)
-            else None
-        )
+
+        # MCP config: domain-specific server only (use_mcp).
+        # user_responses=true no longer gives agents the ask_user tool directly;
+        # they request clarification via their response text, and the manager
+        # routes to UserInteractionAgent.
+        use_mcp = getattr(agent_obj, "use_mcp", False)
+        user_responses = getattr(agent_obj, "user_responses", False)
+        if use_mcp:
+            mcp_config: Optional[MCPConfig] = MCPConfig.from_env(
+                domain=getattr(agent_obj, "mcp_domain", None)
+            )
+        else:
+            mcp_config = None
 
         self.logger.info(
             "Creating AgentTemplate '%s' (model=%s, use_rag=%s, use_mcp=%s, reasoning=%s).",
@@ -117,10 +154,19 @@ class AgentFactory:
             use_reasoning,
         )
 
+        # Build agent instructions from system_message + optional interaction rules
+        instructions = getattr(agent_obj, "system_message", "")
+
+        # Universal user-interaction rules for agents that have
+        # user_responses=true — tells them to request clarification via the
+        # chat manager rather than calling ask_user directly.
+        if user_responses:
+            instructions += _UNIVERSAL_USER_INTERACTION_PROMPT
+
         agent = AgentTemplate(
             agent_name=agent_obj.name,
             agent_description=getattr(agent_obj, "description", ""),
-            agent_instructions=getattr(agent_obj, "system_message", ""),
+            agent_instructions=instructions,
             use_reasoning=use_reasoning,
             model_deployment_name=deployment_name,
             project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
@@ -153,7 +199,7 @@ class AgentFactory:
             memory_store:      Cosmos DB store for agent persistence.
 
         Returns:
-            List of initialized agent instances (AgentTemplate or ProxyAgent).
+            List of initialized ``AgentTemplate`` instances.
         """
         initialized: List = []
 

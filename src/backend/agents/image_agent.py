@@ -25,7 +25,7 @@ from azure.storage.blob.aio import BlobServiceClient as AsyncBlobServiceClient
 from common.config.app_config import config
 from common.models.messages import AgentMessage
 from orchestration.connection_config import connection_config
-from v4.models.messages import WebsocketMessageType
+from models.messages import WebsocketMessageType
 
 logger = logging.getLogger(__name__)
 

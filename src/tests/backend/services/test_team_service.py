@@ -80,6 +80,8 @@ class MockTeamAgent:
     description: str = ""
     use_rag: bool = False
     use_mcp: bool = False
+    mcp_domain: str = None
+    user_responses: bool = False
     use_bing: bool = False
     use_reasoning: bool = False
     index_name: str = ""
@@ -466,9 +468,9 @@ class TestExtractModelsFromAgent:
         models = service.extract_models_from_agent(agent)
         assert "gpt-4o" in models
 
-    def test_skip_proxy_agent(self):
+    def test_agent_without_deployment_name_returns_empty(self):
         service = TeamService()
-        agent = {"name": "ProxyAgent", "deployment_name": "gpt-4o"}
+        agent = {"name": "SomeAgent"}
         models = service.extract_models_from_agent(agent)
         assert models == set()
 

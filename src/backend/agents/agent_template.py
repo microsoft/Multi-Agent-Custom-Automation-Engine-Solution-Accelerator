@@ -19,11 +19,11 @@ import logging
 from contextlib import AsyncExitStack
 from typing import AsyncGenerator, Optional
 
-from agent_framework import Agent, AgentResponseUpdate, Content, Message
+from agent_framework import (Agent, AgentResponseUpdate, Content,
+                             MCPStreamableHTTPTool, Message)
 from agent_framework_foundry import FoundryChatClient
 from azure.ai.projects.aio import AIProjectClient
-from azure.ai.projects.models import (AISearchIndexResource,
-                                      AzureAISearchTool,
+from azure.ai.projects.models import (AISearchIndexResource, AzureAISearchTool,
                                       AzureAISearchToolResource,
                                       CodeInterpreterTool, MCPTool,
                                       PromptAgentDefinition)
@@ -158,9 +158,17 @@ class AgentTemplate:
                     )
                 except HttpResponseError as exc:
                     if exc.status_code == 409:
+                        # Toolbox exists — delete and recreate so URL/tool
+                        # changes (e.g. per-domain MCP routing) take effect.
                         self.logger.info(
-                            "Toolbox '%s' already exists \u2014 reusing.",
+                            "Toolbox '%s' already exists — deleting and recreating.",
                             toolbox_name,
+                        )
+                        await project_client.beta.toolboxes.delete(toolbox_name)
+                        await project_client.beta.toolboxes.create_version(
+                            name=toolbox_name,
+                            description=f"Tools for {self.agent_name}",
+                            tools=tools,
                         )
                     else:
                         raise
@@ -182,17 +190,46 @@ class AgentTemplate:
                 # when shallow-copied via dict(). Deep-convert each tool to a plain
                 # dict so the OpenAI Responses API can serialize them.
                 # See bugs/toolbox-search-tool-serialization.md
+                #
+                # Filter out MCP tools — we always use MCPStreamableHTTPTool
+                # (client-side) for Magentic execution.  The server-side
+                # MCPTool in the Toolbox is only for Foundry Playground
+                # visibility; loading it here would create duplicates.
                 maf_tools = [
                     t.as_dict() if hasattr(t, "as_dict") else t
                     for t in toolbox.tools
+                    if not (hasattr(t, "type") and str(getattr(t, "type", "")).lower() == "mcp")
                 ]
+
+            # Step 2b — Client-side MCP tool.  MCPStreamableHTTPTool connects
+            # from *this* process so localhost URLs work (unlike the Toolbox
+            # MCPTool which is executed server-side by the Responses API).
+            mcp_tool = None
+            if self.mcp_cfg:
+                mcp_tool = MCPStreamableHTTPTool(
+                    name=self.mcp_cfg.name,
+                    url=self.mcp_cfg.url,
+                )
+                await self._stack.enter_async_context(mcp_tool)
+                self.logger.info(
+                    "Connected to MCP server '%s' at %s.",
+                    self.mcp_cfg.name,
+                    self.mcp_cfg.url,
+                )
+
+            # Combine Toolbox tools (Search, CodeInterpreter) + client-side MCP.
+            all_tools: list = []
+            if maf_tools:
+                all_tools.extend(maf_tools)
+            if mcp_tool:
+                all_tools.append(mcp_tool)
 
             agent = Agent(
                 client=chat_client,
                 name=self.agent_name,
                 instructions=definition.instructions or self.agent_instructions,
                 description=self.agent_description,
-                tools=maf_tools,
+                tools=all_tools if all_tools else None,
             )
             self._agent = await self._stack.enter_async_context(agent)
 
@@ -218,19 +255,39 @@ class AgentTemplate:
         return self
 
     def _build_tools(self) -> list:
-        """Return Toolbox tool instances based on this agent's config flags."""
+        """Return Toolbox tool instances for server-side tools.
+
+        When ``MCP_SERVER_CONNECTION_ID`` is set (deployed environment), an
+        ``MCPTool`` is added here so the Foundry portal / Playground can
+        reach the MCP server through the registered project connection.
+
+        In local development (no connection ID), MCP is handled exclusively
+        via ``MCPStreamableHTTPTool`` (client-side) in ``open()`` — this
+        allows the backend process to connect directly to ``localhost``.
+
+        Client-side ``MCPStreamableHTTPTool`` is **always** created in
+        ``open()`` for Magentic orchestration regardless of this flag;
+        Toolbox-originated MCP tools are filtered out of ``maf_tools``
+        to avoid duplicates.
+        """
         tools = []
 
-        if self.mcp_cfg:
-            mcp_kwargs: dict = {
-                "server_label": self.mcp_cfg.name,
-                "server_url": self.mcp_cfg.url,
-                "require_approval": "never",
-            }
-            if self.mcp_cfg.connection_id:
-                mcp_kwargs["project_connection_id"] = self.mcp_cfg.connection_id
-            tools.append(MCPTool(**mcp_kwargs))
-            self.logger.debug("Added MCPTool '%s'.", self.mcp_cfg.name)
+        # Server-side MCPTool — only when a Foundry project connection is
+        # configured (i.e. deployed).  Locally the connection_id is empty
+        # and MCP is handled client-side only.
+        if self.mcp_cfg and self.mcp_cfg.connection_id:
+            tools.append(
+                MCPTool(
+                    server_label=self.mcp_cfg.name,
+                    server_url=self.mcp_cfg.url,
+                    server_description=self.mcp_cfg.description,
+                    project_connection_id=self.mcp_cfg.connection_id,
+                )
+            )
+            self.logger.debug(
+                "Added server-side MCPTool (connection_id=%s).",
+                self.mcp_cfg.connection_id,
+            )
 
         if self.search_config and self.search_config.index_name:
             # Workaround: convert to plain dict via as_dict() because

@@ -117,6 +117,25 @@ class UserClarificationResponse:
     m_plan_id: str = ""
 
 
+@dataclass(slots=True)
+class TimeoutNotification:
+    """Notification about a timeout (approval or clarification)."""
+    timeout_type: str          # "approval" or "clarification"
+    request_id: str            # plan_id or request_id
+    message: str               # description
+    timestamp: float           # epoch time
+    timeout_duration: float    # seconds waited
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "timeout_type": self.timeout_type,
+            "request_id": self.request_id,
+            "message": self.message,
+            "timestamp": self.timestamp,
+            "timeout_duration": self.timeout_duration,
+        }
+
+
 class WebsocketMessageType(str, Enum):
     """Types of WebSocket messages sent over the WebSocket connection."""
     SYSTEM_MESSAGE = "system_message"

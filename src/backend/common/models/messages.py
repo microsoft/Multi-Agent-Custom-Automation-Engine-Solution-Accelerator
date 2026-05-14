@@ -10,7 +10,6 @@ from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-
 # ---------------------------------------------------------------------------
 # Enumerations
 # ---------------------------------------------------------------------------
@@ -172,6 +171,8 @@ class TeamAgent(BaseModel):
     index_name: str = ""
     use_rag: bool = False
     use_mcp: bool = False
+    mcp_domain: str | None = None
+    user_responses: bool = False
     use_bing: bool = False
     use_reasoning: bool = False
     coding_tools: bool = False

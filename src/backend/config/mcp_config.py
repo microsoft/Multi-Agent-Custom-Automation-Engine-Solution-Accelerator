@@ -29,8 +29,15 @@ class MCPConfig:
     connection_id: str | None = None
 
     @classmethod
-    def from_env(cls) -> "MCPConfig":
-        """Build MCPConfig from environment variables."""
+    def from_env(cls, domain: str | None = None) -> "MCPConfig":
+        """Build MCPConfig from environment variables.
+
+        Args:
+            domain: Optional MCP domain (e.g. "hr", "tech_support").
+                    When provided the base URL is rewritten so the agent
+                    connects to the domain-scoped endpoint
+                    (e.g. ``http://host:9000/hr/mcp``).
+        """
         url = config.MCP_SERVER_ENDPOINT
         name = config.MCP_SERVER_NAME
         description = config.MCP_SERVER_DESCRIPTION
@@ -39,6 +46,13 @@ class MCPConfig:
 
         if not all([url, name, description, tenant_id, client_id]):
             raise ValueError(f"{cls.__name__}: missing required environment variables")
+
+        if domain:
+            # Rewrite e.g. "http://host:9000/mcp" → "http://host:9000/hr/mcp"
+            url = url.rstrip("/")
+            if url.endswith("/mcp"):
+                url = url[: -len("/mcp")]
+            url = f"{url}/{domain}/mcp"
 
         return cls(
             url=url,

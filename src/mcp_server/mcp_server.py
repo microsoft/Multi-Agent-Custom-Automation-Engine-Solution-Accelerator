@@ -1,14 +1,27 @@
 """
-MACAE MCP Server - FastMCP server with organized tools and services.
+MACAE MCP Server - FastMCP server with per-domain path routing.
+
+Each registered service domain gets its own FastMCP instance mounted at
+``/<domain>/mcp`` under a single FastAPI application.  A catch-all server
+with **all** tools is also mounted at ``/mcp`` for backward compatibility.
+
+Example endpoints (default port 9000):
+    http://localhost:9000/hr/mcp           -> HR tools only
+    http://localhost:9000/tech_support/mcp -> Tech-support tools only
+    http://localhost:9000/mcp              -> all tools (legacy)
 """
 
 import argparse
 import logging
-###
+from contextlib import asynccontextmanager
 
+import uvicorn
 from config.settings import config
 from core.factory import MCPToolFactory
+from fastapi import FastAPI
+from fastmcp import FastMCP
 from fastmcp.server.auth.providers.jwt import JWTVerifier
+from services.ask_user_service import AskUserService
 from services.hr_service import HRService
 from services.image_service import ImageService
 from services.marketing_service import MarketingService
@@ -29,76 +42,124 @@ factory.register_service(MarketingService())
 factory.register_service(ProductService())
 factory.register_service(ImageService())
 
+# Shared services — registered on every domain server
+factory.register_shared_service(AskUserService())
 
 
-def create_fastmcp_server():
-    """Create and configure FastMCP server."""
-    try:
-        # Create authentication provider if enabled
-        auth = None
-        if config.enable_auth:
-            auth_config = {
-                "jwks_uri": config.jwks_uri,
-                "issuer": config.issuer,
-                "audience": config.audience,
-            }
-            if all(auth_config.values()):
-                auth = JWTVerifier(
-                    jwks_uri=auth_config["jwks_uri"],
-                    issuer=auth_config["issuer"],
-                    algorithm="RS256",
-                    audience=auth_config["audience"],
-                )
+def _create_user_responses_server(auth=None) -> FastMCP:
+    """Create a minimal MCP server that exposes only the ask_user shared tool.
 
-        # Create MCP server
-        mcp_server = factory.create_mcp_server(name=config.server_name, auth=auth)
+    Agents with ``user_responses: true`` but no domain tools connect here.
+    """
+    server = FastMCP("MACAE-user_responses", auth=auth)
+    for svc in factory._shared_services:
+        svc.register_tools(server)
+    return server
 
-        logger.info("✅ FastMCP server created successfully")
-        return mcp_server
 
-    except ImportError:
-        logger.warning("⚠️  FastMCP not available. Install with: pip install fastmcp")
+def _build_auth():
+    """Return a JWTVerifier when auth is enabled, else None."""
+    if not config.enable_auth:
         return None
+    auth_config = {
+        "jwks_uri": config.jwks_uri,
+        "issuer": config.issuer,
+        "audience": config.audience,
+    }
+    if not all(auth_config.values()):
+        return None
+    return JWTVerifier(
+        jwks_uri=auth_config["jwks_uri"],
+        issuer=auth_config["issuer"],
+        algorithm="RS256",
+        audience=auth_config["audience"],
+    )
 
 
-# Create FastMCP server instance for fastmcp run command
-mcp = create_fastmcp_server()
+def create_app() -> FastAPI:
+    """Build a FastAPI application with per-domain MCP mounts."""
+    auth = _build_auth()
+
+    # One FastMCP server per domain + one catch-all with every tool
+    domain_servers: dict[str, FastMCP] = factory.create_all_domain_servers(auth=auth)
+    all_server: FastMCP = factory.create_mcp_server(name=config.server_name, auth=auth)
+
+    # Minimal server for agents that only need ask_user (user_responses domain)
+    user_responses_server: FastMCP = _create_user_responses_server(auth=auth)
+    domain_servers["user_responses"] = user_responses_server
+
+    # Convert each FastMCP to a mountable ASGI sub-app
+    domain_apps = {
+        domain: server.http_app(path="/mcp")
+        for domain, server in domain_servers.items()
+    }
+    all_app = all_server.http_app(path="/mcp")
+
+    # Chain lifespans so every sub-app starts/stops cleanly
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        apps = list(domain_apps.values()) + [all_app]
+        # Enter all lifespans (nested)
+        async def _enter(remaining):
+            if not remaining:
+                yield
+                return
+            head, *tail = remaining
+            async with head.lifespan(_app):
+                async for _ in _enter(tail):
+                    yield
+        async for _ in _enter(apps):
+            yield
+
+    app = FastAPI(lifespan=lifespan)
+
+    # Mount domain-scoped endpoints: /<domain>/mcp
+    for domain, sub_app in domain_apps.items():
+        app.mount(f"/{domain}", sub_app)
+        logger.info("  Mounted /%s/mcp", domain)
+
+    # Mount catch-all: /mcp (all tools, backward compat)
+    app.mount("", all_app)
+    logger.info("  Mounted /mcp (all tools)")
+
+    return app
+
+
+# Module-level app for ``uvicorn mcp_server:app``
+app = create_app()
+
+# Keep a reference to the legacy single-server for ``fastmcp run`` compat
+mcp = factory.create_mcp_server(name=config.server_name, auth=_build_auth())
 
 
 def log_server_info():
     """Log server initialization info."""
-    if not mcp:
-        logger.error("❌ FastMCP server not available")
-        return
-
     summary = factory.get_tool_summary()
-    logger.info(f"🚀 {config.server_name} initialized")
-    logger.info(f"📊 Total services: {summary['total_services']}")
-    logger.info(f"🔧 Total tools: {summary['total_tools']}")
-    logger.info(f"🔐 Authentication: {'Enabled' if config.enable_auth else 'Disabled'}")
+    logger.info("🚀 %s initialized with per-domain routing", config.server_name)
+    logger.info("📊 Total services: %s", summary["total_services"])
+    logger.info("🔧 Total tools: %s", summary["total_tools"])
+    logger.info("🔐 Authentication: %s", "Enabled" if config.enable_auth else "Disabled")
 
     for domain, info in summary["services"].items():
         logger.info(
-            f"   📁 {domain}: {info['tool_count']} tools ({info['class_name']})"
+            "   📁 /%s/mcp: %s tools (%s)",
+            domain,
+            info["tool_count"],
+            info["class_name"],
         )
 
 
 def run_server(
     transport: str = "stdio", host: str = "127.0.0.1", port: int = 9000, **kwargs
 ):
-    """Run the FastMCP server with specified transport."""
-    if not mcp:
-        logger.error("❌ Cannot start FastMCP server - not available")
-        return
-
+    """Run the server."""
     log_server_info()
 
-    logger.info(f"🤖 Starting FastMCP server with {transport} transport")
-    if transport in ["http", "streamable-http", "sse"]:
-        logger.info(f"🌐 Server will be available at: http://{host}:{port}/mcp/")
-        mcp.run(transport=transport, host=host, port=port, **kwargs)
+    if transport in ("http", "streamable-http", "sse"):
+        logger.info("🤖 Starting server on http://%s:%s", host, port)
+        uvicorn.run(app, host=host, port=port)
     else:
-        # For STDIO transport, only pass kwargs that are supported
+        # STDIO transport — fall back to the single catch-all server
         stdio_kwargs = {k: v for k, v in kwargs.items() if k not in ["log_level"]}
         mcp.run(transport=transport, **stdio_kwargs)
 

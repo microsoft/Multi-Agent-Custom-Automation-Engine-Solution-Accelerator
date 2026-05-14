@@ -4,7 +4,7 @@ import datetime
 import logging
 from typing import Any, Dict, List, Optional, Type
 
-import v4.models.messages as messages
+from models.plan_models import MPlan
 from azure.cosmos.aio import CosmosClient
 from azure.cosmos.aio._database import DatabaseProxy
 
@@ -457,22 +457,22 @@ class CosmosDBClient(DatabaseBase):
 
         return True
 
-    async def add_mplan(self, mplan: messages.MPlan) -> None:
+    async def add_mplan(self, mplan: MPlan) -> None:
         """Add a team configuration to the database."""
         await self.add_item(mplan)
 
-    async def update_mplan(self, mplan: messages.MPlan) -> None:
+    async def update_mplan(self, mplan: MPlan) -> None:
         """Update a team configuration in the database."""
         await self.update_item(mplan)
 
-    async def get_mplan(self, plan_id: str) -> Optional[messages.MPlan]:
+    async def get_mplan(self, plan_id: str) -> Optional[MPlan]:
         """Retrieve a mplan configuration by mplan_id."""
         query = "SELECT * FROM c WHERE c.plan_id=@plan_id AND c.data_type=@data_type"
         parameters = [
             {"name": "@plan_id", "value": plan_id},
             {"name": "@data_type", "value": DataType.m_plan},
         ]
-        results = await self.query_items(query, parameters, messages.MPlan)
+        results = await self.query_items(query, parameters, MPlan)
         return results[0] if results else None
 
     async def add_agent_message(self, message: AgentMessageData) -> None:

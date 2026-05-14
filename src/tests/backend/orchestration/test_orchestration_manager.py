@@ -1,15 +1,16 @@
 """Unit tests for orchestration_manager module.
 
-Comprehensive test cases covering OrchestrationManager with proper mocking.
+Tests OrchestrationManager:
+- init_orchestration() — builds MagenticBuilder workflow
+- get_current_or_new_orchestration() — lifecycle management
+- run_orchestration() — event stream processing with plan review
+- _process_event_stream() — event dispatch
 """
 
 import asyncio
 import logging
 import os
 import sys
-import uuid
-from typing import List, Optional
-from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
@@ -31,7 +32,7 @@ os.environ.update({
     'COSMOSDB_CONTAINER': 'test_container',
     'AZURE_CLIENT_ID': 'test_client_id',
     'AZURE_TENANT_ID': 'test_tenant_id',
-    'AZURE_OPENAI_RAI_DEPLOYMENT_NAME': 'test_rai_deployment'
+    'AZURE_OPENAI_RAI_DEPLOYMENT_NAME': 'test_rai_deployment',
 })
 
 # Mock external Azure dependencies
@@ -56,44 +57,48 @@ sys.modules['azure.identity'] = Mock()
 sys.modules['azure.identity.aio'] = Mock()
 sys.modules['azure.cosmos'] = Mock(CosmosClient=Mock)
 
-# Mock agent_framework dependencies
-class MockChatMessage:
-    """Mock ChatMessage class for isinstance checks."""
+
+# ---------------------------------------------------------------------------
+# Lightweight mock types for agent_framework
+# ---------------------------------------------------------------------------
+class MockMessage:
+    """Mock Message returned by executor_completed events."""
     def __init__(self, text="Mock message"):
         self.text = text
-        self.author_name = "TestAgent"
-        self.role = "assistant"
 
-class MockWorkflowOutputEvent:
-    """Mock WorkflowOutputEvent."""
-    def __init__(self, data=None):
-        self.data = data or MockChatMessage()
 
-class MockMagenticOrchestratorMessageEvent:
-    """Mock MagenticOrchestratorMessageEvent."""
-    def __init__(self, message=None, kind="orchestrator"):
-        self.message = message or MockChatMessage()
-        self.kind = kind
+class MockAgentResponseUpdate:
+    """Mock AgentResponseUpdate for streaming output events."""
+    def __init__(self, text="streaming chunk"):
+        self.text = text
 
-class MockMagenticAgentDeltaEvent:
-    """Mock MagenticAgentDeltaEvent."""
-    def __init__(self, agent_id="test_agent"):
-        self.agent_id = agent_id
-        self.delta = "streaming update"
 
-class MockMagenticAgentMessageEvent:
-    """Mock MagenticAgentMessageEvent."""
-    def __init__(self, agent_id="test_agent", message=None):
-        self.agent_id = agent_id
-        self.message = message or MockChatMessage()
+class MockMagenticPlanReviewRequest:
+    """Mock MagenticPlanReviewRequest."""
+    def __init__(self):
+        self.plan = Mock()  # _MagenticTaskLedger
+        self._approved_response = Mock()
 
-class MockMagenticFinalResultEvent:
-    """Mock MagenticFinalResultEvent."""
-    def __init__(self, message=None):
-        self.message = message or MockChatMessage()
+    def approve(self):
+        return self._approved_response
+
+    def revise(self, feedback):
+        return Mock()
+
+
+class MockMagenticOrchestratorEvent:
+    """Mock MagenticOrchestratorEvent."""
+    def __init__(self):
+        self.event_type = Mock()
+        self.event_type.value = "plan_created"
+
+
+class MockInMemoryCheckpointStorage:
+    pass
+
 
 class MockAgent:
-    """Mock agent class with proper attributes."""
+    """Mock agent with typical attributes."""
     def __init__(self, agent_name=None, name=None, has_inner_agent=False):
         if agent_name:
             self.agent_name = agent_name
@@ -103,87 +108,62 @@ class MockAgent:
             self._agent = Mock()
         self.close = AsyncMock()
 
-class AsyncGeneratorMock:
-    """Helper class to mock async generators."""
-    def __init__(self, items):
-        self.items = items
-        self.call_count = 0
-        self.call_args_list = []
-    
-    async def __call__(self, *args, **kwargs):
-        self.call_count += 1
-        self.call_args_list.append((args, kwargs))
-        for item in self.items:
-            yield item
-    
-    def assert_called_once(self):
-        """Assert that the mock was called exactly once."""
-        if self.call_count != 1:
-            raise AssertionError(f"Expected 1 call, got {self.call_count}")
-    
-    def assert_called_once_with(self, *args, **kwargs):
-        """Assert that the mock was called exactly once with specific arguments."""
-        self.assert_called_once()
-        expected = (args, kwargs)
-        actual = self.call_args_list[0]
-        if actual != expected:
-            raise AssertionError(f"Expected {expected}, got {actual}")
 
-class MockMagenticBuilder:
-    """Mock MagenticBuilder."""
-    def __init__(self):
-        self._participants = {}
-        self._manager = None
-        self._storage = None
-        
-    def participants(self, participants_dict=None, **kwargs):
-        if participants_dict:
-            self._participants = participants_dict
-        else:
-            self._participants = kwargs
-        return self
-    
-    def with_standard_manager(self, manager=None, max_round_count=10, max_stall_count=0):
-        self._manager = manager
-        return self
-    
-    def with_checkpointing(self, storage):
-        self._storage = storage
-        return self
-    
-    def build(self):
-        workflow = Mock()
-        workflow._participants = self._participants
-        workflow.executors = {
-            "magentic_orchestrator": Mock(
-                _conversation=[]
-            ),
-            "agent_1": Mock(
-                _chat_history=[]
-            )
-        }
-        # Mock async generator for run_stream
-        workflow.run_stream = AsyncGeneratorMock([])
-        return workflow
+def _make_event(event_type, data=None, executor_id=None, request_id=None):
+    """Factory for workflow events."""
+    event = Mock()
+    event.type = event_type
+    event.data = data
+    event.executor_id = executor_id
+    event.request_id = request_id
+    return event
 
-class MockInMemoryCheckpointStorage:
-    """Mock InMemoryCheckpointStorage."""
-    pass
 
-# Set up agent_framework mocks
+async def _async_iter(items):
+    """Helper: convert a list into an async iterator."""
+    for item in items:
+        yield item
+
+
+def _make_workflow_mock(run_return=None, executors=None):
+    """Create a properly configured workflow Mock."""
+    wf = Mock()
+    wf._executors = executors or {}
+    wf.executors = executors or {}
+    wf._terminated = False
+    wf._participants = {}
+    if run_return is not None:
+        wf.run = Mock(return_value=run_return)
+    return wf
+
+
+# ---------------------------------------------------------------------------
+# agent_framework mocks
+# ---------------------------------------------------------------------------
+mock_magentic_builder = Mock()
+mock_magentic_builder.return_value.build.return_value = Mock()
+
+af_mock = Mock()
+af_mock.Agent = Mock(return_value=Mock())
+af_mock.AgentResponse = Mock
+af_mock.AgentResponseUpdate = MockAgentResponseUpdate
+af_mock.InMemoryCheckpointStorage = MockInMemoryCheckpointStorage
+af_mock.Message = MockMessage
+af_mock.WorkflowEvent = Mock
+
+af_orch_mock = Mock()
+af_orch_mock.MagenticBuilder = mock_magentic_builder
+af_orch_mock.MagenticOrchestratorEvent = MockMagenticOrchestratorEvent
+af_orch_mock.MagenticOrchestratorEventType = Mock
+af_orch_mock.MagenticPlanReviewRequest = MockMagenticPlanReviewRequest
+
+sys.modules['agent_framework'] = af_mock
+sys.modules['agent_framework.orchestrations'] = af_orch_mock
 sys.modules['agent_framework_foundry'] = Mock(FoundryChatClient=Mock())
-sys.modules['agent_framework'] = Mock(
-    ChatMessage=MockChatMessage,
-    WorkflowOutputEvent=MockWorkflowOutputEvent,
-    MagenticBuilder=MockMagenticBuilder,
-    InMemoryCheckpointStorage=MockInMemoryCheckpointStorage,
-    MagenticOrchestratorMessageEvent=MockMagenticOrchestratorMessageEvent,
-    MagenticAgentDeltaEvent=MockMagenticAgentDeltaEvent,
-    MagenticAgentMessageEvent=MockMagenticAgentMessageEvent,
-    MagenticFinalResultEvent=MockMagenticFinalResultEvent,
-)
 
-# Mock common modules
+# ---------------------------------------------------------------------------
+# Application module mocks
+# ---------------------------------------------------------------------------
 mock_config = Mock()
 mock_config.get_azure_credential.return_value = Mock()
 mock_config.AZURE_CLIENT_ID = 'test_client_id'
@@ -194,605 +174,803 @@ sys.modules['common.config'] = Mock()
 sys.modules['common.config.app_config'] = Mock(config=mock_config)
 sys.modules['common.models'] = Mock()
 
+
 class MockTeamConfiguration:
-    """Mock TeamConfiguration."""
     def __init__(self, name="TestTeam", deployment_name="test_deployment"):
         self.name = name
         self.deployment_name = deployment_name
 
-sys.modules['common.models.messages'] = Mock(TeamConfiguration=MockTeamConfiguration)
 
 class MockDatabaseBase:
-    """Mock DatabaseBase."""
     pass
 
+
+sys.modules['common.models.messages'] = Mock(TeamConfiguration=MockTeamConfiguration)
 sys.modules['common.database'] = Mock()
 sys.modules['common.database.database_base'] = Mock(DatabaseBase=MockDatabaseBase)
 
-# Mock flat-layout modules
+
 class MockTeamService:
-    """Mock TeamService."""
     def __init__(self):
         self.memory_context = MockDatabaseBase()
+
 
 sys.modules['services'] = Mock()
 sys.modules['services.team_service'] = Mock(TeamService=MockTeamService)
 
 sys.modules['callbacks.response_handlers'] = Mock(
     agent_response_callback=Mock(),
-    streaming_agent_response_callback=AsyncMock()
+    streaming_agent_response_callback=AsyncMock(),
 )
 
-# Mock orchestration.connection_config
+# ---- Mock orchestration.connection_config ----
 mock_connection_config = Mock()
 mock_connection_config.send_status_update_async = AsyncMock()
 
 mock_orchestration_config = Mock()
 mock_orchestration_config.max_rounds = 10
 mock_orchestration_config.orchestrations = {}
+mock_orchestration_config.plans = {}
 mock_orchestration_config.get_current_orchestration = Mock(return_value=None)
 mock_orchestration_config.set_approval_pending = Mock()
 
 sys.modules['orchestration.connection_config'] = Mock(
     connection_config=mock_connection_config,
-    orchestration_config=mock_orchestration_config
+    orchestration_config=mock_orchestration_config,
 )
 
-# Mock models.messages
+# ---- Mock models.messages ----
 class MockWebsocketMessageType:
-    """Mock WebsocketMessageType."""
     FINAL_RESULT_MESSAGE = "final_result_message"
+    PLAN_APPROVAL_REQUEST = "plan_approval_request"
+    PLAN_APPROVAL_RESPONSE = "plan_approval_response"
+    AGENT_MESSAGE_STREAMING = "agent_message_streaming"
 
-sys.modules['models.messages'] = Mock(WebsocketMessageType=MockWebsocketMessageType)
 
-# Mock orchestration.human_approval_manager
-class MockHumanApprovalMagenticManager:
-    """Mock HumanApprovalMagenticManager."""
-    def __init__(self, user_id, chat_client, instructions=None, max_round_count=10):
-        self.user_id = user_id
-        self.chat_client = chat_client
-        self.instructions = instructions
-        self.max_round_count = max_round_count
+class MockAgentMessageStreaming:
+    def __init__(self, agent_name="", content="", is_final=False):
+        self.agent_name = agent_name
+        self.content = content
+        self.is_final = is_final
 
-sys.modules['orchestration.human_approval_manager'] = Mock(
-    HumanApprovalMagenticManager=MockHumanApprovalMagenticManager
+
+class MockPlanApprovalRequest:
+    def __init__(self, plan=None, status="PENDING_APPROVAL", context=None):
+        self.plan = plan
+        self.status = status
+        self.context = context or {}
+
+
+class MockPlanApprovalResponse:
+    def __init__(self, approved=True, m_plan_id=None):
+        self.approved = approved
+        self.m_plan_id = m_plan_id
+
+
+mock_messages_module = Mock()
+mock_messages_module.WebsocketMessageType = MockWebsocketMessageType
+mock_messages_module.AgentMessageStreaming = MockAgentMessageStreaming
+mock_messages_module.PlanApprovalRequest = MockPlanApprovalRequest
+mock_messages_module.PlanApprovalResponse = MockPlanApprovalResponse
+sys.modules['models'] = Mock()
+sys.modules['models.messages'] = mock_messages_module
+
+# ---- Mock plan_review_helpers ----
+class MockMPlan:
+    def __init__(self):
+        self.id = "test-plan-id"
+        self.user_id = None
+
+
+mock_convert = Mock(return_value=MockMPlan())
+mock_get_prompt_kwargs = Mock(return_value={"task_ledger_plan_prompt": "p"})
+mock_wait_approval = AsyncMock(return_value=MockPlanApprovalResponse(approved=True, m_plan_id="test-plan-id"))
+
+sys.modules['orchestration.plan_review_helpers'] = Mock(
+    convert_plan_review_to_mplan=mock_convert,
+    get_magentic_prompt_kwargs=mock_get_prompt_kwargs,
+    wait_for_plan_approval=mock_wait_approval,
 )
 
-# Mock agents.agent_factory
+# ---- Mock agents ----
 class MockAgentFactory:
-    """Mock AgentFactory."""
     def __init__(self, team_service=None):
         self.team_service = team_service
-    
+
     async def get_agents(self, user_id, team_config_input, memory_store):
-        # Create mock agents
         agent1 = Mock()
         agent1.agent_name = "TestAgent1"
-        agent1._agent = Mock()  # Inner agent for wrapper templates
+        agent1._agent = Mock()
         agent1.close = AsyncMock()
-        
         agent2 = Mock()
         agent2.name = "TestAgent2"
         agent2.close = AsyncMock()
-        
         return [agent1, agent2]
 
-sys.modules.setdefault('agents', Mock())
-sys.modules['agents.agent_factory'] = Mock(
-    AgentFactory=MockAgentFactory
-)
 
-# Now import the module under test
+sys.modules.setdefault('agents', Mock())
+sys.modules['agents.agent_factory'] = Mock(AgentFactory=MockAgentFactory)
+
+# ---- Import module under test ----
 from backend.orchestration.orchestration_manager import OrchestrationManager
 
-# Get mocked references for tests
+# Re-bind mocked singletons for convenient assertions
 connection_config = sys.modules['orchestration.connection_config'].connection_config
 orchestration_config = sys.modules['orchestration.connection_config'].orchestration_config
 agent_response_callback = sys.modules['callbacks.response_handlers'].agent_response_callback
 streaming_agent_response_callback = sys.modules['callbacks.response_handlers'].streaming_agent_response_callback
 
 
-class TestOrchestrationManager(IsolatedAsyncioTestCase):
-    """Test cases for OrchestrationManager class."""
+# =========================================================================
+# init_orchestration
+# =========================================================================
+class TestInitOrchestration:
+    """Test OrchestrationManager.init_orchestration()."""
 
-    def setUp(self):
-        """Set up test fixtures before each test method."""
-        # Reset mocks
-        orchestration_config.orchestrations.clear()
-        orchestration_config.get_current_orchestration.return_value = None
-        orchestration_config.set_approval_pending.reset_mock()
-        connection_config.send_status_update_async.reset_mock()
-        agent_response_callback.reset_mock()
-        streaming_agent_response_callback.reset_mock()
-        
-        # Create test instance
-        self.orchestration_manager = OrchestrationManager()
-        self.test_user_id = "test_user_123"
-        self.test_team_config = MockTeamConfiguration()
-        self.test_team_service = MockTeamService()
-
-    def test_init(self):
-        """Test OrchestrationManager initialization."""
-        manager = OrchestrationManager()
-        
-        self.assertIsNone(manager.user_id)
-        self.assertIsNotNone(manager.logger)
-        self.assertIsInstance(manager.logger, logging.Logger)
-
-    async def test_init_orchestration_success(self):
-        """Test successful orchestration initialization."""
-        # Reset the mock to get clean call count
+    def setup_method(self):
         mock_config.get_azure_credential.reset_mock()
-        
-        # Use MockAgent instead of Mock to avoid attribute issues
-        agent1 = MockAgent(agent_name="TestAgent1", has_inner_agent=True)
-        agent2 = MockAgent(name="TestAgent2")
-        
-        agents = [agent1, agent2]
-        
+        mock_magentic_builder.reset_mock()
+        mock_magentic_builder.return_value.build.return_value = Mock()
+
+    @pytest.mark.asyncio
+    async def test_given_valid_args_when_init_then_returns_workflow(self):
+        # Arrange
+        agents = [MockAgent(agent_name="A1", has_inner_agent=True), MockAgent(name="A2")]
+
+        # Act
         workflow = await OrchestrationManager.init_orchestration(
             agents=agents,
-            team_config=self.test_team_config,
+            team_config=MockTeamConfiguration(),
             memory_store=MockDatabaseBase(),
-            user_id=self.test_user_id
+            user_id="user-1",
         )
-        
-        self.assertIsNotNone(workflow)
+
+        # Assert
+        assert workflow is not None
         mock_config.get_azure_credential.assert_called_once()
+        mock_magentic_builder.assert_called_once()
+        call_kwargs = mock_magentic_builder.call_args.kwargs
+        assert call_kwargs["enable_plan_review"] is True
+        assert call_kwargs["intermediate_outputs"] is True
 
-    async def test_init_orchestration_no_user_id(self):
-        """Test orchestration initialization without user_id raises ValueError."""
-        agents = [Mock()]
-        
-        with self.assertRaises(ValueError) as context:
+    @pytest.mark.asyncio
+    async def test_given_no_user_id_when_init_then_raises_value_error(self):
+        with pytest.raises(ValueError, match="user_id is required"):
             await OrchestrationManager.init_orchestration(
-                agents=agents,
-                team_config=self.test_team_config,
+                agents=[Mock()],
+                team_config=MockTeamConfiguration(),
                 memory_store=MockDatabaseBase(),
-                user_id=None
+                user_id=None,
             )
-        
-        self.assertIn("user_id is required", str(context.exception))
 
-    @patch('backend.orchestration.orchestration_manager.FoundryChatClient')
-    async def test_init_orchestration_client_creation_failure(self, mock_client_class):
-        """Test orchestration initialization when client creation fails."""
-        mock_client_class.side_effect = Exception("Client creation failed")
-        
-        agents = [Mock()]
-        
-        with self.assertRaises(Exception) as context:
+    @pytest.mark.asyncio
+    async def test_given_empty_user_id_when_init_then_raises_value_error(self):
+        with pytest.raises(ValueError, match="user_id is required"):
             await OrchestrationManager.init_orchestration(
-                agents=agents,
-                team_config=self.test_team_config,
+                agents=[Mock()],
+                team_config=MockTeamConfiguration(),
                 memory_store=MockDatabaseBase(),
-                user_id=self.test_user_id
+                user_id="",
             )
-        
-        self.assertIn("Client creation failed", str(context.exception))
 
-    @patch('backend.orchestration.orchestration_manager.HumanApprovalMagenticManager')
-    async def test_init_orchestration_manager_creation_failure(self, mock_manager_class):
-        """Test orchestration initialization when manager creation fails."""
-        mock_manager_class.side_effect = Exception("Manager creation failed")
-        
-        agents = [Mock()]
-        
-        with self.assertRaises(Exception) as context:
-            await OrchestrationManager.init_orchestration(
-                agents=agents,
-                team_config=self.test_team_config,
-                memory_store=MockDatabaseBase(),
-                user_id=self.test_user_id
-            )
-        
-        self.assertIn("Manager creation failed", str(context.exception))
+    @pytest.mark.asyncio
+    async def test_given_client_failure_when_init_then_propagates(self):
+        # Arrange
+        with patch('backend.orchestration.orchestration_manager.FoundryChatClient',
+                   side_effect=Exception("Client boom")):
+            # Act & Assert
+            with pytest.raises(Exception, match="Client boom"):
+                await OrchestrationManager.init_orchestration(
+                    agents=[Mock()],
+                    team_config=MockTeamConfiguration(),
+                    memory_store=MockDatabaseBase(),
+                    user_id="user-1",
+                )
 
-    async def test_init_orchestration_participants_mapping(self):
-        """Test proper participant mapping in orchestration initialization."""
-        # Use MockAgent to avoid attribute issues
-        agent_with_agent_name = MockAgent(agent_name="AgentWithAgentName", has_inner_agent=True)
-        agent_with_name = MockAgent(name="AgentWithName")
-        agent_without_name = MockAgent()  # Neither agent_name nor name
-        
-        agents = [agent_with_agent_name, agent_with_name, agent_without_name]
-        
-        workflow = await OrchestrationManager.init_orchestration(
-            agents=agents,
-            team_config=self.test_team_config,
+    @pytest.mark.asyncio
+    async def test_given_agents_with_inner_agent_when_init_then_unwraps(self):
+        # Arrange
+        inner = Mock()
+        outer = Mock()
+        outer.agent_name = "Wrapped"
+        outer._agent = inner
+
+        # Act
+        await OrchestrationManager.init_orchestration(
+            agents=[outer],
+            team_config=MockTeamConfiguration(),
             memory_store=MockDatabaseBase(),
-            user_id=self.test_user_id
+            user_id="user-1",
         )
-        
-        self.assertIsNotNone(workflow)
-        # Verify builder was called with participants
-        self.assertIsNotNone(workflow._participants)
 
-    async def test_get_current_or_new_orchestration_existing(self):
-        """Test getting existing orchestration."""
-        # Set up existing orchestration
-        mock_workflow = Mock()
-        orchestration_config.get_current_orchestration.return_value = mock_workflow
-        
-        result = await OrchestrationManager.get_current_or_new_orchestration(
-            user_id=self.test_user_id,
-            team_config=self.test_team_config,
-            team_switched=False,
-            team_service=self.test_team_service
+        # Assert — participants list should contain the inner agent
+        call_kwargs = mock_magentic_builder.call_args.kwargs
+        assert inner in call_kwargs["participants"]
+
+    @pytest.mark.asyncio
+    async def test_given_agent_without_name_when_init_then_assigns_fallback(self):
+        # Arrange — agent with neither agent_name nor name
+        bare_agent = Mock(spec=[])
+
+        # Act — should not raise
+        await OrchestrationManager.init_orchestration(
+            agents=[bare_agent],
+            team_config=MockTeamConfiguration(),
+            memory_store=MockDatabaseBase(),
+            user_id="user-1",
         )
-        
-        self.assertEqual(result, mock_workflow)
-        orchestration_config.get_current_orchestration.assert_called_with(self.test_user_id)
 
-    async def test_get_current_or_new_orchestration_new(self):
-        """Test creating new orchestration when none exists."""
-        # No existing orchestration
+        # Assert
+        mock_magentic_builder.assert_called_once()
+
+
+# =========================================================================
+# get_current_or_new_orchestration
+# =========================================================================
+class TestGetCurrentOrNewOrchestration:
+    """Test OrchestrationManager.get_current_or_new_orchestration()."""
+
+    def setup_method(self):
+        orchestration_config.orchestrations.clear()
+        orchestration_config.get_current_orchestration.reset_mock()
         orchestration_config.get_current_orchestration.return_value = None
-        
+
+    @pytest.mark.asyncio
+    async def test_given_existing_workflow_when_no_switch_then_returns_it(self):
+        # Arrange
+        mock_workflow = Mock()
+        mock_workflow._terminated = False
+        orchestration_config.get_current_orchestration.return_value = mock_workflow
+
+        # Act
+        result = await OrchestrationManager.get_current_or_new_orchestration(
+            user_id="user-1",
+            team_config=MockTeamConfiguration(),
+            team_switched=False,
+            team_service=MockTeamService(),
+        )
+
+        # Assert
+        assert result == mock_workflow
+
+    @pytest.mark.asyncio
+    async def test_given_no_workflow_when_called_then_creates_new(self):
+        # Arrange
+        orchestration_config.get_current_orchestration.return_value = None
+
         with patch.object(OrchestrationManager, 'init_orchestration', new_callable=AsyncMock) as mock_init:
             mock_workflow = Mock()
             mock_init.return_value = mock_workflow
-            
-            result = await OrchestrationManager.get_current_or_new_orchestration(
-                user_id=self.test_user_id,
-                team_config=self.test_team_config,
+
+            # Act
+            await OrchestrationManager.get_current_or_new_orchestration(
+                user_id="user-1",
+                team_config=MockTeamConfiguration(),
                 team_switched=False,
-                team_service=self.test_team_service
+                team_service=MockTeamService(),
             )
-            
-            # Verify new orchestration was created and stored
-            mock_init.assert_called_once()
-            self.assertEqual(orchestration_config.orchestrations[self.test_user_id], mock_workflow)
 
-    async def test_get_current_or_new_orchestration_team_switched(self):
-        """Test creating new orchestration when team is switched."""
-        # Set up existing orchestration with participants that need closing
-        mock_existing_workflow = Mock()
-        mock_agent = MockAgent(agent_name="TestAgent")
-        mock_existing_workflow._participants = {"agent1": mock_agent}
-        
-        orchestration_config.get_current_orchestration.return_value = mock_existing_workflow
-        
+            # Assert
+            mock_init.assert_called_once()
+            assert orchestration_config.orchestrations["user-1"] == mock_workflow
+
+    @pytest.mark.asyncio
+    async def test_given_team_switched_when_called_then_closes_old_agents(self):
+        # Arrange
+        mock_agent = MockAgent(agent_name="OldAgent")
+        mock_old_workflow = Mock()
+        mock_old_workflow._participants = {"a1": mock_agent}
+        orchestration_config.get_current_orchestration.return_value = mock_old_workflow
+
         with patch.object(OrchestrationManager, 'init_orchestration', new_callable=AsyncMock) as mock_init:
-            mock_new_workflow = Mock()
-            mock_init.return_value = mock_new_workflow
-            
-            result = await OrchestrationManager.get_current_or_new_orchestration(
-                user_id=self.test_user_id,
-                team_config=self.test_team_config,
+            mock_init.return_value = Mock()
+
+            # Act
+            await OrchestrationManager.get_current_or_new_orchestration(
+                user_id="user-1",
+                team_config=MockTeamConfiguration(),
                 team_switched=True,
-                team_service=self.test_team_service
+                team_service=MockTeamService(),
             )
-            
-            # Verify agents were closed and new orchestration was created
-            mock_agent.close.assert_called_once()
+
+            # Assert
+            mock_agent.close.assert_awaited_once()
             mock_init.assert_called_once()
-            self.assertEqual(orchestration_config.orchestrations[self.test_user_id], mock_new_workflow)
 
-    async def test_get_current_or_new_orchestration_agent_creation_failure(self):
-        """Test handling agent creation failure."""
-        orchestration_config.get_current_orchestration.return_value = None
-        
-        # Mock agent factory to raise exception
-        with patch('backend.orchestration.orchestration_manager.AgentFactory') as mock_factory_class:
-            mock_factory = Mock()
-            mock_factory.get_agents = AsyncMock(side_effect=Exception("Agent creation failed"))
-            mock_factory_class.return_value = mock_factory
-            
-            with self.assertRaises(Exception) as context:
-                await OrchestrationManager.get_current_or_new_orchestration(
-                    user_id=self.test_user_id,
-                    team_config=self.test_team_config,
-                    team_switched=False,
-                    team_service=self.test_team_service
-                )
-            
-            self.assertIn("Agent creation failed", str(context.exception))
+    @pytest.mark.asyncio
+    async def test_given_terminated_workflow_when_called_then_creates_new(self):
+        # Arrange
+        mock_old = Mock()
+        mock_old._terminated = True
+        mock_old._participants = {}
+        orchestration_config.get_current_orchestration.return_value = mock_old
 
-    async def test_get_current_or_new_orchestration_init_failure(self):
-        """Test handling orchestration initialization failure."""
-        orchestration_config.get_current_orchestration.return_value = None
-        
         with patch.object(OrchestrationManager, 'init_orchestration', new_callable=AsyncMock) as mock_init:
-            mock_init.side_effect = Exception("Orchestration init failed")
-            
-            with self.assertRaises(Exception) as context:
+            mock_init.return_value = Mock()
+
+            # Act
+            await OrchestrationManager.get_current_or_new_orchestration(
+                user_id="user-1",
+                team_config=MockTeamConfiguration(),
+                team_switched=False,
+                team_service=MockTeamService(),
+            )
+
+            # Assert
+            mock_init.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_given_team_switched_when_closing_then_closes_all_agents(self):
+        # Arrange
+        agent_a = MockAgent(agent_name="AgentA")
+        agent_b = MockAgent(agent_name="AgentB")
+        mock_old = Mock()
+        mock_old._participants = {"a": agent_a, "b": agent_b}
+        orchestration_config.get_current_orchestration.return_value = mock_old
+
+        with patch.object(OrchestrationManager, 'init_orchestration', new_callable=AsyncMock) as mock_init:
+            mock_init.return_value = Mock()
+
+            # Act
+            await OrchestrationManager.get_current_or_new_orchestration(
+                user_id="user-1",
+                team_config=MockTeamConfiguration(),
+                team_switched=True,
+                team_service=MockTeamService(),
+            )
+
+            # Assert — all agents closed
+            agent_a.close.assert_awaited_once()
+            agent_b.close.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_given_agent_creation_failure_when_called_then_propagates(self):
+        # Arrange
+        orchestration_config.get_current_orchestration.return_value = None
+
+        with patch('backend.orchestration.orchestration_manager.AgentFactory') as mock_factory_cls:
+            mock_factory = Mock()
+            mock_factory.get_agents = AsyncMock(side_effect=Exception("Agent boom"))
+            mock_factory_cls.return_value = mock_factory
+
+            # Act & Assert
+            with pytest.raises(Exception, match="Agent boom"):
                 await OrchestrationManager.get_current_or_new_orchestration(
-                    user_id=self.test_user_id,
-                    team_config=self.test_team_config,
+                    user_id="user-1",
+                    team_config=MockTeamConfiguration(),
                     team_switched=False,
-                    team_service=self.test_team_service
+                    team_service=MockTeamService(),
                 )
-            
-            self.assertIn("Orchestration init failed", str(context.exception))
 
-    async def test_run_orchestration_success(self):
-        """Test successful orchestration execution."""
-        # Set up mock workflow with events
-        mock_workflow = Mock()
-        mock_events = [
-            MockMagenticOrchestratorMessageEvent(),
-            MockMagenticAgentDeltaEvent(),
-            MockMagenticAgentMessageEvent(),
-            MockMagenticFinalResultEvent(),
-            MockWorkflowOutputEvent(MockChatMessage("Final result"))
-        ]
-        mock_workflow.run_stream = AsyncGeneratorMock(mock_events)
-        mock_workflow.executors = {
-            "magentic_orchestrator": Mock(_conversation=[]),
-            "agent_1": Mock(_chat_history=[])
-        }
-
-        orchestration_config.get_current_orchestration.return_value = mock_workflow
-
-        # Mock input task
-        input_task = Mock()
-        input_task.description = "Test task description"
-
-        # Execute orchestration
-        await self.orchestration_manager.run_orchestration(
-            user_id=self.test_user_id,
-            input_task=input_task
-        )
-
-        # Verify callbacks were called
-        streaming_agent_response_callback.assert_called()
-        agent_response_callback.assert_called()
-        
-        # Verify final result was sent
-        connection_config.send_status_update_async.assert_called()
-
-    async def test_run_orchestration_no_workflow(self):
-        """Test run_orchestration when no workflow exists."""
+    @pytest.mark.asyncio
+    async def test_given_init_failure_when_called_then_propagates(self):
+        # Arrange
         orchestration_config.get_current_orchestration.return_value = None
-        
-        input_task = Mock()
-        input_task.description = "Test task"
-        
-        with self.assertRaises(ValueError) as context:
-            await self.orchestration_manager.run_orchestration(
-                user_id=self.test_user_id,
-                input_task=input_task
-            )
-        
-        self.assertIn("Orchestration not initialized", str(context.exception))
 
-    async def test_run_orchestration_workflow_execution_error(self):
-        """Test run_orchestration when workflow execution fails."""
-        # Set up mock workflow that raises exception
-        mock_workflow = Mock()
-        mock_workflow.run_stream = AsyncGeneratorMock([])
-        mock_workflow.run_stream = Mock(side_effect=Exception("Workflow execution failed"))
-        mock_workflow.executors = {}
-        
-        orchestration_config.get_current_orchestration.return_value = mock_workflow
-        
-        input_task = Mock()
-        input_task.description = "Test task"
-        
-        with self.assertRaises(Exception):
-            await self.orchestration_manager.run_orchestration(
-                user_id=self.test_user_id,
-                input_task=input_task
-            )
-        
-        # Verify error status was sent
-        connection_config.send_status_update_async.assert_called()
+        with patch.object(OrchestrationManager, 'init_orchestration', new_callable=AsyncMock) as mock_init:
+            mock_init.side_effect = Exception("Init boom")
 
-    async def test_run_orchestration_conversation_clearing(self):
-        """Test conversation history clearing in run_orchestration."""
-        # Set up workflow with various executor types
-        mock_conversation = []
-        mock_chat_history = []
-        
-        mock_orchestrator_executor = Mock()
-        mock_orchestrator_executor._conversation = mock_conversation
-        
-        mock_agent_executor = Mock()
-        mock_agent_executor._chat_history = mock_chat_history
-        
-        mock_workflow = Mock()
-        mock_workflow.executors = {
-            "magentic_orchestrator": mock_orchestrator_executor,
-            "agent_1": mock_agent_executor
-        }
-        mock_workflow.run_stream = AsyncGeneratorMock([])
-        
-        orchestration_config.get_current_orchestration.return_value = mock_workflow
-        
-        input_task = Mock()
-        input_task.description = "Test task"
-        
-        await self.orchestration_manager.run_orchestration(
-            user_id=self.test_user_id,
-            input_task=input_task
-        )
-        
-        # Verify histories were cleared
-        self.assertEqual(len(mock_conversation), 0)
-        self.assertEqual(len(mock_chat_history), 0)
+            # Act & Assert
+            with pytest.raises(Exception, match="Init boom"):
+                await OrchestrationManager.get_current_or_new_orchestration(
+                    user_id="user-1",
+                    team_config=MockTeamConfiguration(),
+                    team_switched=False,
+                    team_service=MockTeamService(),
+                )
 
-    async def test_run_orchestration_clearing_with_custom_containers(self):
-        """Test conversation clearing with custom containers that have clear() method."""
-        # Set up custom container with clear method
-        mock_custom_container = Mock()
-        mock_custom_container.clear = Mock()
-        
-        mock_executor = Mock()
-        mock_executor._conversation = mock_custom_container
-        
-        mock_workflow = Mock()
-        mock_workflow.executors = {
-            "magentic_orchestrator": mock_executor
-        }
-        mock_workflow.run_stream = AsyncGeneratorMock([])
-        
-        orchestration_config.get_current_orchestration.return_value = mock_workflow
-        
-        input_task = Mock()
-        input_task.description = "Test task"
-        
-        await self.orchestration_manager.run_orchestration(
-            user_id=self.test_user_id,
-            input_task=input_task
-        )
-        
-        # Verify clear method was called
-        mock_custom_container.clear.assert_called_once()
 
-    async def test_run_orchestration_clearing_failure_handling(self):
-        """Test handling of failures during conversation clearing."""
-        # Set up executor that raises exception during clearing
-        mock_executor = Mock()
-        mock_conversation = Mock()
-        mock_conversation.clear = Mock(side_effect=Exception("Clear failed"))
-        mock_executor._conversation = mock_conversation
-        
-        mock_workflow = Mock()
-        mock_workflow.executors = {
-            "magentic_orchestrator": mock_executor
-        }
-        mock_workflow.run_stream = AsyncGeneratorMock([])
-        
-        orchestration_config.get_current_orchestration.return_value = mock_workflow
-        
-        input_task = Mock()
-        input_task.description = "Test task"
-        
-        # Should not raise exception - clearing failures are handled gracefully
-        await self.orchestration_manager.run_orchestration(
-            user_id=self.test_user_id,
-            input_task=input_task
-        )
-        
-        # Verify workflow still executed
-        mock_workflow.run_stream.assert_called_once()
+# =========================================================================
+# run_orchestration
+# =========================================================================
+class TestRunOrchestration:
+    """Test OrchestrationManager.run_orchestration() and _process_event_stream()."""
 
-    async def test_run_orchestration_event_processing_error(self):
-        """Test handling of errors during event processing."""
-        # Set up workflow with events that cause processing errors
-        mock_workflow = Mock()
-        mock_events = [MockMagenticAgentDeltaEvent()]
-        mock_workflow.run_stream = AsyncGeneratorMock(mock_events)
-        mock_workflow.executors = {}
-        
-        # Make streaming callback raise exception
-        streaming_agent_response_callback.side_effect = Exception("Callback error")
-        
-        orchestration_config.get_current_orchestration.return_value = mock_workflow
-        
-        input_task = Mock()
-        input_task.description = "Test task"
-        
-        # Should not raise exception - event processing errors are handled
-        await self.orchestration_manager.run_orchestration(
-            user_id=self.test_user_id,
-            input_task=input_task
-        )
-        
-        # Reset side effect for other tests
-        streaming_agent_response_callback.side_effect = None
-
-    def test_run_orchestration_job_id_generation(self):
-        """Test that job_id is generated and approval is set pending."""
-        # Reset the mock first to get a clean count
+    def setup_method(self):
+        orchestration_config.orchestrations.clear()
+        orchestration_config.plans.clear()
+        orchestration_config.get_current_orchestration.reset_mock()
         orchestration_config.set_approval_pending.reset_mock()
+        connection_config.send_status_update_async.reset_mock()
+        connection_config.send_status_update_async.side_effect = None
+        agent_response_callback.reset_mock()
+        streaming_agent_response_callback.reset_mock()
+        streaming_agent_response_callback.side_effect = None
+        mock_wait_approval.reset_mock()
+        mock_wait_approval.return_value = MockPlanApprovalResponse(approved=True, m_plan_id="test-plan-id")
+        mock_convert.reset_mock()
+        mock_convert.return_value = MockMPlan()
+
+    @pytest.mark.asyncio
+    async def test_given_no_workflow_when_run_then_raises_value_error(self):
+        # Arrange
         orchestration_config.get_current_orchestration.return_value = None
-        
-        input_task = Mock()
-        input_task.description = "Test task"
-        
-        # Run should fail due to no workflow, but we can test the setup
-        with self.assertRaises(ValueError):
-            asyncio.run(self.orchestration_manager.run_orchestration(
-                user_id=self.test_user_id,
-                input_task=input_task
-            ))
-        
-        # Verify approval was set pending (called with some job_id)
-        orchestration_config.set_approval_pending.assert_called_once()
+        manager = OrchestrationManager()
 
-    async def test_run_orchestration_string_input_task(self):
-        """Test run_orchestration with string input task."""
-        mock_workflow = Mock()
-        mock_workflow.run_stream = AsyncGeneratorMock([])
-        mock_workflow.executors = {}
-        
-        orchestration_config.get_current_orchestration.return_value = mock_workflow
-        
-        # Use string input instead of object
-        input_task = "Simple string task"
-        
-        await self.orchestration_manager.run_orchestration(
-            user_id=self.test_user_id,
-            input_task=input_task
-        )
-        
-        # Verify workflow was called with the string
-        mock_workflow.run_stream.assert_called_once_with("Simple string task")
+        # Act & Assert
+        with pytest.raises(ValueError, match="Orchestration not initialized"):
+            await manager.run_orchestration(user_id="user-1", input_task="task")
 
-    async def test_run_orchestration_websocket_error_handling(self):
-        """Test handling of WebSocket sending errors."""
+    @pytest.mark.asyncio
+    async def test_given_empty_stream_when_run_then_sends_final_result(self):
+        # Arrange
         mock_workflow = Mock()
-        mock_workflow.run_stream = AsyncGeneratorMock([])
+        mock_workflow.run = Mock(return_value=_async_iter([]))
+        mock_workflow._executors = {}
         mock_workflow.executors = {}
-        
-        # Make WebSocket sending fail
-        connection_config.send_status_update_async.side_effect = Exception("WebSocket error")
-        
+        mock_workflow.get_executors_list.return_value = []
         orchestration_config.get_current_orchestration.return_value = mock_workflow
-        
-        input_task = Mock()
-        input_task.description = "Test task"
-        
-        # The method should handle WebSocket errors gracefully by catching them
-        # and trying to send error status, which will also fail, but shouldn't raise
-        try:
-            await self.orchestration_manager.run_orchestration(
-                user_id=self.test_user_id,
-                input_task=input_task
-            )
-        except Exception as e:
-            # The method may still raise the original WebSocket error
-            # This is acceptable behavior for this test
-            self.assertIn("WebSocket error", str(e))
-        
-        # Reset side effect
+        manager = OrchestrationManager()
+
+        # Act
+        await manager.run_orchestration(user_id="user-1", input_task="do stuff")
+
+        # Assert — final result WebSocket message sent
+        connection_config.send_status_update_async.assert_awaited()
+
+    @pytest.mark.asyncio
+    async def test_given_executor_completed_when_run_then_captures_final_text(self):
+        # Arrange
+        final_msg = MockMessage(text="Final answer text")
+        events = [
+            _make_event("executor_completed", data=[final_msg], executor_id="magentic_orchestrator"),
+        ]
+        mock_workflow = Mock()
+        mock_workflow.run = Mock(return_value=_async_iter(events))
+        mock_workflow._executors = {}
+        mock_workflow.executors = {}
+        mock_workflow.get_executors_list.return_value = []
+        orchestration_config.get_current_orchestration.return_value = mock_workflow
+        manager = OrchestrationManager()
+
+        # Act
+        await manager.run_orchestration(user_id="user-1", input_task="do stuff")
+
+        # Assert — the final WS message should contain the executor's text
+        call_args = connection_config.send_status_update_async.call_args_list[-1]
+        sent_message = call_args[0][0]
+        assert sent_message["data"]["content"] == "Final answer text"
+
+    @pytest.mark.asyncio
+    async def test_given_agent_completed_event_when_run_then_calls_agent_callback(self):
+        # Arrange
+        agent_msg = MockMessage(text="Agent output")
+        events = [
+            _make_event("executor_completed", data=[agent_msg], executor_id="hr_agent"),
+        ]
+        mock_workflow = Mock()
+        mock_workflow.run = Mock(return_value=_async_iter(events))
+        mock_workflow._executors = {}
+        mock_workflow.executors = {}
+        mock_workflow.get_executors_list.return_value = []
+        orchestration_config.get_current_orchestration.return_value = mock_workflow
+        manager = OrchestrationManager()
+
+        # Act
+        await manager.run_orchestration(user_id="user-1", input_task="task")
+
+        # Assert
+        agent_response_callback.assert_called_once_with("hr_agent", agent_msg, "user-1")
+
+    @pytest.mark.asyncio
+    async def test_given_streaming_output_when_run_then_calls_streaming_callback(self):
+        # Arrange
+        update = MockAgentResponseUpdate(text="chunk")
+        events = [
+            _make_event("output", data=update, executor_id="hr_agent"),
+        ]
+        mock_workflow = Mock()
+        mock_workflow.run = Mock(return_value=_async_iter(events))
+        mock_workflow._executors = {}
+        mock_workflow.executors = {}
+        mock_workflow.get_executors_list.return_value = []
+        orchestration_config.get_current_orchestration.return_value = mock_workflow
+        manager = OrchestrationManager()
+
+        # Act
+        await manager.run_orchestration(user_id="user-1", input_task="task")
+
+        # Assert
+        streaming_agent_response_callback.assert_awaited()
+
+    @pytest.mark.asyncio
+    async def test_given_orchestrator_streaming_when_run_then_accumulates_chunks(self):
+        # Arrange
+        update1 = MockAgentResponseUpdate(text="Hello ")
+        update2 = MockAgentResponseUpdate(text="world")
+        events = [
+            _make_event("output", data=update1, executor_id="magentic_orchestrator"),
+            _make_event("output", data=update2, executor_id="magentic_orchestrator"),
+        ]
+        mock_workflow = Mock()
+        mock_workflow.run = Mock(return_value=_async_iter(events))
+        mock_workflow._executors = {}
+        mock_workflow.executors = {}
+        mock_workflow.get_executors_list.return_value = []
+        orchestration_config.get_current_orchestration.return_value = mock_workflow
+        manager = OrchestrationManager()
+
+        # Act
+        await manager.run_orchestration(user_id="user-1", input_task="task")
+
+        # Assert — fallback to joined chunks when no executor_completed
+        call_args = connection_config.send_status_update_async.call_args_list[-1]
+        sent_message = call_args[0][0]
+        assert sent_message["data"]["content"] == "Hello world"
+
+    @pytest.mark.asyncio
+    async def test_given_new_agent_when_streaming_then_sends_header(self):
+        # Arrange
+        update = MockAgentResponseUpdate(text="chunk")
+        events = [
+            _make_event("output", data=update, executor_id="hr_agent"),
+        ]
+        mock_workflow = Mock()
+        mock_workflow.run = Mock(return_value=_async_iter(events))
+        mock_workflow._executors = {}
+        mock_workflow.executors = {}
+        mock_workflow.get_executors_list.return_value = []
+        orchestration_config.get_current_orchestration.return_value = mock_workflow
+        manager = OrchestrationManager()
+
+        # Act
+        await manager.run_orchestration(user_id="user-1", input_task="task")
+
+        # Assert — header sent for agent switch
+        header_calls = [
+            c for c in connection_config.send_status_update_async.call_args_list
+            if len(c[0]) > 0 and isinstance(c[0][0], MockAgentMessageStreaming)
+        ]
+        assert len(header_calls) >= 1
+
+    @pytest.mark.asyncio
+    async def test_given_orchestrator_event_when_run_then_no_error(self):
+        # Arrange
+        orch_event = MockMagenticOrchestratorEvent()
+        events = [
+            _make_event("magentic_orchestrator", data=orch_event),
+        ]
+        mock_workflow = Mock()
+        mock_workflow.run = Mock(return_value=_async_iter(events))
+        mock_workflow._executors = {}
+        mock_workflow.executors = {}
+        mock_workflow.get_executors_list.return_value = []
+        orchestration_config.get_current_orchestration.return_value = mock_workflow
+        manager = OrchestrationManager()
+
+        # Act — should not raise
+        await manager.run_orchestration(user_id="user-1", input_task="task")
+
+    @pytest.mark.asyncio
+    async def test_given_string_input_when_run_then_uses_str(self):
+        # Arrange
+        mock_workflow = Mock()
+        mock_workflow.run = Mock(return_value=_async_iter([]))
+        mock_workflow._executors = {}
+        mock_workflow.executors = {}
+        mock_workflow.get_executors_list.return_value = []
+        orchestration_config.get_current_orchestration.return_value = mock_workflow
+        manager = OrchestrationManager()
+
+        # Act
+        await manager.run_orchestration(user_id="user-1", input_task="plain string task")
+
+        # Assert — workflow.run was called with the string
+        mock_workflow.run.assert_called_once()
+        call_args = mock_workflow.run.call_args
+        assert call_args[0][0] == "plain string task"
+
+    @pytest.mark.asyncio
+    async def test_given_object_input_when_run_then_uses_description(self):
+        # Arrange
+        mock_workflow = Mock()
+        mock_workflow.run = Mock(return_value=_async_iter([]))
+        mock_workflow._executors = {}
+        mock_workflow.executors = {}
+        mock_workflow.get_executors_list.return_value = []
+        orchestration_config.get_current_orchestration.return_value = mock_workflow
+        manager = OrchestrationManager()
+        task = Mock()
+        task.description = "object task desc"
+
+        # Act
+        await manager.run_orchestration(user_id="user-1", input_task=task)
+
+        # Assert
+        call_args = mock_workflow.run.call_args
+        assert call_args[0][0] == "object task desc"
+
+    @pytest.mark.asyncio
+    async def test_given_workflow_error_when_run_then_sends_error_ws_and_raises(self):
+        # Arrange
+        mock_workflow = Mock()
+        mock_workflow.run = Mock(side_effect=Exception("Workflow boom"))
+        mock_workflow._executors = {}
+        mock_workflow.executors = {}
+        mock_workflow.get_executors_list.return_value = []
+        orchestration_config.get_current_orchestration.return_value = mock_workflow
+        manager = OrchestrationManager()
+
+        # Act & Assert
+        with pytest.raises(Exception, match="Workflow boom"):
+            await manager.run_orchestration(user_id="user-1", input_task="task")
+
+        # Assert — error status sent
+        connection_config.send_status_update_async.assert_awaited()
+
+    @pytest.mark.asyncio
+    async def test_given_event_processing_error_when_run_then_continues(self):
+        # Arrange
+        streaming_agent_response_callback.side_effect = Exception("Callback boom")
+        update = MockAgentResponseUpdate(text="x")
+        events = [
+            _make_event("output", data=update, executor_id="hr_agent"),
+        ]
+        mock_workflow = Mock()
+        mock_workflow.run = Mock(return_value=_async_iter(events))
+        mock_workflow._executors = {}
+        mock_workflow.executors = {}
+        mock_workflow.get_executors_list.return_value = []
+        orchestration_config.get_current_orchestration.return_value = mock_workflow
+        manager = OrchestrationManager()
+
+        # Act — should not raise; errors are logged and swallowed
+        await manager.run_orchestration(user_id="user-1", input_task="task")
+
+
+# =========================================================================
+# _process_event_stream — plan review
+# =========================================================================
+class TestProcessEventStreamPlanReview:
+    """Test plan review collection within _process_event_stream()."""
+
+    def setup_method(self):
+        orchestration_config.plans.clear()
+        connection_config.send_status_update_async.reset_mock()
         connection_config.send_status_update_async.side_effect = None
 
-    async def test_run_orchestration_all_event_types(self):
-        """Test processing of all event types."""
-        mock_workflow = Mock()
-        
-        # Create all possible event types
-        events = [
-            MockMagenticOrchestratorMessageEvent(),
-            MockMagenticAgentDeltaEvent(),
-            MockMagenticAgentMessageEvent(),
-            MockMagenticFinalResultEvent(),
-            MockWorkflowOutputEvent(),
-            Mock()  # Unknown event type
-        ]
-        
-        mock_workflow.run_stream = AsyncGeneratorMock(events)
-        mock_workflow.executors = {}
-        
-        orchestration_config.get_current_orchestration.return_value = mock_workflow
-        
-        input_task = Mock()
-        input_task.description = "Test all events"
-        
-        # Should process all events without errors
-        await self.orchestration_manager.run_orchestration(
-            user_id=self.test_user_id,
-            input_task=input_task
+    @pytest.mark.asyncio
+    async def test_given_plan_review_event_when_processing_then_returns_collected_requests(self):
+        # Arrange
+        plan_review = MockMagenticPlanReviewRequest()
+        event = _make_event("request_info", data=plan_review, request_id="req-1")
+
+        manager = OrchestrationManager()
+
+        # Act
+        result = await manager._process_event_stream(
+            _async_iter([event]),
+            user_id="user-1",
+            final_output_ref=[None],
+            orchestrator_chunks=[],
+            current_streaming_agent_ref=[None],
         )
-        
-        # Verify all appropriate callbacks were made
-        streaming_agent_response_callback.assert_called()
-        agent_response_callback.assert_called()
+
+        # Assert — returns dict with request_id → plan_review
+        assert result is not None
+        assert "req-1" in result
+        assert result["req-1"] is plan_review
+
+    @pytest.mark.asyncio
+    async def test_given_multiple_plan_reviews_when_processing_then_collects_all(self):
+        # Arrange
+        review1 = MockMagenticPlanReviewRequest()
+        review2 = MockMagenticPlanReviewRequest()
+        events = [
+            _make_event("request_info", data=review1, request_id="req-1"),
+            _make_event("request_info", data=review2, request_id="req-2"),
+        ]
+
+        manager = OrchestrationManager()
+
+        # Act
+        result = await manager._process_event_stream(
+            _async_iter(events),
+            user_id="user-1",
+            final_output_ref=[None],
+            orchestrator_chunks=[],
+            current_streaming_agent_ref=[None],
+        )
+
+        # Assert
+        assert result is not None
+        assert len(result) == 2
+        assert "req-1" in result
+        assert "req-2" in result
+
+    @pytest.mark.asyncio
+    async def test_given_no_plan_review_when_stream_completes_then_returns_none(self):
+        # Arrange
+        events = [_make_event("magentic_orchestrator", data=MockMagenticOrchestratorEvent())]
+        manager = OrchestrationManager()
+
+        # Act
+        result = await manager._process_event_stream(
+            _async_iter(events),
+            user_id="user-1",
+            final_output_ref=[None],
+            orchestrator_chunks=[],
+            current_streaming_agent_ref=[None],
+        )
+
+        # Assert
+        assert result is None
 
 
-if __name__ == '__main__':
-    import unittest
-    unittest.main()
+# =========================================================================
+# run_orchestration — resume loop
+# =========================================================================
+class TestRunOrchestrationResumeLoop:
+    """Test the resume loop in run_orchestration()."""
+
+    def setup_method(self):
+        orchestration_config.plans.clear()
+        orchestration_config.set_approval_pending.reset_mock()
+        connection_config.send_status_update_async.reset_mock()
+        connection_config.send_status_update_async.side_effect = None
+        mock_wait_approval.reset_mock()
+        mock_convert.reset_mock()
+        mock_convert.return_value = MockMPlan()
+
+    @pytest.mark.asyncio
+    async def test_given_plan_review_then_completion_when_run_then_resumes(self):
+        # Arrange — first call returns plan review, second call completes
+        plan_review = MockMagenticPlanReviewRequest()
+        review_event = _make_event("request_info", data=plan_review, request_id="req-1")
+        final_msg = MockMessage(text="Done")
+        completion_event = _make_event("executor_completed", data=[final_msg], executor_id="magentic_orchestrator")
+
+        call_count = [0]
+
+        def mock_run(*args, **kwargs):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                return _async_iter([review_event])
+            return _async_iter([completion_event])
+
+        mock_wait_approval.return_value = MockPlanApprovalResponse(approved=True, m_plan_id="test-plan-id")
+
+        mock_workflow = Mock()
+        mock_workflow.run = mock_run
+        mock_workflow._executors = {}
+        mock_workflow.executors = {}
+        mock_workflow.get_executors_list.return_value = []
+        orchestration_config.get_current_orchestration.return_value = mock_workflow
+        manager = OrchestrationManager()
+
+        # Act
+        await manager.run_orchestration(user_id="user-1", input_task="task")
+
+        # Assert — workflow.run called twice (initial + resume)
+        assert call_count[0] == 2
+
+    @pytest.mark.asyncio
+    async def test_given_approval_pending_when_run_then_sets_pending(self):
+        # Arrange
+        mock_workflow = Mock()
+        mock_workflow.run = Mock(return_value=_async_iter([]))
+        mock_workflow._executors = {}
+        mock_workflow.executors = {}
+        mock_workflow.get_executors_list.return_value = []
+        orchestration_config.get_current_orchestration.return_value = mock_workflow
+        manager = OrchestrationManager()
+
+        # Act
+        await manager.run_orchestration(user_id="user-1", input_task="task")
+
+        # Assert
+        orchestration_config.set_approval_pending.assert_called_once()
+
+
+class TestOrchestrationManagerInit:
+    """Test OrchestrationManager constructor."""
+
+    def test_given_new_instance_when_init_then_user_id_is_none(self):
+        manager = OrchestrationManager()
+
+        assert manager.user_id is None
+
+    def test_given_new_instance_when_init_then_logger_is_set(self):
+        manager = OrchestrationManager()
+
+        assert isinstance(manager.logger, logging.Logger)

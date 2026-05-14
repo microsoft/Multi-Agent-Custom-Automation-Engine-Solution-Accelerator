@@ -503,6 +503,58 @@ async def plan_approval(
     return None
 
 
+# ------------------------------------------------------------------
+# MCP ask_user bridge
+# ------------------------------------------------------------------
+
+@app_router.post("/clarification/ask")
+async def clarification_ask(request: Request):
+    """Synchronous bridge for the MCP ``ask_user`` tool.
+
+    The MCP server POSTs ``{question, user_id}`` here. This endpoint:
+    1. Sends a ``USER_CLARIFICATION_REQUEST`` to the user via WebSocket.
+    2. Blocks until the user responds (or the request times out).
+    3. Returns ``{answer}`` so the MCP tool can pass it back to the agent.
+    """
+    body = await request.json()
+    question = body.get("question", "")
+    user_id = body.get("user_id", "")
+
+    if not question or not user_id:
+        raise HTTPException(status_code=400, detail="question and user_id are required")
+
+    request_id = str(uuid.uuid4())
+
+    # Register the pending clarification in orchestration state
+    orchestration_config.set_clarification_pending(request_id)
+
+    # Send the question to the user's browser via WebSocket
+    clarification_request = messages.UserClarificationRequest(
+        question=question,
+        request_id=request_id,
+    )
+    await connection_config.send_status_update_async(
+        {
+            "type": WebsocketMessageType.USER_CLARIFICATION_REQUEST,
+            "data": clarification_request,
+        },
+        user_id=user_id,
+        message_type=WebsocketMessageType.USER_CLARIFICATION_REQUEST,
+    )
+
+    # Block until the user responds (the existing /user_clarification
+    # endpoint calls set_clarification_result when the user answers).
+    try:
+        answer = await orchestration_config.wait_for_clarification(request_id)
+    except asyncio.TimeoutError:
+        return {"answer": ""}
+    except Exception as exc:
+        logger.error("clarification/ask: error waiting for response: %s", exc)
+        return {"answer": ""}
+
+    return {"answer": answer}
+
+
 @app_router.post("/user_clarification")
 async def user_clarification(
     human_feedback: messages.UserClarificationResponse, request: Request

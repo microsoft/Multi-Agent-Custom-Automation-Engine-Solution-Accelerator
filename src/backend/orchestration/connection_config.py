@@ -4,11 +4,6 @@ WebSocket connection management and orchestration state configuration.
 
 Extracted from v4/config/settings.py. Holds OrchestrationConfig, ConnectionConfig,
 and TeamConfig — the three singletons imported together by the router.
-
-TODO (Phase 4): Update MPlan and WebsocketMessageType imports to
-    from models.plan_models import MPlan
-    from models.messages import WebsocketMessageType
-once the models/ package is created.
 """
 
 import asyncio
@@ -18,9 +13,8 @@ from typing import Any, Dict, Optional
 
 from common.models.messages import TeamConfiguration
 from fastapi import WebSocket
-# TODO (Phase 4): replace with flat-layout imports once models/ package exists
-from v4.models.messages import WebsocketMessageType
-from v4.models.models import MPlan
+from models.messages import WebsocketMessageType
+from models.plan_models import MPlan
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +28,7 @@ class OrchestrationConfig:
         self.approvals: Dict[str, bool] = {}           # plan_id -> approval status (None = pending)
         self.sockets: Dict[str, WebSocket] = {}        # user_id -> WebSocket
         self.clarifications: Dict[str, str] = {}       # plan_id -> clarification response
-        self.max_rounds: int = 20
+        self.max_rounds: int = 10
         self.active_tasks: Dict[str, asyncio.Task] = {}  # user_id -> running asyncio.Task
         self.default_timeout: float = 300.0
 
@@ -247,10 +241,22 @@ class ConnectionConfig:
 
         process_id = self.user_to_process.get(user_id)
         if not process_id:
-            logger.warning(
-                "No active WebSocket process found for user ID: %s", user_id
-            )
-            return
+            # Fallback: the LLM may have passed a wrong user_id (e.g. "default",
+            # "USER").  If there is exactly one connected user, use that instead.
+            if len(self.user_to_process) == 1:
+                fallback_user_id = next(iter(self.user_to_process))
+                logger.warning(
+                    "No WebSocket for user_id '%s' — falling back to sole "
+                    "connected user '%s'",
+                    user_id,
+                    fallback_user_id,
+                )
+                process_id = self.user_to_process[fallback_user_id]
+            else:
+                logger.warning(
+                    "No active WebSocket process found for user ID: %s", user_id
+                )
+                return
 
         try:
             if hasattr(message, "to_dict"):

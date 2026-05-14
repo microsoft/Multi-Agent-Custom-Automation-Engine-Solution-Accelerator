@@ -46,7 +46,6 @@ _mock_messages_mod.TeamConfiguration = Mock()
 
 # --- agents sub-modules (short absolute imports in factory code)
 mock_agent_template_cls = Mock()
-mock_proxy_agent_cls = Mock()
 mock_mcp_config_cls = Mock()
 mock_search_config_cls = Mock()
 
@@ -54,10 +53,6 @@ sys.modules.setdefault("agents", Mock())  # parent package stub
 _mock_agent_template_mod = Mock()
 _mock_agent_template_mod.AgentTemplate = mock_agent_template_cls
 sys.modules["agents.agent_template"] = _mock_agent_template_mod
-
-_mock_proxy_agent_mod = Mock()
-_mock_proxy_agent_mod.ProxyAgent = mock_proxy_agent_cls
-sys.modules["agents.proxy_agent"] = _mock_proxy_agent_mod
 
 _mock_mcp_config_mod = Mock()
 _mock_mcp_config_mod.MCPConfig = mock_mcp_config_cls
@@ -83,6 +78,7 @@ def _agent_obj(**overrides) -> SimpleNamespace:
         coding_tools=False,
         use_rag=False,
         use_mcp=False,
+        user_responses=False,
         index_name=None,
     )
     defaults.update(overrides)
@@ -144,23 +140,77 @@ class TestCreateAgentFromConfig:
         self.team_config = Mock(name="Test Team")
         self.memory_store = Mock()
         mock_agent_template_cls.reset_mock()
-        mock_proxy_agent_cls.reset_mock()
         mock_mcp_config_cls.reset_mock()
         mock_search_config_cls.reset_mock()
 
     @pytest.mark.asyncio
-    async def test_proxy_agent_path(self):
-        """agent named 'ProxyAgent' (case-insensitive) returns a ProxyAgent immediately."""
-        proxy_instance = Mock()
-        mock_proxy_agent_cls.return_value = proxy_instance
+    async def test_user_responses_true_creates_mcp_config(self):
+        """user_responses=True creates MCPConfig with domain='user_responses'."""
+        mcp_instance = Mock()
+        mock_mcp_config_cls.from_env.return_value = mcp_instance
 
-        result = await self.factory.create_agent_from_config(
-            "user123", _agent_obj(name="ProxyAgent", deployment_name=None), self.team_config, self.memory_store
+        agent_instance = Mock()
+        agent_instance.open = AsyncMock()
+        mock_agent_template_cls.return_value = agent_instance
+
+        await self.factory.create_agent_from_config(
+            "user123",
+            _agent_obj(user_responses=True),
+            self.team_config,
+            self.memory_store,
         )
 
-        assert result is proxy_instance
-        mock_proxy_agent_cls.assert_called_once_with(user_id="user123")
-        mock_agent_template_cls.assert_not_called()
+        mock_mcp_config_cls.from_env.assert_called_once_with(domain="user_responses")
+
+    @pytest.mark.asyncio
+    async def test_user_responses_injects_session_user_id(self):
+        """user_responses=True appends SESSION_USER_ID to instructions."""
+        agent_instance = Mock()
+        agent_instance.open = AsyncMock()
+        mock_agent_template_cls.return_value = agent_instance
+        mock_mcp_config_cls.from_env.return_value = Mock()
+
+        await self.factory.create_agent_from_config(
+            "user123",
+            _agent_obj(user_responses=True, system_message="Be helpful."),
+            self.team_config,
+            self.memory_store,
+        )
+
+        call_kwargs = mock_agent_template_cls.call_args[1]
+        assert "SESSION_USER_ID: user123" in call_kwargs["agent_instructions"]
+
+    @pytest.mark.asyncio
+    async def test_user_responses_false_no_mcp_config(self):
+        """user_responses=False (default) does not create MCPConfig."""
+        agent_instance = Mock()
+        agent_instance.open = AsyncMock()
+        mock_agent_template_cls.return_value = agent_instance
+
+        await self.factory.create_agent_from_config(
+            "user123", _agent_obj(), self.team_config, self.memory_store
+        )
+
+        mock_mcp_config_cls.from_env.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_use_mcp_takes_priority_over_user_responses(self):
+        """use_mcp=True takes priority; MCPConfig uses the mcp_domain, not 'user_responses'."""
+        mcp_instance = Mock()
+        mock_mcp_config_cls.from_env.return_value = mcp_instance
+
+        agent_instance = Mock()
+        agent_instance.open = AsyncMock()
+        mock_agent_template_cls.return_value = agent_instance
+
+        await self.factory.create_agent_from_config(
+            "user123",
+            _agent_obj(use_mcp=True, mcp_domain="hr", user_responses=True),
+            self.team_config,
+            self.memory_store,
+        )
+
+        mock_mcp_config_cls.from_env.assert_called_once_with(domain="hr")
 
     @pytest.mark.asyncio
     async def test_unsupported_model_raises(self):

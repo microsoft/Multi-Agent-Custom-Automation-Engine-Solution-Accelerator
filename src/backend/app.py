@@ -12,6 +12,11 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 # Local imports
 from middleware.health_check import HealthCheckMiddleware
+# TEMPORARY — remove when agent-framework PR #5690 lands.
+# Must run before any MagenticBuilder workflow is constructed.
+from patches import magentic_duplicate_fc_id
+
+magentic_duplicate_fc_id.apply()
 
 # Azure monitoring
 

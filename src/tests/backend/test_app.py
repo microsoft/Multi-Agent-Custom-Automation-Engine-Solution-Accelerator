@@ -48,8 +48,6 @@ os.environ.setdefault("AZURE_OPENAI_RAI_DEPLOYMENT_NAME", "test-rai-deployment")
 
 # Clear any module-level Mock pollution from earlier tests in the suite.
 # common.models.* gets mocked by test_agent_utils.py, test_response_handlers.py, etc.
-# backend.v4.models.messages gets mocked below (in the isolation block) and must be
-# cleared so app.py can import the real UserLanguage from common.models.messages.
 from types import ModuleType as _ModuleType
 for _ma_key in [
     'common', 'common.models', 'common.models.messages',
@@ -59,50 +57,19 @@ for _ma_key in [
     if _ma_key in sys.modules and not isinstance(sys.modules[_ma_key], _ModuleType):
         del sys.modules[_ma_key]
 
-# Check if v4 modules are already properly imported (means we're in a full test run)
-_router_module = sys.modules.get('backend.v4.api.router')
-_has_real_router = (_router_module is not None and 
-                   hasattr(_router_module, 'PlanService'))
+# Mock external dependencies that may not be installed in test environment
+from fastapi import APIRouter
 
-if not _has_real_router:
-    # We're running in isolation - need to mock v4 imports
-    # This prevents relative import issues from v4.api.router
-    
-    # Create a real FastAPI router to avoid isinstance errors
-    from fastapi import APIRouter
-    
-    # Mock azure.monitor.opentelemetry module
-    mock_azure_monitor_module = ModuleType('configure_azure_monitor')
-    mock_azure_monitor_module.configure_azure_monitor = lambda *args, **kwargs: None
-    sys.modules['azure.monitor.opentelemetry'] = mock_azure_monitor_module
-    
-    # Mock v4.models.messages module (both backend. and relative paths)
-    mock_messages_module = ModuleType('messages')
-    mock_messages_module.WebsocketMessageType = type('WebsocketMessageType', (), {})
-    sys.modules['backend.v4.models.messages'] = mock_messages_module
-    sys.modules['v4.models.messages'] = mock_messages_module
-    
-    # Mock v4.api.router module with a real APIRouter (both backend. and relative paths)
-    mock_router_module = ModuleType('router')
-    mock_router_module.app_v4 = APIRouter()
-    sys.modules['backend.v4.api.router'] = mock_router_module
-    sys.modules['v4.api.router'] = mock_router_module
-    
-    # Mock v4.config.agent_registry module (both backend. and relative paths)
-    class MockAgentRegistry:
-        async def cleanup_all_agents(self):
-            pass
-    
-    mock_agent_registry_module = ModuleType('agent_registry')
-    mock_agent_registry_module.agent_registry = MockAgentRegistry()
-    sys.modules['backend.v4.config.agent_registry'] = mock_agent_registry_module
-    sys.modules['v4.config.agent_registry'] = mock_agent_registry_module
-    
-    # Mock middleware.health_check module (both backend. and relative paths)
-    mock_health_check_module = ModuleType('health_check')
-    mock_health_check_module.HealthCheckMiddleware = MagicMock()
-    sys.modules['backend.middleware.health_check'] = mock_health_check_module
-    sys.modules['middleware.health_check'] = mock_health_check_module
+# Mock azure.monitor.opentelemetry module
+mock_azure_monitor_module = ModuleType('configure_azure_monitor')
+mock_azure_monitor_module.configure_azure_monitor = lambda *args, **kwargs: None
+sys.modules['azure.monitor.opentelemetry'] = mock_azure_monitor_module
+
+# Mock middleware.health_check module (both backend. and relative paths)
+mock_health_check_module = ModuleType('health_check')
+mock_health_check_module.HealthCheckMiddleware = MagicMock()
+sys.modules['backend.middleware.health_check'] = mock_health_check_module
+sys.modules['middleware.health_check'] = mock_health_check_module
 
 # Now import backend.app
 from backend.app import app, user_browser_language_endpoint, lifespan
@@ -261,8 +228,7 @@ async def test_lifespan_cleanup_success():
     mock_cleanup = AsyncMock(return_value=None)
     
     # Patch at the module level where it's imported
-    with patch.object(sys.modules.get('v4.config.agent_registry', sys.modules.get('backend.v4.config.agent_registry')), 
-                      'agent_registry') as mock_registry:
+    with patch('backend.config.agent_registry.agent_registry') as mock_registry:
         mock_registry.cleanup_all_agents = mock_cleanup
         
         async with lifespan(app):

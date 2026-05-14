@@ -3,21 +3,17 @@
 import asyncio
 import logging
 import uuid
+from contextlib import AsyncExitStack
 from typing import List, Optional
 
-from agent_framework import (
-    Agent,
-    AgentResponse,
-    AgentResponseUpdate,
-    InMemoryCheckpointStorage,
-    Message,
-    WorkflowEvent,
-)
-from agent_framework.orchestrations import (
-    MagenticBuilder,
-    MagenticOrchestratorEvent,
-    MagenticOrchestratorEventType,
-)
+import models.messages as messages
+from agent_framework import (Agent, AgentResponse, AgentResponseUpdate,
+                             InMemoryCheckpointStorage, MCPStreamableHTTPTool,
+                             Message, WorkflowEvent, WorkflowRunState)
+from agent_framework.orchestrations import (MagenticBuilder,
+                                            MagenticOrchestratorEvent,
+                                            MagenticOrchestratorEventType,
+                                            MagenticPlanReviewRequest)
 # agent_framework imports
 from agent_framework_foundry import FoundryChatClient
 from agents.agent_factory import AgentFactory
@@ -26,10 +22,14 @@ from callbacks.response_handlers import (agent_response_callback,
 from common.config.app_config import config
 from common.database.database_base import DatabaseBase
 from common.models.messages import TeamConfiguration
+from config.mcp_config import MCPConfig
 from models.messages import AgentMessageStreaming, WebsocketMessageType
 from orchestration.connection_config import (connection_config,
                                              orchestration_config)
-from orchestration.human_approval_manager import HumanApprovalMagenticManager
+from orchestration.plan_review_helpers import (convert_plan_review_to_mplan,
+                                               get_magentic_prompt_kwargs,
+                                               wait_for_plan_approval)
+from orchestration.user_interaction_agent import create_user_interaction_agent
 from services.team_service import TeamService
 
 
@@ -54,22 +54,19 @@ class OrchestrationManager:
         user_id: str | None = None,
     ):
         """
-        Initialize a Magentic workflow with:
-          - Provided agents (participants)
-          - HumanApprovalMagenticManager as orchestrator manager
+        Initialize a Magentic workflow using MagenticBuilder with:
+          - enable_plan_review=True for framework-native plan approval
+          - Prompt customizations from get_magentic_prompt_kwargs()
           - FoundryChatClient as the underlying chat client
           - Event-based callbacks for streaming and final responses
-        - Uses same deployment, endpoint, and credentials
-        - Applies same execution settings (temperature, max_tokens)
-        - Maintains same human approval workflow
         """
         if not user_id:
             raise ValueError("user_id is required to initialize orchestration")
 
-        # Get credential from config (same as old version)
+        # Get credential from config
         credential = config.get_azure_credential(client_id=config.AZURE_CLIENT_ID)
 
-        # Create Foundry chat client for orchestration using config
+        # Create Foundry chat client for orchestration
         try:
             chat_client = FoundryChatClient(
                 project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
@@ -86,52 +83,64 @@ class OrchestrationManager:
             cls.logger.error("Failed to create FoundryChatClient: %s", e)
             raise
 
-        # Wrap the chat client in an Agent (MAF 1.x GA API: StandardMagenticManager
-        # requires a SupportsAgentRun, not a raw chat client)
+        # Detect whether any agent supports user interaction
+        has_user_responses = any(
+            getattr(ag, "user_responses", False) for ag in agents
+        )
+
         manager_agent = Agent(chat_client, name="MagenticManager")
 
-        # Create HumanApprovalMagenticManager with the manager agent
-        try:
-            manager = HumanApprovalMagenticManager(
-                user_id=user_id,
-                agent=manager_agent,
-                max_round_count=orchestration_config.max_rounds,
-            )
-            cls.logger.info(
-                "Created HumanApprovalMagenticManager for user '%s' with max_rounds=%d",
-                user_id,
-                orchestration_config.max_rounds,
-            )
-        except Exception as e:
-            cls.logger.error("Failed to create manager: %s", e)
-            raise
+        # Get prompt customization kwargs
+        prompt_kwargs = get_magentic_prompt_kwargs(has_user_responses=has_user_responses)
 
-        # Build participant list (MAF 1.x GA: MagenticBuilder takes a sequence)
+        cls.logger.info(
+            "Building MagenticBuilder for user '%s' with max_rounds=%d, "
+            "enable_plan_review=True, has_user_responses=%s",
+            user_id, orchestration_config.max_rounds, has_user_responses,
+        )
+
+        # Build participant list (unwrap AgentTemplate._agent)
         participant_list = []
         for ag in agents:
             name = getattr(ag, "agent_name", None) or getattr(ag, "name", None)
             if not name:
                 name = f"agent_{len(participant_list) + 1}"
-
-            # AgentTemplate wraps the MAF Agent in ._agent; unwrap it.
             inner = getattr(ag, "_agent", None) or ag
             participant_list.append(inner)
             cls.logger.debug("Added participant '%s'", name)
 
-        # Assemble and build the Magentic workflow
+        # If user interaction is enabled, create UserInteractionAgent as a
+        # participant.  This agent has the ask_user MCP tool and acts as the
+        # proxy for all user-facing questions.
+        user_interaction_ctx = None
+        if has_user_responses and user_id:
+            ui_agent, user_interaction_ctx = await create_user_interaction_agent(
+                chat_client=chat_client,
+                user_id=user_id,
+            )
+            participant_list.append(ui_agent)
+            cls.logger.info("Added UserInteractionAgent as participant")
+
+        # Assemble and build the Magentic workflow using the standard
+        # manager_agent= path with prompt overrides — no subclassing.
         storage = InMemoryCheckpointStorage()
         workflow = MagenticBuilder(
             participants=participant_list,
-            manager=manager,
+            manager_agent=manager_agent,
             max_round_count=orchestration_config.max_rounds,
             checkpoint_storage=storage,
             intermediate_outputs=True,
+            enable_plan_review=True,
+            **prompt_kwargs,
         ).build()
 
         cls.logger.info(
-            "Built Magentic workflow with %d participants",
+            "Built Magentic workflow with %d participants (plan review enabled)",
             len(participant_list),
         )
+
+        # Attach the MCP context manager so it can be cleaned up on workflow replace
+        workflow._user_interaction_ctx = user_interaction_ctx
 
         return workflow
 
@@ -150,26 +159,39 @@ class OrchestrationManager:
         Return an existing workflow for the user or create a new one if:
           - None exists
           - Team switched flag is True
+          - Previous workflow has completed (_terminated)
         """
         current = orchestration_config.get_current_orchestration(user_id)
-        if current is None or team_switched:
-            if current is not None and team_switched:
+        workflow_terminated = getattr(current, "_terminated", False)
+        needs_new = current is None or team_switched or workflow_terminated
+        if needs_new:
+            if current is not None and (team_switched or workflow_terminated):
+                reason = "team switched" if team_switched else "workflow completed"
                 cls.logger.info(
-                    "Team switched, closing previous agents for user '%s'", user_id
+                    "Replacing workflow (%s), closing previous agents for user '%s'",
+                    reason, user_id,
                 )
+                # Close the UserInteractionAgent MCP context stack
+                ui_ctx = getattr(current, "_user_interaction_ctx", None)
+                if ui_ctx is not None:
+                    try:
+                        await ui_ctx.aclose()
+                        cls.logger.debug("Closed UserInteractionAgent MCP context")
+                    except Exception as e:
+                        cls.logger.error("Error closing UI agent MCP context: %s", e)
+
                 # Close prior agents (same logic as old version)
                 for agent in getattr(current, "_participants", {}).values():
                     agent_name = getattr(
                         agent, "agent_name", getattr(agent, "name", "")
                     )
-                    if agent_name != "ProxyAgent":
-                        close_coro = getattr(agent, "close", None)
-                        if callable(close_coro):
-                            try:
-                                await close_coro()
-                                cls.logger.debug("Closed agent '%s'", agent_name)
-                            except Exception as e:
-                                cls.logger.error("Error closing agent: %s", e)
+                    close_coro = getattr(agent, "close", None)
+                    if callable(close_coro):
+                        try:
+                            await close_coro()
+                            cls.logger.debug("Closed agent '%s'", agent_name)
+                        except Exception as e:
+                            cls.logger.error("Error closing agent: %s", e)
 
             factory = AgentFactory(team_service=team_service)
             try:
@@ -206,6 +228,13 @@ class OrchestrationManager:
     async def run_orchestration(self, user_id: str, input_task) -> None:
         """
         Execute the Magentic workflow for the provided user and task description.
+
+        Follows the framework's recommended pattern for plan review:
+        1. Run the workflow, streaming events until it idles with pending requests.
+        2. Collect any ``MagenticPlanReviewRequest`` events emitted during the run.
+        3. Present the plan to the user and wait for approval/rejection.
+        4. Resume with ``workflow.run(responses={request_id: response})``.
+        5. Repeat until the workflow completes with no pending requests.
         """
         job_id = str(uuid.uuid4())
         orchestration_config.set_approval_pending(job_id)
@@ -222,117 +251,64 @@ class OrchestrationManager:
         self.logger.debug("Task: %s", task_text)
 
         try:
-            # MAF 1.x GA: workflow.run(message, stream=True) returns an async stream of WorkflowEvent
-            final_output: str | None = None
+            final_output_ref: list = [None]
             orchestrator_chunks: list[str] = []
-            current_streaming_agent: str | None = None
+            current_streaming_agent_ref: list = [None]
+
+            # Collect participant names for plan conversion
+            participant_names = [
+                executor.id
+                for executor in workflow.get_executors_list()
+            ]
+            self.logger.info("Participant names: %s", participant_names)
 
             self.logger.info("Starting workflow execution...")
-            async for event in workflow.run(task_text, stream=True):
-                try:
-                    # Diagnostic: log every event so we can see what the workflow emits
-                    data_type = type(event.data).__name__ if event.data is not None else "None"
-                    executor = getattr(event, "executor_id", None) or "?"
-                    self.logger.warning(
-                        "[EVENT] type=%s  data_type=%s  executor=%s",
-                        event.type, data_type, executor,
-                    )
 
-                    # Magentic orchestrator events (plan created, replanned, progress ledger)
-                    if event.type == "magentic_orchestrator":
-                        orch_event: MagenticOrchestratorEvent = event.data
-                        self.logger.info(
-                            "[ORCHESTRATOR:%s]", orch_event.event_type.value
-                        )
+            # Initial run — stream events, collect any plan review requests
+            plan_requests = await self._process_event_stream(
+                workflow.run(task_text, stream=True),
+                user_id=user_id,
+                final_output_ref=final_output_ref,
+                orchestrator_chunks=orchestrator_chunks,
+                current_streaming_agent_ref=current_streaming_agent_ref,
+            )
 
-                    # Streaming output — participant agents emit AgentResponseUpdate
-                    # chunks into the "thinking" buffer. Orchestrator chunks are
-                    # also streamed AND accumulated for the final result fallback.
-                    # Agent name headers are sent on the first chunk from each new
-                    # agent so that agents with no output get no header.
-                    elif event.type == "output":
-                        executor = event.executor_id or "unknown"
-                        output_data = event.data
+            # Resume loop — handle plan reviews until workflow completes
+            while plan_requests:
+                self.logger.info(
+                    "Workflow paused with %d plan review request(s)",
+                    len(plan_requests),
+                )
 
-                        if isinstance(output_data, AgentResponseUpdate):
-                            # Accumulate orchestrator chunks for final result
-                            if executor == "magentic_orchestrator" and output_data.text:
-                                orchestrator_chunks.append(output_data.text)
+                # Present each plan review to the user and collect responses
+                responses = await self._handle_plan_reviews(
+                    plan_requests,
+                    participant_names=participant_names,
+                    task_text=task_text,
+                    user_id=user_id,
+                )
 
-                            # Inject agent header on first chunk from a new agent
-                            if (
-                                executor != "magentic_orchestrator"
-                                and executor != current_streaming_agent
-                            ):
-                                current_streaming_agent = executor
-                                display_name = executor.replace("_", " ")
-                                header_text = f"\n\n---\n### {display_name}\n\n"
-                                try:
-                                    await connection_config.send_status_update_async(
-                                        AgentMessageStreaming(
-                                            agent_name=executor,
-                                            content=header_text,
-                                            is_final=False,
-                                        ),
-                                        user_id,
-                                        message_type=WebsocketMessageType.AGENT_MESSAGE_STREAMING,
-                                    )
-                                except Exception as cb_err:
-                                    self.logger.error(
-                                        "Error sending agent header for %s: %s",
-                                        executor, cb_err,
-                                    )
+                if responses is None:
+                    # All reviews were rejected or timed out
+                    raise Exception("Plan execution cancelled by user")
 
-                            # Stream chunk to thinking buffer
-                            try:
-                                await streaming_agent_response_callback(
-                                    executor, output_data, False, user_id,
-                                )
-                            except Exception as cb_err:
-                                self.logger.error(
-                                    "Error in streaming callback for %s: %s",
-                                    executor, cb_err,
-                                )
+                self.logger.info(
+                    "Resuming workflow with %d approved response(s)",
+                    len(responses),
+                )
 
-                    # Executor completed — carries the agent's final response as
-                    # a list of Message objects. For participant agents this is
-                    # sent as an AGENT_MESSAGE (the clean, non-streaming result).
-                    # For the orchestrator this becomes the final consolidated output.
-                    elif (
-                        event.type == "executor_completed"
-                        and isinstance(event.data, list)
-                        and event.executor_id
-                    ):
-                        agent_id = event.executor_id
-                        if agent_id == "magentic_orchestrator":
-                            # Extract final consolidated result from orchestrator
-                            for msg in event.data:
-                                if isinstance(msg, Message) and msg.text:
-                                    final_output = msg.text
-                        else:
-                            # Per-agent final result
-                            for msg in event.data:
-                                if isinstance(msg, Message) and msg.text:
-                                    try:
-                                        agent_response_callback(
-                                            agent_id, msg, user_id
-                                        )
-                                    except Exception as cb_err:
-                                        self.logger.error(
-                                            "Error in agent callback for %s: %s",
-                                            agent_id, cb_err,
-                                        )
-
-                except Exception as e:
-                    self.logger.error(
-                        "Error processing event type=%s: %s",
-                        getattr(event, "type", "?"), e,
-                        exc_info=True,
-                    )
+                # Resume the workflow with the collected responses
+                plan_requests = await self._process_event_stream(
+                    workflow.run(stream=True, responses=responses),
+                    user_id=user_id,
+                    final_output_ref=final_output_ref,
+                    orchestrator_chunks=orchestrator_chunks,
+                    current_streaming_agent_ref=current_streaming_agent_ref,
+                )
 
             # Use executor_completed Message if available; otherwise fall back to
             # accumulated orchestrator streaming chunks.
-            final_text = final_output or "".join(orchestrator_chunks)
+            final_text = final_output_ref[0] or "".join(orchestrator_chunks)
 
             # Log results
             self.logger.info("\nAgent responses:")
@@ -383,3 +359,297 @@ class OrchestrationManager:
             except Exception as send_error:
                 self.logger.error("Failed to send error status: %s", send_error)
             raise
+
+    # ---------------------------
+    # Pre-orchestration clarification
+    # ---------------------------
+    async def _pre_orchestration_clarification(
+        self,
+        task_text: str,
+        user_id: str,
+        capability_summary: str,
+    ) -> str | None:
+        """Run a one-shot Agent call to gather missing info before the workflow.
+
+        Returns enriched task text if questions were asked and answered,
+        or None if no clarification was needed.
+        """
+        credential = config.get_azure_credential(client_id=config.AZURE_CLIENT_ID)
+        chat_client = FoundryChatClient(
+            project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
+            model="gpt-4.1",
+            credential=credential,
+        )
+
+        instructions = f"""SESSION_USER_ID: {user_id}
+
+You are a pre-check assistant. Your ONLY job is to determine whether the user's
+task has enough information for the team to execute, and if not, ask the user.
+
+TEAM CAPABILITIES:
+{capability_summary}
+
+RULES:
+1. Review the user's task below against the team capabilities.
+2. If critical information is MISSING (e.g. employee name, role, start date,
+   department, specific preferences that tools require), call ask_user ONCE
+   with a numbered list of questions. Mark each as (required) or (optional, default: X).
+3. If the task already has enough information to proceed, respond with EXACTLY:
+   READY
+4. Do NOT execute any task. Do NOT make a plan. Just ask or say READY.
+5. Only ask about information the USER would know — not system-internal details.
+6. Keep questions concise — 3-6 questions max.
+"""
+
+        mcp_cfg = MCPConfig.from_env(domain="user_responses")
+        async with AsyncExitStack() as stack:
+            mcp_tool = MCPStreamableHTTPTool(name=mcp_cfg.name, url=mcp_cfg.url)
+            await stack.enter_async_context(mcp_tool)
+
+            clarifier = Agent(
+                chat_client,
+                name="PreCheckClarifier",
+                tools=[mcp_tool],
+                instructions=instructions,
+            )
+
+            self.logger.info("Running pre-orchestration clarification check")
+
+            # Run the agent with the task as input
+            response = await clarifier.run(task_text)
+
+            # Extract the final text from the response
+            result_text = ""
+            if isinstance(response, list):
+                for msg in response:
+                    if isinstance(msg, Message) and msg.text:
+                        result_text = msg.text
+            elif hasattr(response, "text"):
+                result_text = response.text
+            else:
+                result_text = str(response)
+
+            self.logger.info(
+                "Pre-check result (first 200 chars): %s", result_text[:200]
+            )
+
+            # If the agent said READY, no enrichment needed
+            if "READY" in result_text.upper().strip():
+                self.logger.info("Pre-check: task has sufficient info, proceeding")
+                return None
+
+            # Otherwise the agent asked questions and got answers.
+            # The conversation with the user happened via ask_user.
+            # We need to get the answers and append them to the task.
+            # The response after asking typically contains the user's answers
+            # integrated into a summary. Append it to the original task.
+            enriched = f"{task_text}\n\nADDITIONAL CONTEXT (from user clarification):\n{result_text}"
+            self.logger.info("Pre-check: enriched task with user answers")
+            return enriched
+
+    # ---------------------------
+    # Plan review handling
+    # ---------------------------
+    async def _handle_plan_reviews(
+        self,
+        plan_requests: dict[str, "MagenticPlanReviewRequest"],
+        *,
+        participant_names: list[str],
+        task_text: str,
+        user_id: str,
+    ) -> dict | None:
+        """Present collected plan review requests to the user and gather responses.
+
+        Returns:
+            A ``{request_id: MagenticPlanReviewResponse}`` dict if at least one
+            plan was approved, or ``None`` if all were rejected/timed out.
+        """
+        responses = {}
+
+        for request_id, plan_review in plan_requests.items():
+            self.logger.info(
+                "[PLAN_REVIEW] Presenting plan to user (request_id=%s)", request_id
+            )
+
+            # Convert to MPlan for frontend display
+            mplan = convert_plan_review_to_mplan(
+                plan_review,
+                participant_names=participant_names,
+                task_text=task_text,
+                user_id=user_id,
+            )
+
+            # Store plan
+            try:
+                orchestration_config.plans[mplan.id] = mplan
+            except Exception as e:
+                self.logger.error("Error storing plan: %s", e)
+
+            # Send approval request to frontend via WebSocket
+            approval_message = messages.PlanApprovalRequest(
+                plan=mplan,
+                status="PENDING_APPROVAL",
+                context={"task": task_text},
+            )
+            await connection_config.send_status_update_async(
+                message=approval_message,
+                user_id=user_id,
+                message_type=WebsocketMessageType.PLAN_APPROVAL_REQUEST,
+            )
+
+            # Wait for user response
+            approval_response = await wait_for_plan_approval(mplan.id, user_id)
+
+            if approval_response and approval_response.approved:
+                self.logger.info("Plan approved (request_id=%s)", request_id)
+                responses[request_id] = plan_review.approve()
+            else:
+                self.logger.info("Plan rejected (request_id=%s)", request_id)
+                await connection_config.send_status_update_async(
+                    {
+                        "type": WebsocketMessageType.PLAN_APPROVAL_RESPONSE,
+                        "data": approval_response,
+                    },
+                    user_id=user_id,
+                    message_type=WebsocketMessageType.PLAN_APPROVAL_RESPONSE,
+                )
+                return None
+
+        return responses if responses else None
+
+    async def _process_event_stream(
+        self,
+        stream,
+        *,
+        user_id: str,
+        final_output_ref: list,
+        orchestrator_chunks: list[str],
+        current_streaming_agent_ref: list,
+    ) -> dict[str, "MagenticPlanReviewRequest"] | None:
+        """Process a workflow event stream, collecting plan review requests.
+
+        Follows the framework sample pattern: consume all events, collect any
+        ``MagenticPlanReviewRequest`` objects, and break when the workflow
+        reaches ``IDLE_WITH_PENDING_REQUESTS``. The caller is responsible for
+        presenting plans to the user and resuming the workflow.
+
+        Returns:
+            A ``{request_id: MagenticPlanReviewRequest}`` dict if plan reviews
+            were requested, or ``None`` if the stream completed normally.
+        """
+        plan_requests: dict[str, MagenticPlanReviewRequest] = {}
+
+        async for event in stream:
+            try:
+                data_type = type(event.data).__name__ if event.data is not None else "None"
+                executor = getattr(event, "executor_id", None) or "?"
+                self.logger.warning(
+                    "[EVENT] type=%s  data_type=%s  executor=%s",
+                    event.type, data_type, executor,
+                )
+
+                # -------------------------------------------------------
+                # Plan review request — collect, don't block
+                # -------------------------------------------------------
+                if event.type == "request_info" and isinstance(event.data, MagenticPlanReviewRequest):
+                    request_id = event.request_id
+                    self.logger.info(
+                        "[PLAN_REVIEW] Collected plan review request (request_id=%s)",
+                        request_id,
+                    )
+                    plan_requests[request_id] = event.data
+
+                # -------------------------------------------------------
+                # Status — log when idle with pending requests
+                # (stream will end naturally; do NOT break)
+                # -------------------------------------------------------
+                elif event.type == "status" and event.state is WorkflowRunState.IDLE_WITH_PENDING_REQUESTS:
+                    self.logger.info(
+                        "[STATUS] Workflow idle with %d pending request(s)",
+                        len(plan_requests),
+                    )
+
+                # Magentic orchestrator events (plan created, replanned, progress ledger)
+                elif event.type == "magentic_orchestrator":
+                    orch_event: MagenticOrchestratorEvent = event.data
+                    self.logger.info(
+                        "[ORCHESTRATOR:%s]", orch_event.event_type.value
+                    )
+
+                # Streaming output
+                elif event.type == "output":
+                    executor = event.executor_id or "unknown"
+                    output_data = event.data
+
+                    if isinstance(output_data, AgentResponseUpdate):
+                        if executor == "magentic_orchestrator" and output_data.text:
+                            orchestrator_chunks.append(output_data.text)
+
+                        if (
+                            executor != "magentic_orchestrator"
+                            and executor != current_streaming_agent_ref[0]
+                        ):
+                            current_streaming_agent_ref[0] = executor
+                            display_name = executor.replace("_", " ")
+                            header_text = f"\n\n---\n### {display_name}\n\n"
+                            try:
+                                await connection_config.send_status_update_async(
+                                    AgentMessageStreaming(
+                                        agent_name=executor,
+                                        content=header_text,
+                                        is_final=False,
+                                    ),
+                                    user_id,
+                                    message_type=WebsocketMessageType.AGENT_MESSAGE_STREAMING,
+                                )
+                            except Exception as cb_err:
+                                self.logger.error(
+                                    "Error sending agent header for %s: %s",
+                                    executor, cb_err,
+                                )
+
+                        try:
+                            await streaming_agent_response_callback(
+                                executor, output_data, False, user_id,
+                            )
+                        except Exception as cb_err:
+                            self.logger.error(
+                                "Error in streaming callback for %s: %s",
+                                executor, cb_err,
+                            )
+
+                # Executor completed
+                elif (
+                    event.type == "executor_completed"
+                    and isinstance(event.data, list)
+                    and event.executor_id
+                ):
+                    agent_id = event.executor_id
+                    if agent_id == "magentic_orchestrator":
+                        for msg in event.data:
+                            if isinstance(msg, Message) and msg.text:
+                                final_output_ref[0] = msg.text
+                    else:
+                        for msg in event.data:
+                            if isinstance(msg, Message) and msg.text:
+                                try:
+                                    agent_response_callback(
+                                        agent_id, msg, user_id
+                                    )
+                                except Exception as cb_err:
+                                    self.logger.error(
+                                        "Error in agent callback for %s: %s",
+                                        agent_id, cb_err,
+                                    )
+
+            except Exception as e:
+                if "cancelled by user" in str(e):
+                    raise
+                self.logger.error(
+                    "Error processing event type=%s: %s",
+                    getattr(event, "type", "?"), e,
+                    exc_info=True,
+                )
+
+        # Stream fully consumed or broke on IDLE_WITH_PENDING_REQUESTS
+        return plan_requests if plan_requests else None

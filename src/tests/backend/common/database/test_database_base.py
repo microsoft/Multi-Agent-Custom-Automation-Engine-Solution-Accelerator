@@ -15,11 +15,7 @@ os.environ.setdefault('APPLICATIONINSIGHTS_CONNECTION_STRING', 'test_connection_
 os.environ.setdefault('APP_ENV', 'dev')
 
 # Only mock external problematic dependencies - do NOT mock internal common.* modules
-sys.modules['v4'] = Mock()
-sys.modules['v4.models'] = Mock()
-sys.modules['v4.models.messages'] = Mock()
-
-import v4.models.messages as messages
+from backend.models.plan_models import MPlan
 
 # Import the REAL modules using backend.* paths for proper coverage tracking
 from backend.common.database.database_base import DatabaseBase
@@ -155,13 +151,13 @@ class TestDatabaseBaseImplementationRequirements:
             async def delete_plan_by_plan_id(self, plan_id: str) -> bool:
                 return False
             
-            async def add_mplan(self, mplan: messages.MPlan) -> None:
+            async def add_mplan(self, mplan: MPlan) -> None:
                 pass
             
-            async def update_mplan(self, mplan: messages.MPlan) -> None:
+            async def update_mplan(self, mplan: MPlan) -> None:
                 pass
             
-            async def get_mplan(self, plan_id: str) -> Optional[messages.MPlan]:
+            async def get_mplan(self, plan_id: str) -> Optional[MPlan]:
                 return None
             
             async def add_agent_message(self, message: AgentMessageData) -> None:

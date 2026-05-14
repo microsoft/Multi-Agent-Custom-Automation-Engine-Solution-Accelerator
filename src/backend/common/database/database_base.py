@@ -6,7 +6,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Type
 
-import v4.models.messages as messages
+from models.plan_models import MPlan
 
 from ..models.messages import (
     AgentMessageData,
@@ -207,17 +207,17 @@ class DatabaseBase(ABC):
         pass
 
     @abstractmethod
-    async def add_mplan(self, mplan: messages.MPlan) -> None:
+    async def add_mplan(self, mplan: MPlan) -> None:
         """Add an mplan configuration to the database."""
         pass
 
     @abstractmethod
-    async def update_mplan(self, mplan: messages.MPlan) -> None:
+    async def update_mplan(self, mplan: MPlan) -> None:
         """Update an mplan configuration in the database."""
         pass
 
     @abstractmethod
-    async def get_mplan(self, plan_id: str) -> Optional[messages.MPlan]:
+    async def get_mplan(self, plan_id: str) -> Optional[MPlan]:
         """Retrieve an mplan configuration by plan_id."""
         pass
 

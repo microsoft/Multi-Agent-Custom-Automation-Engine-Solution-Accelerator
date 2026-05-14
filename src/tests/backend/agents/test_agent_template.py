@@ -32,6 +32,11 @@ sys.modules["agent_framework_foundry"] = _mock_af_foundry
 sys.modules.setdefault("azure", Mock())
 sys.modules.setdefault("azure.identity", Mock())
 sys.modules.setdefault("azure.identity.aio", Mock())
+sys.modules.setdefault("azure.core", Mock())
+sys.modules.setdefault("azure.core.exceptions", Mock(
+    HttpResponseError=type('HttpResponseError', (Exception,), {}),
+    ResourceNotFoundError=type('ResourceNotFoundError', (Exception,), {}),
+))
 sys.modules.setdefault("azure.ai", Mock())
 sys.modules.setdefault("azure.ai.projects", Mock())
 sys.modules.setdefault("azure.ai.projects.aio", Mock())

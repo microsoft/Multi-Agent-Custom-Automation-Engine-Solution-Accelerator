@@ -25,10 +25,7 @@ sys.modules['azure.core'] = Mock()
 sys.modules['azure.core.exceptions'] = Mock()
 sys.modules['azure.identity'] = Mock()
 sys.modules['azure.identity.aio'] = Mock()
-# Mock v4 modules that cosmosdb.py tries to import
-sys.modules['v4'] = Mock()
-sys.modules['v4.models'] = Mock()
-sys.modules['v4.models.messages'] = Mock()
+# Mock v4 modules — no longer needed (flat layout migration complete)
 
 # Import the REAL modules using backend.* paths for proper coverage tracking
 from backend.common.database.cosmosdb import CosmosDBClient
@@ -43,7 +40,7 @@ from backend.common.models.messages import (
     TeamConfiguration,
     UserCurrentTeam,
 )
-import v4.models.messages as messages
+from backend.models.plan_models import MPlan
 
 
 class TestCosmosDBClientInitialization:
@@ -1045,7 +1042,7 @@ class TestCosmosDBMiscellaneousOperations:
             {"name": "@plan_id", "value": "test_plan_id"},
             {"name": "@data_type", "value": DataType.m_plan},
         ]
-        client.query_items.assert_called_once_with(expected_query, expected_params, messages.MPlan)
+        client.query_items.assert_called_once_with(expected_query, expected_params, MPlan)
     
     @pytest.mark.asyncio
     async def test_add_team_agent(self, client):
