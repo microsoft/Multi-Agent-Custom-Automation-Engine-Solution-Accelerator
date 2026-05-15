@@ -453,6 +453,28 @@ while [[ "$useCaseValid" != true ]]; do
     fi
 done
 
+# WAF/Private Networking: If the Container App has IP restrictions or internal ingress,
+# the backendUrl is not reachable from the developer's machine. Route through the frontend
+# App Service proxy instead, which is public and forwards /api/* to the private backend over VNet.
+solutionSuffix=$(az group show --name "$ResourceGroup" --query "tags.SolutionSuffix" -o tsv 2>/dev/null)
+if [[ -n "$solutionSuffix" ]]; then
+    containerAppName="ca-${solutionSuffix}"
+    isExternal=$(az containerapp show --name "$containerAppName" --resource-group "$ResourceGroup" \
+        --query "properties.configuration.ingress.external" -o tsv 2>/dev/null)
+    hasIpRestrictions=$(az containerapp show --name "$containerAppName" --resource-group "$ResourceGroup" \
+        --query "length(properties.configuration.ingress.ipSecurityRestrictions || \`[]\`)" -o tsv 2>/dev/null)
+    hasIpRestrictions=${hasIpRestrictions:-0}
+    proxyEnabled=$(az webapp config appsettings list --name "app-${solutionSuffix}" --resource-group "$ResourceGroup" \
+        --query "[?name=='PROXY_API_REQUESTS'].value" -o tsv 2>/dev/null)
+    if [[ "$isExternal" == "false" ]] || [[ "$hasIpRestrictions" -gt 0 ]] || [[ "$proxyEnabled" == "true" ]]; then
+        frontendHostname="app-${solutionSuffix}"
+        frontendUrl="https://${frontendHostname}.azurewebsites.net"
+        echo "Private networking detected: Container App has restricted access."
+        echo "Routing API calls through frontend App Service: $frontendUrl"
+        backendUrl="$frontendUrl"
+    fi
+fi
+
 echo ""
 echo "==============================================="
 echo "Values to be used:"

@@ -34,7 +34,7 @@ Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/    ← Repository roo
 │   │   ├── .venv/                          ← Virtual environment
 │   │   └── .env                            ← Backend config file
 │   │   └── app.py                          ← Backend Entry Point
-│   ├── frontend/                           ← cd src/frontend
+│   ├── App/                               ← cd src/App
 │   │   ├── node_modules/                   ← npm dependencies
 │   │   ├── .venv/                          ← Virtual environment
 │   │   ├── frontend_server.py              ← Frontend entry point
@@ -60,7 +60,7 @@ cd path/to/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator
 This project uses Backend `.env` file in Backend directory with different configuration requirements:
 
 - **Backend**: `src/backend/.env` 
-<!-- - **Frontend**: `src/frontend.env` 
+<!-- - **Frontend**: `src/App.env` 
 - **MCP Server**: `src/mcp_sevrer/.env`  -->
 
 
@@ -189,7 +189,7 @@ Create `.vscode/settings.json` and copy the following JSON:
         },
         {
             "name": "Frontend",
-            "path": "./src/frontend"
+            "path": "./src/App"
         }
     ]
 }
@@ -363,8 +363,8 @@ source .venv/bin/activate  # Linux/WSL2
 # or
 .\.venv\Scripts\Activate.ps1  # Windows PowerShell
 
-# Install dependencies
-uv sync --python 3.12
+# Install dependencies (--extra dev includes pytest for testing)
+uv sync --python 3.12 --extra dev
 ```
 
 **Windows users**: If you encounter issues with the `uv` command not being found, use the Python Launcher instead:
@@ -373,11 +373,11 @@ uv sync --python 3.12
 # Create virtual environment
 py -3.12 -m uv venv .venv
 
-# Install dependencies
-py -3.12 -m uv sync
+# Install dependencies (--extra dev includes pytest for testing)
+py -3.12 -m uv sync --extra dev
 ```
 
-> **⚠️ Important**: Always run `uv sync` (or `py -3.12 -m uv sync` on Windows) after creating the virtual environment to install all required dependencies. Missing dependencies will cause runtime errors like `ModuleNotFoundError: No module named 'pydantic'` or DNS resolution failures.
+> **⚠️ Important**: Always run `uv sync --extra dev` (or `py -3.12 -m uv sync --extra dev` on Windows) after creating the virtual environment to install all required dependencies. Missing dependencies will cause runtime errors like `ModuleNotFoundError: No module named 'pydantic'` or DNS resolution failures.
 
 ### 4.4. Run the Backend
 
@@ -443,13 +443,13 @@ python mcp_server.py --transport streamable-http --host 0.0.0.0 --port 9000
 
 > **📋 Terminal Reminder**: Open a **third dedicated terminal window (Terminal 3)** for the Frontend. Keep Terminals 1 (Backend) and 2 (MCP Server) running. All commands assume you start from the **repository root directory**.
 
-The UI is located under `src/frontend`.
+The UI is located under `src/App`.
 
 ### 6.1. Navigate to Frontend Directory
 
 ```bash
 # From repository root
-cd src/frontend
+cd src/App
 ```
 
 ### 6.2. Install UI Dependencies

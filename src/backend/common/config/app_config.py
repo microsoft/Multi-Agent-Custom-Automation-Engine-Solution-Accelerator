@@ -6,6 +6,10 @@ from typing import Optional
 from azure.ai.projects.aio import AIProjectClient
 from azure.cosmos import CosmosClient
 from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
+from azure.identity.aio import (
+    DefaultAzureCredential as DefaultAzureCredentialAsync,
+    ManagedIdentityCredential as ManagedIdentityCredentialAsync,
+)
 from dotenv import load_dotenv
 
 
@@ -113,7 +117,8 @@ class AppConfig:
         """
         Returns an Azure credential based on the application environment.
 
-        If the environment is 'dev', it uses DefaultAzureCredential.
+        If the environment is 'dev', it uses DefaultAzureCredential with exclude_environment_credential=True
+        to avoid EnvironmentCredential exceptions in Application Insights traces.
         Otherwise, it uses ManagedIdentityCredential.
 
         Args:
@@ -123,9 +128,28 @@ class AppConfig:
             Credential object: Either DefaultAzureCredential or ManagedIdentityCredential.
         """
         if self.APP_ENV == "dev":
-            return DefaultAzureCredential()  # CodeQL [SM05139]: DefaultAzureCredential is safe here
+            return DefaultAzureCredential(exclude_environment_credential=True)  # CodeQL [SM05139]: DefaultAzureCredential is safe here
         else:
             return ManagedIdentityCredential(client_id=client_id)
+
+    def get_azure_credential_async(self, client_id=None):
+        """
+        Returns an async Azure credential based on the application environment.
+
+        If the environment is 'dev', it uses DefaultAzureCredential (async) with exclude_environment_credential=True
+        to avoid EnvironmentCredential exceptions in Application Insights traces.
+        Otherwise, it uses ManagedIdentityCredential (async).
+
+        Args:
+            client_id (str, optional): The client ID for the Managed Identity Credential.
+
+        Returns:
+            Async Credential object: Either DefaultAzureCredentialAsync or ManagedIdentityCredentialAsync.
+        """
+        if self.APP_ENV == "dev":
+            return DefaultAzureCredentialAsync(exclude_environment_credential=True)
+        else:
+            return ManagedIdentityCredentialAsync(client_id=client_id)
 
     def get_azure_credentials(self):
         """Retrieve Azure credentials, either from environment variables or managed identity."""

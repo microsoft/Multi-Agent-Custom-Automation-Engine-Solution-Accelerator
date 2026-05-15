@@ -10,7 +10,6 @@ from common.models.messages_af import (
     AgentType,
     PlanStatus,
 )
-from common.utils.event_utils import track_event_if_configured
 from v4.config.settings import orchestration_config
 
 logger = logging.getLogger(__name__)
@@ -154,26 +153,10 @@ class PlanService:
                         plan.overall_status = PlanStatus.approved
                         plan.m_plan = mplan.model_dump()
                         await memory_store.update_plan(plan)
-                        track_event_if_configured(
-                            "PlanApproved",
-                            {
-                                "m_plan_id": human_feedback.m_plan_id,
-                                "plan_id": human_feedback.plan_id,
-                                "user_id": user_id,
-                            },
-                        )
                     else:
                         print("Plan not found in memory store.")
                         return False
                 else:  # reject plan
-                    track_event_if_configured(
-                        "PlanRejected",
-                        {
-                            "m_plan_id": human_feedback.m_plan_id,
-                            "plan_id": human_feedback.plan_id,
-                            "user_id": user_id,
-                        },
-                    )
                     await memory_store.delete_plan_by_plan_id(human_feedback.plan_id)
 
         except Exception as e:
