@@ -161,6 +161,14 @@ const planSlice = createSlice({
             }
         },
 
+        /** Single dispatch when an error occurs during plan execution */
+        planFailedFinal(state) {
+            state.showProcessingPlanSpinner = false;
+            if (state.planData?.plan) {
+                (state.planData as any).plan.overall_status = PlanStatus.FAILED;
+            }
+        },
+
         /** Reset everything back to initial state (used when navigating to a new plan) */
         resetPlan() {
             return { ...initialState };
@@ -229,6 +237,7 @@ export const {
     planApprovalRejected,
     approvalRequestReceived,
     planCompletedFinal,
+    planFailedFinal,
     resetPlan,
 } = planSlice.actions;
 

@@ -38,6 +38,8 @@ from v4.config.settings import connection_config, orchestration_config
 from v4.models.messages import WebsocketMessageType
 from v4.orchestration.human_approval_manager import HumanApprovalMagenticManager
 from v4.magentic_agents.magentic_agent_factory import MagenticAgentFactory
+from common.database.database_factory import DatabaseFactory
+from v4.models.models import PlanStatus
 
 
 class OrchestrationManager:
@@ -47,6 +49,7 @@ class OrchestrationManager:
 
     def __init__(self):
         self.user_id: Optional[str] = None
+        self._plan_id: Optional[str] = None
         self.logger = self.__class__.logger
 
     def _extract_response_text(self, data) -> str:
@@ -293,10 +296,11 @@ class OrchestrationManager:
     # ---------------------------
     # Execution
     # ---------------------------
-    async def run_orchestration(self, user_id: str, input_task) -> None:
+    async def run_orchestration(self, user_id: str, input_task, plan_id: str = None) -> None:
         """
         Execute the Magentic workflow for the provided user and task description.
         """
+        self._plan_id = plan_id
         job_id = str(uuid.uuid4())
         orchestration_config.set_approval_pending(job_id)
         self.logger.info(
@@ -545,19 +549,50 @@ class OrchestrationManager:
                 self.logger.error("Error attributes: %s", e.__dict__)
             self.logger.info("=" * 50)
 
-            # Send error status to user
+            # Build a user-friendly error message
+            error_str = str(e)
+            if "Too Many Requests" in error_str or "429" in error_str:
+                user_error_message = (
+                    "The service is currently experiencing high demand (rate limit exceeded). "
+                    "Please wait a moment and try again."
+                )
+            elif "timeout" in error_str.lower():
+                user_error_message = (
+                    "The request timed out while processing. Please try again."
+                )
+            elif "conflict" in error_str.lower() or "modified concurrently" in error_str.lower():
+                user_error_message = (
+                    "A conflict occurred while processing your request. "
+                    "The resource was modified by another operation. Please start a new task and try again."
+                )
+            else:
+                user_error_message = "An error occurred while processing your request. Please start a new task and try again."
+
+            # Update plan status to failed in the database
+            try:
+                if self._plan_id:
+                    memory_store = await DatabaseFactory.get_database(user_id=user_id)
+                    plan = await memory_store.get_plan_by_plan_id(plan_id=self._plan_id)
+                    if plan:
+                        plan.overall_status = PlanStatus.FAILED
+                        await memory_store.update_plan(plan)
+                        self.logger.info("Plan '%s' status updated to FAILED", self._plan_id)
+            except Exception as db_error:
+                self.logger.error("Failed to update plan status to FAILED: %s", db_error)
+
+            # Send error status to user via ERROR_MESSAGE type
             try:
                 await connection_config.send_status_update_async(
                     {
-                        "type": WebsocketMessageType.FINAL_RESULT_MESSAGE,
+                        "type": WebsocketMessageType.ERROR_MESSAGE,
                         "data": {
-                            "content": f"Error during orchestration: {str(e)}",
+                            "content": user_error_message,
                             "status": "error",
                             "timestamp": asyncio.get_event_loop().time(),
                         },
                     },
                     user_id,
-                    message_type=WebsocketMessageType.FINAL_RESULT_MESSAGE,
+                    message_type=WebsocketMessageType.ERROR_MESSAGE,
                 )
             except Exception as send_error:
                 self.logger.error("Failed to send error status: %s", send_error)
