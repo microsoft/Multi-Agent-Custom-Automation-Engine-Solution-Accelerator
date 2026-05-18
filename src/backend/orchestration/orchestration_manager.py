@@ -86,6 +86,9 @@ class OrchestrationManager:
         # Detect whether any agent supports user interaction
         has_user_responses = any(
             getattr(ag, "user_responses", False) for ag in agents
+        ) or any(
+            getattr(ag, "user_responses", False)
+            for ag in getattr(team_config, "agents", [])
         )
 
         manager_agent = Agent(chat_client, name="MagenticManager")
@@ -159,17 +162,25 @@ class OrchestrationManager:
         Return an existing workflow for the user or create a new one if:
           - None exists
           - Team switched flag is True
-          - Previous workflow has completed (_terminated)
+
+        When a previous workflow has completed (_terminated), we reuse the
+        existing agent pool and only rebuild the workflow shell (Option 3).
+        Full agent teardown only happens on explicit team switch.
         """
         current = orchestration_config.get_current_orchestration(user_id)
         workflow_terminated = getattr(current, "_terminated", False)
-        needs_new = current is None or team_switched or workflow_terminated
-        if needs_new:
-            if current is not None and (team_switched or workflow_terminated):
-                reason = "team switched" if team_switched else "workflow completed"
+
+        # Full rebuild: no workflow exists or team explicitly changed
+        needs_full_rebuild = current is None or team_switched
+
+        # Lightweight reset: workflow finished but agents are still valid
+        needs_workflow_reset = not needs_full_rebuild and workflow_terminated
+
+        if needs_full_rebuild:
+            if current is not None:
                 cls.logger.info(
-                    "Replacing workflow (%s), closing previous agents for user '%s'",
-                    reason, user_id,
+                    "Replacing workflow (team switched), closing previous agents for user '%s'",
+                    user_id,
                 )
                 # Close the UserInteractionAgent MCP context stack
                 ui_ctx = getattr(current, "_user_interaction_ctx", None)
@@ -180,11 +191,10 @@ class OrchestrationManager:
                     except (RuntimeError, Exception) as e:
                         cls.logger.debug("UI agent MCP cleanup (benign): %s", e)
 
-                # Close prior agents (same logic as old version)
-                for agent in getattr(current, "_participants", {}).values():
-                    agent_name = getattr(
-                        agent, "agent_name", getattr(agent, "name", "")
-                    )
+                # Close prior agents — only on team switch
+                for executor in current.get_executors_list():
+                    agent = getattr(executor, "agent", executor)
+                    agent_name = getattr(agent, "name", "") or getattr(executor, "id", "")
                     close_coro = getattr(agent, "close", None)
                     if callable(close_coro):
                         try:
@@ -220,6 +230,39 @@ class OrchestrationManager:
                 )
                 print(f"Failed to initialize orchestration for user '{user_id}': {e}")
                 raise
+
+        elif needs_workflow_reset:
+            cls.logger.info(
+                "Workflow completed — resetting workflow shell, reusing agents for user '%s'",
+                user_id,
+            )
+            # Extract existing participant agents from the workflow executors.
+            # Skip the MagenticManager (orchestrator) and UserInteractionAgent —
+            # both will be recreated by init_orchestration.
+            reusable_agents = [
+                executor.agent
+                for executor in current.get_executors_list()
+                if hasattr(executor, "agent")
+                and not getattr(executor.agent, "name", "").startswith("UserInteraction")
+            ]
+            cls.logger.info(
+                "Reusing %d agents for new workflow", len(reusable_agents),
+            )
+
+            try:
+                orchestration_config.orchestrations[user_id] = (
+                    await cls.init_orchestration(
+                        reusable_agents, team_config,
+                        team_service.memory_context, user_id,
+                    )
+                )
+            except Exception as e:
+                cls.logger.error(
+                    "Failed to reset orchestration for user '%s': %s", user_id, e
+                )
+                print(f"Failed to reset orchestration for user '{user_id}': {e}")
+                raise
+
         return orchestration_config.get_current_orchestration(user_id)
 
     # ---------------------------

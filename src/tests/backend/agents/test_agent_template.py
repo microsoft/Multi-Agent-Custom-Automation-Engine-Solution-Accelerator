@@ -63,6 +63,7 @@ sys.modules["config.agent_registry"] = _mock_config_agent_registry
 _mock_config_mcp_config = Mock()
 _mock_config_mcp_config.MCPConfig = Mock()
 _mock_config_mcp_config.SearchConfig = Mock()
+_mock_config_mcp_config.VectorStoreConfig = Mock()
 sys.modules["config.mcp_config"] = _mock_config_mcp_config
 
 from backend.agents.agent_template import AgentTemplate  # noqa: E402
@@ -96,6 +97,12 @@ def _make_search_config(**kw):
     m = Mock()
     m.connection_name = kw.get("connection_name", "search-conn")
     m.index_name = kw.get("index_name", "test-index")
+    return m
+
+
+def _make_vector_store_config(**kw):
+    m = Mock()
+    m.vector_store_name = kw.get("vector_store_name", "test-vector-store")
     return m
 
 
@@ -170,6 +177,11 @@ def search_config():
     return _make_search_config()
 
 
+@pytest.fixture
+def vector_store_config():
+    return _make_vector_store_config()
+
+
 # ---------------------------------------------------------------------------
 # TestAgentTemplateInit
 # ---------------------------------------------------------------------------
@@ -203,6 +215,10 @@ class TestAgentTemplateInit:
         assert agent.enable_code_interpreter is True
         assert agent.mcp_cfg is mcp_config
         assert agent.search_config is search_config
+
+    def test_vector_store_config_stored(self, basic_kwargs, vector_store_config):
+        agent = AgentTemplate(**basic_kwargs, vector_store_config=vector_store_config)
+        assert agent.vector_store_config is vector_store_config
 
     def test_no_use_azure_search_attribute(self, basic_kwargs, search_config):
         """The old _use_azure_search attribute must not exist in the new pattern."""
@@ -269,6 +285,23 @@ class TestBuildTools:
         with patch("backend.agents.agent_template.CodeInterpreterTool", return_value=mock_tool):
             result = agent._build_tools()
         assert mock_tool in result
+
+    def test_file_search_tool_added(self, basic_kwargs, vector_store_config):
+        agent = AgentTemplate(**basic_kwargs, vector_store_config=vector_store_config)
+        agent._resolved_vector_store_id = "vs_abc123"
+        mock_tool = Mock()
+        mock_tool.as_dict = Mock(return_value={"type": "file_search"})
+        with patch("backend.agents.agent_template.FileSearchTool", return_value=mock_tool) as mock_cls:
+            result = agent._build_tools()
+        mock_cls.assert_called_once_with(vector_store_ids=["vs_abc123"])
+        assert {"type": "file_search"} in result
+
+    def test_file_search_tool_skipped_when_no_resolved_id(self, basic_kwargs, vector_store_config):
+        agent = AgentTemplate(**basic_kwargs, vector_store_config=vector_store_config)
+        agent._resolved_vector_store_id = None
+        with patch("backend.agents.agent_template.FileSearchTool") as mock_cls:
+            agent._build_tools()
+        mock_cls.assert_not_called()
 
     def test_all_three_tools(self, basic_kwargs, mcp_config, search_config):
         agent = AgentTemplate(

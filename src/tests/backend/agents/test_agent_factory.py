@@ -54,9 +54,12 @@ _mock_agent_template_mod = Mock()
 _mock_agent_template_mod.AgentTemplate = mock_agent_template_cls
 sys.modules["agents.agent_template"] = _mock_agent_template_mod
 
+mock_vector_store_config_cls = Mock()
+
 _mock_mcp_config_mod = Mock()
 _mock_mcp_config_mod.MCPConfig = mock_mcp_config_cls
 _mock_mcp_config_mod.SearchConfig = mock_search_config_cls
+_mock_mcp_config_mod.VectorStoreConfig = mock_vector_store_config_cls
 sys.modules["config.mcp_config"] = _mock_mcp_config_mod
 
 # Now import the module under test (full backend.* path as per project convention)
@@ -78,8 +81,10 @@ def _agent_obj(**overrides) -> SimpleNamespace:
         coding_tools=False,
         use_rag=False,
         use_mcp=False,
+        use_file_search=False,
         user_responses=False,
         index_name=None,
+        vector_store_name=None,
     )
     defaults.update(overrides)
     return SimpleNamespace(**defaults)
@@ -142,6 +147,7 @@ class TestCreateAgentFromConfig:
         mock_agent_template_cls.reset_mock()
         mock_mcp_config_cls.reset_mock()
         mock_search_config_cls.reset_mock()
+        mock_vector_store_config_cls.reset_mock()
 
     @pytest.mark.asyncio
     async def test_user_responses_true_creates_mcp_config(self):
@@ -237,6 +243,45 @@ class TestCreateAgentFromConfig:
         assert result is agent_instance
         mock_agent_template_cls.assert_called_once()
         agent_instance.open.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_with_file_search_config(self):
+        """use_file_search=True + vector_store_name creates VectorStoreConfig."""
+        vs_instance = Mock()
+        mock_vector_store_config_cls.return_value = vs_instance
+
+        agent_instance = Mock()
+        agent_instance.open = AsyncMock()
+        mock_agent_template_cls.return_value = agent_instance
+
+        await self.factory.create_agent_from_config(
+            "user123",
+            _agent_obj(use_file_search=True, vector_store_name="my-vector-store"),
+            self.team_config,
+            self.memory_store,
+        )
+
+        mock_vector_store_config_cls.assert_called_once_with(vector_store_name="my-vector-store")
+        call_kwargs = mock_agent_template_cls.call_args[1]
+        assert call_kwargs["vector_store_config"] is vs_instance
+
+    @pytest.mark.asyncio
+    async def test_file_search_without_vector_store_name_skips(self):
+        """use_file_search=True but no vector_store_name → no VectorStoreConfig."""
+        agent_instance = Mock()
+        agent_instance.open = AsyncMock()
+        mock_agent_template_cls.return_value = agent_instance
+
+        await self.factory.create_agent_from_config(
+            "user123",
+            _agent_obj(use_file_search=True, vector_store_name=None),
+            self.team_config,
+            self.memory_store,
+        )
+
+        mock_vector_store_config_cls.assert_not_called()
+        call_kwargs = mock_agent_template_cls.call_args[1]
+        assert call_kwargs["vector_store_config"] is None
 
     @pytest.mark.asyncio
     async def test_with_search_config(self):

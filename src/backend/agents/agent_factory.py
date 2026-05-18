@@ -15,7 +15,7 @@ from agents.agent_template import AgentTemplate
 from common.config.app_config import config
 from common.database.database_base import DatabaseBase
 from common.models.messages import TeamConfiguration
-from config.mcp_config import MCPConfig, SearchConfig
+from config.mcp_config import MCPConfig, SearchConfig, VectorStoreConfig
 
 
 class UnsupportedModelError(Exception):
@@ -132,6 +132,14 @@ class AgentFactory:
             else None
         )
 
+        # Foundry IQ (FileSearchTool + vector stores)
+        vector_store_name = getattr(agent_obj, "vector_store_name", None)
+        vector_store_config: Optional[VectorStoreConfig] = (
+            VectorStoreConfig(vector_store_name=vector_store_name)
+            if getattr(agent_obj, "use_file_search", False) and vector_store_name
+            else None
+        )
+
         # MCP config: domain-specific server only (use_mcp).
         # user_responses=true no longer gives agents the ask_user tool directly;
         # they request clarification via their response text, and the manager
@@ -146,10 +154,11 @@ class AgentFactory:
             mcp_config = None
 
         self.logger.info(
-            "Creating AgentTemplate '%s' (model=%s, use_rag=%s, use_mcp=%s, reasoning=%s).",
+            "Creating AgentTemplate '%s' (model=%s, use_rag=%s, use_file_search=%s, use_mcp=%s, reasoning=%s).",
             agent_obj.name,
             deployment_name,
             search_config is not None,
+            vector_store_config is not None,
             mcp_config is not None,
             use_reasoning,
         )
@@ -173,6 +182,7 @@ class AgentFactory:
             enable_code_interpreter=getattr(agent_obj, "coding_tools", False),
             mcp_config=mcp_config,
             search_config=search_config,
+            vector_store_config=vector_store_config,
             team_config=team_config,
             memory_store=memory_store,
         )

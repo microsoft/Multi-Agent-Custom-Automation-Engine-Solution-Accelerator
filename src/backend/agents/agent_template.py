@@ -25,15 +25,15 @@ from agent_framework_foundry import FoundryChatClient
 from azure.ai.projects.aio import AIProjectClient
 from azure.ai.projects.models import (AISearchIndexResource, AzureAISearchTool,
                                       AzureAISearchToolResource,
-                                      CodeInterpreterTool, MCPTool,
-                                      PromptAgentDefinition)
+                                      CodeInterpreterTool, FileSearchTool,
+                                      MCPTool, PromptAgentDefinition)
 from azure.core.exceptions import HttpResponseError, ResourceNotFoundError
 from azure.identity.aio import DefaultAzureCredential
 from common.database.database_base import DatabaseBase
 from common.models.messages import CurrentTeamAgent, TeamConfiguration
 from common.utils.agent_utils import get_database_team_agent_id
 from config.agent_registry import agent_registry
-from config.mcp_config import MCPConfig, SearchConfig
+from config.mcp_config import MCPConfig, SearchConfig, VectorStoreConfig
 
 
 class AgentTemplate:
@@ -55,6 +55,7 @@ class AgentTemplate:
         enable_code_interpreter: bool = False,
         mcp_config: MCPConfig | None = None,
         search_config: SearchConfig | None = None,
+        vector_store_config: VectorStoreConfig | None = None,
         team_config: TeamConfiguration | None = None,
         memory_store: DatabaseBase | None = None,
     ) -> None:
@@ -67,6 +68,7 @@ class AgentTemplate:
         self.enable_code_interpreter = enable_code_interpreter
         self.mcp_cfg = mcp_config
         self.search_config = search_config
+        self.vector_store_config = vector_store_config
         self.team_config = team_config
         self.memory_store = memory_store
 
@@ -75,6 +77,7 @@ class AgentTemplate:
         self._credential: Optional[DefaultAzureCredential] = None
         self._stack: Optional[AsyncExitStack] = None
         self._agent: Optional[Agent] = None
+        self._resolved_vector_store_id: str | None = None
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -139,6 +142,27 @@ class AgentTemplate:
                         definition = agent_details.versions.latest.definition
                     else:
                         raise
+
+            # Step 1b — Resolve vector store name → ID (for FileSearchTool).
+            self._resolved_vector_store_id: str | None = None
+            if self.vector_store_config and self.vector_store_config.vector_store_name:
+                oai = project_client.get_openai_client()
+                vs_name = self.vector_store_config.vector_store_name
+                page = await oai.vector_stores.list()
+                for vs in page.data:
+                    if vs.name == vs_name:
+                        self._resolved_vector_store_id = vs.id
+                        self.logger.info(
+                            "Resolved vector store '%s' → %s.",
+                            vs_name,
+                            vs.id,
+                        )
+                        break
+                if not self._resolved_vector_store_id:
+                    raise ValueError(
+                        f"Vector store '{vs_name}' not found. "
+                        f"Run scripts/seed_vector_stores.py to create it."
+                    )
 
             # Step 2 — Create per-agent Toolbox (only when the agent has tools).
             toolbox_name = f"macae-{self.agent_name}-tools"
@@ -310,6 +334,17 @@ class AgentTemplate:
             )
             self.logger.debug(
                 "Added AzureAISearchTool (index=%s).", self.search_config.index_name
+            )
+
+        if self._resolved_vector_store_id:
+            tools.append(
+                FileSearchTool(
+                    vector_store_ids=[self._resolved_vector_store_id]
+                ).as_dict()
+            )
+            self.logger.debug(
+                "Added FileSearchTool (vector_store=%s).",
+                self._resolved_vector_store_id,
             )
 
         if self.enable_code_interpreter:

@@ -84,7 +84,9 @@ class MockTeamAgent:
     user_responses: bool = False
     use_bing: bool = False
     use_reasoning: bool = False
+    use_file_search: bool = False
     index_name: str = ""
+    vector_store_name: str = ""
     coding_tools: bool = False
 
 @dataclass

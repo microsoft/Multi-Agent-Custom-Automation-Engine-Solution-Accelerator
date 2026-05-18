@@ -99,3 +99,10 @@ class SearchConfig:
             endpoint=endpoint,
             index_name=index_name,
         )
+
+
+@dataclass(slots=True)
+class VectorStoreConfig:
+    """Configuration for Foundry IQ (FileSearchTool + managed vector stores)."""
+
+    vector_store_name: str = ""
