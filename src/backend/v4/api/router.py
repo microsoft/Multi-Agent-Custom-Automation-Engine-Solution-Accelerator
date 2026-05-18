@@ -93,18 +93,26 @@ async def start_comms(
         # Keep the connection open - FastAPI will close the connection if this returns
         try:
             # Keep the connection open - FastAPI will close the connection if this returns
+            # Send periodic pings to prevent idle timeout from Azure infra / reverse proxies.
+            ping_interval = 30  # seconds
+            last_ping = asyncio.get_event_loop().time()
             while True:
                 # no expectation that we will receive anything from the client but this keeps
                 # the connection open and does not take cpu cycle
                 try:
-                    message = await websocket.receive_text()
+                    message = await asyncio.wait_for(
+                        websocket.receive_text(), timeout=ping_interval
+                    )
+                    last_ping = asyncio.get_event_loop().time()
                     logging.debug(f"Received WebSocket message from {user_id}: {message}")
                 except asyncio.TimeoutError:
-                    # Ignore timeouts to keep the WebSocket connection open, but avoid a tight loop.
-                    logging.debug(
-                        f"WebSocket receive timeout for user {user_id}, process {process_id}"
-                    )
-                    await asyncio.sleep(0.1)
+                    # No message received within ping_interval — send a ping to keep alive.
+                    try:
+                        await websocket.send_text('{"type":"ping"}')
+                        last_ping = asyncio.get_event_loop().time()
+                    except Exception:
+                        logging.info(f"Ping failed for {user_id}/{process_id}, connection likely closed")
+                        break
                 except WebSocketDisconnect:
                     dc_props = {"process_id": process_id, "user_id": user_id}
                     if session_id:
@@ -537,7 +545,8 @@ async def plan_approval(
                     human_feedback.m_plan_id
                 )
                 raise HTTPException(
-                    status_code=404, detail="No active plan found for approval"
+                    status_code=404,
+                    detail="No active plan found for approval. The plan may have timed out due to inactivity. Please start a new task.",
                 )
     except Exception as e:
         logging.error(f"Error processing plan approval: {e}")
