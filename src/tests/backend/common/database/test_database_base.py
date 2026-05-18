@@ -501,7 +501,7 @@ class TestDatabaseBaseContextManager:
                 raise ValueError("Test exception")
 
         # Even with exception, close should have been called
-        assert database.closed is True
+        assert database.closed is True  # lgtm[py/unreachable-statement]
 
 
 class TestDatabaseBaseInheritance:

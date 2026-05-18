@@ -344,7 +344,7 @@ class TestOrchestrationConfig(IsolatedAsyncioTestCase):
         cancel_task_handle = asyncio.create_task(cancel_task())
         
         with self.assertRaises(asyncio.CancelledError):
-            await task
+            await task  # lgtm[py/statement-has-no-effect]
         
         _ = await cancel_task_handle
         self.assertTrue(task.cancelled())
@@ -365,7 +365,7 @@ class TestOrchestrationConfig(IsolatedAsyncioTestCase):
         cancel_task_handle = asyncio.create_task(cancel_task())
         
         with self.assertRaises(asyncio.CancelledError):
-            await task
+            await task  # lgtm[py/statement-has-no-effect]
         
         _ = await cancel_task_handle
         self.assertTrue(task.cancelled())
