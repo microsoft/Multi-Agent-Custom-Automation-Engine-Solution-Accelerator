@@ -1,8 +1,5 @@
 name: Cleanup Deployment Job
 
-permissions:
-  contents: read
-  actions: read
 on:
   workflow_call:
     inputs:
@@ -32,7 +29,7 @@ on:
         description: 'Azure Location'
         required: true
         type: string
-      AZURE_ENV_OPENAI_LOCATION:
+      AZURE_ENV_AI_SERVICE_LOCATION:
         description: 'Azure OpenAI Location'
         required: true
         type: string
@@ -49,19 +46,25 @@ jobs:
   cleanup-deployment:
     runs-on: ${{ inputs.runner_os }}
     continue-on-error: true
+    environment: production
     env:
       RESOURCE_GROUP_NAME: ${{ inputs.RESOURCE_GROUP_NAME }}
       AZURE_LOCATION: ${{ inputs.AZURE_LOCATION }}
-      AZURE_ENV_OPENAI_LOCATION: ${{ inputs.AZURE_ENV_OPENAI_LOCATION }}
+      AZURE_ENV_AI_SERVICE_LOCATION: ${{ inputs.AZURE_ENV_AI_SERVICE_LOCATION }}
       ENV_NAME: ${{ inputs.ENV_NAME }}
       IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
     steps:
 
       - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set Azure Subscription
         shell: bash
-        run: |
-          az login --service-principal -u ${{ secrets.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_TENANT_ID }}
-          az account set --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: az account set --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Delete Resource Group (Optimized Cleanup)
         id: delete_rg

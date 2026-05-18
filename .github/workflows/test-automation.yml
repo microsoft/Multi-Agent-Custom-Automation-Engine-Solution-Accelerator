@@ -1,5 +1,9 @@
 name: Test Automation MACAE
 
+permissions:
+  id-token: write
+  contents: read
+
 on:
   workflow_dispatch:
   workflow_call:
@@ -26,6 +30,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    environment: production
     env:
       MACAE_WEB_URL: ${{ inputs.MACAE_WEB_URL }}
       MACAE_URL_API: ${{ inputs.MACAE_URL_API }}
@@ -35,17 +40,19 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
           python-version: "3.13"
 
       - name: Azure CLI Login
-        uses: azure/login@v2
+        uses: azure/login@v3
         with:
-          creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       # - name: Start Container App
       #   uses: azure/cli@v2
@@ -132,7 +139,7 @@ jobs:
 
       - name: Upload test report
         id: upload_report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
           name: test-report-${{ github.run_id }}
