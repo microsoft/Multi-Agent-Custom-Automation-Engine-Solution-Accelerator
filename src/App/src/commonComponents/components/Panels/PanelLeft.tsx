@@ -98,7 +98,7 @@ const PanelLeft: React.FC<PanelLeftProps> = ({
         {content}
       </div>
 
-      {footer && <div>{footer}</div>}
+      {footer && <div style={{ position: 'relative', zIndex: 2 }}>{footer}</div>}
 
       {panelResize && (
         <div
