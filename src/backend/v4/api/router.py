@@ -95,7 +95,6 @@ async def start_comms(
             # Keep the connection open - FastAPI will close the connection if this returns
             # Send periodic pings to prevent idle timeout from Azure infra / reverse proxies.
             ping_interval = 30  # seconds
-            last_ping = asyncio.get_event_loop().time()
             while True:
                 # no expectation that we will receive anything from the client but this keeps
                 # the connection open and does not take cpu cycle
@@ -103,13 +102,11 @@ async def start_comms(
                     message = await asyncio.wait_for(
                         websocket.receive_text(), timeout=ping_interval
                     )
-                    last_ping = asyncio.get_event_loop().time()
                     logging.debug(f"Received WebSocket message from {user_id}: {message}")
                 except asyncio.TimeoutError:
                     # No message received within ping_interval — send a ping to keep alive.
                     try:
                         await websocket.send_text('{"type":"ping"}')
-                        last_ping = asyncio.get_event_loop().time()
                     except Exception:
                         logging.info(f"Ping failed for {user_id}/{process_id}, connection likely closed")
                         break
