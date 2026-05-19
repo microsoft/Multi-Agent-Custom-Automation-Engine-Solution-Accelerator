@@ -94,14 +94,19 @@ jobs:
       - name: Check and Create Resource Group
         id: check_create_rg
         run: |
-          set -e  
-          echo "Checking if resource group exists..."
+          set -e
+          OWNER_TAG_VALUE="${{ github.actor }}"
+          echo "🔍 Checking if resource group '${{ env.RESOURCE_GROUP_NAME }}' exists..."
           rg_exists=$(az group exists --name ${{ env.RESOURCE_GROUP_NAME }})
           if [ "$rg_exists" = "false" ]; then
-            echo "Resource group does not exist. Creating..."
-            az group create --name ${{ env.RESOURCE_GROUP_NAME }} --location ${{ env.AZURE_LOCATION }} || { echo "Error creating resource group"; exit 1; }
+            echo "📦 Resource group does not exist. Creating new resource group '${{ env.RESOURCE_GROUP_NAME }}' in location '${{ env.AZURE_LOCATION }}'..."
+            echo "🏷️  Adding Owner tag: Owner=${OWNER_TAG_VALUE}"
+            az group create --name ${{ env.RESOURCE_GROUP_NAME }} --location ${{ env.AZURE_LOCATION }} --tags "Owner=${OWNER_TAG_VALUE}" || { echo "❌ Error creating resource group"; exit 1; }
+            echo "✅ Resource group '${{ env.RESOURCE_GROUP_NAME }}' created successfully."
           else
-            echo "Resource group already exists."
+            echo "✅ Resource group '${{ env.RESOURCE_GROUP_NAME }}' already exists."
+            echo "🏷️  Merging Owner tag on existing resource group: Owner=${OWNER_TAG_VALUE}"
+            az group update --name "${{ env.RESOURCE_GROUP_NAME }}" --set tags.Owner="${OWNER_TAG_VALUE}" --output none || echo "⚠️  Warning: failed to update Owner tag on existing resource group '${{ env.RESOURCE_GROUP_NAME }}'."
           fi
 
       - name: Generate Unique Solution Prefix
