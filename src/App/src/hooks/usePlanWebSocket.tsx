@@ -150,7 +150,6 @@ export function usePlanWebSocket({
             WebsocketMessageType.AGENT_MESSAGE_STREAMING,
             (msg: any) => {
                 const line = PlanDataService.simplifyHumanClarification(msg.data.content);
-                dispatch(setShowProcessingPlanSpinner(false));
                 dispatch(setShowBufferingText(true));
                 dispatch(appendToStreamingBuffer(line));
             },
@@ -202,7 +201,7 @@ export function usePlanWebSocket({
                     ? Math.max(Math.round((Date.now() - processingStartedAtRef.current) / 1000), 0)
                     : null;
                 const completionTimeLine = completionElapsedSeconds !== null
-                    ? `\n\nTotal completion time: ${formatElapsedTime(completionElapsedSeconds)}`
+                    ? `\n\n**Total completion time:** ${formatElapsedTime(completionElapsedSeconds)}`
                     : '';
 
                 const agentMessageData: AgentMessageData = {
@@ -284,7 +283,7 @@ export function usePlanWebSocket({
                         agentMessageData?.content,
                     );
                     dispatch(addAgentMessage(agentMessageData));
-                    dispatch(setShowProcessingPlanSpinner(false));
+                    dispatch(setShowProcessingPlanSpinner(true));
                     scrollToBottom();
                     persistAgentMessage(agentMessageData, planData, dispatch);
                 }
