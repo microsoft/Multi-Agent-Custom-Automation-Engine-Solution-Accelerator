@@ -189,36 +189,90 @@ class AgentTemplate:
                     )
 
             # Step 1c — Create AzureAISearchContextProvider for Foundry IQ KB.
-            # Source priority: portal agent definition.tools (MCPTool with
-            # /knowledgebases/ in server_url) > team JSON kb_config.
+            # Team JSON kb_config is authoritative for KB assignment.
+            # If the portal definition has a stale MCPTool (different KB name),
+            # update the portal to match.
             self._kb_provider = None
             kb_endpoint: str | None = None
             kb_name: str | None = None
 
-            # Try portal first: parse MCPTool server_url for KB info.
-            if definition.tools:
+            # Determine desired KB from team JSON config.
+            if self.kb_config:
+                kb_endpoint = self.kb_config.search_endpoint
+                kb_name = self.kb_config.knowledge_base_name
+
+            # Check if portal MCPTool matches; update if stale.
+            if kb_name and definition.tools:
+                portal_kb_name: str | None = None
                 for tool_def in definition.tools:
                     if isinstance(tool_def, MCPTool) and tool_def.server_url:
                         url = tool_def.server_url
                         if "/knowledgebases/" in url:
-                            # URL pattern: https://{host}/knowledgebases/{kb-name}/mcp?...
                             from urllib.parse import urlparse
                             parsed = urlparse(url)
-                            kb_endpoint = f"{parsed.scheme}://{parsed.hostname}"
                             parts = parsed.path.split("/knowledgebases/")
                             if len(parts) == 2:
-                                kb_name = parts[1].split("/")[0]
-                            self.logger.info(
-                                "Discovered KB from portal agent definition: "
-                                "kb=%s, endpoint=%s",
-                                kb_name, kb_endpoint,
-                            )
+                                portal_kb_name = parts[1].split("/")[0]
                             break
 
-            # Fall back to team JSON kb_config.
-            if not kb_name and self.kb_config:
-                kb_endpoint = self.kb_config.search_endpoint
-                kb_name = self.kb_config.knowledge_base_name
+                if portal_kb_name and portal_kb_name != kb_name:
+                    self.logger.warning(
+                        "Portal agent '%s' has stale KB '%s' — updating to '%s'.",
+                        self.agent_name, portal_kb_name, kb_name,
+                    )
+                    # Rebuild tools list with corrected MCPTool.
+                    kb_mcp_url = (
+                        f"{self.kb_config.search_endpoint}/knowledgebases/"
+                        f"{kb_name}/mcp?api-version=2025-11-01-preview"
+                    )
+                    new_tools = [
+                        t for t in definition.tools
+                        if not (isinstance(t, MCPTool) and t.server_url
+                                and "/knowledgebases/" in t.server_url)
+                    ]
+                    new_tools.append(MCPTool(
+                        server_label=kb_name,
+                        server_url=kb_mcp_url,
+                        project_connection_id=self.kb_config.search_connection_name,
+                    ))
+                    definition = PromptAgentDefinition(
+                        model=definition.model,
+                        instructions=definition.instructions,
+                        tools=new_tools,
+                    )
+                    await project_client.agents.create_version(
+                        agent_name=self.agent_name,
+                        definition=definition,
+                        description=self.agent_description,
+                    )
+                    self.logger.info(
+                        "Updated agent '%s' portal definition with KB '%s'.",
+                        self.agent_name, kb_name,
+                    )
+            elif kb_name and not definition.tools:
+                # Agent exists but has no tools — add the MCPTool.
+                kb_mcp_url = (
+                    f"{self.kb_config.search_endpoint}/knowledgebases/"
+                    f"{kb_name}/mcp?api-version=2025-11-01-preview"
+                )
+                definition = PromptAgentDefinition(
+                    model=definition.model,
+                    instructions=definition.instructions,
+                    tools=[MCPTool(
+                        server_label=kb_name,
+                        server_url=kb_mcp_url,
+                        project_connection_id=self.kb_config.search_connection_name,
+                    )],
+                )
+                await project_client.agents.create_version(
+                    agent_name=self.agent_name,
+                    definition=definition,
+                    description=self.agent_description,
+                )
+                self.logger.info(
+                    "Added KB MCPTool '%s' to existing agent '%s'.",
+                    kb_name, self.agent_name,
+                )
 
             if kb_endpoint and kb_name:
                 self._kb_provider = AzureAISearchContextProvider(
