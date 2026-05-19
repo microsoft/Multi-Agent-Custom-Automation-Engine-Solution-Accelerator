@@ -210,12 +210,24 @@ def convert_plan_review_to_mplan(
         plan_text_str = "\n".join(plan_lines)
         facts_str = ""
 
+    logger.warning(
+        "[PLAN-DEBUG] plan_text_str for parsing (%d chars):\n%s",
+        len(plan_text_str), plan_text_str[:2000],
+    )
+
     mplan: MPlan = PlanToMPlanConverter.convert(
         plan_text=plan_text_str,
         facts=facts_str,
         team=participant_names,
         task=task_text,
     )
+
+    logger.warning(
+        "[PLAN-DEBUG] Parsed %d steps from plan text. Steps: %s",
+        len(mplan.steps),
+        [(s.agent, s.action[:60]) for s in mplan.steps],
+    )
+
     mplan.user_id = user_id
     return mplan
 

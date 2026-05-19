@@ -55,6 +55,7 @@ class AppConfig:
         )
         self.AZURE_OPENAI_ENDPOINT = self._get_required("AZURE_OPENAI_ENDPOINT")
         self.REASONING_MODEL_NAME = self._get_optional("REASONING_MODEL_NAME", "o3")
+        self.ORCHESTRATOR_MODEL_NAME = self._get_optional("ORCHESTRATOR_MODEL_NAME", "o4-mini")
         # self.AZURE_BING_CONNECTION_NAME = self._get_optional(
         #     "AZURE_BING_CONNECTION_NAME"
         # )

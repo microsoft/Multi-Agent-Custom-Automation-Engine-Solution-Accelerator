@@ -310,6 +310,34 @@ async def process_request(
         )
         raise HTTPException(status_code=500, detail="Failed to create plan") from e
 
+    # Ensure the workflow is valid (rebuild if terminated or stuck from a prior run)
+    current_workflow = orchestration_config.get_current_orchestration(user_id)
+    workflow_unusable = (
+        current_workflow is None
+        or getattr(current_workflow, "_terminated", False)
+        or getattr(current_workflow, "_is_running", False)
+    )
+    if workflow_unusable:
+        logger.info(
+            "Workflow unusable for user '%s' (None=%s, terminated=%s, is_running=%s) — rebuilding",
+            user_id,
+            current_workflow is None,
+            getattr(current_workflow, "_terminated", False),
+            getattr(current_workflow, "_is_running", False),
+        )
+        # Force-clear the running flag so get_current_or_new_orchestration
+        # sees it as terminated and takes the lightweight reset path.
+        if current_workflow is not None and getattr(current_workflow, "_is_running", False):
+            current_workflow._is_running = False
+            current_workflow._terminated = True
+        team_service = TeamService(memory_store)
+        await OrchestrationManager.get_current_or_new_orchestration(
+            user_id=user_id,
+            team_config=team,
+            team_switched=False,
+            team_service=team_service,
+        )
+
     try:
 
         async def run_orchestration_task():
@@ -326,6 +354,8 @@ async def process_request(
         if prior_task is not None and not prior_task.done():
             try:
                 prior_task.cancel()
+                # Give the cancelled task a chance to clean up
+                await asyncio.sleep(0)
             except Exception:
                 pass
             orchestration_config.active_tasks.pop(user_id, None)

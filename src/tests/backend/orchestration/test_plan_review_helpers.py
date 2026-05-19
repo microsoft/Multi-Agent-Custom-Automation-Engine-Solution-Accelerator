@@ -114,12 +114,19 @@ sys.modules['orchestration.connection_config'] = Mock(
 )
 
 # ---- Mock models.plan_models ----
+class MockMStep:
+    def __init__(self, agent="", action=""):
+        self.agent = agent
+        self.action = action
+
+
 class MockMPlan:
     def __init__(self):
         self.id = "test-plan-id"
         self.user_id = None
+        self.steps = []
 
-sys.modules['models.plan_models'] = Mock(MPlan=MockMPlan)
+sys.modules['models.plan_models'] = Mock(MPlan=MockMPlan, MStep=MockMStep)
 
 # ---- Mock plan converter ----
 class MockPlanToMPlanConverter:
@@ -181,7 +188,7 @@ class TestGetMagenticPromptKwargs:
         result = get_magentic_prompt_kwargs(has_user_responses=True)
 
         # Assert
-        assert "WORK-FIRST" in result["task_ledger_plan_prompt"]
+        assert "USER CLARIFICATION POLICY" in result["task_ledger_plan_prompt"]
 
     def test_given_user_responses_when_called_then_progress_contains_execution_rules(self):
         # Act

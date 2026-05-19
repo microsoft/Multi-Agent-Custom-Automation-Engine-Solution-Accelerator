@@ -457,37 +457,34 @@ class AgentTemplate:
         return self
 
     def _build_tools(self) -> list:
-        """Return Toolbox tool instances for server-side tools.
+        """Return Toolbox tool instances for portal visibility.
 
-        When ``MCP_SERVER_CONNECTION_ID`` is set (deployed environment), an
-        ``MCPTool`` is added here so the Foundry portal / Playground can
-        reach the MCP server through the registered project connection.
-
-        In local development (no connection ID), MCP is handled exclusively
-        via ``MCPStreamableHTTPTool`` (client-side) in ``open()`` — this
-        allows the backend process to connect directly to ``localhost``.
+        An ``MCPTool`` is always added when ``mcp_cfg`` is present so the
+        Foundry portal / Playground displays the MCP server alongside the
+        agent.  In deployed environments ``project_connection_id`` allows
+        server-side execution via the Responses API; locally it may be None
+        but the toolbox entry still provides discoverability.
 
         Client-side ``MCPStreamableHTTPTool`` is **always** created in
-        ``open()`` for Magentic orchestration regardless of this flag;
-        Toolbox-originated MCP tools are filtered out of ``maf_tools``
-        to avoid duplicates.
+        ``open()`` for Magentic orchestration regardless; Toolbox-originated
+        MCP tools are filtered out of ``maf_tools`` to avoid duplicates.
         """
         tools = []
 
-        # Server-side MCPTool — only when a Foundry project connection is
-        # configured (i.e. deployed).  Locally the connection_id is empty
-        # and MCP is handled client-side only.
-        if self.mcp_cfg and self.mcp_cfg.connection_id:
-            tools.append(
-                MCPTool(
-                    server_label=self.mcp_cfg.name,
-                    server_url=self.mcp_cfg.url,
-                    server_description=self.mcp_cfg.description,
-                    project_connection_id=self.mcp_cfg.connection_id,
-                )
-            )
+        # MCPTool for portal visibility — always add when mcp_cfg is present.
+        # In deployed environments project_connection_id enables server-side
+        # execution; locally client-side MCPStreamableHTTPTool handles it.
+        if self.mcp_cfg:
+            mcp_tool_kwargs = {
+                "server_label": self.mcp_cfg.name,
+                "server_url": self.mcp_cfg.url,
+                "server_description": self.mcp_cfg.description,
+            }
+            if self.mcp_cfg.connection_id:
+                mcp_tool_kwargs["project_connection_id"] = self.mcp_cfg.connection_id
+            tools.append(MCPTool(**mcp_tool_kwargs))
             self.logger.debug(
-                "Added server-side MCPTool (connection_id=%s).",
+                "Added MCPTool for toolbox (connection_id=%s).",
                 self.mcp_cfg.connection_id,
             )
 

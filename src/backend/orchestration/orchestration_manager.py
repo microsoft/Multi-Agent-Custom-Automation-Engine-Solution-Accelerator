@@ -83,6 +83,27 @@ class OrchestrationManager:
             cls.logger.error("Failed to create FoundryChatClient: %s", e)
             raise
 
+        # Create a separate client for the orchestrator manager using a
+        # reasoning model (o4-mini) — much more reliable at structured JSON
+        # output and multi-step routing decisions than standard GPT models.
+        orchestrator_model = config.ORCHESTRATOR_MODEL_NAME
+        try:
+            manager_chat_client = FoundryChatClient(
+                project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
+                model=orchestrator_model,
+                credential=credential,
+            )
+            cls.logger.warning(
+                "Manager model: '%s' (participants use '%s')",
+                orchestrator_model, team_config.deployment_name,
+            )
+        except Exception as e:
+            cls.logger.warning(
+                "Failed to create manager client with '%s', falling back to '%s': %s",
+                orchestrator_model, team_config.deployment_name, e,
+            )
+            manager_chat_client = chat_client
+
         # Detect whether any agent supports user interaction
         has_user_responses = any(
             getattr(ag, "user_responses", False) for ag in agents
@@ -91,7 +112,7 @@ class OrchestrationManager:
             for ag in getattr(team_config, "agents", [])
         )
 
-        manager_agent = Agent(chat_client, name="MagenticManager")
+        manager_agent = Agent(manager_chat_client, name="MagenticManager")
 
         # Get prompt customization kwargs
         prompt_kwargs = get_magentic_prompt_kwargs(has_user_responses=has_user_responses)
