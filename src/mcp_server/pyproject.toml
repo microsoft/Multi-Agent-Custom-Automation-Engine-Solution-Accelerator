@@ -27,7 +27,7 @@ dependencies = [
   "urllib3==2.7.0",
   "azure-core==1.38.0",
   "cryptography==46.0.7",
-  "authlib==1.6.11",
+  "authlib==1.6.12",
 ]
 
 [project.optional-dependencies]
