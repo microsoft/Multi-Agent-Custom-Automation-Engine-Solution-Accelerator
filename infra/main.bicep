@@ -1214,6 +1214,8 @@ module containerApp 'br/public:avm/res/app/container-app:0.22.0' = {
     ingressTargetPort: 8000
     ingressExternal: true
     activeRevisionsMode: 'Single'
+    // SFI: Enforce HTTPS-only ingress. When false, HTTP requests are automatically redirected to HTTPS.
+    ingressAllowInsecure: false
     corsPolicy: {
       allowedOrigins: [
         'https://${webSiteResourceName}.azurewebsites.net'
@@ -1422,6 +1424,8 @@ module containerAppMcp 'br/public:avm/res/app/container-app:0.22.0' = {
     ingressTargetPort: 9000
     ingressExternal: true
     activeRevisionsMode: 'Single'
+    // SFI: Enforce HTTPS-only ingress. When false, HTTP requests are automatically redirected to HTTPS.
+    ingressAllowInsecure: false
     corsPolicy: {
       allowedOrigins: [
         'https://${webSiteResourceName}.azurewebsites.net'
