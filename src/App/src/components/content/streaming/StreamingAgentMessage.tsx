@@ -176,11 +176,13 @@ const renderAgentMessages = (
                   <Body1 className={styles.agentName}>
                     {getAgentDisplayName(msg.agent)}
                   </Body1>
-                  <Tag
-                    appearance="brand"
-                  >
-                    AI Agent
-                  </Tag>
+                  {msg.agent_type !== AgentMessageType.SYSTEM_AGENT && msg.agent?.toLowerCase() !== 'system' && (
+                    <Tag
+                      appearance="brand"
+                    >
+                      AI Agent
+                    </Tag>
+                  )}
                 </div>
               )}
 

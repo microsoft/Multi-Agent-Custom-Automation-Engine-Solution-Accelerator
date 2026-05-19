@@ -371,7 +371,20 @@ async def process_request(
     try:
 
         async def run_orchestration_task():
-            await OrchestrationManager().run_orchestration(user_id, input_task)
+            try:
+                await OrchestrationManager().run_orchestration(user_id, input_task, plan_id=plan_id)
+            except Exception as orch_error:
+                logger.error("Background orchestration failed for plan '%s': %s", plan_id, orch_error)
+                track_event_if_configured(
+                    "Error_Orchestration_Failed",
+                    {
+                        "plan_id": plan_id,
+                        "session_id": input_task.session_id,
+                        "user_id": user_id,
+                        "error": str(orch_error),
+                        "error_type": type(orch_error).__name__,
+                    },
+                )
 
         background_tasks.add_task(run_orchestration_task)
 
