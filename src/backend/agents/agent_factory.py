@@ -15,7 +15,8 @@ from agents.agent_template import AgentTemplate
 from common.config.app_config import config
 from common.database.database_base import DatabaseBase
 from common.models.messages import TeamConfiguration
-from config.mcp_config import MCPConfig, SearchConfig, VectorStoreConfig
+from config.mcp_config import (KnowledgeBaseConfig, MCPConfig, SearchConfig,
+                               VectorStoreConfig)
 
 
 class UnsupportedModelError(Exception):
@@ -140,6 +141,14 @@ class AgentFactory:
             else None
         )
 
+        # Foundry IQ Knowledge Base (server-side MCP on Azure AI Search)
+        kb_name = getattr(agent_obj, "knowledge_base_name", None)
+        kb_config: Optional[KnowledgeBaseConfig] = (
+            KnowledgeBaseConfig.from_env(kb_name)
+            if getattr(agent_obj, "use_knowledge_base", False) and kb_name
+            else None
+        )
+
         # MCP config: domain-specific server only (use_mcp).
         # user_responses=true no longer gives agents the ask_user tool directly;
         # they request clarification via their response text, and the manager
@@ -183,6 +192,8 @@ class AgentFactory:
             mcp_config=mcp_config,
             search_config=search_config,
             vector_store_config=vector_store_config,
+            kb_config=kb_config,
+            temperature=getattr(agent_obj, "temperature", None),
             team_config=team_config,
             memory_store=memory_store,
         )

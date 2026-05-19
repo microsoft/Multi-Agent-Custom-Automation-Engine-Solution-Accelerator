@@ -19,8 +19,9 @@ import logging
 from contextlib import AsyncExitStack
 from typing import AsyncGenerator, Optional
 
-from agent_framework import (Agent, AgentResponseUpdate, Content,
+from agent_framework import (Agent, AgentResponseUpdate, ChatOptions, Content,
                              MCPStreamableHTTPTool, Message)
+from agent_framework_azure_ai_search import AzureAISearchContextProvider
 from agent_framework_foundry import FoundryChatClient
 from azure.ai.projects.aio import AIProjectClient
 from azure.ai.projects.models import (AISearchIndexResource, AzureAISearchTool,
@@ -33,7 +34,8 @@ from common.database.database_base import DatabaseBase
 from common.models.messages import CurrentTeamAgent, TeamConfiguration
 from common.utils.agent_utils import get_database_team_agent_id
 from config.agent_registry import agent_registry
-from config.mcp_config import MCPConfig, SearchConfig, VectorStoreConfig
+from config.mcp_config import (KnowledgeBaseConfig, MCPConfig, SearchConfig,
+                               VectorStoreConfig)
 
 
 class AgentTemplate:
@@ -56,6 +58,8 @@ class AgentTemplate:
         mcp_config: MCPConfig | None = None,
         search_config: SearchConfig | None = None,
         vector_store_config: VectorStoreConfig | None = None,
+        kb_config: KnowledgeBaseConfig | None = None,
+        temperature: float | None = None,
         team_config: TeamConfiguration | None = None,
         memory_store: DatabaseBase | None = None,
     ) -> None:
@@ -69,6 +73,8 @@ class AgentTemplate:
         self.mcp_cfg = mcp_config
         self.search_config = search_config
         self.vector_store_config = vector_store_config
+        self.kb_config = kb_config
+        self.temperature = temperature
         self.team_config = team_config
         self.memory_store = memory_store
 
@@ -78,6 +84,7 @@ class AgentTemplate:
         self._stack: Optional[AsyncExitStack] = None
         self._agent: Optional[Agent] = None
         self._resolved_vector_store_id: str | None = None
+        self._kb_provider: AzureAISearchContextProvider | None = None
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -118,9 +125,26 @@ class AgentTemplate:
                 )
             except ResourceNotFoundError:
                 # First run: bootstrap a Prompt Agent from the team JSON config.
+                # Include MCPTool for KB so it shows in the portal.
+                bootstrap_tools = None
+                if self.kb_config:
+                    kb_mcp_url = (
+                        f"{self.kb_config.search_endpoint}/knowledgebases/"
+                        f"{self.kb_config.knowledge_base_name}/mcp"
+                        f"?api-version=2025-11-01-preview"
+                    )
+                    bootstrap_tools = [
+                        MCPTool(
+                            server_label=self.kb_config.knowledge_base_name,
+                            server_url=kb_mcp_url,
+                            project_connection_id=self.kb_config.search_connection_name,
+                        )
+                    ]
+
                 definition = PromptAgentDefinition(
                     model=self.model_deployment_name,
                     instructions=self.agent_instructions,
+                    tools=bootstrap_tools,
                 )
                 try:
                     await project_client.agents.create_version(
@@ -164,38 +188,55 @@ class AgentTemplate:
                         f"Run scripts/seed_vector_stores.py to create it."
                     )
 
+            # Step 1c — Create AzureAISearchContextProvider for Foundry IQ KB.
+            # Source priority: portal agent definition.tools (MCPTool with
+            # /knowledgebases/ in server_url) > team JSON kb_config.
+            self._kb_provider = None
+            kb_endpoint: str | None = None
+            kb_name: str | None = None
+
+            # Try portal first: parse MCPTool server_url for KB info.
+            if definition.tools:
+                for tool_def in definition.tools:
+                    if isinstance(tool_def, MCPTool) and tool_def.server_url:
+                        url = tool_def.server_url
+                        if "/knowledgebases/" in url:
+                            # URL pattern: https://{host}/knowledgebases/{kb-name}/mcp?...
+                            from urllib.parse import urlparse
+                            parsed = urlparse(url)
+                            kb_endpoint = f"{parsed.scheme}://{parsed.hostname}"
+                            parts = parsed.path.split("/knowledgebases/")
+                            if len(parts) == 2:
+                                kb_name = parts[1].split("/")[0]
+                            self.logger.info(
+                                "Discovered KB from portal agent definition: "
+                                "kb=%s, endpoint=%s",
+                                kb_name, kb_endpoint,
+                            )
+                            break
+
+            # Fall back to team JSON kb_config.
+            if not kb_name and self.kb_config:
+                kb_endpoint = self.kb_config.search_endpoint
+                kb_name = self.kb_config.knowledge_base_name
+
+            if kb_endpoint and kb_name:
+                self._kb_provider = AzureAISearchContextProvider(
+                    endpoint=kb_endpoint,
+                    knowledge_base_name=kb_name,
+                    credential=self._credential,
+                    mode="agentic",
+                )
+                await self._stack.enter_async_context(self._kb_provider)
+                self.logger.info(
+                    "Created AzureAISearchContextProvider (kb=%s, endpoint=%s).",
+                    kb_name,
+                    kb_endpoint,
+                )
+
             # Step 2 — Create per-agent Toolbox (only when the agent has tools).
             toolbox_name = f"macae-{self.agent_name}-tools"
             tools = self._build_tools()
-
-            if tools:
-                try:
-                    await project_client.beta.toolboxes.create_version(
-                        name=toolbox_name,
-                        description=f"Tools for {self.agent_name}",
-                        tools=tools,
-                    )
-                    self.logger.info(
-                        "Created toolbox '%s' with %d tool(s).",
-                        toolbox_name,
-                        len(tools),
-                    )
-                except HttpResponseError as exc:
-                    if exc.status_code == 409:
-                        # Toolbox exists — delete and recreate so URL/tool
-                        # changes (e.g. per-domain MCP routing) take effect.
-                        self.logger.info(
-                            "Toolbox '%s' already exists — deleting and recreating.",
-                            toolbox_name,
-                        )
-                        await project_client.beta.toolboxes.delete(toolbox_name)
-                        await project_client.beta.toolboxes.create_version(
-                            name=toolbox_name,
-                            description=f"Tools for {self.agent_name}",
-                            tools=tools,
-                        )
-                    else:
-                        raise
 
             # Step 3 — FoundryChatClient + Agent (single path, FoundryAgent never used).
             # definition.model and definition.instructions come from the portal
@@ -208,22 +249,89 @@ class AgentTemplate:
 
             maf_tools = None
             if tools:
-                toolbox = await chat_client.get_toolbox(toolbox_name)
-                # Workaround: ToolboxVersionObject.tools contains azure-ai-projects
-                # SDK model objects that are MutableMapping but NOT JSON-serializable
-                # when shallow-copied via dict(). Deep-convert each tool to a plain
-                # dict so the OpenAI Responses API can serialize them.
-                # See bugs/toolbox-search-tool-serialization.md
+                # Filter out domain MCP tools — those are handled client-side
+                # via MCPStreamableHTTPTool.  KEEP KB MCP tools (server-side,
+                # executed by the Responses API).
+                def _is_domain_mcp_tool(t) -> bool:
+                    d = t.as_dict() if hasattr(t, "as_dict") else t
+                    if not isinstance(d, dict):
+                        return False
+                    if str(d.get("type", "")).lower() != "mcp":
+                        return False
+                    url = str(d.get("server_url", "") or "")
+                    return "/knowledgebases/" not in url
+
+                # Try reading tools from the Toolbox API so that portal edits
+                # (e.g. adding CodeInterpreter) are reflected at runtime.
+                # If the toolbox doesn't exist yet, create it.  If it exists
+                # but tools haven't propagated (eventual consistency), fall
+                # back to locally-built tools immediately — no retries.
                 #
-                # Filter out MCP tools — we always use MCPStreamableHTTPTool
-                # (client-side) for Magentic execution.  The server-side
-                # MCPTool in the Toolbox is only for Foundry Playground
-                # visibility; loading it here would create duplicates.
-                maf_tools = [
-                    t.as_dict() if hasattr(t, "as_dict") else t
-                    for t in toolbox.tools
-                    if not (hasattr(t, "type") and str(getattr(t, "type", "")).lower() == "mcp")
-                ]
+                # KB MCP tools use project_connection_id for auth.  The
+                # Responses API resolves this server-side when the toolbox
+                # stores the tool definition with the connection reference.
+                toolbox_tools = None
+                toolbox_exists = False
+                try:
+                    toolbox = await chat_client.get_toolbox(toolbox_name)
+                    toolbox_exists = True
+                    if toolbox and toolbox.tools:
+                        toolbox_tools = toolbox.tools
+                except Exception as _tb_exc:
+                    self.logger.debug(
+                        "get_toolbox('%s') failed: %s", toolbox_name, _tb_exc,
+                    )
+
+                if not toolbox_exists:
+                    try:
+                        await project_client.beta.toolboxes.create_version(
+                            name=toolbox_name,
+                            description=f"Tools for {self.agent_name}",
+                            tools=tools,
+                        )
+                        self.logger.info(
+                            "Created toolbox '%s' with %d tool(s).",
+                            toolbox_name,
+                            len(tools),
+                        )
+                    except HttpResponseError as exc:
+                        if exc.status_code != 409:
+                            raise
+                        self.logger.debug(
+                            "Toolbox '%s' already exists (race).", toolbox_name
+                        )
+
+                # Build maf_tools: use toolbox for non-domain-MCP tools
+                # (search, code interpreter, KB MCP).  The Toolbox stores
+                # project_connection_id and the Responses API resolves auth
+                # server-side when the tool is invoked.
+                maf_tools = []
+
+                if toolbox_tools:
+                    # From toolbox: take everything except domain MCP tools
+                    # (those are handled client-side via MCPStreamableHTTPTool)
+                    maf_tools = [
+                        t.as_dict() if hasattr(t, "as_dict") else t
+                        for t in toolbox_tools
+                        if not _is_domain_mcp_tool(t)
+                    ]
+                    self.logger.info(
+                        "Agent '%s' tools from toolbox: %d.",
+                        self.agent_name,
+                        len(maf_tools),
+                    )
+                else:
+                    # Toolbox not ready — use local non-domain-MCP tools
+                    maf_tools = [
+                        t.as_dict() if hasattr(t, "as_dict") else t
+                        for t in tools
+                        if not _is_domain_mcp_tool(t)
+                    ]
+                    self.logger.info(
+                        "Agent '%s' toolbox not ready — local tools: %d.",
+                        self.agent_name,
+                        len(maf_tools),
+                    )
 
             # Step 2b — Client-side MCP tool.  MCPStreamableHTTPTool connects
             # from *this* process so localhost URLs work (unlike the Toolbox
@@ -248,12 +356,28 @@ class AgentTemplate:
             if mcp_tool:
                 all_tools.append(mcp_tool)
 
+            # --- DIAGNOSTIC: dump what reaches Agent() ---
+            import json as _json
+            def _tool_summary(t):
+                if isinstance(t, dict):
+                    return {k: v for k, v in t.items() if k != "headers"}
+                return repr(t)[:120]
+            self.logger.warning(
+                ">>> Agent('%s') all_tools=%d: %s",
+                self.agent_name,
+                len(all_tools),
+                _json.dumps([_tool_summary(t) for t in all_tools], indent=2, default=str),
+            )
+            # --- END DIAGNOSTIC ---
+
             agent = Agent(
                 client=chat_client,
                 name=self.agent_name,
                 instructions=definition.instructions or self.agent_instructions,
                 description=self.agent_description,
                 tools=all_tools if all_tools else None,
+                context_providers=[self._kb_provider] if self._kb_provider else None,
+                default_options=ChatOptions(temperature=self.temperature) if self.temperature is not None else None,
             )
             self._agent = await self._stack.enter_async_context(agent)
 
@@ -395,6 +519,20 @@ class AgentTemplate:
 
         message = Message(role="user", contents=[Content.from_text(prompt)])
         async for update in self._agent.run(message, stream=True):
+            # --- DIAGNOSTIC: log each update type ---
+            self.logger.warning(
+                ">>> [%s] update type=%s data_type=%s",
+                self.agent_name,
+                type(update).__name__,
+                getattr(update, 'data_type', None),
+            )
+            if hasattr(update, 'content') and update.content:
+                self.logger.warning(
+                    ">>> [%s] content preview: %s",
+                    self.agent_name,
+                    str(update.content)[:200],
+                )
+            # --- END DIAGNOSTIC ---
             yield update
 
     # ------------------------------------------------------------------

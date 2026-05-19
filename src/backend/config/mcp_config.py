@@ -106,3 +106,36 @@ class VectorStoreConfig:
     """Configuration for Foundry IQ (FileSearchTool + managed vector stores)."""
 
     vector_store_name: str = ""
+
+
+@dataclass(slots=True)
+class KnowledgeBaseConfig:
+    """Configuration for Foundry IQ Knowledge Base (MCP endpoint on Azure AI Search)."""
+
+    knowledge_base_name: str = ""
+    search_endpoint: str = ""
+    search_connection_name: str = ""
+
+    @classmethod
+    def from_env(cls, knowledge_base_name: str) -> "KnowledgeBaseConfig":
+        """Build KnowledgeBaseConfig from environment variables."""
+        search_endpoint = config.AZURE_AI_SEARCH_ENDPOINT
+        connection_name = config.AZURE_AI_SEARCH_CONNECTION_NAME
+
+        if not all([knowledge_base_name, search_endpoint, connection_name]):
+            raise ValueError(
+                f"{cls.__name__}: missing required environment variables "
+                "(AZURE_AI_SEARCH_ENDPOINT, AZURE_AI_SEARCH_CONNECTION_NAME)"
+            )
+
+        return cls(
+            knowledge_base_name=knowledge_base_name,
+            search_endpoint=search_endpoint,
+            search_connection_name=connection_name,
+        )
+
+    @property
+    def mcp_url(self) -> str:
+        """Return the KB MCP endpoint URL."""
+        base = self.search_endpoint.rstrip("/")
+        return f"{base}/knowledgebases/{self.knowledge_base_name}/mcp?api-version=2025-11-01-preview"

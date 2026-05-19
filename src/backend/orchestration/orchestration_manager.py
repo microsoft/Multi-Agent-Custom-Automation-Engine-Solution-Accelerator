@@ -610,7 +610,7 @@ RULES:
             try:
                 data_type = type(event.data).__name__ if event.data is not None else "None"
                 executor = getattr(event, "executor_id", None) or "?"
-                self.logger.warning(
+                self.logger.debug(
                     "[EVENT] type=%s  data_type=%s  executor=%s",
                     event.type, data_type, executor,
                 )
