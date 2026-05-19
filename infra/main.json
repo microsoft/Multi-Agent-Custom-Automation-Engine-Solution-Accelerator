@@ -5,11 +5,11 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.42.1.51946",
-      "templateHash": "8490920419623942773"
+      "version": "0.43.8.12551",
+      "templateHash": "12475542446442392463"
     },
     "name": "Multi-Agent Custom Automation Engine",
-    "description": "This module contains the resources required to deploy the [Multi-Agent Custom Automation Engine solution accelerator](https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) for both Sandbox environments and WAF aligned environments.\r\n\r\n> **Note:** This module is not intended for broad, generic use, as it was designed by the Commercial Solution Areas CTO team, as a Microsoft Solution Accelerator. Feature requests and bug fix requests are welcome if they support the needs of this organization but may not be incorporated if they aim to make this module more generic than what it needs to be for its primary use case. This module will likely be updated to leverage AVM resource modules in the future. This may result in breaking changes in upcoming versions when these features are implemented.\r\n"
+    "description": "This module contains the resources required to deploy the [Multi-Agent Custom Automation Engine solution accelerator](https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) for both Sandbox environments and WAF aligned environments.\n\n> **Note:** This module is not intended for broad, generic use, as it was designed by the Commercial Solution Areas CTO team, as a Microsoft Solution Accelerator. Feature requests and bug fix requests are welcome if they support the needs of this organization but may not be incorporated if they aim to make this module more generic than what it needs to be for its primary use case. This module will likely be updated to leverage AVM resource modules in the future. This may result in breaking changes in upcoming versions when these features are implemented.\n"
   },
   "parameters": {
     "solutionName": {
@@ -4991,8 +4991,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "4286500745908716598"
+              "version": "0.43.8.12551",
+              "templateHash": "9540091515555271756"
             }
           },
           "definitions": {
@@ -24308,8 +24308,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "6570260143045999127"
+              "version": "0.43.8.12551",
+              "templateHash": "7866379492866507946"
             }
           },
           "definitions": {
@@ -28012,8 +28012,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "14513113443903512301"
+              "version": "0.43.8.12551",
+              "templateHash": "2868048678223903575"
             }
           },
           "parameters": {
@@ -42561,8 +42561,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "15053339789155096730"
+              "version": "0.43.8.12551",
+              "templateHash": "18345308984648474640"
             }
           },
           "definitions": {
@@ -43593,8 +43593,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.42.1.51946",
-                      "templateHash": "16493651611122310009"
+                      "version": "0.43.8.12551",
+                      "templateHash": "1009721598684973971"
                     },
                     "name": "Site App Settings",
                     "description": "This module deploys a Site App Setting."
@@ -54840,8 +54840,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "4859654437121510695"
+              "version": "0.43.8.12551",
+              "templateHash": "9739523049889844356"
             }
           },
           "parameters": {
