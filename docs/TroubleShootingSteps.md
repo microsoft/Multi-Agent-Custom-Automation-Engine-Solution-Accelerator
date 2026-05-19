@@ -138,6 +138,55 @@ Use these as quick reference guides to unblock your deployments.
 | **PropertyChangeNotAllowed** | Immutable VM property cannot be changed after creation | This error occurs when you attempt to modify an immutable property (such as `osProfile.adminUsername`) on an existing VM.<br><br>**Cause (Azure Limitation):**<br>Once a VM is created, the `osProfile.adminUsername` property is immutable and cannot be changed. If you modify the VM username or password in the template and redeploy, this issue will occur.<br><br>**Resolution:**<br><ul><li>Delete the existing deployment and redeploy with new credentials:<br>`azd down --force --purge`</li><li>Set new credentials before redeployment:<br>`azd env set AZURE_ENV_VM_ADMIN_USERNAME "newusername"`<br>`azd env set AZURE_ENV_VM_ADMIN_PASSWORD "NewSecurePassword123!"`</li><li>Redeploy:<br>`azd up`</li></ul><br>**Note:** Some VM properties are immutable by design. Always plan credential and configuration changes before initial deployment. |
  
 
+<<<<<<< HEAD
+=======
+ <details>
+  <summary><b>MissingSubscriptionRegistration/ AllowBringYourOwnPublicIpAddress</b></summary>
+ 
+ 
+Enable `AllowBringYourOwnPublicIpAddress` Feature
+ 
+Before deploying the resources, you may need to enable the **Bring Your Own Public IP Address** feature in Azure. This is required only once per subscription.
+ 
+### Steps
+ 
+1. **Run the following command to register the feature:**
+ 
+   ```bash
+   az feature register --namespace Microsoft.Network --name AllowBringYourOwnPublicIpAddress
+   ```
+ 
+2. **Wait for the registration to complete.**
+    You can check the status using:
+ 
+    ```bash
+    az feature show --namespace Microsoft.Network --name AllowBringYourOwnPublicIpAddress --query properties.state
+    ```
+ 
+3. **The output should show:**
+    "Registered"
+ 
+4. **Once the feature is registered, refresh the provider:**
+ 
+    ```bash
+    az provider register --namespace Microsoft.Network
+    ```
+ 
+    💡 Note: Feature registration may take several minutes to complete. This needs to be done only once per Azure subscription.
+ 
+  </details>
+ 
+<details>
+<summary><b>ResourceGroupNotFound</b></summary>
+ 
+## Option 1
+### Steps
+ 
+1. Go to [Azure Portal](https://portal.azure.com/#home).
+ 
+2. Click on the **"Resource groups"** option available on the Azure portal home page.
+![alt text](../docs/images/AzureHomePage.png)
+>>>>>>> c39397b78d171265febf757e7e42a3e2bb530f03
 
 ----------------------------------
 
