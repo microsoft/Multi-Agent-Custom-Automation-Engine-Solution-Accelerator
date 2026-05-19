@@ -54,13 +54,14 @@ on:
         required: false
         default: false
         type: boolean
-      enable_scalability:
-        description: 'Enable Scalability (WAF only)'
+      EXP:
+        description: 'Deploy EXP'
         required: false
         default: false
         type: boolean
-      EXP:
-        description: 'Deploy EXP'
+
+      enable_scalability:
+        description: 'Enable Scalability (WAF only)'
         required: false
         default: false
         type: boolean
