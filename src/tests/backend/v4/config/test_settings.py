@@ -212,7 +212,7 @@ class TestOrchestrationConfig(IsolatedAsyncioTestCase):
         self.assertEqual(config.max_rounds, 20)
         self.assertIsInstance(config._approval_events, dict)
         self.assertIsInstance(config._clarification_events, dict)
-        self.assertEqual(config.default_timeout, 300.0)
+        self.assertEqual(config.default_timeout, 1800.0)
 
     def test_get_current_orchestration(self):
         """Test getting current orchestration."""
