@@ -40,84 +40,95 @@ if len(sys.argv) < 3:
 backend_url = sys.argv[1]
 directory_path = sys.argv[2]
 user_principal_id = sys.argv[3] if len(sys.argv) > 3 and sys.argv[3].strip() != "" else "00000000-0000-0000-0000-000000000000"
-team_id_from_arg = sys.argv[4] if len(sys.argv) > 4 else "00000000-0000-0000-0000-000000000001"
+team_id_from_arg = sys.argv[4] if len(sys.argv) > 4 else None
 
 # Convert to absolute path if provided as relative
 directory_path = os.path.abspath(directory_path)
 print(f"Scanning directory: {directory_path}")
 
-files_to_process = [
-    ("hr.json", "00000000-0000-0000-0000-000000000001"),
-    ("marketing.json", "00000000-0000-0000-0000-000000000002"),
-    ("retail.json", "00000000-0000-0000-0000-000000000003"),
-    ("rfp_analysis_team.json", "00000000-0000-0000-0000-000000000004"),
-    ("contract_compliance_team.json", "00000000-0000-0000-0000-000000000005"),
-    ("ad_copy_team.json", "00000000-0000-0000-0000-000000000006"),
-]
+# Dynamically discover JSON files and their team_ids
+files_to_process = []
+for fname in os.listdir(directory_path):
+    if not fname.endswith('.json'):
+        continue
+    fpath = os.path.join(directory_path, fname)
+    if not os.path.isfile(fpath):
+        continue
+    try:
+        with open(fpath, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        tid = data.get("team_id")
+        if tid:
+            files_to_process.append((fname, tid))
+        else:
+            print(f"Skipping {fname}: no team_id field found")
+    except (json.JSONDecodeError, IOError) as e:
+        print(f"Skipping {fname}: {e}")
 
 upload_endpoint = backend_url.rstrip('/') + '/api/v4/upload_team_config'
 
 # Process each JSON file in the directory
 uploaded_count = 0
 for filename, team_id in files_to_process:
-    if team_id == team_id_from_arg:
-        file_path = os.path.join(directory_path, filename)
-        if os.path.isfile(file_path):
-            print(f"Uploading file:  {filename}")
-            team_exists = check_team_exists(backend_url, team_id, user_principal_id)            
-            if team_exists:
-                # Delete existing team to allow re-upload with updated config
-                print(f"Team (ID: {team_id}) already exists. Deleting to re-upload with latest config...")
-                delete_endpoint = backend_url.rstrip('/') + f'/api/v4/team_configs/{team_id}'
-                headers = {
-                    'x-ms-client-principal-id': user_principal_id
-                }
-                try:
-                    delete_response = requests.delete(delete_endpoint, headers=headers)
-                    if delete_response.status_code == 200:
-                        print(f"Successfully deleted existing team (ID: {team_id}).")
-                    else:
-                        print(f"Warning: Could not delete existing team (ID: {team_id}). Status: {delete_response.status_code}. Will attempt upload anyway.")
-                except Exception as e:
-                    print(f"Warning: Exception deleting team (ID: {team_id}): {str(e)}. Will attempt upload anyway.")
+    if team_id_from_arg and team_id != team_id_from_arg:
+        continue
+    file_path = os.path.join(directory_path, filename)
+    if not os.path.isfile(file_path):
+        print(f"File not found: {filename}")
+        sys.exit(1)
 
-            try:
-                with open(file_path, 'rb') as file_data:
-                    files = {
-                        'file': (filename, file_data, 'application/json')
-                    }
-                    headers = {
-                        'x-ms-client-principal-id': user_principal_id
-                    }
-                    params = {
-                        'team_id': team_id
-                    }
-                    response = requests.post(
-                        upload_endpoint,
-                        files=files,
-                        headers=headers,
-                        params=params
-                    )
-                    if response.status_code == 200:
-                        try:
-                            resp_json = response.json()
-                            if resp_json.get("status") == "success":
-                                print(f"Successfully uploaded team configuration: {resp_json.get('name')} (team_id: {resp_json.get('team_id')})")
-                                uploaded_count += 1
-                            else:
-                                print(f"Upload failed for {filename}. Response: {resp_json}")
-                                sys.exit(1)
-                        except Exception as e:
-                            print(f"Error parsing response for {filename}: {str(e)}")
-                            sys.exit(1)
+    print(f"Uploading file:  {filename}")
+    team_exists = check_team_exists(backend_url, team_id, user_principal_id)
+    if team_exists:
+        # Delete existing team to allow re-upload with updated config
+        print(f"Team (ID: {team_id}) already exists. Deleting to re-upload with latest config...")
+        delete_endpoint = backend_url.rstrip('/') + f'/api/v4/team_configs/{team_id}'
+        headers = {
+            'x-ms-client-principal-id': user_principal_id
+        }
+        try:
+            delete_response = requests.delete(delete_endpoint, headers=headers)
+            if delete_response.status_code == 200:
+                print(f"Successfully deleted existing team (ID: {team_id}).")
+            else:
+                print(f"Warning: Could not delete existing team (ID: {team_id}). Status: {delete_response.status_code}. Will attempt upload anyway.")
+        except Exception as e:
+            print(f"Warning: Exception deleting team (ID: {team_id}): {str(e)}. Will attempt upload anyway.")
+
+    try:
+        with open(file_path, 'rb') as file_data:
+            files = {
+                'file': (filename, file_data, 'application/json')
+            }
+            headers = {
+                'x-ms-client-principal-id': user_principal_id
+            }
+            params = {
+                'team_id': team_id
+            }
+            response = requests.post(
+                upload_endpoint,
+                files=files,
+                headers=headers,
+                params=params
+            )
+            if response.status_code == 200:
+                try:
+                    resp_json = response.json()
+                    if resp_json.get("status") == "success":
+                        print(f"Successfully uploaded team configuration: {resp_json.get('name')} (team_id: {resp_json.get('team_id')})")
+                        uploaded_count += 1
                     else:
-                        print(f"Failed to upload {filename}. Status code: {response.status_code}, Response: {response.text}")
+                        print(f"Upload failed for {filename}. Response: {resp_json}")
                         sys.exit(1)
-            except Exception as e:
-                print(f"Error processing {filename}: {str(e)}")
+                except Exception as e:
+                    print(f"Error parsing response for {filename}: {str(e)}")
+                    sys.exit(1)
+            else:
+                print(f"Failed to upload {filename}. Status code: {response.status_code}, Response: {response.text}")
                 sys.exit(1)
-        else:
-            print(f"File not found: {filename}")
-            sys.exit(1)
- 
+    except Exception as e:
+        print(f"Error processing {filename}: {str(e)}")
+        sys.exit(1)
+
 print(f"Completed uploading team configurations")
