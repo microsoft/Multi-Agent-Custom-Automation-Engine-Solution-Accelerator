@@ -26,11 +26,15 @@ from config.mcp_config import MCPConfig
 from models.messages import AgentMessageStreaming, WebsocketMessageType
 from orchestration.connection_config import (connection_config,
                                              orchestration_config)
+from orchestration.patches import apply_tool_history_leak_patch
 from orchestration.plan_review_helpers import (convert_plan_review_to_mplan,
                                                get_magentic_prompt_kwargs,
                                                wait_for_plan_approval)
 from orchestration.user_interaction_agent import create_user_interaction_agent
 from services.team_service import TeamService
+
+# Apply framework bug workaround (tool-call history leaks between participants)
+apply_tool_history_leak_patch()
 
 
 class OrchestrationManager:
@@ -152,6 +156,7 @@ class OrchestrationManager:
             participants=participant_list,
             manager_agent=manager_agent,
             max_round_count=orchestration_config.max_rounds,
+            max_stall_count=5,
             checkpoint_storage=storage,
             intermediate_outputs=True,
             enable_plan_review=True,
