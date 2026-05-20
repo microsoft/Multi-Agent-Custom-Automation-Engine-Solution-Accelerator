@@ -395,7 +395,7 @@ Write-Host "2. Retail Customer Satisfaction"
 Write-Host "3. HR Employee Onboarding"
 Write-Host "4. Marketing Press Release"
 Write-Host "5. Contract Compliance Review"
-Write-Host "7. All"
+Write-Host "6. All"
 Write-Host "==============================================="
 Write-Host ""
 
@@ -404,7 +404,7 @@ do {
     $useCaseSelection = Read-Host "Please enter the number of the use case you would like to install."
     
     # Handle both numeric and text input for 'all'
-    if ($useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
+    if ($useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
         $selectedUseCase = "All"
         $useCaseValid = $true
         Write-Host "Selected: All use cases will be installed."
@@ -439,15 +439,32 @@ do {
         Write-Host "Selected: Contract Compliance Review"
         Write-Host "Note: If you choose to install a single use case, installation of other use cases will require re-running this script."
     }
-    elseif ($useCaseSelection -eq "6") {
-        $useCaseValid = $false
-        Write-Host "Invalid selection. Please enter a number from 1-5 or 7." -ForegroundColor Red
-    }
     else {
         $useCaseValid = $false
-        Write-Host "Invalid selection. Please enter a number from 1-5 or 7." -ForegroundColor Red
+        Write-Host "Invalid selection. Please enter a number from 1-6." -ForegroundColor Red
     }
 } while (-not $useCaseValid)
+
+# WAF/Private Networking: If the Container App has IP restrictions or internal ingress,
+# the backendUrl is not reachable from the developer's machine. Route through the frontend
+# App Service proxy instead, which is public and forwards /api/* to the private backend over VNet.
+$solutionSuffix = az group show --name $ResourceGroup --query "tags.SolutionSuffix" -o tsv 2>$null
+if ($solutionSuffix) {
+    $containerAppName = "ca-$solutionSuffix"
+    $isExternal = az containerapp show --name $containerAppName --resource-group $ResourceGroup `
+        --query "properties.configuration.ingress.external" -o tsv 2>$null
+    $hasIpRestrictions = az containerapp show --name $containerAppName --resource-group $ResourceGroup `
+        --query "length(properties.configuration.ingress.ipSecurityRestrictions || ``[]``)" -o tsv 2>$null
+    $proxyEnabled = az webapp config appsettings list --name "app-$solutionSuffix" --resource-group $ResourceGroup `
+        --query "[?name=='PROXY_API_REQUESTS'].value" -o tsv 2>$null
+    if ($isExternal -eq "false" -or [int]$hasIpRestrictions -gt 0 -or $proxyEnabled -eq "true") {
+        $frontendHostname = "app-$solutionSuffix"
+        $frontendUrl = "https://${frontendHostname}.azurewebsites.net"
+        Write-Host "Private networking detected: Container App has restricted access."
+        Write-Host "Routing API calls through frontend App Service: $frontendUrl"
+        $script:backendUrl = $frontendUrl
+    }
+}
 
 Write-Host ""
 Write-Host "==============================================="
@@ -530,7 +547,7 @@ $isSampleDataFailed = $false
 $failedTeamConfigs = 0
 
 # Use Case 3 -----=--
-if($useCaseSelection -eq "3" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
+if($useCaseSelection -eq "3" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
     Write-Host "Uploading Team Configuration for HR Employee Onboarding..."
     $directoryPath = "data/agent_teams"
     $teamId = "00000000-0000-0000-0000-000000000001"
@@ -549,7 +566,7 @@ if($useCaseSelection -eq "3" -or $useCaseSelection -eq "all" -or $useCaseSelecti
 }
 
 # Use Case 4 -----=--
-if($useCaseSelection -eq "4" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
+if($useCaseSelection -eq "4" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
     Write-Host "Uploading Team Configuration for Marketing Press Release..."
     $directoryPath = "data/agent_teams"
     $teamId = "00000000-0000-0000-0000-000000000002"
@@ -570,7 +587,7 @@ if($useCaseSelection -eq "4" -or $useCaseSelection -eq "all" -or $useCaseSelecti
 $stIsPublicAccessDisabled = $false
 $srchIsPublicAccessDisabled = $false
 # Enable public access for resources
-if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "6" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7"){
+if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5"  -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6"){
     if ($ResourceGroup) {
         # Check if resource group has Type=WAF tag
         $rgTypeTag = (az group show --name $ResourceGroup --query "tags.Type" -o tsv 2>$null)
@@ -662,7 +679,7 @@ if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection 
 
 
 
-if($useCaseSelection -eq "1" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
+if($useCaseSelection -eq "1" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
     Write-Host "Uploading Team Configuration for RFP Evaluation..."
     $directoryPath = "data/agent_teams"
     $teamId = "00000000-0000-0000-0000-000000000004"
@@ -736,7 +753,7 @@ if($useCaseSelection -eq "1" -or $useCaseSelection -eq "all" -or $useCaseSelecti
 }
 
 
-if($useCaseSelection -eq "5" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
+if($useCaseSelection -eq "5" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
     Write-Host "Uploading Team Configuration for Contract Compliance Review..."
     $directoryPath = "data/agent_teams"
     $teamId = "00000000-0000-0000-0000-000000000005"
@@ -809,7 +826,7 @@ if($useCaseSelection -eq "5" -or $useCaseSelection -eq "all" -or $useCaseSelecti
     Write-Host "Python script to index data for Contract Compliance Review successfully executed."
 }
 
-if($useCaseSelection -eq "2" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
+if($useCaseSelection -eq "2" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6") {
     Write-Host "Uploading Team Configuration for Retail Customer Satisfaction..."
     $directoryPath = "data/agent_teams"
     $teamId = "00000000-0000-0000-0000-000000000003"
@@ -870,7 +887,7 @@ if ($isTeamConfigFailed -or $isSampleDataFailed) {
     Write-Host "`nOne or more tasks failed. Please check the error messages above."
     exit 1
 } else {
-    if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7"){
+    if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "6"){
         Write-Host "`nTeam configuration upload and sample data processing completed successfully."
     }else {
         Write-Host "`nTeam configuration upload completed successfully."
