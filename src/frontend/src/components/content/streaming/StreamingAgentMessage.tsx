@@ -135,7 +135,8 @@ const isClarificationMessage = (content: string): boolean => {
 const renderAgentMessages = (
   agentMessages: AgentMessageData[], 
   planData?: any, 
-  planApprovalRequest?: any
+  planApprovalRequest?: any,
+  finalResultRef?: React.RefObject<HTMLDivElement>
 ) => {
   const styles = useStyles();
   
@@ -150,15 +151,18 @@ const renderAgentMessages = (
       {validMessages.map((msg, index) => {
         const isHuman = msg.agent_type === AgentMessageType.HUMAN_AGENT;
         const isClarification = !isHuman && isClarificationMessage(msg.content || '');
+        const isLastMessage = index === validMessages.length - 1;
 
         return (
-          <div
-            key={index}
-            className={styles.container}
-            style={{
-              flexDirection: isHuman ? 'row-reverse' : 'row'
-            }}
-          >
+          <React.Fragment key={index}>
+            {/* Scroll anchor placed just before the final message */}
+            {isLastMessage && finalResultRef && <div ref={finalResultRef} />}
+            <div
+              className={styles.container}
+              style={{
+                flexDirection: isHuman ? 'row-reverse' : 'row'
+              }}
+            >
             {/* Avatar */}
             <div className={`${styles.avatar} ${isHuman ? styles.humanAvatar : styles.botAvatar}`}>
               {isHuman ? (
@@ -256,6 +260,7 @@ const renderAgentMessages = (
               </div>
             </div>
           </div>
+          </React.Fragment>
         );
       })}
     </>

@@ -34,6 +34,7 @@ const PlanPage: React.FC = () => {
     const navigate = useNavigate();
     const { showToast, dismissToast } = useInlineToaster();
     const messagesContainerRef = useRef<HTMLDivElement>(null);
+    const finalResultRef = useRef<HTMLDivElement>(null);
     const [input, setInput] = useState<string>("");
     const [planData, setPlanData] = useState<ProcessedPlanData | any>(null);
     const [loading, setLoading] = useState<boolean>(true);
@@ -225,6 +226,17 @@ const PlanPage: React.FC = () => {
         }, 100);
     }, []);
 
+    // Scroll to final result message instead of absolute bottom
+    const scrollToFinalResult = useCallback(() => {
+        setTimeout(() => {
+            if (finalResultRef.current) {
+                finalResultRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+            } else {
+                scrollToBottom();
+            }
+        }, 150);
+    }, [scrollToBottom]);
+
 
     //WebsocketMessageType.PLAN_APPROVAL_REQUEST
     useEffect(() => {
@@ -355,7 +367,7 @@ const PlanPage: React.FC = () => {
                 setShowProcessingPlanSpinner(false);
                 setAgentMessages(prev => [...prev, agentMessageData]);
                 setSelectedTeam(planData?.team || null);
-                scrollToBottom();
+                scrollToFinalResult();
                 // Persist the agent message
                 const is_final = true;
                 if (planData?.plan) {
@@ -374,7 +386,7 @@ const PlanPage: React.FC = () => {
         });
 
         return () => unsubscribe();
-    }, [scrollToBottom, planData, processAgentMessage, streamingMessageBuffer, setSelectedTeam]);
+    }, [scrollToFinalResult, scrollToBottom, planData, processAgentMessage, streamingMessageBuffer, setSelectedTeam]);
 
     // WebsocketMessageType.ERROR_MESSAGE
     useEffect(() => {
@@ -797,6 +809,7 @@ const PlanPage: React.FC = () => {
                                 planApprovalRequest={planApprovalRequest}
                                 waitingForPlan={waitingForPlan}
                                 messagesContainerRef={messagesContainerRef}
+                                finalResultRef={finalResultRef}
                                 streamingMessageBuffer={streamingMessageBuffer}
                                 showBufferingText={showBufferingText}
                                 agentMessages={agentMessages}
