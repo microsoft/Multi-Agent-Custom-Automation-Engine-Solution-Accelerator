@@ -8,7 +8,9 @@ Provides:
 """
 
 import asyncio
+import json
 import logging
+import re
 from typing import Optional
 
 import models.messages as messages
@@ -17,7 +19,7 @@ from agent_framework_orchestrations._magentic import (
     ORCHESTRATOR_TASK_LEDGER_FACTS_PROMPT,
     ORCHESTRATOR_TASK_LEDGER_PLAN_PROMPT,
     ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT)
-from models.plan_models import MPlan
+from models.plan_models import MPlan, MStep
 from orchestration.connection_config import (connection_config,
                                              orchestration_config)
 from orchestration.helper.plan_to_mplan_converter import PlanToMPlanConverter
@@ -69,23 +71,36 @@ CLARIFYING QUESTIONS POLICY (CRITICAL — ZERO QUESTIONS):
 - Ask EXACTLY 0 questions. Always proceed with sensible defaults.
 """
 
-    plan_append = f"""
+    plan_append = """
 
 PLAN RULES:
 - Steps are HIGH-LEVEL task assignments — one step per agent. Do NOT prescribe
   sub-tasks, parameters, or data retrieval. Agents discover their own processes.
-{clarification_policy}
-FORMAT: Each step = bullet + **AgentName** + "to" + action. Use exact agent names.
+""" + clarification_policy + """
+OUTPUT FORMAT (CRITICAL — use EXACTLY this JSON structure, nothing else):
+```json
+[
+  {{"agent": "AgentName", "action": "high-level task description"}},
+  ...
+]
+```
+Use exact agent names from the team list above. Output ONLY the JSON array — no
+markdown fences, no commentary before or after.
+
 Example (when user info is missing):
-- **UserInteractionAgent** to ask the user for the new employee's full name, start date, and role.
-- **HRHelperAgent** to execute the onboarding process for the new employee.
-- **TechnicalSupportAgent** to provision IT resources and accounts for the new employee.
-- **MagenticManager** to compile a final onboarding summary for the user.
+[
+  {{"agent": "UserInteractionAgent", "action": "ask the user for the new employee's full name, start date, and role"}},
+  {{"agent": "HRHelperAgent", "action": "execute the onboarding process for the new employee"}},
+  {{"agent": "TechnicalSupportAgent", "action": "provision IT resources and accounts for the new employee"}},
+  {{"agent": "MagenticManager", "action": "compile a final onboarding summary for the user"}}
+]
 
 Example (when user provided all details):
-- **HRHelperAgent** to execute the onboarding process for the new employee.
-- **TechnicalSupportAgent** to provision IT resources and accounts for the new employee.
-- **MagenticManager** to compile a final onboarding summary for the user.
+[
+  {{"agent": "HRHelperAgent", "action": "execute the onboarding process for the new employee"}},
+  {{"agent": "TechnicalSupportAgent", "action": "provision IT resources and accounts for the new employee"}},
+  {{"agent": "MagenticManager", "action": "compile a final onboarding summary for the user"}}
+]
 
 Note: UserInteractionAgent is the ONLY agent that communicates with the user.
 MagenticManager NEVER asks the user questions directly.
@@ -156,6 +171,79 @@ Before setting is_request_satisfied to true, you MUST verify:
 
 
 # ---------------------------------------------------------------------------
+# JSON plan parsing (for reasoning models like o4-mini)
+# ---------------------------------------------------------------------------
+
+_JSON_ARRAY_RE = re.compile(r"\[.*\]", re.DOTALL)
+
+
+def _try_parse_json_plan(
+    plan_text: str,
+    team: list[str],
+    task: str,
+    facts: str,
+) -> Optional["MPlan"]:
+    """Attempt to parse plan_text as a JSON array of steps.
+
+    Expected format:
+        [{"agent": "AgentName", "action": "description"}, ...]
+
+    Returns an MPlan if successful, or None to signal fallback to bullet parsing.
+    """
+    text = plan_text.strip()
+    if not text:
+        return None
+
+    # Strip markdown code fences if present (```json ... ```)
+    if text.startswith("```"):
+        lines = text.splitlines()
+        # Remove first line (```json) and last line (```)
+        lines = [ln for ln in lines if not ln.strip().startswith("```")]
+        text = "\n".join(lines).strip()
+
+    # Try to extract a JSON array from the text
+    if not text.startswith("["):
+        m = _JSON_ARRAY_RE.search(text)
+        if m:
+            text = m.group(0)
+        else:
+            return None
+
+    try:
+        data = json.loads(text)
+    except (json.JSONDecodeError, ValueError):
+        return None
+
+    if not isinstance(data, list) or not data:
+        return None
+
+    # Build team lookup for case-insensitive matching
+    team_lookup = {name.lower(): name for name in team}
+
+    steps: list["MStep"] = []
+    for item in data:
+        if not isinstance(item, dict):
+            return None  # unexpected structure → fallback
+        agent_raw = item.get("agent", "")
+        action = item.get("action", "")
+        if not agent_raw or not action:
+            continue
+        # Resolve canonical agent name (case-insensitive)
+        agent = team_lookup.get(agent_raw.lower(), agent_raw)
+        steps.append(MStep(agent=agent, action=action))
+
+    if not steps:
+        return None
+
+    mplan = MPlan()
+    mplan.team = list(team)
+    mplan.user_request = task
+    mplan.facts = facts
+    mplan.steps = steps
+    return mplan
+
+
+# ---------------------------------------------------------------------------
 # Plan conversion
 # ---------------------------------------------------------------------------
 
@@ -199,15 +287,10 @@ def convert_plan_review_to_mplan(
         facts_str = getattr(inner_facts, "text", "") or ""
     else:
         # Plain Message — .text contains everything (team + facts + plan).
-        # Filter to only bullet lines with bold agent names (**Agent**) so
-        # we keep plan steps and drop team descriptions / facts.
-        import re
+        # First try full text (may be JSON from reasoning models).
+        # If not JSON, filter to bullet lines with bold agent names.
         full_text = getattr(obj, "text", "") or ""
-        bold_re = re.compile(r"\*\*\w+\*\*")
-        plan_lines = [
-            ln for ln in full_text.splitlines() if bold_re.search(ln)
-        ]
-        plan_text_str = "\n".join(plan_lines)
+        plan_text_str = full_text
         facts_str = ""
 
     logger.warning(
@@ -215,12 +298,27 @@ def convert_plan_review_to_mplan(
         len(plan_text_str), plan_text_str[:2000],
     )
 
-    mplan: MPlan = PlanToMPlanConverter.convert(
-        plan_text=plan_text_str,
-        facts=facts_str,
-        team=participant_names,
-        task=task_text,
-    )
+    # Try JSON parsing first (structured output from reasoning models),
+    # fall back to bullet-style regex parsing for backward compatibility.
+    mplan = _try_parse_json_plan(plan_text_str, participant_names, task_text, facts_str)
+    if mplan is None:
+        # For bullet parsing in the plain-message path, filter to only lines
+        # containing bold agent names to strip team descriptions / facts.
+        if inner_plan is None or not hasattr(inner_plan, "text"):
+            bold_re = re.compile(r"\*\*\w+\*\*")
+            plan_lines = [
+                ln for ln in plan_text_str.splitlines() if bold_re.search(ln)
+            ]
+            bullet_text = "\n".join(plan_lines)
+        else:
+            bullet_text = plan_text_str
+
+        mplan = PlanToMPlanConverter.convert(
+            plan_text=bullet_text,
+            facts=facts_str,
+            team=participant_names,
+            task=task_text,
+        )
 
     logger.warning(
         "[PLAN-DEBUG] Parsed %d steps from plan text. Steps: %s",
