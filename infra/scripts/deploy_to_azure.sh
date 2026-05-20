@@ -3,7 +3,7 @@
 # MACAE - Deploy Local Code to Azure
 # ==============================================================================
 #
-# Builds Docker images for changed services, pushes to ACR, and updates
+# Builds Docker images locally, pushes to ACR, and updates
 # the deployed Azure resources (Container Apps / App Service).
 #
 # Usage:
@@ -160,22 +160,21 @@ check_prerequisites() {
 
     local missing=()
 
-    if command -v docker &>/dev/null; then
-        log_success "Docker found: $(docker --version)"
-    else
-        missing+=("docker")
-    fi
-
     if command -v az &>/dev/null; then
         log_success "Azure CLI found"
     else
         missing+=("azure-cli")
     fi
 
-    if command -v git &>/dev/null; then
-        log_success "Git found"
+    if command -v docker &>/dev/null; then
+        if docker info &>/dev/null; then
+            log_success "Docker found and running"
+        else
+            log_error "Docker found but daemon not running. Please start Docker Desktop."
+            exit 1
+        fi
     else
-        missing+=("git")
+        missing+=("docker")
     fi
 
     if [[ ${#missing[@]} -gt 0 ]]; then
@@ -183,36 +182,22 @@ check_prerequisites() {
         echo ""
         for tool in "${missing[@]}"; do
             case "$tool" in
-                docker)
-                    echo "  ┌─ Docker ──────────────────────────────────────────────────────"
-                    echo "  │  Download: https://docs.docker.com/get-docker/"
-                    echo "  │  Windows: Docker Desktop from https://www.docker.com/products/docker-desktop"
-                    echo "  │  Verify: docker --version"
-                    echo "  └──────────────────────────────────────────────────────────────"
-                    ;;
                 azure-cli)
                     echo "  ┌─ Azure CLI ───────────────────────────────────────────────────"
                     echo "  │  Install: https://learn.microsoft.com/cli/azure/install-azure-cli"
                     echo "  │  Verify: az --version"
                     echo "  └──────────────────────────────────────────────────────────────"
                     ;;
-                git)
-                    echo "  ┌─ Git ─────────────────────────────────────────────────────────"
-                    echo "  │  Install: https://git-scm.com/downloads"
-                    echo "  │  Verify: git --version"
+                docker)
+                    echo "  ┌─ Docker Desktop ──────────────────────────────────────────────"
+                    echo "  │  Install: https://www.docker.com/products/docker-desktop"
+                    echo "  │  Verify: docker --version"
                     echo "  └──────────────────────────────────────────────────────────────"
                     ;;
             esac
         done
         exit 1
     fi
-
-    # Check Docker daemon is running
-    if ! docker info &>/dev/null; then
-        log_error "Docker daemon is not running. Please start Docker Desktop and retry."
-        exit 1
-    fi
-    log_success "Docker daemon is running"
 
     # Check Azure login
     if ! az account show &>/dev/null; then
@@ -529,25 +514,6 @@ assign_acr_pull_roles() {
 # Step 4: Determine Services to Deploy
 # ==============================================================================
 
-detect_changed_services() {
-    # Only detect uncommitted changes (staged + unstaged vs last commit).
-    # We intentionally skip 'commits ahead of origin/main' to avoid false positives
-    # from other work on the feature branch that the user hasn't actively changed.
-    local changed
-    changed=$(git diff --name-only HEAD 2>/dev/null || true)
-
-    if [[ -z "$changed" ]]; then
-        echo ""
-        return
-    fi
-
-    local services=""
-    echo "$changed" | grep -q '^src/backend/'   && services+="backend,"
-    echo "$changed" | grep -q '^src/mcp_server/' && services+="mcp,"
-    echo "$changed" | grep -q '^src/App/'        && services+="frontend,"
-    echo "${services%,}"  # strip trailing comma
-}
-
 determine_services() {
     log_step "Step 4: Determining Services to Deploy"
 
@@ -556,7 +522,6 @@ determine_services() {
     DEPLOY_FRONTEND=false
 
     if [[ -n "$SERVICES" ]]; then
-        # Explicit service selection
         IFS=',' read -ra svc_list <<< "$SERVICES"
         for svc in "${svc_list[@]}"; do
             svc=$(echo "$svc" | tr -d ' ' | tr '[:upper:]' '[:lower:]')
@@ -568,34 +533,10 @@ determine_services() {
             esac
         done
     else
-        # Auto-detect changed services from git
-        log_info "No --services specified — detecting changed services via git..."
-        local detected
-        detected=$(detect_changed_services)
-
-        if [[ -n "$detected" ]]; then
-            log_info "Git detected changes in: $detected"
-            IFS=',' read -ra svc_list <<< "$detected"
-            for svc in "${svc_list[@]}"; do
-                case "$svc" in
-                    backend)  DEPLOY_BACKEND=true ;;
-                    mcp)      DEPLOY_MCP=true ;;
-                    frontend) DEPLOY_FRONTEND=true ;;
-                esac
-            done
-        else
-            log_warn "No service-specific changes detected (no uncommitted changes vs HEAD)."
-            echo ""
-            read -rp "No changes detected. Deploy all services anyway? [y/N]: " confirm
-            if [[ "${confirm,,}" == "y" || "${confirm,,}" == "yes" ]]; then
-                DEPLOY_BACKEND=true
-                DEPLOY_MCP=true
-                DEPLOY_FRONTEND=true
-            else
-                log_info "Nothing to deploy. Exiting."
-                exit 0
-            fi
-        fi
+        log_info "No --services specified — deploying all services"
+        DEPLOY_BACKEND=true
+        DEPLOY_MCP=true
+        DEPLOY_FRONTEND=true
     fi
 
     echo "  Services to deploy:"
@@ -616,9 +557,7 @@ generate_tag() {
     else
         local timestamp
         timestamp=$(date +%Y%m%d-%H%M%S)
-        local git_sha
-        git_sha=$(git rev-parse --short=7 HEAD 2>/dev/null || echo "unknown")
-        IMAGE_TAG="${timestamp}-${git_sha}"
+        IMAGE_TAG="$timestamp"
     fi
 
     log_success "Image tag: $IMAGE_TAG"
@@ -636,7 +575,6 @@ build_and_push() {
         return
     fi
 
-    # Login to ACR
     log_info "Logging into ACR: $ACR_NAME..."
     az acr login --name "$ACR_NAME"
     log_success "ACR login successful"

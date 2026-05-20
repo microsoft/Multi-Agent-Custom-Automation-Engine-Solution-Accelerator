@@ -65,7 +65,7 @@ fi
 # ==============================================================================
 
 BLUE='\033[0;34m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
-RED='\033[0;31m'; CYAN='\033[0;36m'; NC='\033[0m'
+RED='\033[0;31m'; CYAN='\033[0;36m'; NC='\033[0m'; DIM='\033[2m'
 
 # ==============================================================================
 # Helpers
@@ -901,34 +901,52 @@ SETEOF
 print_summary() {
     log_step "Setup Complete!"
 
-    echo -e "${GREEN}All services have been set up successfully.${NC}"
     echo ""
-    echo -e "${CYAN}To start the application, open 3 separate terminals:${NC}"
+    echo -e "${GREEN}All services have been configured successfully.${NC}"
     echo ""
+    echo -e "${CYAN}----------------------------------------------------------------------${NC}"
+    echo -e "${CYAN}  HOW TO START THE APPLICATION${NC}"
+    echo -e "${CYAN}----------------------------------------------------------------------${NC}"
+    echo ""
+    echo "  Open 3 separate terminals and start services in this order:"
+    echo ""
+
     echo -e "${YELLOW}  Terminal 1 - Backend (port 8000):${NC}"
     echo "    cd src/backend"
-    echo "    source .venv/Scripts/activate   # Git Bash / Windows"
-    echo "    source .venv/bin/activate       # Linux / macOS"
+    echo "    Activate virtual environment:"
+    echo "      PowerShell : .\.venv\Scripts\Activate.ps1"
+    echo "      Git Bash   : source .venv/Scripts/activate"
+    echo "      Linux/macOS: source .venv/bin/activate"
     echo "    python app.py"
     echo ""
+
     echo -e "${YELLOW}  Terminal 2 - MCP Server (port 9000):${NC}"
     echo "    cd src/mcp_server"
-    echo "    source .venv/Scripts/activate   # Git Bash / Windows"
-    echo "    source .venv/bin/activate       # Linux / macOS"
+    echo "    Activate virtual environment:"
+    echo "      PowerShell : .\.venv\Scripts\Activate.ps1"
+    echo "      Git Bash   : source .venv/Scripts/activate"
+    echo "      Linux/macOS: source .venv/bin/activate"
     echo "    python mcp_server.py --transport streamable-http --host 0.0.0.0 --port 9000"
     echo ""
+
     echo -e "${YELLOW}  Terminal 3 - Frontend (port 3000):${NC}"
     echo "    cd src/App"
-    echo "    source .venv/Scripts/activate   # Git Bash / Windows"
-    echo "    source .venv/bin/activate       # Linux / macOS"
+    echo "    Activate virtual environment:"
+    echo "      PowerShell : .\.venv\Scripts\Activate.ps1"
+    echo "      Git Bash   : source .venv/Scripts/activate"
+    echo "      Linux/macOS: source .venv/bin/activate"
     echo "    python frontend_server.py"
     echo ""
-    echo -e "${CYAN}------------------------------------------------------${NC}"
-    echo -e "${GREEN}  Application URL: http://localhost:3000${NC}"
+
+    echo -e "${CYAN}----------------------------------------------------------------------${NC}"
+    echo -e "${CYAN}  SERVICE URLs${NC}"
+    echo -e "${CYAN}----------------------------------------------------------------------${NC}"
+    echo -e "${GREEN}  Application UI:  http://localhost:3000${NC}"
     echo -e "${GREEN}  Backend API:     http://localhost:8000${NC}"
     echo -e "${GREEN}  API Docs:        http://localhost:8000/docs${NC}"
     echo -e "${GREEN}  MCP Server:      http://localhost:9000${NC}"
-    echo -e "${CYAN}------------------------------------------------------${NC}"
+    echo -e "${CYAN}----------------------------------------------------------------------${NC}"
+    echo ""
 }
 
 # ==============================================================================

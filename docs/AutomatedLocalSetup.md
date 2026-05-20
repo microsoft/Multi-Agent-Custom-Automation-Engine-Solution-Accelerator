@@ -152,23 +152,32 @@ The script automatically grants your user account the following roles (skips if 
 
 ## After Setup
 
-Once the script finishes, start the three services in separate terminals:
+Once the script finishes, start the three services in separate terminals (Backend first, then MCP, then Frontend):
 
-```bash
-# Terminal 1 — Backend (port 8000)
-cd src/backend
-source .venv/Scripts/activate   # Windows Git Bash
-# source .venv/bin/activate     # Linux / macOS
-uvicorn app:app --reload --host 0.0.0.0 --port 8000
+```
+Terminal 1 — Backend (port 8000):
+  cd src/backend
+  Activate virtual environment:
+    PowerShell : .\.venv\Scripts\Activate.ps1
+    Git Bash   : source .venv/Scripts/activate
+    Linux/macOS: source .venv/bin/activate
+  python app.py
 
-# Terminal 2 — MCP Server (port 9000)
-cd src/mcp_server
-source .venv/Scripts/activate
-python mcp_server.py
+Terminal 2 — MCP Server (port 9000):
+  cd src/mcp_server
+  Activate virtual environment:
+    PowerShell : .\.venv\Scripts\Activate.ps1
+    Git Bash   : source .venv/Scripts/activate
+    Linux/macOS: source .venv/bin/activate
+  python mcp_server.py --transport streamable-http --host 0.0.0.0 --port 9000
 
-# Terminal 3 — Frontend (port 3000)
-cd src/App
-npm run dev
+Terminal 3 — Frontend (port 3000):
+  cd src/App
+  Activate virtual environment:
+    PowerShell : .\.venv\Scripts\Activate.ps1
+    Git Bash   : source .venv/Scripts/activate
+    Linux/macOS: source .venv/bin/activate
+  python frontend_server.py
 ```
 
 Then open [http://localhost:3000](http://localhost:3000).

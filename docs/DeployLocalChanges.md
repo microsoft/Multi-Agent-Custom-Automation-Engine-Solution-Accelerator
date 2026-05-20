@@ -1,6 +1,6 @@
 # Deploy Local Changes to Azure
 
-Two scripts — one for each platform — that build only the Docker images you changed, push them to ACR, and update the live Azure resources.
+Two scripts — one for each platform — that build Docker images for the services you specify (or all by default), push them to ACR, and update the live Azure resources.
 
 | Platform | Script |
 |---|---|
@@ -11,11 +11,10 @@ Two scripts — one for each platform — that build only the Docker images you 
 
 ## Prerequisites
 
-| Tool | Purpose |
-|---|---|
-| [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) | Manage Azure resources |
-| [Docker Desktop](https://www.docker.com/products/docker-desktop/) | Build and push images |
-| Git | Detect which services changed |
+| Tool | Required? | Purpose |
+|---|---|---|
+| [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) | **Yes** | Manage Azure resources, ACR login |
+| [Docker Desktop](https://www.docker.com/products/docker-desktop/) | **Yes** | Build and push Docker images |
 
 You must be logged in before running:
 ```bash
@@ -26,12 +25,12 @@ az login
 
 ## What It Does (in order)
 
-1. **Checks prerequisites** — Docker, Azure CLI, Git
+1. **Checks prerequisites** — Azure CLI and Docker (both required)
 2. **Discovers Azure resources** — finds the backend/MCP Container Apps and frontend App Service in your resource group
 3. **Resolves ACR** — lists ACRs in the resource group and asks which one to use; prompts to create a new one if needed
-4. **Detects changed services** — uses `git diff` to find which of `src/backend/`, `src/mcp_server/`, `src/App/` have changed; only those services are built and deployed
-5. **Generates an image tag** — auto-generates `YYYYMMDD-HHMMSS-<git-sha>` or uses your custom tag
-6. **Builds & pushes images** — `docker build` + `docker push` to ACR for each changed service
+4. **Determines services** — deploys all services by default, or only the ones you specify with `--services`
+5. **Generates an image tag** — auto-generates `YYYYMMDD-HHMMSS` or uses your custom tag
+6. **Builds & pushes images** — builds locally with Docker, pushes to ACR
 7. **Updates Azure resources** — updates the Container App / App Service to the new image tag
 8. **Prints a summary** with rollback commands
 
@@ -41,16 +40,16 @@ az login
 
 ```bash
 # bash (Linux/macOS/WSL)
-bash infra/scripts/deploy_to_azure.sh -g <resource-group>
+bash infra/scripts/deploy_to_azure.sh --resource-group <resource-group>
 
 # PowerShell (Windows)
 .\infra\scripts\deploy_to_azure.ps1 -ResourceGroup <resource-group>
 ```
 
 The script will:
-- Auto-detect which services you changed via git
+- Deploy all services by default (use `--services` to pick specific ones)
+- Build images locally with Docker and push to ACR
 - Ask which ACR to use (or offer to create one)
-- Ask for confirmation before deploying if no changes are detected
 
 ---
 
@@ -59,14 +58,14 @@ The script will:
 ### Bash
 
 ```bash
-./infra/scripts/deploy_to_azure.sh -g <resource-group> [options]
+./infra/scripts/deploy_to_azure.sh --resource-group <resource-group> [options]
 
 Required:
   -g, --resource-group <name>   Azure Resource Group name
 
 Options:
   --acr <name>                  Skip the ACR prompt; use this ACR directly
-  --services <list>             Skip change detection; deploy only these services
+  --services <list>             Deploy only these services (default: all)
                                   Values: backend, mcp, frontend (comma-separated)
   --tag <tag>                   Use a custom image tag instead of auto-generated
   --dry-run                     Preview all steps without making any changes
@@ -86,7 +85,7 @@ Required:
 
 Options:
   -Acr <name>                   Skip the ACR prompt; use this ACR directly
-  -Services <list>              Skip change detection; deploy only these services
+  -Services <list>              Deploy only these services (default: all)
                                   Values: "backend,mcp,frontend"
   -Tag <tag>                    Use a custom image tag instead of auto-generated
   -DryRun                       Preview all steps without making any changes
@@ -100,30 +99,30 @@ Options:
 ## Examples
 
 ```bash
-# Deploy only what changed (auto-detected)
-bash infra/scripts/deploy_to_azure.sh -g rg-macae-dev
+# Deploy all services (default)
+bash infra/scripts/deploy_to_azure.sh --resource-group rg-macae-dev
 
 # Deploy only the frontend
-bash infra/scripts/deploy_to_azure.sh -g rg-macae-dev --services frontend
+bash infra/scripts/deploy_to_azure.sh --resource-group rg-macae-dev --services frontend
 
 # Deploy backend and MCP with a specific ACR
-bash infra/scripts/deploy_to_azure.sh -g rg-macae-dev --services backend,mcp --acr myregistry
+bash infra/scripts/deploy_to_azure.sh --resource-group rg-macae-dev --services backend,mcp --acr myregistry
 
 # Preview without making changes
-bash infra/scripts/deploy_to_azure.sh -g rg-macae-dev --dry-run
+bash infra/scripts/deploy_to_azure.sh --resource-group rg-macae-dev --dry-run
 
 # Build images only (no Azure update)
-bash infra/scripts/deploy_to_azure.sh -g rg-macae-dev --build-only
+bash infra/scripts/deploy_to_azure.sh --resource-group rg-macae-dev --build-only
 
 # Update Azure only (images already pushed)
-bash infra/scripts/deploy_to_azure.sh -g rg-macae-dev --deploy-only --tag 20260506-120000-abc1234
+bash infra/scripts/deploy_to_azure.sh --resource-group rg-macae-dev --deploy-only --tag 20260506-120000-abc1234
 
 # Skip AcrPull role assignment (roles already exist)
-bash infra/scripts/deploy_to_azure.sh -g rg-macae-dev --skip-role-assignment
+bash infra/scripts/deploy_to_azure.sh --resource-group rg-macae-dev --skip-role-assignment
 ```
 
 ```powershell
-# Deploy only what changed
+# Deploy all services (default)
 .\infra\scripts\deploy_to_azure.ps1 -ResourceGroup rg-macae-dev
 
 # Deploy only backend
@@ -134,25 +133,6 @@ bash infra/scripts/deploy_to_azure.sh -g rg-macae-dev --skip-role-assignment
 
 # Skip AcrPull role assignment (roles already exist)
 .\infra\scripts\deploy_to_azure.ps1 -ResourceGroup rg-macae-dev -SkipRoleAssignment
-```
-
----
-
-## Change Detection Logic
-
-When `--services` is not specified, the script runs `git diff` to determine what to build:
-
-| Files changed in | Service built |
-|---|---|
-| `src/backend/` | backend |
-| `src/mcp_server/` | mcp |
-| `src/App/` | frontend |
-
-It checks only **uncommitted changes** (staged and unstaged vs the last commit, i.e. `git diff HEAD`). Commits that are already committed but not yet pushed are intentionally excluded to avoid false positives from unrelated branch work.
-
-If no changes are detected in any service directory, the script asks:
-```
-No changes detected. Deploy all services anyway? [y/N]:
 ```
 
 ---

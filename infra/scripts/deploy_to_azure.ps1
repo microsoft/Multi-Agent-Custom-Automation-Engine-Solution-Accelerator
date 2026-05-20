@@ -80,22 +80,22 @@ function Check-Prerequisites {
 
     $missing = @()
 
-    if (Get-Command docker -ErrorAction SilentlyContinue) {
-        Write-LogSuccess "Docker found: $(docker --version)"
-    } else {
-        $missing += "docker"
-    }
-
     if (Get-Command az -ErrorAction SilentlyContinue) {
         Write-LogSuccess "Azure CLI found"
     } else {
         $missing += "azure-cli"
     }
 
-    if (Get-Command git -ErrorAction SilentlyContinue) {
-        Write-LogSuccess "Git found"
+    if (Get-Command docker -ErrorAction SilentlyContinue) {
+        $dockerInfo = docker info 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            Write-LogSuccess "Docker found and running"
+        } else {
+            Write-LogError "Docker found but daemon not running. Please start Docker Desktop."
+            exit 1
+        }
     } else {
-        $missing += "git"
+        $missing += "docker"
     }
 
     if ($missing.Count -gt 0) {
@@ -103,13 +103,6 @@ function Check-Prerequisites {
         Write-Host ""
         foreach ($tool in $missing) {
             switch ($tool) {
-                "docker" {
-                    Write-Host "  ┌─ Docker ──────────────────────────────────────────────────────"
-                    Write-Host "  │  Download: https://www.docker.com/products/docker-desktop"
-                    Write-Host "  │  Or: winget install Docker.DockerDesktop"
-                    Write-Host "  │  Verify: docker --version"
-                    Write-Host "  └──────────────────────────────────────────────────────────────"
-                }
                 "azure-cli" {
                     Write-Host "  ┌─ Azure CLI ───────────────────────────────────────────────────"
                     Write-Host "  │  Download: https://aka.ms/installazurecliwindows"
@@ -117,25 +110,17 @@ function Check-Prerequisites {
                     Write-Host "  │  Verify: az --version"
                     Write-Host "  └──────────────────────────────────────────────────────────────"
                 }
-                "git" {
-                    Write-Host "  ┌─ Git ─────────────────────────────────────────────────────────"
-                    Write-Host "  │  Download: https://git-scm.com/download/win"
-                    Write-Host "  │  Or: winget install Git.Git"
-                    Write-Host "  │  Verify: git --version"
+                "docker" {
+                    Write-Host "  ┌─ Docker Desktop ──────────────────────────────────────────────"
+                    Write-Host "  │  Download: https://www.docker.com/products/docker-desktop"
+                    Write-Host "  │  Or: winget install Docker.DockerDesktop"
+                    Write-Host "  │  Verify: docker --version"
                     Write-Host "  └──────────────────────────────────────────────────────────────"
                 }
             }
         }
         exit 1
     }
-
-    # Check Docker daemon
-    $dockerInfo = docker info 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        Write-LogError "Docker daemon is not running. Please start Docker Desktop and retry."
-        exit 1
-    }
-    Write-LogSuccess "Docker daemon is running"
 
     # Check Azure login
     $azAccount = az account show 2>&1
@@ -408,20 +393,6 @@ function Assign-AcrPullRoles {
 # Step 4: Determine Services
 # ==============================================================================
 
-function Get-ChangedServices {
-    # Only detect uncommitted changes (staged + unstaged vs last commit).
-    # We intentionally skip 'commits ahead of origin/main' to avoid false positives
-    # from other work on the feature branch that the user hasn't actively changed.
-    $changed = git diff --name-only HEAD 2>$null
-    if (-not $changed) { return @() }
-
-    $services = @()
-    if ($changed -match '^src/backend/')    { $services += "backend" }
-    if ($changed -match '^src/mcp_server/') { $services += "mcp" }
-    if ($changed -match '^src/App/')        { $services += "frontend" }
-    return $services
-}
-
 function Determine-Services {
     Write-LogStep "Step 4: Determining Services to Deploy"
 
@@ -440,32 +411,10 @@ function Determine-Services {
             }
         }
     } else {
-        # Auto-detect changed services from git
-        Write-LogInfo "No -Services specified — detecting changed services via git..."
-        $detected = Get-ChangedServices
-
-        if ($detected.Count -gt 0) {
-            Write-LogInfo "Git detected changes in: $($detected -join ', ')"
-            foreach ($svc in $detected) {
-                switch ($svc) {
-                    "backend"  { $script:DeployBackend = $true }
-                    "mcp"      { $script:DeployMcp = $true }
-                    "frontend" { $script:DeployFrontend = $true }
-                }
-            }
-        } else {
-            Write-LogWarn "No service-specific changes detected (no uncommitted changes vs HEAD)."
-            Write-Host ""
-            $confirm = Read-Host "No changes detected. Deploy all services anyway? [y/N]"
-            if ($confirm -match '^[Yy](es)?$') {
-                $script:DeployBackend = $true
-                $script:DeployMcp = $true
-                $script:DeployFrontend = $true
-            } else {
-                Write-LogInfo "Nothing to deploy. Exiting."
-                exit 0
-            }
-        }
+        Write-LogInfo "No -Services specified — deploying all services"
+        $script:DeployBackend = $true
+        $script:DeployMcp = $true
+        $script:DeployFrontend = $true
     }
 
     Write-Host "  Services to deploy:"
@@ -485,9 +434,7 @@ function Generate-Tag {
         $script:ImageTag = $Tag
     } else {
         $timestamp = (Get-Date).ToString("yyyyMMdd-HHmmss")
-        $gitSha = git rev-parse --short=7 HEAD 2>$null
-        if (-not $gitSha) { $gitSha = "unknown" }
-        $script:ImageTag = "$timestamp-$gitSha"
+        $script:ImageTag = $timestamp
     }
 
     Write-LogSuccess "Image tag: $script:ImageTag"
@@ -505,7 +452,6 @@ function Build-AndPush {
         return
     }
 
-    # Login to ACR
     Write-LogInfo "Logging into ACR: $script:AcrName..."
     az acr login --name $script:AcrName
     Write-LogSuccess "ACR login successful"

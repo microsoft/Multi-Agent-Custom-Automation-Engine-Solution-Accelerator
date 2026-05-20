@@ -816,31 +816,52 @@ function Setup-VSCode {
 function Print-Summary {
     Write-LogStep "Setup Complete! 🎉"
 
-    Write-Host "All services have been set up successfully." -ForegroundColor Green
     Write-Host ""
-    Write-Host "To start the application, open 3 separate PowerShell windows:" -ForegroundColor Cyan
+    Write-Host "All services have been configured successfully." -ForegroundColor Green
     Write-Host ""
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+    Write-Host "  HOW TO START THE APPLICATION" -ForegroundColor Cyan
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "  Open 3 separate terminals and start services in this order:" -ForegroundColor White
+    Write-Host ""
+
     Write-Host "  Terminal 1 - Backend (port 8000):" -ForegroundColor Yellow
     Write-Host "    cd src\backend"
-    Write-Host "    .\.venv\Scripts\Activate.ps1"
+    Write-Host "    Activate virtual environment:"
+    Write-Host "      PowerShell : .\.venv\Scripts\Activate.ps1"
+    Write-Host "      Git Bash   : source .venv/Scripts/activate"
+    Write-Host "      Linux/macOS: source .venv/bin/activate"
     Write-Host "    python app.py"
     Write-Host ""
+
     Write-Host "  Terminal 2 - MCP Server (port 9000):" -ForegroundColor Yellow
     Write-Host "    cd src\mcp_server"
-    Write-Host "    .\.venv\Scripts\Activate.ps1"
+    Write-Host "    Activate virtual environment:"
+    Write-Host "      PowerShell : .\.venv\Scripts\Activate.ps1"
+    Write-Host "      Git Bash   : source .venv/Scripts/activate"
+    Write-Host "      Linux/macOS: source .venv/bin/activate"
     Write-Host "    python mcp_server.py --transport streamable-http --host 0.0.0.0 --port 9000"
     Write-Host ""
+
     Write-Host "  Terminal 3 - Frontend (port 3000):" -ForegroundColor Yellow
     Write-Host "    cd src\App"
-    Write-Host "    .\.venv\Scripts\Activate.ps1"
+    Write-Host "    Activate virtual environment:"
+    Write-Host "      PowerShell : .\.venv\Scripts\Activate.ps1"
+    Write-Host "      Git Bash   : source .venv/Scripts/activate"
+    Write-Host "      Linux/macOS: source .venv/bin/activate"
     Write-Host "    python frontend_server.py"
     Write-Host ""
-    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-    Write-Host "  Application URL: http://localhost:3000" -ForegroundColor Green
+
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+    Write-Host "  SERVICE URLs" -ForegroundColor Cyan
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+    Write-Host "  Application UI:  http://localhost:3000" -ForegroundColor Green
     Write-Host "  Backend API:     http://localhost:8000" -ForegroundColor Green
     Write-Host "  API Docs:        http://localhost:8000/docs" -ForegroundColor Green
     Write-Host "  MCP Server:      http://localhost:9000" -ForegroundColor Green
-    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+    Write-Host ""
 }
 
 # ==============================================================================
