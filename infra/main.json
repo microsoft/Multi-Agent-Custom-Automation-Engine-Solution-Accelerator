@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "12475542446442392463"
+      "templateHash": "6587818059632090787"
     },
     "name": "Multi-Agent Custom Automation Engine",
     "description": "This module contains the resources required to deploy the [Multi-Agent Custom Automation Engine solution accelerator](https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) for both Sandbox environments and WAF aligned environments.\n\n> **Note:** This module is not intended for broad, generic use, as it was designed by the Commercial Solution Areas CTO team, as a Microsoft Solution Accelerator. Feature requests and bug fix requests are welcome if they support the needs of this organization but may not be incorporated if they aim to make this module more generic than what it needs to be for its primary use case. This module will likely be updated to leverage AVM resource modules in the future. This may result in breaking changes in upcoming versions when these features are implemented.\n"
@@ -415,6 +415,7 @@
     "bastionResourceName": "[format('bas-{0}', variables('solutionSuffix'))]",
     "maintenanceConfigurationResourceName": "[format('mc-{0}', variables('solutionSuffix'))]",
     "dataCollectionRulesResourceName": "[format('dcr-{0}', variables('solutionSuffix'))]",
+    "dcrLogAnalyticsDestinationName": "[format('la-{0}-destination', variables('logAnalyticsWorkspaceResourceName'))]",
     "proximityPlacementGroupResourceName": "[format('ppg-{0}', variables('solutionSuffix'))]",
     "virtualMachineResourceName": "[format('vm-{0}', variables('solutionSuffix'))]",
     "virtualMachineAvailabilityZone": 1,
@@ -10065,19 +10066,10 @@
                   {
                     "name": "SecurityAuditEvents",
                     "streams": [
-                      "Microsoft-WindowsEvent"
-                    ],
-                    "eventLogName": "Security",
-                    "eventTypes": [
-                      {
-                        "eventType": "Audit Success"
-                      },
-                      {
-                        "eventType": "Audit Failure"
-                      }
+                      "Microsoft-Event"
                     ],
                     "xPathQueries": [
-                      "Security!*[System[(EventID=4624 or EventID=4625)]]"
+                      "Security!*[System[(band(Keywords,13510798882111488)) and (EventID != 4624)]]"
                     ]
                   }
                 ]
@@ -10086,7 +10078,7 @@
                 "logAnalytics": [
                   {
                     "workspaceResourceId": "[if(variables('useExistingLogAnalytics'), parameters('existingLogAnalyticsWorkspaceId'), reference('logAnalyticsWorkspace').outputs.resourceId.value)]",
-                    "name": "la--1264800308"
+                    "name": "[variables('dcrLogAnalyticsDestinationName')]"
                   }
                 ]
               },
@@ -10096,10 +10088,20 @@
                     "Microsoft-Perf"
                   ],
                   "destinations": [
-                    "la--1264800308"
+                    "[variables('dcrLogAnalyticsDestinationName')]"
                   ],
                   "transformKql": "source",
                   "outputStream": "Microsoft-Perf"
+                },
+                {
+                  "streams": [
+                    "Microsoft-Event"
+                  ],
+                  "destinations": [
+                    "[variables('dcrLogAnalyticsDestinationName')]"
+                  ],
+                  "transformKql": "source",
+                  "outputStream": "Microsoft-Event"
                 }
               ]
             }
@@ -38445,6 +38447,9 @@
           "activeRevisionsMode": {
             "value": "Single"
           },
+          "ingressAllowInsecure": {
+            "value": false
+          },
           "corsPolicy": {
             "value": {
               "allowedOrigins": [
@@ -40186,6 +40191,9 @@
           },
           "activeRevisionsMode": {
             "value": "Single"
+          },
+          "ingressAllowInsecure": {
+            "value": false
           },
           "corsPolicy": {
             "value": {
@@ -44508,6 +44516,9 @@
             "value": "Hot"
           },
           "supportsHttpsTrafficOnly": {
+            "value": true
+          },
+          "requireInfrastructureEncryption": {
             "value": true
           },
           "roleAssignments": {
