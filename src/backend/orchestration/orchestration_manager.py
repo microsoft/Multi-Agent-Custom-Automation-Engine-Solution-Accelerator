@@ -26,11 +26,11 @@ from config.mcp_config import MCPConfig
 from models.messages import AgentMessageStreaming, WebsocketMessageType
 from orchestration.connection_config import (connection_config,
                                              orchestration_config)
-from orchestration.patches import apply_tool_history_leak_patch
 from orchestration.plan_review_helpers import (convert_plan_review_to_mplan,
                                                get_magentic_prompt_kwargs,
                                                wait_for_plan_approval)
 from orchestration.user_interaction_agent import create_user_interaction_agent
+from patches.tool_history_leak import apply_tool_history_leak_patch
 from services.team_service import TeamService
 
 # Apply framework bug workaround (tool-call history leaks between participants)
@@ -452,93 +452,6 @@ class OrchestrationManager:
             except (RuntimeError, Exception) as e:
                 self.logger.debug("UserInteractionAgent MCP cleanup (benign): %s", e)
             workflow._user_interaction_ctx = None
-
-    # ---------------------------
-    # Pre-orchestration clarification
-    # ---------------------------
-    async def _pre_orchestration_clarification(
-        self,
-        task_text: str,
-        user_id: str,
-        capability_summary: str,
-    ) -> str | None:
-        """Run a one-shot Agent call to gather missing info before the workflow.
-
-        Returns enriched task text if questions were asked and answered,
-        or None if no clarification was needed.
-        """
-        credential = config.get_azure_credential(client_id=config.AZURE_CLIENT_ID)
-        chat_client = FoundryChatClient(
-            project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
-            model="gpt-4.1",
-            credential=credential,
-        )
-
-        instructions = f"""SESSION_USER_ID: {user_id}
-
-You are a pre-check assistant. Your ONLY job is to determine whether the user's
-task has enough information for the team to execute, and if not, ask the user.
-
-TEAM CAPABILITIES:
-{capability_summary}
-
-RULES:
-1. Review the user's task below against the team capabilities.
-2. If critical information is MISSING (e.g. employee name, role, start date,
-   department, specific preferences that tools require), call ask_user ONCE
-   with a numbered list of questions. Mark each as (required) or (optional, default: X).
-3. If the task already has enough information to proceed, respond with EXACTLY:
-   READY
-4. Do NOT execute any task. Do NOT make a plan. Just ask or say READY.
-5. Only ask about information the USER would know — not system-internal details.
-6. Keep questions concise — 3-6 questions max.
-"""
-
-        mcp_cfg = MCPConfig.from_env(domain="user_responses")
-        async with AsyncExitStack() as stack:
-            mcp_tool = MCPStreamableHTTPTool(name=mcp_cfg.name, url=mcp_cfg.url)
-            await stack.enter_async_context(mcp_tool)
-
-            clarifier = Agent(
-                chat_client,
-                name="PreCheckClarifier",
-                tools=[mcp_tool],
-                instructions=instructions,
-            )
-
-            self.logger.info("Running pre-orchestration clarification check")
-
-            # Run the agent with the task as input
-            response = await clarifier.run(task_text)
-
-            # Extract the final text from the response
-            result_text = ""
-            if isinstance(response, list):
-                for msg in response:
-                    if isinstance(msg, Message) and msg.text:
-                        result_text = msg.text
-            elif hasattr(response, "text"):
-                result_text = response.text
-            else:
-                result_text = str(response)
-
-            self.logger.info(
-                "Pre-check result (first 200 chars): %s", result_text[:200]
-            )
-
-            # If the agent said READY, no enrichment needed
-            if "READY" in result_text.upper().strip():
-                self.logger.info("Pre-check: task has sufficient info, proceeding")
-                return None
-
-            # Otherwise the agent asked questions and got answers.
-            # The conversation with the user happened via ask_user.
-            # We need to get the answers and append them to the task.
-            # The response after asking typically contains the user's answers
-            # integrated into a summary. Append it to the original task.
-            enriched = f"{task_text}\n\nADDITIONAL CONTEXT (from user clarification):\n{result_text}"
-            self.logger.info("Pre-check: enriched task with user answers")
-            return enriched
 
     # ---------------------------
     # Plan review handling

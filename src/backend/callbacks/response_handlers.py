@@ -69,7 +69,7 @@ def agent_response_callback(
     role = getattr(message, "role", "assistant")
 
     # Message has a .text property that concatenates all TextContent items
-    text = message.text if message is not None else ""
+    text = getattr(message, "text", "") if message is not None else ""
 
     text = clean_citations(text or "")
 

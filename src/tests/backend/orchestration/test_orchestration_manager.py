@@ -160,6 +160,9 @@ af_orch_mock.MagenticPlanReviewRequest = MockMagenticPlanReviewRequest
 sys.modules['agent_framework'] = af_mock
 sys.modules['agent_framework.orchestrations'] = af_orch_mock
 sys.modules['agent_framework_foundry'] = Mock(FoundryChatClient=Mock())
+sys.modules['agent_framework_orchestrations'] = Mock()
+sys.modules['agent_framework_orchestrations._magentic'] = Mock()
+sys.modules['agent_framework_azure_ai_search'] = Mock()
 
 # ---------------------------------------------------------------------------
 # Application module mocks
@@ -374,6 +377,7 @@ class TestInitOrchestration:
         outer = Mock()
         outer.agent_name = "Wrapped"
         outer._agent = inner
+        outer.user_responses = False
 
         # Act
         await OrchestrationManager.init_orchestration(
@@ -458,8 +462,12 @@ class TestGetCurrentOrNewOrchestration:
     async def test_given_team_switched_when_called_then_closes_old_agents(self):
         # Arrange
         mock_agent = MockAgent(agent_name="OldAgent")
+        mock_executor = Mock()
+        mock_executor.agent = mock_agent
         mock_old_workflow = Mock()
         mock_old_workflow._participants = {"a1": mock_agent}
+        mock_old_workflow.get_executors_list.return_value = [mock_executor]
+        mock_old_workflow._user_interaction_ctx = None
         orchestration_config.get_current_orchestration.return_value = mock_old_workflow
 
         with patch.object(OrchestrationManager, 'init_orchestration', new_callable=AsyncMock) as mock_init:
@@ -483,6 +491,7 @@ class TestGetCurrentOrNewOrchestration:
         mock_old = Mock()
         mock_old._terminated = True
         mock_old._participants = {}
+        mock_old.get_executors_list.return_value = []
         orchestration_config.get_current_orchestration.return_value = mock_old
 
         with patch.object(OrchestrationManager, 'init_orchestration', new_callable=AsyncMock) as mock_init:
@@ -504,8 +513,14 @@ class TestGetCurrentOrNewOrchestration:
         # Arrange
         agent_a = MockAgent(agent_name="AgentA")
         agent_b = MockAgent(agent_name="AgentB")
+        exec_a = Mock()
+        exec_a.agent = agent_a
+        exec_b = Mock()
+        exec_b.agent = agent_b
         mock_old = Mock()
         mock_old._participants = {"a": agent_a, "b": agent_b}
+        mock_old.get_executors_list.return_value = [exec_a, exec_b]
+        mock_old._user_interaction_ctx = None
         orchestration_config.get_current_orchestration.return_value = mock_old
 
         with patch.object(OrchestrationManager, 'init_orchestration', new_callable=AsyncMock) as mock_init:

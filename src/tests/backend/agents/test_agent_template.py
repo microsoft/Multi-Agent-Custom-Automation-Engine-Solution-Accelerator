@@ -28,6 +28,9 @@ sys.modules["agent_framework"] = _mock_agent_fw
 _mock_af_foundry = Mock()
 sys.modules["agent_framework_foundry"] = _mock_af_foundry
 
+_mock_af_search = Mock()
+sys.modules["agent_framework_azure_ai_search"] = _mock_af_search
+
 # azure hierarchy
 sys.modules.setdefault("azure", Mock())
 sys.modules.setdefault("azure.identity", Mock())
@@ -42,6 +45,26 @@ sys.modules.setdefault("azure.ai.projects", Mock())
 sys.modules.setdefault("azure.ai.projects.aio", Mock())
 _mock_projects_models = Mock()
 sys.modules["azure.ai.projects.models"] = _mock_projects_models
+
+# azure.ai.agents — provide real PromptAgentDefinition so attrs work
+class _PromptAgentDefinition:
+    def __init__(self, model=None, instructions=None, tools=None, **kwargs):
+        self.model = model
+        self.instructions = instructions
+        self.tools = tools
+
+_mock_agents_models = Mock()
+_mock_agents_models.PromptAgentDefinition = _PromptAgentDefinition
+_mock_agents_models.MCPTool = Mock()
+_mock_agents_models.AzureAISearchTool = Mock()
+_mock_agents_models.AzureAISearchToolResource = Mock()
+_mock_agents_models.AISearchIndexResource = Mock()
+_mock_agents_models.CodeInterpreterTool = Mock()
+_mock_agents_models.FileSearchTool = Mock()
+_mock_ai_agents = Mock()
+_mock_ai_agents.models = _mock_agents_models
+sys.modules["azure.ai.agents"] = _mock_ai_agents
+sys.modules["azure.ai.agents.models"] = _mock_agents_models
 
 # common.*
 sys.modules.setdefault("common", Mock())
@@ -97,6 +120,7 @@ def _make_search_config(**kw):
     m = Mock()
     m.connection_name = kw.get("connection_name", "search-conn")
     m.index_name = kw.get("index_name", "test-index")
+    m.search_query_type = kw.get("search_query_type", "simple")
     return m
 
 
@@ -119,15 +143,32 @@ def _make_agent_record(name="TestAgent", model="test-model", instructions="Porta
 # ---------------------------------------------------------------------------
 
 
-def _make_project_client_mock(agent_records=None):
-    """Return a mock AIProjectClient that yields agent_records from list_agents()."""
-    records = agent_records or []
+def _make_project_client_mock(agent_records=None, raise_not_found=False):
+    """Return a mock AIProjectClient that supports get/create_version API."""
+    # Use the same ResourceNotFoundError that agent_template.py catches
+    import backend.agents.agent_template as _atmod
+    _RNFE = _atmod.ResourceNotFoundError
     client = AsyncMock()
     client.__aenter__ = AsyncMock(return_value=client)
     client.__aexit__ = AsyncMock(return_value=False)
-    client.agents.list_agents = Mock(return_value=_async_iter(records))
+
+    if raise_not_found or (agent_records is not None and len(agent_records) == 0):
+        client.agents.get = AsyncMock(side_effect=_RNFE("Not found"))
+    else:
+        record = (agent_records[0] if agent_records else _make_agent_record())
+        agent_details = Mock()
+        agent_details.versions.latest.definition = _PromptAgentDefinition(
+            model=record.model,
+            instructions=record.instructions,
+            tools=None,
+        )
+        client.agents.get = AsyncMock(return_value=agent_details)
+
+    client.agents.create_version = AsyncMock()
     client.agents.create_agent = AsyncMock(return_value=_make_agent_record())
+    client.beta.toolboxes.create_version = AsyncMock()
     client.beta.toolboxes.create_toolbox_version = AsyncMock()
+    client.get_openai_client = Mock(return_value=Mock())
     return client
 
 
@@ -139,9 +180,10 @@ def _make_credential_mock():
 
 
 def _make_agent_cm_mock(inner=None):
+    """Create a mock that supports async context manager protocol via contextlib."""
     cm = AsyncMock()
-    cm.__aenter__ = AsyncMock(return_value=inner or Mock())
-    cm.__aexit__ = AsyncMock(return_value=False)
+    cm.__aenter__.return_value = inner or Mock()
+    cm.__aexit__.return_value = False
     return cm
 
 
@@ -252,7 +294,6 @@ class TestBuildTools:
         call_kw = mock_cls.call_args[1]
         assert call_kw["server_label"] == mcp_config.name
         assert call_kw["server_url"] == mcp_config.url
-        assert call_kw["require_approval"] == "never"
         assert "project_connection_id" not in call_kw  # no connection_id on this fixture
 
     def test_mcp_tool_includes_connection_id_when_set(self, basic_kwargs, mcp_config_with_connection):
@@ -265,12 +306,17 @@ class TestBuildTools:
     def test_search_tool_added(self, basic_kwargs, search_config):
         agent = AgentTemplate(**basic_kwargs, search_config=search_config)
         mock_tool = Mock()
+        mock_tool.as_dict = Mock(return_value={"type": "azure_ai_search"})
         with patch("backend.agents.agent_template.AzureAISearchTool", return_value=mock_tool) as mock_cls:
-            result = agent._build_tools()
-        assert mock_tool in result
-        call_kw = mock_cls.call_args[1]
-        assert call_kw["index_connection_id"] == search_config.connection_name
-        assert call_kw["index_name"] == search_config.index_name
+            with patch("backend.agents.agent_template.AzureAISearchToolResource") as mock_res:
+                with patch("backend.agents.agent_template.AISearchIndexResource") as mock_idx:
+                    result = agent._build_tools()
+        assert {"type": "azure_ai_search"} in result
+        mock_idx.assert_called_once_with(
+            project_connection_id=search_config.connection_name,
+            index_name=search_config.index_name,
+            query_type=search_config.search_query_type,
+        )
 
     def test_search_tool_skipped_when_no_index(self, basic_kwargs):
         sc = _make_search_config(index_name=None)
@@ -337,16 +383,17 @@ class TestAgentTemplateOpen:
             patch("backend.agents.agent_template.AIProjectClient", return_value=project_client),
             patch("backend.agents.agent_template.FoundryChatClient", return_value=chat_client_mock),
             patch("backend.agents.agent_template.Agent", return_value=agent_cm),
+            patch("backend.agents.agent_template.PromptAgentDefinition", _PromptAgentDefinition),
             patch("backend.agents.agent_template.agent_registry"),
         ):
             agent = AgentTemplate(**basic_kwargs)
             result = await agent.open()
 
-        project_client.agents.create_agent.assert_called_once()
-        call_kw = project_client.agents.create_agent.call_args[1]
-        assert call_kw["name"] == "TestAgent"
-        assert call_kw["instructions"] == "Bootstrap instructions"
-        assert call_kw["model"] == "test-model"
+        project_client.agents.create_version.assert_called_once()
+        call_kw = project_client.agents.create_version.call_args[1]
+        assert call_kw["agent_name"] == "TestAgent"
+        assert call_kw["definition"].instructions == "Bootstrap instructions"
+        assert call_kw["definition"].model == "test-model"
         assert result is agent
         assert agent._agent is not None
 
@@ -370,7 +417,7 @@ class TestAgentTemplateOpen:
             agent = AgentTemplate(**basic_kwargs)
             await agent.open()
 
-        project_client.agents.create_agent.assert_not_called()
+        project_client.agents.create_version.assert_not_called()
         # Agent() must receive portal instructions, not bootstrap instructions
         call_kw = mock_agent_cls.call_args[1]
         assert call_kw["instructions"] == "Portal instructions"
@@ -405,7 +452,12 @@ class TestAgentTemplateOpen:
         agent_cm = _make_agent_cm_mock()
         mock_toolbox = Mock()
         chat_client_mock = Mock()
-        chat_client_mock.get_toolbox = AsyncMock(return_value=mock_toolbox)
+        # get_toolbox raises so toolbox_exists=False → create_version called
+        chat_client_mock.get_toolbox = AsyncMock(side_effect=Exception("not found"))
+
+        mcp_tool_cm = AsyncMock()
+        mcp_tool_cm.__aenter__ = AsyncMock(return_value=mcp_tool_cm)
+        mcp_tool_cm.__aexit__ = AsyncMock(return_value=False)
 
         with (
             patch("backend.agents.agent_template.DefaultAzureCredential", return_value=cred),
@@ -413,17 +465,15 @@ class TestAgentTemplateOpen:
             patch("backend.agents.agent_template.FoundryChatClient", return_value=chat_client_mock),
             patch("backend.agents.agent_template.Agent", return_value=agent_cm) as mock_agent_cls,
             patch("backend.agents.agent_template.MCPTool", return_value=Mock()),
+            patch("backend.agents.agent_template.MCPStreamableHTTPTool", return_value=mcp_tool_cm),
             patch("backend.agents.agent_template.agent_registry"),
         ):
             agent = AgentTemplate(**basic_kwargs, mcp_config=mcp_config)
             await agent.open()
 
-        project_client.beta.toolboxes.create_toolbox_version.assert_called_once()
-        call_kw = project_client.beta.toolboxes.create_toolbox_version.call_args[1]
-        assert call_kw["toolbox_name"] == "macae-TestAgent-tools"
-        chat_client_mock.get_toolbox.assert_called_once_with("macae-TestAgent-tools")
-        agent_call_kw = mock_agent_cls.call_args[1]
-        assert agent_call_kw["tools"] == [mock_toolbox]
+        project_client.beta.toolboxes.create_version.assert_called_once()
+        call_kw = project_client.beta.toolboxes.create_version.call_args[1]
+        assert call_kw["name"] == "macae-TestAgent-tools"
 
     @pytest.mark.asyncio
     async def test_open_registers_agent(self, basic_kwargs):
@@ -460,15 +510,15 @@ class TestAgentTemplateOpen:
             r1 = await agent.open()
             r2 = await agent.open()
 
-        # list_agents() called only once (second open() returns early)
-        project_client.agents.list_agents.assert_called_once()
+        # agents.get() called only once (second open() returns early)
+        project_client.agents.get.assert_called_once()
         assert r1 is r2
 
     @pytest.mark.asyncio
     async def test_open_cleans_up_on_error(self, basic_kwargs):
         cred = _make_credential_mock()
         project_client = _make_project_client_mock()
-        project_client.agents.list_agents = Mock(side_effect=RuntimeError("boom"))
+        project_client.agents.get = AsyncMock(side_effect=RuntimeError("boom"))
 
         with (
             patch("backend.agents.agent_template.DefaultAzureCredential", return_value=cred),

@@ -40,7 +40,7 @@ from backend.common.models.messages import (
     TeamConfiguration,
     UserCurrentTeam,
 )
-from backend.models.plan_models import MPlan
+from models.plan_models import MPlan
 
 
 class TestCosmosDBClientInitialization:

@@ -27,3 +27,20 @@ if _backend_path not in sys.path:
 # namespace for all later test files.
 import models  # noqa: E402, F401
 import models.plan_models  # noqa: E402, F401
+import models.messages  # noqa: E402, F401
+
+# Pre-import packages commonly poisoned by module-level sys.modules mocking
+import orchestration  # noqa: E402, F401
+import orchestration.connection_config  # noqa: E402, F401
+import services  # noqa: E402, F401
+import agent_framework  # noqa: E402, F401
+import common  # noqa: E402, F401
+
+# Pre-import backend.app so test_app.py doesn't fail when other test files
+# pollute sys.modules with Mocks during collection.
+# NOTE: This caches backend.app and all its transitive imports (including
+# agent_framework, orchestration_manager, etc.) with REAL references.
+# Tests that rely on sys.modules mocking of those modules must use
+# patch() within test methods rather than module-level sys.modules
+# assignments to override symbols in already-imported modules.
+import backend.app  # noqa: E402, F401

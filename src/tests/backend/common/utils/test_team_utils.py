@@ -59,6 +59,9 @@ sys.modules['agent_framework_azure_ai._client'] = Mock()
 sys.modules['agent_framework'] = Mock()
 sys.modules['agent_framework.azure'] = Mock(AzureOpenAIChatClient=Mock)
 sys.modules['agent_framework._agents'] = Mock()
+sys.modules['agent_framework_azure_ai_search'] = Mock(
+    AzureAISearchContextProvider=Mock, AzureAISearchSettings=Mock
+)
 sys.modules['agent_framework_foundry'] = Mock(FoundryChatClient=Mock)
 sys.modules['mcp'] = Mock()
 sys.modules['mcp.types'] = Mock()
@@ -82,124 +85,92 @@ class TestFindFirstAvailableTeam:
     @pytest.mark.asyncio
     async def test_find_first_available_team_rfp_available(self):
         """Test finding first available team when RFP team is available."""
-        # Setup
         mock_team_service = Mock()
-        mock_team_config = Mock()
-        mock_team_service.get_team_configuration = AsyncMock(return_value=mock_team_config)
-        user_id = "test_user"
-        
-        # Execute
-        result = await find_first_available_team(mock_team_service, user_id)
-        
-        # Verify
-        assert result == "00000000-0000-0000-0000-000000000004"  # RFP team ID
-        mock_team_service.get_team_configuration.assert_called_once_with(
-            "00000000-0000-0000-0000-000000000004", user_id
+        rfp_team = Mock(team_id="00000000-0000-0000-0000-000000000004")
+        hr_team = Mock(team_id="00000000-0000-0000-0000-000000000001")
+        mock_team_service.get_all_team_configurations = AsyncMock(
+            return_value=[rfp_team, hr_team]
         )
+        
+        result = await find_first_available_team(mock_team_service, "test_user")
+        
+        assert result == "00000000-0000-0000-0000-000000000004"
     
     @pytest.mark.asyncio
     async def test_find_first_available_team_retail_available(self):
-        """Test finding first available team when RFP fails but Retail is available."""
-        # Setup
+        """Test finding first available team when RFP not present but Retail is."""
         mock_team_service = Mock()
-        mock_team_config = Mock()
+        retail_team = Mock(team_id="00000000-0000-0000-0000-000000000003")
+        hr_team = Mock(team_id="00000000-0000-0000-0000-000000000001")
+        mock_team_service.get_all_team_configurations = AsyncMock(
+            return_value=[retail_team, hr_team]
+        )
         
-        # RFP fails, Retail succeeds
-        def side_effect(team_id, user_id):
-            if team_id == "00000000-0000-0000-0000-000000000004":  # RFP
-                raise Exception("RFP team not available")
-            elif team_id == "00000000-0000-0000-0000-000000000003":  # Retail
-                return mock_team_config
-            return None
+        result = await find_first_available_team(mock_team_service, "test_user")
         
-        mock_team_service.get_team_configuration = AsyncMock(side_effect=side_effect)
-        user_id = "test_user"
-        
-        # Execute
-        result = await find_first_available_team(mock_team_service, user_id)
-        
-        # Verify
-        assert result == "00000000-0000-0000-0000-000000000003"  # Retail team ID
-        assert mock_team_service.get_team_configuration.call_count == 2
+        assert result == "00000000-0000-0000-0000-000000000003"
     
     @pytest.mark.asyncio
     async def test_find_first_available_team_marketing_available(self):
-        """Test finding first available team when only Marketing is available."""
-        # Setup
+        """Test finding first available team when only Marketing and HR are present."""
         mock_team_service = Mock()
-        mock_team_config = Mock()
+        marketing_team = Mock(team_id="00000000-0000-0000-0000-000000000002")
+        hr_team = Mock(team_id="00000000-0000-0000-0000-000000000001")
+        mock_team_service.get_all_team_configurations = AsyncMock(
+            return_value=[marketing_team, hr_team]
+        )
         
-        # RFP and Retail fail, Marketing succeeds
-        def side_effect(team_id, user_id):
-            if team_id in ["00000000-0000-0000-0000-000000000004", "00000000-0000-0000-0000-000000000003"]:
-                raise Exception("Team not available")
-            elif team_id == "00000000-0000-0000-0000-000000000002":  # Marketing
-                return mock_team_config
-            return None
+        result = await find_first_available_team(mock_team_service, "test_user")
         
-        mock_team_service.get_team_configuration = AsyncMock(side_effect=side_effect)
-        user_id = "test_user"
-        
-        # Execute
-        result = await find_first_available_team(mock_team_service, user_id)
-        
-        # Verify
-        assert result == "00000000-0000-0000-0000-000000000002"  # Marketing team ID
-        assert mock_team_service.get_team_configuration.call_count == 3
+        assert result == "00000000-0000-0000-0000-000000000002"
     
     @pytest.mark.asyncio
     async def test_find_first_available_team_hr_available(self):
-        """Test finding first available team when only HR is available."""
-        # Setup
+        """Test finding first available team when only HR is present."""
         mock_team_service = Mock()
-        mock_team_config = Mock()
+        hr_team = Mock(team_id="00000000-0000-0000-0000-000000000001")
+        mock_team_service.get_all_team_configurations = AsyncMock(
+            return_value=[hr_team]
+        )
         
-        # All teams fail except HR
-        def side_effect(team_id, user_id):
-            if team_id == "00000000-0000-0000-0000-000000000001":  # HR
-                return mock_team_config
-            else:
-                raise Exception("Team not available")
+        result = await find_first_available_team(mock_team_service, "test_user")
         
-        mock_team_service.get_team_configuration = AsyncMock(side_effect=side_effect)
-        user_id = "test_user"
-        
-        # Execute
-        result = await find_first_available_team(mock_team_service, user_id)
-        
-        # Verify
-        assert result == "00000000-0000-0000-0000-000000000001"  # HR team ID
-        assert mock_team_service.get_team_configuration.call_count == 4
+        assert result == "00000000-0000-0000-0000-000000000001"
     
     @pytest.mark.asyncio
     async def test_find_first_available_team_none_available(self):
-        """Test finding first available team when no teams are available."""
-        # Setup
+        """Test finding first available team when fetch raises exception."""
         mock_team_service = Mock()
-        mock_team_service.get_team_configuration = AsyncMock(side_effect=Exception("No teams available"))
-        user_id = "test_user"
+        mock_team_service.get_all_team_configurations = AsyncMock(
+            side_effect=Exception("No teams available")
+        )
         
-        # Execute
-        result = await find_first_available_team(mock_team_service, user_id)
+        result = await find_first_available_team(mock_team_service, "test_user")
         
-        # Verify
         assert result is None
-        assert mock_team_service.get_team_configuration.call_count == 4
     
     @pytest.mark.asyncio
-    async def test_find_first_available_team_returns_none_config(self):
-        """Test finding first available team when service returns None."""
-        # Setup
+    async def test_find_first_available_team_returns_empty_list(self):
+        """Test finding first available team when service returns empty list."""
         mock_team_service = Mock()
-        mock_team_service.get_team_configuration = AsyncMock(return_value=None)
-        user_id = "test_user"
+        mock_team_service.get_all_team_configurations = AsyncMock(return_value=[])
         
-        # Execute
-        result = await find_first_available_team(mock_team_service, user_id)
+        result = await find_first_available_team(mock_team_service, "test_user")
         
-        # Verify
         assert result is None
-        assert mock_team_service.get_team_configuration.call_count == 4
+
+    @pytest.mark.asyncio
+    async def test_find_first_available_team_custom_id_fallback(self):
+        """Test fallback to non-standard team ID when no standard IDs present."""
+        mock_team_service = Mock()
+        custom_team = Mock(team_id="custom-team-id-abc")
+        mock_team_service.get_all_team_configurations = AsyncMock(
+            return_value=[custom_team]
+        )
+        
+        result = await find_first_available_team(mock_team_service, "test_user")
+        
+        assert result == "custom-team-id-abc"
 
 
 class TestCreateRAIAgent:
@@ -212,9 +183,9 @@ class TestCreateRAIAgent:
     
     @pytest.mark.asyncio
     @patch('backend.common.utils.team_utils.config')
-    @patch('backend.common.utils.team_utils.FoundryAgentTemplate')
+    @patch('backend.common.utils.team_utils.AgentTemplate')
     @patch('backend.common.utils.team_utils.agent_registry')
-    async def test_create_rai_agent_success(self, mock_registry, mock_foundry_class, mock_config):
+    async def test_create_rai_agent_success(self, mock_registry, mock_agent_class, mock_config):
         """Test successful creation of RAI agent."""
         # Setup
         mock_config.AZURE_OPENAI_RAI_DEPLOYMENT_NAME = "test_rai_deployment"
@@ -223,14 +194,14 @@ class TestCreateRAIAgent:
         mock_agent = Mock()
         mock_agent.open = AsyncMock()
         mock_agent.agent_name = "RAIAgent"
-        mock_foundry_class.return_value = mock_agent
+        mock_agent_class.return_value = mock_agent
         
         # Execute
         result = await create_RAI_agent(self.mock_team, self.mock_memory_store)
         
         # Verify agent creation
-        mock_foundry_class.assert_called_once()
-        call_args = mock_foundry_class.call_args
+        mock_agent_class.assert_called_once()
+        call_args = mock_agent_class.call_args
         
         assert call_args[1]['agent_name'] == "RAIAgent"
         assert call_args[1]['agent_description'] == "A comprehensive research assistant for integration testing"
@@ -258,10 +229,10 @@ class TestCreateRAIAgent:
     
     @pytest.mark.asyncio
     @patch('backend.common.utils.team_utils.config')
-    @patch('backend.common.utils.team_utils.FoundryAgentTemplate')
+    @patch('backend.common.utils.team_utils.AgentTemplate')
     @patch('backend.common.utils.team_utils.agent_registry')
     @patch('backend.common.utils.team_utils.logging')
-    async def test_create_rai_agent_registry_error(self, mock_logging, mock_registry, mock_foundry_class, mock_config):
+    async def test_create_rai_agent_registry_error(self, mock_logging, mock_registry, mock_agent_class, mock_config):
         """Test RAI agent creation when registry registration fails."""
         # Setup
         mock_config.AZURE_OPENAI_RAI_DEPLOYMENT_NAME = "test_rai_deployment"
@@ -270,7 +241,7 @@ class TestCreateRAIAgent:
         mock_agent = Mock()
         mock_agent.open = AsyncMock()
         mock_agent.agent_name = "RAIAgent"
-        mock_foundry_class.return_value = mock_agent
+        mock_agent_class.return_value = mock_agent
         
         mock_registry.register_agent.side_effect = Exception("Registry error")
         

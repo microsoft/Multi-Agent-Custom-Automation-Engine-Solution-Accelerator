@@ -150,11 +150,8 @@ class TestCreateAgentFromConfig:
         mock_vector_store_config_cls.reset_mock()
 
     @pytest.mark.asyncio
-    async def test_user_responses_true_creates_mcp_config(self):
-        """user_responses=True creates MCPConfig with domain='user_responses'."""
-        mcp_instance = Mock()
-        mock_mcp_config_cls.from_env.return_value = mcp_instance
-
+    async def test_user_responses_true_does_not_create_mcp_config(self):
+        """user_responses=True alone does NOT create MCPConfig (use_mcp needed)."""
         agent_instance = Mock()
         agent_instance.open = AsyncMock()
         mock_agent_template_cls.return_value = agent_instance
@@ -166,15 +163,16 @@ class TestCreateAgentFromConfig:
             self.memory_store,
         )
 
-        mock_mcp_config_cls.from_env.assert_called_once_with(domain="user_responses")
+        mock_mcp_config_cls.from_env.assert_not_called()
+        call_kwargs = mock_agent_template_cls.call_args[1]
+        assert call_kwargs["mcp_config"] is None
 
     @pytest.mark.asyncio
-    async def test_user_responses_injects_session_user_id(self):
-        """user_responses=True appends SESSION_USER_ID to instructions."""
+    async def test_user_responses_appends_interaction_prompt(self):
+        """user_responses=True appends universal interaction prompt to instructions."""
         agent_instance = Mock()
         agent_instance.open = AsyncMock()
         mock_agent_template_cls.return_value = agent_instance
-        mock_mcp_config_cls.from_env.return_value = Mock()
 
         await self.factory.create_agent_from_config(
             "user123",
@@ -184,7 +182,8 @@ class TestCreateAgentFromConfig:
         )
 
         call_kwargs = mock_agent_template_cls.call_args[1]
-        assert "SESSION_USER_ID: user123" in call_kwargs["agent_instructions"]
+        assert "CRITICAL RULES" in call_kwargs["agent_instructions"]
+        assert "Be helpful." in call_kwargs["agent_instructions"]
 
     @pytest.mark.asyncio
     async def test_user_responses_false_no_mcp_config(self):

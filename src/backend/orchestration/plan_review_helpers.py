@@ -46,21 +46,21 @@ def get_magentic_prompt_kwargs(*, has_user_responses: bool = False) -> dict:
     if has_user_responses:
         clarification_policy = """
 USER CLARIFICATION POLICY (UserInteractionAgent is a participant):
-- BEFORE creating a plan, review the task for missing user-specific information
-  that domain agents will need (e.g. employee name, start date, role,
-  preferences, configuration choices).
-- If critical details are missing, include a step for **UserInteractionAgent** at
-  the START of the plan to gather that information.  Describe exactly what
-  questions to ask (numbered list with required/optional markers).
-- Only include a UserInteractionAgent step when information is genuinely missing —
-  if the user already provided enough detail, proceed directly to domain agents.
-- After UserInteractionAgent returns the answers, subsequent agents receive them
-  as part of the conversation history — no manual forwarding needed.
-- If a domain agent reports during execution that it needs additional user info,
-  select UserInteractionAgent as next_speaker with a message describing what is
-  needed, then re-invoke the requesting agent afterward.
+- Do NOT put UserInteractionAgent at the start of the plan to gather info.
+  Domain agents have MCP tools that tell them EXACTLY what information they need
+  (via workflow blueprints). They know better than you what to ask.
+- PLAN STRUCTURE: Always start with domain agents. They will call their blueprint
+  tools, discover what info is missing, and then REQUEST user clarification.
+- When a domain agent's response says it needs user information (e.g. "I need the
+  following from the user: ..."), set is_progress_being_made=true and select
+  **UserInteractionAgent** as next_speaker. Pass the agent's EXACT question list
+  to UserInteractionAgent — do NOT rephrase, add to, or remove from it.
+- After UserInteractionAgent returns the answers, re-invoke the domain agent that
+  requested the info so it can continue its workflow.
 - Do NOT fabricate, assume, or hallucinate missing user-specific details.
+- Do NOT invent your own list of questions. Only relay what domain agents request.
 - NEVER call ask_user yourself — only UserInteractionAgent has that tool.
+- MagenticManager NEVER asks questions directly — it only routes between agents.
 """
     else:
         clarification_policy = """
@@ -87,15 +87,11 @@ OUTPUT FORMAT (CRITICAL — use EXACTLY this JSON structure, nothing else):
 Use exact agent names from the team list above. Output ONLY the JSON array — no
 markdown fences, no commentary before or after.
 
-Example (when user info is missing):
-[
-  {{"agent": "UserInteractionAgent", "action": "ask the user for the new employee's full name, start date, and role"}},
-  {{"agent": "HRHelperAgent", "action": "execute the onboarding process for the new employee"}},
-  {{"agent": "TechnicalSupportAgent", "action": "provision IT resources and accounts for the new employee"}},
-  {{"agent": "MagenticManager", "action": "compile a final onboarding summary for the user"}}
-]
+IMPORTANT: Do NOT include UserInteractionAgent in the initial plan. Domain agents
+will request user clarification during execution if they need it — the manager
+will then route to UserInteractionAgent at that point dynamically.
 
-Example (when user provided all details):
+Example plan:
 [
   {{"agent": "HRHelperAgent", "action": "execute the onboarding process for the new employee"}},
   {{"agent": "TechnicalSupportAgent", "action": "provision IT resources and accounts for the new employee"}},
@@ -103,7 +99,8 @@ Example (when user provided all details):
 ]
 
 Note: UserInteractionAgent is the ONLY agent that communicates with the user.
-MagenticManager NEVER asks the user questions directly.
+MagenticManager NEVER asks the user questions directly. MagenticManager NEVER
+lists missing information or asks clarifying questions — it ONLY routes tasks.
 
 INVOCATION RULES:
 - Every plan step MUST be executed by its named agent. MagenticManager MUST NOT
@@ -131,8 +128,14 @@ FINAL ANSWER RULES:
         facts_append = """
 
 - Under "FACTS TO LOOK UP", list ONLY facts agents can discover via their tools.
-  Do NOT list user-specific information (preferences, choices, dates).
+  Do NOT list user-specific information (preferences, choices, dates, names,
+  departments, email formats, equipment preferences, etc.).
 - Under "EDUCATED GUESSES", do NOT guess user-specific details.
+- Do NOT enumerate "information needed from the user" — domain agents will
+  determine exactly what they need by consulting their workflow blueprints.
+  You do NOT know what questions to ask; only domain agents do.
+- Keep facts minimal. The agents are self-directed — they will discover their
+  own process via tools.
 """
         kwargs["task_ledger_facts_prompt"] = (
             ORCHESTRATOR_TASK_LEDGER_FACTS_PROMPT + facts_append
@@ -148,7 +151,25 @@ EXECUTION RULES:
   "I need the following information from the user" or "I need the user to provide X"),
   this IS progress — set is_progress_being_made to true and select
   **UserInteractionAgent** as next_speaker with a message describing what is needed.
-  After answers arrive, re-invoke the domain agent.
+
+RE-INVOCATION RULE (CRITICAL — PREVENTS QUESTION LOOPS):
+- After UserInteractionAgent returns the user's answers, you MUST re-invoke the
+  original domain agent. Your message to that agent MUST begin with:
+  "USER ANSWERS RECEIVED — PROCEED TO EXECUTION. Do NOT ask questions again.
+  Here are the user's answers:"
+  followed by the COMPLETE verbatim text of the user's answers.
+- This tells the domain agent to skip its question phase and go straight to
+  calling its tools with the provided answers.
+- NEVER re-invoke a domain agent with a vague message like "continue" or
+  "proceed with provisioning". Always include the full user answers.
+
+QUESTION RELAY RULE (CRITICAL — DO NOT SUMMARIZE OR FILTER):
+- When routing to UserInteractionAgent, you MUST include the COMPLETE list of
+  questions from the domain agent — copy them ALL verbatim.
+- Do NOT pick a subset. Do NOT summarize. Do NOT rephrase.
+- Do NOT split questions across multiple turns — send them ALL in one message.
+- The domain agent's question list is carefully derived from its workflow blueprint.
+  Every item matters. Dropping questions will cause the workflow to fail.
 
 STALL DETECTION OVERRIDE:
 - An agent requesting user clarification is NOT stalling. It is a valid step in

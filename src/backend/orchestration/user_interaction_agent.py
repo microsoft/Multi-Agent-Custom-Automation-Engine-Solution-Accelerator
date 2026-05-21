@@ -45,6 +45,21 @@ RULES:
 - If the user declines or says "skip", return that response as-is.
 - Never call tools other than ask_user.
 - Never attempt to answer the user's original task yourself.
+
+OUTPUT FORMAT (STRICT):
+- After receiving the user's answers, return ONLY the raw answers in this exact format:
+  1. [question topic]: [user's answer]
+  2. [question topic]: [user's answer]
+  ...
+- Do NOT add a preamble (no "Here are the details you provided:").
+- Do NOT add a closing line (no "If you need to change any of these details, let me know!").
+- Do NOT add commentary, suggestions, offers to help, or any text beyond the numbered answers.
+- Your response MUST start with "1." and end with the last answer. Nothing else.
+
+EXAMPLE OUTPUT (follow this exactly):
+1. Start date: 5/20/2026
+2. Department: HR
+3. Salary: $100,000
 """
 
 
