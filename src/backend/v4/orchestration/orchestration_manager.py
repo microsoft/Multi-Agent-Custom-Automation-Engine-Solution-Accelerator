@@ -7,14 +7,17 @@ import uuid
 from typing import List, Optional
 
 # agent_framework imports
-from agent_framework_azure_ai import AzureAIClient
+from agent_framework.foundry import RawFoundryAgentChatClient as AzureAIClient
 from agent_framework import (
     Agent,
+    AgentResponse,
     AgentResponseUpdate,
     ChatOptions,
     Message,
     InMemoryCheckpointStorage,
 )
+from azure.ai.projects.aio import AIProjectClient
+from azure.ai.projects.models import PromptAgentDefinition
 from agent_framework_orchestrations import MagenticBuilder
 from agent_framework_orchestrations._base_group_chat_orchestrator import (
     GroupChatRequestSentEvent,
@@ -137,12 +140,37 @@ class OrchestrationManager:
         agent_name = sanitized_name if sanitized_name else "OrchestratorAgent"
 
         try:
-            # Create the chat client (AzureAIClient)
+            # Ensure the server-side Foundry agent exists by upserting a new version.
+            # RawFoundryAgentChatClient only BINDS to an existing agent; it does not auto-create one.
+            project_client = AIProjectClient(
+                endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
+                credential=credential,
+            )
+            manager_instructions = (
+                "You are the MagenticManager: an orchestrator that plans, delegates, and "
+                "synthesizes work across participant agents to solve the user's task."
+            )
+            azure_agent = await project_client.agents.create_version(
+                agent_name=agent_name,
+                definition=PromptAgentDefinition(
+                    model=team_config.deployment_name,
+                    instructions=manager_instructions,
+                ),
+            )
+            cls.logger.info(
+                "Upserted Foundry manager agent (name=%s, id=%s, version=%s).",
+                azure_agent.name,
+                azure_agent.id,
+                azure_agent.version,
+            )
+
+            # Create the chat client (Foundry agent-bound chat client)
             chat_client = AzureAIClient(
                 project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
-                model_deployment_name=team_config.deployment_name,
-                agent_name=agent_name,
+                agent_name=azure_agent.name,
+                agent_version=azure_agent.version,
                 credential=credential,
+                allow_preview=True,
             )
 
             # New API: Create an Agent to wrap the chat client for the manager
@@ -489,6 +517,15 @@ class OrchestrationManager:
                         # Final workflow output (list[Message] or Message)
                         elif isinstance(output_data, Message):
                             final_output = output_data.text or ""
+                        elif isinstance(output_data, AgentResponse):
+                            # Non-streaming completion shape used by the
+                            # Magentic orchestrator when yielding final answer.
+                            try:
+                                final_output = "\n\n".join(
+                                    m.text for m in (output_data.messages or []) if getattr(m, "text", None)
+                                )
+                            except Exception:
+                                final_output = str(output_data)
                         elif isinstance(output_data, list):
                             # Handle list of Message objects
                             texts = []
@@ -513,6 +550,22 @@ class OrchestrationManager:
 
             # Extract final result
             final_text = final_output if final_output else ""
+
+            # Fallback: in streaming mode the Magentic orchestrator yields its
+            # final synthesized answer as AgentResponseUpdate chunks from its
+            # own executor (not a participant). Participant buffers are flushed
+            # by GroupChatResponseReceivedEvent; whatever remains belongs to
+            # the orchestrator's final answer.
+            if not final_text and agent_stream_buffers:
+                leftover = [v for v in agent_stream_buffers.values() if v]
+                if leftover:
+                    final_text = "\n\n".join(leftover)
+                    self.logger.info(
+                        "Reconstructed final answer from %d unflushed orchestrator buffer(s) (%d chars)",
+                        len(leftover),
+                        len(final_text),
+                    )
+                    agent_stream_buffers.clear()
 
             # Log agent call summary
             self.logger.info("Agent call counts: %s", agent_call_counts)

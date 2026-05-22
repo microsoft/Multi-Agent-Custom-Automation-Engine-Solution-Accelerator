@@ -36,13 +36,21 @@ class PlanToMPlanConverter:
     BULLET_RE = re.compile(r"^(?P<indent>\s*)[-•*]\s+(?P<body>.+)$")
     BOLD_AGENT_RE = re.compile(r"\*\*([A-Za-z0-9_]+)\*\*")
     STRIP_BULLET_MARKER_RE = re.compile(r"^[-•*]\s+")
+    # Matches an action that starts with a (optionally bolded) MagenticManager token.
+    # Used to drop synthetic "MagenticManager to finalize..." steps emitted by the
+    # planner LLM (the name is not a real team participant, so the agent falls
+    # back to `fallback_agent`).
+    MAGENTIC_MANAGER_PREFIX_RE = re.compile(
+        r"^\s*(?:\*\*\s*)?magenticmanager(?:\s*\*\*)?\b",
+        re.IGNORECASE,
+    )
 
     def __init__(
         self,
         team: Iterable[str],
         task: str = "",
         facts: str = "",
-        detection_window: int = 25,
+        detection_window: int = 40,
         fallback_agent: str = "MagenticAgent",
         enable_sub_bullets: bool = False,
         trim_actions: bool = True,
@@ -96,6 +104,20 @@ class PlanToMPlanConverter:
             agent, action = self._extract_agent_and_action(body)
 
             if not action:
+                continue
+
+            # Drop synthetic "MagenticManager ..." steps. The planner LLM
+            # sometimes emits a trailing bullet like
+            # `- **MagenticManager** to finalize ...` because the prompt's
+            # few-shot example contains one. MagenticManager is not a real
+            # team participant, so the agent resolves to `fallback_agent`
+            # and the bold token survives in the action text, which then
+            # renders as a bold "MagenticManager" word in the UI. Strip
+            # those bullets here.
+            if (
+                agent == self.fallback_agent
+                and self.MAGENTIC_MANAGER_PREFIX_RE.match(action)
+            ):
                 continue
 
             mplan.steps.append(MStep(agent=agent, action=action))

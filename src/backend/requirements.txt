@@ -1,5 +1,5 @@
 fastapi==0.136.1
-uvicorn==0.46.0
+uvicorn[standard]==0.46.0
 azure-cosmos==4.15.0
 azure-monitor-opentelemetry==1.8.7
 azure-monitor-events-extension==0.1.0
@@ -20,9 +20,10 @@ azure-search-documents==11.6.0
 azure-ai-evaluation==1.16.6
 azure-core==1.40.0
 
-agent-framework-azure-ai==1.0.0rc4
-agent-framework-core==1.0.0rc4
-agent-framework-orchestrations==1.0.0b260311
+agent-framework-core==1.4.0
+agent-framework-foundry==1.4.0
+agent-framework-orchestrations==1.0.0b260514
+agent-framework-orchestrations==1.0.0b260514
 
 mcp==1.27.0
 werkzeug==3.1.8

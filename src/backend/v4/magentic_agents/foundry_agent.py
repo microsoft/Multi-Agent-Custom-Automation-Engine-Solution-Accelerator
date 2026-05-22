@@ -4,13 +4,15 @@ import logging
 from typing import List, Optional
 
 from agent_framework import (Agent, Message, ChatOptions)
-from agent_framework_azure_ai import \
-    AzureAIClient  # Provided by agent_framework
+from agent_framework.foundry import (
+    RawFoundryAgentChatClient as AzureAIClient,
+)  # Provided by agent_framework.foundry (replaces agent_framework_azure_ai.AzureAIClient)
 from azure.ai.projects.models import (
     PromptAgentDefinition,
     AzureAISearchTool,
     AzureAISearchToolResource,
     AISearchIndexResource,
+    MCPTool,
 )
 from common.config.app_config import config
 from common.database.database_base import DatabaseBase
@@ -201,14 +203,14 @@ class FoundryAgentTemplate(AzureAgentBase):
                 azure_agent.version,
             )
 
-            # Wrap in AzureAIClient using agent_name and agent_version (NOT agent_id)
-            # AzureAIClient constructor: agent_name, agent_version, project_endpoint, credential
+            # Wrap in Foundry agent-bound chat client using agent_name and agent_version (NOT agent_id)
+            # Constructor: agent_name, agent_version, project_endpoint, credential
             chat_client = AzureAIClient(
                 project_endpoint=self.project_endpoint,
                 agent_name=azure_agent.name,
                 agent_version=azure_agent.version,  # Use the specific version we just created
-                model_deployment_name=self.model_deployment_name,
                 credential=self.creds,
+                allow_preview=True,
             )
             return chat_client
 
@@ -248,6 +250,8 @@ class FoundryAgentTemplate(AzureAgentBase):
                     )
 
                 # In Azure Search raw tool path, tools/tool_choice are handled server-side.
+                # NOTE: temperature is owned by the server-side agent definition; passing it
+                # here would trigger Foundry 400 'Not allowed when agent is specified'.
                 self._agent = Agent(
                     id=self.get_agent_id(),
                     client=chat_client,
@@ -257,24 +261,81 @@ class FoundryAgentTemplate(AzureAgentBase):
                     default_options=ChatOptions(
                         store=False,
                         tool_choice="required",
-                        temperature=temp,
                     ),
                 )
             else:
-                # MCP path (also used by RAI agent which has no tools)
+                # MCP path (also used by RAI agent which has no tools).
+                # When binding to a server-side Foundry agent, tools MUST be declared
+                # on the agent definition (server-side). Passing tools=[...] client-side
+                # triggers 400 'Not allowed when agent is specified' on /responses.
                 self.logger.info("Initializing agent in MCP mode.")
-                tools = await self._collect_tools()
+
+                # Build server-side tool list from MCP config (if any)
+                server_tools = []
+                if self.mcp_cfg:
+                    try:
+                        server_tools.append(
+                            MCPTool(
+                                server_label=self.mcp_cfg.name,
+                                server_url=self.mcp_cfg.url,
+                                # Skip per-call user approval; otherwise Foundry halts
+                                # the workflow on a request_info event awaiting consent.
+                                require_approval="never",
+                            )
+                        )
+                        self.logger.info(
+                            "Declared server-side MCPTool (label=%s, url=%s).",
+                            self.mcp_cfg.name,
+                            self.mcp_cfg.url,
+                        )
+                    except Exception as ex:
+                        self.logger.warning(
+                            "Failed to build server-side MCPTool, falling back to no tools: %s",
+                            ex,
+                        )
+
+                try:
+                    azure_agent = await self.project_client.agents.create_version(
+                        agent_name=self.agent_name,
+                        definition=PromptAgentDefinition(
+                            model=self.model_deployment_name,
+                            instructions=self.agent_instructions,
+                            tools=server_tools if server_tools else None,
+                        ),
+                    )
+                    self._azure_server_agent_id = azure_agent.id
+                    self.logger.info(
+                        "Created Foundry agent via create_version (name=%s, id=%s, version=%s, tools=%d).",
+                        azure_agent.name,
+                        azure_agent.id,
+                        azure_agent.version,
+                        len(server_tools),
+                    )
+                    chat_client = AzureAIClient(
+                        project_endpoint=self.project_endpoint,
+                        agent_name=azure_agent.name,
+                        agent_version=azure_agent.version,
+                        credential=self.creds,
+                        allow_preview=True,
+                    )
+                except Exception as ex:
+                    self.logger.error(
+                        "Failed to create Foundry agent '%s' via create_version: %s",
+                        self.agent_name,
+                        ex,
+                    )
+                    raise
+
+                # NOTE: temperature and tools are owned by the server-side agent definition;
+                # passing them here would trigger Foundry 400 'Not allowed when agent is specified'.
                 self._agent = Agent(
                     id=self.get_agent_id(),
-                    client=self.get_chat_client(),
+                    client=chat_client,
                     instructions=self.agent_instructions,
                     name=self.agent_name,
                     description=self.agent_description,
-                    tools=tools if tools else None,
                     default_options=ChatOptions(
                         store=False,
-                        tool_choice="auto" if tools else "none",
-                        temperature=temp,
                     ),
                 )
             self.logger.info("Initialized Agent '%s'", self.agent_name)
@@ -302,7 +363,7 @@ class FoundryAgentTemplate(AzureAgentBase):
         if not self._agent:
             raise RuntimeError("Agent not initialized; call open() first.")
 
-        messages = [Message(role="user", text=prompt)]
+        messages = [Message(role="user", contents=[prompt])]
 
         async for update in self._agent.run(messages, stream=True):
             yield update

@@ -9,9 +9,9 @@ from agent_framework import (
     MCPStreamableHTTPTool,
 )
 
-# from agent_framework.azure import AzureAIClient
-from agent_framework_azure_ai import AzureAIClient
-from azure.ai.agents.aio import AgentsClient
+# Migrated from agent_framework_azure_ai (deprecated) to agent_framework.foundry
+from agent_framework.foundry import RawFoundryAgentChatClient as AzureAIClient
+from azure.ai.projects.aio import AIProjectClient
 from common.config.app_config import config
 from common.database.database_base import DatabaseBase
 from common.models.messages_af import TeamConfiguration
@@ -49,7 +49,7 @@ class MCPEnabledBase:
         self._agent: Agent | None = None
         self.team_service: TeamService | None = team_service
         self.team_config: TeamConfiguration | None = team_config
-        self.client: Optional[AgentsClient] = None
+        self.client: Optional[AIProjectClient] = None
         self.project_endpoint = project_endpoint
         self.creds = None
         self.memory_store: Optional[DatabaseBase] = memory_store
@@ -69,8 +69,8 @@ class MCPEnabledBase:
         self.creds = config.get_azure_credential_async(config.AZURE_CLIENT_ID)
         if self._stack:
             await self._stack.enter_async_context(self.creds)
-        # Create AgentsClient
-        self.client = AgentsClient(
+        # Create AIProjectClient (replaces AgentsClient from deprecated azure-ai-agents)
+        self.client = AIProjectClient(
             endpoint=self.project_endpoint,
             credential=self.creds,
         )
@@ -157,15 +157,15 @@ class MCPEnabledBase:
             and self._agent.client
         ):
             return self._agent.client  # type: ignore
+        # Foundry RawFoundryAgentChatClient: when agent_version is None, latest version is used.
         chat_client = AzureAIClient(
             project_endpoint=self.project_endpoint,
             agent_name=self.agent_name,
-            model_deployment_name=self.model_deployment_name,
             credential=self.creds,
-            use_latest_version=True,
+            allow_preview=True,
         )
         self.logger.info(
-            "Created new AzureAIClient (agent_name=%s, use_latest_version=True)",
+            "Created new Foundry agent chat client (agent_name=%s, latest version)",
             self.agent_name,
         )
         return chat_client
@@ -291,7 +291,7 @@ class AzureAgentBase(MCPEnabledBase):
                 try:
                     await self.client.close()
                 except Exception as exc:
-                    logging.warning("Failed to close Azure AgentsClient %r: %s", self.client, exc, exc_info=True)
+                    logging.warning("Failed to close AIProjectClient %r: %s", self.client, exc, exc_info=True)
             if self.creds:
                 try:
                     await self.creds.close()

@@ -12,9 +12,8 @@ from common.config.app_config import config
 from common.models.messages_af import TeamConfiguration
 from fastapi import WebSocket
 
-# agent_framework substitutes
-from agent_framework.azure import AzureOpenAIChatClient
-# from agent_framework_azure_ai import AzureOpenAIChatClient
+# agent_framework substitutes (migrated to agent_framework.foundry in 1.4.0)
+from agent_framework.foundry import FoundryChatClient as AzureOpenAIChatClient
 from agent_framework import ChatOptions
 
 from v4.models.messages import MPlan, WebsocketMessageType
@@ -41,14 +40,14 @@ class AzureConfig:
 
     async def create_chat_completion_service(self, use_reasoning_model: bool = False) -> AzureOpenAIChatClient:
         """
-        Create an AzureOpenAIChatClient (agent_framework) for the selected model.
+        Create a FoundryChatClient (agent_framework.foundry) for the selected model.
         Matches former AzureChatCompletion usage.
         """
         model_name = self.reasoning_model if use_reasoning_model else self.standard_model
         return AzureOpenAIChatClient(
-            endpoint=self.endpoint,
-            model_deployment_name=model_name,
-            azure_ad_token_provider=self.ad_token_provider,  # function returning token string
+            project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
+            model=model_name,
+            credential=self.credential,
         )
 
     def create_execution_settings(self) -> ChatOptions:
