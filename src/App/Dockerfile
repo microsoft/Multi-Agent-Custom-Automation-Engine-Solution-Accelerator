@@ -8,13 +8,12 @@ WORKDIR /app/frontend
 # Copy package files first for better caching
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --silent
+# Install dependencies once (cached unless package*.json changes)
+# npm rebuild esbuild --force ensures the correct platform binary inside the Linux image
+RUN npm ci && npm rebuild esbuild --force
 
-# Copy source files
+# Copy source files (node_modules excluded by .dockerignore)
 COPY . ./
-
-RUN rm -rf node_modules && npm ci && npm rebuild esbuild --force
 
 # Build the React app
 RUN npm run build
