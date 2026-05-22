@@ -37,6 +37,7 @@ from v4.callbacks.response_handlers import (
 from v4.config.settings import connection_config, orchestration_config
 from v4.models.messages import WebsocketMessageType
 from v4.orchestration.human_approval_manager import HumanApprovalMagenticManager
+from v4.orchestration.exceptions import PlanSupersededError, PlanTimeoutError
 from v4.magentic_agents.magentic_agent_factory import MagenticAgentFactory
 from common.database.database_factory import DatabaseFactory
 from v4.models.models import PlanStatus
@@ -540,6 +541,67 @@ class OrchestrationManager:
                 message_type=WebsocketMessageType.FINAL_RESULT_MESSAGE,
             )
             self.logger.info("Final result sent via WebSocket to user '%s'", user_id)
+
+        except PlanSupersededError:
+            # Plan was superseded by a new task from the same user.
+            # Terminate silently — do NOT send error messages to the WebSocket
+            # because the user has already moved on to a new plan.
+            self.logger.info(
+                "Plan '%s' was superseded by a new task — terminating silently",
+                self._plan_id,
+            )
+            # Update plan status to failed in the database (housekeeping)
+            try:
+                if self._plan_id:
+                    memory_store = await DatabaseFactory.get_database(user_id=user_id)
+                    plan = await memory_store.get_plan_by_plan_id(plan_id=self._plan_id)
+                    if plan:
+                        plan.overall_status = PlanStatus.FAILED
+                        await memory_store.update_plan(plan)
+                        self.logger.info("Superseded plan '%s' status updated to FAILED", self._plan_id)
+            except Exception as db_error:
+                self.logger.error("Failed to update superseded plan status: %s", db_error)
+            return  # Exit silently without sending error to user
+
+        except PlanTimeoutError as e:
+            # Plan approval timed out on the current active session.
+            # Send a timeout-specific user-friendly error via ERROR_MESSAGE.
+            self.logger.info(
+                "Plan '%s' approval timed out after %ss",
+                self._plan_id,
+                e.timeout_seconds,
+            )
+            # Update plan status to failed
+            try:
+                if self._plan_id:
+                    memory_store = await DatabaseFactory.get_database(user_id=user_id)
+                    plan = await memory_store.get_plan_by_plan_id(plan_id=self._plan_id)
+                    if plan:
+                        plan.overall_status = PlanStatus.FAILED
+                        await memory_store.update_plan(plan)
+                        self.logger.info("Timed-out plan '%s' status updated to FAILED", self._plan_id)
+            except Exception as db_error:
+                self.logger.error("Failed to update timed-out plan status: %s", db_error)
+            # Send timeout error to user
+            try:
+                await connection_config.send_status_update_async(
+                    {
+                        "type": WebsocketMessageType.ERROR_MESSAGE,
+                        "data": {
+                            "content": (
+                                "The plan approval request timed out because no action was taken. "
+                                "Please start a new task and try again."
+                            ),
+                            "status": "error",
+                            "timestamp": asyncio.get_event_loop().time(),
+                        },
+                    },
+                    user_id,
+                    message_type=WebsocketMessageType.ERROR_MESSAGE,
+                )
+            except Exception as send_error:
+                self.logger.error("Failed to send timeout error: %s", send_error)
+            return  # Don't re-raise; this is a handled terminal state
 
         except Exception as e:
             # Error handling

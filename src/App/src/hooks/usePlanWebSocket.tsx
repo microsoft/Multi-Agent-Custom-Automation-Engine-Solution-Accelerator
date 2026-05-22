@@ -18,6 +18,7 @@ import {
     approvalRequestReceived,
     planCompletedFinal,
     planFailedFinal,
+    setShowTimeoutDialog,
 } from '@/store/slices/planSlice';
 import {
     setSubmittingChatDisableInput,
@@ -242,6 +243,17 @@ export function usePlanWebSocket({
                     const c = errorMessage.trim();
                     if (c.length > 0) errorContent = c;
                 }
+
+                // Detect timeout-specific error → show popup dialog instead of inline error
+                const isTimeout = errorContent.toLowerCase().includes('timed out');
+                if (isTimeout) {
+                    dispatch(planFailedFinal());
+                    dispatch(setShowBufferingText(false));
+                    dispatch(setShowTimeoutDialog(true));
+                    webSocketService.disconnect();
+                    return;
+                }
+
                 const errorAgent: AgentMessageData = {
                     agent: 'system',
                     agent_type: AgentMessageType.SYSTEM_AGENT,
