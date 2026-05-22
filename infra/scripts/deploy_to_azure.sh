@@ -822,18 +822,37 @@ print_summary() {
 
     echo ""
     echo "  ┌─ Rollback Commands (if needed) ───────────────────────────────"
+    echo "  │  NOTE: When rolling back to images from a different registry"
+    echo "  │  (e.g. biabcontainerreg.azurecr.io public defaults), the Web App"
+    echo "  │  also needs acrUseManagedIdentityCreds disabled and the"
+    echo "  │  DOCKER_REGISTRY_SERVER_URL updated, otherwise the pull will"
+    echo "  │  fail with ACRTokenRetrievalFailure. Container Apps fall back"
+    echo "  │  to anonymous pull automatically for public registries."
+    echo "  └──────────────────────────────────────────────────────────────"
+    echo ""
+    echo "  Copy/paste the commands below (one per line):"
+    echo ""
 
     if [[ "$DEPLOY_BACKEND" == true && -n "$BACKEND_CA" && -n "${OLD_BACKEND_IMAGE:-}" ]]; then
-        echo "  │  Backend:  az containerapp update --name $BACKEND_CA --resource-group $RESOURCE_GROUP --image $OLD_BACKEND_IMAGE"
+        echo "  # Backend rollback"
+        echo "  az containerapp update --name $BACKEND_CA --resource-group $RESOURCE_GROUP --image $OLD_BACKEND_IMAGE"
+        echo ""
     fi
     if [[ "$DEPLOY_MCP" == true && -n "$MCP_CA" && -n "${OLD_MCP_IMAGE:-}" ]]; then
-        echo "  │  MCP:      az containerapp update --name $MCP_CA --resource-group $RESOURCE_GROUP --image $OLD_MCP_IMAGE"
+        echo "  # MCP rollback"
+        echo "  az containerapp update --name $MCP_CA --resource-group $RESOURCE_GROUP --image $OLD_MCP_IMAGE"
+        echo ""
     fi
     if [[ "$DEPLOY_FRONTEND" == true && -n "$FRONTEND_APP" && -n "${OLD_FRONTEND_IMAGE:-}" ]]; then
         local old_img="${OLD_FRONTEND_IMAGE#DOCKER|}"
-        echo "  │  Frontend: az webapp config container set --name $FRONTEND_APP --resource-group $RESOURCE_GROUP --container-image-name $old_img"
+        local old_registry="${old_img%%/*}"
+        echo "  # Frontend rollback (run all 4 lines)"
+        echo "  az webapp config set --name $FRONTEND_APP --resource-group $RESOURCE_GROUP --generic-configurations '{\"acrUseManagedIdentityCreds\": false}'"
+        echo "  az webapp config appsettings set --name $FRONTEND_APP --resource-group $RESOURCE_GROUP --settings DOCKER_REGISTRY_SERVER_URL=https://$old_registry"
+        echo "  az webapp config container set --name $FRONTEND_APP --resource-group $RESOURCE_GROUP --container-image-name $old_img"
+        echo "  az webapp restart --name $FRONTEND_APP --resource-group $RESOURCE_GROUP"
+        echo ""
     fi
-    echo "  └──────────────────────────────────────────────────────────────"
 
     if [[ "$DRY_RUN" == true ]]; then
         echo ""

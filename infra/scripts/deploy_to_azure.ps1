@@ -668,18 +668,37 @@ function Print-Summary {
 
     Write-Host ""
     Write-Host "  ┌─ Rollback Commands (if needed) ───────────────────────────────"
+    Write-Host "  │  NOTE: When rolling back to images from a different registry"
+    Write-Host "  │  (e.g. biabcontainerreg.azurecr.io public defaults), the Web App"
+    Write-Host "  │  also needs acrUseManagedIdentityCreds disabled and the"
+    Write-Host "  │  DOCKER_REGISTRY_SERVER_URL updated, otherwise the pull will"
+    Write-Host "  │  fail with ACRTokenRetrievalFailure. Container Apps fall back"
+    Write-Host "  │  to anonymous pull automatically for public registries."
+    Write-Host "  └──────────────────────────────────────────────────────────────"
+    Write-Host ""
+    Write-Host "  Copy/paste the commands below (one per line):"
+    Write-Host ""
 
     if ($script:DeployBackend -and $script:BackendCA -and $script:OldBackendImage) {
-        Write-Host "  │  Backend:  az containerapp update --name $($script:BackendCA) --resource-group $ResourceGroup --image $($script:OldBackendImage)"
+        Write-Host "  # Backend rollback"
+        Write-Host "  az containerapp update --name $($script:BackendCA) --resource-group $ResourceGroup --image $($script:OldBackendImage)"
+        Write-Host ""
     }
     if ($script:DeployMcp -and $script:McpCA -and $script:OldMcpImage) {
-        Write-Host "  │  MCP:      az containerapp update --name $($script:McpCA) --resource-group $ResourceGroup --image $($script:OldMcpImage)"
+        Write-Host "  # MCP rollback"
+        Write-Host "  az containerapp update --name $($script:McpCA) --resource-group $ResourceGroup --image $($script:OldMcpImage)"
+        Write-Host ""
     }
     if ($script:DeployFrontend -and $script:FrontendApp -and $script:OldFrontendImage) {
         $oldImg = $script:OldFrontendImage -replace '^DOCKER\|', ''
-        Write-Host "  │  Frontend: az webapp config container set --name $($script:FrontendApp) --resource-group $ResourceGroup --container-image-name $oldImg"
+        $oldRegistry = ($oldImg -split '/')[0]
+        Write-Host "  # Frontend rollback (run all 4 lines)"
+        Write-Host "  az webapp config set --name $($script:FrontendApp) --resource-group $ResourceGroup --generic-configurations '{\""acrUseManagedIdentityCreds\"": false}'"
+        Write-Host "  az webapp config appsettings set --name $($script:FrontendApp) --resource-group $ResourceGroup --settings DOCKER_REGISTRY_SERVER_URL=https://$oldRegistry"
+        Write-Host "  az webapp config container set --name $($script:FrontendApp) --resource-group $ResourceGroup --container-image-name $oldImg"
+        Write-Host "  az webapp restart --name $($script:FrontendApp) --resource-group $ResourceGroup"
+        Write-Host ""
     }
-    Write-Host "  └──────────────────────────────────────────────────────────────"
 
     if ($DryRun) {
         Write-Host ""
