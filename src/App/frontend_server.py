@@ -28,7 +28,7 @@ INDEX_HTML = os.path.join(BUILD_DIR, "index.html")
 
 # Proxy configuration for WAF/private networking deployments
 PROXY_API_REQUESTS = os.getenv("PROXY_API_REQUESTS", "false").lower() == "true"
-BACKEND_API_URL = os.getenv("BACKEND_API_URL", "http://127.0.0.1:8000")
+BACKEND_API_URL = os.getenv("BACKEND_API_URL", "http://localhost:8000")
 
 # Serve static files from build directory
 app.mount(
