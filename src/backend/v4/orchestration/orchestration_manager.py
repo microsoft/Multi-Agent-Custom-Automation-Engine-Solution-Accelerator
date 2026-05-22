@@ -37,7 +37,7 @@ from v4.callbacks.response_handlers import (
 from v4.config.settings import connection_config, orchestration_config
 from v4.models.messages import WebsocketMessageType
 from v4.orchestration.human_approval_manager import HumanApprovalMagenticManager
-from v4.orchestration.exceptions import PlanSupersededError, PlanTimeoutError
+from .exceptions import PlanSupersededError, PlanTimeoutError
 from v4.magentic_agents.magentic_agent_factory import MagenticAgentFactory
 from common.database.database_factory import DatabaseFactory
 from v4.models.models import PlanStatus

@@ -19,7 +19,7 @@ from agent_framework_orchestrations._magentic import (
 
 from v4.config.settings import connection_config, orchestration_config
 from v4.models.models import MPlan
-from v4.orchestration.exceptions import PlanSupersededError, PlanTimeoutError
+from .exceptions import PlanSupersededError, PlanTimeoutError
 from v4.orchestration.helper.plan_to_mplan_converter import PlanToMPlanConverter
 
 logger = logging.getLogger(__name__)
