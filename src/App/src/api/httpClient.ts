@@ -20,7 +20,7 @@ class HttpClient {
     private responseInterceptors: ResponseInterceptor[] = [];
     private timeout: number;
 
-    constructor(baseUrl = '', timeout = 180000) {
+    constructor(baseUrl = '', timeout = 30000) {
         this.baseUrl = baseUrl;
         this.timeout = timeout;
     }
