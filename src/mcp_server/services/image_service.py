@@ -17,7 +17,6 @@ from azure.storage.blob import (
     BlobSasPermissions,
     BlobServiceClient,
     ContentSettings,
-    PublicAccess,
     generate_blob_sas,
 )
 
@@ -37,14 +36,14 @@ def _get_credential():
     return DefaultAzureCredential()
 
 
-def _ensure_public_container(blob_service: BlobServiceClient, container_name: str) -> None:
-    """Create the container with blob-level public read access if missing."""
+def _ensure_container(blob_service: BlobServiceClient, container_name: str) -> None:
+    """Create the container if it does not already exist."""
     container_client = blob_service.get_container_client(container_name)
     try:
-        container_client.create_container(public_access=PublicAccess.BLOB)
-        logger.info("Created public blob container '%s'", container_name)
+        container_client.create_container()
+        logger.info("Created blob container '%s'", container_name)
     except Exception:
-        # Container already exists — leave its access level alone.
+        # Container already exists — ignore.
         pass
 
 
@@ -59,7 +58,7 @@ def _upload_png_and_get_url(png_bytes: bytes) -> str:
 
     credential = _get_credential()
     blob_service = BlobServiceClient(account_url=account_url, credential=credential)
-    _ensure_public_container(blob_service, container_name)
+    _ensure_container(blob_service, container_name)
 
     blob_client = blob_service.get_blob_client(container=container_name, blob=blob_name)
     blob_client.upload_blob(
@@ -104,16 +103,17 @@ class ImageService(MCPToolBase):
 
             Use this tool whenever the user asks for an image, picture, photo, banner,
             or visual asset. Pass a detailed description of the scene, subject, style,
-            lighting, and composition. The tool returns a public HTTPS URL to the
-            generated PNG. Embed the URL in your response using markdown image syntax,
-            for example: ![Generated image](<url>).
+            lighting, and composition. The tool returns a markdown image tag that
+            embeds the generated PNG (e.g. ``![Generated marketing image](https://...)``).
+            Include the returned string verbatim in your reply so the user sees the
+            image inline.
 
             Args:
                 prompt: A detailed description of the image to generate.
                 size: One of "1024x1024", "1024x1792", or "1792x1024". Defaults to square.
 
             Returns:
-                A public HTTPS URL to the generated PNG image.
+                A markdown image tag pointing to the generated PNG.
             """
             if not config.azure_openai_endpoint:
                 raise RuntimeError("AZURE_OPENAI_ENDPOINT is not configured on the MCP server")
@@ -151,7 +151,7 @@ class ImageService(MCPToolBase):
             png_bytes = base64.b64decode(b64_data)
             public_url = _upload_png_and_get_url(png_bytes)
             logger.info("Image uploaded: %s", public_url)
-            return public_url
+            return f"![Generated marketing image]({public_url})"
 
     @property
     def tool_count(self) -> int:

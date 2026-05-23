@@ -156,9 +156,23 @@ class AgentFactory:
         use_mcp = getattr(agent_obj, "use_mcp", False)
         user_responses = getattr(agent_obj, "user_responses", False)
         if use_mcp:
-            mcp_config: Optional[MCPConfig] = MCPConfig.from_env(
-                domain=getattr(agent_obj, "mcp_domain", None)
-            )
+            mcp_domain = getattr(agent_obj, "mcp_domain", None)
+            # Fallback: derive domain from agent name if the team config didn't
+            # supply one. Stops the agent from connecting to the base /mcp
+            # endpoint and pulling in cross-pack tools like generate_press_release.
+            if not mcp_domain:
+                _NAME_TO_DOMAIN = {
+                    "ImageContentAgent": "image",
+                    "ImageGenerationAgent": "image",
+                }
+                mcp_domain = _NAME_TO_DOMAIN.get(agent_obj.name)
+                if mcp_domain:
+                    self.logger.warning(
+                        "Agent '%s' has use_mcp=True but no mcp_domain in team config; "
+                        "defaulting to domain='%s' based on agent name.",
+                        agent_obj.name, mcp_domain,
+                    )
+            mcp_config: Optional[MCPConfig] = MCPConfig.from_env(domain=mcp_domain)
         else:
             mcp_config = None
 

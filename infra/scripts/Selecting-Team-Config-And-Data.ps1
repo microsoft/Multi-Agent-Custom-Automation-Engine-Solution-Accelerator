@@ -5,26 +5,9 @@ param(
 )
 
 # Variables
-$directoryPath = ""
 $backendUrl = ""
 $storageAccount = ""
-$blobContainerForRetailCustomer = ""
-$blobContainerForRetailOrder = ""
-$blobContainerForRFPSummary = ""
-$blobContainerForRFPRisk = ""
-$blobContainerForRFPCompliance = ""
-$blobContainerForContractSummary = ""
-$blobContainerForContractRisk = ""
-$blobContainerForContractCompliance = ""
 $aiSearch = ""
-$aiSearchIndexForRetailCustomer = ""
-$aiSearchIndexForRetailOrder = ""
-$aiSearchIndexForRFPSummary = ""
-$aiSearchIndexForRFPRisk = ""
-$aiSearchIndexForRFPCompliance = ""
-$aiSearchIndexForContractSummary = ""
-$aiSearchIndexForContractRisk = ""
-$aiSearchIndexForContractCompliance = ""
 $azSubscriptionId = ""
 $stIsPublicAccessDisabled = $false
 $srchIsPublicAccessDisabled = $false
@@ -110,30 +93,13 @@ function Get-ValuesFromAzdEnv {
 
     Write-Host "Getting values from azd environment..."
     
-    $script:directoryPath = "data/agent_teams"
     $script:backendUrl = $(azd env get-value BACKEND_URL)
     $script:storageAccount = $(azd env get-value AZURE_STORAGE_ACCOUNT_NAME)
-    $script:blobContainerForRetailCustomer = $(azd env get-value AZURE_STORAGE_CONTAINER_NAME_RETAIL_CUSTOMER)
-    $script:blobContainerForRetailOrder = $(azd env get-value AZURE_STORAGE_CONTAINER_NAME_RETAIL_ORDER)
-    $script:blobContainerForRFPSummary = $(azd env get-value AZURE_STORAGE_CONTAINER_NAME_RFP_SUMMARY)
-    $script:blobContainerForRFPRisk = $(azd env get-value AZURE_STORAGE_CONTAINER_NAME_RFP_RISK)
-    $script:blobContainerForRFPCompliance = $(azd env get-value AZURE_STORAGE_CONTAINER_NAME_RFP_COMPLIANCE)
-    $script:blobContainerForContractSummary = $(azd env get-value AZURE_STORAGE_CONTAINER_NAME_CONTRACT_SUMMARY)
-    $script:blobContainerForContractRisk = $(azd env get-value AZURE_STORAGE_CONTAINER_NAME_CONTRACT_RISK)
-    $script:blobContainerForContractCompliance = $(azd env get-value AZURE_STORAGE_CONTAINER_NAME_CONTRACT_COMPLIANCE)
     $script:aiSearch = $(azd env get-value AZURE_AI_SEARCH_NAME)
-    $script:aiSearchIndexForRetailCustomer = $(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_RETAIL_CUSTOMER)
-    $script:aiSearchIndexForRetailOrder = $(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_RETAIL_ORDER)
-    $script:aiSearchIndexForRFPSummary = $(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_RFP_SUMMARY)
-    $script:aiSearchIndexForRFPRisk = $(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_RFP_RISK)
-    $script:aiSearchIndexForRFPCompliance = $(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_RFP_COMPLIANCE)
-    $script:aiSearchIndexForContractSummary = $(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_SUMMARY)
-    $script:aiSearchIndexForContractRisk = $(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_RISK)
-    $script:aiSearchIndexForContractCompliance = $(azd env get-value AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_COMPLIANCE)
     $script:ResourceGroup = $(azd env get-value AZURE_RESOURCE_GROUP)
     
     # Validate that we got all required values
-    if (-not $script:backendUrl -or -not $script:storageAccount -or -not $script:blobContainerForRetailCustomer -or -not $script:aiSearch -or -not $script:aiSearchIndexForRetailOrder -or -not $script:ResourceGroup) {
+    if (-not $script:backendUrl -or -not $script:storageAccount -or -not $script:aiSearch -or -not $script:ResourceGroup) {
         Write-Host "Error: Could not retrieve all required values from azd environment."
         return $false
     }
@@ -167,8 +133,6 @@ function Get-DeploymentValue {
 function Get-ValuesFromAzDeployment {
     Write-Host "Getting values from Azure deployment outputs..."
     
-    $script:directoryPath = "data/agent_teams"
-    
     Write-Host "Fetching deployment name..."
     $deploymentName = az group show --name $ResourceGroup --query "tags.DeploymentName" -o tsv
     if (-not $deploymentName) {
@@ -185,22 +149,6 @@ function Get-ValuesFromAzDeployment {
     
     # Extract specific outputs with fallback logic
     $script:storageAccount = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_STORAGE_ACCOUNT_NAME" -FallbackKey "azureStorageAccountName"
-    $script:blobContainerForRetailCustomer = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_STORAGE_CONTAINER_NAME_RETAIL_CUSTOMER" -FallbackKey "azureStorageContainerNameRetailCustomer"
-    $script:blobContainerForRetailOrder = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_STORAGE_CONTAINER_NAME_RETAIL_ORDER" -FallbackKey "azureStorageContainerNameRetailOrder"
-    $script:blobContainerForRFPSummary = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_STORAGE_CONTAINER_NAME_RFP_SUMMARY" -FallbackKey "azureStorageContainerNameRfpSummary"
-    $script:blobContainerForRFPRisk = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_STORAGE_CONTAINER_NAME_RFP_RISK" -FallbackKey "azureStorageContainerNameRfpRisk"
-    $script:blobContainerForRFPCompliance = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_STORAGE_CONTAINER_NAME_RFP_COMPLIANCE" -FallbackKey "azureStorageContainerNameRfpCompliance"
-    $script:blobContainerForContractSummary = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_STORAGE_CONTAINER_NAME_CONTRACT_SUMMARY" -FallbackKey "azureStorageContainerNameContractSummary"
-    $script:blobContainerForContractRisk = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_STORAGE_CONTAINER_NAME_CONTRACT_RISK" -FallbackKey "azureStorageContainerNameContractRisk"
-    $script:blobContainerForContractCompliance = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_STORAGE_CONTAINER_NAME_CONTRACT_COMPLIANCE" -FallbackKey "azureStorageContainerNameContractCompliance"
-    $script:aiSearchIndexForRetailCustomer = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_INDEX_NAME_RETAIL_CUSTOMER" -FallbackKey "azureAiSearchIndexNameRetailCustomer"
-    $script:aiSearchIndexForRetailOrder = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_INDEX_NAME_RETAIL_ORDER" -FallbackKey "azureAiSearchIndexNameRetailOrder"
-    $script:aiSearchIndexForRFPSummary = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_INDEX_NAME_RFP_SUMMARY" -FallbackKey "azureAiSearchIndexNameRfpSummary"
-    $script:aiSearchIndexForRFPRisk = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_INDEX_NAME_RFP_RISK" -FallbackKey "azureAiSearchIndexNameRfpRisk"
-    $script:aiSearchIndexForRFPCompliance = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_INDEX_NAME_RFP_COMPLIANCE" -FallbackKey "azureAiSearchIndexNameRfpCompliance"
-    $script:aiSearchIndexForContractSummary = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_INDEX_NAME_CONTRACT_SUMMARY" -FallbackKey "azureAiSearchIndexNameContractSummary"
-    $script:aiSearchIndexForContractRisk = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_INDEX_NAME_CONTRACT_RISK" -FallbackKey "azureAiSearchIndexNameContractRisk"
-    $script:aiSearchIndexForContractCompliance = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_INDEX_NAME_CONTRACT_COMPLIANCE" -FallbackKey "azureAiSearchIndexNameContractCompliance"
     $script:aiSearch = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_SEARCH_NAME" -FallbackKey "azureAiSearchName"
     $script:backendUrl = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "backenD_URL" -FallbackKey "backendUrl"
     
@@ -246,28 +194,6 @@ function Get-ValuesUsingSolutionSuffix {
     
     $script:backendUrl = "https://$backendFqdn"
     
-    # Hardcoded container names (These don't follow the suffix pattern in Bicep, hence need to be changed here if changed in Bicep)
-    $script:blobContainerForRetailCustomer = "retail-dataset-customer"
-    $script:blobContainerForRetailOrder = "retail-dataset-order"
-    $script:blobContainerForRFPSummary = "rfp-summary-dataset"
-    $script:blobContainerForRFPRisk = "rfp-risk-dataset"
-    $script:blobContainerForRFPCompliance = "rfp-compliance-dataset"
-    $script:blobContainerForContractSummary = "contract-summary-dataset"
-    $script:blobContainerForContractRisk = "contract-risk-dataset"
-    $script:blobContainerForContractCompliance = "contract-compliance-dataset"
-    
-    # Hardcoded index names (These don't follow the suffix pattern in Bicep, hence need to be changed here if changed in Bicep)
-    $script:aiSearchIndexForRetailCustomer = "macae-retail-customer-index"
-    $script:aiSearchIndexForRetailOrder = "macae-retail-order-index"
-    $script:aiSearchIndexForRFPSummary = "macae-rfp-summary-index"
-    $script:aiSearchIndexForRFPRisk = "macae-rfp-risk-index"
-    $script:aiSearchIndexForRFPCompliance = "macae-rfp-compliance-index"
-    $script:aiSearchIndexForContractSummary = "contract-summary-doc-index"
-    $script:aiSearchIndexForContractRisk = "contract-risk-doc-index"
-    $script:aiSearchIndexForContractCompliance = "contract-compliance-doc-index"
-    
-    $script:directoryPath = "data/agent_teams"
-    
     # Validate that we got all critical values
     if (-not $script:storageAccount -or -not $script:aiSearch -or -not $script:backendUrl) {
         Write-Host "Error: Failed to reconstruct all required resource names."
@@ -275,6 +201,112 @@ function Get-ValuesUsingSolutionSuffix {
     }
     
     Write-Host "Successfully reconstructed values from resource naming convention."
+    return $true
+}
+
+function Deploy-ContentPack {
+    param(
+        [string]$PackPath,
+        [string]$StorageAccountName,
+        [string]$AiSearchName,
+        [string]$PythonCmd
+    )
+
+    $packJsonPath = Join-Path $PackPath "pack.json"
+    if (-not (Test-Path $packJsonPath)) {
+        Write-Host "  No pack.json found at $packJsonPath - skipping data deployment."
+        return $true
+    }
+
+    $pack = Get-Content $packJsonPath -Raw | ConvertFrom-Json
+    Write-Host "  Deploying data for content pack: $($pack.name)"
+    $hadFailure = $false
+
+    # Process blob_indexes: upload files to blob container, then create search index
+    if ($pack.blob_indexes) {
+        foreach ($entry in $pack.blob_indexes) {
+            $container = $entry.container
+            $sourcePath = Join-Path $PackPath $entry.source
+            $pattern = if ($entry.pattern) { $entry.pattern } else { "*" }
+            $indexName = $entry.index_name
+
+            if (-not (Test-Path $sourcePath)) {
+                Write-Host "  Warning: source directory not found: $sourcePath. Skipping."
+                $hadFailure = $true
+                continue
+            }
+
+            # Ensure container exists
+            az storage container create --account-name $StorageAccountName --name $container --auth-mode login --output none 2>$null
+
+            Write-Host "  Uploading blobs to container '$container'..."
+            az storage blob upload-batch --account-name $StorageAccountName --destination $container --source $sourcePath --auth-mode login --pattern $pattern --overwrite --output none
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "  Error: Failed to upload blobs to container '$container'."
+                $hadFailure = $true
+                continue
+            }
+
+            Write-Host "  Creating search index '$indexName' from container '$container'..."
+            $process = Start-Process -FilePath $PythonCmd -ArgumentList "infra/scripts/index_datasets.py", $StorageAccountName, $container, $AiSearchName, $indexName -Wait -NoNewWindow -PassThru
+            if ($process.ExitCode -ne 0) {
+                Write-Host "  Error: Indexing failed for '$indexName'."
+                $hadFailure = $true
+            }
+        }
+    }
+
+    # Process blob_uploads: upload files only (no indexing)
+    if ($pack.blob_uploads) {
+        foreach ($entry in $pack.blob_uploads) {
+            $container = $entry.container
+            $sourcePath = Join-Path $PackPath $entry.source
+            $pattern = if ($entry.pattern) { $entry.pattern } else { "*" }
+
+            if (-not (Test-Path $sourcePath)) {
+                Write-Host "  Warning: source directory not found: $sourcePath. Skipping."
+                $hadFailure = $true
+                continue
+            }
+
+            # Ensure container exists
+            az storage container create --account-name $StorageAccountName --name $container --auth-mode login --output none 2>$null
+
+            Write-Host "  Uploading blobs to container '$container'..."
+            az storage blob upload-batch --account-name $StorageAccountName --destination $container --source $sourcePath --auth-mode login --pattern $pattern --overwrite --output none
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "  Error: Failed to upload blobs to container '$container'."
+                $hadFailure = $true
+            }
+        }
+    }
+
+    # Process search_indexes: create indexes from already-uploaded blob data
+    if ($pack.search_indexes) {
+        foreach ($entry in $pack.search_indexes) {
+            $indexName = $entry.index_name
+            # Use the first blob_uploads container as the data source
+            $container = $null
+            if ($pack.blob_uploads -and $pack.blob_uploads.Count -gt 0) {
+                $container = $pack.blob_uploads[0].container
+            }
+            if (-not $container) {
+                Write-Host "  Warning: No blob container found for search_index '$indexName'. Skipping."
+                continue
+            }
+
+            Write-Host "  Creating search index '$indexName' from container '$container'..."
+            $process = Start-Process -FilePath $PythonCmd -ArgumentList "infra/scripts/index_datasets.py", $StorageAccountName, $container, $AiSearchName, $indexName -Wait -NoNewWindow -PassThru
+            if ($process.ExitCode -ne 0) {
+                Write-Host "  Error: Indexing failed for '$indexName'."
+                $hadFailure = $true
+            }
+        }
+    }
+
+    if ($hadFailure) {
+        return $false
+    }
     return $true
 }
 
@@ -395,6 +427,7 @@ Write-Host "2. Retail Customer Satisfaction"
 Write-Host "3. HR Employee Onboarding"
 Write-Host "4. Marketing Press Release"
 Write-Host "5. Contract Compliance Review"
+Write-Host "6. Content Generation"
 Write-Host "7. All"
 Write-Host "==============================================="
 Write-Host ""
@@ -440,12 +473,14 @@ do {
         Write-Host "Note: If you choose to install a single use case, installation of other use cases will require re-running this script."
     }
     elseif ($useCaseSelection -eq "6") {
-        $useCaseValid = $false
-        Write-Host "Invalid selection. Please enter a number from 1-5 or 7." -ForegroundColor Red
+        $selectedUseCase = "Content Generation"
+        $useCaseValid = $true
+        Write-Host "Selected: Content Generation"
+        Write-Host "Note: If you choose to install a single use case, installation of other use cases will require re-running this script."
     }
     else {
         $useCaseValid = $false
-        Write-Host "Invalid selection. Please enter a number from 1-5 or 7." -ForegroundColor Red
+        Write-Host "Invalid selection. Please enter a number from 1-7." -ForegroundColor Red
     }
 } while (-not $useCaseValid)
 
@@ -458,7 +493,6 @@ Write-Host "Resource Group: $ResourceGroup"
 Write-Host "Backend URL: $backendUrl"
 Write-Host "Storage Account: $storageAccount"
 Write-Host "AI Search: $aiSearch"
-Write-Host "Directory Path: $directoryPath"
 Write-Host "Subscription ID: $azSubscriptionId"
 Write-Host "==============================================="
 Write-Host ""
@@ -532,10 +566,9 @@ $failedTeamConfigs = 0
 # Use Case 3 -----=--
 if($useCaseSelection -eq "3" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
     Write-Host "Uploading Team Configuration for HR Employee Onboarding..."
-    $directoryPath = "data/agent_teams"
-    $teamId = "00000000-0000-0000-0000-000000000001"
+    $teamConfigDir = "content_packs/hr_onboarding/agent_teams"
     try {
-        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $directoryPath, $userPrincipalId, $teamId -Wait -NoNewWindow -PassThru
+        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $teamConfigDir, $userPrincipalId, "00000000-0000-0000-0000-000000000001" -Wait -NoNewWindow -PassThru
         if ($process.ExitCode -ne 0) {
             Write-Host "Error: Team configuration for HR Employee Onboarding upload failed."
             $isTeamConfigFailed = $true
@@ -545,16 +578,14 @@ if($useCaseSelection -eq "3" -or $useCaseSelection -eq "all" -or $useCaseSelecti
         $isTeamConfigFailed = $true
         $failedTeamConfigs += 1
     }
-
 }
 
 # Use Case 4 -----=--
 if($useCaseSelection -eq "4" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
     Write-Host "Uploading Team Configuration for Marketing Press Release..."
-    $directoryPath = "data/agent_teams"
-    $teamId = "00000000-0000-0000-0000-000000000002"
+    $teamConfigDir = "content_packs/marketing_press_release/agent_teams"
     try {
-        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $directoryPath, $userPrincipalId, $teamId -Wait -NoNewWindow -PassThru
+        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $teamConfigDir, $userPrincipalId, "00000000-0000-0000-0000-000000000002" -Wait -NoNewWindow -PassThru
         if ($process.ExitCode -ne 0) {
             Write-Host "Error: Team configuration for Marketing Press Release upload failed."
             $isTeamConfigFailed = $true
@@ -564,7 +595,6 @@ if($useCaseSelection -eq "4" -or $useCaseSelection -eq "all" -or $useCaseSelecti
         $isTeamConfigFailed = $true
         $failedTeamConfigs += 1
     }
-
 }
 
 $stIsPublicAccessDisabled = $false
@@ -664,10 +694,9 @@ if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection 
 
 if($useCaseSelection -eq "1" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
     Write-Host "Uploading Team Configuration for RFP Evaluation..."
-    $directoryPath = "data/agent_teams"
-    $teamId = "00000000-0000-0000-0000-000000000004"
+    $teamConfigDir = "content_packs/rfp_evaluation/agent_teams"
     try {
-        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $directoryPath, $userPrincipalId, $teamId -Wait -NoNewWindow -PassThru
+        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $teamConfigDir, $userPrincipalId, "00000000-0000-0000-0000-000000000004" -Wait -NoNewWindow -PassThru
         if ($process.ExitCode -ne 0) {
             Write-Host "Error: Team configuration for RFP Evaluation upload failed."
             $failedTeamConfigs += 1
@@ -679,69 +708,22 @@ if($useCaseSelection -eq "1" -or $useCaseSelection -eq "all" -or $useCaseSelecti
     }
     Write-Host "Uploaded Team Configuration for RFP Evaluation..."
 
-    $directoryPath = "data/datasets/rfp/summary"
-    # Upload sample files to blob storage
-    Write-Host "Uploading sample files to blob storage for RFP Evaluation..."
-    $result = az storage blob upload-batch --account-name $storageAccount --destination $blobContainerForRFPSummary --source $directoryPath --auth-mode login --pattern "*" --overwrite --output none
-
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Error: Failed to upload files to blob storage."
+    Write-Host "Deploying data for RFP Evaluation content pack..."
+    $packResult = Deploy-ContentPack -PackPath "content_packs/rfp_evaluation" -StorageAccountName $storageAccount -AiSearchName $aiSearch -PythonCmd $pythonCmd
+    if (-not $packResult) {
+        Write-Host "Error: Data deployment for RFP Evaluation failed."
         $isSampleDataFailed = $true
-        exit 1
+    } else {
+        Write-Host "Data deployment for RFP Evaluation completed successfully."
     }
-
-    $directoryPath = "data/datasets/rfp/risk"
-    $result = az storage blob upload-batch --account-name $storageAccount --destination $blobContainerForRFPRisk --source $directoryPath --auth-mode login --pattern "*" --overwrite --output none
-
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Error: Failed to upload files to blob storage."
-        $isSampleDataFailed = $true
-        exit 1
-    }
-
-    $directoryPath = "data/datasets/rfp/compliance"
-    # Upload sample files to blob storage
-    $result = az storage blob upload-batch --account-name $storageAccount --destination $blobContainerForRFPCompliance --source $directoryPath --auth-mode login --pattern "*" --overwrite --output none
-
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Error: Failed to upload files to blob storage."
-        $isSampleDataFailed = $true
-        exit 1
-    }
-    Write-Host "Files uploaded successfully to blob storage."
-
-    # Run the Python script to index data
-    Write-Host "Running the python script to index data for RFP Evaluation"
-    $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/index_datasets.py", $storageAccount, $blobContainerForRFPSummary , $aiSearch, $aiSearchIndexForRFPSummary -Wait -NoNewWindow -PassThru
-
-    if ($process.ExitCode -ne 0) {
-        Write-Host "Error: Indexing python script execution failed."
-        $isSampleDataFailed = $true
-    }
-
-    $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/index_datasets.py", $storageAccount, $blobContainerForRFPRisk , $aiSearch, $aiSearchIndexForRFPRisk -Wait -NoNewWindow -PassThru
-
-    if ($process.ExitCode -ne 0) {
-        Write-Host "Error: Indexing python script execution failed."
-        $isSampleDataFailed = $true
-    }
-
-    $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/index_datasets.py", $storageAccount, $blobContainerForRFPCompliance , $aiSearch, $aiSearchIndexForRFPCompliance -Wait -NoNewWindow -PassThru
-
-    if ($process.ExitCode -ne 0) {
-        Write-Host "Error: Indexing python script execution failed."
-        $isSampleDataFailed = $true
-    }
-    Write-Host "Python script to index data for RFP Evaluation successfully executed."
 }
 
 
 if($useCaseSelection -eq "5" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
     Write-Host "Uploading Team Configuration for Contract Compliance Review..."
-    $directoryPath = "data/agent_teams"
-    $teamId = "00000000-0000-0000-0000-000000000005"
+    $teamConfigDir = "content_packs/contract_compliance/agent_teams"
     try {
-        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $directoryPath, $userPrincipalId, $teamId -Wait -NoNewWindow -PassThru
+        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $teamConfigDir, $userPrincipalId, "00000000-0000-0000-0000-000000000005" -Wait -NoNewWindow -PassThru
         if ($process.ExitCode -ne 0) {
             Write-Host "Error: Team configuration for Contract Compliance Review upload failed."
             $failedTeamConfigs += 1
@@ -753,68 +735,21 @@ if($useCaseSelection -eq "5" -or $useCaseSelection -eq "all" -or $useCaseSelecti
     }
     Write-Host "Uploaded Team Configuration for Contract Compliance Review..."
 
-    $directoryPath = "data/datasets/contract_compliance/summary"
-    # Upload sample files to blob storage
-    Write-Host "Uploading sample files to blob storage for Contract Compliance Review..."
-    $result = az storage blob upload-batch --account-name $storageAccount --destination $blobContainerForContractSummary --source $directoryPath --auth-mode login --pattern "*" --overwrite --output none
-
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Error: Failed to upload files to blob storage."
+    Write-Host "Deploying data for Contract Compliance content pack..."
+    $packResult = Deploy-ContentPack -PackPath "content_packs/contract_compliance" -StorageAccountName $storageAccount -AiSearchName $aiSearch -PythonCmd $pythonCmd
+    if (-not $packResult) {
+        Write-Host "Error: Data deployment for Contract Compliance failed."
         $isSampleDataFailed = $true
-        exit 1
+    } else {
+        Write-Host "Data deployment for Contract Compliance completed successfully."
     }
-
-    $directoryPath = "data/datasets/contract_compliance/risk"
-    $result = az storage blob upload-batch --account-name $storageAccount --destination $blobContainerForContractRisk --source $directoryPath --auth-mode login --pattern "*" --overwrite --output none
-
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Error: Failed to upload files to blob storage."
-        $isSampleDataFailed = $true
-        exit 1
-    }
-
-    $directoryPath = "data/datasets/contract_compliance/compliance"
-
-    $result = az storage blob upload-batch --account-name $storageAccount --destination $blobContainerForContractCompliance --source $directoryPath --auth-mode login --pattern "*" --overwrite --output none
-
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Error: Failed to upload files to blob storage."
-        $isSampleDataFailed = $true
-        exit 1
-    }
-    Write-Host "Files uploaded successfully to blob storage."
-
-    # Run the Python script to index data
-    Write-Host "Running the python script to index data for Contract Compliance Review"
-    $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/index_datasets.py", $storageAccount, $blobContainerForContractSummary , $aiSearch, $aiSearchIndexForContractSummary -Wait -NoNewWindow -PassThru
-
-    if ($process.ExitCode -ne 0) {
-        Write-Host "Error: Indexing python script execution failed."
-        $isSampleDataFailed = $true
-    }
-
-    $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/index_datasets.py", $storageAccount, $blobContainerForContractRisk , $aiSearch, $aiSearchIndexForContractRisk -Wait -NoNewWindow -PassThru
-
-    if ($process.ExitCode -ne 0) {
-        Write-Host "Error: Indexing python script execution failed."
-        $isSampleDataFailed = $true
-    }
-
-    $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/index_datasets.py", $storageAccount, $blobContainerForContractCompliance , $aiSearch, $aiSearchIndexForContractCompliance -Wait -NoNewWindow -PassThru
-
-    if ($process.ExitCode -ne 0) {
-        Write-Host "Error: Indexing python script execution failed."
-        $isSampleDataFailed = $true
-    }
-    Write-Host "Python script to index data for Contract Compliance Review successfully executed."
 }
 
 if($useCaseSelection -eq "2" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
     Write-Host "Uploading Team Configuration for Retail Customer Satisfaction..."
-    $directoryPath = "data/agent_teams"
-    $teamId = "00000000-0000-0000-0000-000000000003"
+    $teamConfigDir = "content_packs/retail_customer/agent_teams"
     try {
-        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $directoryPath, $userPrincipalId, $teamId -Wait -NoNewWindow -PassThru
+        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $teamConfigDir, $userPrincipalId, "00000000-0000-0000-0000-000000000003" -Wait -NoNewWindow -PassThru
         if ($process.ExitCode -ne 0) {
             Write-Host "Error: Team configuration for Retail Customer Satisfaction upload failed."
             $failedTeamConfigs += 1
@@ -826,51 +761,47 @@ if($useCaseSelection -eq "2" -or $useCaseSelection -eq "all" -or $useCaseSelecti
     }
     Write-Host "Uploaded Team Configuration for Retail Customer Satisfaction..."
 
-    $directoryPath = "data/datasets/retail/customer"
-    # Upload sample files to blob storage
-    Write-Host "Uploading sample files to blob storage for Retail Customer Satisfaction ..."
-    $result = az storage blob upload-batch --account-name $storageAccount --destination "retail-dataset-customer" --source $directoryPath --auth-mode login --pattern "*" --overwrite --output none
-
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Error: Failed to upload files to blob storage."
+    Write-Host "Deploying data for Retail Customer content pack..."
+    $packResult = Deploy-ContentPack -PackPath "content_packs/retail_customer" -StorageAccountName $storageAccount -AiSearchName $aiSearch -PythonCmd $pythonCmd
+    if (-not $packResult) {
+        Write-Host "Error: Data deployment for Retail Customer Satisfaction failed."
         $isSampleDataFailed = $true
-        exit 1
+    } else {
+        Write-Host "Data deployment for Retail Customer Satisfaction completed successfully."
     }
+}
 
-    $directoryPath = "data/datasets/retail/order"
-    $result = az storage blob upload-batch --account-name $storageAccount --destination "retail-dataset-order" --source "data/datasets/retail/order" --auth-mode login --pattern "*" --overwrite --output none
+if($useCaseSelection -eq "6" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
+    Write-Host "Uploading Team Configuration for Content Generation..."
+    $teamConfigDir = "content_packs/content_gen/agent_teams"
+    try {
+        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $teamConfigDir, $userPrincipalId, "00000000-0000-0000-0000-000000000007" -Wait -NoNewWindow -PassThru
+        if ($process.ExitCode -ne 0) {
+            Write-Host "Error: Team configuration for Content Generation upload failed."
+            $failedTeamConfigs += 1
+            $isTeamConfigFailed = $true
+        }
+    } catch {
+        Write-Host "Error: Uploading team configuration failed."
+        $isTeamConfigFailed = $true
+    }
+    Write-Host "Uploaded Team Configuration for Content Generation..."
 
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Error: Failed to upload files to blob storage."
+    Write-Host "Deploying data for Content Generation content pack..."
+    $packResult = Deploy-ContentPack -PackPath "content_packs/content_gen" -StorageAccountName $storageAccount -AiSearchName $aiSearch -PythonCmd $pythonCmd
+    if (-not $packResult) {
+        Write-Host "Error: Data deployment for Content Generation failed."
         $isSampleDataFailed = $true
-        exit 1
+    } else {
+        Write-Host "Data deployment for Content Generation completed successfully."
     }
-    Write-Host "Files uploaded successfully to blob storage."
-
-    # Run the Python script to index data
-    Write-Host "Running the python script to index data for Retail Customer Satisfaction"
-    $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/index_datasets.py", $storageAccount, "retail-dataset-customer", $aiSearch, "macae-retail-customer-index" -Wait -NoNewWindow -PassThru
-
-    if ($process.ExitCode -ne 0) {
-        Write-Host "Error: Indexing python script execution failed."
-        $isSampleDataFailed = $true
-        exit 1
-    }
-    $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/index_datasets.py", $storageAccount, "retail-dataset-order" , $aiSearch, "macae-retail-order-index" -Wait -NoNewWindow -PassThru
-
-    if ($process.ExitCode -ne 0) {
-        Write-Host "Error: Indexing python script execution failed."
-        $isSampleDataFailed = $true
-        exit 1
-    }
-    Write-Host "Python script to index data for Retail Customer Satisfaction successfully executed."
 }
 
 if ($isTeamConfigFailed -or $isSampleDataFailed) {
     Write-Host "`nOne or more tasks failed. Please check the error messages above."
     exit 1
 } else {
-    if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7"){
+    if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "6" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7"){
         Write-Host "`nTeam configuration upload and sample data processing completed successfully."
     }else {
         Write-Host "`nTeam configuration upload completed successfully."

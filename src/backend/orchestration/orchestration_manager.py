@@ -30,7 +30,7 @@ from orchestration.plan_review_helpers import (convert_plan_review_to_mplan,
                                                get_magentic_prompt_kwargs,
                                                wait_for_plan_approval)
 from orchestration.user_interaction_agent import create_user_interaction_agent
-from patches.tool_history_leak import apply_tool_history_leak_patch
+from orchestration.patches import apply_tool_history_leak_patch
 from services.team_service import TeamService
 
 # Apply framework bug workaround (tool-call history leaks between participants)
