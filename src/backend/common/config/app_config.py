@@ -54,7 +54,6 @@ class AppConfig:
             "AZURE_OPENAI_API_VERSION", "2024-11-20"
         )
         self.AZURE_OPENAI_ENDPOINT = self._get_required("AZURE_OPENAI_ENDPOINT")
-        self.REASONING_MODEL_NAME = self._get_optional("REASONING_MODEL_NAME", "o3")
         self.ORCHESTRATOR_MODEL_NAME = self._get_optional("ORCHESTRATOR_MODEL_NAME", "o4-mini")
         # self.AZURE_BING_CONNECTION_NAME = self._get_optional(
         #     "AZURE_BING_CONNECTION_NAME"
@@ -106,10 +105,6 @@ class AppConfig:
             "AZURE_STORAGE_IMAGES_CONTAINER", "generated-images"
         )
         # self.BING_CONNECTION_NAME = self._get_optional("BING_CONNECTION_NAME")
-
-        test_team_json = self._get_optional("TEST_TEAM_JSON")
-
-        self.AGENT_TEAM_FILE = f"../../data/agent_teams/{test_team_json}.json"
 
         # Cached clients and resources
         self._azure_credentials = None
