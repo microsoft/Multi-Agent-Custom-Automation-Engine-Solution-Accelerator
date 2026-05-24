@@ -62,6 +62,7 @@ class AgentTemplate:
         temperature: float | None = None,
         team_config: TeamConfiguration | None = None,
         memory_store: DatabaseBase | None = None,
+        extra_tools: list | None = None,
     ) -> None:
         self.agent_name = agent_name
         self.agent_description = agent_description
@@ -77,6 +78,7 @@ class AgentTemplate:
         self.temperature = temperature
         self.team_config = team_config
         self.memory_store = memory_store
+        self.extra_tools = extra_tools or []
 
         self.logger = logging.getLogger(__name__)
 
@@ -403,12 +405,14 @@ class AgentTemplate:
                     self.mcp_cfg.url,
                 )
 
-            # Combine Toolbox tools (Search, CodeInterpreter) + client-side MCP.
+            # Combine Toolbox tools (Search, CodeInterpreter) + client-side MCP + extra tools.
             all_tools: list = []
             if maf_tools:
                 all_tools.extend(maf_tools)
             if mcp_tool:
                 all_tools.append(mcp_tool)
+            if self.extra_tools:
+                all_tools.extend(self.extra_tools)
 
             # --- DIAGNOSTIC: dump what reaches Agent() ---
             import json as _json

@@ -861,10 +861,11 @@ class TestProcessEventStreamPlanReview:
             current_streaming_agent_ref=[None],
         )
 
-        # Assert — returns dict with request_id → plan_review
+        # Assert — returns dict with plan_reviews key
         assert result is not None
-        assert "req-1" in result
-        assert result["req-1"] is plan_review
+        assert "plan_reviews" in result
+        assert "req-1" in result["plan_reviews"]
+        assert result["plan_reviews"]["req-1"] is plan_review
 
     @pytest.mark.asyncio
     async def test_given_multiple_plan_reviews_when_processing_then_collects_all(self):
@@ -889,9 +890,10 @@ class TestProcessEventStreamPlanReview:
 
         # Assert
         assert result is not None
-        assert len(result) == 2
-        assert "req-1" in result
-        assert "req-2" in result
+        assert "plan_reviews" in result
+        assert len(result["plan_reviews"]) == 2
+        assert "req-1" in result["plan_reviews"]
+        assert "req-2" in result["plan_reviews"]
 
     @pytest.mark.asyncio
     async def test_given_no_plan_review_when_stream_completes_then_returns_none(self):

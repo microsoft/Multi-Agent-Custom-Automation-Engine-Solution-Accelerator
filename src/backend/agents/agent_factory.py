@@ -17,6 +17,7 @@ from common.database.database_base import DatabaseBase
 from common.models.messages import TeamConfiguration
 from config.mcp_config import (KnowledgeBaseConfig, MCPConfig, SearchConfig,
                                VectorStoreConfig)
+from tools.clarification_tool import request_user_clarification
 
 
 class UnsupportedModelError(Exception):
@@ -39,20 +40,18 @@ CRITICAL RULES — READ BEFORE ACTING:
 
 2. GATHER ALL MISSING INFO BEFORE EXECUTING. Before calling action tools, check
    whether you have every required parameter. If ANY required parameter is missing
-   from the conversation context, state clearly:
-   "I need the following information from the user: [list]"
-   The chat manager will route to UserInteractionAgent to collect answers.
+   from the conversation context, call the request_user_clarification tool with
+   clear, numbered questions listing exactly what you need.
 
 3. PRESENT OPTIONS TO THE USER. If you have optional steps or overridable
    defaults, include them in your clarification request so the user can decide.
 
-4. EXECUTE ONLY AFTER ANSWERS ARRIVE. Once user answers are in conversation
-   history, proceed with execution using the real values provided.
+4. EXECUTE ONLY AFTER ANSWERS ARRIVE. Once the request_user_clarification tool
+   returns the user's answers, proceed with execution using the real values provided.
 
-5. REQUEST CLARIFICATION VIA THE MANAGER. Do NOT call ask_user yourself — only
-   the UserInteractionAgent can communicate with the user. If mid-execution you
-   discover a genuinely required value is still missing, state:
-   "I need the following information from the user: [specific questions]"
+5. ALWAYS USE THE TOOL. To ask the user a question, you MUST call
+   request_user_clarification. Do NOT simply state that you need information —
+   the user cannot see your text until the task completes.
 
 6. Do NOT re-ask anything already answered in the conversation history.
 """
@@ -150,9 +149,6 @@ class AgentFactory:
         )
 
         # MCP config: domain-specific server only (use_mcp).
-        # user_responses=true no longer gives agents the ask_user tool directly;
-        # they request clarification via their response text, and the manager
-        # routes to UserInteractionAgent.
         use_mcp = getattr(agent_obj, "use_mcp", False)
         user_responses = getattr(agent_obj, "user_responses", False)
         if use_mcp:
@@ -176,10 +172,12 @@ class AgentFactory:
         instructions = getattr(agent_obj, "system_message", "")
 
         # Universal user-interaction rules for agents that have
-        # user_responses=true — tells them to request clarification via the
-        # chat manager rather than calling ask_user directly.
+        # user_responses=true — tells them to call request_user_clarification.
         if user_responses:
             instructions += _UNIVERSAL_USER_INTERACTION_PROMPT
+
+        # Agents with user_responses=true get the clarification tool directly.
+        extra_tools = [request_user_clarification] if user_responses else None
 
         agent = AgentTemplate(
             agent_name=agent_obj.name,
@@ -196,6 +194,7 @@ class AgentFactory:
             temperature=getattr(agent_obj, "temperature", None),
             team_config=team_config,
             memory_store=memory_store,
+            extra_tools=extra_tools,
         )
 
         await agent.open()

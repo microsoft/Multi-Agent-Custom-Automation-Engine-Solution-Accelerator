@@ -765,13 +765,30 @@ export class PlanDataService {
    */
   static parseUserClarificationRequest(rawData: any): ParsedUserClarification | null {
     try {
+      // --- New structured JSON format (from approval-mode tool) ---
+      // After send_status_update_async wraps, the shape arriving is:
+      // { type, data: { type, data: { request_id, questions, agent_name } } }
+      // Walk up to 3 levels of .data nesting to find the object with request_id.
+      let structured = rawData?.data;
+      for (let i = 0; i < 3 && structured && typeof structured === 'object' && !structured.request_id; i++) {
+        structured = structured.data;
+      }
+      if (structured && typeof structured === 'object' && structured.request_id) {
+        const question = structured.questions || structured.question || '';
+        return {
+          type: WebsocketMessageType.USER_CLARIFICATION_REQUEST,
+          question,
+          request_id: structured.request_id,
+        };
+      }
+
+      // --- Legacy string format: UserClarificationRequest(question="...", request_id="...") ---
       const extractString = (val: any, depth = 0): string | null => {
         if (depth > 15) return null;
         if (typeof val === 'string') {
           return val.startsWith('UserClarificationRequest(') ? val : null;
         }
         if (val && typeof val === 'object') {
-          // Prefer .data traversal
           if (val.data !== undefined) {
             const inner = extractString(val.data, depth + 1);
             if (inner) return inner;
