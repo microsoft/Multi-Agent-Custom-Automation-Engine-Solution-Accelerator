@@ -67,8 +67,8 @@ def _filter_tool_call_messages(messages: list[Message]) -> list[Message]:
     return filtered
 
 
-# Store original method reference
-_original_handle_response = MagenticOrchestrator._handle_response
+# Store original method reference — intentional protected access for monkey-patch
+_original_handle_response = MagenticOrchestrator._handle_response  # type: ignore[attr-defined]
 
 
 async def _patched_handle_response(self, response, ctx) -> None:
@@ -100,27 +100,18 @@ async def _patched_handle_response(self, response, ctx) -> None:
 def apply_tool_history_leak_patch():
     """Apply the monkey-patch. Call once at import time."""
     # Layer 1: filter at broadcast (production path in _handle_response)
-    MagenticOrchestrator._handle_response = _patched_handle_response  # type: ignore[assignment]
+    MagenticOrchestrator._handle_response = _patched_handle_response  # type: ignore[attr-defined]
 
     # Layer 2: filter at consumption (AgentExecutor cache before model call)
-    _original_run_agent_and_emit = AgentExecutor._run_agent_and_emit
+    _original_run_agent_and_emit = AgentExecutor._run_agent_and_emit  # type: ignore[attr-defined]
 
     async def _patched_run_agent_and_emit(self, ctx):
         """Filter tool-call items from _cache before sending to the model."""
-        # Debug: log what the agent sees on invocation
         agent_name = getattr(getattr(self, 'agent', None), 'name', None) or getattr(self, 'id', '?')
-        logger.info(
-            "=== AGENT INVOCATION: %s === cache has %d messages",
+        logger.debug(
+            "Agent '%s' invoked with %d cached messages",
             agent_name, len(self._cache),
         )
-        for i, msg in enumerate(self._cache):
-            role = getattr(msg, 'role', '?')
-            text = getattr(msg, 'text', '') or ''
-            content_types = [getattr(c, 'type', '?') for c in getattr(msg, 'contents', [])]
-            logger.info(
-                "  [%d] role=%s types=%s text_preview='%s'",
-                i, role, content_types, text[:150].replace('\n', ' '),
-            )
 
         pre_len = len(self._cache)
         self._cache = _filter_tool_call_messages(self._cache)
@@ -133,5 +124,5 @@ def apply_tool_history_leak_patch():
             )
         return await _original_run_agent_and_emit(self, ctx)
 
-    AgentExecutor._run_agent_and_emit = _patched_run_agent_and_emit  # type: ignore[assignment]
-    print("[F1-PATCH] Applied: MagenticOrchestrator._handle_response + AgentExecutor._run_agent_and_emit")
+    AgentExecutor._run_agent_and_emit = _patched_run_agent_and_emit  # type: ignore[attr-defined]
+    logger.info("[F1-PATCH] Applied: MagenticOrchestrator._handle_response + AgentExecutor._run_agent_and_emit")

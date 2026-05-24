@@ -42,7 +42,7 @@ def pop_answer(request_id: str) -> str:
 # The approval-gated tool given to domain agents with user_responses=true.
 # ---------------------------------------------------------------------------
 @tool(approval_mode="always_require")
-def request_user_clarification(questions: str) -> str:
+def request_user_clarification(questions: str) -> str:  # noqa: ARG001 - questions consumed by approval mechanism, not tool body
     """Ask the user for clarifying information and return their answer.
 
     Use this tool when you need information that is not available in the

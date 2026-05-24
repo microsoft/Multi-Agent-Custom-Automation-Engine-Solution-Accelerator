@@ -411,22 +411,10 @@ class AgentTemplate:
                 all_tools.extend(maf_tools)
             if mcp_tool:
                 all_tools.append(mcp_tool)
+            # Extra tools (e.g. approval-gated clarification tool) injected by
+            # AgentFactory for agents with user_responses=true.
             if self.extra_tools:
                 all_tools.extend(self.extra_tools)
-
-            # --- DIAGNOSTIC: dump what reaches Agent() ---
-            import json as _json
-            def _tool_summary(t):
-                if isinstance(t, dict):
-                    return {k: v for k, v in t.items() if k != "headers"}
-                return repr(t)[:120]
-            self.logger.warning(
-                ">>> Agent('%s') all_tools=%d: %s",
-                self.agent_name,
-                len(all_tools),
-                _json.dumps([_tool_summary(t) for t in all_tools], indent=2, default=str),
-            )
-            # --- END DIAGNOSTIC ---
 
             agent = Agent(
                 client=chat_client,

@@ -3,18 +3,15 @@
 import asyncio
 import logging
 import uuid
-from contextlib import AsyncExitStack
 from typing import List, Optional
 
 import models.messages as messages
-from agent_framework import (Agent, AgentResponse, AgentResponseUpdate,
-                             InMemoryCheckpointStorage, MCPStreamableHTTPTool,
-                             Message, WorkflowEvent, WorkflowRunState)
+from agent_framework import (Agent, AgentResponseUpdate,
+                             InMemoryCheckpointStorage,
+                             Message, WorkflowRunState)
 from agent_framework.orchestrations import (MagenticBuilder,
                                             MagenticOrchestratorEvent,
-                                            MagenticOrchestratorEventType,
                                             MagenticPlanReviewRequest)
-# agent_framework imports
 from agent_framework_foundry import FoundryChatClient
 from agents.agent_factory import AgentFactory
 from callbacks.response_handlers import (agent_response_callback,
@@ -22,7 +19,6 @@ from callbacks.response_handlers import (agent_response_callback,
 from common.config.app_config import config
 from common.database.database_base import DatabaseBase
 from common.models.messages import TeamConfiguration
-from config.mcp_config import MCPConfig
 from models.messages import AgentMessageStreaming, WebsocketMessageType
 from orchestration.connection_config import (connection_config,
                                              orchestration_config)
@@ -32,7 +28,9 @@ from orchestration.plan_review_helpers import (convert_plan_review_to_mplan,
 from patches.tool_history_leak import apply_tool_history_leak_patch
 from services.team_service import TeamService
 
-# Apply patch to prevent tool call/result leaking across agents in GroupChat
+# Apply patch: MAF bug causes tool_call/tool_result messages to leak across
+# participants in GroupChat, triggering "No tool call found for call_id" 400 errors.
+# See localspec/bugs/framework/F1-tool-history-leak.md
 apply_tool_history_leak_patch()
 
 class OrchestrationManager:
@@ -135,8 +133,11 @@ class OrchestrationManager:
             participant_list.append(inner)
             cls.logger.debug("Added participant '%s'", name)
 
-        # Assemble and build the Magentic workflow using the standard
-        # manager_agent= path with prompt overrides — no subclassing.
+        # MagenticBuilder config:
+        #   enable_plan_review=True  → emits request_info events with MagenticPlanReviewRequest
+        #   intermediate_outputs=True → streams AgentResponseUpdate per token
+        #   Both request_info event types (plan review + function_approval_request)
+        #   pause the workflow in IDLE_WITH_PENDING_REQUESTS until responses are provided.
         storage = InMemoryCheckpointStorage()
         workflow = MagenticBuilder(
             participants=participant_list,
@@ -237,13 +238,12 @@ class OrchestrationManager:
                 user_id,
             )
             # Extract existing participant agents from the workflow executors.
-            # Skip the MagenticManager (orchestrator) and UserInteractionAgent —
-            # both will be recreated by init_orchestration.
+            # Skip the MagenticManager — it is recreated by init_orchestration.
             reusable_agents = [
                 executor.agent
                 for executor in current.get_executors_list()
                 if hasattr(executor, "agent")
-                and not getattr(executor.agent, "name", "").startswith("UserInteraction")
+                and getattr(executor.agent, "name", "") != "MagenticManager"
             ]
             cls.logger.info(
                 "Reusing %d agents for new workflow", len(reusable_agents),
@@ -336,7 +336,7 @@ class OrchestrationManager:
                         user_id=user_id,
                     )
                     if plan_responses is None:
-                        raise Exception("Plan execution cancelled by user")
+                        raise RuntimeError("Plan execution cancelled by user")
                     responses.update(plan_responses)
 
                 # Handle tool approval requests (clarification from user)
@@ -628,7 +628,9 @@ class OrchestrationManager:
                 )
 
                 # -------------------------------------------------------
-                # Plan review request — collect, don't block
+                # MAF request_info event #1: Plan review
+                # Emitted by enable_plan_review=True when the orchestrator
+                # produces a task plan. We collect it and present to the user.
                 # -------------------------------------------------------
                 if event.type == "request_info" and isinstance(event.data, MagenticPlanReviewRequest):
                     request_id = event.request_id
@@ -639,7 +641,10 @@ class OrchestrationManager:
                     plan_requests[request_id] = event.data
 
                 # -------------------------------------------------------
-                # Function approval request (clarification tool)
+                # MAF request_info event #2: Function approval (HITL)
+                # Emitted by @tool(approval_mode=\"always_require\") when an
+                # agent calls request_user_clarification. The framework pauses
+                # and waits for us to approve/reject after getting the user's answer.
                 # -------------------------------------------------------
                 elif (
                     event.type == "request_info"
