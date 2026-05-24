@@ -12,8 +12,9 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 # Local imports
 from middleware.health_check import HealthCheckMiddleware
-# TEMPORARY — remove when agent-framework PR #5690 lands.
-# Must run before any MagenticBuilder workflow is constructed.
+# TEMPORARY — upstream PR #5690 (agent-framework 1.4.0) fixes the fc_ duplicate
+# variant but NOT the orphaned function_call_output variant that also triggers
+# "Progress ledger creation failed" in multi-agent Magentic workflows.
 from patches import magentic_duplicate_fc_id
 
 magentic_duplicate_fc_id.apply()
