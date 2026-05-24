@@ -36,7 +36,8 @@ _TECH_SUPPORT_BLUEPRINTS = {
 
 ### Important
 - Look at each tool's required parameters to know exactly what to pass.
-- Do NOT fabricate any information — ask the user for anything you don't have.
+- Do NOT fabricate any information — use exactly what the user provides.
+- If the user has already provided answers, proceed directly to execution with those answers.
 """,
 }
 
