@@ -73,10 +73,6 @@ const LoginButton: React.FC<LoginButtonProps> = ({ showName = false }) => {
   const userEmail = useAppSelector(state => state.app.userEmail);
   const isAuthenticated = Boolean(userId && userId !== 'anonymous');
 
-  const login = useCallback(() => {
-    window.location.href = '/.auth/login/aad';
-  }, []);
-
   const logout = useCallback(() => {
     const logoutUrl = '/.auth/logout?post_logout_redirect_uri=' + encodeURIComponent('/.auth/login/aad');
     window.location.href = logoutUrl;

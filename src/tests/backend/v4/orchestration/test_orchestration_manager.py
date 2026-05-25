@@ -277,6 +277,7 @@ class MockDatabaseBase:
 
 sys.modules['common.database'] = Mock()
 sys.modules['common.database.database_base'] = Mock(DatabaseBase=MockDatabaseBase)
+sys.modules['common.database.database_factory'] = Mock(DatabaseFactory=Mock())
 
 # Mock v4 modules
 class MockTeamService:
@@ -315,9 +316,18 @@ sys.modules['v4.config.settings'] = Mock(
 class MockWebsocketMessageType:
     """Mock WebsocketMessageType."""
     FINAL_RESULT_MESSAGE = "final_result_message"
+    ERROR_MESSAGE = "error_message"
+    AGENT_MESSAGE = "agent_message"
+
+class MockPlanStatus:
+    """Mock PlanStatus."""
+    FAILED = "failed"
+    COMPLETED = "completed"
+    IN_PROGRESS = "in_progress"
 
 sys.modules['v4.models'] = Mock()
 sys.modules['v4.models.messages'] = Mock(WebsocketMessageType=MockWebsocketMessageType)
+sys.modules['v4.models.models'] = Mock(PlanStatus=MockPlanStatus)
 
 # Mock v4.orchestration.human_approval_manager
 class MockHumanApprovalMagenticManager:

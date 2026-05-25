@@ -671,14 +671,14 @@ def main() -> int:
     # Optional HTML email report
     if args.html_output:
         scan_dir = str(args.dir) if args.dir else ""
-        html = generate_html_report(
+        html_report = generate_html_report(
             results,
             accelerator_name=args.accelerator_name,
             run_url=args.run_url,
             scan_dir=scan_dir,
         )
         args.html_output.parent.mkdir(parents=True, exist_ok=True)
-        args.html_output.write_text(html, encoding="utf-8")
+        args.html_output.write_text(html_report, encoding="utf-8")
         print(f"HTML report written to {args.html_output}")
 
     has_errors = any(r.has_errors for r in results)
