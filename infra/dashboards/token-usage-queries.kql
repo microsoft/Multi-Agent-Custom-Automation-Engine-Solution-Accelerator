@@ -4,18 +4,19 @@
 // ============================================================
 
 // 1. Overall token usage summary (last 7 days)
+// Uses LLM_Agent_Token_Usage to include RAI agent and partial data from failed plans
 customEvents
-| where name == 'LLM_Token_Usage_Summary'
+| where name == 'LLM_Agent_Token_Usage'
 | where timestamp > ago(7d)
-| extend input_tokens = toint(customDimensions['total_input_tokens'])
-| extend output_tokens = toint(customDimensions['total_output_tokens'])
+| extend input_tokens = toint(customDimensions['input_tokens'])
+| extend output_tokens = toint(customDimensions['output_tokens'])
 | extend total_tokens = toint(customDimensions['total_tokens'])
 | summarize 
-    TotalRequests = count(),
+    TotalAgentInvocations = count(),
     TotalInputTokens = sum(input_tokens),
     TotalOutputTokens = sum(output_tokens),
     TotalTokens = sum(total_tokens),
-    AvgTokensPerRequest = round(avg(total_tokens), 0)
+    AvgTokensPerInvocation = round(avg(total_tokens), 0)
 
 // 2. Token usage by agent
 customEvents
@@ -33,24 +34,25 @@ customEvents
     by Agent = agent
 | order by TotalTokens desc
 
-// 3. Token usage over time (hourly)
+// 3. Token usage over time (hourly, includes RAI agent and partial data from failed plans)
 customEvents
-| where name == 'LLM_Token_Usage_Summary'
+| where name == 'LLM_Agent_Token_Usage'
 | where timestamp > ago(7d)
-| extend input_tokens = toint(customDimensions['total_input_tokens'])
-| extend output_tokens = toint(customDimensions['total_output_tokens'])
+| extend input_tokens = toint(customDimensions['input_tokens'])
+| extend output_tokens = toint(customDimensions['output_tokens'])
 | summarize InputTokens = sum(input_tokens), OutputTokens = sum(output_tokens) by bin(timestamp, 1h)
 | order by timestamp asc
 | render areachart
 
 // 4. Estimated cost (GPT-4o pricing: $2.50/1M input, $10.00/1M output)
+// Uses LLM_Agent_Token_Usage to include RAI agent and partial data from failed plans
 let input_price_per_million = 2.50;
 let output_price_per_million = 10.00;
 customEvents
-| where name == 'LLM_Token_Usage_Summary'
+| where name == 'LLM_Agent_Token_Usage'
 | where timestamp > ago(30d)
-| extend input_tokens = toint(customDimensions['total_input_tokens'])
-| extend output_tokens = toint(customDimensions['total_output_tokens'])
+| extend input_tokens = toint(customDimensions['input_tokens'])
+| extend output_tokens = toint(customDimensions['output_tokens'])
 | summarize TotalInput = sum(input_tokens), TotalOutput = sum(output_tokens) by bin(timestamp, 1d)
 | extend InputCost = round(TotalInput * input_price_per_million / 1000000.0, 4)
 | extend OutputCost = round(TotalOutput * output_price_per_million / 1000000.0, 4)
@@ -58,13 +60,20 @@ customEvents
 | project Day = timestamp, TotalInput, TotalOutput, InputCost, OutputCost, TotalCost
 | order by Day desc
 
-// 5. Top token consumers by user
+// 5. Top token consumers by user (includes RAI agent and partial data from failed plans)
 customEvents
-| where name == 'LLM_Token_Usage_Summary'
+| where name == 'LLM_Agent_Token_Usage'
 | where timestamp > ago(7d)
+| extend input_tokens = toint(customDimensions['input_tokens'])
+| extend output_tokens = toint(customDimensions['output_tokens'])
 | extend total_tokens = toint(customDimensions['total_tokens'])
 | extend user_id = tostring(customDimensions['user_id'])
-| summarize TotalTokens = sum(total_tokens), Requests = count() by user_id
+| summarize 
+    TotalInputTokens = sum(input_tokens),
+    TotalOutputTokens = sum(output_tokens),
+    TotalTokens = sum(total_tokens), 
+    AgentInvocations = count() 
+    by user_id
 | order by TotalTokens desc
 | take 20
 
@@ -77,9 +86,9 @@ customEvents
 | summarize TotalTokens = sum(total_tokens) by agent
 | render piechart
 
-// 7. Token usage percentiles per task
+// 7. Token usage percentiles per agent invocation
 customEvents
-| where name == 'LLM_Token_Usage_Summary'
+| where name == 'LLM_Agent_Token_Usage'
 | where timestamp > ago(7d)
 | extend total_tokens = toint(customDimensions['total_tokens'])
 | summarize
@@ -231,3 +240,177 @@ dependencies
     TotalOutput = sum(output_tokens)
     by model
 | order by TotalInput desc
+
+// ============================================================
+// Execution Time Queries
+// ============================================================
+
+// 16. Agent execution time summary (last 7 days)
+customEvents
+| where name == 'Agent_Execution_Time'
+| where timestamp > ago(7d)
+| extend agent = tostring(customDimensions['agent_name'])
+| extend execution_seconds = todouble(customDimensions['execution_seconds'])
+| extend invocations = toint(customDimensions['invocations'])
+| extend avg_seconds = todouble(customDimensions['avg_seconds'])
+| extend model = tostring(customDimensions['model_deployment_name'])
+| summarize 
+    TotalExecutionSeconds = round(sum(execution_seconds), 2),
+    TotalInvocations = sum(invocations),
+    AvgSecondsPerInvocation = round(avg(avg_seconds), 2),
+    MinSeconds = round(min(execution_seconds), 2),
+    MaxSeconds = round(max(execution_seconds), 2),
+    Runs = count()
+    by Agent = agent, Model = model
+| order by TotalExecutionSeconds desc
+
+// 17. Agent execution time over time (hourly)
+customEvents
+| where name == 'Agent_Execution_Time'
+| where timestamp > ago(7d)
+| extend agent = tostring(customDimensions['agent_name'])
+| extend execution_seconds = todouble(customDimensions['execution_seconds'])
+| summarize AvgExecutionSeconds = round(avg(execution_seconds), 2) by bin(timestamp, 1h), agent
+| order by timestamp asc
+| render areachart
+
+// 18. Agent execution time percentiles
+customEvents
+| where name == 'Agent_Execution_Time'
+| where timestamp > ago(7d)
+| extend agent = tostring(customDimensions['agent_name'])
+| extend execution_seconds = todouble(customDimensions['execution_seconds'])
+| summarize
+    p50 = round(percentile(execution_seconds, 50), 2),
+    p90 = round(percentile(execution_seconds, 90), 2),
+    p95 = round(percentile(execution_seconds, 95), 2),
+    p99 = round(percentile(execution_seconds, 99), 2),
+    Max = round(max(execution_seconds), 2)
+    by Agent = agent
+| order by p50 desc
+
+// 19. Orchestration (end-to-end) execution time summary
+customEvents
+| where name == 'Orchestration_Execution_Time'
+| where timestamp > ago(7d)
+| extend execution_seconds = todouble(customDimensions['execution_seconds'])
+| extend agent_count = toint(customDimensions['agent_count'])
+| summarize 
+    TotalRuns = count(),
+    AvgSeconds = round(avg(execution_seconds), 2),
+    MinSeconds = round(min(execution_seconds), 2),
+    MaxSeconds = round(max(execution_seconds), 2),
+    p50 = round(percentile(execution_seconds, 50), 2),
+    p90 = round(percentile(execution_seconds, 90), 2),
+    p95 = round(percentile(execution_seconds, 95), 2),
+    AvgAgentCount = round(avg(agent_count), 1)
+
+// 20. Orchestration execution time over time (hourly)
+customEvents
+| where name == 'Orchestration_Execution_Time'
+| where timestamp > ago(7d)
+| extend execution_seconds = todouble(customDimensions['execution_seconds'])
+| summarize AvgSeconds = round(avg(execution_seconds), 2) by bin(timestamp, 1h)
+| order by timestamp asc
+| render timechart
+
+// 21. Team-wise execution time
+let TeamMapping = datatable(agent:string, Team:string) [
+    "HRHelperAgent", "Human Resources",
+    "TechnicalSupportAgent", "Human Resources",
+    "ProductAgent", "Product Marketing",
+    "MarketingAgent", "Product Marketing",
+    "CustomerDataAgent", "Retail Customer Success",
+    "OrderDataAgent", "Retail Customer Success",
+    "AnalysisRecommendationAgent", "Retail Customer Success",
+    "ContractSummaryAgent", "Contract Compliance",
+    "ContractRiskAgent", "Contract Compliance",
+    "ContractComplianceAgent", "Contract Compliance",
+    "RfpSummaryAgent", "RFP Analysis",
+    "RfpRiskAgent", "RFP Analysis",
+    "RfpComplianceAgent", "RFP Analysis",
+    "ProxyAgent", "Shared"
+];
+customEvents
+| where name == 'Agent_Execution_Time'
+| where timestamp > ago(7d)
+| extend agent = tostring(customDimensions['agent_name'])
+| extend execution_seconds = todouble(customDimensions['execution_seconds'])
+| extend invocations = toint(customDimensions['invocations'])
+| lookup kind=leftouter TeamMapping on agent
+| extend Team = iff(isempty(Team), "Unknown", Team)
+| summarize
+    TotalExecutionSeconds = round(sum(execution_seconds), 2),
+    TotalInvocations = sum(invocations),
+    AvgSecondsPerInvocation = round(avg(execution_seconds / toint(invocations)), 2),
+    AgentCount = dcount(agent),
+    Runs = count()
+    by Team
+| order by TotalExecutionSeconds desc
+
+// 22. Team-wise execution time over time (hourly)
+let TeamMapping = datatable(agent:string, Team:string) [
+    "HRHelperAgent", "Human Resources",
+    "TechnicalSupportAgent", "Human Resources",
+    "ProductAgent", "Product Marketing",
+    "MarketingAgent", "Product Marketing",
+    "CustomerDataAgent", "Retail Customer Success",
+    "OrderDataAgent", "Retail Customer Success",
+    "AnalysisRecommendationAgent", "Retail Customer Success",
+    "ContractSummaryAgent", "Contract Compliance",
+    "ContractRiskAgent", "Contract Compliance",
+    "ContractComplianceAgent", "Contract Compliance",
+    "RfpSummaryAgent", "RFP Analysis",
+    "RfpRiskAgent", "RFP Analysis",
+    "RfpComplianceAgent", "RFP Analysis",
+    "ProxyAgent", "Shared"
+];
+customEvents
+| where name == 'Agent_Execution_Time'
+| where timestamp > ago(7d)
+| extend agent = tostring(customDimensions['agent_name'])
+| extend execution_seconds = todouble(customDimensions['execution_seconds'])
+| lookup kind=leftouter TeamMapping on agent
+| extend Team = iff(isempty(Team), "Unknown", Team)
+| summarize TotalExecutionSeconds = round(sum(execution_seconds), 2) by bin(timestamp, 1h), Team
+| order by timestamp asc
+| render areachart
+
+// 23. Agent execution time distribution (pie chart by team)
+let TeamMapping = datatable(agent:string, Team:string) [
+    "HRHelperAgent", "Human Resources",
+    "TechnicalSupportAgent", "Human Resources",
+    "ProductAgent", "Product Marketing",
+    "MarketingAgent", "Product Marketing",
+    "CustomerDataAgent", "Retail Customer Success",
+    "OrderDataAgent", "Retail Customer Success",
+    "AnalysisRecommendationAgent", "Retail Customer Success",
+    "ContractSummaryAgent", "Contract Compliance",
+    "ContractRiskAgent", "Contract Compliance",
+    "ContractComplianceAgent", "Contract Compliance",
+    "RfpSummaryAgent", "RFP Analysis",
+    "RfpRiskAgent", "RFP Analysis",
+    "RfpComplianceAgent", "RFP Analysis",
+    "ProxyAgent", "Shared"
+];
+customEvents
+| where name == 'Agent_Execution_Time'
+| where timestamp > ago(7d)
+| extend agent = tostring(customDimensions['agent_name'])
+| extend execution_seconds = todouble(customDimensions['execution_seconds'])
+| lookup kind=leftouter TeamMapping on agent
+| extend Team = iff(isempty(Team), "Unknown", Team)
+| summarize TotalExecutionSeconds = round(sum(execution_seconds), 2) by Team
+| render piechart
+
+// 24. Slowest agent invocations (top 20)
+customEvents
+| where name == 'Agent_Execution_Time'
+| where timestamp > ago(7d)
+| extend agent = tostring(customDimensions['agent_name'])
+| extend execution_seconds = todouble(customDimensions['execution_seconds'])
+| extend model = tostring(customDimensions['model_deployment_name'])
+| extend user_id = tostring(customDimensions['user_id'])
+| project timestamp, Agent = agent, ExecutionSeconds = round(execution_seconds, 2), Model = model, UserId = user_id
+| order by ExecutionSeconds desc
+| take 20

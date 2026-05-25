@@ -539,6 +539,10 @@ class OrchestrationManager:
         cumulative_input_tokens = 0
         cumulative_output_tokens = 0
         cumulative_total_tokens = 0
+        # Execution time tracking
+        orchestration_start_time = _time.time()
+        agent_start_times: dict[str, float] = {}  # agent_name -> start epoch
+        agent_execution_times: dict[str, dict] = {}  # agent_name -> {total_seconds, invocations, model_deployment_name}
 
         try:
             # Execute workflow using run() with stream=True
@@ -571,6 +575,8 @@ class OrchestrationManager:
                             agent_name = event.data.participant_name
                             agent_call_counts[agent_name] = agent_call_counts.get(agent_name, 0) + 1
                             call_num = agent_call_counts[agent_name]
+                            # Record agent start time for execution duration tracking
+                            agent_start_times[agent_name] = _time.time()
 
                             self.logger.info(
                                 "[REQUEST SENT (round %d)] to agent: %s (call #%d)",
@@ -589,6 +595,25 @@ class OrchestrationManager:
                                 event.data.round_index,
                                 agent_name
                             )
+
+                            # Calculate agent execution duration
+                            if agent_name in agent_start_times:
+                                agent_duration = _time.time() - agent_start_times.pop(agent_name)
+                                agent_model = agent_model_map.get(agent_name, "")
+                                if agent_name not in agent_execution_times:
+                                    agent_execution_times[agent_name] = {
+                                        "total_seconds": 0.0,
+                                        "invocations": 0,
+                                        "model_deployment_name": agent_model,
+                                    }
+                                agent_execution_times[agent_name]["total_seconds"] += agent_duration
+                                agent_execution_times[agent_name]["invocations"] += 1
+                                self.logger.info(
+                                    "[EXECUTION TIME] agent=%s duration=%.2fs (invocation #%d, cumulative=%.2fs)",
+                                    agent_name, agent_duration,
+                                    agent_execution_times[agent_name]["invocations"],
+                                    agent_execution_times[agent_name]["total_seconds"],
+                                )
 
                             # Extract token usage from GroupChatResponseReceivedEvent
                             _gc_usage = self._try_extract_usage_from_event(event.data)
@@ -762,45 +787,6 @@ class OrchestrationManager:
             # Log agent call summary
             self.logger.info("Agent call counts: %s", agent_call_counts)
 
-            # Log token usage summary
-            if agent_token_usage:
-                self.logger.info(
-                    "[TOKEN SUMMARY] Total: input=%d output=%d total=%d | By agent: %s | By model: %s",
-                    cumulative_input_tokens, cumulative_output_tokens, cumulative_total_tokens,
-                    {k: v for k, v in agent_token_usage.items()},
-                    {k: v for k, v in model_token_usage.items()},
-                )
-
-                # Track token usage to Application Insights
-                from common.utils.event_utils import track_event_if_configured
-                track_event_if_configured("LLM_Token_Usage_Summary", {
-                    "total_input_tokens": str(cumulative_input_tokens),
-                    "total_output_tokens": str(cumulative_output_tokens),
-                    "total_tokens": str(cumulative_total_tokens),
-                    "agent_count": str(len(agent_token_usage)),
-                    "model_count": str(len(model_token_usage)),
-                    "user_id": user_id or "",
-                })
-                # Track per-agent usage
-                for agent_name, usage in agent_token_usage.items():
-                    track_event_if_configured("LLM_Agent_Token_Usage", {
-                        "agent_name": agent_name,
-                        "input_tokens": str(usage["input_tokens"]),
-                        "output_tokens": str(usage["output_tokens"]),
-                        "total_tokens": str(usage["total_tokens"]),
-                        "model_deployment_name": str(usage.get("model_deployment_name", "")),
-                        "user_id": user_id or "",
-                    })
-                # Track per-model usage
-                for model_name, usage in model_token_usage.items():
-                    track_event_if_configured("LLM_Model_Token_Usage", {
-                        "model_deployment_name": model_name,
-                        "input_tokens": str(usage["input_tokens"]),
-                        "output_tokens": str(usage["output_tokens"]),
-                        "total_tokens": str(usage["total_tokens"]),
-                        "user_id": user_id or "",
-                    })
-
             # Log results
             self.logger.info("\nAgent responses:")
             self.logger.info(
@@ -824,26 +810,6 @@ class OrchestrationManager:
                 message_type=WebsocketMessageType.FINAL_RESULT_MESSAGE,
             )
             self.logger.info("Final result sent via WebSocket to user '%s'", user_id)
-
-            # Persist token usage to the plan in CosmosDB
-            if plan_id and cumulative_total_tokens > 0:
-                try:
-                    from common.database.database_factory import DatabaseFactory
-                    db = await DatabaseFactory.get_database(user_id=user_id)
-                    plan = await db.get_plan_by_plan_id(plan_id=plan_id)
-                    if plan:
-                        plan.total_input_tokens = cumulative_input_tokens
-                        plan.total_output_tokens = cumulative_output_tokens
-                        plan.total_tokens = cumulative_total_tokens
-                        plan.usage_by_agent = agent_token_usage
-                        plan.usage_by_model = model_token_usage
-                        await db.update_item(plan)
-                        self.logger.info(
-                            "Persisted token usage to plan '%s': total=%d",
-                            plan_id, cumulative_total_tokens,
-                        )
-                except Exception as db_err:
-                    self.logger.warning("Failed to persist token usage to plan: %s", db_err)
 
         except Exception as e:
             # Error handling
@@ -870,3 +836,99 @@ class OrchestrationManager:
             except Exception as send_error:
                 self.logger.error("Failed to send error status: %s", send_error)
             raise
+
+        finally:
+            # Always track token usage and execution time to Application Insights,
+            # even if orchestration failed partway through (e.g. 2 of 3 agents completed).
+            try:
+                orchestration_end_time = _time.time()
+                orchestration_duration = orchestration_end_time - orchestration_start_time
+
+                if agent_token_usage:
+                    self.logger.info(
+                        "[TOKEN SUMMARY] Total: input=%d output=%d total=%d | By agent: %s | By model: %s",
+                        cumulative_input_tokens, cumulative_output_tokens, cumulative_total_tokens,
+                        {k: v for k, v in agent_token_usage.items()},
+                        {k: v for k, v in model_token_usage.items()},
+                    )
+
+                    from common.utils.event_utils import track_event_if_configured
+                    track_event_if_configured("LLM_Token_Usage_Summary", {
+                        "total_input_tokens": str(cumulative_input_tokens),
+                        "total_output_tokens": str(cumulative_output_tokens),
+                        "total_tokens": str(cumulative_total_tokens),
+                        "agent_count": str(len(agent_token_usage)),
+                        "model_count": str(len(model_token_usage)),
+                        "user_id": user_id or "",
+                    })
+                    # Track per-agent usage
+                    for agent_name, usage in agent_token_usage.items():
+                        track_event_if_configured("LLM_Agent_Token_Usage", {
+                            "agent_name": agent_name,
+                            "input_tokens": str(usage["input_tokens"]),
+                            "output_tokens": str(usage["output_tokens"]),
+                            "total_tokens": str(usage["total_tokens"]),
+                            "model_deployment_name": str(usage.get("model_deployment_name", "")),
+                            "user_id": user_id or "",
+                        })
+                    # Track per-model usage
+                    for model_name, usage in model_token_usage.items():
+                        track_event_if_configured("LLM_Model_Token_Usage", {
+                            "model_deployment_name": model_name,
+                            "input_tokens": str(usage["input_tokens"]),
+                            "output_tokens": str(usage["output_tokens"]),
+                            "total_tokens": str(usage["total_tokens"]),
+                            "user_id": user_id or "",
+                        })
+
+                # Track execution time to Application Insights
+                from common.utils.event_utils import track_event_if_configured as _track_event
+                if agent_execution_times:
+                    self.logger.info(
+                        "[EXECUTION TIME SUMMARY] Orchestration=%.2fs | By agent: %s",
+                        orchestration_duration,
+                        {k: {"total_seconds": round(v["total_seconds"], 2), "invocations": v["invocations"]}
+                         for k, v in agent_execution_times.items()},
+                    )
+                    for agent_name, timing in agent_execution_times.items():
+                        _track_event("Agent_Execution_Time", {
+                            "agent_name": agent_name,
+                            "execution_seconds": str(round(timing["total_seconds"], 3)),
+                            "invocations": str(timing["invocations"]),
+                            "avg_seconds": str(round(timing["total_seconds"] / max(timing["invocations"], 1), 3)),
+                            "model_deployment_name": str(timing.get("model_deployment_name", "")),
+                            "user_id": user_id or "",
+                        })
+                _track_event("Orchestration_Execution_Time", {
+                    "execution_seconds": str(round(orchestration_duration, 3)),
+                    "agent_count": str(len(agent_execution_times)),
+                    "user_id": user_id or "",
+                })
+
+                # Persist token usage to the plan in CosmosDB
+                if plan_id and cumulative_total_tokens > 0:
+                    try:
+                        from common.database.database_factory import DatabaseFactory
+                        db = await DatabaseFactory.get_database(user_id=user_id)
+                        plan = await db.get_plan_by_plan_id(plan_id=plan_id)
+                        if plan:
+                            plan.total_input_tokens = cumulative_input_tokens
+                            plan.total_output_tokens = cumulative_output_tokens
+                            plan.total_tokens = cumulative_total_tokens
+                            plan.usage_by_agent = agent_token_usage
+                            plan.usage_by_model = model_token_usage
+                            plan.orchestration_execution_seconds = round(orchestration_duration, 3)
+                            plan.execution_time_by_agent = {
+                                k: {"total_seconds": round(v["total_seconds"], 3), "invocations": v["invocations"]}
+                                for k, v in agent_execution_times.items()
+                            }
+                            await db.update_item(plan)
+                            self.logger.info(
+                                "Persisted token usage to plan '%s': total=%d",
+                                plan_id, cumulative_total_tokens,
+                            )
+                    except Exception as db_err:
+                        self.logger.warning("Failed to persist token usage to plan: %s", db_err)
+
+            except Exception as tracking_err:
+                self.logger.warning("Failed to track token usage/execution time: %s", tracking_err)
