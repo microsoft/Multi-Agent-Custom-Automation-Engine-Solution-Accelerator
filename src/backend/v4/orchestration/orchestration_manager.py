@@ -587,7 +587,7 @@ class OrchestrationManager:
                         "data": {
                             "content": user_error_message,
                             "status": "error",
-                            "timestamp": _time.time(),
+                            "timestamp": asyncio.get_event_loop().time(),
                         },
                     },
                     user_id,
