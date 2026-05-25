@@ -17,6 +17,7 @@ import {
     selectPlanApproved,
     approvalRequestReceived,
     planCompletedFinal,
+    planFailedFinal,
 } from '@/store/slices/planSlice';
 import {
     setSubmittingChatDisableInput,
@@ -178,16 +179,18 @@ export function usePlanWebSocket({
             WebsocketMessageType.FINAL_RESULT_MESSAGE,
             (finalMessage: any) => {
                 if (!finalMessage) return;
-                const agentMessageData: AgentMessageData = {
-                    agent: AgentType.GROUP_CHAT_MANAGER,
-                    agent_type: AgentMessageType.AI_AGENT,
-                    timestamp: Date.now(),
-                    steps: [],
-                    next_steps: [],
-                    content: '\u{1F389}\u{1F389} ' + (finalMessage.data?.content || ''),
-                    raw_data: finalMessage,
-                };
-                if (finalMessage?.data?.status === PlanStatus.COMPLETED) {
+                const messageStatus = finalMessage?.data?.status;
+
+                if (messageStatus === PlanStatus.COMPLETED) {
+                    const agentMessageData: AgentMessageData = {
+                        agent: AgentType.GROUP_CHAT_MANAGER,
+                        agent_type: AgentMessageType.AI_AGENT,
+                        timestamp: Date.now(),
+                        steps: [],
+                        next_steps: [],
+                        content: '\u{1F389}\u{1F389} ' + (finalMessage.data?.content || ''),
+                        raw_data: finalMessage,
+                    };
                     dispatch(setShowBufferingText(true));
                     dispatch(addAgentMessage(agentMessageData));
                     dispatch(setSelectedTeam(planData?.team || null));
@@ -196,11 +199,30 @@ export function usePlanWebSocket({
                     scrollToBottom();
                     webSocketService.disconnect();
                     persistAgentMessage(agentMessageData, planData, dispatch, true, streamingMessageBuffer);
+                } else if (messageStatus === 'error') {
+                    // Safety net: handle error status sent as FINAL_RESULT_MESSAGE
+                    const errorContent = finalMessage.data?.content || 'An unexpected error occurred. Please try again later.';
+                    const errorAgent: AgentMessageData = {
+                        agent: 'system',
+                        agent_type: AgentMessageType.SYSTEM_AGENT,
+                        timestamp: Date.now(),
+                        steps: [],
+                        next_steps: [],
+                        content: formatErrorMessage(errorContent),
+                        raw_data: finalMessage || '',
+                    };
+                    dispatch(addAgentMessage(errorAgent));
+                    dispatch(planFailedFinal());
+                    dispatch(setShowBufferingText(false));
+                    dispatch(setSubmittingChatDisableInput(true));
+                    scrollToBottom();
+                    showToast(errorContent, 'error');
+                    webSocketService.disconnect();
                 }
             },
         );
         return unsub;
-    }, [dispatch, scrollToBottom, planData, streamingMessageBuffer]);
+    }, [dispatch, scrollToBottom, planData, streamingMessageBuffer, formatErrorMessage, showToast]);
 
     // ── ERROR_MESSAGE ─────────────────────────────────────────────
     useEffect(() => {
@@ -231,11 +253,12 @@ export function usePlanWebSocket({
                     raw_data: errorMessage || '',
                 };
                 dispatch(addAgentMessage(errorAgent));
-                dispatch(setShowProcessingPlanSpinner(false));
+                dispatch(planFailedFinal());
                 dispatch(setShowBufferingText(false));
-                dispatch(setSubmittingChatDisableInput(false));
+                dispatch(setSubmittingChatDisableInput(true));
                 scrollToBottom();
                 showToast(errorContent, 'error');
+                webSocketService.disconnect();
             },
         );
         return unsub;

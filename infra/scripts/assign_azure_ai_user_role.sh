@@ -25,25 +25,25 @@ fi
 
 IFS=',' read -r -a principal_ids_array <<< $principal_ids
 
-echo "Assigning Azure AI User role role to users"
+echo "Assigning Foundry User role to users"
 
-echo "Using provided Azure AI resource id: $aif_resource_id"
+echo "Using provided Foundry resource id: $aif_resource_id"
 
 for principal_id in "${principal_ids_array[@]}"; do
 
-    # Check if the user has the Azure AI User role
-    echo "Checking if user - ${principal_id} has the Azure AI User role"
+    # Check if the user has the Foundry User role
+    echo "Checking if user - ${principal_id} has the Foundry User role"
     role_assignment=$(MSYS_NO_PATHCONV=1 az role assignment list --role 53ca6127-db72-4b80-b1b0-d745d6d5456d --scope $aif_resource_id --assignee $principal_id --query "[].roleDefinitionId" -o tsv)
     if [ -z "$role_assignment" ]; then
-        echo "User - ${principal_id} does not have the Azure AI User role. Assigning the role."
+        echo "User - ${principal_id} does not have the Foundry User role. Assigning the role."
         MSYS_NO_PATHCONV=1 az role assignment create --assignee $principal_id --role 53ca6127-db72-4b80-b1b0-d745d6d5456d --scope $aif_resource_id --output none
         if [ $? -eq 0 ]; then
-            echo "Azure AI User role assigned successfully."
+            echo "Foundry User role assigned successfully."
         else
-            echo "Failed to assign Azure AI User role."
+            echo "Failed to assign Foundry User role."
             exit 1
         fi
     else
-        echo "User - ${principal_id} already has the Azure AI User role."
+        echo "User - ${principal_id} already has the Foundry User role."
     fi
 done

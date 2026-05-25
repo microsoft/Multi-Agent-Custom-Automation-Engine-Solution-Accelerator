@@ -273,8 +273,8 @@ az cosmosdb sql role assignment create --resource-group <solution-accelerator-rg
 **Assign the required roles:**
 
 ```bash
-# Azure AI User role
-az role assignment create --assignee <aad-user-upn> --role "Azure AI User" --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.CognitiveServices/accounts/<foundry-account-name>/projects/<foundry-project-name>
+# Foundry User role
+az role assignment create --assignee <aad-user-upn> --role "Foundry User" --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.CognitiveServices/accounts/<foundry-account-name>/projects/<foundry-project-name>
 ```
 
 ```bash

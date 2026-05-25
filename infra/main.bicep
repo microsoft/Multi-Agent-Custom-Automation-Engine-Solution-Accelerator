@@ -2,10 +2,7 @@
 targetScope = 'resourceGroup'
 
 metadata name = 'Multi-Agent Custom Automation Engine'
-metadata description = '''This module contains the resources required to deploy the [Multi-Agent Custom Automation Engine solution accelerator](https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) for both Sandbox environments and WAF aligned environments.
-
-> **Note:** This module is not intended for broad, generic use, as it was designed by the Commercial Solution Areas CTO team, as a Microsoft Solution Accelerator. Feature requests and bug fix requests are welcome if they support the needs of this organization but may not be incorporated if they aim to make this module more generic than what it needs to be for its primary use case. This module will likely be updated to leverage AVM resource modules in the future. This may result in breaking changes in upcoming versions when these features are implemented.
-'''
+metadata description = 'This module contains the resources required to deploy the [Multi-Agent Custom Automation Engine solution accelerator](https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) for both Sandbox environments and WAF aligned environments.\n\n> **Note:** This module is not intended for broad, generic use, as it was designed by the Commercial Solution Areas CTO team, as a Microsoft Solution Accelerator. Feature requests and bug fix requests are welcome if they support the needs of this organization but may not be incorporated if they aim to make this module more generic than what it needs to be for its primary use case. This module will likely be updated to leverage AVM resource modules in the future. This may result in breaking changes in upcoming versions when these features are implemented.\n'
 
 @description('Optional. A unique application/solution name for all resources in this deployment. This should be 3-16 characters long.')
 @minLength(3)
@@ -479,6 +476,7 @@ var dataCollectionRulesResourceName = 'dcr-${solutionSuffix}'
 var dataCollectionRulesLocation = useExistingLogAnalytics
   ? existingLogAnalyticsWorkspace!.location
   : logAnalyticsWorkspace!.outputs.location
+var dcrLogAnalyticsDestinationName = 'la-${logAnalyticsWorkspaceResourceName}-destination'
 module windowsVmDataCollectionRules 'br/public:avm/res/insights/data-collection-rule:0.11.0' = if (enablePrivateNetworking && enableMonitoring) {
   name: take('avm.res.insights.data-collection-rule.${dataCollectionRulesResourceName}', 64)
   params: {
@@ -550,19 +548,10 @@ module windowsVmDataCollectionRules 'br/public:avm/res/insights/data-collection-
           {
             name: 'SecurityAuditEvents'
             streams: [
-              'Microsoft-WindowsEvent'
-            ]
-            eventLogName: 'Security'
-            eventTypes: [
-              {
-                eventType: 'Audit Success'
-              }
-              {
-                eventType: 'Audit Failure'
-              }
+              'Microsoft-Event'
             ]
             xPathQueries: [
-              'Security!*[System[(EventID=4624 or EventID=4625)]]'
+              'Security!*[System[(band(Keywords,13510798882111488)) and (EventID != 4624)]]'
             ]
           }
         ]
@@ -571,7 +560,7 @@ module windowsVmDataCollectionRules 'br/public:avm/res/insights/data-collection-
         logAnalytics: [
           {
             workspaceResourceId: logAnalyticsWorkspaceResourceId
-            name: 'la--1264800308'
+            name: dcrLogAnalyticsDestinationName
           }
         ]
       }
@@ -581,10 +570,20 @@ module windowsVmDataCollectionRules 'br/public:avm/res/insights/data-collection-
             'Microsoft-Perf'
           ]
           destinations: [
-            'la--1264800308'
+            dcrLogAnalyticsDestinationName
           ]
           transformKql: 'source'
           outputStream: 'Microsoft-Perf'
+        }
+        {
+          streams: [
+            'Microsoft-Event'
+          ]
+          destinations: [
+            dcrLogAnalyticsDestinationName
+          ]
+          transformKql: 'source'
+          outputStream: 'Microsoft-Event'
         }
       ]
     }
@@ -854,7 +853,7 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
     ]
     roleAssignments: [
       {
-        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
+        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Foundry User
         principalId: userAssignedIdentity.outputs.principalId
         principalType: 'ServicePrincipal'
       }
@@ -935,7 +934,7 @@ module aiFoundryAiServices 'br:mcr.microsoft.com/bicep/avm/res/cognitive-service
     managedIdentities: { userAssignedResourceIds: [userAssignedIdentity!.outputs.resourceId] } //To create accounts or projects, you must enable a managed identity on your resource
     roleAssignments: [
       {
-        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
+        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Foundry User
         principalId: userAssignedIdentity.outputs.principalId
         principalType: 'ServicePrincipal'
       }
@@ -950,7 +949,7 @@ module aiFoundryAiServices 'br:mcr.microsoft.com/bicep/avm/res/cognitive-service
         principalType: 'ServicePrincipal'
       }
       {
-        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
+        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Foundry User
         principalId: deployingUserPrincipalId
         principalType: deployerPrincipalType
       }
@@ -1213,6 +1212,8 @@ module containerApp 'br/public:avm/res/app/container-app:0.22.0' = {
     ingressTargetPort: 8000
     ingressExternal: true
     activeRevisionsMode: 'Single'
+    // SFI: Enforce HTTPS-only ingress. When false, HTTP requests are automatically redirected to HTTPS.
+    ingressAllowInsecure: false
     corsPolicy: {
       allowedOrigins: [
         'https://${webSiteResourceName}.azurewebsites.net'
@@ -1421,6 +1422,8 @@ module containerAppMcp 'br/public:avm/res/app/container-app:0.22.0' = {
     ingressTargetPort: 9000
     ingressExternal: true
     activeRevisionsMode: 'Single'
+    // SFI: Enforce HTTPS-only ingress. When false, HTTP requests are automatically redirected to HTTPS.
+    ingressAllowInsecure: false
     corsPolicy: {
       allowedOrigins: [
         'https://${webSiteResourceName}.azurewebsites.net'
@@ -1596,6 +1599,7 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.32.0' = {
     tags: tags
     accessTier: 'Hot'
     supportsHttpsTrafficOnly: true
+    requireInfrastructureEncryption: true
 
     roleAssignments: [
       {
