@@ -27,7 +27,7 @@ IFS=',' read -r -a principal_ids_array <<< $principal_ids
 
 echo "Assigning Foundry User role to users"
 
-echo "Using provided Azure AI resource id: $aif_resource_id"
+echo "Using provided Foundry resource id: $aif_resource_id"
 
 for principal_id in "${principal_ids_array[@]}"; do
 
