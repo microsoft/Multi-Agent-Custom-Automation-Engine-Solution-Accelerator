@@ -153,7 +153,7 @@ fi
 echo "add_cosmosdb_access.sh completed successfully."
 
 
-# Call add_cosmosdb_access.sh
+# Call assign_foundry_user_role.sh
 echo "Running assign_foundry_user_role.sh"
 bash infra/scripts/assign_foundry_user_role.sh "$resourceGroupName" "$aif_resource_id" "$principal_ids" "$managedIdentityClientId"
 if [ $? -ne 0 ]; then
