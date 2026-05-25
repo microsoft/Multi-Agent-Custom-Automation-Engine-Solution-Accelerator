@@ -1577,4 +1577,3 @@ async def get_plan_by_id(
     except Exception as e:
         logging.error(f"Error retrieving plan: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error occurred")
-
