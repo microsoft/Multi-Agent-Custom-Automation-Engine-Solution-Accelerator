@@ -160,7 +160,7 @@ af_orch_mock.MagenticPlanReviewRequest = MockMagenticPlanReviewRequest
 sys.modules['agent_framework'] = af_mock
 sys.modules['agent_framework.orchestrations'] = af_orch_mock
 sys.modules['agent_framework_foundry'] = Mock(FoundryChatClient=Mock())
-sys.modules['agent_framework_orchestrations'] = Mock()
+sys.modules['agent_framework_orchestrations'] = af_orch_mock
 sys.modules['agent_framework_orchestrations._magentic'] = Mock()
 sys.modules['agent_framework_azure_ai_search'] = Mock()
 

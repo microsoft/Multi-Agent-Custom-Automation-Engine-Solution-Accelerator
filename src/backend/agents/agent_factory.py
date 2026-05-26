@@ -15,8 +15,7 @@ from agents.agent_template import AgentTemplate
 from common.config.app_config import config
 from common.database.database_base import DatabaseBase
 from common.models.messages import TeamConfiguration
-from config.mcp_config import (KnowledgeBaseConfig, MCPConfig, SearchConfig,
-                               VectorStoreConfig)
+from config.mcp_config import KnowledgeBaseConfig, MCPConfig, VectorStoreConfig
 from tools.clarification_tool import request_user_clarification
 
 
@@ -74,20 +73,6 @@ class AgentFactory:
         self._agent_list: List = []
 
     # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _extract_use_reasoning(agent_obj: SimpleNamespace) -> bool:
-        """Return True only when the agent config explicitly sets use_reasoning=True."""
-        val = (
-            agent_obj.get("use_reasoning", False)
-            if isinstance(agent_obj, dict)
-            else getattr(agent_obj, "use_reasoning", False)
-        )
-        return val is True
-
-    # ------------------------------------------------------------------
     # Single-agent creation
     # ------------------------------------------------------------------
 
@@ -122,16 +107,6 @@ class AgentFactory:
                 f"Supported models: {supported_models}"
             )
 
-        use_reasoning = self._extract_use_reasoning(agent_obj)
-
-        # Build optional tool configs
-        index_name = getattr(agent_obj, "index_name", None)
-        search_config: Optional[SearchConfig] = (
-            SearchConfig.from_env(index_name)
-            if getattr(agent_obj, "use_rag", False)
-            else None
-        )
-
         # Foundry IQ (FileSearchTool + vector stores)
         vector_store_name = getattr(agent_obj, "vector_store_name", None)
         vector_store_config: Optional[VectorStoreConfig] = (
@@ -148,38 +123,36 @@ class AgentFactory:
             else None
         )
 
-        # MCP config: domain-specific server only (use_mcp).
-        use_mcp = getattr(agent_obj, "use_mcp", False)
+        # Toolbox MCP config: domain-specific server only (use_toolbox).
+        use_toolbox = getattr(agent_obj, "use_toolbox", False)
         user_responses = getattr(agent_obj, "user_responses", False)
-        if use_mcp:
-            mcp_domain = getattr(agent_obj, "mcp_domain", None)
-            # Fallback: derive domain from agent name if the team config didn't
+        if use_toolbox:
+            toolbox_filter = getattr(agent_obj, "toolbox_filter", None)
+            # Fallback: derive filter from agent name if the team config didn't
             # supply one. Stops the agent from connecting to the base /mcp
             # endpoint and pulling in cross-pack tools like generate_press_release.
-            if not mcp_domain:
-                _NAME_TO_DOMAIN = {
+            if not toolbox_filter:
+                _NAME_TO_FILTER = {
                     "ImageContentAgent": "image",
                     "ImageGenerationAgent": "image",
                 }
-                mcp_domain = _NAME_TO_DOMAIN.get(agent_obj.name)
-                if mcp_domain:
+                toolbox_filter = _NAME_TO_FILTER.get(agent_obj.name)
+                if toolbox_filter:
                     self.logger.warning(
-                        "Agent '%s' has use_mcp=True but no mcp_domain in team config; "
-                        "defaulting to domain='%s' based on agent name.",
-                        agent_obj.name, mcp_domain,
+                        "Agent '%s' has use_toolbox=True but no toolbox_filter in team config; "
+                        "defaulting to filter='%s' based on agent name.",
+                        agent_obj.name, toolbox_filter,
                     )
-            mcp_config: Optional[MCPConfig] = MCPConfig.from_env(domain=mcp_domain)
+            mcp_config: Optional[MCPConfig] = MCPConfig.from_env(domain=toolbox_filter)
         else:
             mcp_config = None
 
         self.logger.info(
-            "Creating AgentTemplate '%s' (model=%s, use_rag=%s, use_file_search=%s, use_mcp=%s, reasoning=%s).",
+            "Creating AgentTemplate '%s' (model=%s, use_file_search=%s, use_toolbox=%s).",
             agent_obj.name,
             deployment_name,
-            search_config is not None,
             vector_store_config is not None,
             mcp_config is not None,
-            use_reasoning,
         )
 
         # Build agent instructions from system_message + optional interaction rules
@@ -197,12 +170,10 @@ class AgentFactory:
             agent_name=agent_obj.name,
             agent_description=getattr(agent_obj, "description", ""),
             agent_instructions=instructions,
-            use_reasoning=use_reasoning,
             model_deployment_name=deployment_name,
             project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
             enable_code_interpreter=getattr(agent_obj, "coding_tools", False),
             mcp_config=mcp_config,
-            search_config=search_config,
             vector_store_config=vector_store_config,
             kb_config=kb_config,
             temperature=getattr(agent_obj, "temperature", None),

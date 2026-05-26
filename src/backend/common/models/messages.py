@@ -167,18 +167,13 @@ class TeamAgent(BaseModel):
     deployment_name: str
     system_message: str = ""
     description: str = ""
-    icon: str
-    index_name: str = ""
-    use_rag: bool = False
     use_file_search: bool = False
     vector_store_name: str | None = None
     use_knowledge_base: bool = False
     knowledge_base_name: str | None = None
-    use_mcp: bool = False
-    mcp_domain: str | None = None
+    use_toolbox: bool = False
+    toolbox_filter: str | None = None
     user_responses: bool = False
-    use_bing: bool = False
-    use_reasoning: bool = False
     coding_tools: bool = False
     temperature: float | None = None
 

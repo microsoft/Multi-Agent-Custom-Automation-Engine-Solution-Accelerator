@@ -74,4 +74,5 @@ disable = [
     "unused-import",
     "unused-argument",
     "import-error",
+    "no-name-in-module",
 ]

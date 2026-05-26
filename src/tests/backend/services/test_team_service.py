@@ -74,20 +74,18 @@ class MockTeamAgent:
     input_key: str = ""
     type: str = ""
     name: str = ""
-    icon: str = ""
     deployment_name: str = ""
     system_message: str = ""
     description: str = ""
-    use_rag: bool = False
-    use_mcp: bool = False
-    mcp_domain: str = None
-    user_responses: bool = False
-    use_bing: bool = False
-    use_reasoning: bool = False
     use_file_search: bool = False
-    index_name: str = ""
-    vector_store_name: str = ""
+    vector_store_name: str = None
+    use_knowledge_base: bool = False
+    knowledge_base_name: str = None
+    use_toolbox: bool = False
+    toolbox_filter: str = None
+    user_responses: bool = False
     coding_tools: bool = False
+    temperature: float = None
 
 @dataclass
 class MockStartingTask:
@@ -143,10 +141,9 @@ def _valid_agent_data(
     input_key="agent1",
     type="ai",
     name="TestAgent",
-    icon="icon.png",
     **kwargs
 ):
-    data = {"input_key": input_key, "type": type, "name": name, "icon": icon}
+    data = {"input_key": input_key, "type": type, "name": name}
     data.update(kwargs)
     return data
 
@@ -291,7 +288,7 @@ class TestTeamConfigurationValidation:
 
     def test_validate_and_parse_agent_missing_field_raises_error(self):
         service = TeamService()
-        for field in ["input_key", "type", "name", "icon"]:
+        for field in ["input_key", "type", "name"]:
             agent_data = _valid_agent_data()
             del agent_data[field]
             with pytest.raises(ValueError, match=field):
@@ -302,13 +299,13 @@ class TestTeamConfigurationValidation:
         agent_data = _valid_agent_data(
             deployment_name="gpt-4",
             system_message="You are helpful.",
-            use_rag=True
+            use_toolbox=True
         )
         result = service._validate_and_parse_agent(agent_data)
         assert isinstance(result, MockTeamAgent)
         assert result.name == "TestAgent"
         assert result.deployment_name == "gpt-4"
-        assert result.use_rag is True
+        assert result.use_toolbox is True
 
     def test_validate_and_parse_task_missing_field_raises_error(self):
         service = TeamService()

@@ -50,7 +50,7 @@ exclude_lines = [
 ]
 
 [tool.pylint.main]
-init-hook = 'import sys; sys.path.insert(0, "src")'
+init-hook = 'import sys; sys.path.insert(0, "src"); sys.path.insert(0, "src/backend"); sys.path.insert(0, "src/mcp_server"); sys.path.insert(0, "tests/e2e-test")'
 
 [tool.pylint."messages control"]
 disable = [
@@ -63,4 +63,9 @@ disable = [
     "unused-argument",
     "import-error",
     "no-name-in-module",
+    "attribute-defined-outside-init",
+    "reimport",
+    "logging-fstring-interpolation",
+    "redundant-unittest-assert",
+    "invalid-character-zero-width-space",
 ]

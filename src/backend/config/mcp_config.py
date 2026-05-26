@@ -1,12 +1,10 @@
 # Copyright (c) Microsoft. All rights reserved.
 """
-Unified MCP and Azure AI Search configuration.
+Unified MCP configuration for toolbox and knowledge base connections.
 
 This module merges the two previously separate MCPConfig definitions:
 - v4/config/settings.py::MCPConfig (url, name, description, get_headers())
 - v4/magentic_agents/models/agent_models.py::MCPConfig (all fields + from_env())
-
-SearchConfig is carried forward from v4/magentic_agents/models/agent_models.py.
 """
 
 import logging
@@ -82,33 +80,6 @@ class MCPConfig:
         )
         logger.debug("MCP headers created (token present: %s)", bool(token))
         return headers
-
-
-@dataclass(slots=True)
-class SearchConfig:
-    """Configuration for connecting to Azure AI Search."""
-
-    connection_name: str | None = None
-    endpoint: str | None = None
-    index_name: str | None = None
-    search_query_type: str = "simple"
-
-    @classmethod
-    def from_env(cls, index_name: str) -> "SearchConfig":
-        """Build SearchConfig from environment variables."""
-        connection_name = config.AZURE_AI_SEARCH_CONNECTION_NAME
-        endpoint = config.AZURE_AI_SEARCH_ENDPOINT
-
-        if not all([connection_name, index_name, endpoint]):
-            raise ValueError(
-                f"{cls.__name__}: missing required Azure Search environment variables"
-            )
-
-        return cls(
-            connection_name=connection_name,
-            endpoint=endpoint,
-            index_name=index_name,
-        )
 
 
 @dataclass(slots=True)

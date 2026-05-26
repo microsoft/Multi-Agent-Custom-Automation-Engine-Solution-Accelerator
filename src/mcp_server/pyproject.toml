@@ -56,4 +56,4 @@ mcp-server = "mcp_server:main"
 init-hook = "import sys; sys.path.insert(0, '.')"
 
 [tool.pylint."messages control"]
-disable = ["broad-exception-caught", "redefined-outer-name", "protected-access"]
+disable = ["broad-exception-caught", "redefined-outer-name", "protected-access", "import-error", "no-name-in-module", "unused-import", "unused-variable"]

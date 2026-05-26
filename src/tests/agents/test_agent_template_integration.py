@@ -18,6 +18,8 @@ Replaces the stale test_foundry_integration.py (which tested the old two-path
 FoundryAgentTemplate constructor signature).
 """
 
+# pylint: disable=import-outside-toplevel
+
 from __future__ import annotations
 
 import os
@@ -106,7 +108,6 @@ async def test_open_and_close_no_tools():
         agent_name=_SMOKE_AGENT_NAME,
         agent_description=_SMOKE_AGENT_DESC,
         agent_instructions=_SMOKE_AGENT_INSTRUCTIONS,
-        use_reasoning=False,
         model_deployment_name=model,
         project_endpoint=project_endpoint,
         enable_code_interpreter=False,
@@ -141,7 +142,6 @@ async def test_context_manager_protocol():
         agent_name=_SMOKE_AGENT_NAME,
         agent_description=_SMOKE_AGENT_DESC,
         agent_instructions=_SMOKE_AGENT_INSTRUCTIONS,
-        use_reasoning=False,
         model_deployment_name=model,
         project_endpoint=project_endpoint,
     )
@@ -166,7 +166,6 @@ async def test_second_open_is_idempotent():
         agent_name=_SMOKE_AGENT_NAME,
         agent_description=_SMOKE_AGENT_DESC,
         agent_instructions=_SMOKE_AGENT_INSTRUCTIONS,
-        use_reasoning=False,
         model_deployment_name=model,
         project_endpoint=project_endpoint,
     )
@@ -248,7 +247,6 @@ async def test_get_or_create_creates_when_absent(monkeypatch):
             agent_name=_SMOKE_AGENT_NAME,
             agent_description=_SMOKE_AGENT_DESC,
             agent_instructions=_SMOKE_AGENT_INSTRUCTIONS,
-            use_reasoning=False,
             model_deployment_name=model,
             project_endpoint=project_endpoint,
         )
@@ -318,7 +316,6 @@ async def test_get_or_create_skips_create_when_present():
             agent_name=_SMOKE_AGENT_NAME,
             agent_description=_SMOKE_AGENT_DESC,
             agent_instructions=_SMOKE_AGENT_INSTRUCTIONS,
-            use_reasoning=False,
             model_deployment_name=model,
             project_endpoint=project_endpoint,
         )
@@ -396,7 +393,6 @@ async def test_toolbox_created_when_mcp_config_present():
             agent_name=_SMOKE_AGENT_NAME,
             agent_description=_SMOKE_AGENT_DESC,
             agent_instructions=_SMOKE_AGENT_INSTRUCTIONS,
-            use_reasoning=False,
             model_deployment_name=model,
             project_endpoint=project_endpoint,
             mcp_config=mcp_cfg,
@@ -470,7 +466,6 @@ async def test_no_toolbox_created_when_no_tools():
             agent_name=_SMOKE_AGENT_NAME,
             agent_description=_SMOKE_AGENT_DESC,
             agent_instructions=_SMOKE_AGENT_INSTRUCTIONS,
-            use_reasoning=False,
             model_deployment_name=model,
             project_endpoint=project_endpoint,
             enable_code_interpreter=False,

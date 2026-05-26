@@ -206,12 +206,10 @@ class TestCreateRAIAgent:
         assert call_args[1]['agent_name'] == "RAIAgent"
         assert call_args[1]['agent_description'] == "A comprehensive research assistant for integration testing"
         assert "You are RAIAgent, a strict safety classifier for professional workplace use" in call_args[1]['agent_instructions']
-        assert call_args[1]['use_reasoning'] is False
         assert call_args[1]['model_deployment_name'] == "test_rai_deployment"
         assert call_args[1]['enable_code_interpreter'] is False
         assert call_args[1]['project_endpoint'] == "https://test.project.azure.com/"
         assert call_args[1]['mcp_config'] is None
-        assert call_args[1]['search_config'] is None
         assert call_args[1]['team_config'] is self.mock_team
         assert call_args[1]['memory_store'] is self.mock_memory_store
         

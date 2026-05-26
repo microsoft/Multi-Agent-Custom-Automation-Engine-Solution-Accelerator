@@ -29,20 +29,24 @@ export interface TeamAgentBE {
     system_message?: string;
     /** Description of the agent */
     description?: string;
-    /** Icon for the agent */
-    icon?: string;
-    /** Index name for RAG capabilities */
-    index_name?: string;
-    /** Whether the agent uses RAG */
-    use_rag?: boolean;
-    /** Whether the agent uses MCP (Model Context Protocol) */
-    use_mcp?: boolean;
-    /** Whether the agent uses Bing search */
-    use_bing?: boolean;
-    /** Whether the agent uses reasoning */
-    use_reasoning?: boolean;
+    /** Whether the agent uses file search */
+    use_file_search?: boolean;
+    /** Vector store name for file search */
+    vector_store_name?: string;
+    /** Whether the agent uses a knowledge base */
+    use_knowledge_base?: boolean;
+    /** Knowledge base name */
+    knowledge_base_name?: string;
+    /** Whether the agent uses toolbox (MCP) */
+    use_toolbox?: boolean;
+    /** Toolbox filter domain */
+    toolbox_filter?: string;
+    /** Whether the agent supports user responses */
+    user_responses?: boolean;
     /** Whether the agent has coding tools */
     coding_tools?: boolean;
+    /** Temperature setting */
+    temperature?: number | null;
 }
 
 /**

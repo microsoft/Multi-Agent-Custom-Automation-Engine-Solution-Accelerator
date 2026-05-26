@@ -1,11 +1,10 @@
-"""Unit tests for agents.agent_factory (AgentFactory — GA agent_framework 1.2.2).
+"""Unit tests for agents.agent_factory (AgentFactory — GA agent_framework 1.6.0).
 
 Ported from src/tests/backend/v4/magentic_agents/test_magentic_agent_factory.py.
 Key changes:
   - MagenticAgentFactory → AgentFactory
   - FoundryAgentTemplate → AgentTemplate
   - Mock paths updated to new package layout
-  - extract_use_reasoning (public) → _extract_use_reasoning (static, private)
   - cleanup_all_agents now lives on AgentFactory as a static method
   - get_agents skips per-agent errors (UnsupportedModelError, InvalidConfigurationError,
     and unexpected exceptions) rather than propagating them
@@ -47,7 +46,6 @@ _mock_messages_mod.TeamConfiguration = Mock()
 # --- agents sub-modules (short absolute imports in factory code)
 mock_agent_template_cls = Mock()
 mock_mcp_config_cls = Mock()
-mock_search_config_cls = Mock()
 
 sys.modules.setdefault("agents", Mock())  # parent package stub
 _mock_agent_template_mod = Mock()
@@ -58,7 +56,6 @@ mock_vector_store_config_cls = Mock()
 
 _mock_mcp_config_mod = Mock()
 _mock_mcp_config_mod.MCPConfig = mock_mcp_config_cls
-_mock_mcp_config_mod.SearchConfig = mock_search_config_cls
 _mock_mcp_config_mod.VectorStoreConfig = mock_vector_store_config_cls
 sys.modules["config.mcp_config"] = _mock_mcp_config_mod
 
@@ -76,14 +73,10 @@ def _agent_obj(**overrides) -> SimpleNamespace:
         deployment_name="gpt-4",
         description="Test agent description",
         system_message="Test system message",
-        use_reasoning=False,
-        use_bing=False,
         coding_tools=False,
-        use_rag=False,
-        use_mcp=False,
+        use_toolbox=False,
         use_file_search=False,
         user_responses=False,
-        index_name=None,
         vector_store_name=None,
     )
     defaults.update(overrides)
@@ -111,32 +104,6 @@ class TestAgentFactoryInit:
         assert factory._agent_list == []
 
 
-class TestExtractUseReasoning:
-    """AgentFactory._extract_use_reasoning (static) tests."""
-
-    def test_true_bool(self):
-        assert AgentFactory._extract_use_reasoning(SimpleNamespace(use_reasoning=True)) is True
-
-    def test_false_bool(self):
-        assert AgentFactory._extract_use_reasoning(SimpleNamespace(use_reasoning=False)) is False
-
-    def test_dict_true(self):
-        # agent_obj may itself be a dict (e.g. pre-parsed JSON)
-        assert AgentFactory._extract_use_reasoning({"use_reasoning": True}) is True
-
-    def test_dict_false(self):
-        assert AgentFactory._extract_use_reasoning({"use_reasoning": False}) is False
-
-    def test_dict_missing_key(self):
-        assert AgentFactory._extract_use_reasoning({"other_key": True}) is False
-
-    def test_non_bool_value(self):
-        assert AgentFactory._extract_use_reasoning(SimpleNamespace(use_reasoning="yes")) is False
-
-    def test_missing_attribute(self):
-        assert AgentFactory._extract_use_reasoning(SimpleNamespace()) is False
-
-
 class TestCreateAgentFromConfig:
     """AgentFactory.create_agent_from_config tests."""
 
@@ -146,12 +113,11 @@ class TestCreateAgentFromConfig:
         self.memory_store = Mock()
         mock_agent_template_cls.reset_mock()
         mock_mcp_config_cls.reset_mock()
-        mock_search_config_cls.reset_mock()
         mock_vector_store_config_cls.reset_mock()
 
     @pytest.mark.asyncio
     async def test_user_responses_true_does_not_create_mcp_config(self):
-        """user_responses=True alone does NOT create MCPConfig (use_mcp needed)."""
+        """user_responses=True alone does NOT create MCPConfig (use_toolbox needed)."""
         agent_instance = Mock()
         agent_instance.open = AsyncMock()
         mock_agent_template_cls.return_value = agent_instance
@@ -199,8 +165,8 @@ class TestCreateAgentFromConfig:
         mock_mcp_config_cls.from_env.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_use_mcp_takes_priority_over_user_responses(self):
-        """use_mcp=True takes priority; MCPConfig uses the mcp_domain, not 'user_responses'."""
+    async def test_use_toolbox_takes_priority_over_user_responses(self):
+        """use_toolbox=True takes priority; MCPConfig uses the toolbox_filter, not 'user_responses'."""
         mcp_instance = Mock()
         mock_mcp_config_cls.from_env.return_value = mcp_instance
 
@@ -210,7 +176,7 @@ class TestCreateAgentFromConfig:
 
         await self.factory.create_agent_from_config(
             "user123",
-            _agent_obj(use_mcp=True, mcp_domain="hr", user_responses=True),
+            _agent_obj(use_toolbox=True, toolbox_filter="hr", user_responses=True),
             self.team_config,
             self.memory_store,
         )
@@ -283,27 +249,8 @@ class TestCreateAgentFromConfig:
         assert call_kwargs["vector_store_config"] is None
 
     @pytest.mark.asyncio
-    async def test_with_search_config(self):
-        """use_rag=True loads SearchConfig from env."""
-        search_instance = Mock()
-        mock_search_config_cls.from_env.return_value = search_instance
-
-        agent_instance = Mock()
-        agent_instance.open = AsyncMock()
-        mock_agent_template_cls.return_value = agent_instance
-
-        await self.factory.create_agent_from_config(
-            "user123",
-            _agent_obj(use_rag=True, index_name="my-index"),
-            self.team_config,
-            self.memory_store,
-        )
-
-        mock_search_config_cls.from_env.assert_called_once_with("my-index")
-
-    @pytest.mark.asyncio
-    async def test_with_mcp_config(self):
-        """use_mcp=True loads MCPConfig from env."""
+    async def test_with_toolbox_config(self):
+        """use_toolbox=True loads MCPConfig from env."""
         mcp_instance = Mock()
         mock_mcp_config_cls.from_env.return_value = mcp_instance
 
@@ -312,24 +259,10 @@ class TestCreateAgentFromConfig:
         mock_agent_template_cls.return_value = agent_instance
 
         await self.factory.create_agent_from_config(
-            "user123", _agent_obj(use_mcp=True), self.team_config, self.memory_store
+            "user123", _agent_obj(use_toolbox=True), self.team_config, self.memory_store
         )
 
         mock_mcp_config_cls.from_env.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_with_reasoning(self):
-        """use_reasoning=True passes use_reasoning=True to AgentTemplate."""
-        agent_instance = Mock()
-        agent_instance.open = AsyncMock()
-        mock_agent_template_cls.return_value = agent_instance
-
-        await self.factory.create_agent_from_config(
-            "user123", _agent_obj(use_reasoning=True), self.team_config, self.memory_store
-        )
-
-        call_kwargs = mock_agent_template_cls.call_args[1]
-        assert call_kwargs["use_reasoning"] is True
 
     @pytest.mark.asyncio
     async def test_with_coding_tools(self):

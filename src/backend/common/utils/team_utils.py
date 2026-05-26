@@ -94,12 +94,10 @@ async def create_RAI_agent(
         agent_name=agent_name,
         agent_description=agent_description,
         agent_instructions=agent_instructions,
-        use_reasoning=False,
         model_deployment_name=model_deployment_name,
         enable_code_interpreter=False,
         project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
         mcp_config=None,
-        search_config=None,
         team_config=team,
         memory_store=memory_store,
     )

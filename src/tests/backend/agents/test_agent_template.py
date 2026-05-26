@@ -85,7 +85,6 @@ sys.modules["config.agent_registry"] = _mock_config_agent_registry
 
 _mock_config_mcp_config = Mock()
 _mock_config_mcp_config.MCPConfig = Mock()
-_mock_config_mcp_config.SearchConfig = Mock()
 _mock_config_mcp_config.VectorStoreConfig = Mock()
 sys.modules["config.mcp_config"] = _mock_config_mcp_config
 
@@ -113,14 +112,6 @@ def _make_mcp_config(**kw):
     m.name = kw.get("name", "TestMCP")
     m.description = kw.get("description", "Test MCP")
     m.connection_id = kw.get("connection_id", None)
-    return m
-
-
-def _make_search_config(**kw):
-    m = Mock()
-    m.connection_name = kw.get("connection_name", "search-conn")
-    m.index_name = kw.get("index_name", "test-index")
-    m.search_query_type = kw.get("search_query_type", "simple")
     return m
 
 
@@ -198,7 +189,6 @@ def basic_kwargs():
         agent_name="TestAgent",
         agent_description="Test Description",
         agent_instructions="Bootstrap instructions",
-        use_reasoning=False,
         model_deployment_name="test-model",
         project_endpoint="https://test.project.azure.com/",
     )
@@ -212,11 +202,6 @@ def mcp_config():
 @pytest.fixture
 def mcp_config_with_connection():
     return _make_mcp_config(connection_id="mcp-connection-id")
-
-
-@pytest.fixture
-def search_config():
-    return _make_search_config()
 
 
 @pytest.fixture
@@ -236,36 +221,26 @@ class TestAgentTemplateInit:
         assert agent.agent_name == "TestAgent"
         assert agent.agent_description == "Test Description"
         assert agent.agent_instructions == "Bootstrap instructions"
-        assert agent.use_reasoning is False
         assert agent.model_deployment_name == "test-model"
         assert agent.project_endpoint == "https://test.project.azure.com/"
         assert agent.enable_code_interpreter is False
         assert agent.mcp_cfg is None
-        assert agent.search_config is None
         assert agent._agent is None
         assert agent._stack is None
         assert isinstance(agent.logger, logging.Logger)
 
-    def test_all_params(self, basic_kwargs, mcp_config, search_config):
+    def test_all_params(self, basic_kwargs, mcp_config):
         agent = AgentTemplate(
-            **{**basic_kwargs, "use_reasoning": True},
+            **basic_kwargs,
             enable_code_interpreter=True,
             mcp_config=mcp_config,
-            search_config=search_config,
         )
-        assert agent.use_reasoning is True
         assert agent.enable_code_interpreter is True
         assert agent.mcp_cfg is mcp_config
-        assert agent.search_config is search_config
 
     def test_vector_store_config_stored(self, basic_kwargs, vector_store_config):
         agent = AgentTemplate(**basic_kwargs, vector_store_config=vector_store_config)
         assert agent.vector_store_config is vector_store_config
-
-    def test_no_use_azure_search_attribute(self, basic_kwargs, search_config):
-        """The old _use_azure_search attribute must not exist in the new pattern."""
-        agent = AgentTemplate(**basic_kwargs, search_config=search_config)
-        assert not hasattr(agent, "_use_azure_search")
 
 
 # ---------------------------------------------------------------------------
@@ -277,12 +252,10 @@ class TestBuildTools:
     def test_no_tools_returns_empty(self, basic_kwargs):
         agent = AgentTemplate(**basic_kwargs)
         with patch("backend.agents.agent_template.MCPTool") as mock_mcp, \
-             patch("backend.agents.agent_template.AzureAISearchTool") as mock_search, \
              patch("backend.agents.agent_template.CodeInterpreterTool") as mock_ci:
             result = agent._build_tools()
         assert result == []
         mock_mcp.assert_not_called()
-        mock_search.assert_not_called()
         mock_ci.assert_not_called()
 
     def test_mcp_tool_added(self, basic_kwargs, mcp_config):
@@ -302,28 +275,6 @@ class TestBuildTools:
             agent._build_tools()
         call_kw = mock_cls.call_args[1]
         assert call_kw["project_connection_id"] == "mcp-connection-id"
-
-    def test_search_tool_added(self, basic_kwargs, search_config):
-        agent = AgentTemplate(**basic_kwargs, search_config=search_config)
-        mock_tool = Mock()
-        mock_tool.as_dict = Mock(return_value={"type": "azure_ai_search"})
-        with patch("backend.agents.agent_template.AzureAISearchTool", return_value=mock_tool) as mock_cls:
-            with patch("backend.agents.agent_template.AzureAISearchToolResource") as mock_res:
-                with patch("backend.agents.agent_template.AISearchIndexResource") as mock_idx:
-                    result = agent._build_tools()
-        assert {"type": "azure_ai_search"} in result
-        mock_idx.assert_called_once_with(
-            project_connection_id=search_config.connection_name,
-            index_name=search_config.index_name,
-            query_type=search_config.search_query_type,
-        )
-
-    def test_search_tool_skipped_when_no_index(self, basic_kwargs):
-        sc = _make_search_config(index_name=None)
-        agent = AgentTemplate(**basic_kwargs, search_config=sc)
-        with patch("backend.agents.agent_template.AzureAISearchTool") as mock_cls:
-            agent._build_tools()
-        mock_cls.assert_not_called()
 
     def test_code_interpreter_added(self, basic_kwargs):
         agent = AgentTemplate(**basic_kwargs, enable_code_interpreter=True)
@@ -349,18 +300,16 @@ class TestBuildTools:
             agent._build_tools()
         mock_cls.assert_not_called()
 
-    def test_all_three_tools(self, basic_kwargs, mcp_config, search_config):
+    def test_all_tools_combined(self, basic_kwargs, mcp_config):
         agent = AgentTemplate(
             **basic_kwargs,
             mcp_config=mcp_config,
-            search_config=search_config,
             enable_code_interpreter=True,
         )
         with patch("backend.agents.agent_template.MCPTool", return_value=Mock()), \
-             patch("backend.agents.agent_template.AzureAISearchTool", return_value=Mock()), \
              patch("backend.agents.agent_template.CodeInterpreterTool", return_value=Mock()):
             result = agent._build_tools()
-        assert len(result) == 3
+        assert len(result) == 2
 
 
 # ---------------------------------------------------------------------------
@@ -400,7 +349,8 @@ class TestAgentTemplateOpen:
     @pytest.mark.asyncio
     async def test_open_reuses_agent_when_found(self, basic_kwargs):
         """list_agents() returns matching agent → create_agent() NOT called."""
-        existing = _make_agent_record(name="TestAgent", instructions="Portal instructions")
+        # Portal instructions match team JSON → no sync needed
+        existing = _make_agent_record(name="TestAgent", instructions="Bootstrap instructions")
         project_client = _make_project_client_mock(agent_records=[existing])
         cred = _make_credential_mock()
         agent_cm = _make_agent_cm_mock()
@@ -418,9 +368,9 @@ class TestAgentTemplateOpen:
             await agent.open()
 
         project_client.agents.create_version.assert_not_called()
-        # Agent() must receive portal instructions, not bootstrap instructions
+        # Agent() receives team JSON instructions (authoritative over portal)
         call_kw = mock_agent_cls.call_args[1]
-        assert call_kw["instructions"] == "Portal instructions"
+        assert call_kw["instructions"] == "Bootstrap instructions"
 
     @pytest.mark.asyncio
     async def test_open_no_toolbox_when_no_tools(self, basic_kwargs):
@@ -448,12 +398,11 @@ class TestAgentTemplateOpen:
     async def test_open_creates_toolbox_with_mcp(self, basic_kwargs, mcp_config):
         """MCP configured → toolbox created and wired to Agent."""
         project_client = _make_project_client_mock()
+        # Toolbox get raises → toolbox_exists=False → create_version called
+        project_client.beta.toolboxes.get = AsyncMock(side_effect=Exception("not found"))
         cred = _make_credential_mock()
         agent_cm = _make_agent_cm_mock()
-        mock_toolbox = Mock()
         chat_client_mock = Mock()
-        # get_toolbox raises so toolbox_exists=False → create_version called
-        chat_client_mock.get_toolbox = AsyncMock(side_effect=Exception("not found"))
 
         mcp_tool_cm = AsyncMock()
         mcp_tool_cm.__aenter__ = AsyncMock(return_value=mcp_tool_cm)

@@ -120,7 +120,7 @@ class TeamService:
 
     def _validate_and_parse_agent(self, agent_data: Dict[str, Any]) -> TeamAgent:
         """Validate and parse a single agent."""
-        required_fields = ["input_key", "type", "name", "icon"]
+        required_fields = ["input_key", "type", "name"]
         for field in required_fields:
             if field not in agent_data:
                 raise ValueError(f"Agent missing required field: {field}")
@@ -130,17 +130,17 @@ class TeamService:
             type=agent_data["type"],
             name=agent_data["name"],
             deployment_name=agent_data.get("deployment_name", ""),
-            icon=agent_data["icon"],
             system_message=agent_data.get("system_message", ""),
             description=agent_data.get("description", ""),
-            use_rag=agent_data.get("use_rag", False),
-            use_mcp=agent_data.get("use_mcp", False),
-            mcp_domain=agent_data.get("mcp_domain"),
+            use_file_search=agent_data.get("use_file_search", False),
+            vector_store_name=agent_data.get("vector_store_name"),
+            use_knowledge_base=agent_data.get("use_knowledge_base", False),
+            knowledge_base_name=agent_data.get("knowledge_base_name"),
+            use_toolbox=agent_data.get("use_toolbox", False),
+            toolbox_filter=agent_data.get("toolbox_filter"),
             user_responses=agent_data.get("user_responses", False),
-            use_bing=agent_data.get("use_bing", False),
-            use_reasoning=agent_data.get("use_reasoning", False),
-            index_name=agent_data.get("index_name", ""),
             coding_tools=agent_data.get("coding_tools", False),
+            temperature=agent_data.get("temperature"),
         )
 
     def _validate_and_parse_task(self, task_data: Dict[str, Any]) -> StartingTask:

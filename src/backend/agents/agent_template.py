@@ -4,13 +4,10 @@ Single code path:
   1. Get-or-create Foundry portal agent (bootstrap from team JSON on first run;
      portal edits to instructions/model take effect on container restart).
   2. Build per-agent Toolbox (``macae-{agent_name}-tools``) with whichever of
-     MCP, Azure AI Search, and Code Interpreter are enabled for this agent.
+     MCP, FileSearch, and Code Interpreter are enabled for this agent.
   3. ``Agent(client=FoundryChatClient(...), instructions=portal_agent.instructions,
              tools=[toolbox])`` — FoundryAgent is never used so Magentic / Handoff
      always works.
-
-Replaces the two-path design that used FoundryAgent for Azure Search (which blocked
-Magentic) and FoundryChatClient + Agent with MCPStreamableHTTPTool for MCP.
 """
 
 from __future__ import annotations
@@ -24,9 +21,7 @@ from agent_framework import (Agent, AgentResponseUpdate, Content,
 from agent_framework_foundry import FoundryChatClient
 from agent_framework_openai import OpenAIChatOptions
 from azure.ai.projects.aio import AIProjectClient
-from azure.ai.projects.models import (AISearchIndexResource, AzureAISearchTool,
-                                      AzureAISearchToolResource,
-                                      CodeInterpreterTool, FileSearchTool,
+from azure.ai.projects.models import (CodeInterpreterTool, FileSearchTool,
                                       MCPTool, PromptAgentDefinition)
 from azure.core.exceptions import HttpResponseError, ResourceNotFoundError
 from azure.identity.aio import DefaultAzureCredential
@@ -34,8 +29,7 @@ from common.database.database_base import DatabaseBase
 from common.models.messages import CurrentTeamAgent, TeamConfiguration
 from common.utils.agent_utils import get_database_team_agent_id
 from config.agent_registry import agent_registry
-from config.mcp_config import (KnowledgeBaseConfig, MCPConfig, SearchConfig,
-                               VectorStoreConfig)
+from config.mcp_config import KnowledgeBaseConfig, MCPConfig, VectorStoreConfig
 
 
 class AgentTemplate:
@@ -51,12 +45,10 @@ class AgentTemplate:
         agent_name: str,
         agent_description: str,
         agent_instructions: str,
-        use_reasoning: bool,
         model_deployment_name: str,
         project_endpoint: str,
         enable_code_interpreter: bool = False,
         mcp_config: MCPConfig | None = None,
-        search_config: SearchConfig | None = None,
         vector_store_config: VectorStoreConfig | None = None,
         kb_config: KnowledgeBaseConfig | None = None,
         temperature: float | None = None,
@@ -67,12 +59,10 @@ class AgentTemplate:
         self.agent_name = agent_name
         self.agent_description = agent_description
         self.agent_instructions = agent_instructions
-        self.use_reasoning = use_reasoning
         self.model_deployment_name = model_deployment_name
         self.project_endpoint = project_endpoint
         self.enable_code_interpreter = enable_code_interpreter
         self.mcp_cfg = mcp_config
-        self.search_config = search_config
         self.vector_store_config = vector_store_config
         self.kb_config = kb_config
         self.temperature = temperature
@@ -584,29 +574,6 @@ class AgentTemplate:
                 self.mcp_cfg.connection_id,
             )
 
-        if self.search_config and self.search_config.index_name:
-            # Workaround: convert to plain dict via as_dict() because
-            # agent_framework_foundry shallow-copies Mapping tools with dict(),
-            # leaving nested SDK models (AzureAISearchToolResource) that are
-            # not JSON-serializable for the Responses API.
-            # See bugs/toolbox-search-tool-serialization.md
-            tools.append(
-                AzureAISearchTool(
-                    azure_ai_search=AzureAISearchToolResource(
-                        indexes=[
-                            AISearchIndexResource(
-                                project_connection_id=self.search_config.connection_name,
-                                index_name=self.search_config.index_name,
-                                query_type=self.search_config.search_query_type,
-                            )
-                        ]
-                    )
-                ).as_dict()
-            )
-            self.logger.debug(
-                "Added AzureAISearchTool (index=%s).", self.search_config.index_name
-            )
-
         if self._resolved_vector_store_id:
             tools.append(
                 FileSearchTool(
@@ -666,20 +633,6 @@ class AgentTemplate:
 
         message = Message(role="user", contents=[Content.from_text(prompt)])
         async for update in self._agent.run(message, stream=True):
-            # --- DIAGNOSTIC: log each update type ---
-            self.logger.warning(
-                ">>> [%s] update type=%s data_type=%s",
-                self.agent_name,
-                type(update).__name__,
-                getattr(update, 'data_type', None),
-            )
-            if update.text:
-                self.logger.warning(
-                    ">>> [%s] content preview: %s",
-                    self.agent_name,
-                    update.text[:200],
-                )
-            # --- END DIAGNOSTIC ---
             yield update
 
     # ------------------------------------------------------------------
