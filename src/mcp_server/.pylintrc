@@ -1,0 +1,5 @@
+[MAIN]
+init-hook='import sys; sys.path.insert(0, r"c:/src/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/src/mcp_server")'
+
+[MESSAGES CONTROL]
+disable=broad-exception-caught,redefined-outer-name,protected-access,import-error,no-name-in-module

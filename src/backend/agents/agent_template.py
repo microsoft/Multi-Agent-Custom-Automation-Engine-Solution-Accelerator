@@ -17,11 +17,12 @@ from __future__ import annotations
 
 import logging
 from contextlib import AsyncExitStack
-from typing import Any, AsyncGenerator, Optional
+from typing import Any, AsyncGenerator, Optional, cast
 
-from agent_framework import (Agent, AgentResponseUpdate, ChatOptions, Content,
+from agent_framework import (Agent, AgentResponseUpdate, Content,
                              MCPStreamableHTTPTool, Message)
 from agent_framework_foundry import FoundryChatClient
+from agent_framework_openai import OpenAIChatOptions
 from azure.ai.projects.aio import AIProjectClient
 from azure.ai.projects.models import (AISearchIndexResource, AzureAISearchTool,
                                       AzureAISearchToolResource,
@@ -119,7 +120,10 @@ class AgentTemplate:
 
             try:
                 agent_details = await project_client.agents.get(self.agent_name)
-                definition = agent_details.versions.latest.definition
+                definition = cast(
+                    PromptAgentDefinition,
+                    agent_details.versions.latest.definition,
+                )
                 self.logger.info(
                     "Found existing agent '%s' — using portal definition.",
                     self.agent_name,
@@ -127,7 +131,7 @@ class AgentTemplate:
             except ResourceNotFoundError:
                 # First run: bootstrap a Prompt Agent from the team JSON config.
                 # Include MCPTool for KB so it shows in the portal.
-                bootstrap_tools = None
+                bootstrap_tools: list[Any] | None = None
                 if self.kb_config:
                     kb_mcp_url = (
                         f"{self.kb_config.search_endpoint}/knowledgebases/"
@@ -164,7 +168,10 @@ class AgentTemplate:
                         agent_details = await project_client.agents.get(
                             self.agent_name
                         )
-                        definition = agent_details.versions.latest.definition
+                        definition = cast(
+                            PromptAgentDefinition,
+                            agent_details.versions.latest.definition,
+                        )
                     else:
                         raise
 
@@ -204,6 +211,7 @@ class AgentTemplate:
 
             # Check if portal MCPTool matches; update if stale.
             if kb_name and definition.tools:
+                assert self.kb_config is not None
                 portal_kb_name: str | None = None
                 for tool_def in definition.tools:
                     if isinstance(tool_def, MCPTool) and tool_def.server_url:
@@ -251,6 +259,7 @@ class AgentTemplate:
                         self.agent_name, kb_name,
                     )
             elif kb_name and not definition.tools:
+                assert self.kb_config is not None
                 # Agent exists but has no tools — add the MCPTool.
                 kb_mcp_url = (
                     f"{self.kb_config.search_endpoint}/knowledgebases/"
@@ -277,7 +286,8 @@ class AgentTemplate:
 
             if kb_endpoint and kb_name:
                 try:
-                    from agent_framework_azure_ai_search import AzureAISearchContextProvider
+                    from agent_framework_azure_ai_search import \
+                        AzureAISearchContextProvider
                 except (ModuleNotFoundError, ImportError):
                     AzureAISearchContextProvider = None  # type: ignore[assignment]
                     self.logger.warning(
@@ -337,13 +347,21 @@ class AgentTemplate:
                 toolbox_tools = None
                 toolbox_exists = False
                 try:
-                    toolbox = await chat_client.get_toolbox(toolbox_name)
+                    toolbox_obj = await project_client.beta.toolboxes.get(
+                        toolbox_name,
+                    )
                     toolbox_exists = True
-                    if toolbox and toolbox.tools:
-                        toolbox_tools = toolbox.tools
+                    if toolbox_obj and toolbox_obj.default_version:
+                        toolbox_ver = (
+                            await project_client.beta.toolboxes.get_version(
+                                toolbox_name, toolbox_obj.default_version,
+                            )
+                        )
+                        if toolbox_ver and toolbox_ver.tools:
+                            toolbox_tools = toolbox_ver.tools
                 except Exception as _tb_exc:
                     self.logger.debug(
-                        "get_toolbox('%s') failed: %s", toolbox_name, _tb_exc,
+                        "get toolbox '%s' failed: %s", toolbox_name, _tb_exc,
                     )
 
                 if not toolbox_exists:
@@ -402,7 +420,7 @@ class AgentTemplate:
             # MCPTool which is executed server-side by the Responses API).
             mcp_tool = None
             if self.mcp_cfg:
-                mcp_kwargs = {
+                mcp_kwargs: dict[str, Any] = {
                     "name": self.mcp_cfg.name,
                     "url": self.mcp_cfg.url,
                 }
@@ -482,8 +500,8 @@ class AgentTemplate:
                     self.logger.info(
                         "Syncing portal instructions for '%s' (len %d → %d).",
                         self.agent_name,
-                        len(definition.instructions),
-                        len(effective_instructions),
+                        len(definition.instructions or ""),
+                        len(effective_instructions or ""),
                     )
                 definition = PromptAgentDefinition(
                     model=definition.model,
@@ -509,7 +527,7 @@ class AgentTemplate:
                 description=self.agent_description,
                 tools=all_tools if all_tools else None,
                 context_providers=[self._kb_provider] if self._kb_provider else None,
-                default_options=ChatOptions(temperature=self.temperature) if self.temperature is not None else None,
+                default_options=OpenAIChatOptions(temperature=self.temperature) if self.temperature is not None else None,
             )
             self._agent = await self._stack.enter_async_context(agent)
 
@@ -553,7 +571,7 @@ class AgentTemplate:
         # In deployed environments project_connection_id enables server-side
         # execution; locally client-side MCPStreamableHTTPTool handles it.
         if self.mcp_cfg:
-            mcp_tool_kwargs = {
+            mcp_tool_kwargs: dict[str, Any] = {
                 "server_label": self.mcp_cfg.name,
                 "server_url": self.mcp_cfg.url,
                 "server_description": self.mcp_cfg.description,
@@ -655,11 +673,11 @@ class AgentTemplate:
                 type(update).__name__,
                 getattr(update, 'data_type', None),
             )
-            if hasattr(update, 'content') and update.content:
+            if update.text:
                 self.logger.warning(
                     ">>> [%s] content preview: %s",
                     self.agent_name,
-                    str(update.content)[:200],
+                    update.text[:200],
                 )
             # --- END DIAGNOSTIC ---
             yield update

@@ -205,7 +205,7 @@ def main():
         config.enable_auth = False
 
     # Print startup info
-    print(f"🚀 Starting MACAE MCP Server")
+    print("🚀 Starting MACAE MCP Server")
     print(f"📋 Transport: {args.transport.upper()}")
     print(f"🔧 Debug: {config.debug}")
     print(f"🔐 Auth: {'Enabled' if config.enable_auth else 'Disabled'}")

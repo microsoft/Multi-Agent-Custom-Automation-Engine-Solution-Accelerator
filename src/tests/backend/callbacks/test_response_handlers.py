@@ -630,7 +630,7 @@ class TestStreamingAgentResponseCallback:
                     # Verify tool message was created and sent
                     mock_tool_message.assert_called_once_with(agent_name="agent_123")
                     # Verify tool_calls.extend was called with our mock tool call
-                    assert mock_tool_call in mock_tool_msg.tool_calls or mock_tool_msg.tool_calls.extend.called
+                    assert mock_tool_call in mock_tool_msg.tool_calls or mock_tool_msg.tool_calls.extend.called  # type: ignore[union-attr]
 
                     # Verify both tool message and streaming message were sent
                     assert connection_config.send_status_update_async.call_count == 2

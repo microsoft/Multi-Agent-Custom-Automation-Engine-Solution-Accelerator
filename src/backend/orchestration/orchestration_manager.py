@@ -7,12 +7,12 @@ from typing import List, Optional
 
 import models.messages as messages
 from agent_framework import (Agent, AgentResponseUpdate,
-                             InMemoryCheckpointStorage,
-                             Message, WorkflowRunState)
-from agent_framework.orchestrations import (MagenticBuilder,
+                             InMemoryCheckpointStorage, Message,
+                             WorkflowRunState)
+from agent_framework_foundry import FoundryChatClient
+from agent_framework_orchestrations import (MagenticBuilder,
                                             MagenticOrchestratorEvent,
                                             MagenticPlanReviewRequest)
-from agent_framework_foundry import FoundryChatClient
 from agents.agent_factory import AgentFactory
 from callbacks.response_handlers import (agent_response_callback,
                                          streaming_agent_response_callback)
@@ -166,7 +166,7 @@ class OrchestrationManager:
         user_id: str,
         team_config: TeamConfiguration,
         team_switched: bool,
-        team_service: TeamService = None,
+        team_service: Optional[TeamService] = None,
     ):
         """
         Return an existing workflow for the user or create a new one if:
@@ -199,17 +199,22 @@ class OrchestrationManager:
                     close_coro = getattr(agent, "close", None)
                     if callable(close_coro):
                         try:
-                            await close_coro()
+                            result = close_coro()
+                            if asyncio.iscoroutine(result):
+                                await result
                             cls.logger.debug("Closed agent '%s'", agent_name)
                         except Exception as e:
                             cls.logger.error("Error closing agent: %s", e)
 
+            assert team_service is not None, "team_service required for agent creation"
+            memory_ctx = team_service.memory_context
+            assert memory_ctx is not None, "memory_context required for agent creation"
             factory = AgentFactory(team_service=team_service)
             try:
                 agents = await factory.get_agents(
                     user_id=user_id,
                     team_config_input=team_config,
-                    memory_store=team_service.memory_context,
+                    memory_store=memory_ctx,
                 )
                 cls.logger.info("Created %d agents for user '%s'", len(agents), user_id)
             except Exception as e:
@@ -222,7 +227,7 @@ class OrchestrationManager:
                 cls.logger.info("Initializing new orchestration for user '%s'", user_id)
                 orchestration_config.orchestrations[user_id] = (
                     await cls.init_orchestration(
-                        agents, team_config, team_service.memory_context, user_id
+                        agents, team_config, memory_ctx, user_id
                     )
                 )
             except Exception as e:
@@ -249,11 +254,14 @@ class OrchestrationManager:
                 "Reusing %d agents for new workflow", len(reusable_agents),
             )
 
+            assert team_service is not None, "team_service required for workflow reset"
+            reset_memory_ctx = team_service.memory_context
+            assert reset_memory_ctx is not None, "memory_context required for workflow reset"
             try:
                 orchestration_config.orchestrations[user_id] = (
                     await cls.init_orchestration(
                         reusable_agents, team_config,
-                        team_service.memory_context, user_id,
+                        reset_memory_ctx, user_id,
                     )
                 )
             except Exception as e:
@@ -473,7 +481,7 @@ class OrchestrationManager:
             # Send approval request to frontend via WebSocket
             approval_message = messages.PlanApprovalRequest(
                 plan=mplan,
-                status="PENDING_APPROVAL",
+                status="PENDING_APPROVAL",  # type: ignore[arg-type]
                 context={"task": task_text},
             )
             await connection_config.send_status_update_async(
@@ -522,13 +530,14 @@ class OrchestrationManager:
         """
         import json
         import threading
+
         from tools.clarification_tool import store_answer
 
         responses = {}
 
         for request_id, content in tool_approvals.items():
             # Extract the questions from function call arguments
-            fn_call = content.function_call
+            fn_call = content.function_call  # type: ignore[attr-defined]
             fn_args_raw = getattr(fn_call, "arguments", None) or "{}"
             try:
                 fn_args = json.loads(fn_args_raw) if isinstance(fn_args_raw, str) else fn_args_raw
@@ -589,7 +598,7 @@ class OrchestrationManager:
             store_answer(thread_key, answer)
 
             # Approve the tool call
-            approval = content.to_function_approval_response(approved=True)
+            approval = content.to_function_approval_response(approved=True)  # type: ignore[attr-defined]
             responses[request_id] = approval
 
         return responses

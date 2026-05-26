@@ -48,3 +48,19 @@ exclude_lines = [
     "raise AssertionError",
     "raise NotImplementedError",
 ]
+
+[tool.pylint.main]
+init-hook = 'import sys; sys.path.insert(0, "src")'
+
+[tool.pylint."messages control"]
+disable = [
+    "broad-exception-caught",
+    "redefined-outer-name",
+    "protected-access",
+    "redefined-builtin",
+    "unused-import",
+    "unused-variable",
+    "unused-argument",
+    "import-error",
+    "no-name-in-module",
+]

@@ -1,0 +1,13 @@
+{
+  "executionEnvironments": [
+    {
+      "root": "src/mcp_server",
+      "extraPaths": ["src/mcp_server"]
+    },
+    {
+      "root": "src/backend",
+      "venvPath": "src/backend",
+      "venv": ".venv"
+    }
+  ]
+}

@@ -64,3 +64,14 @@ dependencies = [
     #       which conflicts with the GA azure-ai-agents==1.1.0. Kept as comment for rollback only.
     # "agent-framework-azure-ai==1.0.0rc6",  # Legacy bridge — required by v4/ code only
 ]
+
+[tool.pylint."messages control"]
+disable = [
+    "broad-exception-caught",
+    "redefined-outer-name",
+    "protected-access",
+    "redefined-builtin",
+    "unused-import",
+    "unused-argument",
+    "import-error",
+]

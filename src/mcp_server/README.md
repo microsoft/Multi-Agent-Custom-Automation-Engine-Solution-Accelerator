@@ -16,7 +16,7 @@ A FastMCP-based Model Context Protocol (MCP) server for the Multi-Agent Custom A
 
 ## Architecture
 
-```
+```text
 src/backend/v4/mcp_server/
 ├── core/                   # Core factory and base classes
 │   ├── __init__.py
@@ -109,18 +109,18 @@ src/backend/v4/mcp_server/
 
 ### Transport Options
 
-**1. STDIO Transport (default)**
+#### 1. STDIO Transport (default)
 
 - 🔧 Perfect for: Local tools, command-line integrations, Claude Desktop
 - 🚀 Usage: `python mcp_server.py` or `python mcp_server.py --transport stdio`
 
-**2. HTTP (Streamable) Transport**
+#### 2. HTTP (Streamable) Transport
 
 - 🌐 Perfect for: Web-based deployments, microservices, remote access
 - 🚀 Usage: `python mcp_server.py --transport http --port 9000`
 - 🌐 URL: `http://127.0.0.1:9000/mcp/`
 
-**3. SSE Transport (deprecated)**
+#### 3. SSE Transport (deprecated)
 
 - ⚠️ Legacy support only - use HTTP transport for new projects
 - 🚀 Usage: `python mcp_server.py --transport sse --port 9000`
@@ -148,7 +148,7 @@ fastmcp dev mcp_server.py -t streamable-http --port 9000
    ```
 
 2. **Access the Server**:
-   - MCP endpoint: http://localhost:9000/mcp/
+   - MCP endpoint: <http://localhost:9000/mcp/>
    - Health check available via custom routes
 
 ### VS Code Development
@@ -222,6 +222,7 @@ For development, set `MCP_ENABLE_AUTH=false` to disable authentication.
    ```
 
 3. **Add Domain** (if new):
+
    ```python
    # In core/factory.py
    class Domain(Enum):

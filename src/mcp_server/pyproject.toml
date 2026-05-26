@@ -51,3 +51,9 @@ include = ["**/*", "README.md"]
 
 [project.scripts]
 mcp-server = "mcp_server:main"
+
+[tool.pylint.main]
+init-hook = "import sys; sys.path.insert(0, '.')"
+
+[tool.pylint."messages control"]
+disable = ["broad-exception-caught", "redefined-outer-name", "protected-access"]

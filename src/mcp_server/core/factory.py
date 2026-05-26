@@ -34,13 +34,11 @@ class MCPToolBase(ABC):
     @abstractmethod
     def register_tools(self, mcp: FastMCP) -> None:
         """Register tools with the MCP server."""
-        pass
 
     @property
     @abstractmethod
     def tool_count(self) -> int:
         """Return the number of tools provided by this service."""
-        pass
 
 
 class MCPToolFactory:
