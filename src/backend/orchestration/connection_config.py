@@ -28,7 +28,7 @@ class OrchestrationConfig:
         self.approvals: Dict[str, bool] = {}           # plan_id -> approval status (None = pending)
         self.sockets: Dict[str, WebSocket] = {}        # user_id -> WebSocket
         self.clarifications: Dict[str, str] = {}       # plan_id -> clarification response
-        self.max_rounds: int = 10
+        self.max_rounds: int = 30
         self.active_tasks: Dict[str, asyncio.Task] = {}  # user_id -> running asyncio.Task
         self.default_timeout: float = 300.0
 
@@ -253,7 +253,9 @@ class ConnectionConfig:
                 )
                 process_id = self.user_to_process[fallback_user_id]
             else:
-                logger.warning(
+                # Demoted to DEBUG: this fires once per streaming token before
+                # the frontend WS connects, flooding logs and burying real events.
+                logger.debug(
                     "No active WebSocket process found for user ID: %s", user_id
                 )
                 return

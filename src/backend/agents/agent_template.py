@@ -17,11 +17,10 @@ from __future__ import annotations
 
 import logging
 from contextlib import AsyncExitStack
-from typing import AsyncGenerator, Optional
+from typing import Any, AsyncGenerator, Optional
 
 from agent_framework import (Agent, AgentResponseUpdate, ChatOptions, Content,
                              MCPStreamableHTTPTool, Message)
-from agent_framework_azure_ai_search import AzureAISearchContextProvider
 from agent_framework_foundry import FoundryChatClient
 from azure.ai.projects.aio import AIProjectClient
 from azure.ai.projects.models import (AISearchIndexResource, AzureAISearchTool,
@@ -86,7 +85,7 @@ class AgentTemplate:
         self._stack: Optional[AsyncExitStack] = None
         self._agent: Optional[Agent] = None
         self._resolved_vector_store_id: str | None = None
-        self._kb_provider: AzureAISearchContextProvider | None = None
+        self._kb_provider: Any = None
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -277,18 +276,27 @@ class AgentTemplate:
                 )
 
             if kb_endpoint and kb_name:
-                self._kb_provider = AzureAISearchContextProvider(
-                    endpoint=kb_endpoint,
-                    knowledge_base_name=kb_name,
-                    credential=self._credential,
-                    mode="agentic",
-                )
-                await self._stack.enter_async_context(self._kb_provider)
-                self.logger.info(
-                    "Created AzureAISearchContextProvider (kb=%s, endpoint=%s).",
-                    kb_name,
-                    kb_endpoint,
-                )
+                try:
+                    from agent_framework_azure_ai_search import AzureAISearchContextProvider
+                except (ModuleNotFoundError, ImportError):
+                    AzureAISearchContextProvider = None  # type: ignore[assignment]
+                    self.logger.warning(
+                        "agent-framework-azure-ai-search not available; "
+                        "KB context provider disabled for '%s'.", self.agent_name,
+                    )
+                if AzureAISearchContextProvider is not None:
+                    self._kb_provider = AzureAISearchContextProvider(
+                        endpoint=kb_endpoint,
+                        knowledge_base_name=kb_name,
+                        credential=self._credential,
+                        mode="agentic",
+                    )
+                    await self._stack.enter_async_context(self._kb_provider)
+                    self.logger.info(
+                        "Created AzureAISearchContextProvider (kb=%s, endpoint=%s).",
+                        kb_name,
+                        kb_endpoint,
+                    )
 
             # Step 2 — Create per-agent Toolbox (only when the agent has tools).
             toolbox_name = f"macae-{self.agent_name}-tools"
@@ -394,15 +402,20 @@ class AgentTemplate:
             # MCPTool which is executed server-side by the Responses API).
             mcp_tool = None
             if self.mcp_cfg:
-                mcp_tool = MCPStreamableHTTPTool(
-                    name=self.mcp_cfg.name,
-                    url=self.mcp_cfg.url,
-                )
+                mcp_kwargs = {
+                    "name": self.mcp_cfg.name,
+                    "url": self.mcp_cfg.url,
+                }
+                if self.mcp_cfg.allowed_tools:
+                    mcp_kwargs["allowed_tools"] = self.mcp_cfg.allowed_tools
+                mcp_tool = MCPStreamableHTTPTool(**mcp_kwargs)
                 await self._stack.enter_async_context(mcp_tool)
                 self.logger.info(
-                    "Connected to MCP server '%s' at %s.",
+                    "Connected to MCP server '%s' at %s (allowed=%s) — functions: %s",
                     self.mcp_cfg.name,
                     self.mcp_cfg.url,
+                    self.mcp_cfg.allowed_tools,
+                    [f.name for f in mcp_tool.functions],
                 )
 
             # Combine Toolbox tools (Search, CodeInterpreter) + client-side MCP + extra tools.
@@ -416,10 +429,83 @@ class AgentTemplate:
             if self.extra_tools:
                 all_tools.extend(self.extra_tools)
 
+            # Team JSON instructions are authoritative — always prefer them
+            # over portal instructions to prevent stale-instruction drift.
+            effective_instructions = self.agent_instructions or definition.instructions
+
+            # Compute the desired portal tools list based on team JSON config.
+            # ONLY the KB MCPTool belongs in the portal definition; client-side
+            # MCP (use_mcp) and file_search are attached at runtime via the
+            # Agent(tools=...) parameter. Any other portal tools (e.g. stale
+            # function tools left over from prior packs like
+            # `generate_press_release`) MUST be stripped or the Foundry server
+            # will merge them into every request, causing the LLM to loop on
+            # the wrong tool.
+            desired_portal_tools: list = []
+            if self.kb_config:
+                kb_mcp_url = (
+                    f"{self.kb_config.search_endpoint}/knowledgebases/"
+                    f"{self.kb_config.knowledge_base_name}/mcp"
+                    f"?api-version=2025-11-01-preview"
+                )
+                desired_portal_tools.append(MCPTool(
+                    server_label=self.kb_config.knowledge_base_name,
+                    server_url=kb_mcp_url,
+                    project_connection_id=self.kb_config.search_connection_name,
+                ))
+
+            def _tool_signature(tools):
+                sig = []
+                for t in tools or []:
+                    if isinstance(t, MCPTool):
+                        sig.append(("mcp", getattr(t, "server_url", None)))
+                    else:
+                        sig.append((type(t).__name__, getattr(t, "name", repr(t)[:60])))
+                return sorted(sig, key=lambda x: (x[0], str(x[1])))
+
+            current_sig = _tool_signature(definition.tools)
+            desired_sig = _tool_signature(desired_portal_tools)
+            tools_need_sync = current_sig != desired_sig
+
+            instructions_need_sync = (
+                definition.instructions
+                and definition.instructions != effective_instructions
+            )
+
+            if tools_need_sync or instructions_need_sync:
+                if tools_need_sync:
+                    self.logger.warning(
+                        "Stripping stale portal tools for '%s'. Was: %s → Now: %s",
+                        self.agent_name, current_sig, desired_sig,
+                    )
+                if instructions_need_sync:
+                    self.logger.info(
+                        "Syncing portal instructions for '%s' (len %d → %d).",
+                        self.agent_name,
+                        len(definition.instructions),
+                        len(effective_instructions),
+                    )
+                definition = PromptAgentDefinition(
+                    model=definition.model,
+                    instructions=effective_instructions,
+                    tools=desired_portal_tools if desired_portal_tools else None,
+                )
+                try:
+                    await project_client.agents.create_version(
+                        agent_name=self.agent_name,
+                        definition=definition,
+                        description=self.agent_description,
+                    )
+                except Exception as _sync_exc:
+                    self.logger.warning(
+                        "Failed to sync portal definition for '%s': %s",
+                        self.agent_name, _sync_exc,
+                    )
+
             agent = Agent(
                 client=chat_client,
                 name=self.agent_name,
-                instructions=definition.instructions or self.agent_instructions,
+                instructions=effective_instructions,
                 description=self.agent_description,
                 tools=all_tools if all_tools else None,
                 context_providers=[self._kb_provider] if self._kb_provider else None,

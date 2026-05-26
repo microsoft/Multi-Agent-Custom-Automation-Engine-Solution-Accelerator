@@ -17,6 +17,15 @@ from common.config.app_config import config
 logger = logging.getLogger(__name__)
 
 
+# Mapping of mcp_domain → list of MCP tool names the agent is allowed to call.
+# When set, agent_template will pass this as MCPStreamableHTTPTool(allowed_tools=...)
+# so the LLM only sees the relevant subset (avoids cross-pack tool confusion when
+# the MCP server exposes every function at the base /mcp endpoint).
+DOMAIN_ALLOWED_TOOLS: dict[str, list[str]] = {
+    "image": ["generate_marketing_image"],
+}
+
+
 @dataclass(slots=True)
 class MCPConfig:
     """Configuration for connecting to an MCP server."""
@@ -27,6 +36,7 @@ class MCPConfig:
     tenant_id: str = ""
     client_id: str = ""
     connection_id: str | None = None
+    allowed_tools: list[str] | None = None
 
     @classmethod
     def from_env(cls, domain: str | None = None) -> "MCPConfig":
@@ -47,12 +57,11 @@ class MCPConfig:
         if not all([url, name, description, tenant_id, client_id]):
             raise ValueError(f"{cls.__name__}: missing required environment variables")
 
-        if domain:
-            # Rewrite e.g. "http://host:9000/mcp" → "http://host:9000/hr/mcp"
-            url = url.rstrip("/")
-            if url.endswith("/mcp"):
-                url = url[: -len("/mcp")]
-            url = f"{url}/{domain}/mcp"
+        # NOTE: URL rewriting to /<domain>/mcp is disabled because the
+        # currently-deployed MCP server only exposes the catch-all /mcp
+        # endpoint. We rely on the client-side ``allowed_tools`` filter
+        # below to scope the LLM's tool surface to the right domain.
+        allowed_tools = DOMAIN_ALLOWED_TOOLS.get(domain) if domain else None
 
         return cls(
             url=url,
@@ -61,6 +70,7 @@ class MCPConfig:
             tenant_id=tenant_id,
             client_id=client_id,
             connection_id=config.MCP_SERVER_CONNECTION_ID,
+            allowed_tools=allowed_tools,
         )
 
     def get_headers(self, token: str) -> dict:
