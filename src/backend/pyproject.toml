@@ -55,8 +55,10 @@ dependencies = [
     "azure-core==1.38.0",
     # ── Agent Framework ────────────────────────────────────────────────────────
     # OLD (restore to revert): "agent-framework>=1.0.0b251105",
-    "agent-framework==1.2.2",                # GA umbrella — pulls agent-framework-core[all]
-    "agent-framework-foundry==1.2.2",        # FoundryChatClient + AIProjectClient integration
+    # OLD (restore to revert): "agent-framework==1.2.2",
+    "agent-framework==1.6.0",                # GA umbrella — pulls agent-framework-core[all]
+    # OLD (restore to revert): "agent-framework-foundry==1.2.2",
+    "agent-framework-foundry==1.6.0",        # FoundryChatClient + AIProjectClient integration
     # TODO: Remove when v4/ directory is deleted (Phase 9)
     # NOTE: agent-framework-azure-ai==1.0.0rc6 requires azure-ai-agents>=1.2.0b5,<1.2.0b6
     #       which conflicts with the GA azure-ai-agents==1.1.0. Kept as comment for rollback only.
