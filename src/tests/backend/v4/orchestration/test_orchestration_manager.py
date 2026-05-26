@@ -324,10 +324,17 @@ class MockPlanStatus:
     FAILED = "failed"
     COMPLETED = "completed"
     IN_PROGRESS = "in_progress"
+    # messages_af.PlanStatus uses lowercase member names
+    failed = "failed"
+    completed = "completed"
+    in_progress = "in_progress"
 
 sys.modules['v4.models'] = Mock()
 sys.modules['v4.models.messages'] = Mock(WebsocketMessageType=MockWebsocketMessageType)
 sys.modules['v4.models.models'] = Mock(PlanStatus=MockPlanStatus)
+# Attach PlanStatus to the already-mocked messages_af module (production code now imports
+# PlanStatus from common.models.messages_af, not v4.models.models).
+sys.modules['common.models.messages_af'].PlanStatus = MockPlanStatus
 
 # Mock v4.orchestration.human_approval_manager
 class MockHumanApprovalMagenticManager:
@@ -932,6 +939,82 @@ class TestOrchestrationManager(IsolatedAsyncioTestCase):
         
         # Verify streaming callback was called (for output event with AgentResponseUpdate data)
         streaming_agent_response_callback.assert_called()
+
+    async def test_run_orchestration_marks_plan_failed_on_exception(self):
+        """When orchestration raises and plan_id is set, plan.overall_status must be
+        updated to FAILED via DatabaseFactory/get_plan_by_plan_id/update_plan."""
+        mock_workflow = Mock()
+        mock_workflow.executors = {}
+        mock_workflow.run = Mock(side_effect=Exception("Workflow execution failed"))
+        orchestration_config.get_current_orchestration.return_value = mock_workflow
+
+        mock_plan = Mock()
+        mock_plan.overall_status = "in_progress"
+        mock_memory_store = Mock()
+        mock_memory_store.get_plan_by_plan_id = AsyncMock(return_value=mock_plan)
+        mock_memory_store.update_plan = AsyncMock()
+
+        db_factory_mock = sys.modules['common.database.database_factory'].DatabaseFactory
+        db_factory_mock.get_database = AsyncMock(return_value=mock_memory_store)
+
+        input_task = Mock()
+        input_task.description = "Test task"
+
+        with self.assertRaises(Exception):
+            await self.orchestration_manager.run_orchestration(
+                user_id=self.test_user_id,
+                input_task=input_task,
+                plan_id="plan-123",
+            )
+
+        db_factory_mock.get_database.assert_awaited_with(user_id=self.test_user_id)
+        mock_memory_store.get_plan_by_plan_id.assert_awaited_with(plan_id="plan-123")
+        mock_memory_store.update_plan.assert_awaited_once()
+        self.assertEqual(mock_plan.overall_status, "failed")
+
+    async def test_run_orchestration_db_failure_does_not_mask_original_error(self):
+        """If the DB update itself fails, the original orchestration error must still
+        propagate (the DB error is logged and swallowed)."""
+        mock_workflow = Mock()
+        mock_workflow.executors = {}
+        original_error = RuntimeError("Workflow boom")
+        mock_workflow.run = Mock(side_effect=original_error)
+        orchestration_config.get_current_orchestration.return_value = mock_workflow
+
+        db_factory_mock = sys.modules['common.database.database_factory'].DatabaseFactory
+        db_factory_mock.get_database = AsyncMock(side_effect=Exception("DB unavailable"))
+
+        input_task = Mock()
+        input_task.description = "Test task"
+
+        with self.assertRaises(RuntimeError) as ctx:
+            await self.orchestration_manager.run_orchestration(
+                user_id=self.test_user_id,
+                input_task=input_task,
+                plan_id="plan-123",
+            )
+        self.assertIn("Workflow boom", str(ctx.exception))
+
+    async def test_run_orchestration_skips_db_update_when_no_plan_id(self):
+        """When plan_id is not provided, the orchestration must not touch the DB on failure."""
+        mock_workflow = Mock()
+        mock_workflow.executors = {}
+        mock_workflow.run = Mock(side_effect=Exception("Workflow execution failed"))
+        orchestration_config.get_current_orchestration.return_value = mock_workflow
+
+        db_factory_mock = sys.modules['common.database.database_factory'].DatabaseFactory
+        db_factory_mock.get_database = AsyncMock()
+
+        input_task = Mock()
+        input_task.description = "Test task"
+
+        with self.assertRaises(Exception):
+            await self.orchestration_manager.run_orchestration(
+                user_id=self.test_user_id,
+                input_task=input_task,
+            )
+
+        db_factory_mock.get_database.assert_not_awaited()
 
 
 class TestExtractResponseText(IsolatedAsyncioTestCase):

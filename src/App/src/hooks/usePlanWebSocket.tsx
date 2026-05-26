@@ -214,6 +214,7 @@ export function usePlanWebSocket({
                     dispatch(addAgentMessage(errorAgent));
                     dispatch(planFailedFinal());
                     dispatch(setShowBufferingText(false));
+                    dispatch(setSubmittingChatDisableInput(true));
                     scrollToBottom();
                     showToast(errorContent, 'error');
                     webSocketService.disconnect();
@@ -254,6 +255,7 @@ export function usePlanWebSocket({
                 dispatch(addAgentMessage(errorAgent));
                 dispatch(planFailedFinal());
                 dispatch(setShowBufferingText(false));
+                dispatch(setSubmittingChatDisableInput(true));
                 scrollToBottom();
                 showToast(errorContent, 'error');
                 webSocketService.disconnect();

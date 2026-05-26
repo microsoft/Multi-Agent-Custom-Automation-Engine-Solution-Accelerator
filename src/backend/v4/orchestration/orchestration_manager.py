@@ -25,7 +25,7 @@ from agent_framework_orchestrations._magentic import (
 )
 
 from common.config.app_config import config
-from common.models.messages_af import TeamConfiguration
+from common.models.messages_af import TeamConfiguration, PlanStatus
 
 from common.database.database_base import DatabaseBase
 
@@ -39,7 +39,6 @@ from v4.models.messages import TokenUsageUpdate, WebsocketMessageType
 from v4.orchestration.human_approval_manager import HumanApprovalMagenticManager
 from v4.magentic_agents.magentic_agent_factory import MagenticAgentFactory
 from common.database.database_factory import DatabaseFactory
-from v4.models.models import PlanStatus
 
 
 class OrchestrationManager:
@@ -449,7 +448,7 @@ class OrchestrationManager:
     # ---------------------------
     # Execution
     # ---------------------------
-    async def run_orchestration(self, user_id: str, input_task, plan_id: str = None) -> None:
+    async def run_orchestration(self, user_id: str, input_task, plan_id: Optional[str] = None) -> None:
         """
         Execute the Magentic workflow for the provided user and task description.
         """
@@ -848,7 +847,7 @@ class OrchestrationManager:
                     memory_store = await DatabaseFactory.get_database(user_id=user_id)
                     plan = await memory_store.get_plan_by_plan_id(plan_id=self._plan_id)
                     if plan:
-                        plan.overall_status = PlanStatus.FAILED
+                        plan.overall_status = PlanStatus.failed
                         await memory_store.update_plan(plan)
                         self.logger.info("Plan '%s' status updated to FAILED", self._plan_id)
             except Exception as db_error:
