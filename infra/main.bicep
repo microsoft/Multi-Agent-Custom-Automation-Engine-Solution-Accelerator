@@ -78,11 +78,11 @@ param gpt5MiniModelName string = 'gpt-5-mini'
 param gpt5MiniModelVersion string = '2025-08-07'
 
 @minLength(1)
-@description('Optional. Name of the image-generation model to deploy. Defaults to gpt-image-1.')
-param gptImageModelName string = 'gpt-image-1'
+@description('Optional. Name of the image-generation model to deploy. Defaults to gpt-image-1.5.')
+param gptImageModelName string = 'gpt-image-1.5'
 
-@description('Optional. Version of the image-generation model to deploy. Defaults to 2025-04-15.')
-param gptImageModelVersion string = '2025-04-15'
+@description('Optional. Version of the image-generation model to deploy. Defaults to 2025-12-16.')
+param gptImageModelVersion string = '2025-12-16'
 
 @description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2024-12-01-preview.')
 param azureopenaiVersion string = '2024-12-01-preview'
@@ -142,8 +142,8 @@ param gpt5MiniModelCapacity int = 50
 @description('Optional. GPT image model deployment type. Defaults to GlobalStandard.')
 param gptImageModelDeploymentType string = 'GlobalStandard'
 
-@description('Optional. GPT image model deployment capacity (images per minute). Defaults to 1.')
-param gptImageModelCapacity int = 1
+@description('Optional. gpt-image-1.5 deployment capacity (RPM). Defaults to 5 to support concurrent marketing-image generation across multiple sessions.')
+param gptImageModelCapacity int = 5
 
 @description('Optional. The tags to apply to all deployed Azure resources.')
 param tags resourceInput<'Microsoft.Resources/resourceGroups@2025-04-01'>.tags = {}
