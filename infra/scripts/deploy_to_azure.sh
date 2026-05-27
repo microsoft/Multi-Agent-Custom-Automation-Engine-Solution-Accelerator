@@ -25,6 +25,11 @@ set -euo pipefail
 # See: https://github.com/Azure/azure-cli/issues/13009
 az() { MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL="*" command az "$@"; }
 
+# Probe for the real az executable that ignores the wrapper function above.
+# Used in check_prerequisites so an uninstalled Azure CLI doesn't pass the check
+# merely because `command -v az` matches our shell function.
+_has_az_executable() { type -P az >/dev/null 2>&1; }
+
 # Convert a path to Windows-native format for tools like docker.exe that need it.
 # On non-MSYS systems (Linux/macOS) this is a no-op.
 _winpath() {
@@ -73,7 +78,7 @@ log_warn()    { echo -e "${YELLOW}[!]${NC} $*"; }
 log_error()   { echo -e "${RED}[✗]${NC} $*"; }
 log_step()    { echo -e "\n${CYAN}━━━ $* ━━━${NC}\n"; }
 
-# Retry an az command up to 3 times on transient network errors
+# Retry an az command up to 4 attempts on transient network/operation-in-progress errors
 az_retry() {
     local attempt=1 out rc delay
     while [[ $attempt -le 4 ]]; do
@@ -160,7 +165,7 @@ check_prerequisites() {
 
     local missing=()
 
-    if command -v az &>/dev/null; then
+    if _has_az_executable; then
         log_success "Azure CLI found"
     else
         missing+=("azure-cli")
@@ -808,7 +813,7 @@ configure_acr_on_resources() {
 # ==============================================================================
 
 update_azure_resources() {
-    log_step "Step 7: Updating Azure Resources"
+    log_step "Step 8: Updating Azure Resources"
 
     if [[ "$BUILD_ONLY" == true ]]; then
         return

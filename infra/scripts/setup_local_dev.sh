@@ -18,6 +18,19 @@
 set -euo pipefail
 
 # ==============================================================================
+# Bash version check (associative arrays require Bash 4+; macOS ships Bash 3.2)
+# ==============================================================================
+if [[ -z "${BASH_VERSION:-}" ]] || [[ "${BASH_VERSINFO[0]:-0}" -lt 4 ]]; then
+    echo "[ERROR] This script requires Bash 4 or newer (associative arrays)." >&2
+    echo "        Detected: ${BASH_VERSION:-unknown}" >&2
+    echo "        macOS ships with Bash 3.2 by default — install Bash 4+ via Homebrew:" >&2
+    echo "          brew install bash" >&2
+    echo "        Then re-run with the new interpreter, e.g.:" >&2
+    echo "          /opt/homebrew/bin/bash infra/scripts/setup_local_dev.sh ..." >&2
+    exit 1
+fi
+
+# ==============================================================================
 # Paths
 # ==============================================================================
 
@@ -50,15 +63,8 @@ for _cmd in python3.12 python3 python py; do
         fi
     fi
 done
-# Fallback: use whatever python3/python is available even if version check failed
-if [[ -z "$PYTHON_CMD" ]]; then
-    for _cmd in python3 python py; do
-        if command -v "$_cmd" &>/dev/null; then
-            PYTHON_CMD="$_cmd"
-            break
-        fi
-    done
-fi
+# No silent fallback to <3.12 — later steps (uv sync --python 3.12, venv) require 3.12+.
+# If nothing suitable is found, leave PYTHON_CMD empty; check_prerequisites will fail loudly.
 
 # ==============================================================================
 # Colors
@@ -979,9 +985,17 @@ EXTEOF
 
     local settings_file="$vscode_dir/settings.json"
     if [[ ! -f "$settings_file" ]]; then
-        cat > "$settings_file" << 'SETEOF'
+        # Choose an OS-appropriate interpreter sub-path (Windows uses Scripts\python.exe,
+        # Linux/macOS use bin/python). Detect by checking what activate script exists.
+        local interp_path
+        if [[ -f "$BACKEND_DIR/.venv/Scripts/python.exe" ]] || [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; then
+            interp_path='${workspaceFolder}/src/backend/.venv/Scripts/python.exe'
+        else
+            interp_path='${workspaceFolder}/src/backend/.venv/bin/python'
+        fi
+        cat > "$settings_file" << SETEOF
 {
-    "python.defaultInterpreterPath": "${workspaceFolder}/src/backend/.venv/Scripts/python.exe",
+    "python.defaultInterpreterPath": "$interp_path",
     "python.terminal.activateEnvironment": true,
     "python.linting.enabled": true,
     "python.formatting.provider": "black",

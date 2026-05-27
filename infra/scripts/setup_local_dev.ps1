@@ -13,6 +13,8 @@
 #   .\setup_local_dev.ps1 -ResourceGroup "rg-macae-dev" -SkipPrereqs
 # ==============================================================================
 
+#Requires -Version 7.0
+
 param(
     [string]$ResourceGroup = "",
     [string]$Subscription = "",
@@ -21,6 +23,16 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+# PowerShell 7+ is required because this script uses the null-coalescing operator (`??`)
+# and `Out-File -Encoding utf8NoBOM`, neither of which exist in Windows PowerShell 5.1.
+# `#Requires -Version 7.0` aborts with a clear error on older hosts before parsing fails.
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+    Write-Host "[ERROR] This script requires PowerShell 7 or newer. Detected: $($PSVersionTable.PSVersion)" -ForegroundColor Red
+    Write-Host "        Install from https://aka.ms/powershell or 'winget install Microsoft.PowerShell'" -ForegroundColor Red
+    Write-Host "        Then re-run with 'pwsh.exe' instead of 'powershell.exe'." -ForegroundColor Red
+    exit 1
+}
 
 # Resolve repo root (script lives in infra/scripts/)
 $ScriptDir = $PSScriptRoot
@@ -67,21 +79,32 @@ function Check-Prerequisites {
     $missing = @()
 
     # Python 3.12+
+    # Detect a Python 3.12+ interpreter and remember the exact invocation so later
+    # steps (venv creation) use the same interpreter. Without this, `py -3.12` may pass
+    # prereqs while a later `python -m venv` call fails because `python` isn't on PATH.
+    $script:PythonInvocation = $null
     if (Test-CommandExists "py") {
         $pyVersion = & py -3.12 --version 2>$null
         if ($pyVersion) {
             Write-LogSuccess "Python 3.12 found: $pyVersion"
-        } else {
-            $missing += "Python.Python.3.12"
+            $script:PythonInvocation = @("py", "-3.12")
         }
-    } elseif (Test-CommandExists "python") {
+    }
+    if (-not $script:PythonInvocation -and (Test-CommandExists "python")) {
         $pyVersion = & python --version 2>$null
         if ($pyVersion -match "3\.1[2-9]") {
             Write-LogSuccess "Python found: $pyVersion"
-        } else {
-            $missing += "Python.Python.3.12"
+            $script:PythonInvocation = @("python")
         }
-    } else {
+    }
+    if (-not $script:PythonInvocation -and (Test-CommandExists "python3")) {
+        $pyVersion = & python3 --version 2>$null
+        if ($pyVersion -match "3\.1[2-9]") {
+            Write-LogSuccess "Python found: $pyVersion"
+            $script:PythonInvocation = @("python3")
+        }
+    }
+    if (-not $script:PythonInvocation) {
         $missing += "Python.Python.3.12"
     }
 
@@ -840,7 +863,14 @@ function Setup-Frontend {
     if (-not (Test-Path ".venv\Scripts\activate")) {
         if (Test-Path ".venv") { Write-LogWarn "Existing .venv is incomplete (no activate script), recreating..." }
         Write-LogInfo "Creating Python virtual environment..."
-        python -m venv --clear .venv
+        # Use the same interpreter Check-Prerequisites detected (handles 'py -3.12'
+        # on Windows machines where 'python' isn't on PATH).
+        $pyExe = if ($script:PythonInvocation) { $script:PythonInvocation[0] } else { "python" }
+        $pyArgs = @()
+        if ($script:PythonInvocation -and $script:PythonInvocation.Count -gt 1) {
+            $pyArgs = $script:PythonInvocation[1..($script:PythonInvocation.Count - 1)]
+        }
+        & $pyExe @pyArgs -m venv --clear .venv
     } else {
         Write-LogInfo "Python virtual environment already exists"
     }

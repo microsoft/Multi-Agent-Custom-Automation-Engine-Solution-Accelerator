@@ -31,6 +31,7 @@ az login
 
 1. **Checks prerequisites** — Python 3.12+, Node.js, npm, uv, Azure CLI, Git
 2. **Azure authentication** — logs you in if needed, confirms the active subscription
+2b. **Checks Azure roles & permissions** — verifies you have role-assignment permission (Owner / User Access Administrator / RBAC Administrator) before attempting RBAC step (non-fatal warning)
 3. **Fetches Azure configuration** — reads deployment outputs or queries resources individually to build `src/backend/.env`
 4. **Assigns RBAC roles** — grants your user account the roles needed to run the app locally:
    - Cosmos DB Built-in Data Contributor

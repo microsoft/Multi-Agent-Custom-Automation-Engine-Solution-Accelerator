@@ -26,6 +26,7 @@ az login
 ## What It Does (in order)
 
 1. **Checks prerequisites** — Azure CLI and Docker (both required)
+1b. **Checks Azure roles & permissions** — verifies you have Contributor + role-assignment permission on the resource group (non-fatal warning)
 2. **Discovers Azure resources** — finds the backend/MCP Container Apps and frontend App Service in your resource group
 3. **Resolves ACR** — lists ACRs in the resource group and asks which one to use; prompts to create a new one if needed
 4. **Determines services** — deploys all services by default, or only the ones you specify with `--services`

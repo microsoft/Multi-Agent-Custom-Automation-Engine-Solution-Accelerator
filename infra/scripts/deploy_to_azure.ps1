@@ -646,12 +646,17 @@ function Configure-AcrOnResources {
         if ($DryRun) { Write-LogInfo "[DRY RUN] Would update frontend App Service registry config" }
         else {
             Write-LogInfo "Updating frontend App Service registry config..."
+            # Capture exit codes from BOTH commands — without this, a failure in the
+            # first call (DOCKER_REGISTRY_SERVER_URL) would be masked if the second
+            # call succeeds, leaving the Web App with a half-configured registry.
             az webapp config appsettings set --name $script:FrontendApp --resource-group $ResourceGroup `
                 --settings DOCKER_REGISTRY_SERVER_URL="https://$($script:AcrLoginServer)" --output none
+            $appsettingsRc = $LASTEXITCODE
             az webapp config set --name $script:FrontendApp --resource-group $ResourceGroup `
                 --generic-configurations '{\"acrUseManagedIdentityCreds\": true}' --output none
-            if ($LASTEXITCODE -ne 0) {
-                Write-LogError "Frontend registry config FAILED — image pull may fail."
+            $configRc = $LASTEXITCODE
+            if ($appsettingsRc -ne 0 -or $configRc -ne 0) {
+                Write-LogError "Frontend registry config FAILED (appsettings rc=$appsettingsRc, config rc=$configRc) — image pull may fail."
             } else {
                 Write-LogSuccess "Frontend registry config updated"
             }
