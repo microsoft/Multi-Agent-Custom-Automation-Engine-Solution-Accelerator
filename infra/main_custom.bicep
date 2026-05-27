@@ -152,32 +152,43 @@ param virtualMachineAdminUsername string?
 @secure()
 param virtualMachineAdminPassword string?
 // These parameters are changed for testing - please reset as part of publication
+// Note: Container image params below are injected by azd during service deployment.
+// They appear unused in Bicep but are required for azd's container image resolution.
 
 @description('Optional. The Container Registry hostname where the docker images for the backend are located.')
+#disable-next-line no-unused-params
 param backendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
 
 @description('Optional. The Container Image Name to deploy on the backend.')
+#disable-next-line no-unused-params
 param backendContainerImageName string = 'macaebackend'
 
 @description('Optional. The Container Image Tag to deploy on the backend.')
+#disable-next-line no-unused-params
 param backendContainerImageTag string = 'latest_v4'
 
 @description('Optional. The Container Registry hostname where the docker images for the frontend are located.')
+#disable-next-line no-unused-params
 param frontendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
 
 @description('Optional. The Container Image Name to deploy on the frontend.')
+#disable-next-line no-unused-params
 param frontendContainerImageName string = 'macaefrontend'
 
 @description('Optional. The Container Image Tag to deploy on the frontend.')
+#disable-next-line no-unused-params
 param frontendContainerImageTag string = 'latest_v4'
 
 @description('Optional. The Container Registry hostname where the docker images for the MCP are located.')
+#disable-next-line no-unused-params
 param MCPContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
 
 @description('Optional. The Container Image Name to deploy on the MCP.')
+#disable-next-line no-unused-params
 param MCPContainerImageName string = 'macaemcp'
 
 @description('Optional. The Container Image Tag to deploy on the MCP.')
+#disable-next-line no-unused-params
 param MCPContainerImageTag string = 'latest_v4'
 
 @description('Optional. Enable/Disable usage telemetry for module.')
@@ -729,6 +740,7 @@ var privateDnsZones = [
   'privatelink.openai.azure.com'
   'privatelink.services.ai.azure.com'
   'privatelink.documents.azure.com'
+  #disable-next-line no-hardcoded-env-urls
   'privatelink.blob.core.windows.net'
   'privatelink.search.windows.net'
   keyVaultPrivateDNSZone
@@ -1235,6 +1247,7 @@ module containerAppEnvironment 'br/public:avm/res/app/managed-environment:0.11.2
 module containerRegistry 'br/public:avm/res/container-registry/registry:0.9.1' = {
   name: 'registryDeployment'
   params: {
+    #disable-next-line BCP334
     name: 'cr${solutionSuffix}'
     acrAdminUserEnabled: false
     acrSku: 'Basic'
@@ -1580,7 +1593,7 @@ module containerAppMcp 'br/public:avm/res/app/container-app:0.18.1' = {
           }
           {
             name: 'JWKS_URI'
-            value: 'https://login.microsoftonline.com/${tenant().tenantId}/discovery/v2.0/keys'
+            value: '${environment().authentication.loginEndpoint}${tenant().tenantId}/discovery/v2.0/keys'
           }
           {
             name: 'ISSUER'
@@ -1688,7 +1701,6 @@ module webSite 'modules/web-sites.bicep' = {
 // ========== Storage Account ========== //
 
 var storageAccountName = replace('st${solutionSuffix}', '-', '')
-param storageContainerName string = 'sample-dataset'
 param storageContainerNameRetailCustomer string = 'retail-dataset-customer'
 param storageContainerNameRetailOrder string = 'retail-dataset-order'
 param storageContainerNameRFPSummary string = 'rfp-summary-dataset'
@@ -1801,7 +1813,6 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
 // ========== Search Service ========== //
 
 var searchServiceName = 'srch-${solutionSuffix}'
-var aiSearchIndexName = 'sample-dataset-index'
 
 module searchService 'br/public:avm/res/search/search-service:0.11.1' = {
   name: take('avm.res.search.search-service.${solutionSuffix}', 64)
@@ -1890,9 +1901,6 @@ module aiSearchFoundryConnection 'modules/aifp-connections.bicep' = {
     searchServiceName: searchService.outputs.name
     searchApiKey: searchService.outputs.primaryKey
   }
-  dependsOn: [
-    aiFoundryAiServices
-  ]
 }
 
 // ========== KeyVault ========== //
@@ -1983,10 +1991,11 @@ output AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDep
 // output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiProjectEndpoint
 output APP_ENV string = 'Prod'
 output AI_FOUNDRY_RESOURCE_ID string = !useExistingAiFoundryAiProject
-  ? aiFoundryAiServices.outputs.resourceId
+  ? aiFoundryAiServices!.outputs.resourceId
   : existingAiFoundryAiProjectResourceId
 output COSMOSDB_ACCOUNT_NAME string = cosmosDbResourceName
 output AZURE_SEARCH_ENDPOINT string = searchService.outputs.endpoint
+#disable-next-line BCP318
 output AZURE_CLIENT_ID string = userAssignedIdentity!.outputs.clientId
 output AZURE_TENANT_ID string = tenant().tenantId
 output AZURE_AI_SEARCH_CONNECTION_NAME string = aiSearchConnectionName

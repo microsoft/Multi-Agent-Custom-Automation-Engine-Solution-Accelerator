@@ -741,6 +741,7 @@ var privateDnsZones = [
   'privatelink.openai.azure.com'
   'privatelink.services.ai.azure.com'
   'privatelink.documents.azure.com'
+  #disable-next-line no-hardcoded-env-urls
   'privatelink.blob.core.windows.net'
   'privatelink.search.windows.net'
 ]
@@ -1565,7 +1566,7 @@ module containerAppMcp 'br/public:avm/res/app/container-app:0.18.1' = {
           }
           {
             name: 'JWKS_URI'
-            value: 'https://login.microsoftonline.com/${tenant().tenantId}/discovery/v2.0/keys'
+            value: '${environment().authentication.loginEndpoint}${tenant().tenantId}/discovery/v2.0/keys'
           }
           {
             name: 'ISSUER'
@@ -1674,7 +1675,6 @@ module webSite 'modules/web-sites.bicep' = {
 // ========== Storage Account ========== //
 
 var storageAccountName = replace('st${solutionSuffix}', '-', '')
-param storageContainerName string = 'sample-dataset'
 param storageContainerNameRetailCustomer string = 'retail-dataset-customer'
 param storageContainerNameRetailOrder string = 'retail-dataset-order'
 param storageContainerNameRFPSummary string = 'rfp-summary-dataset'
@@ -1956,9 +1956,6 @@ module aiSearchFoundryConnection 'modules/aifp-connections.bicep' = {
     searchServiceName: searchService.outputs.name
     searchApiKey: searchService.outputs.primaryKey
   }
-  dependsOn: [
-    aiFoundryAiServices
-  ]
 }
 
 // ============ //
@@ -1994,10 +1991,11 @@ output AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDep
 // output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiProjectEndpoint
 output APP_ENV string = 'Prod'
 output AI_FOUNDRY_RESOURCE_ID string = !useExistingAiFoundryAiProject
-  ? aiFoundryAiServices.outputs.resourceId
+  ? aiFoundryAiServices!.outputs.resourceId
   : existingAiFoundryAiProjectResourceId
 output COSMOSDB_ACCOUNT_NAME string = cosmosDbResourceName
 output AZURE_SEARCH_ENDPOINT string = searchService.outputs.endpoint
+#disable-next-line BCP318
 output AZURE_CLIENT_ID string = userAssignedIdentity!.outputs.clientId
 output AZURE_TENANT_ID string = tenant().tenantId
 output AZURE_AI_SEARCH_CONNECTION_NAME string = aiSearchConnectionName
