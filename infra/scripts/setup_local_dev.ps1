@@ -240,6 +240,49 @@ function Check-AzureAuth {
 }
 
 # ==============================================================================
+# Step 2b: Azure Role / Permission Check
+# ==============================================================================
+#
+# This script assigns data-plane roles (Cosmos DB, AI services, AI Search,
+# Storage Blob) to the signed-in user. That requires the user to have
+# permission to write role assignments at subscription scope:
+#   - User Access Administrator OR Role Based Access Control Administrator
+#     (or Owner)
+# Non-fatal warning: group-inherited roles may not always enumerate.
+# ==============================================================================
+
+function Check-AzureRoles {
+    Write-LogStep "Step 2b: Checking Azure Roles & Permissions"
+
+    $subId  = az account show --query id -o tsv 2>$null
+    $userId = az ad signed-in-user show --query id -o tsv 2>$null
+    if (-not $subId -or -not $userId) {
+        Write-LogWarn "Could not determine subscription or user identity -- skipping role check."
+        return
+    }
+
+    $scope = "/subscriptions/$subId"
+    $rolesRaw = az role assignment list --assignee $userId --scope $scope `
+        --include-inherited --include-groups --query "[].roleDefinitionName" -o tsv 2>$null
+    if (-not $rolesRaw) {
+        Write-LogWarn "Unable to enumerate role assignments at $scope."
+        Write-LogWarn "Required: 'User Access Administrator' OR 'Role Based Access Control Administrator' (or 'Owner') to assign data-plane roles."
+        return
+    }
+
+    $roles = ($rolesRaw -split "`r?`n" | Where-Object { $_ -ne "" })
+    $hasRoleMgmt = ($roles -contains 'Owner') -or ($roles -contains 'User Access Administrator') -or ($roles -contains 'Role Based Access Control Administrator')
+
+    if ($hasRoleMgmt) {
+        Write-LogSuccess "Role-assignment permission found (Owner/UAA/RBAC Admin)"
+    } else {
+        Write-LogWarn "Missing 'User Access Administrator' / 'Role Based Access Control Administrator' (or 'Owner')."
+        Write-LogWarn "The Cosmos DB / AI / Search / Storage Blob role assignments performed by this script may fail."
+        Write-LogWarn "Ask an admin to pre-assign those roles, or grant the missing role on the subscription."
+    }
+}
+
+# ==============================================================================
 # Step 3: Fetch Configuration
 # ==============================================================================
 
@@ -540,6 +583,27 @@ AZURE_LOGGING_PACKAGES=$($envVars["AZURE_LOGGING_PACKAGES"])
 # Step 4: RBAC (Optional)
 # ==============================================================================
 
+# Tracks role assignments that failed so the final summary can surface them
+$script:FailedRoleAssignments = @()
+
+# Returns $true if the named role definition exists in the given subscription.
+# Some Azure subscriptions (older tenants, sovereign clouds, or those where
+# the AI Foundry RP is not registered) may be missing newer roles like
+# 'Azure AI User' / 'Azure AI Developer'.
+function Test-RoleDefinitionExists([string]$roleName, [string]$subId) {
+    $def = az role definition list --name $roleName --subscription $subId --query "[0].id" -o tsv 2>$null
+    return [bool]$def
+}
+
+function Record-RoleFailure([string]$role, [string]$assignee, [string]$scope, [string]$reason) {
+    $script:FailedRoleAssignments += [pscustomobject]@{
+        Role     = $role
+        Assignee = $assignee
+        Scope    = $scope
+        Reason   = $reason
+    }
+}
+
 function Assign-RbacRoles {
     # Always assign RBAC when resource group is known (needed for local dev access)
     if (-not $ResourceGroup) { 
@@ -571,13 +635,18 @@ function Assign-RbacRoles {
             Write-LogSuccess "  Cosmos DB Data Contributor: already assigned ✓"
         } else {
             Write-LogInfo "  Assigning Cosmos DB Data Contributor..."
+            $cosmosScope = "/subscriptions/$subId/resourceGroups/$ResourceGroup/providers/Microsoft.DocumentDB/databaseAccounts/$cosmosName"
             az cosmosdb sql role assignment create `
                 --resource-group $ResourceGroup --account-name $cosmosName `
                 --role-definition-name "Cosmos DB Built-in Data Contributor" `
                 --principal-id $userObjectId `
-                --scope "/subscriptions/$subId/resourceGroups/$ResourceGroup/providers/Microsoft.DocumentDB/databaseAccounts/$cosmosName" 2>$null
-            if ($LASTEXITCODE -eq 0) { Write-LogSuccess "    Cosmos DB role assigned" }
-            else { Write-LogWarn "    Cosmos DB role assignment failed (may need elevated permissions)" }
+                --scope $cosmosScope 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                Write-LogSuccess "    Cosmos DB role assigned"
+            } else {
+                Write-LogWarn "    Cosmos DB role assignment failed (may need elevated permissions)"
+                Record-RoleFailure "Cosmos DB Built-in Data Contributor" $userUpn $cosmosScope "AssignmentFailed"
+            }
         }
     }
 
@@ -593,11 +662,23 @@ function Assign-RbacRoles {
             $existing = az role assignment list --assignee $userObjectId --role $role --scope $scope --query "[0].id" -o tsv 2>$null
             if ($existing) {
                 Write-LogSuccess "  ${role}: already assigned ✓"
+                continue
+            }
+            # Verify the role definition exists in this subscription before trying to assign.
+            # Missing roles are common in older subscriptions or sovereign clouds.
+            if (-not (Test-RoleDefinitionExists $role $subId)) {
+                Write-LogWarn "  ${role}: role definition NOT FOUND in subscription '$subId'"
+                Write-LogWarn "    Likely cause: Microsoft.CognitiveServices RP not registered, or AI Foundry role not yet available in this cloud."
+                Record-RoleFailure $role $userUpn $scope "RoleDefinitionNotFound"
+                continue
+            }
+            Write-LogInfo "  Assigning '$role'..."
+            az role assignment create --assignee $userUpn --role $role --scope $scope 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                Write-LogSuccess "    $role assigned"
             } else {
-                Write-LogInfo "  Assigning '$role'..."
-                az role assignment create --assignee $userUpn --role $role --scope $scope 2>$null
-                if ($LASTEXITCODE -eq 0) { Write-LogSuccess "    $role assigned" }
-                else { Write-LogWarn "    $role assignment failed" }
+                Write-LogWarn "    $role assignment failed"
+                Record-RoleFailure $role $userUpn $scope "AssignmentFailed"
             }
         }
     }
@@ -612,8 +693,12 @@ function Assign-RbacRoles {
         } else {
             Write-LogInfo "  Assigning Search Index Data Contributor..."
             az role assignment create --assignee $userUpn --role "Search Index Data Contributor" --scope $scope 2>$null
-            if ($LASTEXITCODE -eq 0) { Write-LogSuccess "    Search role assigned" }
-            else { Write-LogWarn "    Search role assignment failed" }
+            if ($LASTEXITCODE -eq 0) {
+                Write-LogSuccess "    Search role assigned"
+            } else {
+                Write-LogWarn "    Search role assignment failed"
+                Record-RoleFailure "Search Index Data Contributor" $userUpn $scope "AssignmentFailed"
+            }
         }
     }
 
@@ -627,8 +712,12 @@ function Assign-RbacRoles {
         } else {
             Write-LogInfo "  Assigning Storage Blob Data Contributor..."
             az role assignment create --assignee $userUpn --role "Storage Blob Data Contributor" --scope $scope 2>$null
-            if ($LASTEXITCODE -eq 0) { Write-LogSuccess "    Storage role assigned" }
-            else { Write-LogWarn "    Storage role assignment failed" }
+            if ($LASTEXITCODE -eq 0) {
+                Write-LogSuccess "    Storage role assigned"
+            } else {
+                Write-LogWarn "    Storage role assignment failed"
+                Record-RoleFailure "Storage Blob Data Contributor" $userUpn $scope "AssignmentFailed"
+            }
         }
     }
 
@@ -700,6 +789,14 @@ function Setup-Backend {
 
     Write-LogInfo "Installing dependencies..."
     uv sync --python 3.12 --extra dev
+    if ($LASTEXITCODE -ne 0) {
+        Write-LogWarn "uv sync failed; retrying with --refresh..."
+        uv sync --python 3.12 --extra dev --refresh
+        if ($LASTEXITCODE -ne 0) {
+            Pop-Location
+            throw "Backend 'uv sync' failed after retry. Check network/proxy and that Python 3.12 is on PATH, then re-run."
+        }
+    }
 
     Write-LogSuccess "Backend setup complete"
     Pop-Location
@@ -721,6 +818,14 @@ function Setup-McpServer {
 
     Write-LogInfo "Installing dependencies..."
     uv sync --python 3.12
+    if ($LASTEXITCODE -ne 0) {
+        Write-LogWarn "uv sync failed; retrying with --refresh..."
+        uv sync --python 3.12 --refresh
+        if ($LASTEXITCODE -ne 0) {
+            Pop-Location
+            throw "MCP Server 'uv sync' failed after retry. Check network/proxy and that Python 3.12 is on PATH, then re-run."
+        }
+    }
 
     Write-LogSuccess "MCP Server setup complete"
     Pop-Location
@@ -742,12 +847,28 @@ function Setup-Frontend {
 
     Write-LogInfo "Installing Python dependencies..."
     & ".venv\Scripts\pip.exe" install -q -r requirements.txt
+    if ($LASTEXITCODE -ne 0) {
+        Pop-Location
+        throw "Frontend 'pip install' failed. Check network/proxy and the Python venv, then re-run."
+    }
 
     Write-LogInfo "Installing npm dependencies..."
     npm install
+    if ($LASTEXITCODE -ne 0) {
+        Write-LogWarn "npm install failed; retrying with --legacy-peer-deps..."
+        npm install --legacy-peer-deps
+        if ($LASTEXITCODE -ne 0) {
+            Pop-Location
+            throw "Frontend 'npm install' failed after retry. Check Node.js version (>=18) and your npm registry, then re-run."
+        }
+    }
 
     Write-LogInfo "Building frontend..."
     npm run build
+    if ($LASTEXITCODE -ne 0) {
+        Pop-Location
+        throw "Frontend 'npm run build' failed. Review the build output above and re-run."
+    }
 
     Write-LogSuccess "Frontend setup complete"
     Pop-Location
@@ -888,8 +1009,37 @@ if ($policy -eq "Restricted") {
     Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
 }
 
+function Report-FailedRoleAssignments {
+    if (-not $script:FailedRoleAssignments -or $script:FailedRoleAssignments.Count -eq 0) { return }
+
+    Write-Host ""
+    Write-Host "================================================================" -ForegroundColor Red
+    Write-Host " ⚠  Setup completed, but $($script:FailedRoleAssignments.Count) required role assignment(s) FAILED" -ForegroundColor Red
+    Write-Host "    The application will get 403 errors at runtime without these." -ForegroundColor Red
+    Write-Host "================================================================" -ForegroundColor Red
+    Write-Host ""
+    foreach ($f in $script:FailedRoleAssignments) {
+        Write-Host "  • $($f.Role)" -ForegroundColor Yellow
+        Write-Host "      Reason : $($f.Reason)"
+        Write-Host "      Scope  : $($f.Scope)"
+        if ($f.Reason -eq "RoleDefinitionNotFound") {
+            Write-Host "      Fix    : Register the resource provider, or have an admin run:"
+            Write-Host "               az provider register -n Microsoft.CognitiveServices --wait"
+        } else {
+            Write-Host "      Fix    : Ask an admin with 'User Access Administrator' (or 'Owner') to run:"
+            Write-Host "               az role assignment create --assignee `"$($f.Assignee)`" ``"
+            Write-Host "                 --role `"$($f.Role)`" --scope `"$($f.Scope)`""
+        }
+        Write-Host ""
+    }
+    Write-Host "Re-run this script once the roles are in place, or pass --resource-group to retry." -ForegroundColor Yellow
+    Write-Host ""
+    exit 2
+}
+
 Check-Prerequisites
 Check-AzureAuth
+Check-AzureRoles
 Fetch-Configuration
 Assign-RbacRoles
 Setup-Backend
@@ -897,3 +1047,4 @@ Setup-McpServer
 Setup-Frontend
 Setup-VSCode
 Print-Summary
+Report-FailedRoleAssignments

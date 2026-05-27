@@ -132,6 +132,47 @@ function Check-Prerequisites {
 }
 
 # ==============================================================================
+# Step 1b: Azure Role / Permission Check
+# ==============================================================================
+#
+# Per docs/DeploymentGuide.md, the deploying account needs:
+#   - Contributor (or Owner) on the subscription -- to update resources
+#   - User Access Administrator OR Role Based Access Control Administrator
+#     (or Owner) -- to assign the AcrPull role to managed identities
+# This check is non-fatal: group-inherited roles may not always enumerate.
+# ==============================================================================
+
+function Check-AzureRoles {
+    Write-LogStep "Step 1b: Checking Azure Roles & Permissions"
+
+    $subId  = az account show --query id -o tsv 2>$null
+    $userId = az ad signed-in-user show --query id -o tsv 2>$null
+    if (-not $subId -or -not $userId) {
+        Write-LogWarn "Could not determine subscription or user identity -- skipping role check."
+        return
+    }
+
+    $scope = "/subscriptions/$subId"
+    $rolesRaw = az role assignment list --assignee $userId --scope $scope `
+        --include-inherited --include-groups --query "[].roleDefinitionName" -o tsv 2>$null
+    if (-not $rolesRaw) {
+        Write-LogWarn "Unable to enumerate role assignments at $scope."
+        Write-LogWarn "Required: Contributor + (User Access Administrator OR Role Based Access Control Administrator), or Owner."
+        return
+    }
+
+    $roles = ($rolesRaw -split "`r?`n" | Where-Object { $_ -ne "" })
+    $hasResMgmt  = ($roles -contains 'Owner') -or ($roles -contains 'Contributor')
+    $hasRoleMgmt = ($roles -contains 'Owner') -or ($roles -contains 'User Access Administrator') -or ($roles -contains 'Role Based Access Control Administrator')
+
+    if ($hasResMgmt) { Write-LogSuccess "Resource management role found (Owner/Contributor)" }
+    else { Write-LogWarn "Missing 'Contributor' (or 'Owner') at subscription scope -- Azure resource updates may fail." }
+
+    if ($hasRoleMgmt) { Write-LogSuccess "Role-assignment permission found (Owner/UAA/RBAC Admin)" }
+    else { Write-LogWarn "Missing 'User Access Administrator' / 'Role Based Access Control Administrator' (or 'Owner') -- AcrPull role assignment may fail. Pass -SkipRoleAssignment if roles are already in place." }
+}
+
+# ==============================================================================
 # Step 2: Discover Azure Resources
 # ==============================================================================
 
@@ -454,22 +495,45 @@ function Build-AndPush {
 
     Write-LogInfo "Logging into ACR: $script:AcrName..."
     az acr login --name $script:AcrName
+    if ($LASTEXITCODE -ne 0) {
+        Write-LogError "ACR login failed for '$script:AcrName'."
+        Write-LogError "  Likely causes:"
+        Write-LogError "    - Your account lacks 'AcrPush' / 'Contributor' on the registry."
+        Write-LogError "    - Docker daemon not running."
+        Write-LogError "    - Tenant blocks docker-credential helpers (try: az acr login -n $script:AcrName --expose-token)."
+        exit 1
+    }
     Write-LogSuccess "ACR login successful"
 
     $env:DOCKER_BUILDKIT = "1"
+
+    # Track per-service success so a partial failure does not strand the others
+    $script:BuildResults = [ordered]@{}
 
     if ($script:DeployBackend) {
         $fullImage = "$($script:AcrLoginServer)/$BackendImageName`:$($script:ImageTag)"
         Write-LogInfo "Building backend image: $fullImage"
         if ($DryRun) {
             Write-LogInfo "[DRY RUN] Would build: docker build -t $fullImage $BackendDir"
+            $script:BuildResults["backend"] = "dry-run"
         } else {
             docker build -t $fullImage $BackendDir
-            if ($LASTEXITCODE -ne 0) { Write-LogError "Backend image build FAILED"; exit 1 }
-            Write-LogSuccess "Backend image built"
-            docker push $fullImage
-            if ($LASTEXITCODE -ne 0) { Write-LogError "Backend image push FAILED"; exit 1 }
-            Write-LogSuccess "Backend image pushed: $fullImage"
+            if ($LASTEXITCODE -ne 0) {
+                Write-LogError "Backend image build FAILED -- continuing with other services"
+                $script:BuildResults["backend"] = "build-failed"
+                $script:DeployBackend = $false
+            } else {
+                Write-LogSuccess "Backend image built"
+                docker push $fullImage
+                if ($LASTEXITCODE -ne 0) {
+                    Write-LogError "Backend image push FAILED -- continuing with other services"
+                    $script:BuildResults["backend"] = "push-failed"
+                    $script:DeployBackend = $false
+                } else {
+                    Write-LogSuccess "Backend image pushed: $fullImage"
+                    $script:BuildResults["backend"] = "ok"
+                }
+            }
         }
     }
 
@@ -478,13 +542,25 @@ function Build-AndPush {
         Write-LogInfo "Building MCP image: $fullImage"
         if ($DryRun) {
             Write-LogInfo "[DRY RUN] Would build: docker build -t $fullImage $McpDir"
+            $script:BuildResults["mcp"] = "dry-run"
         } else {
             docker build -t $fullImage $McpDir
-            if ($LASTEXITCODE -ne 0) { Write-LogError "MCP image build FAILED"; exit 1 }
-            Write-LogSuccess "MCP image built"
-            docker push $fullImage
-            if ($LASTEXITCODE -ne 0) { Write-LogError "MCP image push FAILED"; exit 1 }
-            Write-LogSuccess "MCP image pushed: $fullImage"
+            if ($LASTEXITCODE -ne 0) {
+                Write-LogError "MCP image build FAILED -- continuing with other services"
+                $script:BuildResults["mcp"] = "build-failed"
+                $script:DeployMcp = $false
+            } else {
+                Write-LogSuccess "MCP image built"
+                docker push $fullImage
+                if ($LASTEXITCODE -ne 0) {
+                    Write-LogError "MCP image push FAILED -- continuing with other services"
+                    $script:BuildResults["mcp"] = "push-failed"
+                    $script:DeployMcp = $false
+                } else {
+                    Write-LogSuccess "MCP image pushed: $fullImage"
+                    $script:BuildResults["mcp"] = "ok"
+                }
+            }
         }
     }
 
@@ -493,14 +569,33 @@ function Build-AndPush {
         Write-LogInfo "Building frontend image: $fullImage"
         if ($DryRun) {
             Write-LogInfo "[DRY RUN] Would build: docker build -t $fullImage $FrontendDir"
+            $script:BuildResults["frontend"] = "dry-run"
         } else {
             docker build -t $fullImage $FrontendDir
-            if ($LASTEXITCODE -ne 0) { Write-LogError "Frontend image build FAILED"; exit 1 }
-            Write-LogSuccess "Frontend image built"
-            docker push $fullImage
-            if ($LASTEXITCODE -ne 0) { Write-LogError "Frontend image push FAILED"; exit 1 }
-            Write-LogSuccess "Frontend image pushed: $fullImage"
+            if ($LASTEXITCODE -ne 0) {
+                Write-LogError "Frontend image build FAILED -- continuing with other services"
+                $script:BuildResults["frontend"] = "build-failed"
+                $script:DeployFrontend = $false
+            } else {
+                Write-LogSuccess "Frontend image built"
+                docker push $fullImage
+                if ($LASTEXITCODE -ne 0) {
+                    Write-LogError "Frontend image push FAILED -- continuing with other services"
+                    $script:BuildResults["frontend"] = "push-failed"
+                    $script:DeployFrontend = $false
+                } else {
+                    Write-LogSuccess "Frontend image pushed: $fullImage"
+                    $script:BuildResults["frontend"] = "ok"
+                }
+            }
         }
+    }
+
+    # If all selected services failed to build/push, bail before touching Azure resources
+    $okCount = ($script:BuildResults.Values | Where-Object { $_ -eq "ok" -or $_ -eq "dry-run" }).Count
+    if ($okCount -eq 0 -and $script:BuildResults.Count -gt 0) {
+        Write-LogError "All image builds/pushes failed -- aborting before touching Azure resources."
+        exit 1
     }
 
     if ($BuildOnly) {
@@ -656,6 +751,16 @@ function Print-Summary {
     Write-Host "  Image Tag:       $($script:ImageTag)"
     Write-Host ""
 
+    if ($script:BuildResults -and $script:BuildResults.Count -gt 0) {
+        Write-Host "  Build results:"
+        foreach ($k in $script:BuildResults.Keys) {
+            $v = $script:BuildResults[$k]
+            $glyph = if ($v -eq "ok" -or $v -eq "dry-run") { "[OK]" } else { "[FAIL]" }
+            Write-Host ("    {0,-6} {1,-9} {2}" -f $glyph, $k, $v)
+        }
+        Write-Host ""
+    }
+
     if ($script:DeployBackend -and $script:BackendCA) {
         Write-Host "  Backend:         $($script:AcrLoginServer)/$BackendImageName`:$($script:ImageTag)"
     }
@@ -720,6 +825,7 @@ Write-Host "╚═════════════════════�
 Write-Host ""
 
 Check-Prerequisites
+Check-AzureRoles
 Discover-Resources
 Resolve-Acr
 Determine-Services

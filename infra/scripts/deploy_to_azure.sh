@@ -208,6 +208,54 @@ check_prerequisites() {
 }
 
 # ==============================================================================
+# Step 1b: Azure Role / Permission Check
+# ==============================================================================
+#
+# Per docs/DeploymentGuide.md, the deploying account needs:
+#   - Contributor (or Owner) on the subscription -- to update resources
+#   - User Access Administrator OR Role Based Access Control Administrator
+#     (or Owner) -- to assign the AcrPull role to managed identities
+# This check is non-fatal: group-inherited roles may not always enumerate.
+# ==============================================================================
+
+check_azure_roles() {
+    log_step "Step 1b: Checking Azure Roles & Permissions"
+
+    local sub_id user_id
+    sub_id=$(az account show --query id -o tsv 2>/dev/null || true)
+    user_id=$(az ad signed-in-user show --query id -o tsv 2>/dev/null || true)
+    if [[ -z "$sub_id" || -z "$user_id" ]]; then
+        log_warn "Could not determine subscription or user identity -- skipping role check."
+        return
+    fi
+
+    local scope="/subscriptions/$sub_id"
+    local roles_raw
+    roles_raw=$(az role assignment list --assignee "$user_id" --scope "$scope" \
+        --include-inherited --include-groups --query "[].roleDefinitionName" -o tsv 2>/dev/null || true)
+    if [[ -z "$roles_raw" ]]; then
+        log_warn "Unable to enumerate role assignments at $scope."
+        log_warn "Required: Contributor + (User Access Administrator OR Role Based Access Control Administrator), or Owner."
+        return
+    fi
+
+    local has_res_mgmt=false has_role_mgmt=false
+    while IFS= read -r r; do
+        case "$r" in
+            Owner) has_res_mgmt=true; has_role_mgmt=true ;;
+            Contributor) has_res_mgmt=true ;;
+            "User Access Administrator"|"Role Based Access Control Administrator") has_role_mgmt=true ;;
+        esac
+    done <<< "$roles_raw"
+
+    if $has_res_mgmt; then log_success "Resource management role found (Owner/Contributor)"
+    else log_warn "Missing 'Contributor' (or 'Owner') at subscription scope -- Azure resource updates may fail."; fi
+
+    if $has_role_mgmt; then log_success "Role-assignment permission found (Owner/UAA/RBAC Admin)"
+    else log_warn "Missing 'User Access Administrator' / 'Role Based Access Control Administrator' (or 'Owner') -- AcrPull role assignment may fail. Pass --skip-role-assignment if roles are already in place."; fi
+}
+
+# ==============================================================================
 # Step 2: Validate Resource Group & Discover Resources
 # ==============================================================================
 
@@ -576,21 +624,44 @@ build_and_push() {
     fi
 
     log_info "Logging into ACR: $ACR_NAME..."
-    az acr login --name "$ACR_NAME"
+    if ! az acr login --name "$ACR_NAME"; then
+        log_error "ACR login failed for '$ACR_NAME'."
+        log_error "  Likely causes:"
+        log_error "    - Your account lacks 'AcrPush' / 'Contributor' on the registry."
+        log_error "    - Docker daemon not running."
+        log_error "    - Tenant blocks docker-credential helpers (try: az acr login -n $ACR_NAME --expose-token)."
+        exit 1
+    fi
     log_success "ACR login successful"
 
     export DOCKER_BUILDKIT=1
+
+    # Track per-service success so a partial failure does not strand the others.
+    # Uses parallel arrays so we can iterate in order in the summary.
+    BUILD_RESULT_NAMES=()
+    BUILD_RESULT_STATUS=()
+    _record_build_result() { BUILD_RESULT_NAMES+=("$1"); BUILD_RESULT_STATUS+=("$2"); }
 
     if [[ "$DEPLOY_BACKEND" == true ]]; then
         local full_image="$ACR_LOGIN_SERVER/$BACKEND_IMAGE_NAME:$IMAGE_TAG"
         log_info "Building backend image: $full_image"
         if [[ "$DRY_RUN" == true ]]; then
             log_info "[DRY RUN] Would build: docker build -t $full_image $BACKEND_DIR"
+            _record_build_result backend dry-run
+        elif ! docker build -t "$full_image" "$(_winpath "$BACKEND_DIR")"; then
+            log_error "Backend image build FAILED -- continuing with other services"
+            _record_build_result backend build-failed
+            DEPLOY_BACKEND=false
         else
-            docker build -t "$full_image" "$(_winpath "$BACKEND_DIR")"
             log_success "Backend image built"
-            docker push "$full_image"
-            log_success "Backend image pushed: $full_image"
+            if ! docker push "$full_image"; then
+                log_error "Backend image push FAILED -- continuing with other services"
+                _record_build_result backend push-failed
+                DEPLOY_BACKEND=false
+            else
+                log_success "Backend image pushed: $full_image"
+                _record_build_result backend ok
+            fi
         fi
     fi
 
@@ -599,11 +670,21 @@ build_and_push() {
         log_info "Building MCP image: $full_image"
         if [[ "$DRY_RUN" == true ]]; then
             log_info "[DRY RUN] Would build: docker build -t $full_image $MCP_DIR"
+            _record_build_result mcp dry-run
+        elif ! docker build -t "$full_image" "$(_winpath "$MCP_DIR")"; then
+            log_error "MCP image build FAILED -- continuing with other services"
+            _record_build_result mcp build-failed
+            DEPLOY_MCP=false
         else
-            docker build -t "$full_image" "$(_winpath "$MCP_DIR")"
             log_success "MCP image built"
-            docker push "$full_image"
-            log_success "MCP image pushed: $full_image"
+            if ! docker push "$full_image"; then
+                log_error "MCP image push FAILED -- continuing with other services"
+                _record_build_result mcp push-failed
+                DEPLOY_MCP=false
+            else
+                log_success "MCP image pushed: $full_image"
+                _record_build_result mcp ok
+            fi
         fi
     fi
 
@@ -612,12 +693,32 @@ build_and_push() {
         log_info "Building frontend image: $full_image"
         if [[ "$DRY_RUN" == true ]]; then
             log_info "[DRY RUN] Would build: docker build -t $full_image $FRONTEND_DIR"
+            _record_build_result frontend dry-run
+        elif ! docker build -t "$full_image" "$(_winpath "$FRONTEND_DIR")"; then
+            log_error "Frontend image build FAILED -- continuing with other services"
+            _record_build_result frontend build-failed
+            DEPLOY_FRONTEND=false
         else
-            docker build -t "$full_image" "$(_winpath "$FRONTEND_DIR")"
             log_success "Frontend image built"
-            docker push "$full_image"
-            log_success "Frontend image pushed: $full_image"
+            if ! docker push "$full_image"; then
+                log_error "Frontend image push FAILED -- continuing with other services"
+                _record_build_result frontend push-failed
+                DEPLOY_FRONTEND=false
+            else
+                log_success "Frontend image pushed: $full_image"
+                _record_build_result frontend ok
+            fi
         fi
+    fi
+
+    # If all selected services failed to build/push, bail before touching Azure resources
+    local ok_count=0 i
+    for i in "${BUILD_RESULT_STATUS[@]}"; do
+        if [[ "$i" == "ok" || "$i" == "dry-run" ]]; then ok_count=$((ok_count + 1)); fi
+    done
+    if [[ ${#BUILD_RESULT_STATUS[@]} -gt 0 && $ok_count -eq 0 ]]; then
+        log_error "All image builds/pushes failed -- aborting before touching Azure resources."
+        exit 1
     fi
 
     if [[ "$BUILD_ONLY" == true ]]; then
@@ -810,6 +911,18 @@ print_summary() {
     echo "  Image Tag:       $IMAGE_TAG"
     echo ""
 
+    if [[ ${#BUILD_RESULT_NAMES[@]:-0} -gt 0 ]]; then
+        echo "  Build results:"
+        local i name status glyph
+        for i in "${!BUILD_RESULT_NAMES[@]}"; do
+            name="${BUILD_RESULT_NAMES[$i]}"
+            status="${BUILD_RESULT_STATUS[$i]}"
+            if [[ "$status" == "ok" || "$status" == "dry-run" ]]; then glyph="[OK]  "; else glyph="[FAIL]"; fi
+            printf "    %s %-9s %s\n" "$glyph" "$name" "$status"
+        done
+        echo ""
+    fi
+
     if [[ "$DEPLOY_BACKEND" == true && -n "$BACKEND_CA" ]]; then
         echo "  Backend:         $ACR_LOGIN_SERVER/$BACKEND_IMAGE_NAME:$IMAGE_TAG"
     fi
@@ -876,6 +989,7 @@ main() {
 
     parse_args "$@"
     check_prerequisites
+    check_azure_roles
     validate_and_discover
     resolve_acr
     determine_services

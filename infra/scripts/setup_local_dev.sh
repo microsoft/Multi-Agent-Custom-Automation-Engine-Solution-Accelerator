@@ -301,6 +301,55 @@ check_azure_auth() {
 }
 
 # ==============================================================================
+# Step 2b: Azure Role / Permission Check
+# ==============================================================================
+#
+# This script assigns data-plane roles (Cosmos DB, AI services, AI Search,
+# Storage Blob) to the signed-in user. That requires the user to have
+# permission to write role assignments at subscription scope:
+#   - User Access Administrator OR Role Based Access Control Administrator
+#     (or Owner)
+# Non-fatal warning: group-inherited roles may not always enumerate.
+# ==============================================================================
+
+check_azure_roles() {
+    log_step "Step 2b: Checking Azure Roles & Permissions"
+
+    local sub_id user_id
+    sub_id=$(az account show --query id -o tsv 2>/dev/null || true)
+    user_id=$(az ad signed-in-user show --query id -o tsv 2>/dev/null || true)
+    if [[ -z "$sub_id" || -z "$user_id" ]]; then
+        log_warn "Could not determine subscription or user identity -- skipping role check."
+        return
+    fi
+
+    local scope="/subscriptions/$sub_id"
+    local roles_raw
+    roles_raw=$(az role assignment list --assignee "$user_id" --scope "$scope" \
+        --include-inherited --include-groups --query "[].roleDefinitionName" -o tsv 2>/dev/null || true)
+    if [[ -z "$roles_raw" ]]; then
+        log_warn "Unable to enumerate role assignments at $scope."
+        log_warn "Required: 'User Access Administrator' OR 'Role Based Access Control Administrator' (or 'Owner') to assign data-plane roles."
+        return
+    fi
+
+    local has_role_mgmt=false
+    while IFS= read -r r; do
+        case "$r" in
+            Owner|"User Access Administrator"|"Role Based Access Control Administrator") has_role_mgmt=true ;;
+        esac
+    done <<< "$roles_raw"
+
+    if $has_role_mgmt; then
+        log_success "Role-assignment permission found (Owner/UAA/RBAC Admin)"
+    else
+        log_warn "Missing 'User Access Administrator' / 'Role Based Access Control Administrator' (or 'Owner')."
+        log_warn "The Cosmos DB / AI / Search / Storage Blob role assignments performed by this script may fail."
+        log_warn "Ask an admin to pre-assign those roles, or grant the missing role on the subscription."
+    fi
+}
+
+# ==============================================================================
 # Step 3: Fetch Configuration
 # ==============================================================================
 
@@ -615,6 +664,21 @@ ENVEOF
 # Step 4: RBAC
 # ==============================================================================
 
+FAILED_ROLE_ASSIGNMENTS=()
+
+# Returns 0 if the named role definition exists in the given subscription.
+test_role_definition_exists() {
+    local role_name="$1" sub_id="$2"
+    local def
+    def=$(MSYS_NO_PATHCONV=1 az role definition list --name "$role_name" --subscription "$sub_id" --query "[0].id" -o tsv 2>/dev/null || true)
+    [[ -n "$def" ]]
+}
+
+# Append a failed assignment record: "Role|Assignee|Scope|Reason"
+record_role_failure() {
+    FAILED_ROLE_ASSIGNMENTS+=("$1|$2|$3|$4")
+}
+
 assign_rbac_roles() {
     if [[ -z "$RESOURCE_GROUP" ]]; then
         log_info "No resource group specified, skipping RBAC assignment."
@@ -654,16 +718,18 @@ assign_rbac_roles() {
         else
             log_info "  Assigning Cosmos DB Data Contributor..."
             local cosmos_rc=0
+            local cosmos_scope="/subscriptions/$sub_id/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.DocumentDB/databaseAccounts/$cosmos_name"
             MSYS_NO_PATHCONV=1 az cosmosdb sql role assignment create \
                 --resource-group "$RESOURCE_GROUP" --account-name "$cosmos_name" \
                 --role-definition-name "Cosmos DB Built-in Data Contributor" \
                 --principal-id "$oid" \
-                --scope "/subscriptions/$sub_id/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.DocumentDB/databaseAccounts/$cosmos_name" \
+                --scope "$cosmos_scope" \
                 --output none 2>/dev/null || cosmos_rc=$?
             if [[ $cosmos_rc -eq 0 ]]; then
                 log_success "    Cosmos DB role assigned"
             else
                 log_warn "    Cosmos DB role assignment failed (may need elevated permissions)"
+                record_role_failure "Cosmos DB Built-in Data Contributor" "$upn" "$cosmos_scope" "AssignmentFailed"
             fi
         fi
     fi
@@ -692,15 +758,24 @@ assign_rbac_roles() {
             existing=$(_az_tsv role assignment list --assignee "$oid" --role "$role" --scope "$scope" --query "[0].id" -o tsv)
             if [[ -n "$existing" ]]; then
                 log_success "  $role: already assigned"
+                continue
+            fi
+            # Verify the role definition exists in this subscription before trying to assign.
+            # Older subscriptions / sovereign clouds may not have newer AI Foundry roles.
+            if ! test_role_definition_exists "$role" "$sub_id"; then
+                log_warn "  $role: role definition NOT FOUND in subscription '$sub_id'"
+                log_warn "    Likely cause: Microsoft.CognitiveServices RP not registered, or AI Foundry role not yet available in this cloud."
+                record_role_failure "$role" "$upn" "$scope" "RoleDefinitionNotFound"
+                continue
+            fi
+            log_info "  Assigning '$role'..."
+            local role_rc=0
+            MSYS_NO_PATHCONV=1 az role assignment create --assignee "$upn" --role "$role" --scope "$scope" --output none 2>/dev/null || role_rc=$?
+            if [[ $role_rc -eq 0 ]]; then
+                log_success "    $role assigned"
             else
-                log_info "  Assigning '$role'..."
-                local role_rc=0
-                MSYS_NO_PATHCONV=1 az role assignment create --assignee "$upn" --role "$role" --scope "$scope" --output none 2>/dev/null || role_rc=$?
-                if [[ $role_rc -eq 0 ]]; then
-                    log_success "    $role assigned"
-                else
-                    log_warn "    $role assignment failed"
-                fi
+                log_warn "    $role assignment failed"
+                record_role_failure "$role" "$upn" "$scope" "AssignmentFailed"
             fi
         done
     else
@@ -724,6 +799,7 @@ assign_rbac_roles() {
                 log_success "    Search role assigned"
             else
                 log_warn "    Search role assignment failed"
+                record_role_failure "Search Index Data Contributor" "$upn" "$scope" "AssignmentFailed"
             fi
         fi
     fi
@@ -745,6 +821,7 @@ assign_rbac_roles() {
                 log_success "    Storage role assigned"
             else
                 log_warn "    Storage role assignment failed"
+                record_role_failure "Storage Blob Data Contributor" "$upn" "$scope" "AssignmentFailed"
             fi
         fi
     fi
@@ -771,7 +848,14 @@ setup_backend() {
     fi
 
     log_info "Installing dependencies..."
-    uv sync --python 3.12 --extra dev
+    if ! uv sync --python 3.12 --extra dev; then
+        log_warn "uv sync failed; retrying with --refresh..."
+        if ! uv sync --python 3.12 --extra dev --refresh; then
+            log_error "Backend 'uv sync' failed after retry. Check network/proxy and that Python 3.12 is on PATH, then re-run."
+            cd "$REPO_ROOT"
+            exit 1
+        fi
+    fi
 
     log_success "Backend setup complete"
     cd "$REPO_ROOT"
@@ -796,7 +880,14 @@ setup_mcp_server() {
     fi
 
     log_info "Installing dependencies..."
-    uv sync --python 3.12
+    if ! uv sync --python 3.12; then
+        log_warn "uv sync failed; retrying with --refresh..."
+        if ! uv sync --python 3.12 --refresh; then
+            log_error "MCP Server 'uv sync' failed after retry. Check network/proxy and that Python 3.12 is on PATH, then re-run."
+            cd "$REPO_ROOT"
+            exit 1
+        fi
+    fi
 
     log_success "MCP Server setup complete"
     cd "$REPO_ROOT"
@@ -825,14 +916,30 @@ setup_frontend() {
 
     log_info "Installing Python dependencies..."
     activate_venv
-    pip install -q -r requirements.txt
+    if ! pip install -q -r requirements.txt; then
+        deactivate 2>/dev/null || true
+        log_error "Frontend 'pip install' failed. Check network/proxy and the Python venv, then re-run."
+        cd "$REPO_ROOT"
+        exit 1
+    fi
     deactivate 2>/dev/null || true
 
     log_info "Installing npm dependencies..."
-    npm install
+    if ! npm install; then
+        log_warn "npm install failed; retrying with --legacy-peer-deps..."
+        if ! npm install --legacy-peer-deps; then
+            log_error "Frontend 'npm install' failed after retry. Check Node.js version (>=18) and your npm registry, then re-run."
+            cd "$REPO_ROOT"
+            exit 1
+        fi
+    fi
 
     log_info "Building frontend..."
-    npm run build
+    if ! npm run build; then
+        log_error "Frontend 'npm run build' failed. Review the build output above and re-run."
+        cd "$REPO_ROOT"
+        exit 1
+    fi
 
     log_success "Frontend setup complete"
     cd "$REPO_ROOT"
@@ -967,8 +1074,40 @@ if [[ ! -f "$REPO_ROOT/src/backend/app.py" ]]; then
     exit 1
 fi
 
+report_failed_role_assignments() {
+    if [[ ${#FAILED_ROLE_ASSIGNMENTS[@]} -eq 0 ]]; then return 0; fi
+
+    local red='\033[31m' yellow='\033[33m' reset='\033[0m'
+    echo ""
+    echo -e "${red}================================================================${reset}"
+    echo -e "${red} !  Setup completed, but ${#FAILED_ROLE_ASSIGNMENTS[@]} required role assignment(s) FAILED${reset}"
+    echo -e "${red}    The application will get 403 errors at runtime without these.${reset}"
+    echo -e "${red}================================================================${reset}"
+    echo ""
+    local entry role assignee scope reason
+    for entry in "${FAILED_ROLE_ASSIGNMENTS[@]}"; do
+        IFS='|' read -r role assignee scope reason <<< "$entry"
+        echo -e "  ${yellow}* ${role}${reset}"
+        echo "      Reason : $reason"
+        echo "      Scope  : $scope"
+        if [[ "$reason" == "RoleDefinitionNotFound" ]]; then
+            echo "      Fix    : Register the resource provider, or have an admin run:"
+            echo "               az provider register -n Microsoft.CognitiveServices --wait"
+        else
+            echo "      Fix    : Ask an admin with 'User Access Administrator' (or 'Owner') to run:"
+            echo "               az role assignment create --assignee \"$assignee\" \\"
+            echo "                 --role \"$role\" --scope \"$scope\""
+        fi
+        echo ""
+    done
+    echo -e "${yellow}Re-run this script once the roles are in place.${reset}"
+    echo ""
+    exit 2
+}
+
 check_prerequisites
 check_azure_auth
+check_azure_roles
 fetch_configuration
 assign_rbac_roles
 setup_backend
@@ -976,3 +1115,4 @@ setup_mcp_server
 setup_frontend
 setup_vscode
 print_summary
+report_failed_role_assignments
