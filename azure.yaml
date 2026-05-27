@@ -5,55 +5,13 @@ metadata:
 requiredVersions:
   azd: '>= 1.18.0'
 
-# Use the custom infra module which provisions a per-deployment ACR,
-# grants AcrPull to the user-assigned managed identity, and tags the
-# container apps with azd-service-name so azd deploy can swap in the
-# freshly-built images below.
+# Default deployment uses main.bicep which pulls pre-built container images
+# from the public Microsoft registry (biabcontainerreg.azurecr.io).
+# No local Docker build is needed — azd provisions infra and runs hooks only.
+# For custom/dev builds from source, use: azd up --config azure_custom.yaml
 infra:
   path: infra
-  module: main_custom
-
-# Build the backend, MCP server, and frontend from source on every
-# `azd up` / `azd deploy`. Images are pushed to the deployment's ACR
-# (created by main_custom.bicep) and bound to the container apps via
-# the azd-service-name tags.
-services:
-  backend:
-    project: ./src/backend
-    language: py
-    host: containerapp
-    docker:
-      path: ./Dockerfile.NoCache
-      image: backend
-      registry: ${AZURE_CONTAINER_REGISTRY_ENDPOINT}
-      remoteBuild: true
-
-  mcp:
-    project: ./src/mcp_server
-    language: py
-    host: containerapp
-    docker:
-      image: mcp
-      registry: ${AZURE_CONTAINER_REGISTRY_ENDPOINT}
-      remoteBuild: true
-
-  frontend:
-    project: ./src/frontend
-    language: py
-    host: appservice
-    dist: ./dist
-    hooks:
-      prepackage:
-        windows:
-          shell: pwsh
-          run: ./package_frontend.ps1
-          interactive: true
-          continueOnError: false
-        posix:
-          shell: sh
-          run: bash ./package_frontend.sh
-          interactive: true
-          continueOnError: false
+  module: main
 
 hooks:
   postdeploy:

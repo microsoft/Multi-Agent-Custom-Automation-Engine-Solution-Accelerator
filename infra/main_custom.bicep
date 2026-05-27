@@ -834,6 +834,7 @@ var aiFoundryAiServicesImageModelDeployment = {
   }
   raiPolicyName: 'Microsoft.Default'
 }
+var supportedModelsList = '["${aiFoundryAiServicesReasoningModelDeployment.name}","${aiFoundryAiServicesModelDeployment.name}","${aiFoundryAiServices4_1ModelDeployment.name}"]'
 var aiFoundryAiProjectDescription = 'AI Foundry Project'
 
 resource existingAiFoundryAiServices 'Microsoft.CognitiveServices/accounts@2025-06-01' existing = if (useExistingAiFoundryAiProject) {
@@ -913,6 +914,11 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
       }
       {
         roleDefinitionIdOrName: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd' // Cognitive Services OpenAI User
+        principalId: userAssignedIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
+      }
+      {
+        roleDefinitionIdOrName: 'a001fd3d-188f-4b5d-821b-7da978bf7442' // Cognitive Services OpenAI Contributor
         principalId: userAssignedIdentity.outputs.principalId
         principalType: 'ServicePrincipal'
       }
@@ -1007,6 +1013,11 @@ module aiFoundryAiServices 'br:mcr.microsoft.com/bicep/avm/res/cognitive-service
       }
       {
         roleDefinitionIdOrName: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd' // Cognitive Services OpenAI User
+        principalId: userAssignedIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
+      }
+      {
+        roleDefinitionIdOrName: 'a001fd3d-188f-4b5d-821b-7da978bf7442' // Cognitive Services OpenAI Contributor
         principalId: userAssignedIdentity.outputs.principalId
         principalType: 'ServicePrincipal'
       }
@@ -1423,7 +1434,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
           }
           {
             name: 'SUPPORTED_MODELS'
-            value: '["o3","o4-mini","gpt-4.1","gpt-4.1-mini"]'
+            value: supportedModelsList
           }
           {
             name: 'AZURE_AI_SEARCH_API_KEY'
@@ -1432,6 +1443,10 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
           {
             name: 'AZURE_STORAGE_BLOB_URL'
             value: avmStorageAccount.outputs.serviceEndpoints.blob
+          }
+          {
+            name: 'AZURE_OPENAI_IMAGE_DEPLOYMENT'
+            value: aiFoundryAiServicesImageModelDeployment.name
           }
           {
             name: 'AZURE_AI_MODEL_DEPLOYMENT_NAME'
@@ -1771,6 +1786,10 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
           name: storageContainerNameContractCompliance
           publicAccess: 'None'
         }
+        {
+          name: 'generated-images'
+          publicAccess: 'None'
+        }
       ]
       deleteRetentionPolicyDays: 9
       deleteRetentionPolicyEnabled: true
@@ -1975,7 +1994,7 @@ output AZURE_COGNITIVE_SERVICES string = 'https://cognitiveservices.azure.com/.d
 output REASONING_MODEL_NAME string = aiFoundryAiServicesReasoningModelDeployment.name
 output MCP_SERVER_NAME string = 'MacaeMcpServer'
 output MCP_SERVER_DESCRIPTION string = 'MCP server with greeting, HR, and planning tools'
-output SUPPORTED_MODELS string = '["o3","o4-mini","gpt-4.1","gpt-4.1-mini"]'
+output SUPPORTED_MODELS string = supportedModelsList
 output AZURE_AI_SEARCH_API_KEY string = '<Deployed-Search-ApiKey>'
 output BACKEND_URL string = 'https://${containerApp.outputs.fqdn}'
 output AZURE_AI_PROJECT_ENDPOINT string = aiFoundryAiProjectEndpoint
