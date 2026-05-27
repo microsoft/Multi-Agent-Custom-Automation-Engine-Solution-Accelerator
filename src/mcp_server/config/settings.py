@@ -43,6 +43,9 @@ class MCPServerConfig(BaseSettings):
     azure_storage_images_container: str = Field(default="generated-images")
     azure_client_id: Optional[str] = Field(default=None)
 
+    # Backend URL for image proxy (browser loads images via backend instead of direct blob)
+    backend_url: Optional[str] = Field(default=None)
+
 
 # Global configuration instance
 config = MCPServerConfig()

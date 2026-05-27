@@ -48,7 +48,12 @@ def _ensure_container(blob_service: BlobServiceClient, container_name: str) -> N
 
 
 def _upload_png_and_get_url(png_bytes: bytes) -> str:
-    """Upload PNG bytes to blob storage, return the public URL."""
+    """Upload PNG bytes to blob storage, return an accessible URL.
+
+    Prefers the backend image-proxy URL (BACKEND_URL/api/v4/images/{blob}) so
+    the browser never needs direct blob access.  Falls back to a user-delegation
+    SAS URL, or bare blob URL as a last resort.
+    """
     if not config.azure_storage_blob_url:
         raise RuntimeError("AZURE_STORAGE_BLOB_URL is not configured on the MCP server")
 
@@ -67,10 +72,16 @@ def _upload_png_and_get_url(png_bytes: bytes) -> str:
         content_settings=ContentSettings(content_type="image/png"),
     )
 
+    # Prefer backend proxy URL — the browser fetches via the backend which has
+    # its own credential for blob access; no SAS or public access needed.
+    if config.backend_url:
+        backend_origin = config.backend_url.rstrip("/")
+        return f"{backend_origin}/api/v4/images/{blob_name}"
+
+    # Fallback: generate a user-delegation SAS URL for direct blob access.
     blob_url = f"{account_url}/{container_name}/{blob_name}"
     try:
         now = datetime.now(timezone.utc)
-        # User-delegation key requires MI/AAD auth; valid up to 7 days.
         delegation_key = blob_service.get_user_delegation_key(
             key_start_time=now - timedelta(minutes=5),
             key_expiry_time=now + timedelta(days=_SAS_VALIDITY_DAYS),

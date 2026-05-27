@@ -1577,6 +1577,26 @@ module containerAppMcp 'br/public:avm/res/app/container-app:0.18.1' = {
             name: 'DATASET_PATH'
             value: './datasets'
           }
+          {
+            name: 'AZURE_CLIENT_ID'
+            value: userAssignedIdentity!.outputs.clientId
+          }
+          {
+            name: 'AZURE_OPENAI_ENDPOINT'
+            value: 'https://${aiFoundryAiServicesResourceName}.openai.azure.com/'
+          }
+          {
+            name: 'AZURE_OPENAI_IMAGE_DEPLOYMENT'
+            value: 'gpt-image-1.5'
+          }
+          {
+            name: 'AZURE_STORAGE_BLOB_URL'
+            value: avmStorageAccount.outputs.serviceEndpoints.blob
+          }
+          {
+            name: 'BACKEND_URL'
+            value: 'https://${containerApp.outputs.fqdn}'
+          }
         ]
       }
     ]
