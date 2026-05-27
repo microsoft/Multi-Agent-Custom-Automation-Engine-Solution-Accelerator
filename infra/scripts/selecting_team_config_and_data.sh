@@ -823,12 +823,23 @@ if [[ "$isTeamConfigFailed" == true || "$isSampleDataFailed" == true ]]; then
     echo ""
     echo "One or more tasks failed. Please check the error messages above."
     exit 1
-else
-    if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "2" || "$useCaseSelection" == "5" || "$useCaseSelection" == "all" || "$useCaseSelection" == "7" ]]; then
-        echo ""
-        echo "Team configuration upload and sample data processing completed successfully."
+fi
+
+# Seed Foundry IQ Knowledge Bases (depends on indexes existing)
+if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "2" || "$useCaseSelection" == "5" || "$useCaseSelection" == "6" || "$useCaseSelection" == "all" || "$useCaseSelection" == "7" ]]; then
+    echo ""
+    echo "Seeding Foundry IQ Knowledge Bases..."
+    if $pythonCmd scripts/seed_knowledge_bases.py; then
+        echo "Knowledge bases seeded successfully."
     else
-        echo ""
-        echo "Team configuration upload completed successfully."
+        echo "Warning: Knowledge base seeding failed. You can run 'python scripts/seed_knowledge_bases.py' manually after deployment."
     fi
+fi
+
+if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "2" || "$useCaseSelection" == "5" || "$useCaseSelection" == "all" || "$useCaseSelection" == "7" ]]; then
+    echo ""
+    echo "Team configuration upload and sample data processing completed successfully."
+else
+    echo ""
+    echo "Team configuration upload completed successfully."
 fi

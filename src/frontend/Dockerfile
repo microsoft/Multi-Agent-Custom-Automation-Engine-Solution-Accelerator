@@ -20,7 +20,7 @@ RUN rm -rf node_modules && npm ci && npm rebuild esbuild --force
 RUN npm run build
 
 # Stage 2: Python build environment with UV
-FROM python:3.11-slim-bullseye AS python-builder
+FROM python:3.11-slim-bookworm AS python-builder
 
 # Copy UV from official image
 COPY --from=ghcr.io/astral-sh/uv:0.6.3 /uv /uvx /bin/
@@ -41,7 +41,7 @@ RUN if [ -f "requirements.txt" ]; then \
     fi
 
 # Stage 3: Final production image
-FROM python:3.11-slim-bullseye
+FROM python:3.11-slim-bookworm
 
 # Set production environment
 ENV NODE_ENV=production \

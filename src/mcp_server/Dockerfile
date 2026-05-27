@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/devcontainers/python:3.11-bullseye AS base
+FROM python:3.11-slim-bookworm AS base
 WORKDIR /app
 
 FROM base AS builder
@@ -22,6 +22,9 @@ RUN uv sync --frozen --no-dev
 
 # Final stage
 FROM base
+
+# Install curl for healthcheck
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY --from=builder /app /app

@@ -736,7 +736,6 @@ module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.17.0' = if (e
 }
 
 // ========== Private DNS Zones ========== //
-var keyVaultPrivateDNSZone = 'privatelink.${toLower(environment().name) == 'azureusgovernment' ? 'vaultcore.usgovcloudapi.net' : 'vaultcore.azure.net'}'
 var privateDnsZones = [
   'privatelink.cognitiveservices.azure.com'
   'privatelink.openai.azure.com'
@@ -744,7 +743,6 @@ var privateDnsZones = [
   'privatelink.documents.azure.com'
   'privatelink.blob.core.windows.net'
   'privatelink.search.windows.net'
-  keyVaultPrivateDNSZone
 ]
 
 // DNS Zone Index Constants
@@ -755,7 +753,6 @@ var dnsZoneIndex = {
   cosmosDb: 3
   blob: 4
   search: 5
-  keyVault: 6
 }
 
 // List of DNS zone indices that correspond to AI-related services.
@@ -859,6 +856,8 @@ var aiFoundryAiServicesImageModelDeployment = {
 }
 var aiFoundryAiProjectDescription = 'AI Foundry Project'
 
+var supportedModelsList = '["${aiFoundryAiServicesReasoningModelDeployment.name}","${aiFoundryAiServicesModelDeployment.name}","${aiFoundryAiServices4_1ModelDeployment.name}","${aiFoundryAiServices5MiniModelDeployment.name}"]'
+
 resource existingAiFoundryAiServices 'Microsoft.CognitiveServices/accounts@2025-06-01' existing = if (useExistingAiFoundryAiProject) {
   name: aiFoundryAiServicesResourceName
   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
@@ -949,6 +948,11 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
       }
       {
         roleDefinitionIdOrName: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd' // Cognitive Services OpenAI User
+        principalId: userAssignedIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
+      }
+      {
+        roleDefinitionIdOrName: 'a001fd3d-188f-4b5d-821b-7da978bf7442' // Cognitive Services OpenAI Contributor
         principalId: userAssignedIdentity.outputs.principalId
         principalType: 'ServicePrincipal'
       }
@@ -1056,6 +1060,11 @@ module aiFoundryAiServices 'br:mcr.microsoft.com/bicep/avm/res/cognitive-service
       }
       {
         roleDefinitionIdOrName: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd' // Cognitive Services OpenAI User
+        principalId: userAssignedIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
+      }
+      {
+        roleDefinitionIdOrName: 'a001fd3d-188f-4b5d-821b-7da978bf7442' // Cognitive Services OpenAI Contributor
         principalId: userAssignedIdentity.outputs.principalId
         principalType: 'ServicePrincipal'
       }
@@ -1415,6 +1424,10 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
             value: aiFoundryAiServicesReasoningModelDeployment.name
           }
           {
+            name: 'AZURE_OPENAI_IMAGE_DEPLOYMENT'
+            value: aiFoundryAiServicesImageModelDeployment.name
+          }
+          {
             name: 'MCP_SERVER_ENDPOINT'
             value: 'https://${containerAppMcp.outputs.fqdn}/mcp'
           }
@@ -1436,11 +1449,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
           }
           {
             name: 'SUPPORTED_MODELS'
-            value: '["o3","o4-mini","gpt-4.1","gpt-4.1-mini"]'
-          }
-          {
-            name: 'AZURE_AI_SEARCH_API_KEY'
-            secretRef: 'azure-ai-search-api-key'
+            value: supportedModelsList
           }
           {
             name: 'AZURE_STORAGE_BLOB_URL'
@@ -1475,13 +1484,6 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
             value: ''
           }
         ]
-      }
-    ]
-    secrets: [
-      {
-        name: 'azure-ai-search-api-key'
-        keyVaultUrl: keyvault.outputs.secrets[0].uriWithVersion
-        identity: userAssignedIdentity.outputs.resourceId
       }
     ]
   }
@@ -1587,7 +1589,7 @@ module containerAppMcp 'br/public:avm/res/app/container-app:0.18.1' = {
           }
           {
             name: 'AZURE_OPENAI_IMAGE_DEPLOYMENT'
-            value: 'gpt-image-1.5'
+            value: aiFoundryAiServicesImageModelDeployment.name
           }
           {
             name: 'AZURE_STORAGE_BLOB_URL'
@@ -1595,7 +1597,7 @@ module containerAppMcp 'br/public:avm/res/app/container-app:0.18.1' = {
           }
           {
             name: 'BACKEND_URL'
-            value: 'https://${containerApp.outputs.fqdn}'
+            value: 'https://${containerAppResourceName}.${containerAppEnvironment.outputs.defaultDomain}'
           }
         ]
       }
@@ -1768,6 +1770,10 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.20.0' = {
         }
         {
           name: storageContainerNameContractCompliance
+          publicAccess: 'None'
+        }
+        {
+          name: 'generated-images'
           publicAccess: 'None'
         }
       ]
@@ -1955,60 +1961,6 @@ module aiSearchFoundryConnection 'modules/aifp-connections.bicep' = {
   ]
 }
 
-// ========== KeyVault ========== //
-var keyVaultName = 'kv-${solutionSuffix}'
-module keyvault 'br/public:avm/res/key-vault/vault:0.12.1' = {
-  name: take('avm.res.key-vault.vault.${keyVaultName}', 64)
-  params: {
-    name: keyVaultName
-    location: location
-    tags: tags
-    sku: enableScalability ? 'premium' : 'standard'
-    publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
-    networkAcls: {
-      defaultAction: 'Allow'
-    }
-    enableVaultForDeployment: true
-    enableVaultForDiskEncryption: true
-    enableVaultForTemplateDeployment: true
-    enableRbacAuthorization: true
-    enableSoftDelete: true
-    softDeleteRetentionInDays: 7
-    diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : []
-    // WAF aligned configuration for Private Networking
-    privateEndpoints: enablePrivateNetworking
-      ? [
-          {
-            name: 'pep-${keyVaultName}'
-            customNetworkInterfaceName: 'nic-${keyVaultName}'
-            privateDnsZoneGroup: {
-              privateDnsZoneGroupConfigs: [
-                { privateDnsZoneResourceId: avmPrivateDnsZones[dnsZoneIndex.keyVault]!.outputs.resourceId }
-              ]
-            }
-            service: 'vault'
-            subnetResourceId: virtualNetwork!.outputs.backendSubnetResourceId
-          }
-        ]
-      : []
-    // WAF aligned configuration for Role-based Access Control
-    roleAssignments: [
-      {
-        principalId: userAssignedIdentity.outputs.principalId
-        principalType: 'ServicePrincipal'
-        roleDefinitionIdOrName: 'Key Vault Administrator'
-      }
-    ]
-    secrets: [
-      {
-        name: 'AzureAISearchAPIKey'
-        value: searchService.outputs.primaryKey
-      }
-    ]
-    enableTelemetry: enableTelemetry
-  }
-}
-
 // ============ //
 // Outputs      //
 // ============ //
@@ -2053,9 +2005,8 @@ output AZURE_COGNITIVE_SERVICES string = 'https://cognitiveservices.azure.com/.d
 output REASONING_MODEL_NAME string = aiFoundryAiServicesReasoningModelDeployment.name
 output MCP_SERVER_NAME string = 'MacaeMcpServer'
 output MCP_SERVER_DESCRIPTION string = 'MCP server with greeting, HR, and planning tools'
-output SUPPORTED_MODELS string = '["o3","o4-mini","gpt-4.1","gpt-4.1-mini"]'
-output AZURE_AI_SEARCH_API_KEY string = '<Deployed-Search-ApiKey>'
-output BACKEND_URL string = 'https://${containerApp.outputs.fqdn}'
+output SUPPORTED_MODELS string = supportedModelsList
+output BACKEND_URL string = 'https://${containerAppResourceName}.${containerAppEnvironment.outputs.defaultDomain}'
 output AZURE_AI_PROJECT_ENDPOINT string = aiFoundryAiProjectEndpoint
 output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiProjectEndpoint
 output AZURE_AI_AGENT_API_VERSION string = azureAiAgentAPIVersion

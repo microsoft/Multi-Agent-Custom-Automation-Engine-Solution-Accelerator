@@ -97,7 +97,6 @@ class AppConfig:
             "AZURE_AI_SEARCH_CONNECTION_NAME"
         )
         self.AZURE_AI_SEARCH_ENDPOINT = self._get_optional("AZURE_AI_SEARCH_ENDPOINT")
-        self.AZURE_AI_SEARCH_API_KEY = self._get_optional("AZURE_AI_SEARCH_API_KEY")
 
         # Storage settings
         self.AZURE_STORAGE_BLOB_URL = self._get_optional("AZURE_STORAGE_BLOB_URL")

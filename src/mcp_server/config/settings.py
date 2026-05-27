@@ -31,7 +31,7 @@ class MCPServerConfig(BaseSettings):
 
     # MCP specific settings
     server_name: str = Field(default="MacaeMcpServer")
-    enable_auth: bool = Field(default=True)
+    enable_auth: bool = Field(default=False)
     
     # Dataset path - added to handle the environment variable
     dataset_path: str = Field(default="./datasets")

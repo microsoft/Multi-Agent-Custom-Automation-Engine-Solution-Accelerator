@@ -800,13 +800,23 @@ if($useCaseSelection -eq "6" -or $useCaseSelection -eq "all" -or $useCaseSelecti
 if ($isTeamConfigFailed -or $isSampleDataFailed) {
     Write-Host "`nOne or more tasks failed. Please check the error messages above."
     exit 1
-} else {
-    if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "6" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7"){
-        Write-Host "`nTeam configuration upload and sample data processing completed successfully."
-    }else {
-        Write-Host "`nTeam configuration upload completed successfully."
+}
+
+# Seed Foundry IQ Knowledge Bases (depends on indexes existing)
+if ($useCaseSelection -eq "1" -or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "6" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
+    Write-Host "`nSeeding Foundry IQ Knowledge Bases..."
+    $process = Start-Process -FilePath $pythonCmd -ArgumentList "scripts/seed_knowledge_bases.py" -Wait -NoNewWindow -PassThru
+    if ($process.ExitCode -ne 0) {
+        Write-Host "Warning: Knowledge base seeding failed. You can run 'python scripts/seed_knowledge_bases.py' manually after deployment."
+    } else {
+        Write-Host "Knowledge bases seeded successfully."
     }
-    
+}
+
+if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "6" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7"){
+    Write-Host "`nTeam configuration upload and sample data processing completed successfully."
+}else {
+    Write-Host "`nTeam configuration upload completed successfully."
 }
 
 } finally {
