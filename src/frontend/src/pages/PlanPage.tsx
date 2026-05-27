@@ -25,6 +25,9 @@ import "../styles/PlanPage.css"
 // Create API service instance
 const apiService = new APIService();
 
+// Module-level flag to ensure reload redirect only fires once per actual page reload
+let hasHandledReload = false;
+
 /**
  * Page component for displaying a specific plan
  * Accessible via the route /plan/{plan_id}
@@ -460,8 +463,36 @@ const PlanPage: React.FC = () => {
         });
 
         return () => unsubscribe();
-    }, [scrollToBottom, planData, processAgentMessage]); //onPlanReceived, scrollToBottom
+    }, [scrollToBottom, planData, processAgentMessage]); //onPlanReceived, scrollToBottom   
 
+    // Detect page reload and navigate to Home (only if plan is not yet approved)
+    useEffect(() => {
+        if (hasHandledReload) return;
+        if (loading) return; // Wait until plan data is loaded before deciding
+        if (!showApprovalButtons) return; // Plan already approved, stay on page
+        const navEntries = performance.getEntriesByType("navigation") as PerformanceNavigationTiming[];
+        if (navEntries.length > 0 && navEntries[0].type === "reload") {
+            hasHandledReload = true;
+            navigate("/", { replace: true });
+        }
+    }, [navigate, showApprovalButtons, loading]);
+
+    // Warn user before page refresh/close (only when plan is pending approval)
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            e.preventDefault();
+            e.returnValue = "";
+        };
+
+        if (planId && !errorLoading && showApprovalButtons) {
+            window.addEventListener("beforeunload", handleBeforeUnload);
+        }
+
+        return () => {
+            window.removeEventListener("beforeunload", handleBeforeUnload);
+        };
+    }, [planId, errorLoading, showApprovalButtons]);
+    console.log('Niraj Chaudhari 99');
     // Loading message rotation effect
     useEffect(() => {
         let interval: NodeJS.Timeout;
