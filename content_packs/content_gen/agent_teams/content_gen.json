@@ -117,16 +117,8 @@
   "starting_tasks": [
     {
       "id": "task-1",
-      "name": "Generate a social media campaign",
-      "prompt": "Create social media marketing content for our new ProTech Wireless Headphones. Product: premium noise-canceling headphones with 30-hour battery, Bluetooth 5.3, and foldable design. Price: $199. Objectives: drive product awareness and website traffic for the launch. Target audience: young professionals aged 25-35 who value productivity and audio quality. Key message: Uncompromising sound quality meets all-day comfort for the modern professional. Deliverables: LinkedIn post, Instagram caption, and a marketing image. Tone: professional, modern, and aspirational. CTA: Shop now.",
-      "created": "",
-      "creator": "",
-      "logo": ""
-    },
-    {
-      "id": "task-2",
-      "name": "Generate product marketing copy",
-      "prompt": "Write a marketing email campaign for our Spring Workspace Collection. Products: ProLite Laptop Stand ($89, aluminum, foldable), ErgoMesh Chair ($349, lumbar support, breathable mesh), and DeskPad Pro ($45, extra-large, non-slip). Objectives: increase email click-through rate and drive a 20% sales lift this quarter. Target audience: remote workers and home office professionals aged 28-45. Key message: Transform your workspace into a productivity sanctuary. Deliverables: email subject line, preview text, hero headline, body copy, and a marketing image. Tone: warm, motivational, and professional. CTA: Shop the collection and save 15% this week.",
+      "name": "Generate a social media post",
+      "prompt": "I need to create a social media post about paint products for home remodels. The campaign is titled 'Brighten Your Springtime' and the audience is new homeowners. I need marketing copy plus an image. The image should be an informal living room with tasteful furnishings. Can you also add a dog laying on the ground? Please add info about the color Snow Veil.",
       "created": "",
       "creator": "",
       "logo": ""

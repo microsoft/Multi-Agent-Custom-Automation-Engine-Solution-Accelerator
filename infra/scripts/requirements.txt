@@ -1,7 +1,10 @@
 azure-search-documents==11.5.3
 azure-identity==1.24.0
 azure-storage-blob==12.26.0
+azure-cosmos==4.9.0
+aiohttp
 requests==2.32.5
+httpx
 azure-core
 PyPDF2
 python-docx

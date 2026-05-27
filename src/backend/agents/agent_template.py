@@ -183,7 +183,7 @@ class AgentTemplate:
                 if not self._resolved_vector_store_id:
                     raise ValueError(
                         f"Vector store '{vs_name}' not found. "
-                        f"Run scripts/seed_vector_stores.py to create it."
+                        f"Run infra/scripts/seed_vector_stores.py to create it."
                     )
 
             # Step 1c — Create AzureAISearchContextProvider for Foundry IQ KB.
