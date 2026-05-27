@@ -30,7 +30,6 @@
     },
     
     /* Additional options for compatibility */
-    "ignoreDeprecations": "6.0",
     "allowJs": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,

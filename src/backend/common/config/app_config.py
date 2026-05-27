@@ -29,7 +29,7 @@ class AppConfig:
         self.COSMOSDB_DATABASE = self._get_optional("COSMOSDB_DATABASE")
         self.COSMOSDB_CONTAINER = self._get_optional("COSMOSDB_CONTAINER")
 
-        self.APPLICATIONINSIGHTS_CONNECTION_STRING = self._get_required(
+        self.APPLICATIONINSIGHTS_CONNECTION_STRING = self._get_optional(
             "APPLICATIONINSIGHTS_CONNECTION_STRING"
         )
         self.APP_ENV = self._get_required("APP_ENV", "prod")

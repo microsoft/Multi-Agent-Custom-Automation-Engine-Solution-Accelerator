@@ -100,13 +100,13 @@ export class PlanDataService {
         deployment_name: agentBE.deployment_name,
         system_message: agentBE.system_message,
         description: agentBE.description,
-        icon: agentBE.icon,
-        index_name: agentBE.index_name,
-        use_rag: agentBE.use_rag,
-        use_mcp: agentBE.use_mcp,
         coding_tools: agentBE.coding_tools,
         // Additional fields that exist in Agent but not in TeamAgentBE
+        icon: undefined,
+        index_name: undefined,
         index_endpoint: undefined,
+        use_rag: undefined,
+        use_mcp: undefined,
         id: undefined,
         capabilities: undefined,
         role: undefined
