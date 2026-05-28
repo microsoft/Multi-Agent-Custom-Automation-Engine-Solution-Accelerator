@@ -24,6 +24,7 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+$script:hasErrors = $false
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Helper functions
@@ -394,7 +395,8 @@ $env:COSMOSDB_CONTAINER = $cosmosContainer
 
 $seedTeamsScript | & $pythonCmd -
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "WARNING: Team config seeding had errors." -ForegroundColor Yellow
+    Write-Host "  ERROR: Team config seeding had errors." -ForegroundColor Red
+    $script:hasErrors = $true
 }
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -427,6 +429,7 @@ if ($selectedDataPacks.Count -gt 0) {
         $result = Deploy-ContentPack -PackPath $packPath -StorageAccountName $storageAccount -AiSearchName $aiSearchName -PythonCmd $pythonCmd
         if (-not $result) {
             $isSampleDataFailed = $true
+            $script:hasErrors = $true
             Write-Host "  Error in data deployment for $packPath" -ForegroundColor Red
         }
     }
@@ -440,7 +443,8 @@ if ($selectedDataPacks.Count -gt 0) {
     $env:AZURE_AI_PROJECT_ENDPOINT = $projectEndpoint
     $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/seed_vector_stores.py" -Wait -NoNewWindow -PassThru
     if ($process.ExitCode -ne 0) {
-        Write-Host "  WARNING: Vector store creation failed. Run 'python infra/scripts/seed_vector_stores.py' manually." -ForegroundColor Yellow
+        Write-Host "  ERROR: Vector store creation failed. Run 'python infra/scripts/seed_vector_stores.py' manually." -ForegroundColor Red
+        $script:hasErrors = $true
     } else {
         Write-Host "  Vector stores created successfully."
     }
@@ -455,7 +459,8 @@ if ($selectedDataPacks.Count -gt 0) {
     $env:AZURE_OPENAI_ENDPOINT = $openaiEndpoint
     $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/seed_knowledge_bases.py" -Wait -NoNewWindow -PassThru
     if ($process.ExitCode -ne 0) {
-        Write-Host "  WARNING: Knowledge base seeding failed. Run 'python infra/scripts/seed_knowledge_bases.py' manually." -ForegroundColor Yellow
+        Write-Host "  ERROR: Knowledge base seeding failed. Run 'python infra/scripts/seed_knowledge_bases.py' manually." -ForegroundColor Red
+        $script:hasErrors = $true
     } else {
         Write-Host "  Knowledge bases seeded successfully."
     }
@@ -467,12 +472,25 @@ if ($selectedDataPacks.Count -gt 0) {
 # Done
 # ──────────────────────────────────────────────────────────────────────────────
 
-Write-Host "`n========================================" -ForegroundColor Green
-Write-Host " Post-deployment data seeding complete!" -ForegroundColor Green
-Write-Host "========================================" -ForegroundColor Green
-Write-Host "`nThe application is ready to use."
-$frontendHost = $(azd env get-value webSiteDefaultHostname 2>$null)
-if ($frontendHost) {
-    Write-Host "Frontend: https://$frontendHost"
+if ($script:hasErrors) {
+    Write-Host "`n========================================" -ForegroundColor Red
+    Write-Host " Post-deployment seeding completed with ERRORS" -ForegroundColor Red
+    Write-Host "========================================" -ForegroundColor Red
+    Write-Host "`nOne or more steps failed. Review the output above and re-run the failed steps manually." -ForegroundColor Yellow
+    $frontendHost = $(azd env get-value webSiteDefaultHostname 2>$null)
+    if ($frontendHost) {
+        Write-Host "Frontend: https://$frontendHost"
+    }
+    Write-Host ""
+    exit 1
+} else {
+    Write-Host "`n========================================" -ForegroundColor Green
+    Write-Host " Post-deployment data seeding complete!" -ForegroundColor Green
+    Write-Host "========================================" -ForegroundColor Green
+    Write-Host "`nThe application is ready to use."
+    $frontendHost = $(azd env get-value webSiteDefaultHostname 2>$null)
+    if ($frontendHost) {
+        Write-Host "Frontend: https://$frontendHost"
+    }
+    Write-Host ""
 }
-Write-Host ""

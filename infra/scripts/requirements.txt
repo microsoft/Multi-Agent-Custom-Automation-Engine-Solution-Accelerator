@@ -6,5 +6,7 @@ aiohttp
 requests==2.32.5
 httpx
 azure-core
+azure-ai-projects
 PyPDF2
 python-docx
+python-dotenv
