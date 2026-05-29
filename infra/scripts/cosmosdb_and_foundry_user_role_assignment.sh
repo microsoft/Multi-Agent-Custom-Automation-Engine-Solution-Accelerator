@@ -153,11 +153,11 @@ fi
 echo "add_cosmosdb_access.sh completed successfully."
 
 
-# Call add_cosmosdb_access.sh
-echo "Running assign_azure_ai_user_role.sh"
-bash infra/scripts/assign_azure_ai_user_role.sh "$resourceGroupName" "$aif_resource_id" "$principal_ids" "$managedIdentityClientId"
+# Call assign_foundry_user_role.sh
+echo "Running assign_foundry_user_role.sh"
+bash infra/scripts/assign_foundry_user_role.sh "$resourceGroupName" "$aif_resource_id" "$principal_ids" "$managedIdentityClientId"
 if [ $? -ne 0 ]; then
-    echo "Error: assign_azure_ai_user_role.sh failed."
+    echo "Error: assign_foundry_user_role.sh failed."
     exit 1
 fi
-echo "assign_azure_ai_user_role.sh completed successfully."
+echo "assign_foundry_user_role.sh completed successfully."

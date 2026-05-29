@@ -4,6 +4,7 @@
 resource_group="$1"
 aif_resource_id="$2"
 principal_ids="$3"
+managedIdentityClientId="$4"
 
 
 # Authenticate with Azure
