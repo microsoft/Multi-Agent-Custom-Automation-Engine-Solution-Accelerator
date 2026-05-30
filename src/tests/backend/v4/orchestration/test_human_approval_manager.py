@@ -227,6 +227,7 @@ sys.modules['v4.orchestration.helper.plan_to_mplan_converter'] = Mock(
 
 # Now import the module under test
 from backend.v4.orchestration.human_approval_manager import HumanApprovalMagenticManager
+from backend.v4.orchestration.exceptions import PlanSupersededError, PlanTimeoutError
 
 # Get mocked references for tests
 connection_config = sys.modules['v4.config.settings'].connection_config
@@ -248,6 +249,7 @@ class TestHumanApprovalMagenticManager(unittest.IsolatedAsyncioTestCase):
         orchestration_config.wait_for_approval.reset_mock()
         orchestration_config.wait_for_approval.return_value = True  # Default return value
         orchestration_config.cleanup_approval.reset_mock()
+        orchestration_config.is_plan_superseded = Mock(return_value=False)
         
         # Create mock agent for new API
         self.mock_agent = Mock()
@@ -448,7 +450,7 @@ class TestHumanApprovalMagenticManager(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(result.approved)
             self.assertEqual(result.m_plan_id, plan_id)
         
-        orchestration_config.set_approval_pending.assert_called_with(plan_id)
+        orchestration_config.set_approval_pending.assert_called_with(plan_id, user_id=self.user_id)
         orchestration_config.wait_for_approval.assert_called_with(plan_id)
 
     async def test_wait_for_user_approval_rejection(self):
@@ -485,32 +487,23 @@ class TestHumanApprovalMagenticManager(unittest.IsolatedAsyncioTestCase):
         plan_id = "test-plan-123"
         orchestration_config.wait_for_approval.side_effect = asyncio.TimeoutError()
         
-        # Execute
-        result = await self.manager._wait_for_user_approval(plan_id)
+        # Execute & Verify - should raise PlanTimeoutError
+        with self.assertRaises(PlanTimeoutError):
+            await self.manager._wait_for_user_approval(plan_id)
         
-        # Verify
-        self.assertIsNone(result)
-        
-        # Verify timeout notification was sent
-        connection_config.send_status_update_async.assert_called()
         orchestration_config.cleanup_approval.assert_called_with(plan_id)
 
     async def test_wait_for_user_approval_timeout_websocket_error(self):
-        """Test _wait_for_user_approval with timeout and WebSocket error."""
+        """Test _wait_for_user_approval with timeout raises PlanTimeoutError."""
         # Setup
         plan_id = "test-plan-123"
         orchestration_config.wait_for_approval.side_effect = asyncio.TimeoutError()
-        connection_config.send_status_update_async.side_effect = Exception("WebSocket error")
         
-        # Execute
-        result = await self.manager._wait_for_user_approval(plan_id)
+        # Execute & Verify - should raise PlanTimeoutError
+        with self.assertRaises(PlanTimeoutError):
+            await self.manager._wait_for_user_approval(plan_id)
         
-        # Verify
-        self.assertIsNone(result)
         orchestration_config.cleanup_approval.assert_called_with(plan_id)
-        
-        # Reset side effect
-        connection_config.send_status_update_async.side_effect = None
 
     async def test_wait_for_user_approval_key_error(self):
         """Test _wait_for_user_approval with KeyError."""

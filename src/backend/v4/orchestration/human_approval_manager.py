@@ -19,6 +19,7 @@ from agent_framework_orchestrations._magentic import (
 
 from v4.config.settings import connection_config, orchestration_config
 from v4.models.models import MPlan
+from .exceptions import PlanSupersededError, PlanTimeoutError
 from v4.orchestration.helper.plan_to_mplan_converter import PlanToMPlanConverter
 
 logger = logging.getLogger(__name__)
@@ -330,43 +331,31 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
             logger.error("No plan ID provided for approval")
             return messages.PlanApprovalResponse(approved=False, m_plan_id=m_plan_id)
 
-        orchestration_config.set_approval_pending(m_plan_id)
+        orchestration_config.set_approval_pending(m_plan_id, user_id=self.current_user_id)
 
         try:
             approved = await orchestration_config.wait_for_approval(m_plan_id)
+
+            # Check if this plan was superseded by a new task from the same user
+            if orchestration_config.is_plan_superseded(m_plan_id):
+                logger.info(
+                    "Plan %s was superseded by a new task - terminating silently",
+                    m_plan_id,
+                )
+                orchestration_config.cleanup_approval(m_plan_id)
+                raise PlanSupersededError(m_plan_id)
+
             logger.info("Approval received for plan %s: %s", m_plan_id, approved)
             return messages.PlanApprovalResponse(approved=approved, m_plan_id=m_plan_id)
 
         except asyncio.TimeoutError:
-            logger.debug(
-                "Approval timeout for plan %s - notifying user and terminating process",
+            logger.info(
+                "Approval timeout for plan %s after %ss",
                 m_plan_id,
+                orchestration_config.default_timeout,
             )
-
-            timeout_message = messages.TimeoutNotification(
-                timeout_type="approval",
-                request_id=m_plan_id,
-                message=f"Plan approval request timed out after {orchestration_config.default_timeout} seconds. Please try again.",
-                timestamp=asyncio.get_event_loop().time(),
-                timeout_duration=orchestration_config.default_timeout,
-            )
-
-            try:
-                await connection_config.send_status_update_async(
-                    message=timeout_message,
-                    user_id=self.current_user_id,
-                    message_type=messages.WebsocketMessageType.TIMEOUT_NOTIFICATION,
-                )
-                logger.info(
-                    "Timeout notification sent to user %s for plan %s",
-                    self.current_user_id,
-                    m_plan_id,
-                )
-            except Exception as e:
-                logger.error("Failed to send timeout notification: %s", e)
-
             orchestration_config.cleanup_approval(m_plan_id)
-            return None
+            raise PlanTimeoutError(m_plan_id, orchestration_config.default_timeout)
 
         except KeyError as e:
             logger.debug("Plan ID not found: %s - terminating process silently", e)
@@ -376,6 +365,10 @@ DO NOT EVER OFFER TO HELP FURTHER IN THE FINAL ANSWER! Just provide the final an
             logger.debug("Approval request %s was cancelled", m_plan_id)
             orchestration_config.cleanup_approval(m_plan_id)
             return None
+
+        except (PlanSupersededError, PlanTimeoutError):
+            # Let these propagate to orchestration_manager for proper handling
+            raise
 
         except Exception as e:
             logger.debug(

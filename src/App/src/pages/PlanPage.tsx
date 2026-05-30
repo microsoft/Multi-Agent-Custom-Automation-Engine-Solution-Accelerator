@@ -28,11 +28,13 @@ import {
     selectLoadingMessage,
     selectReloadLeftList,
     selectWaitingForPlan,
+    selectShowTimeoutDialog,
     setReloadLeftList,
     setProcessingApproval,
     setShowProcessingPlanSpinner,
     setShowCancellationDialog,
     setCancellingPlan,
+    setShowTimeoutDialog,
     setLoadingMessage,
     setErrorLoading,
     planApprovalAccepted,
@@ -73,6 +75,7 @@ import { useInlineToaster } from '../components/toast/InlineToaster';
 import Octo from '../commonComponents/imports/Octopus.png';
 import LoadingMessage, { loadingMessages } from '../commonComponents/components/LoadingMessage';
 import PlanCancellationDialog from '../components/common/PlanCancellationDialog';
+import PlanTimeoutDialog from '../components/common/PlanTimeoutDialog';
 import '../styles/PlanPage.css';
 
 // Singleton API service
@@ -99,6 +102,7 @@ const PlanPage: React.FC = () => {
     const showProcessingPlanSpinner = useAppSelector(selectShowProcessingPlanSpinner);
     const showCancellationDialog = useAppSelector(selectShowCancellationDialog);
     const cancellingPlan = useAppSelector(selectCancellingPlan);
+    const showTimeoutDialog = useAppSelector(selectShowTimeoutDialog);
     const loadingMessage = useAppSelector(selectLoadingMessage);
     const reloadLeftList = useAppSelector(selectReloadLeftList);
     const waitingForPlan = useAppSelector(selectWaitingForPlan);
@@ -387,6 +391,15 @@ const PlanPage: React.FC = () => {
                 onConfirm={handleConfirmCancellation}
                 onCancel={handleCancelDialog}
                 loading={cancellingPlan}
+            />
+
+            <PlanTimeoutDialog
+                isOpen={showTimeoutDialog}
+                onGoHome={() => {
+                    dispatch(setShowTimeoutDialog(false));
+                    navigate('/');
+                }}
+                onCancel={() => dispatch(setShowTimeoutDialog(false))}
             />
         </CoralShellColumn>
     );

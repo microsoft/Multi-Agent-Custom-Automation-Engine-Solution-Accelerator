@@ -97,6 +97,10 @@ class OrchestrationConfig:
         self._approval_events: Dict[str, asyncio.Event] = {}
         self._clarification_events: Dict[str, asyncio.Event] = {}
 
+        # Track which user each pending plan belongs to, and which plans are superseded
+        self._plan_to_user: Dict[str, str] = {}  # plan_id -> user_id
+        self._superseded_plans: set = set()  # plan IDs cancelled by a new task
+
         # Default timeout (seconds) for waiting operations
         self.default_timeout: float = 300.0
 
@@ -104,13 +108,15 @@ class OrchestrationConfig:
         """Get existing orchestration workflow instance for user_id."""
         return self.orchestrations.get(user_id, None)
 
-    def set_approval_pending(self, plan_id: str) -> None:
+    def set_approval_pending(self, plan_id: str, user_id: str = None) -> None:
         """Mark approval pending and create/reset its event."""
         self.approvals[plan_id] = None
         if plan_id not in self._approval_events:
             self._approval_events[plan_id] = asyncio.Event()
         else:
             self._approval_events[plan_id].clear()
+        if user_id:
+            self._plan_to_user[plan_id] = user_id
 
     def set_approval_result(self, plan_id: str, approved: bool) -> None:
         """Set approval decision and trigger its event."""
@@ -214,6 +220,30 @@ class OrchestrationConfig:
         """Remove approval tracking data and event."""
         self.approvals.pop(plan_id, None)
         self._approval_events.pop(plan_id, None)
+        self._plan_to_user.pop(plan_id, None)
+        self._superseded_plans.discard(plan_id)
+
+    def cancel_pending_approvals_for_user(self, user_id: str) -> None:
+        """Cancel all pending approvals for a user (called when a new task starts).
+
+        Wakes up any blocking wait_for_approval calls so they return immediately.
+        The plan is marked as superseded so the orchestration can terminate silently
+        without sending error messages to the user's current WebSocket.
+        """
+        plans_to_cancel = [
+            pid for pid, uid in self._plan_to_user.items()
+            if uid == user_id and pid in self.approvals and self.approvals[pid] is None
+        ]
+        for plan_id in plans_to_cancel:
+            logger.info("Superseding stale pending approval: %s (user: %s)", plan_id, user_id)
+            self._superseded_plans.add(plan_id)
+            self.approvals[plan_id] = False
+            if plan_id in self._approval_events:
+                self._approval_events[plan_id].set()  # wake up the blocked wait
+
+    def is_plan_superseded(self, plan_id: str) -> bool:
+        """Check if a plan was superseded by a newer task from the same user."""
+        return plan_id in self._superseded_plans
 
     def cleanup_clarification(self, request_id: str) -> None:
         """Remove clarification tracking data and event."""
