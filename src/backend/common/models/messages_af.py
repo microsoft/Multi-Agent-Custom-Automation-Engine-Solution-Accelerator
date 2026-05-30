@@ -139,6 +139,13 @@ class Plan(BaseDataModel):
     streaming_message: Optional[str] = None
     human_clarification_request: Optional[str] = None
     human_clarification_response: Optional[str] = None
+    total_input_tokens: int = 0
+    total_output_tokens: int = 0
+    total_tokens: int = 0
+    usage_by_agent: Optional[Dict[str, Any]] = None
+    usage_by_model: Optional[Dict[str, Any]] = None
+    orchestration_execution_seconds: float = 0.0
+    execution_time_by_agent: Optional[Dict[str, Any]] = None
 
 
 class Step(BaseDataModel):

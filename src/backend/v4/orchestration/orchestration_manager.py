@@ -35,7 +35,7 @@ from v4.callbacks.response_handlers import (
     streaming_agent_response_callback,
 )
 from v4.config.settings import connection_config, orchestration_config
-from v4.models.messages import WebsocketMessageType
+from v4.models.messages import TokenUsageUpdate, WebsocketMessageType
 from v4.orchestration.human_approval_manager import HumanApprovalMagenticManager
 from v4.magentic_agents.magentic_agent_factory import MagenticAgentFactory
 from common.database.database_factory import DatabaseFactory
@@ -285,12 +285,165 @@ class OrchestrationManager:
                     agents, team_config, team_service.memory_context, user_id
                 )
                 orchestration_config.orchestrations[user_id] = workflow
+
+                # Build agent_name -> model_deployment_name map for token tracking
+                agent_model_map: dict[str, str] = {}
+                for ag in agents:
+                    name = getattr(ag, "agent_name", None) or getattr(ag, "name", None) or ""
+                    model = getattr(ag, "model_deployment_name", None) or ""
+                    if name:
+                        agent_model_map[name] = model
+                # Also include the orchestrator manager's model
+                agent_model_map["MagenticManager"] = team_config.deployment_name or ""
+                orchestration_config.agent_model_maps[user_id] = agent_model_map
+                cls.logger.info("Agent model map for user '%s': %s", user_id, agent_model_map)
             except Exception as e:
                 cls.logger.error(
                     "Failed to initialize orchestration for user '%s': %s", user_id, e
                 )
                 raise
         return orchestration_config.get_current_orchestration(user_id)
+
+    # ---------------------------
+    # Token usage extraction helpers
+    # ---------------------------
+    def _extract_usage_from_dict(self, d: dict) -> tuple[int, int, int] | None:
+        """Extract (input, output, total) from a usage dict."""
+        inp = d.get("input_token_count", 0) or d.get("prompt_tokens", 0) or d.get("input_tokens", 0) or 0
+        out = d.get("output_token_count", 0) or d.get("completion_tokens", 0) or d.get("output_tokens", 0) or 0
+        tot = d.get("total_token_count", 0) or d.get("total_tokens", 0) or (inp + out)
+        if tot > 0:
+            return (inp, out, tot)
+        return None
+
+    def _extract_usage_from_response_update(self, update: AgentResponseUpdate, agent_name: str) -> tuple[int, int, int] | None:
+        """
+        Extract token usage from an AgentResponseUpdate by checking multiple locations:
+        1. contents[] with type == 'usage' (Content objects with usage_details)
+        2. contents[] that are plain dicts with usage keys
+        3. raw_representation (OpenAI SDK response object)
+        4. additional_properties
+        """
+        # 1. Check contents for Content objects with type == "usage"
+        contents = getattr(update, "contents", None) or []
+        for item in contents:
+            # Content object: check .type == "usage"
+            item_type = getattr(item, "type", None)
+            if item_type == "usage":
+                usage_details = getattr(item, "usage_details", None)
+                if isinstance(usage_details, dict):
+                    result = self._extract_usage_from_dict(usage_details)
+                    if result:
+                        self.logger.debug("[TOKEN] Found usage in Content(type=usage) for %s", agent_name)
+                        return result
+
+            # Content object: check .usage_details directly even if type != "usage"
+            usage_details = getattr(item, "usage_details", None)
+            if isinstance(usage_details, dict) and usage_details:
+                result = self._extract_usage_from_dict(usage_details)
+                if result:
+                    self.logger.debug("[TOKEN] Found usage in Content.usage_details for %s", agent_name)
+                    return result
+
+            # Plain dict item (MutableMapping)
+            if isinstance(item, dict):
+                if "usage_details" in item and isinstance(item["usage_details"], dict):
+                    result = self._extract_usage_from_dict(item["usage_details"])
+                    if result:
+                        self.logger.debug("[TOKEN] Found usage in dict content for %s", agent_name)
+                        return result
+                # Direct usage keys in dict
+                if "input_token_count" in item or "total_token_count" in item:
+                    result = self._extract_usage_from_dict(item)
+                    if result:
+                        return result
+
+        # 2. Check raw_representation (OpenAI SDK response)
+        raw = getattr(update, "raw_representation", None)
+        if raw is not None:
+            # OpenAI ChatCompletion response
+            usage_obj = getattr(raw, "usage", None)
+            if usage_obj is not None:
+                if isinstance(usage_obj, dict):
+                    result = self._extract_usage_from_dict(usage_obj)
+                else:
+                    inp = getattr(usage_obj, "prompt_tokens", 0) or getattr(usage_obj, "input_tokens", 0) or 0
+                    out = getattr(usage_obj, "completion_tokens", 0) or getattr(usage_obj, "output_tokens", 0) or 0
+                    tot = getattr(usage_obj, "total_tokens", 0) or (inp + out)
+                    if tot > 0:
+                        result = (inp, out, tot)
+                    else:
+                        result = None
+                if result:
+                    self.logger.debug("[TOKEN] Found usage in raw_representation.usage for %s", agent_name)
+                    return result
+
+            # Check if raw is a dict
+            if isinstance(raw, dict) and "usage" in raw:
+                usage_raw = raw["usage"]
+                if isinstance(usage_raw, dict):
+                    result = self._extract_usage_from_dict(usage_raw)
+                    if result:
+                        self.logger.debug("[TOKEN] Found usage in raw dict for %s", agent_name)
+                        return result
+
+        # 3. Check additional_properties
+        addl = getattr(update, "additional_properties", None)
+        if isinstance(addl, dict) and addl:
+            if "usage" in addl:
+                u = addl["usage"]
+                if isinstance(u, dict):
+                    result = self._extract_usage_from_dict(u)
+                    if result:
+                        self.logger.debug("[TOKEN] Found usage in additional_properties for %s", agent_name)
+                        return result
+
+        return None
+
+    def _try_extract_usage_from_event(self, event_data) -> tuple[int, int, int] | None:
+        """
+        Try to extract token usage from any event data object by checking
+        common attribute patterns.
+        """
+        # Check for .usage attribute
+        usage = getattr(event_data, "usage", None)
+        if usage is not None:
+            if isinstance(usage, dict):
+                return self._extract_usage_from_dict(usage)
+            inp = getattr(usage, "prompt_tokens", 0) or getattr(usage, "input_token_count", 0) or getattr(usage, "input_tokens", 0) or 0
+            out = getattr(usage, "completion_tokens", 0) or getattr(usage, "output_token_count", 0) or getattr(usage, "output_tokens", 0) or 0
+            tot = getattr(usage, "total_tokens", 0) or getattr(usage, "total_token_count", 0) or (inp + out)
+            if tot > 0:
+                return (inp, out, tot)
+
+        # Check for .response with .usage
+        response = getattr(event_data, "response", None)
+        if response is not None:
+            return self._try_extract_usage_from_event(response)
+
+        # Check for .message with usage in metadata
+        msg = getattr(event_data, "message", None)
+        if msg is not None:
+            metadata = getattr(msg, "metadata", None) or getattr(msg, "additional_properties", None)
+            if isinstance(metadata, dict) and "usage" in metadata:
+                u = metadata["usage"]
+                if isinstance(u, dict):
+                    return self._extract_usage_from_dict(u)
+
+        # Check to_dict() for nested usage
+        if hasattr(event_data, "to_dict"):
+            try:
+                d = event_data.to_dict()
+                if isinstance(d, dict):
+                    # Look for usage anywhere in the dict
+                    if "usage" in d and isinstance(d["usage"], dict):
+                        return self._extract_usage_from_dict(d["usage"])
+                    if "usage_details" in d and isinstance(d["usage_details"], dict):
+                        return self._extract_usage_from_dict(d["usage_details"])
+            except Exception:
+                pass
+
+        return None
 
     # ---------------------------
     # Execution
@@ -375,10 +528,24 @@ class OrchestrationManager:
         task_text = getattr(input_task, "description", str(input_task))
         self.logger.debug("Task: %s", task_text)
 
+        # Load agent_name -> model_deployment_name map for token tracking
+        agent_model_map: dict[str, str] = orchestration_config.agent_model_maps.get(user_id, {})
+
         # Track how many times each agent is called (for debugging duplicate calls)
         agent_call_counts: dict = {}
         # Buffer streamed text per-agent so we can emit a complete AGENT_MESSAGE
         agent_stream_buffers: dict[str, str] = {}
+        # Token usage tracking per agent: {agent_name: {input_tokens: int, output_tokens: int, total_tokens: int, model_deployment_name: str}}
+        agent_token_usage: dict[str, dict[str, int | str]] = {}
+        # Token usage tracking per model: {model_deployment_name: {input_tokens: int, output_tokens: int, total_tokens: int}}
+        model_token_usage: dict[str, dict[str, int]] = {}
+        cumulative_input_tokens = 0
+        cumulative_output_tokens = 0
+        cumulative_total_tokens = 0
+        # Execution time tracking
+        orchestration_start_time = _time.time()
+        agent_start_times: dict[str, float] = {}  # agent_name -> start epoch
+        agent_execution_times: dict[str, dict] = {}  # agent_name -> {total_seconds, invocations, model_deployment_name}
 
         try:
             # Execute workflow using run() with stream=True
@@ -411,6 +578,8 @@ class OrchestrationManager:
                             agent_name = event.data.participant_name
                             agent_call_counts[agent_name] = agent_call_counts.get(agent_name, 0) + 1
                             call_num = agent_call_counts[agent_name]
+                            # Record agent start time for execution duration tracking
+                            agent_start_times[agent_name] = _time.time()
 
                             self.logger.info(
                                 "[REQUEST SENT (round %d)] to agent: %s (call #%d)",
@@ -429,6 +598,68 @@ class OrchestrationManager:
                                 event.data.round_index,
                                 agent_name
                             )
+
+                            # Calculate agent execution duration
+                            if agent_name in agent_start_times:
+                                agent_duration = _time.time() - agent_start_times.pop(agent_name)
+                                agent_model = agent_model_map.get(agent_name, "")
+                                if agent_name not in agent_execution_times:
+                                    agent_execution_times[agent_name] = {
+                                        "total_seconds": 0.0,
+                                        "invocations": 0,
+                                        "model_deployment_name": agent_model,
+                                    }
+                                agent_execution_times[agent_name]["total_seconds"] += agent_duration
+                                agent_execution_times[agent_name]["invocations"] += 1
+                                self.logger.info(
+                                    "[EXECUTION TIME] agent=%s duration=%.2fs (invocation #%d, cumulative=%.2fs)",
+                                    agent_name, agent_duration,
+                                    agent_execution_times[agent_name]["invocations"],
+                                    agent_execution_times[agent_name]["total_seconds"],
+                                )
+
+                            # Extract token usage from GroupChatResponseReceivedEvent
+                            _gc_usage = self._try_extract_usage_from_event(event.data)
+                            if _gc_usage:
+                                inp, out, tot = _gc_usage
+                                if tot > 0:
+                                    agent_model = agent_model_map.get(agent_name, "")
+                                    if agent_name not in agent_token_usage:
+                                        agent_token_usage[agent_name] = {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0, "model_deployment_name": agent_model}
+                                    agent_token_usage[agent_name]["input_tokens"] += inp
+                                    agent_token_usage[agent_name]["output_tokens"] += out
+                                    agent_token_usage[agent_name]["total_tokens"] += tot
+                                    # Accumulate model-level usage
+                                    if agent_model:
+                                        if agent_model not in model_token_usage:
+                                            model_token_usage[agent_model] = {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+                                        model_token_usage[agent_model]["input_tokens"] += inp
+                                        model_token_usage[agent_model]["output_tokens"] += out
+                                        model_token_usage[agent_model]["total_tokens"] += tot
+                                    cumulative_input_tokens += inp
+                                    cumulative_output_tokens += out
+                                    cumulative_total_tokens += tot
+                                    self.logger.info(
+                                        "[TOKEN USAGE from GroupChat] agent=%s model=%s input=%d output=%d total=%d | cumulative: %d/%d/%d",
+                                        agent_name, agent_model, inp, out, tot,
+                                        cumulative_input_tokens, cumulative_output_tokens, cumulative_total_tokens,
+                                    )
+                                    try:
+                                        token_update = TokenUsageUpdate(
+                                            agent_name=agent_name,
+                                            input_tokens=inp, output_tokens=out, total_tokens=tot,
+                                            cumulative_input_tokens=cumulative_input_tokens,
+                                            cumulative_output_tokens=cumulative_output_tokens,
+                                            cumulative_total_tokens=cumulative_total_tokens,
+                                            model_deployment_name=agent_model,
+                                        )
+                                        await connection_config.send_status_update_async(
+                                            token_update, user_id,
+                                            message_type=WebsocketMessageType.TOKEN_USAGE_UPDATE,
+                                        )
+                                    except Exception as tok_err:
+                                        self.logger.warning("Failed to send token usage update: %s", tok_err)
+
                             # Flush accumulated streaming content as a complete AGENT_MESSAGE
                             buffered = agent_stream_buffers.pop(agent_name, "")
                             if buffered:
@@ -473,6 +704,49 @@ class OrchestrationManager:
                             chunk_text = output_data.text or ""
                             if chunk_text:
                                 agent_stream_buffers[executor_id] = agent_stream_buffers.get(executor_id, "") + chunk_text
+
+                            # Extract token usage from AgentResponseUpdate
+                            usage_found = self._extract_usage_from_response_update(output_data, executor_id)
+                            if usage_found:
+                                inp, out, tot = usage_found
+                                if tot > 0:
+                                    executor_model = agent_model_map.get(executor_id, "")
+                                    if executor_id not in agent_token_usage:
+                                        agent_token_usage[executor_id] = {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0, "model_deployment_name": executor_model}
+                                    agent_token_usage[executor_id]["input_tokens"] += inp
+                                    agent_token_usage[executor_id]["output_tokens"] += out
+                                    agent_token_usage[executor_id]["total_tokens"] += tot
+                                    # Accumulate model-level usage
+                                    if executor_model:
+                                        if executor_model not in model_token_usage:
+                                            model_token_usage[executor_model] = {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+                                        model_token_usage[executor_model]["input_tokens"] += inp
+                                        model_token_usage[executor_model]["output_tokens"] += out
+                                        model_token_usage[executor_model]["total_tokens"] += tot
+                                    cumulative_input_tokens += inp
+                                    cumulative_output_tokens += out
+                                    cumulative_total_tokens += tot
+                                    self.logger.info(
+                                        "[TOKEN USAGE from stream] agent=%s model=%s input=%d output=%d total=%d | cumulative: %d/%d/%d",
+                                        executor_id, executor_model, inp, out, tot,
+                                        cumulative_input_tokens, cumulative_output_tokens, cumulative_total_tokens,
+                                    )
+                                    try:
+                                        token_update = TokenUsageUpdate(
+                                            agent_name=executor_id,
+                                            input_tokens=inp, output_tokens=out, total_tokens=tot,
+                                            cumulative_input_tokens=cumulative_input_tokens,
+                                            cumulative_output_tokens=cumulative_output_tokens,
+                                            cumulative_total_tokens=cumulative_total_tokens,
+                                            model_deployment_name=executor_model,
+                                        )
+                                        await connection_config.send_status_update_async(
+                                            token_update, user_id,
+                                            message_type=WebsocketMessageType.TOKEN_USAGE_UPDATE,
+                                        )
+                                    except Exception as tok_err:
+                                        self.logger.warning("Failed to send token usage update: %s", tok_err)
+
                             try:
                                 await streaming_agent_response_callback(
                                     executor_id,
@@ -596,3 +870,99 @@ class OrchestrationManager:
             except Exception as send_error:
                 self.logger.error("Failed to send error status: %s", send_error)
             raise
+
+        finally:
+            # Always track token usage and execution time to Application Insights,
+            # even if orchestration failed partway through (e.g. 2 of 3 agents completed).
+            try:
+                orchestration_end_time = _time.time()
+                orchestration_duration = orchestration_end_time - orchestration_start_time
+
+                if agent_token_usage:
+                    self.logger.info(
+                        "[TOKEN SUMMARY] Total: input=%d output=%d total=%d | By agent: %s | By model: %s",
+                        cumulative_input_tokens, cumulative_output_tokens, cumulative_total_tokens,
+                        {k: v for k, v in agent_token_usage.items()},
+                        {k: v for k, v in model_token_usage.items()},
+                    )
+
+                    from common.utils.event_utils import track_event_if_configured
+                    track_event_if_configured("LLM_Token_Usage_Summary", {
+                        "total_input_tokens": str(cumulative_input_tokens),
+                        "total_output_tokens": str(cumulative_output_tokens),
+                        "total_tokens": str(cumulative_total_tokens),
+                        "agent_count": str(len(agent_token_usage)),
+                        "model_count": str(len(model_token_usage)),
+                        "user_id": user_id or "",
+                    })
+                    # Track per-agent usage
+                    for agent_name, usage in agent_token_usage.items():
+                        track_event_if_configured("LLM_Agent_Token_Usage", {
+                            "agent_name": agent_name,
+                            "input_tokens": str(usage["input_tokens"]),
+                            "output_tokens": str(usage["output_tokens"]),
+                            "total_tokens": str(usage["total_tokens"]),
+                            "model_deployment_name": str(usage.get("model_deployment_name", "")),
+                            "user_id": user_id or "",
+                        })
+                    # Track per-model usage
+                    for model_name, usage in model_token_usage.items():
+                        track_event_if_configured("LLM_Model_Token_Usage", {
+                            "model_deployment_name": model_name,
+                            "input_tokens": str(usage["input_tokens"]),
+                            "output_tokens": str(usage["output_tokens"]),
+                            "total_tokens": str(usage["total_tokens"]),
+                            "user_id": user_id or "",
+                        })
+
+                # Track execution time to Application Insights
+                from common.utils.event_utils import track_event_if_configured as _track_event
+                if agent_execution_times:
+                    self.logger.info(
+                        "[EXECUTION TIME SUMMARY] Orchestration=%.2fs | By agent: %s",
+                        orchestration_duration,
+                        {k: {"total_seconds": round(v["total_seconds"], 2), "invocations": v["invocations"]}
+                         for k, v in agent_execution_times.items()},
+                    )
+                    for agent_name, timing in agent_execution_times.items():
+                        _track_event("Agent_Execution_Time", {
+                            "agent_name": agent_name,
+                            "execution_seconds": str(round(timing["total_seconds"], 3)),
+                            "invocations": str(timing["invocations"]),
+                            "avg_seconds": str(round(timing["total_seconds"] / max(timing["invocations"], 1), 3)),
+                            "model_deployment_name": str(timing.get("model_deployment_name", "")),
+                            "user_id": user_id or "",
+                        })
+                _track_event("Orchestration_Execution_Time", {
+                    "execution_seconds": str(round(orchestration_duration, 3)),
+                    "agent_count": str(len(agent_execution_times)),
+                    "user_id": user_id or "",
+                })
+
+                # Persist token usage to the plan in CosmosDB
+                if plan_id and cumulative_total_tokens > 0:
+                    try:
+                        from common.database.database_factory import DatabaseFactory
+                        db = await DatabaseFactory.get_database(user_id=user_id)
+                        plan = await db.get_plan_by_plan_id(plan_id=plan_id)
+                        if plan:
+                            plan.total_input_tokens = cumulative_input_tokens
+                            plan.total_output_tokens = cumulative_output_tokens
+                            plan.total_tokens = cumulative_total_tokens
+                            plan.usage_by_agent = agent_token_usage
+                            plan.usage_by_model = model_token_usage
+                            plan.orchestration_execution_seconds = round(orchestration_duration, 3)
+                            plan.execution_time_by_agent = {
+                                k: {"total_seconds": round(v["total_seconds"], 3), "invocations": v["invocations"]}
+                                for k, v in agent_execution_times.items()
+                            }
+                            await db.update_item(plan)
+                            self.logger.info(
+                                "Persisted token usage to plan '%s': total=%d",
+                                plan_id, cumulative_total_tokens,
+                            )
+                    except Exception as db_err:
+                        self.logger.warning("Failed to persist token usage to plan: %s", db_err)
+
+            except Exception as tracking_err:
+                self.logger.warning("Failed to track token usage/execution time: %s", tracking_err)

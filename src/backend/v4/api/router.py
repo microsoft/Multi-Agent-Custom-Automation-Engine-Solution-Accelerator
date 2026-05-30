@@ -296,7 +296,28 @@ async def process_request(
             detail=f"Error retrieving team configuration: {e}",
         ) from e
 
-    if not await rai_success(input_task.description, team, memory_store):
+    rai_is_safe, rai_token_usage = await rai_success(input_task.description, team, memory_store)
+
+    # Track RAI agent token usage to Application Insights
+    if rai_token_usage.get("total_tokens", 0) > 0:
+        rai_model = rai_token_usage.get("model_deployment_name", "")
+        track_event_if_configured("LLM_Agent_Token_Usage", {
+            "agent_name": "RAIAgent",
+            "input_tokens": str(rai_token_usage["input_tokens"]),
+            "output_tokens": str(rai_token_usage["output_tokens"]),
+            "total_tokens": str(rai_token_usage["total_tokens"]),
+            "model_deployment_name": rai_model,
+            "user_id": user_id or "",
+        })
+        track_event_if_configured("LLM_Model_Token_Usage", {
+            "model_deployment_name": rai_model,
+            "input_tokens": str(rai_token_usage["input_tokens"]),
+            "output_tokens": str(rai_token_usage["output_tokens"]),
+            "total_tokens": str(rai_token_usage["total_tokens"]),
+            "user_id": user_id or "",
+        })
+
+    if not rai_is_safe:
         track_event_if_configured(
             "Error_RAI_Check_Failed",
             {
@@ -665,7 +686,28 @@ async def user_clarification(
     if user_id and human_feedback.request_id:
         # validate rai
         if human_feedback.answer is not None and str(human_feedback.answer).strip() != "":
-            if not await rai_success(human_feedback.answer, team, memory_store):
+            rai_is_safe, rai_token_usage = await rai_success(human_feedback.answer, team, memory_store)
+
+            # Track RAI agent token usage to Application Insights
+            if rai_token_usage.get("total_tokens", 0) > 0:
+                rai_model = rai_token_usage.get("model_deployment_name", "")
+                track_event_if_configured("LLM_Agent_Token_Usage", {
+                    "agent_name": "RAIAgent",
+                    "input_tokens": str(rai_token_usage["input_tokens"]),
+                    "output_tokens": str(rai_token_usage["output_tokens"]),
+                    "total_tokens": str(rai_token_usage["total_tokens"]),
+                    "model_deployment_name": rai_model,
+                    "user_id": user_id or "",
+                })
+                track_event_if_configured("LLM_Model_Token_Usage", {
+                    "model_deployment_name": rai_model,
+                    "input_tokens": str(rai_token_usage["input_tokens"]),
+                    "output_tokens": str(rai_token_usage["output_tokens"]),
+                    "total_tokens": str(rai_token_usage["total_tokens"]),
+                    "user_id": user_id or "",
+                })
+
+            if not rai_is_safe:
                 event_props = {
                     "status": "Plan Clarification ",
                     "description": human_feedback.answer,
