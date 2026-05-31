@@ -99,14 +99,24 @@ class KnowledgeBaseConfig:
 
     @classmethod
     def from_env(cls, knowledge_base_name: str) -> "KnowledgeBaseConfig":
-        """Build KnowledgeBaseConfig from environment variables."""
-        search_endpoint = config.AZURE_AI_SEARCH_ENDPOINT
-        connection_name = config.AZURE_AI_SEARCH_CONNECTION_NAME
+        """Build KnowledgeBaseConfig from environment variables.
 
-        if not all([knowledge_base_name, search_endpoint, connection_name]):
+        The connection name defaults to ``{knowledge_base_name}-mcp`` which
+        matches the per-KB ``RemoteTool`` / ``ProjectManagedIdentity``
+        connection required by Foundry IQ.  Falls back to the legacy shared
+        ``AZURE_AI_SEARCH_CONNECTION_NAME`` env var if set.
+        """
+        search_endpoint = config.AZURE_AI_SEARCH_ENDPOINT
+        # Per-KB RemoteTool connection: "{kb_name}-mcp"
+        connection_name = (
+            config.AZURE_AI_SEARCH_CONNECTION_NAME
+            or f"{knowledge_base_name}-mcp"
+        )
+
+        if not all([knowledge_base_name, search_endpoint]):
             raise ValueError(
                 f"{cls.__name__}: missing required environment variables "
-                "(AZURE_AI_SEARCH_ENDPOINT, AZURE_AI_SEARCH_CONNECTION_NAME)"
+                "(AZURE_AI_SEARCH_ENDPOINT) or knowledge_base_name"
             )
 
         return cls(

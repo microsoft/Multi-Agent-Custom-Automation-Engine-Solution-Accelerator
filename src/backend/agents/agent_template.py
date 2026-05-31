@@ -24,7 +24,8 @@ from azure.ai.projects.aio import AIProjectClient
 from azure.ai.projects.models import (CodeInterpreterTool, FileSearchTool,
                                       MCPTool, PromptAgentDefinition)
 from azure.core.exceptions import HttpResponseError, ResourceNotFoundError
-from azure.identity.aio import DefaultAzureCredential
+from azure.identity.aio import (DefaultAzureCredential,
+                                ManagedIdentityCredential)
 from common.database.database_base import DatabaseBase
 from common.models.messages import CurrentTeamAgent, TeamConfiguration
 from common.utils.agent_utils import get_database_team_agent_id
@@ -76,7 +77,6 @@ class AgentTemplate:
         self._stack: Optional[AsyncExitStack] = None
         self._agent: Optional[Agent] = None
         self._resolved_vector_store_id: str | None = None
-        self._kb_provider: Any = None
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -88,7 +88,17 @@ class AgentTemplate:
             return self
 
         self._stack = AsyncExitStack()
-        self._credential = DefaultAzureCredential()
+
+        # Use ManagedIdentityCredential with explicit client_id when deployed
+        # (APP_ENV != 'dev') to avoid DefaultAzureCredential chain issues with
+        # user-assigned MI.  Locally, DefaultAzureCredential uses CLI login.
+        import os
+        app_env = os.environ.get("APP_ENV", "prod").lower()
+        client_id = os.environ.get("AZURE_CLIENT_ID")
+        if app_env == "dev":
+            self._credential = DefaultAzureCredential()
+        else:
+            self._credential = ManagedIdentityCredential(client_id=client_id)
         await self._stack.enter_async_context(self._credential)
 
         try:
@@ -132,6 +142,8 @@ class AgentTemplate:
                         MCPTool(
                             server_label=self.kb_config.knowledge_base_name,
                             server_url=kb_mcp_url,
+                            require_approval="never",
+                            allowed_tools=["knowledge_base_retrieve"],
                             project_connection_id=self.kb_config.search_connection_name,
                         )
                     ]
@@ -186,17 +198,14 @@ class AgentTemplate:
                         f"Run infra/scripts/seed_vector_stores.py to create it."
                     )
 
-            # Step 1c — Create AzureAISearchContextProvider for Foundry IQ KB.
+            # Step 1c — Ensure portal MCPTool matches team JSON KB config.
             # Team JSON kb_config is authoritative for KB assignment.
             # If the portal definition has a stale MCPTool (different KB name),
             # update the portal to match.
-            self._kb_provider = None
-            kb_endpoint: str | None = None
             kb_name: str | None = None
 
             # Determine desired KB from team JSON config.
             if self.kb_config:
-                kb_endpoint = self.kb_config.search_endpoint
                 kb_name = self.kb_config.knowledge_base_name
 
             # Check if portal MCPTool matches; update if stale.
@@ -214,11 +223,37 @@ class AgentTemplate:
                                 portal_kb_name = parts[1].split("/")[0]
                             break
 
+                # Also check if connection_id is stale.
+                portal_connection_id: str | None = None
+                for tool_def in definition.tools:
+                    if isinstance(tool_def, MCPTool) and tool_def.server_url:
+                        if "/knowledgebases/" in tool_def.server_url:
+                            portal_connection_id = getattr(
+                                tool_def, "project_connection_id", None
+                            )
+                            break
+
+                needs_update = False
                 if portal_kb_name and portal_kb_name != kb_name:
                     self.logger.warning(
                         "Portal agent '%s' has stale KB '%s' — updating to '%s'.",
                         self.agent_name, portal_kb_name, kb_name,
                     )
+                    needs_update = True
+                elif (
+                    portal_connection_id
+                    and portal_connection_id != self.kb_config.search_connection_name
+                ):
+                    self.logger.warning(
+                        "Portal agent '%s' has stale connection '%s' — "
+                        "updating to '%s'.",
+                        self.agent_name,
+                        portal_connection_id,
+                        self.kb_config.search_connection_name,
+                    )
+                    needs_update = True
+
+                if needs_update:
                     # Rebuild tools list with corrected MCPTool.
                     kb_mcp_url = (
                         f"{self.kb_config.search_endpoint}/knowledgebases/"
@@ -232,6 +267,8 @@ class AgentTemplate:
                     new_tools.append(MCPTool(
                         server_label=kb_name,
                         server_url=kb_mcp_url,
+                        require_approval="never",
+                        allowed_tools=["knowledge_base_retrieve"],
                         project_connection_id=self.kb_config.search_connection_name,
                     ))
                     definition = PromptAgentDefinition(
@@ -261,6 +298,8 @@ class AgentTemplate:
                     tools=[MCPTool(
                         server_label=kb_name,
                         server_url=kb_mcp_url,
+                        require_approval="never",
+                        allowed_tools=["knowledge_base_retrieve"],
                         project_connection_id=self.kb_config.search_connection_name,
                     )],
                 )
@@ -273,30 +312,6 @@ class AgentTemplate:
                     "Added KB MCPTool '%s' to existing agent '%s'.",
                     kb_name, self.agent_name,
                 )
-
-            if kb_endpoint and kb_name:
-                try:
-                    from agent_framework_azure_ai_search import \
-                        AzureAISearchContextProvider
-                except (ModuleNotFoundError, ImportError):
-                    AzureAISearchContextProvider = None  # type: ignore[assignment]
-                    self.logger.warning(
-                        "agent-framework-azure-ai-search not available; "
-                        "KB context provider disabled for '%s'.", self.agent_name,
-                    )
-                if AzureAISearchContextProvider is not None:
-                    self._kb_provider = AzureAISearchContextProvider(
-                        endpoint=kb_endpoint,
-                        knowledge_base_name=kb_name,
-                        credential=self._credential,
-                        mode="agentic",
-                    )
-                    await self._stack.enter_async_context(self._kb_provider)
-                    self.logger.info(
-                        "Created AzureAISearchContextProvider (kb=%s, endpoint=%s).",
-                        kb_name,
-                        kb_endpoint,
-                    )
 
             # Step 2 — Create per-agent Toolbox (only when the agent has tools).
             toolbox_name = f"macae-{self.agent_name}-tools"
@@ -372,6 +387,31 @@ class AgentTemplate:
                         self.logger.debug(
                             "Toolbox '%s' already exists (race).", toolbox_name
                         )
+                elif toolbox_tools and self.kb_config:
+                    # Update the toolbox if KB connection is stale.
+                    desired_conn = self.kb_config.search_connection_name
+                    stale = False
+                    for t in toolbox_tools:
+                        d = t.as_dict() if hasattr(t, "as_dict") else t
+                        if isinstance(d, dict) and "/knowledgebases/" in str(d.get("server_url", "")):
+                            if d.get("project_connection_id") != desired_conn:
+                                stale = True
+                            break
+                    if stale:
+                        try:
+                            await project_client.beta.toolboxes.create_version(
+                                name=toolbox_name,
+                                description=f"Tools for {self.agent_name}",
+                                tools=tools,
+                            )
+                            self.logger.warning(
+                                "Updated toolbox '%s' — stale KB connection.",
+                                toolbox_name,
+                            )
+                        except Exception as _tb_upd:
+                            self.logger.debug(
+                                "Toolbox update failed: %s", _tb_upd,
+                            )
 
                 # Build maf_tools: use toolbox for non-domain-MCP tools
                 # (search, code interpreter, KB MCP).  The Toolbox stores
@@ -404,6 +444,27 @@ class AgentTemplate:
                         self.agent_name,
                         len(maf_tools),
                     )
+
+                # Patch KB MCPTool project_connection_id from authoritative
+                # kb_config.  The toolbox may store a stale connection name if
+                # the toolbox was created before connections were re-seeded.
+                if self.kb_config:
+                    desired_conn = self.kb_config.search_connection_name
+                    for i, t in enumerate(maf_tools):
+                        t_dict = t if isinstance(t, dict) else (t.as_dict() if hasattr(t, "as_dict") else t)
+                        if isinstance(t_dict, dict) and "/knowledgebases/" in str(t_dict.get("server_url", "")):
+                            current_conn = t_dict.get("project_connection_id")
+                            if current_conn != desired_conn:
+                                self.logger.warning(
+                                    "Patching stale KB connection for '%s': '%s' → '%s'.",
+                                    self.agent_name, current_conn, desired_conn,
+                                )
+                                t_dict["project_connection_id"] = desired_conn
+                                maf_tools[i] = t_dict
+                            self.logger.info(
+                                "KB_DEBUG agent='%s' maf_tools[%d] connection=%s",
+                                self.agent_name, i, t_dict.get("project_connection_id"),
+                            )
 
             # Step 2b — Client-side MCP tool.  MCPStreamableHTTPTool connects
             # from *this* process so localhost URLs work (unlike the Toolbox
@@ -459,6 +520,8 @@ class AgentTemplate:
                 desired_portal_tools.append(MCPTool(
                     server_label=self.kb_config.knowledge_base_name,
                     server_url=kb_mcp_url,
+                    require_approval="never",
+                    allowed_tools=["knowledge_base_retrieve"],
                     project_connection_id=self.kb_config.search_connection_name,
                 ))
 
@@ -516,7 +579,7 @@ class AgentTemplate:
                 instructions=effective_instructions,
                 description=self.agent_description,
                 tools=all_tools if all_tools else None,
-                context_providers=[self._kb_provider] if self._kb_provider else None,
+
                 default_options=OpenAIChatOptions(temperature=self.temperature) if self.temperature is not None else None,
             )
             self._agent = await self._stack.enter_async_context(agent)
@@ -588,6 +651,26 @@ class AgentTemplate:
         if self.enable_code_interpreter:
             tools.append(CodeInterpreterTool())
             self.logger.debug("Added CodeInterpreterTool.")
+
+        # KB MCPTool — added to the toolbox so it reaches the Agent's tool list.
+        # The Responses API executes it server-side using project_connection_id.
+        if self.kb_config:
+            kb_mcp_url = (
+                f"{self.kb_config.search_endpoint}/knowledgebases/"
+                f"{self.kb_config.knowledge_base_name}/mcp"
+                f"?api-version=2025-11-01-preview"
+            )
+            tools.append(MCPTool(
+                server_label=self.kb_config.knowledge_base_name,
+                server_url=kb_mcp_url,
+                require_approval="never",
+                allowed_tools=["knowledge_base_retrieve"],
+                project_connection_id=self.kb_config.search_connection_name,
+            ))
+            self.logger.debug(
+                "Added KB MCPTool '%s' to toolbox.",
+                self.kb_config.knowledge_base_name,
+            )
 
         return tools
 
