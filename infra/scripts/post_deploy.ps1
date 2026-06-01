@@ -464,6 +464,22 @@ if ($selectedDataPacks.Count -gt 0) {
     } else {
         Write-Host "  Knowledge bases seeded successfully."
     }
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # 9. Create RemoteTool connections for KB MCP endpoints
+    # ──────────────────────────────────────────────────────────────────────────
+
+    Write-Host "`n── Step 5: Creating KB MCP RemoteTool connections ──" -ForegroundColor Green
+
+    $env:AZURE_AI_SEARCH_ENDPOINT = $searchEndpoint
+    $env:AZURE_AI_PROJECT_ENDPOINT = $projectEndpoint
+    $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/seed_kb_connections.py" -Wait -NoNewWindow -PassThru
+    if ($process.ExitCode -ne 0) {
+        Write-Host "  ERROR: KB connection provisioning failed. Run 'python infra/scripts/seed_kb_connections.py' manually." -ForegroundColor Red
+        $script:hasErrors = $true
+    } else {
+        Write-Host "  KB MCP connections created successfully."
+    }
 } else {
     Write-Host "`n  Selected use case has no datasets to deploy — skipping blob/index/KB steps."
 }

@@ -82,9 +82,6 @@ param gptImageModelVersion string = '2025-12-16'
 @description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2025-01-01-preview.')
 param azureopenaiVersion string = '2024-12-01-preview'
 
-@description('Optional. Version of the Azure AI Agent API version. Defaults to 2025-01-01-preview.')
-param azureAiAgentAPIVersion string = '2025-01-01-preview'
-
 @minLength(1)
 @allowed([
   'Standard'
@@ -1350,10 +1347,6 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
             value: 'https://${aiFoundryAiServicesResourceName}.openai.azure.com/'
           }
           {
-            name: 'AZURE_OPENAI_MODEL_NAME'
-            value: aiFoundryAiServicesModelDeployment.name
-          }
-          {
             name: 'AZURE_OPENAI_DEPLOYMENT_NAME'
             value: aiFoundryAiServicesModelDeployment.name
           }
@@ -1394,17 +1387,13 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
           //   value: aiFoundryAiProjectEndpoint
           // }
           {
-            name: 'AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME'
-            value: aiFoundryAiServicesModelDeployment.name
-          }
-          {
             name: 'APP_ENV'
             value: 'Prod'
           }
-          {
-            name: 'AZURE_AI_SEARCH_CONNECTION_NAME'
-            value: aiSearchConnectionName
-          }
+          // NOTE: AZURE_AI_SEARCH_CONNECTION_NAME intentionally omitted.
+          // The app defaults to per-KB RemoteTool connection names (e.g.
+          // "macae-retail-customer-kb-mcp") which carry ProjectManagedIdentity
+          // auth required by the KB MCP endpoint.
           {
             name: 'AZURE_AI_SEARCH_ENDPOINT'
             value: searchService.outputs.endpoint
@@ -1412,18 +1401,6 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
           {
             name: 'AZURE_COGNITIVE_SERVICES'
             value: 'https://cognitiveservices.azure.com/.default'
-          }
-          {
-            name: 'AZURE_BING_CONNECTION_NAME'
-            value: 'binggrnd'
-          }
-          {
-            name: 'BING_CONNECTION_NAME'
-            value: 'binggrnd'
-          }
-          {
-            name: 'REASONING_MODEL_NAME'
-            value: aiFoundryAiServicesReasoningModelDeployment.name
           }
           {
             name: 'MCP_SERVER_ENDPOINT'
@@ -1474,12 +1451,8 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
             value: aiFoundryAiProjectEndpoint
           }
           {
-            name: 'AZURE_AI_AGENT_API_VERSION'
-            value: azureAiAgentAPIVersion
-          }
-          {
-            name: 'AZURE_AI_AGENT_PROJECT_CONNECTION_STRING'
-            value: '${aiFoundryAiServicesResourceName}.services.ai.azure.com;${aiFoundryAiServicesSubscriptionId};${aiFoundryAiServicesResourceGroupName};${aiFoundryAiProjectResourceName}'
+            name: 'ORCHESTRATOR_MODEL_NAME'
+            value: aiFoundryAiServicesReasoningModelDeployment.name
           }
            {
             name: 'AZURE_DEV_COLLECT_TELEMETRY'
@@ -1899,7 +1872,6 @@ module aiSearchFoundryConnection 'modules/aifp-connections.bicep' = {
     searchServiceResourceId: searchService.outputs.resourceId
     searchServiceLocation: searchService.outputs.location
     searchServiceName: searchService.outputs.name
-    searchApiKey: searchService.outputs.primaryKey
   }
 }
 
@@ -1976,7 +1948,6 @@ output COSMOSDB_ENDPOINT string = 'https://${cosmosDbResourceName}.documents.azu
 output COSMOSDB_DATABASE string = cosmosDbDatabaseName
 output COSMOSDB_CONTAINER string = cosmosDbDatabaseMemoryContainerName
 output AZURE_OPENAI_ENDPOINT string = 'https://${aiFoundryAiServicesResourceName}.openai.azure.com/'
-output AZURE_OPENAI_MODEL_NAME string = aiFoundryAiServicesModelDeployment.name
 output AZURE_OPENAI_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDeployment.name
 output AZURE_OPENAI_RAI_DEPLOYMENT_NAME string = aiFoundryAiServices4_1ModelDeployment.name
 output AZURE_OPENAI_API_VERSION string = azureopenaiVersion
@@ -1987,7 +1958,6 @@ output AZURE_AI_RESOURCE_GROUP string = resourceGroup().name
 output AZURE_AI_PROJECT_NAME string = aiFoundryAiProjectName
 output AZURE_AI_MODEL_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDeployment.name
 // output APPLICATIONINSIGHTS_CONNECTION_STRING string = applicationInsights.outputs.connectionString
-output AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDeployment.name
 // output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiProjectEndpoint
 output APP_ENV string = 'Prod'
 output AI_FOUNDRY_RESOURCE_ID string = !useExistingAiFoundryAiProject
@@ -1998,9 +1968,8 @@ output AZURE_SEARCH_ENDPOINT string = searchService.outputs.endpoint
 #disable-next-line BCP318
 output AZURE_CLIENT_ID string = userAssignedIdentity!.outputs.clientId
 output AZURE_TENANT_ID string = tenant().tenantId
-output AZURE_AI_SEARCH_CONNECTION_NAME string = aiSearchConnectionName
 output AZURE_COGNITIVE_SERVICES string = 'https://cognitiveservices.azure.com/.default'
-output REASONING_MODEL_NAME string = aiFoundryAiServicesReasoningModelDeployment.name
+output ORCHESTRATOR_MODEL_NAME string = aiFoundryAiServicesReasoningModelDeployment.name
 output MCP_SERVER_NAME string = 'MacaeMcpServer'
 output MCP_SERVER_DESCRIPTION string = 'MCP server with greeting, HR, and planning tools'
 output SUPPORTED_MODELS string = supportedModelsList
@@ -2008,8 +1977,6 @@ output AZURE_AI_SEARCH_API_KEY string = '<Deployed-Search-ApiKey>'
 output BACKEND_URL string = 'https://${containerApp.outputs.fqdn}'
 output AZURE_AI_PROJECT_ENDPOINT string = aiFoundryAiProjectEndpoint
 output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiProjectEndpoint
-output AZURE_AI_AGENT_API_VERSION string = azureAiAgentAPIVersion
-output AZURE_AI_AGENT_PROJECT_CONNECTION_STRING string = '${aiFoundryAiServicesResourceName}.services.ai.azure.com;${aiFoundryAiServicesSubscriptionId};${aiFoundryAiServicesResourceGroupName};${aiFoundryAiProjectResourceName}'
 output AZURE_DEV_COLLECT_TELEMETRY  string = 'no'
 
 // Container Registry Outputs
