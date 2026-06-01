@@ -209,7 +209,7 @@ export function usePlanWebSocket({
                         steps: [],
                         next_steps: [],
                         content: formatErrorMessage(errorContent),
-                        raw_data: finalMessage || '',
+                        raw_data: finalMessage,
                     };
                     dispatch(addAgentMessage(errorAgent));
                     dispatch(planFailedFinal());
