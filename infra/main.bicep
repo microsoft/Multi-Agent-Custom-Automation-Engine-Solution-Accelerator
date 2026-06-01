@@ -27,6 +27,7 @@ param solutionUniqueText string = take(uniqueString(subscription().id, resourceG
   'northeurope'
   'southeastasia'
   'uksouth'
+  'westus3'
 ])
 param location string
 
@@ -35,7 +36,7 @@ var deployerInfo = deployer()
 var deployingUserPrincipalId = deployerInfo.objectId
 
 // Restricting deployment to only supported Azure OpenAI regions validated with GPT-4o model
-@allowed(['australiaeast', 'eastus2', 'francecentral', 'japaneast', 'norwayeast', 'swedencentral', 'uksouth', 'westus'])
+@allowed(['australiaeast', 'eastus2', 'francecentral', 'japaneast', 'norwayeast', 'swedencentral', 'uksouth', 'westus', 'westus3'])
 @metadata({
   azd: {
     type: 'location'
@@ -168,31 +169,37 @@ param virtualMachineAdminPassword string?
 // These parameters are changed for testing - please reset as part of publication
 
 @description('Optional. The Container Registry hostname where the docker images for the backend are located.')
-param backendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
+param backendContainerRegistryHostname string = 'macaetas273cr.azurecr.io'
 
 @description('Optional. The Container Image Name to deploy on the backend.')
 param backendContainerImageName string = 'macaebackend'
 
 @description('Optional. The Container Image Tag to deploy on the backend.')
-param backendContainerImageTag string = 'latest_v4'
+param backendContainerImageTag string = 'v1.4.0'
 
 @description('Optional. The Container Registry hostname where the docker images for the frontend are located.')
-param frontendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
+param frontendContainerRegistryHostname string = 'macaetas273cr.azurecr.io'
 
 @description('Optional. The Container Image Name to deploy on the frontend.')
 param frontendContainerImageName string = 'macaefrontend'
 
 @description('Optional. The Container Image Tag to deploy on the frontend.')
-param frontendContainerImageTag string = 'latest_v4'
+param frontendContainerImageTag string = 'v1.3.0'
 
 @description('Optional. The Container Registry hostname where the docker images for the MCP are located.')
-param MCPContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
+param MCPContainerRegistryHostname string = 'macaetas273cr.azurecr.io'
 
 @description('Optional. The Container Image Name to deploy on the MCP.')
 param MCPContainerImageName string = 'macaemcp'
 
 @description('Optional. The Container Image Tag to deploy on the MCP.')
-param MCPContainerImageTag string = 'latest_v4'
+param MCPContainerImageTag string = 'v1.2.0'
+
+@description('Optional. The name of the external ACR to grant AcrPull access to. Derived from the registry hostname.')
+param externalAcrName string = split(backendContainerRegistryHostname, '.')[0]
+
+@description('Optional. The resource group containing the external ACR. Required when ACR is in a different resource group.')
+param externalAcrResourceGroup string = 'rg-macaetas27-3'
 
 @description('Optional. Enable/Disable usage telemetry for module.')
 param enableTelemetry bool = true
@@ -229,6 +236,7 @@ var cosmosDbZoneRedundantHaRegionPairs = {
   southeastasia: 'eastasia'
   uksouth: 'westeurope'
   westeurope: 'northeurope'
+  westus3: 'westus'
 }
 // Paired location calculated based on 'location' parameter. This location will be used by applicable resources if `enableScalability` is set to `true`
 var cosmosDbHaLocation = cosmosDbZoneRedundantHaRegionPairs[location]
@@ -245,6 +253,7 @@ var replicaRegionPairs = {
   southeastasia: 'eastasia'
   uksouth: 'westeurope'
   westeurope: 'northeurope'
+  westus3: 'eastus'
 }
 var replicaLocation = replicaRegionPairs[location]
 
@@ -422,6 +431,19 @@ module userAssignedIdentity 'br/public:avm/res/managed-identity/user-assigned-id
     enableTelemetry: enableTelemetry
   }
 }
+
+// ========== ACR Pull Role Assignment ========== //
+// Grant the user-assigned identity AcrPull on the external container registry.
+var acrRoleTargetRg = !empty(externalAcrResourceGroup) ? externalAcrResourceGroup : resourceGroup().name
+module acrPullRole 'modules/acr-pull-role.bicep' = {
+  name: 'acrPullRoleAssignment-${externalAcrName}'
+  scope: resourceGroup(acrRoleTargetRg)
+  params: {
+    acrName: externalAcrName
+    principalId: userAssignedIdentity.outputs.principalId
+  }
+}
+
 // ========== Virtual Network ========== //
 // WAF best practices for virtual networks: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/virtual-network
 // WAF recommendations for networking and connectivity: https://learn.microsoft.com/en-us/azure/well-architected/security/networking
@@ -1282,6 +1304,7 @@ module containerAppEnvironment 'br/public:avm/res/app/managed-environment:0.11.2
 var containerAppResourceName = 'ca-${solutionSuffix}'
 module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
   name: take('avm.res.app.container-app.${containerAppResourceName}', 64)
+  dependsOn: [acrPullRole]
   params: {
     name: containerAppResourceName
     tags: tags
@@ -1289,6 +1312,12 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
     enableTelemetry: enableTelemetry
     environmentResourceId: containerAppEnvironment.outputs.resourceId
     managedIdentities: { userAssignedResourceIds: [userAssignedIdentity.outputs.resourceId] }
+    registries: [
+      {
+        server: backendContainerRegistryHostname
+        identity: userAssignedIdentity.outputs.resourceId
+      }
+    ]
     ingressTargetPort: 8000
     ingressExternal: true
     activeRevisionsMode: 'Single'
@@ -1469,6 +1498,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.18.1' = {
 var containerAppMcpResourceName = 'ca-mcp-${solutionSuffix}'
 module containerAppMcp 'br/public:avm/res/app/container-app:0.18.1' = {
   name: take('avm.res.app.container-app.${containerAppMcpResourceName}', 64)
+  dependsOn: [acrPullRole]
   params: {
     name: containerAppMcpResourceName
     tags: tags
@@ -1476,6 +1506,12 @@ module containerAppMcp 'br/public:avm/res/app/container-app:0.18.1' = {
     enableTelemetry: enableTelemetry
     environmentResourceId: containerAppEnvironment.outputs.resourceId
     managedIdentities: { userAssignedResourceIds: [userAssignedIdentity.outputs.resourceId] }
+    registries: [
+      {
+        server: MCPContainerRegistryHostname
+        identity: userAssignedIdentity.outputs.resourceId
+      }
+    ]
     ingressTargetPort: 9000
     ingressExternal: true
     activeRevisionsMode: 'Single'
@@ -1610,15 +1646,19 @@ module webServerFarm 'br/public:avm/res/web/serverfarm:0.5.0' = {
 var webSiteResourceName = 'app-${solutionSuffix}'
 module webSite 'modules/web-sites.bicep' = {
   name: take('module.web-sites.${webSiteResourceName}', 64)
+  dependsOn: [acrPullRole]
   params: {
     name: webSiteResourceName
     tags: tags
     location: location
     kind: 'app,linux,container'
     serverFarmResourceId: webServerFarm.?outputs.resourceId
+    managedIdentities: { userAssignedResourceIds: [userAssignedIdentity.outputs.resourceId] }
     siteConfig: {
       linuxFxVersion: 'DOCKER|${frontendContainerRegistryHostname}/${frontendContainerImageName}:${frontendContainerImageTag}'
       minTlsVersion: '1.2'
+      acrUseManagedIdentityCreds: true
+      acrUserManagedIdentityID: userAssignedIdentity.outputs.clientId
     }
     configs: [
       {

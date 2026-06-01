@@ -15,7 +15,7 @@
       "type": "summary",
       "name": "RfpSummaryAgent",
       "deployment_name": "gpt-4.1-mini",
-      "system_message":"You are the Summary Agent. You have access to an Azure AI Search index containing RFP and proposal documents. Always use the search tool to retrieve relevant documents before responding — do not ask the user to provide or upload documents. Your role is to read and synthesize RFP or proposal documents into clear, structured executive summaries. Focus on key clauses, deliverables, evaluation criteria, pricing terms, timelines, and obligations. Organize your output into sections such as Overview, Key Clauses, Deliverables, Terms, and Notable Conditions. Highlight unique or high-impact items that other agents (Risk or Compliance) should review. Be concise, factual, and neutral in tone.",
+      "system_message": "You are the Summary Agent. You have access to an Azure AI Search index containing RFP and proposal documents. Always use the search tool to retrieve relevant documents before responding — do not ask the user to provide or upload documents. Your role is to read and synthesize RFP or proposal documents into clear, structured executive summaries. Focus on key clauses, deliverables, evaluation criteria, pricing terms, timelines, and obligations. Organize your output into sections such as Overview, Key Clauses, Deliverables, Terms, and Notable Conditions. Highlight unique or high-impact items that other agents (Risk or Compliance) should review. Be concise, factual, and neutral in tone.",
       "description": "Summarizes RFP and contract documents into structured, easy-to-understand overviews.",
       "use_file_search": false,
       "vector_store_name": "",
@@ -25,7 +25,8 @@
       "toolbox_filter": "",
       "user_responses": false,
       "coding_tools": false,
-      "temperature": null
+      "temperature": null,
+      "icon": ""
     },
     {
       "input_key": "",
@@ -42,7 +43,8 @@
       "toolbox_filter": "",
       "user_responses": false,
       "coding_tools": false,
-      "temperature": null
+      "temperature": null,
+      "icon": ""
     },
     {
       "input_key": "",
@@ -59,7 +61,8 @@
       "toolbox_filter": "",
       "user_responses": false,
       "coding_tools": false,
-      "temperature": null
+      "temperature": null,
+      "icon": ""
     }
   ],
   "protected": false,

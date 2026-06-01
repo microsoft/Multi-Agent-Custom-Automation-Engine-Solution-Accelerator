@@ -22,7 +22,8 @@
       "toolbox_filter": "",
       "user_responses": false,
       "coding_tools": false,
-      "temperature": null
+      "temperature": null,
+      "icon": ""
     },
     {
       "input_key": "CG_planning_agent",
@@ -39,7 +40,8 @@
       "toolbox_filter": "",
       "user_responses": false,
       "coding_tools": false,
-      "temperature": null
+      "temperature": null,
+      "icon": ""
     },
     {
       "input_key": "CG_research_agent",
@@ -56,7 +58,8 @@
       "toolbox_filter": "",
       "user_responses": false,
       "coding_tools": false,
-      "temperature": null
+      "temperature": null,
+      "icon": ""
     },
     {
       "input_key": "CG_text_content_agent",
@@ -73,7 +76,8 @@
       "toolbox_filter": "",
       "user_responses": false,
       "coding_tools": false,
-      "temperature": null
+      "temperature": null,
+      "icon": ""
     },
     {
       "input_key": "CG_image_content_agent",
@@ -90,7 +94,8 @@
       "toolbox_filter": "image",
       "user_responses": false,
       "coding_tools": false,
-      "temperature": null
+      "temperature": null,
+      "icon": ""
     },
     {
       "input_key": "CG_compliance_agent",
@@ -107,7 +112,8 @@
       "toolbox_filter": "",
       "user_responses": false,
       "coding_tools": false,
-      "temperature": null
+      "temperature": null,
+      "icon": ""
     }
   ],
   "protected": false,

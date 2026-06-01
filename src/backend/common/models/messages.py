@@ -167,6 +167,7 @@ class TeamAgent(BaseModel):
     deployment_name: str
     system_message: str = ""
     description: str = ""
+    icon: str = ""
     use_file_search: bool = False
     vector_store_name: str | None = None
     use_knowledge_base: bool = False
