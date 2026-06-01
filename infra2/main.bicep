@@ -23,99 +23,147 @@ param deploymentFlavor string
 @minLength(3)
 @maxLength(20)
 @description('Optional. A unique application/solution name used as base for all resource naming.')
-param solutionName string = 'agenticappudf'
+param solutionName string = 'macae'
 
 @maxLength(5)
 @description('Optional. A unique text suffix appended to resource names for uniqueness.')
 param solutionUniqueText string = substring(uniqueString(subscription().id, resourceGroup().name, solutionName), 0, 5)
 
-@description('Optional. Primary Azure region for resource deployment.')
-param location string = resourceGroup().location
+@metadata({ azd: { type: 'location' } })
+@description('Required. Azure region for all services. Regions are restricted to guarantee compatibility with paired regions and replica locations for data redundancy and failover scenarios based on articles [Azure regions list](https://learn.microsoft.com/azure/reliability/regions-list) and [Azure Database for MySQL Flexible Server - Azure Regions](https://learn.microsoft.com/azure/mysql/flexible-server/overview#azure-regions).')
+@allowed([
+  'australiaeast'
+  'centralus'
+  'eastasia'
+  'eastus2'
+  'japaneast'
+  'northeurope'
+  'southeastasia'
+  'uksouth'
+])
+param location string
 
 @description('Optional. Secondary location for database resources (example: eastus2).')
 param secondaryLocation string = 'eastus2'
 
-@allowed(['australiaeast', 'eastus', 'eastus2', 'francecentral', 'japaneast', 'swedencentral', 'uksouth', 'westus', 'westus3'])
+var deployerInfo = deployer()
+var deployingUserPrincipalId = deployerInfo.objectId
+
+// Restricting deployment to only supported Azure OpenAI regions validated with GPT-4o model
+@allowed(['australiaeast', 'eastus2', 'francecentral', 'japaneast', 'norwayeast', 'swedencentral', 'uksouth', 'westus','westus3'])
 @metadata({
-  azd:{
+  azd: {
     type: 'location'
     usageName: [
-      'OpenAI.GlobalStandard.gpt4.1-mini,100'
-      'OpenAI.GlobalStandard.text-embedding-3-small,80'
+      'OpenAI.GlobalStandard.gpt4.1, 150'
+      'OpenAI.GlobalStandard.o4-mini, 50'
+      'OpenAI.GlobalStandard.gpt4.1-mini, 50'
     ]
   }
 })
-@description('Required. Location for AI Foundry and model deployments.')
+@description('Required. Location for all AI service resources. This should be one of the supported Azure AI Service locations.')
 param azureAiServiceLocation string
 
-@description('Optional. Location for AI Search service deployment.')
-param searchServiceLocation string = location
+// @description('Optional. Location for AI Search service deployment.')
+// param searchServiceLocation string = location
 
 // ============================================================================
 // Parameters — AI Configuration
 // ============================================================================
 
-@allowed(['Standard', 'GlobalStandard'])
-@description('Optional. GPT model deployment type.')
-param deploymentType string = 'GlobalStandard'
-
-@description('Optional. Name of the GPT model to deploy.')
+@minLength(1)
+@description('Optional. Name of the GPT model to deploy:')
 param gptModelName string = 'gpt-4.1-mini'
 
-@description('Optional. Version of the GPT model to deploy.')
+@description('Optional. Version of the GPT model to deploy. Defaults to 2025-04-14.')
 param gptModelVersion string = '2025-04-14'
 
-@description('Optional. Azure OpenAI API version.')
-param azureOpenaiAPIVersion string = '2025-01-01-preview'
+@minLength(1)
+@description('Optional. Name of the GPT model to deploy:')
+param gpt4_1ModelName string = 'gpt-4.1'
 
-@description('Optional. Azure AI Agent API version.')
-param azureAiAgentApiVersion string = '2025-05-01'
+@description('Optional. Version of the GPT model to deploy. Defaults to 2025-04-14.')
+param gpt4_1ModelVersion string = '2025-04-14'
 
-@minValue(10)
-@description('Optional. Capacity of the GPT deployment (TPM in thousands).')
-param gptDeploymentCapacity int = 150
+@minLength(1)
+@description('Optional. Name of the GPT Reasoning model to deploy:')
+param gptReasoningModelName string = 'o4-mini'
 
-@allowed(['text-embedding-3-small'])
-@description('Optional. Name of the Text Embedding model to deploy.')
-param embeddingModel string = 'text-embedding-3-small'
+@description('Optional. Version of the GPT Reasoning model to deploy. Defaults to 2025-04-16.')
+param gptReasoningModelVersion string = '2025-04-16'
 
-@minValue(10)
-@description('Optional. Capacity of the Embedding Model deployment.')
-param embeddingDeploymentCapacity int = 80
+@description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2024-12-01-preview.')
+param azureOpenaiAPIVersion string = '2024-12-01-preview'
+
+@description('Optional. Version of the Azure AI Agent API version. Defaults to 2025-01-01-preview.')
+param azureAiAgentAPIVersion string = '2025-01-01-preview'
+
+@minLength(1)
+@allowed([
+  'Standard'
+  'GlobalStandard'
+])
+@description('Optional. GPT model deployment type. Defaults to GlobalStandard.')
+param gpt4_1ModelDeploymentType string = 'GlobalStandard'
+
+@minLength(1)
+@allowed([
+  'Standard'
+  'GlobalStandard'
+])
+@description('Optional. GPT model deployment type. Defaults to GlobalStandard.')
+param deploymentType string = 'GlobalStandard'
+
+@minLength(1)
+@allowed([
+  'Standard'
+  'GlobalStandard'
+])
+@description('Optional. GPT model deployment type. Defaults to GlobalStandard.')
+param gptReasoningModelDeploymentType string = 'GlobalStandard'
+
+@description('Optional. AI model deployment token capacity. Defaults to 50 for optimal performance.')
+param gptDeploymentCapacity int = 50
+
+@description('Optional. AI model deployment token capacity. Defaults to 150 for optimal performance.')
+param gpt4_1ModelCapacity int = 150
+
+@description('Optional. AI model deployment token capacity. Defaults to 50 for optimal performance.')
+param gptReasoningModelCapacity int = 50
 
 // ============================================================================
 // Parameters — Compute
 // ============================================================================
 
-@description('Optional. Docker image tag for app deployments.')
-param imageTag string = 'latest_v2'
 
-@description('Optional. Name of the Azure Container Registry.')
-param containerRegistryName string = 'dataagentscontainerreg'
+// These parameters are changed for testing - please reset as part of publication
 
-@allowed(['python', 'dotnet'])
-@description('Optional. Backend runtime stack.')
-param backendRuntimeStack string = 'python'
+@description('Optional. The Container Registry hostname where the docker images for the backend are located.')
+param backendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
 
-@allowed(['F1', 'D1', 'B1', 'B2', 'B3', 'S1', 'S2', 'S3', 'P1', 'P2', 'P3', 'P1v3', 'P1v4'])
-@description('Optional. App Service Plan SKU (used by AVM flavors).')
-param appServicePlanSku string = 'B2'
+@description('Optional. The Container Image Name to deploy on the backend.')
+param backendContainerImageName string = 'macaebackend'
 
-// ============================================================================
-// Parameters — Feature Flags
-// ============================================================================
+@description('Optional. The Container Image Tag to deploy on the backend.')
+param backendContainerImageTag string = 'latest_v4'
 
-@description('Optional. Deploy application components (API, Frontend, Cosmos DB).')
-param deployApp bool = true
+@description('Optional. The Container Registry hostname where the docker images for the frontend are located.')
+param frontendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
 
-@description('Optional. Azure-only mode (deploy Azure SQL instead of Fabric SQL).')
-param azureEnvOnly bool = false
+@description('Optional. The Container Image Name to deploy on the frontend.')
+param frontendContainerImageName string = 'macaefrontend'
 
-@description('Optional. Enable chat history storage.')
-param useChatHistoryEnabled bool = true
+@description('Optional. The Container Image Tag to deploy on the frontend.')
+param frontendContainerImageTag string = 'latest_v4'
 
-@description('Optional. Enable user access token forwarding.')
-param useUserAccessToken bool = false
+@description('Optional. The Container Registry hostname where the docker images for the MCP are located.')
+param MCPContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
+
+@description('Optional. The Container Image Name to deploy on the MCP.')
+param MCPContainerImageName string = 'macaemcp'
+
+@description('Optional. The Container Image Tag to deploy on the MCP.')
+param MCPContainerImageTag string = 'latest_v4'x
 
 // ============================================================================
 // Parameters — Existing Resources
@@ -133,60 +181,37 @@ param existingFoundryProjectResourceId string = ''
 
 @allowed(['User', 'ServicePrincipal'])
 @description('Optional. Principal type of the deploying user. Use ServicePrincipal for CI/CD pipelines with OIDC.')
-param deployingUserPrincipalType string = 'User'
+param deployingUserPrincipalType string = contains(deployer(), 'userPrincipalName') ? 'User' : 'ServicePrincipal'
 
 // ============================================================================
 // Parameters — App Configuration
 // ============================================================================
 
-@allowed(['Retail-sales-analysis', 'Insurance-improve-customer-meetings'])
-@description('Optional. Industry use case for deployment.')
-param usecase string = 'Retail-sales-analysis'
 
-@description('Optional. Primary title in the web app header.')
-param appTitlePrimary string = 'Contoso'
-
-@description('Optional. Secondary title in the web app header.')
-param appTitleSecondary string = '| Unified Data Analysis Agents'
 
 // ============================================================================
 // Parameters — AVM-specific (ignored when deploymentFlavor = 'bicep')
 // ============================================================================
 
-@description('Optional. Tags to apply to all resources (AVM only).')
-param tags object = {}
+// @description('Optional. Tags to apply to all resources (AVM only).')
+// param tags object = {}
 
-@description('Optional. Enable/Disable usage telemetry for AVM modules.')
-param enableTelemetry bool = true
+@description('Optional. The tags to apply to all deployed Azure resources.')
+param tags resourceInput<'Microsoft.Resources/resourceGroups@2025-04-01'>.tags = {}
 
-@description('Optional. Enable monitoring (Log Analytics, App Insights, diagnostic settings).')
+@description('Optional. Enable monitoring applicable resources, aligned with the Well Architected Framework recommendations. This setting enables Application Insights and Log Analytics and configures all the resources applicable resources to send logs. Defaults to false.')
 param enableMonitoring bool = false
 
-@description('Optional. Enable private networking (VNet, private endpoints, DNS zones).')
-param enablePrivateNetworking bool = false
-
-@description('Optional. Enable scalability features (zone redundant App Service Plan).')
+@description('Optional. Enable scalability for applicable resources, aligned with the Well Architected Framework recommendations. Defaults to false.')
 param enableScalability bool = false
 
-@description('Optional. Enable redundancy (zone redundant Cosmos DB, multi-region failover).')
+@description('Optional. Enable redundancy for applicable resources, aligned with the Well Architected Framework recommendations. Defaults to false.')
 param enableRedundancy bool = false
 
-// ============================================================================
-// Parameters — Fabric Capacity
-// ============================================================================
+@description('Optional. Enable private networking for applicable resources, aligned with the Well Architected Framework recommendations. Defaults to false.')
+param enablePrivateNetworking bool = false
 
-@description('Optional. Set to true to auto-create a Fabric workspace during post-provision.')
-param createFabricWorkspace bool = false
 
-@description('Optional. Name of an existing Fabric capacity to reuse. Empty auto-creates when conditions are met.')
-param azureFabricCapacityName string = ''
-
-@allowed(['F2', 'F4', 'F8', 'F16', 'F32', 'F64', 'F128', 'F256', 'F512', 'F1024', 'F2048'])
-@description('Optional. SKU tier of the Fabric capacity resource.')
-param fabricCapacitySku string = 'F2'
-
-@description('Optional. Additional user/service principal object IDs to assign as Fabric Capacity admins.')
-param fabricAdminMembers array = []
 
 @secure()
 @description('Optional. VM admin username (AVM-WAF only, when private networking is enabled).')
