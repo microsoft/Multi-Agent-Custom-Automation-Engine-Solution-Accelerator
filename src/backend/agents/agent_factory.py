@@ -25,8 +25,8 @@ class UnsupportedModelError(Exception):
 
 # ---------------------------------------------------------------------------
 # Universal prompt segment for agents whose team config has user_responses=true.
-# Directs them to request clarification from the chat manager (who routes to
-# UserInteractionAgent) rather than calling ask_user directly.
+# Directs them to call request_user_clarification tool when they need user info.
+# The framework pauses automatically and resumes with the user's answer.
 # ---------------------------------------------------------------------------
 
 _UNIVERSAL_USER_INTERACTION_PROMPT = """

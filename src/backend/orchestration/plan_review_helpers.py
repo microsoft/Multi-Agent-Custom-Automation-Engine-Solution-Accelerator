@@ -45,22 +45,21 @@ def get_magentic_prompt_kwargs(*, has_user_responses: bool = False) -> dict:
     """
     if has_user_responses:
         clarification_policy = """
-USER CLARIFICATION POLICY (UserInteractionAgent is a participant):
-- Do NOT put UserInteractionAgent at the start of the plan to gather info.
-  Domain agents have MCP tools that tell them EXACTLY what information they need
+USER CLARIFICATION POLICY (tool-based — no separate interaction agent):
+- Domain agents have MCP tools that tell them EXACTLY what information they need
   (via workflow blueprints). They know better than you what to ask.
 - PLAN STRUCTURE: Always start with domain agents. They will call their blueprint
-  tools, discover what info is missing, and then REQUEST user clarification.
-- When a domain agent's response says it needs user information (e.g. "I need the
-  following from the user: ..."), set is_progress_being_made=true and select
-  **UserInteractionAgent** as next_speaker. Pass the agent's EXACT question list
-  to UserInteractionAgent — do NOT rephrase, add to, or remove from it.
-- After UserInteractionAgent returns the answers, re-invoke the domain agent that
-  requested the info so it can continue its workflow.
+  tools, discover what info is missing, and call their request_user_clarification
+  tool directly. The framework pauses automatically when they do this.
+- There is NO UserInteractionAgent. Do NOT select any agent named
+  UserInteractionAgent — it does not exist as a participant.
+- When a domain agent needs user info, it calls its request_user_clarification
+  tool. The framework handles the pause/resume cycle automatically. You do NOT
+  need to route to any intermediary agent.
+- After the framework resumes (user answered), the domain agent receives the
+  answer as the tool's return value and continues execution on its own.
 - Do NOT fabricate, assume, or hallucinate missing user-specific details.
-- Do NOT invent your own list of questions. Only relay what domain agents request.
-- NEVER call ask_user yourself — only UserInteractionAgent has that tool.
-- MagenticManager NEVER asks questions directly — it only routes between agents.
+- MagenticManager NEVER asks questions directly — it only routes tasks to agents.
 """
     else:
         clarification_policy = """
@@ -87,9 +86,10 @@ OUTPUT FORMAT (CRITICAL — use EXACTLY this JSON structure, nothing else):
 Use exact agent names from the team list above. Output ONLY the JSON array — no
 markdown fences, no commentary before or after.
 
-IMPORTANT: Do NOT include UserInteractionAgent in the initial plan. Domain agents
-will request user clarification during execution if they need it — the manager
-will then route to UserInteractionAgent at that point dynamically.
+IMPORTANT: There is NO UserInteractionAgent. Do NOT include any user-interaction
+agent in the plan. Domain agents gather user info themselves via their
+request_user_clarification tool — the framework pauses automatically when they
+call it and resumes when the user answers.
 
 Example plan:
 [
@@ -98,7 +98,6 @@ Example plan:
   {{"agent": "MagenticManager", "action": "compile a final onboarding summary for the user"}}
 ]
 
-Note: UserInteractionAgent is the ONLY agent that communicates with the user.
 MagenticManager NEVER asks the user questions directly. MagenticManager NEVER
 lists missing information or asks clarifying questions — it ONLY routes tasks.
 
@@ -147,34 +146,26 @@ EXECUTION RULES:
 - When selecting next_speaker, prefer a work agent that has NOT yet been invoked.
 - MagenticManager MUST NOT generate answers, ask questions, or list missing info.
   It only routes tasks to the appropriate agent.
-- If a domain agent's response indicates it needs user clarification (e.g. it says
-  "I need the following information from the user" or "I need the user to provide X"),
-  this IS progress — set is_progress_being_made to true and select
-  **UserInteractionAgent** as next_speaker with a message describing what is needed.
+- There is NO UserInteractionAgent. Do NOT select it as next_speaker.
+- Domain agents that need user info will call their request_user_clarification
+  tool. The framework handles the pause/resume automatically via
+  function_approval_request events. You do NOT need to route to any special agent.
+- If a domain agent's TEXT response says it needs user information but did NOT call
+  its tool, re-invoke the same agent with the message:
+  "You MUST call the request_user_clarification tool with your questions.
+  Do NOT just list them in text. Call the tool now."
 
-RE-INVOCATION RULE (CRITICAL — PREVENTS QUESTION LOOPS):
-- After UserInteractionAgent returns the user's answers, you MUST re-invoke the
-  original domain agent. Your message to that agent MUST begin with:
-  "USER ANSWERS RECEIVED — PROCEED TO EXECUTION. Do NOT ask questions again.
-  Here are the user's answers:"
-  followed by the COMPLETE verbatim text of the user's answers.
-- This tells the domain agent to skip its question phase and go straight to
-  calling its tools with the provided answers.
-- NEVER re-invoke a domain agent with a vague message like "continue" or
-  "proceed with provisioning". Always include the full user answers.
-
-QUESTION RELAY RULE (CRITICAL — DO NOT SUMMARIZE OR FILTER):
-- When routing to UserInteractionAgent, you MUST include the COMPLETE list of
-  questions from the domain agent — copy them ALL verbatim.
-- Do NOT pick a subset. Do NOT summarize. Do NOT rephrase.
-- Do NOT split questions across multiple turns — send them ALL in one message.
-- The domain agent's question list is carefully derived from its workflow blueprint.
-  Every item matters. Dropping questions will cause the workflow to fail.
+RE-INVOCATION RULE (AFTER USER ANSWERS):
+- After the framework resumes from a function_approval_request (the user answered),
+  the domain agent receives the answer automatically as the tool's return value.
+  You do NOT need to manually relay answers. Just let the workflow continue.
+- If for any reason an agent needs to be re-invoked after clarification, prefix
+  your message with: "USER ANSWERS RECEIVED — PROCEED TO EXECUTION."
 
 STALL DETECTION OVERRIDE:
-- An agent requesting user clarification is NOT stalling. It is a valid step in
-  the workflow. Set is_progress_being_made=true and is_in_loop=false when this
-  happens.
+- An agent calling request_user_clarification is NOT stalling. The framework
+  pauses automatically. Set is_progress_being_made=true and is_in_loop=false.
+- Do NOT treat a framework pause as a stall or loop.
 
 COMPLETION CHECK (CRITICAL):
 Before setting is_request_satisfied to true, you MUST verify:
