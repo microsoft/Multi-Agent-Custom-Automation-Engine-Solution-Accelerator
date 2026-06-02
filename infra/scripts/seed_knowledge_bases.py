@@ -372,15 +372,31 @@ def _create_knowledge_base(kb_name: str, kb_def: dict, headers: dict) -> None:
         print(f"    {resp.text[:200]}")
 
 
+def _parse_only_filter() -> set[str] | None:
+    """Optional CLI filter: --only kb1,kb2  → only process those KB names."""
+    for i, arg in enumerate(sys.argv[1:], start=1):
+        if arg == "--only" and i + 1 < len(sys.argv):
+            return {n.strip() for n in sys.argv[i + 1].split(",") if n.strip()}
+        if arg.startswith("--only="):
+            return {n.strip() for n in arg.split("=", 1)[1].split(",") if n.strip()}
+    return None
+
+
 def main() -> None:
     """Provision all knowledge bases."""
     print(f"Search endpoint: {SEARCH_ENDPOINT}")
     print(f"AI services endpoint: {AI_SERVICES_ENDPOINT or '(not set — KB will have no model)'}")
 
+    only_filter = _parse_only_filter()
+    if only_filter is not None:
+        print(f"Filter (--only): {sorted(only_filter)}")
+
     headers = _get_auth_headers()
     print()
 
     for kb_name, kb_def in KNOWLEDGE_BASES.items():
+        if only_filter is not None and kb_name not in only_filter:
+            continue
         print(f"── {kb_name} ──")
 
         # Step 1: Ensure semantic configs on each source index

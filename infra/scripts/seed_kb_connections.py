@@ -25,9 +25,9 @@ import httpx
 from azure.identity import DefaultAzureCredential
 from dotenv import load_dotenv
 
-# Load .env from src/backend/
+# Load .env from src/backend/ (override=False so env vars set by post_deploy.ps1 take precedence)
 _backend_env = Path(__file__).parent.parent / "src" / "backend" / ".env"
-load_dotenv(str(_backend_env), override=True)
+load_dotenv(str(_backend_env), override=False)
 
 SEARCH_ENDPOINT = os.environ.get("AZURE_AI_SEARCH_ENDPOINT", "").rstrip("/")
 PROJECT_ENDPOINT = os.environ.get("AZURE_AI_PROJECT_ENDPOINT", "").rstrip("/")
@@ -149,11 +149,24 @@ def _create_connection_via_arm(
         return False
 
 
+def _parse_only_filter() -> set[str] | None:
+    """Optional CLI filter: --only kb1,kb2  → only process those KB names."""
+    for i, arg in enumerate(sys.argv[1:], start=1):
+        if arg == "--only" and i + 1 < len(sys.argv):
+            return {n.strip() for n in sys.argv[i + 1].split(",") if n.strip()}
+        if arg.startswith("--only="):
+            return {n.strip() for n in arg.split("=", 1)[1].split(",") if n.strip()}
+    return None
+
+
 def main() -> None:
     """Provision RemoteTool connections for all knowledge bases."""
+    only_filter = _parse_only_filter()
+    selected_kbs = [k for k in KB_NAMES if only_filter is None or k in only_filter]
+
     print(f"Search endpoint: {SEARCH_ENDPOINT}")
     print(f"Project endpoint: {PROJECT_ENDPOINT}")
-    print(f"Knowledge bases: {len(KB_NAMES)}")
+    print(f"Knowledge bases: {len(selected_kbs)}{' (filtered)' if only_filter is not None else ''}")
     print()
 
     credential = DefaultAzureCredential()
@@ -185,7 +198,7 @@ def main() -> None:
     print()
 
     success_count = 0
-    for kb_name in KB_NAMES:
+    for kb_name in selected_kbs:
         connection_name = f"{kb_name}-mcp"
         target_url = f"{SEARCH_ENDPOINT}/knowledgebases/{kb_name}/mcp?api-version={KB_API_VERSION}"
 
@@ -199,8 +212,8 @@ def main() -> None:
         print()
 
     credential.close()
-    print(f"Done — {success_count}/{len(KB_NAMES)} connections provisioned.")
-    if success_count < len(KB_NAMES):
+    print(f"Done — {success_count}/{len(selected_kbs)} connections provisioned.")
+    if success_count < len(selected_kbs):
         sys.exit(1)
 
 
