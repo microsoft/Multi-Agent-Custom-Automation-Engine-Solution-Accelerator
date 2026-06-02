@@ -331,7 +331,7 @@ jobs:
           echo "WEBAPP_URL=$WEBAPP_URL" >> $GITHUB_OUTPUT
 
       - name: Refresh Azure login # token expires for WAF deployments due to long deployment time
-        uses: azure/login@v2
+        uses: azure/login@v3
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
