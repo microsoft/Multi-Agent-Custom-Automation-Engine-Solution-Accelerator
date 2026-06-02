@@ -22,7 +22,8 @@
       "toolbox_filter": "hr",
       "user_responses": true,
       "coding_tools": false,
-      "temperature": null
+      "temperature": null,
+      "icon": ""
     },
     {
       "input_key": "",
@@ -39,7 +40,8 @@
       "toolbox_filter": "tech_support",
       "user_responses": true,
       "coding_tools": false,
-      "temperature": null
+      "temperature": null,
+      "icon": ""
     }
   ],
   "protected": false,

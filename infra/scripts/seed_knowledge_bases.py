@@ -30,9 +30,9 @@ import httpx
 from azure.identity import DefaultAzureCredential
 from dotenv import load_dotenv
 
-# Load .env from src/backend/
+# Load .env from src/backend/ (override=False so env vars set by post_deploy.ps1 take precedence)
 _backend_env = Path(__file__).parent.parent / "src" / "backend" / ".env"
-load_dotenv(str(_backend_env), override=True)
+load_dotenv(str(_backend_env), override=False)
 
 SEARCH_ENDPOINT = os.environ.get("AZURE_AI_SEARCH_ENDPOINT", "").rstrip("/")
 AI_SERVICES_ENDPOINT = os.environ.get("AZURE_OPENAI_ENDPOINT", "").rstrip("/")

@@ -25,7 +25,8 @@
       "toolbox_filter": "",
       "user_responses": false,
       "coding_tools": false,
-      "temperature": null
+      "temperature": null,
+      "icon": ""
     },
     {
       "input_key": "",
@@ -42,7 +43,8 @@
       "toolbox_filter": "",
       "user_responses": false,
       "coding_tools": false,
-      "temperature": null
+      "temperature": null,
+      "icon": ""
     },
     {
       "input_key": "",
@@ -59,7 +61,8 @@
       "toolbox_filter": "",
       "user_responses": false,
       "coding_tools": false,
-      "temperature": null
+      "temperature": null,
+      "icon": ""
     }
   ],
   "protected": false,

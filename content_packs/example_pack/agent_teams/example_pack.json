@@ -22,7 +22,8 @@
       "toolbox_filter": "",
       "user_responses": false,
       "coding_tools": false,
-      "temperature": null
+      "temperature": null,
+      "icon": ""
     },
     {
       "input_key": "research_agent",
@@ -39,7 +40,8 @@
       "toolbox_filter": "",
       "user_responses": false,
       "coding_tools": false,
-      "temperature": null
+      "temperature": null,
+      "icon": ""
     }
   ],
   "description": "Reference pack: a tiny book recommender backed by a CSV-indexed AI Search.",
