@@ -89,7 +89,7 @@ Follow the quick deploy steps on the deployment guide to deploy this solution to
 
 To deploy this solution accelerator, ensure you have access to an [Azure subscription](https://azure.microsoft.com/free/) with the necessary permissions to create **resource groups and resources**. Follow the steps in [Azure Account Set Up](./docs/AzureAccountSetUp.md).
 
-Check the [Azure Products by Region](https://azure.microsoft.com/en-us/explore/global-infrastructure/products-by-region/table) page and select a **region** where the following services are available: Azure OpenAI Service, Azure AI Search, and Azure Semantic Search.
+Check the [Azure Products by Region](https://azure.microsoft.com/en-us/explore/global-infrastructure/products-by-region/table) page and select a **region** where the following services are available: Microsoft Foundry Service, Foundry Models, Azure AI Search, and Search Semantic Ranker.
 
 Here are some example regions where the services are available: East US, East US2, Japan East, UK South, Sweden Central.
 
@@ -98,7 +98,8 @@ Pricing varies per region and usage, so it isn't possible to predict exact costs
 Use the [Azure pricing calculator](https://azure.microsoft.com/en-us/pricing/calculator) to calculate the cost of this solution in your subscription. [Review a sample pricing sheet for the architecture](https://azure.com/e/86d0eefbe4dd4a23981c1d3d4f6fe7ed).
 | Product | Description | Cost |
 |---|---|---|
-| [Azure OpenAI Service](https://learn.microsoft.com/azure/ai-services/openai/) | Powers the AI agents for task automation | [Pricing](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/) |
+| [Microsoft Foundry]( https://learn.microsoft.com/en-us/azure/foundry/) | Powers the AI agents for task automation | [Pricing](https://azure.microsoft.com/en-us/pricing/details/microsoft-foundry/) |
+| [Azure AI Search](https://learn.microsoft.com/en-us/azure/search/) | Powers vector based data search | [Pricing]( https://azure.microsoft.com/en-us/pricing/details/search/) |
 | [Azure Container Apps](https://learn.microsoft.com/azure/container-apps/) | Hosts the web application frontend | [Pricing](https://azure.microsoft.com/pricing/details/container-apps/) |
 | [Azure Cosmos DB](https://learn.microsoft.com/azure/cosmos-db/) | Stores metadata and processing results | [Pricing](https://azure.microsoft.com/pricing/details/cosmos-db/) |
 | [Azure Container Registry](https://learn.microsoft.com/azure/container-registry/) | Stores container images for deployment | [Pricing](https://azure.microsoft.com/pricing/details/container-registry/) |
@@ -159,6 +160,7 @@ By using the *Multi-Agent Custom Automation Engine* solution accelerator, users 
 | Retail Remediation | Customer Success Manager | This approach is seeking a smarter way to manage workflows and ensure customer satisfaction. Challenges include difficulty engaging the right agents, inefficiencies from manual processes, fragmented data, and limited security controls. | Using the Multi-Agent Custom Automation Engine, the Customer Success Manager recruits intelligent agents to analyze satisfaction and recommend steps for remediation. The platform’s modular design and reasoning capabilities allow for analyzing dependencies, planning transitions, and reducing manual rework. |
 | RFP Reviewer  | VP of Finance  | Reviewing RFPs manually under tight deadlines is challenging. Compliance checks and risk assessments slow progress, leaving critical gaps and delaying decisions. | Multi-Agent RFP Reviewer is an intelligent platform addresses these issues by deploying AI agents to review RFPs, identify risks, recommend remediation, and execute actions seamlessly - transforming a labor-intensive process into a fast, accurate, and compliant workflow. |
 | Contract Compliance Reviewer | Compliance Counsel  | Reviewing Contracts for compliance manually under tight deadlines is challenging. Compliance checks and risk assessments slow progress, leaving critical gaps and delaying decisions. | Multi-Agent Contract Compliance Reviewer is an intelligent platform addresses these issues by deploying AI agents to review Contracts, identify risks, recommend remediation, and execute actions seamlessly - transforming a labor-intensive process into a fast, accurate, and compliant workflow. |
+| Content Generation | Marketing Creative | Accelerate your marketing content creation by leveraging AI to interpret creative briefs and generate on-brand, multimodal content. The solution helps marketing teams reduce time-to-market for campaigns by automating the creation of compliant marketing copy and images grounded in product data. | This solution leverages a team of agents to interpret creative briefs, retrieve product information, generate marketing content, and validate brand compliance. |
 
 </details>
 
