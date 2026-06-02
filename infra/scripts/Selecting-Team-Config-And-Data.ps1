@@ -429,6 +429,13 @@ Write-Host "4. Marketing Press Release"
 Write-Host "5. Contract Compliance Review"
 Write-Host "6. Content Generation"
 Write-Host "7. All"
+# ┌─────────────────────────────────────────────────────────────────────────────┐
+# │ NEW CONTENT PACK: Add a new menu entry here.                                │
+# │ Increment the number and update "All" to match the new max.                │
+# │ Example:                                                                    │
+# │   Write-Host "8. Your Pack Name"                                            │
+# │   (then change "7. All" → "8. All" and renumber accordingly)                │
+# └─────────────────────────────────────────────────────────────────────────────┘
 Write-Host "==============================================="
 Write-Host ""
 
@@ -478,6 +485,16 @@ do {
         Write-Host "Selected: Content Generation"
         Write-Host "Note: If you choose to install a single use case, installation of other use cases will require re-running this script."
     }
+    # ┌─────────────────────────────────────────────────────────────────────────┐
+    # │ NEW CONTENT PACK: Add an elseif block for your menu number.             │
+    # │ Example:                                                                │
+    # │   elseif ($useCaseSelection -eq "8") {                                  │
+    # │       $selectedUseCase = "Your Pack Name"                               │
+    # │       $useCaseValid = $true                                             │
+    # │       Write-Host "Selected: Your Pack Name"                             │
+    # │       Write-Host "Note: If you choose to install a single use case..."  │
+    # │   }                                                                     │
+    # └─────────────────────────────────────────────────────────────────────────┘
     else {
         $useCaseValid = $false
         Write-Host "Invalid selection. Please enter a number from 1-7." -ForegroundColor Red
@@ -600,6 +617,11 @@ if($useCaseSelection -eq "4" -or $useCaseSelection -eq "all" -or $useCaseSelecti
 $stIsPublicAccessDisabled = $false
 $srchIsPublicAccessDisabled = $false
 # Enable public access for resources
+# ┌─────────────────────────────────────────────────────────────────────────────┐
+# │ NEW CONTENT PACK: If your pack uploads data to blob/search, add your menu   │
+# │ number to this condition so network access is enabled for WAF deployments.  │
+# │ Example: -or $useCaseSelection -eq "8"                                      │
+# └─────────────────────────────────────────────────────────────────────────────┘
 if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "6" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7"){
     if ($ResourceGroup) {
         # Check if resource group has Type=WAF tag
@@ -797,12 +819,56 @@ if($useCaseSelection -eq "6" -or $useCaseSelection -eq "all" -or $useCaseSelecti
     }
 }
 
+# ┌─────────────────────────────────────────────────────────────────────────────────┐
+# │ NEW CONTENT PACK: Add a deployment block here. Copy and customize this template.│
+# │                                                                                 │
+# │ Three things to change:                                                         │
+# │   1. The menu number in the condition (e.g. "8")                                │
+# │   2. The team config directory path                                             │
+# │   3. The team UUID (must be unique, use a new one from uuidgen or online tool)  │
+# │                                                                                 │
+# │ If your pack has data (CSV/PDF), also add Deploy-ContentPack.                   │
+# │ If it does NOT have data (no pack.json indexes), skip Deploy-ContentPack.       │
+# └─────────────────────────────────────────────────────────────────────────────────┘
+# if($useCaseSelection -eq "8" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "9") {
+#     # ── Step 1: Upload team config ──
+#     Write-Host "Uploading Team Configuration for Your Pack Name..."
+#     $teamConfigDir = "content_packs/your_pack/agent_teams"
+#     try {
+#         $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $teamConfigDir, $userPrincipalId, "00000000-0000-0000-0000-000000000008" -Wait -NoNewWindow -PassThru
+#         if ($process.ExitCode -ne 0) {
+#             Write-Host "Error: Team configuration for Your Pack Name upload failed."
+#             $failedTeamConfigs += 1
+#             $isTeamConfigFailed = $true
+#         }
+#     } catch {
+#         Write-Host "Error: Uploading team configuration failed."
+#         $isTeamConfigFailed = $true
+#     }
+#     Write-Host "Uploaded Team Configuration for Your Pack Name..."
+#
+#     # ── Step 2: Deploy data (only if pack.json has search_indexes or blob_indexes) ──
+#     Write-Host "Deploying data for Your Pack content pack..."
+#     $packResult = Deploy-ContentPack -PackPath "content_packs/your_pack" -StorageAccountName $storageAccount -AiSearchName $aiSearch -PythonCmd $pythonCmd
+#     if (-not $packResult) {
+#         Write-Host "Error: Data deployment for Your Pack failed."
+#         $isSampleDataFailed = $true
+#     } else {
+#         Write-Host "Data deployment for Your Pack completed successfully."
+#     }
+# }
+
 if ($isTeamConfigFailed -or $isSampleDataFailed) {
     Write-Host "`nOne or more tasks failed. Please check the error messages above."
     exit 1
 }
 
 # Seed Foundry IQ Knowledge Bases (depends on indexes existing)
+# ┌─────────────────────────────────────────────────────────────────────────────┐
+# │ NEW CONTENT PACK: Add your menu number to this condition if your pack       │
+# │ uses a Knowledge Base (use_knowledge_base=true in agent config).            │
+# │ Example: -or $useCaseSelection -eq "8"                                      │
+# └─────────────────────────────────────────────────────────────────────────────┘
 if ($useCaseSelection -eq "1" -or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "6" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
     Write-Host "`nSeeding Foundry IQ Knowledge Bases..."
     $process = Start-Process -FilePath $pythonCmd -ArgumentList "scripts/seed_knowledge_bases.py" -Wait -NoNewWindow -PassThru

@@ -123,6 +123,42 @@ KNOWLEDGE_BASES: dict = {
             },
         ],
     },
+
+    # ── Example Pack ──
+    # ┌─────────────────────────────────────────────────────────────────────────┐
+    # │ TEMPLATE: Copy this block when adding a new content pack KB.            │
+    # │                                                                         │
+    # │ To customize:                                                           │
+    # │   1. Change the KB name (dict key) → "<your-pack>-<purpose>-kb"         │
+    # │   2. Change "description" → describe what data this KB provides         │
+    # │   3. Change "deploymentId"/"modelName" if using a different model       │
+    # │   4. Change source "name" → "<your-pack>-<purpose>-ks"                  │
+    # │   5. Change source "description" → what the source data contains        │
+    # │   6. Change "index_name" → must match pack.json search_indexes[].name   │
+    # │   7. Update "searchable_fields" to match your index schema              │
+    # │                                                                         │
+    # │ The KB name here must match "knowledge_base_name" in your agent JSON.   │
+    # └─────────────────────────────────────────────────────────────────────────┘
+    # "example-pack-books-kb": {
+    #     "description": "Example book catalog knowledge base for the starter content pack",
+    #     "model": {
+    #         "kind": "azureOpenAI",
+    #         "azureOpenAIParameters": {
+    #             "resourceUri": AI_SERVICES_ENDPOINT,
+    #             "deploymentId": "gpt-4.1-mini",        # ← CHANGE: model deployment name
+    #             "modelName": "gpt-4.1-mini",           # ← CHANGE: model name
+    #         },
+    #     },
+    #     "sources": [
+    #         {
+    #             "name": "example-pack-books-ks",       # ← CHANGE: unique knowledge source name
+    #             "description": "Book catalog with title, author, genre, year, and summary",  # ← CHANGE
+    #             "index_name": "example-pack-books-index",  # ← CHANGE: must match pack.json
+    #             "searchable_fields": ["content", "title"],  # ← CHANGE: fields in your index
+    #         },
+    #     ],
+    # },
+    
     # ── Contract Compliance ──
     "macae-contract-summary-kb": {
         "description": "Contract summary and key terms knowledge base",
