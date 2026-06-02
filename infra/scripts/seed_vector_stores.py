@@ -23,9 +23,9 @@ from azure.ai.projects import AIProjectClient
 from azure.identity import DefaultAzureCredential
 from dotenv import load_dotenv
 
-# Load .env from src/backend/
+# Load .env from src/backend/ (override=False so env vars set by post_deploy.ps1 take precedence)
 _backend_env = Path(__file__).parent.parent / "src" / "backend" / ".env"
-load_dotenv(str(_backend_env), override=True)
+load_dotenv(str(_backend_env), override=False)
 
 PROJECT_ENDPOINT = os.environ.get("AZURE_AI_PROJECT_ENDPOINT")
 if not PROJECT_ENDPOINT:
@@ -136,9 +136,23 @@ def create_vector_store(oai, name: str, file_paths: list[Path]) -> str:
     return vs.id
 
 
+def _parse_only_filter() -> set[str] | None:
+    """Optional CLI filter: --only name1,name2  → only process those store names."""
+    for i, arg in enumerate(sys.argv[1:], start=1):
+        if arg == "--only" and i + 1 < len(sys.argv):
+            return {n.strip() for n in sys.argv[i + 1].split(",") if n.strip()}
+        if arg.startswith("--only="):
+            return {n.strip() for n in arg.split("=", 1)[1].split(",") if n.strip()}
+    return None
+
+
 def main():
     print(f"Project endpoint: {PROJECT_ENDPOINT}")
     print(f"Data directory: {DATA_DIR}")
+
+    only_filter = _parse_only_filter()
+    if only_filter is not None:
+        print(f"Filter (--only): {sorted(only_filter)}")
     print()
 
     credential = DefaultAzureCredential()
@@ -149,6 +163,8 @@ def main():
     oai = project.get_openai_client()
 
     for store_name, file_paths in VECTOR_STORES.items():
+        if only_filter is not None and store_name not in only_filter:
+            continue
         print(f"\n{'='*60}")
         print(f"Vector store: {store_name}")
         print(f"  Files: {[p.name for p in file_paths if p.is_file()]}")

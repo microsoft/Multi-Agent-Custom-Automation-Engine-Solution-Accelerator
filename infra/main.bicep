@@ -1967,17 +1967,15 @@ module searchServiceIdentity 'br/public:avm/res/search/search-service:0.11.1' = 
 // ========== Search Service MI → AI Services Role Assignment ========== //
 // The Search service system MI needs Cognitive Services OpenAI User on the AI Services account
 // so that Knowledge Base MCP tools can call the model for semantic retrieval.
-resource aiServicesForSearchRole 'Microsoft.CognitiveServices/accounts@2025-06-01' existing = {
-  name: aiFoundryAiServicesResourceName
-}
-
-resource searchServiceOpenAIRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(aiServicesForSearchRole.id, searchServiceName, '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd')
-  scope: aiServicesForSearchRole
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd') // Cognitive Services OpenAI User
-    principalId: searchServiceIdentity.outputs.systemAssignedMIPrincipalId!
-    principalType: 'ServicePrincipal'
+// Deployed via a module scoped to the AI Services account's resource group so it works
+// for both new and existing (cross-RG / cross-subscription) Foundry deployments.
+module searchServiceOpenAIRole 'modules/search-openai-role.bicep' = {
+  name: take('module.search-openai-role.${solutionSuffix}', 64)
+  scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
+  params: {
+    aiFoundryAccountName: aiFoundryAiServicesResourceName
+    searchServicePrincipalId: searchServiceIdentity.outputs.systemAssignedMIPrincipalId!
+    roleNameGuidSeed: searchServiceName
   }
 }
 
