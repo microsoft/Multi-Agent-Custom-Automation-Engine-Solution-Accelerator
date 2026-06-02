@@ -158,7 +158,6 @@ KNOWLEDGE_BASES: dict = {
     #         },
     #     ],
     # },
-    
     # ── Contract Compliance ──
     "macae-contract-summary-kb": {
         "description": "Contract summary and key terms knowledge base",

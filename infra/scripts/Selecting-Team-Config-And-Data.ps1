@@ -428,14 +428,14 @@ Write-Host "3. HR Employee Onboarding"
 Write-Host "4. Marketing Press Release"
 Write-Host "5. Contract Compliance Review"
 Write-Host "6. Content Generation"
-Write-Host "7. All"
 # ┌─────────────────────────────────────────────────────────────────────────────┐
 # │ NEW CONTENT PACK: Add a new menu entry here.                                │
-# │ Increment the number and update "All" to match the new max.                │
+# │ Just add the next number — "All" is always printed last automatically.      │
 # │ Example:                                                                    │
-# │   Write-Host "8. Your Pack Name"                                            │
-# │   (then change "7. All" → "8. All" and renumber accordingly)                │
+# │   Write-Host "7. Your Pack Name"                                            │
 # └─────────────────────────────────────────────────────────────────────────────┘
+$allOption = 7  # ← UPDATE: set this to (highest use-case number + 1) when adding a new pack
+Write-Host "$allOption. All"
 Write-Host "==============================================="
 Write-Host ""
 
@@ -443,8 +443,9 @@ Write-Host ""
 do {
     $useCaseSelection = Read-Host "Please enter the number of the use case you would like to install."
     
-    # Handle both numeric and text input for 'all'
-    if ($useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
+    # Normalize: if the user types the "All" number or the word "all", set to "all"
+    if ($useCaseSelection -eq "all" -or $useCaseSelection -eq "$allOption") {
+        $useCaseSelection = "all"
         $selectedUseCase = "All"
         $useCaseValid = $true
         Write-Host "Selected: All use cases will be installed."
@@ -488,16 +489,17 @@ do {
     # ┌─────────────────────────────────────────────────────────────────────────┐
     # │ NEW CONTENT PACK: Add an elseif block for your menu number.             │
     # │ Example:                                                                │
-    # │   elseif ($useCaseSelection -eq "8") {                                  │
+    # │   elseif ($useCaseSelection -eq "7") {                                  │
     # │       $selectedUseCase = "Your Pack Name"                               │
     # │       $useCaseValid = $true                                             │
     # │       Write-Host "Selected: Your Pack Name"                             │
     # │       Write-Host "Note: If you choose to install a single use case..."  │
     # │   }                                                                     │
+    # │ Then update $allOption above to (new number + 1).                       │
     # └─────────────────────────────────────────────────────────────────────────┘
     else {
         $useCaseValid = $false
-        Write-Host "Invalid selection. Please enter a number from 1-7." -ForegroundColor Red
+        Write-Host "Invalid selection. Please enter a number from 1-$allOption." -ForegroundColor Red
     }
 } while (-not $useCaseValid)
 
@@ -581,7 +583,7 @@ $isSampleDataFailed = $false
 $failedTeamConfigs = 0
 
 # Use Case 3 -----=--
-if($useCaseSelection -eq "3" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
+if($useCaseSelection -eq "3" -or $useCaseSelection -eq "all") {
     Write-Host "Uploading Team Configuration for HR Employee Onboarding..."
     $teamConfigDir = "content_packs/hr_onboarding/agent_teams"
     try {
@@ -598,7 +600,7 @@ if($useCaseSelection -eq "3" -or $useCaseSelection -eq "all" -or $useCaseSelecti
 }
 
 # Use Case 4 -----=--
-if($useCaseSelection -eq "4" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
+if($useCaseSelection -eq "4" -or $useCaseSelection -eq "all") {
     Write-Host "Uploading Team Configuration for Marketing Press Release..."
     $teamConfigDir = "content_packs/marketing_press_release/agent_teams"
     try {
@@ -620,9 +622,9 @@ $srchIsPublicAccessDisabled = $false
 # ┌─────────────────────────────────────────────────────────────────────────────┐
 # │ NEW CONTENT PACK: If your pack uploads data to blob/search, add your menu   │
 # │ number to this condition so network access is enabled for WAF deployments.  │
-# │ Example: -or $useCaseSelection -eq "8"                                      │
+# │ Example: -or $useCaseSelection -eq "7"                                      │
 # └─────────────────────────────────────────────────────────────────────────────┘
-if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "6" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7"){
+if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "6" -or $useCaseSelection -eq "all"){
     if ($ResourceGroup) {
         # Check if resource group has Type=WAF tag
         $rgTypeTag = (az group show --name $ResourceGroup --query "tags.Type" -o tsv 2>$null)
@@ -714,7 +716,7 @@ if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection 
 
 
 
-if($useCaseSelection -eq "1" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
+if($useCaseSelection -eq "1" -or $useCaseSelection -eq "all") {
     Write-Host "Uploading Team Configuration for RFP Evaluation..."
     $teamConfigDir = "content_packs/rfp_evaluation/agent_teams"
     try {
@@ -741,7 +743,7 @@ if($useCaseSelection -eq "1" -or $useCaseSelection -eq "all" -or $useCaseSelecti
 }
 
 
-if($useCaseSelection -eq "5" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
+if($useCaseSelection -eq "5" -or $useCaseSelection -eq "all") {
     Write-Host "Uploading Team Configuration for Contract Compliance Review..."
     $teamConfigDir = "content_packs/contract_compliance/agent_teams"
     try {
@@ -767,7 +769,7 @@ if($useCaseSelection -eq "5" -or $useCaseSelection -eq "all" -or $useCaseSelecti
     }
 }
 
-if($useCaseSelection -eq "2" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
+if($useCaseSelection -eq "2" -or $useCaseSelection -eq "all") {
     Write-Host "Uploading Team Configuration for Retail Customer Satisfaction..."
     $teamConfigDir = "content_packs/retail_customer/agent_teams"
     try {
@@ -793,7 +795,7 @@ if($useCaseSelection -eq "2" -or $useCaseSelection -eq "all" -or $useCaseSelecti
     }
 }
 
-if($useCaseSelection -eq "6" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
+if($useCaseSelection -eq "6" -or $useCaseSelection -eq "all") {
     Write-Host "Uploading Team Configuration for Content Generation..."
     $teamConfigDir = "content_packs/content_gen/agent_teams"
     try {
@@ -827,10 +829,11 @@ if($useCaseSelection -eq "6" -or $useCaseSelection -eq "all" -or $useCaseSelecti
 # │   2. The team config directory path                                             │
 # │   3. The team UUID (must be unique, use a new one from uuidgen or online tool)  │
 # │                                                                                 │
+# │ The "all" check is handled automatically — just use your number + "all".        │
 # │ If your pack has data (CSV/PDF), also add Deploy-ContentPack.                   │
 # │ If it does NOT have data (no pack.json indexes), skip Deploy-ContentPack.       │
 # └─────────────────────────────────────────────────────────────────────────────────┘
-# if($useCaseSelection -eq "8" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "9") {
+# if($useCaseSelection -eq "7" -or $useCaseSelection -eq "all") {
 #     # ── Step 1: Upload team config ──
 #     Write-Host "Uploading Team Configuration for Your Pack Name..."
 #     $teamConfigDir = "content_packs/your_pack/agent_teams"
@@ -867,19 +870,33 @@ if ($isTeamConfigFailed -or $isSampleDataFailed) {
 # ┌─────────────────────────────────────────────────────────────────────────────┐
 # │ NEW CONTENT PACK: Add your menu number to this condition if your pack       │
 # │ uses a Knowledge Base (use_knowledge_base=true in agent config).            │
-# │ Example: -or $useCaseSelection -eq "8"                                      │
+# │ Example: -or $useCaseSelection -eq "7"                                      │
 # └─────────────────────────────────────────────────────────────────────────────┘
-if ($useCaseSelection -eq "1" -or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "6" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7") {
+if ($useCaseSelection -eq "1" -or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "6" -or $useCaseSelection -eq "all") {
+    # Set env vars needed by seed scripts (they read from env or src/backend/.env)
+    $env:AZURE_AI_SEARCH_ENDPOINT = $(azd env get-value AZURE_AI_SEARCH_ENDPOINT)
+    $env:AZURE_OPENAI_ENDPOINT = $(azd env get-value AZURE_OPENAI_ENDPOINT)
+    $env:AZURE_AI_PROJECT_ENDPOINT = $(azd env get-value AZURE_AI_PROJECT_ENDPOINT)
+
     Write-Host "`nSeeding Foundry IQ Knowledge Bases..."
-    $process = Start-Process -FilePath $pythonCmd -ArgumentList "scripts/seed_knowledge_bases.py" -Wait -NoNewWindow -PassThru
+    $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/seed_knowledge_bases.py" -Wait -NoNewWindow -PassThru
     if ($process.ExitCode -ne 0) {
-        Write-Host "Warning: Knowledge base seeding failed. You can run 'python scripts/seed_knowledge_bases.py' manually after deployment."
+        Write-Host "Warning: Knowledge base seeding failed. You can run 'python infra/scripts/seed_knowledge_bases.py' manually after deployment."
     } else {
         Write-Host "Knowledge bases seeded successfully."
     }
+
+    # Create RemoteTool MCP connections in Foundry for each KB
+    Write-Host "`nCreating KB MCP connections in Foundry..."
+    $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/seed_kb_connections.py" -Wait -NoNewWindow -PassThru
+    if ($process.ExitCode -ne 0) {
+        Write-Host "Warning: KB MCP connection provisioning failed. You can run 'python infra/scripts/seed_kb_connections.py' manually after deployment."
+    } else {
+        Write-Host "KB MCP connections created successfully."
+    }
 }
 
-if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "6" -or $useCaseSelection -eq "all" -or $useCaseSelection -eq "7"){
+if($useCaseSelection -eq "1"-or $useCaseSelection -eq "2" -or $useCaseSelection -eq "5" -or $useCaseSelection -eq "6" -or $useCaseSelection -eq "all"){
     Write-Host "`nTeam configuration upload and sample data processing completed successfully."
 }else {
     Write-Host "`nTeam configuration upload completed successfully."

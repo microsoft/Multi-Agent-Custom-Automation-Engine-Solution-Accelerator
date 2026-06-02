@@ -41,23 +41,27 @@ if not PROJECT_ENDPOINT:
 
 KB_API_VERSION = "2025-11-01-preview"
 
-# All knowledge base names that need RemoteTool connections.
-# This must stay in sync with seed_knowledge_bases.py KNOWLEDGE_BASES dict.
-KB_NAMES = [
-    # Retail Customer Satisfaction
-    "macae-retail-customer-kb",
-    "macae-retail-orders-kb",
-    # Content Generation
-    "macae-content-gen-products-kb",
-    # Contract Compliance
-    "macae-contract-summary-kb",
-    "macae-contract-risk-kb",
-    "macae-contract-compliance-kb",
-    # RFP Evaluation
-    "macae-rfp-summary-kb",
-    "macae-rfp-risk-kb",
-    "macae-rfp-compliance-kb",
-]
+# Dynamically import KB names from seed_knowledge_bases.py to stay in sync automatically.
+try:
+    from seed_knowledge_bases import KNOWLEDGE_BASES
+    KB_NAMES = list(KNOWLEDGE_BASES.keys())
+except ImportError:
+    # Fallback: hardcoded list (kept for environments where import path differs)
+    KB_NAMES = [
+        # Retail Customer Satisfaction
+        "macae-retail-customer-kb",
+        "macae-retail-orders-kb",
+        # Content Generation
+        "macae-content-gen-products-kb",
+        # Contract Compliance
+        "macae-contract-summary-kb",
+        "macae-contract-risk-kb",
+        "macae-contract-compliance-kb",
+        # RFP Evaluation
+        "macae-rfp-summary-kb",
+        "macae-rfp-risk-kb",
+        "macae-rfp-compliance-kb",
+    ]
 
 
 def _parse_project_ids(project_endpoint: str) -> tuple[str, str, str, str]:

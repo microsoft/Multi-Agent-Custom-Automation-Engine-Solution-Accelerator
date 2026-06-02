@@ -1,10 +1,14 @@
+---
+description: Create a new content pack (agent team + data + knowledge base) using the reference template and step-by-step guide.
+---
+
 # Content Packs
 
 Optional, drop-in extensions to the Multi-Agent Custom Automation Engine. A pack
 ships everything needed to add a domain-specific agent team **without touching
 core code**.
 
-The core solution works fine when this folder is empty or absent.
+The core solution works fine when the `content_packs/` folder is empty or absent.
 
 ---
 
@@ -266,3 +270,4 @@ azd up
 Delete the pack folder. Previously uploaded team configs remain in Cosmos until
 deleted via `DELETE /api/v4/team_configs/{team_id}`. Search indexes and blob
 containers are also left in place — clean up with `az search` / `az storage`.
+
