@@ -135,14 +135,14 @@ mcp = factory.create_mcp_server(name=config.server_name, auth=_build_auth())
 def log_server_info():
     """Log server initialization info."""
     summary = factory.get_tool_summary()
-    logger.info("🚀 %s initialized with per-domain routing", config.server_name)
-    logger.info("📊 Total services: %s", summary["total_services"])
-    logger.info("🔧 Total tools: %s", summary["total_tools"])
-    logger.info("🔐 Authentication: %s", "Enabled" if config.enable_auth else "Disabled")
+    logger.info(" %s initialized with per-domain routing", config.server_name)
+    logger.info(" Total services: %s", summary["total_services"])
+    logger.info(" Total tools: %s", summary["total_tools"])
+    logger.info(" Authentication: %s", "Enabled" if config.enable_auth else "Disabled")
 
     for domain, info in summary["services"].items():
         logger.info(
-            "   📁 /%s/mcp: %s tools (%s)",
+            "    /%s/mcp: %s tools (%s)",
             domain,
             info["tool_count"],
             info["class_name"],
