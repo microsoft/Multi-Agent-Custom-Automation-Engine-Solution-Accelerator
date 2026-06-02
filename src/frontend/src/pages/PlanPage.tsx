@@ -20,6 +20,7 @@ import { APIService } from "../api/apiService";
 import { StreamMessage, StreamingPlanUpdate } from "../models";
 import { usePlanCancellationAlert } from "../hooks/usePlanCancellationAlert";
 import PlanCancellationDialog from "../components/common/PlanCancellationDialog";
+import SessionTimeoutDialog from "../components/common/SessionTimeoutDialog";
 import "../styles/PlanPage.css"
 
 // Create API service instance
@@ -74,6 +75,9 @@ const PlanPage: React.FC = () => {
     const [showCancellationDialog, setShowCancellationDialog] = useState<boolean>(false);
     const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
     const [cancellingPlan, setCancellingPlan] = useState<boolean>(false);
+
+    // Session timeout dialog state
+    const [showSessionTimeoutDialog, setShowSessionTimeoutDialog] = useState<boolean>(false);
 
     const [loadingMessage, setLoadingMessage] = useState<string>(loadingMessages[0]);
 
@@ -442,6 +446,19 @@ const PlanPage: React.FC = () => {
 
         return () => unsubscribe();
     }, [scrollToBottom, showToast, formatErrorMessage]);
+
+    // WebsocketMessageType.TIMEOUT_NOTIFICATION
+    useEffect(() => {
+        const unsubscribe = webSocketService.on(WebsocketMessageType.TIMEOUT_NOTIFICATION, (timeoutMessage: any) => {
+            console.log('⏰ Timeout notification received:', timeoutMessage);
+            setShowSessionTimeoutDialog(true);
+            setShowProcessingPlanSpinner(false);
+            setShowBufferingText(false);
+            webSocketService.disconnect();
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     //WebsocketMessageType.AGENT_MESSAGE
     useEffect(() => {
@@ -837,6 +854,15 @@ const PlanPage: React.FC = () => {
                 onConfirm={handleConfirmCancellation}
                 onCancel={handleCancelDialog}
                 loading={cancellingPlan}
+            />
+
+            {/* Session Timeout Dialog */}
+            <SessionTimeoutDialog
+                isOpen={showSessionTimeoutDialog}
+                onGoHome={() => {
+                    setShowSessionTimeoutDialog(false);
+                    navigate('/');
+                }}
             />
         </CoralShellColumn>
     );

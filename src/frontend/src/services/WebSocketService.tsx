@@ -247,6 +247,11 @@ class WebSocketService {
             this.emit(WebsocketMessageType.ERROR_MESSAGE, message.data); // Emit the data
             break;
             }
+            case WebsocketMessageType.TIMEOUT_NOTIFICATION: {
+                console.log("Received TIMEOUT_NOTIFICATION:", message);
+                this.emit(WebsocketMessageType.TIMEOUT_NOTIFICATION, message);
+                break;
+            }
             case WebsocketMessageType.USER_CLARIFICATION_RESPONSE:
             case WebsocketMessageType.REPLAN_APPROVAL_REQUEST:
             case WebsocketMessageType.REPLAN_APPROVAL_RESPONSE:
