@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "11821004587806663240"
+      "templateHash": "2735781366649174779"
     },
     "name": "Multi-Agent Custom Automation Engine - Vanilla Bicep",
     "description": "Vanilla Bicep orchestrator for the Multi-Agent Custom Automation Engine accelerator. This deployment intentionally excludes WAF features such as private networking, scale-out, redundancy, bastion, and VM resources while keeping router-compatible outputs."
@@ -426,37 +426,6 @@
           }
         }
       }
-    },
-    {
-      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
-      "apiVersion": "2025-10-15",
-      "name": "[format('{0}/{1}', variables('cosmosDbResourceName'), variables('cosmosDbDatabaseName'))]",
-      "properties": {
-        "resource": {
-          "id": "[variables('cosmosDbDatabaseName')]"
-        }
-      }
-    },
-    {
-      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
-      "apiVersion": "2025-10-15",
-      "name": "[format('{0}/{1}/{2}', variables('cosmosDbResourceName'), variables('cosmosDbDatabaseName'), variables('cosmosDbDatabaseMemoryContainerName'))]",
-      "properties": {
-        "resource": {
-          "id": "[variables('cosmosDbDatabaseMemoryContainerName')]",
-          "partitionKey": {
-            "paths": [
-              "[variables('cosmosDbDatabaseMemoryPartitionKey')]"
-            ],
-            "kind": "Hash",
-            "version": 2
-          }
-        },
-        "options": {}
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosDbResourceName'), variables('cosmosDbDatabaseName'))]"
-      ]
     },
     {
       "type": "Microsoft.Authorization/roleAssignments",
@@ -1330,7 +1299,11 @@
             }
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('aiFoundryAiServicesSubscriptionId'), variables('aiFoundryAiServicesResourceGroupName')), 'Microsoft.Resources/deployments', take(format('module.ai-foundry-project.{0}', variables('solutionSuffix')), 64))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('aiFoundryAiServicesSubscriptionId'), variables('aiFoundryAiServicesResourceGroupName')), 'Microsoft.Resources/deployments', take(format('module.existing-project-setup.{0}', variables('solutionSuffix')), 64))]"
+      ]
     },
     {
       "type": "Microsoft.Resources/deployments",
@@ -1465,7 +1438,10 @@
             }
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('aiFoundryAiServicesSubscriptionId'), variables('aiFoundryAiServicesResourceGroupName')), 'Microsoft.Resources/deployments', take(format('module.gpt-model-deployment.{0}', variables('solutionSuffix')), 64))]"
+      ]
     },
     {
       "type": "Microsoft.Resources/deployments",
@@ -1600,7 +1576,10 @@
             }
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('aiFoundryAiServicesSubscriptionId'), variables('aiFoundryAiServicesResourceGroupName')), 'Microsoft.Resources/deployments', take(format('module.gpt41-model-deployment.{0}', variables('solutionSuffix')), 64))]"
+      ]
     },
     {
       "type": "Microsoft.Resources/deployments",
@@ -2698,7 +2677,10 @@
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', take(format('module.ai-search.{0}', variables('solutionSuffix')), 64))]"
+        "[resourceId('Microsoft.Resources/deployments', take(format('module.ai-search.{0}', variables('solutionSuffix')), 64))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('aiFoundryAiServicesSubscriptionId'), variables('aiFoundryAiServicesResourceGroupName')), 'Microsoft.Resources/deployments', take(format('module.gpt-model-deployment.{0}', variables('solutionSuffix')), 64))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('aiFoundryAiServicesSubscriptionId'), variables('aiFoundryAiServicesResourceGroupName')), 'Microsoft.Resources/deployments', take(format('module.gpt41-model-deployment.{0}', variables('solutionSuffix')), 64))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('aiFoundryAiServicesSubscriptionId'), variables('aiFoundryAiServicesResourceGroupName')), 'Microsoft.Resources/deployments', take(format('module.reasoning-model-deployment.{0}', variables('solutionSuffix')), 64))]"
       ]
     },
     {
@@ -2863,6 +2845,9 @@
         }
       },
       "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('aiFoundryAiServicesSubscriptionId'), variables('aiFoundryAiServicesResourceGroupName')), 'Microsoft.Resources/deployments', take(format('module.gpt-model-deployment.{0}', variables('solutionSuffix')), 64))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('aiFoundryAiServicesSubscriptionId'), variables('aiFoundryAiServicesResourceGroupName')), 'Microsoft.Resources/deployments', take(format('module.gpt41-model-deployment.{0}', variables('solutionSuffix')), 64))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('aiFoundryAiServicesSubscriptionId'), variables('aiFoundryAiServicesResourceGroupName')), 'Microsoft.Resources/deployments', take(format('module.reasoning-model-deployment.{0}', variables('solutionSuffix')), 64))]",
         "[resourceId('Microsoft.Resources/deployments', take(format('module.storage-account.{0}', variables('solutionSuffix')), 64))]"
       ]
     },
@@ -3034,7 +3019,10 @@
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', take(format('module.app-insights.{0}', variables('solutionSuffix')), 64))]"
+        "[resourceId('Microsoft.Resources/deployments', take(format('module.app-insights.{0}', variables('solutionSuffix')), 64))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('aiFoundryAiServicesSubscriptionId'), variables('aiFoundryAiServicesResourceGroupName')), 'Microsoft.Resources/deployments', take(format('module.gpt-model-deployment.{0}', variables('solutionSuffix')), 64))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('aiFoundryAiServicesSubscriptionId'), variables('aiFoundryAiServicesResourceGroupName')), 'Microsoft.Resources/deployments', take(format('module.gpt41-model-deployment.{0}', variables('solutionSuffix')), 64))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('aiFoundryAiServicesSubscriptionId'), variables('aiFoundryAiServicesResourceGroupName')), 'Microsoft.Resources/deployments', take(format('module.reasoning-model-deployment.{0}', variables('solutionSuffix')), 64))]"
       ]
     },
     {

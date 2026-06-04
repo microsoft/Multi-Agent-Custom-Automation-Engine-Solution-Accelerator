@@ -332,6 +332,7 @@ var aiFoundryAiProjectPrincipalId = useExistingAiFoundryAiProject
 module gpt_model_deployment './modules/ai/ai-foundry-model-deployment.bicep' = {
   name: take('module.gpt-model-deployment.${solutionSuffix}', 64)
   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
+  dependsOn: useExistingAiFoundryAiProject ? [existing_project_setup] : [ai_foundry_project!]
   params: {
     aiServicesAccountName: aiFoundryAiServicesResourceName
     deploymentName: gptModelName
@@ -346,6 +347,7 @@ module gpt_model_deployment './modules/ai/ai-foundry-model-deployment.bicep' = {
 module gpt4_1_model_deployment './modules/ai/ai-foundry-model-deployment.bicep' = {
   name: take('module.gpt41-model-deployment.${solutionSuffix}', 64)
   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
+  dependsOn: [gpt_model_deployment]
   params: {
     aiServicesAccountName: aiFoundryAiServicesResourceName
     deploymentName: gpt4_1ModelName
@@ -360,6 +362,7 @@ module gpt4_1_model_deployment './modules/ai/ai-foundry-model-deployment.bicep' 
 module reasoning_model_deployment './modules/ai/ai-foundry-model-deployment.bicep' = {
   name: take('module.reasoning-model-deployment.${solutionSuffix}', 64)
   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
+  dependsOn: [gpt4_1_model_deployment]
   params: {
     aiServicesAccountName: aiFoundryAiServicesResourceName
     deploymentName: gptReasoningModelName
@@ -464,6 +467,7 @@ module container_app_environment './modules/compute/container-app-environment.bi
 module foundry_search_connection './modules/ai/ai-foundry-connection.bicep' = {
   name: take('module.foundry-search-connection.${solutionSuffix}', 64)
   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
+  dependsOn: [gpt_model_deployment, gpt4_1_model_deployment, reasoning_model_deployment]
   params: {
     solutionName: solutionSuffix
     aiServicesAccountName: aiFoundryAiServicesResourceName
@@ -482,6 +486,7 @@ module foundry_search_connection './modules/ai/ai-foundry-connection.bicep' = {
 module foundry_storage_connection './modules/ai/ai-foundry-connection.bicep' = {
   name: take('module.foundry-storage-connection.${solutionSuffix}', 64)
   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
+  dependsOn: [gpt_model_deployment, gpt4_1_model_deployment, reasoning_model_deployment]
   params: {
     solutionName: solutionSuffix
     aiServicesAccountName: aiFoundryAiServicesResourceName
@@ -501,6 +506,7 @@ module foundry_storage_connection './modules/ai/ai-foundry-connection.bicep' = {
 module foundry_appi_connection './modules/ai/ai-foundry-connection.bicep' = if (!useExistingAiFoundryAiProject) {
   name: take('module.foundry-appi-connection.${solutionSuffix}', 64)
   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
+  dependsOn: [gpt_model_deployment, gpt4_1_model_deployment, reasoning_model_deployment]
   params: {
     solutionName: solutionSuffix
     aiServicesAccountName: aiFoundryAiServicesResourceName
