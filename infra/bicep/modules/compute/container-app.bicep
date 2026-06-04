@@ -1,91 +1,117 @@
-targetScope = 'resourceGroup'
+// ============================================================================
+// Module: Azure Container App
+// Description: Creates an Azure Container App
+// API: Microsoft.App/containerApps@2024-10-02-preview
+// ============================================================================
 
-@description('The name of the Container App.')
+@description('Name of the container app.')
 param name string
 
-@description('The Azure region where the Container App will be deployed.')
-param solutionLocation string
+@description('Azure region for deployment.')
+param location string
 
-@description('Tags to apply to the resource.')
+@description('Resource tags.')
 param tags object = {}
 
-@description('The resource ID of the Container Apps environment.')
-param environmentId string
+@description('Resource ID of the Container Apps Environment.')
+param environmentResourceId string
 
-@description('The containers to deploy in the Container App template.')
+@description('Container definitions.')
 param containers array
 
-@description('Indicates whether the Container App ingress is externally accessible.')
+@description('Enable external ingress.')
 param ingressExternal bool = true
 
-@description('The ingress target port exposed by the Container App.')
-param ingressTargetPort int
+@description('Target port for ingress.')
+param ingressTargetPort int = 80
 
-@description('The ingress transport protocol for the Container App.')
+@description('Ingress transport protocol.')
+@allowed(['auto', 'http', 'http2', 'tcp'])
 param ingressTransport string = 'auto'
 
-@description('Container registry definitions for pulling container images.')
-param registries array = []
+@description('Whether to allow insecure ingress connections.')
+param ingressAllowInsecure bool = false
 
-@description('Secrets available to the Container App.')
-param secrets array = []
+@description('Disable ingress entirely (for background workers).')
+param disableIngress bool = false
 
-@description('The managed identity type assigned to the Container App.')
-param identityType string = 'SystemAssigned'
+@description('Container registry configurations.')
+param registries array?
 
-@description('The user-assigned identities to associate with the Container App when applicable.')
-param userAssignedIdentities object = {}
+@description('Secret definitions.')
+param secrets array?
 
-@description('The CORS policy to apply to ingress when needed.')
+@description('Managed identity configuration.')
+param managedIdentities object = {}
+
+@description('CORS policy configuration.')
 param corsPolicy object = {}
 
-@description('The minimum number of replicas for the Container App.')
-param scaleMinReplicas int = 0
+@description('Active revision mode.')
+@allowed(['Single', 'Multiple'])
+param activeRevisionsMode string = 'Single'
 
-@description('The maximum number of replicas for the Container App.')
-param scaleMaxReplicas int = 10
-
-var containerAppIdentity = identityType == 'None' ? null : {
-  type: identityType
-  userAssignedIdentities: contains(identityType, 'UserAssigned') ? userAssignedIdentities : null
+@description('Scale settings (maxReplicas, minReplicas, rules).')
+param scaleSettings object = {
+  maxReplicas: 10
+  minReplicas: 0
 }
 
-resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
+@description('Workload profile name.')
+param workloadProfileName string?
+
+// ============================================================================
+// Resource Deployment
+// ============================================================================
+var identityConfig = empty(managedIdentities) ? { type: 'None' } : {
+  type: contains(managedIdentities, 'userAssignedResourceIds') ? (contains(managedIdentities, 'systemAssigned') && managedIdentities.systemAssigned ? 'SystemAssigned,UserAssigned' : 'UserAssigned') : 'SystemAssigned'
+  userAssignedIdentities: contains(managedIdentities, 'userAssignedResourceIds') ? reduce(managedIdentities.userAssignedResourceIds, {}, (cur, id) => union(cur, { '${id}': {} })) : null
+}
+
+var ingressConfig = disableIngress ? null : {
+  external: ingressExternal
+  targetPort: ingressTargetPort
+  transport: ingressTransport
+  allowInsecure: ingressAllowInsecure
+  corsPolicy: !empty(corsPolicy) ? corsPolicy : null
+}
+
+resource containerApp 'Microsoft.App/containerApps@2024-10-02-preview' = {
   name: name
-  location: solutionLocation
+  location: location
   tags: tags
-  identity: containerAppIdentity
+  identity: identityConfig
   properties: {
-    managedEnvironmentId: environmentId
+    managedEnvironmentId: environmentResourceId
+    workloadProfileName: workloadProfileName
     configuration: {
-      ingress: {
-        external: ingressExternal
-        targetPort: ingressTargetPort
-        transport: ingressTransport
-        allowInsecure: false
-        corsPolicy: empty(corsPolicy) ? null : corsPolicy
-      }
+      activeRevisionsMode: activeRevisionsMode
+      ingress: ingressConfig
       registries: registries
       secrets: secrets
     }
     template: {
       containers: containers
       scale: {
-        minReplicas: scaleMinReplicas
-        maxReplicas: scaleMaxReplicas
+        minReplicas: scaleSettings.minReplicas
+        maxReplicas: scaleSettings.maxReplicas
+        rules: contains(scaleSettings, 'rules') ? scaleSettings.rules : null
       }
     }
   }
 }
 
-@description('The name of the Container App.')
+// ============================================================================
+// Outputs
+// ============================================================================
+@description('The name of the container app.')
 output name string = containerApp.name
 
-@description('The resource ID of the Container App.')
-output id string = containerApp.id
+@description('The resource ID of the container app.')
+output resourceId string = containerApp.id
 
-@description('The fully qualified domain name of the Container App ingress endpoint.')
-output fqdn string = containerApp.properties.configuration.ingress.fqdn
+@description('The FQDN of the container app.')
+output fqdn string = !disableIngress ? containerApp.properties.configuration.ingress.fqdn : ''
 
-@description('The principal ID of the system-assigned managed identity, if enabled.')
-output principalId string = contains(identityType, 'SystemAssigned') ? containerApp.identity.principalId : ''
+@description('System-assigned identity principal ID.')
+output principalId string = contains(containerApp.identity.type, 'SystemAssigned') ? containerApp.identity.principalId : ''

@@ -1,30 +1,60 @@
-// ========== Storage Account for AI Foundry Workshop ========== //
-targetScope = 'resourceGroup'
+// ============================================================================
+// Module: Storage Account
+// Description: Creates an Azure Storage Account with blob container
+// API: Microsoft.Storage/storageAccounts@2025-08-01
+// ============================================================================
 
-@minLength(3)
-@description('The name of the solution, used as a base for naming all resources.')
+@description('Solution name suffix used to derive the resource name.')
 param solutionName string
 
-@description('The Azure region where storage resources will be deployed.')
-param solutionLocation string
+@description('Name of the storage account.')
+param name string = take('st${toLower(replace(solutionName, '-', ''))}', 24)
 
-@description('Tags to apply to all resources.')
+@description('Azure region for the resource.')
+param location string
+
+@description('Tags to apply to the resource.')
 param tags object = {}
 
-var storageName = take('st${toLower(replace(solutionName, '-', ''))}', 24)
+@description('Storage account SKU.')
+param skuName string = 'Standard_LRS'
 
+@description('Storage account kind.')
+param kind string = 'StorageV2'
+
+@description('Access tier.')
+@allowed(['Hot', 'Cool'])
+param accessTier string = 'Hot'
+
+@description('Allow blob public access.')
+param allowBlobPublicAccess bool = false
+
+@description('Allow shared key access.')
+param allowSharedKeyAccess bool = true
+
+@description('Blob containers to create.')
+param containers array = [
+  {
+    name: 'default'
+    publicAccess: 'None'
+  }
+]
+
+// ============================================================================
+// Resource Deployment
+// ============================================================================
 resource storageAccount 'Microsoft.Storage/storageAccounts@2025-08-01' = {
-  name: storageName
-  location: solutionLocation
+  name: name
+  location: location
   tags: tags
-  kind: 'StorageV2'
+  kind: kind
   sku: {
-    name: 'Standard_LRS'
+    name: skuName
   }
   properties: {
-    accessTier: 'Hot'
-    allowBlobPublicAccess: false
-    allowSharedKeyAccess: true
+    accessTier: accessTier
+    allowBlobPublicAccess: allowBlobPublicAccess
+    allowSharedKeyAccess: allowSharedKeyAccess
     minimumTlsVersion: 'TLS1_2'
     supportsHttpsTrafficOnly: true
     encryption: {
@@ -47,19 +77,25 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2025-08-01'
   name: 'default'
 }
 
-resource defaultContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2025-08-01' = {
+resource blobContainers 'Microsoft.Storage/storageAccounts/blobServices/containers@2025-08-01' = [for container in containers: {
   parent: blobService
-  name: 'default'
+  name: container.name
   properties: {
-    publicAccess: 'None'
+    publicAccess: container.publicAccess
   }
-}
+}]
 
-@description('The resource ID of the storage account.')
-output storageAccountId string = storageAccount.id
+// ============================================================================
+// Outputs
+// ============================================================================
+@description('Resource ID of the Storage Account.')
+output resourceId string = storageAccount.id
 
-@description('The name of the storage account.')
-output storageAccountName string = storageAccount.name
+@description('Name of the Storage Account.')
+output name string = storageAccount.name
 
-@description('The primary blob endpoint of the storage account.')
-output storageBlobEndpoint string = storageAccount.properties.primaryEndpoints.blob
+@description('Primary blob endpoint.')
+output blobEndpoint string = storageAccount.properties.primaryEndpoints.blob
+
+@description('All service endpoints.')
+output serviceEndpoints object = storageAccount.properties.primaryEndpoints

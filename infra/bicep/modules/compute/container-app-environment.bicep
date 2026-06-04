@@ -1,35 +1,43 @@
-targetScope = 'resourceGroup'
+// ============================================================================
+// Module: Azure Container Apps Environment
+// Description: Creates an Azure Container Apps managed environment
+// API: Microsoft.App/managedEnvironments@2024-03-01
+// ============================================================================
 
-@description('The name of the solution, used as the base for resource naming.')
+@description('Solution name used for naming convention.')
 param solutionName string
 
-@description('The Azure region where the Container Apps environment will be deployed.')
-param solutionLocation string
+@description('Name of the Container Apps Environment.')
+param name string = 'cae-${solutionName}'
 
-@description('Tags to apply to the resource.')
+@description('Azure region for deployment.')
+param location string
+
+@description('Resource tags.')
 param tags object = {}
 
-@description('The resource ID of the Log Analytics workspace used for environment logging.')
-param logAnalyticsWorkspaceId string
+@description('Resource ID of the Log Analytics workspace.')
+param logAnalyticsWorkspaceResourceId string
 
-@description('Optional. The subnet resource ID used for Container Apps infrastructure.')
+@description('Subnet resource ID for VNet integration (optional).')
 param infrastructureSubnetId string = ''
 
-@description('Indicates whether the Container Apps environment is zone redundant.')
+@description('Enable zone redundancy.')
 param zoneRedundant bool = false
 
-var name = 'cae-${solutionName}'
-
+// ============================================================================
+// Resource Deployment
+// ============================================================================
 resource containerAppEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = {
   name: name
-  location: solutionLocation
+  location: location
   tags: tags
   properties: {
     appLogsConfiguration: {
       destination: 'log-analytics'
       logAnalyticsConfiguration: {
-        customerId: reference(logAnalyticsWorkspaceId, '2023-09-01').customerId
-        sharedKey: listKeys(logAnalyticsWorkspaceId, '2023-09-01').primarySharedKey
+        customerId: reference(logAnalyticsWorkspaceResourceId, '2023-09-01').customerId
+        sharedKey: listKeys(logAnalyticsWorkspaceResourceId, '2023-09-01').primarySharedKey
       }
     }
     vnetConfiguration: empty(infrastructureSubnetId) ? null : {
@@ -39,14 +47,17 @@ resource containerAppEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' 
   }
 }
 
-@description('The name of the Container Apps environment.')
+// ============================================================================
+// Outputs
+// ============================================================================
+@description('The name of the Container Apps Environment.')
 output name string = containerAppEnvironment.name
 
-@description('The resource ID of the Container Apps environment.')
-output id string = containerAppEnvironment.id
+@description('The resource ID of the Container Apps Environment.')
+output resourceId string = containerAppEnvironment.id
 
-@description('The default domain of the Container Apps environment.')
+@description('The default domain of the Container Apps Environment.')
 output defaultDomain string = containerAppEnvironment.properties.defaultDomain
 
-@description('The static IP address of the Container Apps environment.')
+@description('The static IP address of the Container Apps Environment.')
 output staticIp string = containerAppEnvironment.properties.staticIp

@@ -8,7 +8,8 @@
 @description('Solution name suffix used to derive the resource name.')
 param solutionName string
 
-var name = 'ppg-${solutionName}'
+@description('Name of the proximity placement group.')
+param name string = 'ppg-${solutionName}'
 
 @description('Azure region for the resource.')
 param location string
@@ -16,14 +17,14 @@ param location string
 @description('Tags to apply to the resource.')
 param tags object = {}
 
-@description('Optional. Enable/Disable usage telemetry for module.')
-param enableTelemetry bool = true
-
 @description('Availability zone for the proximity placement group.')
 param availabilityZone int = 1
 
 @description('VM sizes intent for the proximity placement group.')
 param vmSizes array = []
+
+@description('Enable Azure telemetry collection.')
+param enableTelemetry bool = true
 
 // ============================================================================
 // AVM Module Deployment

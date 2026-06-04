@@ -7,16 +7,14 @@
 @description('Solution name suffix used to derive the resource name.')
 param solutionName string
 
-var name = 'vm-${solutionName}'
+@description('Name of the virtual machine.')
+param name string = 'vm-${solutionName}'
 
 @description('Azure region for the resource.')
 param location string
 
 @description('Tags to apply to the resource.')
 param tags object = {}
-
-@description('Optional. Enable/Disable usage telemetry for module.')
-param enableTelemetry bool = true
 
 @description('VM size.')
 param vmSize string = 'Standard_D2s_v5'
@@ -31,9 +29,6 @@ param adminPassword string
 
 @description('Resource ID of the subnet for the VM NIC.')
 param subnetResourceId string
-
-@description('Optional. Diagnostic settings for the resource.')
-param diagnosticSettings array?
 
 @description('OS type for the VM.')
 param osType string = 'Windows'
@@ -52,14 +47,20 @@ param imageReference object = {
 @description('OS disk size in GB.')
 param osDiskSizeGB int = 128
 
-@description('Optional. Resource ID of the maintenance configuration.')
+@description('Resource ID of the maintenance configuration.')
 param maintenanceConfigurationResourceId string?
 
-@description('Optional. Resource ID of the proximity placement group.')
+@description('Resource ID of the proximity placement group.')
 param proximityPlacementGroupResourceId string?
 
-@description('Optional. Monitoring agent extension configuration (data collection rule associations).')
+@description('Monitoring agent extension configuration (data collection rule associations).')
 param extensionMonitoringAgentConfig object?
+
+@description('Diagnostic settings for the resource.')
+param diagnosticSettings array?
+
+@description('Enable Azure telemetry collection.')
+param enableTelemetry bool = true
 
 // ============================================================================
 // AVM Module Deployment

@@ -8,16 +8,14 @@
 @description('Solution name suffix used to derive the resource name.')
 param solutionName string
 
-var name = 'mc-${solutionName}'
+@description('Name of the maintenance configuration.')
+param name string = 'mc-${solutionName}'
 
 @description('Azure region for the resource.')
 param location string
 
 @description('Tags to apply to the resource.')
 param tags object = {}
-
-@description('Optional. Enable/Disable usage telemetry for module.')
-param enableTelemetry bool = true
 
 @description('Maintenance scope.')
 param maintenanceScope string = 'InGuestPatch'
@@ -54,6 +52,9 @@ param installPatches object = {
     ]
   }
 }
+
+@description('Enable Azure telemetry collection.')
+param enableTelemetry bool = true
 
 // ============================================================================
 // AVM Module Deployment

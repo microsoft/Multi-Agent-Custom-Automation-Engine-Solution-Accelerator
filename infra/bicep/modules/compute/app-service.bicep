@@ -1,45 +1,66 @@
-// ========== Key Vault ========== //
-targetScope = 'resourceGroup'
+// ============================================================================
+// Module: App Service
+// Description: Creates an Azure App Service (Web App)
+// API: Microsoft.Web/sites@2025-05-01
+// ============================================================================
 
-@description('Solution Name')
+@description('Solution name suffix used to derive the resource name.')
 param solutionName string
 
-@description('Solution Location')
-param solutionLocation string
+@description('Name of the App Service.')
+param name string = solutionName
 
-@description('Application settings for the App Service.')
+@description('Azure region for the resource.')
+param location string
+
+@description('Tags to apply to the resource.')
+param tags object = {}
+
+@description('Resource ID of the App Service Plan.')
+param serverFarmResourceId string
+
+@description('Docker image name (e.g., DOCKER|registry.azurecr.io/image:tag).')
+param linuxFxVersion string
+
+@description('Application settings key-value pairs.')
 @secure()
 param appSettings object = {}
 
-@description('The resource ID of the App Service Plan.')
-param appServicePlanId string
+@description('Whether to enable Always On.')
+param alwaysOn bool = true
 
-@description('The Docker image name to deploy.')
-param appImageName string
+@description('Kind of web app.')
+param kind string = 'app,linux'
 
-@description('The resource ID of the user-assigned managed identity. If empty, only system-assigned identity is used.')
-param userassignedIdentityId string = ''
+@description('Subnet resource ID for VNet integration.')
+param virtualNetworkSubnetId string = ''
 
+@description('Public network access setting.')
+param publicNetworkAccess string = 'Enabled'
+
+// ============================================================================
+// Resource Deployment
+// ============================================================================
 resource appService 'Microsoft.Web/sites@2025-05-01' = {
-  name: solutionName
-  location: solutionLocation
-  identity: userassignedIdentityId == '' ? {
+  name: name
+  location: location
+  tags: tags
+  kind: kind
+  identity: {
     type: 'SystemAssigned'
-  } : {
-    type: 'SystemAssigned, UserAssigned'
-    userAssignedIdentities: {
-      '${userassignedIdentityId}': {}
-    }
-  }  
+  }
   properties: {
-    serverFarmId: appServicePlanId
+    serverFarmId: serverFarmResourceId
+    publicNetworkAccess: publicNetworkAccess
+    virtualNetworkSubnetId: !empty(virtualNetworkSubnetId) ? virtualNetworkSubnetId : null
     siteConfig: {
-      alwaysOn: true
+      alwaysOn: alwaysOn
       ftpsState: 'Disabled'
-      linuxFxVersion: appImageName
+      linuxFxVersion: linuxFxVersion
     }
     endToEndEncryptionEnabled: true
   }
+
   resource basicPublishingCredentialsPoliciesFtp 'basicPublishingCredentialsPolicies' = {
     name: 'ftp'
     properties: {
@@ -72,9 +93,20 @@ resource configLogs 'Microsoft.Web/sites/config@2025-05-01' = {
   dependsOn: [configAppSettings]
 }
 
-@description('The principal ID of the App Service system-assigned managed identity.')
+// ============================================================================
+// Outputs
+// ============================================================================
+@description('Resource ID of the App Service.')
+output resourceId string = appService.id
+
+@description('Name of the App Service.')
+output name string = appService.name
+
+@description('Default hostname of the App Service.')
+output defaultHostname string = appService.properties.defaultHostName
+
+@description('URL of the App Service.')
+output appUrl string = 'https://${appService.properties.defaultHostName}'
+
+@description('System-assigned identity principal ID.')
 output identityPrincipalId string = appService.identity.principalId
-
-@description('The URL of the deployed App Service.')
-output appUrl string = 'https://${solutionName}.azurewebsites.net'
-

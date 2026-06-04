@@ -8,35 +8,58 @@
 targetScope = 'resourceGroup'
 
 @description('The name of the existing AI Search service.')
-param searchServiceName string
+param name string
 
 @description('The Azure region of the search service.')
-param searchServiceLocation string
+param location string
 
-resource aiSearchIdentity 'Microsoft.Search/searchServices@2025-05-01' = {
-  name: searchServiceName
-  location: searchServiceLocation
+@description('Tags to apply to the resource.')
+param tags object = {}
+
+@description('SKU name for the search service.')
+param skuName string = 'basic'
+
+@description('Number of replicas.')
+param replicaCount int = 1
+
+@description('Number of partitions.')
+param partitionCount int = 1
+
+@description('Hosting mode.')
+@allowed(['Default', 'HighDensity'])
+param hostingMode string = 'Default'
+
+@description('Semantic search tier.')
+param semanticSearch string = 'free'
+
+@description('Whether to disable local authentication.')
+param disableLocalAuth bool = true
+
+@description('Managed identity type for the search service.')
+param managedIdentityType string = 'SystemAssigned'
+
+@description('Public network access setting.')
+param publicNetworkAccess string = 'Enabled'
+
+resource searchServiceUpdate 'Microsoft.Search/searchServices@2025-05-01' = {
+  name: name
+  location: location
+  tags: tags
   sku: {
-    name: 'standard'
+    name: skuName
   }
   identity: {
-    type: 'SystemAssigned'
+    type: managedIdentityType
   }
   properties: {
-    replicaCount: 1
-    partitionCount: 1
-    hostingMode: 'Default'
-    publicNetworkAccess: 'enabled'
-    networkRuleSet: {
-      ipRules: []
-    }
-    encryptionWithCmk: {
-      enforcement: 'Unspecified'
-    }
-    disableLocalAuth: true
-    semanticSearch: 'free'
+    replicaCount: replicaCount
+    partitionCount: partitionCount
+    hostingMode: hostingMode
+    semanticSearch: semanticSearch
+    disableLocalAuth: disableLocalAuth
+    publicNetworkAccess: publicNetworkAccess
   }
 }
 
 @description('The principal ID of the AI Search system-assigned managed identity.')
-output searchPrincipalId string = aiSearchIdentity.identity.principalId
+output systemAssignedMIPrincipalId string = searchServiceUpdate.identity.principalId

@@ -1,54 +1,58 @@
-// ========== log-analytics.bicep ========== //
-// Creates a new Log Analytics Workspace or references an existing one.
+// ============================================================================
+// Module: Log Analytics Workspace
+// Description: Vanilla Bicep module for Log Analytics Workspace
+// Resource: Microsoft.OperationalInsights/workspaces@2023-09-01
+// Docs: https://learn.microsoft.com/azure/templates/microsoft.operationalinsights/workspaces
+// Note: This module only handles NEW workspace creation.
+//       Existing workspace logic is handled in main.bicep.
+// ============================================================================
 
-targetScope = 'resourceGroup'
-
-@description('The name of the solution, used for naming the workspace.')
+@description('Solution name suffix used to derive the resource name.')
 param solutionName string
 
-@description('The Azure region where the workspace will be deployed.')
-param solutionLocation string
+@description('Optional. Override name for the Log Analytics workspace. Defaults to log-{solutionName}.')
+param name string = 'log-${solutionName}'
 
-@description('The resource ID of an existing Log Analytics workspace. If empty, a new one will be created.')
-param existingLogAnalyticsWorkspaceId string = ''
+@description('Azure region for the resource.')
+param location string
 
-var workspaceName = 'log-${solutionName}'
-var useExisting = !empty(existingLogAnalyticsWorkspaceId)
-var existingLawSubscription = useExisting ? split(existingLogAnalyticsWorkspaceId, '/')[2] : ''
-var existingLawResourceGroup = useExisting ? split(existingLogAnalyticsWorkspaceId, '/')[4] : ''
-var existingLawName = useExisting ? split(existingLogAnalyticsWorkspaceId, '/')[8] : ''
+@description('Tags to apply to the resource.')
+param tags object = {}
 
-// ========== Existing Workspace Reference ========== //
+@description('Retention period in days.')
+param retentionInDays int = 365
 
-resource existingLogAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2025-07-01' existing = if (useExisting) {
-  name: existingLawName
-  scope: resourceGroup(existingLawSubscription, existingLawResourceGroup)
-}
+@description('SKU name for the workspace.')
+param skuName string = 'PerGB2018'
 
-// ========== New Workspace ========== //
+// ============================================================================
+// Resource
+// ============================================================================
 
-resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2025-07-01' = if (!useExisting) {
-  name: workspaceName
-  location: solutionLocation
-  tags: {}
+resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
+  name: name
+  location: location
+  tags: tags
   properties: {
-    retentionInDays: 30
+    retentionInDays: retentionInDays
     sku: {
-      name: 'PerGB2018'
+      name: skuName
     }
   }
 }
 
-// ========== Outputs ========== //
+// ============================================================================
+// Outputs
+// ============================================================================
 
-@description('The resource ID of the Log Analytics workspace.')
-output logAnalyticsWorkspaceId string = useExisting ? existingLogAnalyticsWorkspace.id : logAnalytics.id
+@description('Resource ID of the Log Analytics workspace.')
+output resourceId string = logAnalytics.id
 
-@description('The name of the Log Analytics workspace.')
-output logAnalyticsWorkspaceResourceName string = useExisting ? existingLogAnalyticsWorkspace.name : logAnalytics.name
+@description('Name of the Log Analytics workspace.')
+output name string = logAnalytics.name
 
-@description('The resource group of the Log Analytics workspace.')
-output logAnalyticsWorkspaceResourceGroup string = useExisting ? existingLawResourceGroup : resourceGroup().name
+@description('Location of the workspace.')
+output location string = logAnalytics.location
 
-@description('The subscription ID of the Log Analytics workspace.')
-output logAnalyticsWorkspaceSubscription string = useExisting ? existingLawSubscription : subscription().subscriptionId
+@description('Log Analytics workspace customer ID.')
+output logAnalyticsWorkspaceId string = logAnalytics.properties.customerId

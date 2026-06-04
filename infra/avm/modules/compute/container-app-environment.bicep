@@ -1,18 +1,20 @@
 // ============================================================================
-// Module: Azure Container Apps Environment (AVM)
+// Module: Azure Container Apps Environment
+// Description: Creates an Azure Container Apps managed environment
+// API: Microsoft.App/managedEnvironments@2024-03-01
 // ============================================================================
 
 @description('Solution name used for naming convention.')
 param solutionName string
+
+@description('Name of the Container Apps Environment.')
+param name string = 'cae-${solutionName}'
 
 @description('Azure region for deployment.')
 param location string
 
 @description('Resource tags.')
 param tags object = {}
-
-@description('Enable Azure telemetry collection.')
-param enableTelemetry bool = true
 
 @description('Resource ID of the Log Analytics workspace.')
 param logAnalyticsWorkspaceResourceId string
@@ -24,24 +26,23 @@ param infrastructureSubnetId string = ''
 param zoneRedundant bool = false
 
 // ============================================================================
-// Naming
+// Resource Deployment
 // ============================================================================
-
-var environmentName = 'cae-${solutionName}'
-
-// ============================================================================
-// Container Apps Environment (AVM)
-// ============================================================================
-
-module managedEnvironment 'br/public:avm/res/app/managed-environment:0.8.1' = {
-  name: take('avm.res.app.managedenvironment.${environmentName}', 64)
-  params: {
-    name: environmentName
-    location: location
-    tags: tags
-    enableTelemetry: enableTelemetry
-    logAnalyticsWorkspaceResourceId: logAnalyticsWorkspaceResourceId
-    infrastructureSubnetId: !empty(infrastructureSubnetId) ? infrastructureSubnetId : null
+resource containerAppEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = {
+  name: name
+  location: location
+  tags: tags
+  properties: {
+    appLogsConfiguration: {
+      destination: 'log-analytics'
+      logAnalyticsConfiguration: {
+        customerId: reference(logAnalyticsWorkspaceResourceId, '2023-09-01').customerId
+        sharedKey: listKeys(logAnalyticsWorkspaceResourceId, '2023-09-01').primarySharedKey
+      }
+    }
+    vnetConfiguration: empty(infrastructureSubnetId) ? null : {
+      infrastructureSubnetId: infrastructureSubnetId
+    }
     zoneRedundant: zoneRedundant
   }
 }
@@ -49,15 +50,14 @@ module managedEnvironment 'br/public:avm/res/app/managed-environment:0.8.1' = {
 // ============================================================================
 // Outputs
 // ============================================================================
-
 @description('The name of the Container Apps Environment.')
-output name string = managedEnvironment.outputs.name
+output name string = containerAppEnvironment.name
 
 @description('The resource ID of the Container Apps Environment.')
-output resourceId string = managedEnvironment.outputs.resourceId
+output resourceId string = containerAppEnvironment.id
 
 @description('The default domain of the Container Apps Environment.')
-output defaultDomain string = managedEnvironment.outputs.defaultDomain
+output defaultDomain string = containerAppEnvironment.properties.defaultDomain
 
-@description('The static IP of the Container Apps Environment.')
-output staticIp string = managedEnvironment.outputs.staticIp
+@description('The static IP address of the Container Apps Environment.')
+output staticIp string = containerAppEnvironment.properties.staticIp

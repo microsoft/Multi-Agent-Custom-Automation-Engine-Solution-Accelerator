@@ -584,39 +584,7 @@ module log_analytics './modules/monitoring/log-analytics.bicep' = if (!useExisti
     solutionName: solutionSuffix
     location: location
     tags: tags
-    enableTelemetry: enableTelemetry
     retentionInDays: 365
-    publicNetworkAccessForIngestion: enablePrivateNetworking ? 'Disabled' : 'Enabled'
-    publicNetworkAccessForQuery: enablePrivateNetworking ? 'Disabled' : 'Enabled'
-    enableReplication: enableRedundancy
-    replicationLocation: enableRedundancy ? replicaLocation : ''
-    dailyQuotaGb: enableRedundancy ? '150' : ''
-    dataSources: enablePrivateNetworking ? [
-      {
-        tags: tags
-        eventLogName: 'Application'
-        eventTypes: [
-          { eventType: 'Error' }
-          { eventType: 'Warning' }
-          { eventType: 'Information' }
-        ]
-        kind: 'WindowsEvent'
-        name: 'applicationEvent'
-      }
-      {
-        counterName: '% Processor Time'
-        instanceName: '*'
-        intervalSeconds: 60
-        kind: 'WindowsPerformanceCounter'
-        name: 'windowsPerfCounter1'
-        objectName: 'Processor'
-      }
-      {
-        kind: 'IISLogs'
-        name: 'sampleIISLog1'
-        state: 'OnPremiseEnabled'
-      }
-    ] : []
   }
 }
 
@@ -634,7 +602,6 @@ module app_insights './modules/monitoring/app-insights.bicep' = if (enableMonito
     solutionName: solutionSuffix
     location: location
     tags: tags
-    enableTelemetry: enableTelemetry
     workspaceResourceId: logAnalyticsWorkspaceResourceId
     retentionInDays: 365
     disableIpMasking: false
@@ -765,10 +732,10 @@ module privateDnsZoneDeployments './modules/networking/private-dns-zone.bicep' =
 module managed_identity './modules/identity/managed-identity.bicep' = {
   name: take('module.managed-identity.${solutionName}', 64)
   params: {
+    solutionName: solutionSuffix
     identityName: 'id-${solutionSuffix}'
     location: location
     tags: tags
-    enableTelemetry: enableTelemetry
   }
 }
 
@@ -791,36 +758,7 @@ module ai_foundry_project './modules/ai/ai-foundry-project.bicep' = if (!useExis
     solutionName: solutionSuffix
     location: azureAiServiceLocation
     tags: tags
-    enableTelemetry: enableTelemetry
     publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
-    diagnosticSettings: enableMonitoring ? monitoringDiagnosticSettings : null
-    roleAssignments: [
-      {
-        roleDefinitionIdOrName: aiFoundryRoleIds.foundryUser
-        principalId: managed_identity.outputs.principalId
-        principalType: 'ServicePrincipal'
-      }
-      {
-        roleDefinitionIdOrName: aiFoundryRoleIds.azureAiDeveloper
-        principalId: managed_identity.outputs.principalId
-        principalType: 'ServicePrincipal'
-      }
-      {
-        roleDefinitionIdOrName: aiFoundryRoleIds.cognitiveServicesOpenAIUser
-        principalId: managed_identity.outputs.principalId
-        principalType: 'ServicePrincipal'
-      }
-      {
-        roleDefinitionIdOrName: aiFoundryRoleIds.foundryUser
-        principalId: deployingUserPrincipalId
-        principalType: deployerPrincipalType
-      }
-      {
-        roleDefinitionIdOrName: aiFoundryRoleIds.azureAiDeveloper
-        principalId: deployingUserPrincipalId
-        principalType: deployerPrincipalType
-      }
-    ]
   }
 }
 
@@ -914,33 +852,13 @@ module ai_search './modules/ai/ai-search.bicep' = {
     solutionName: solutionSuffix
     location: location
     tags: tags
-    enableTelemetry: enableTelemetry
     skuName: enableScalability ? 'standard' : 'basic'
     replicaCount: 1
     partitionCount: 1
-    hostingMode: 'default'
+    hostingMode: 'Default'
     semanticSearch: 'free'
     disableLocalAuth: true
     publicNetworkAccess: 'Enabled'
-    diagnosticSettings: enableMonitoring ? monitoringDiagnosticSettings : []
-    roleAssignments: [
-      {
-        principalId: managed_identity.outputs.principalId
-        roleDefinitionIdOrName: 'Search Index Data Contributor'
-        principalType: 'ServicePrincipal'
-      }
-      {
-        principalId: deployingUserPrincipalId
-        roleDefinitionIdOrName: 'Search Index Data Contributor'
-        principalType: deployerPrincipalType
-      }
-      {
-        principalId: deployingUserPrincipalId
-        roleDefinitionIdOrName: 'Search Service Contributor'
-        principalType: deployerPrincipalType
-      }
-    ]
-    privateEndpoints: []
   }
 }
 
@@ -973,69 +891,10 @@ module storage_account './modules/data/storage-account.bicep' = {
     solutionName: solutionSuffix
     location: location
     tags: tags
-    enableTelemetry: enableTelemetry
-    allowBlobPublicAccess: false
-    publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
-    networkAcls: {
-      bypass: 'AzureServices'
-      defaultAction: enablePrivateNetworking ? 'Deny' : 'Allow'
-    }
-    containers: [
-      {
-        name: storageContainerNameRetailCustomer
-        publicAccess: 'None'
-      }
-      {
-        name: storageContainerNameRetailOrder
-        publicAccess: 'None'
-      }
-      {
-        name: storageContainerNameRFPSummary
-        publicAccess: 'None'
-      }
-      {
-        name: storageContainerNameRFPRisk
-        publicAccess: 'None'
-      }
-      {
-        name: storageContainerNameRFPCompliance
-        publicAccess: 'None'
-      }
-      {
-        name: storageContainerNameContractSummary
-        publicAccess: 'None'
-      }
-      {
-        name: storageContainerNameContractRisk
-        publicAccess: 'None'
-      }
-      {
-        name: storageContainerNameContractCompliance
-        publicAccess: 'None'
-      }
-    ]
-    diagnosticSettings: enableMonitoring ? monitoringDiagnosticSettings : []
-    roleAssignments: [
-      {
-        principalId: managed_identity.outputs.principalId
-        roleDefinitionIdOrName: 'Storage Blob Data Contributor'
-        principalType: 'ServicePrincipal'
-      }
-      {
-        principalId: deployingUserPrincipalId
-        roleDefinitionIdOrName: 'Storage Blob Data Contributor'
-        principalType: deployerPrincipalType
-      }
-    ]
-    enablePrivateNetworking: enablePrivateNetworking
-    privateEndpointSubnetId: enablePrivateNetworking ? virtualNetwork!.outputs.backendSubnetResourceId : ''
-    privateDnsZoneResourceIds: enablePrivateNetworking ? [
-      privateDnsZoneDeployments[dnsZoneIndex.blob]!.outputs.resourceId
-    ] : []
   }
 }
 
-module cosmosDBModule './modules/data/cosmos-db.bicep' = {
+module cosmosDBModule './modules/data/cosmos-db-nosql.bicep' = {
   name: take('module.cosmos-db.${solutionName}', 64)
   params: {
     solutionName: solutionSuffix
@@ -1048,17 +907,6 @@ module cosmosDBModule './modules/data/cosmos-db.bicep' = {
         partitionKeyPath: '/session_id'
       }
     ]
-    enableTelemetry: enableTelemetry
-    diagnosticSettings: enableMonitoring ? monitoringDiagnosticSettings : []
-    publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
-    enablePrivateNetworking: enablePrivateNetworking
-    privateEndpointSubnetId: enablePrivateNetworking ? virtualNetwork!.outputs.backendSubnetResourceId : ''
-    privateDnsZoneResourceIds: enablePrivateNetworking ? [
-      privateDnsZoneDeployments[dnsZoneIndex.cosmosDb]!.outputs.resourceId
-    ] : []
-    zoneRedundant: enableRedundancy
-    enableAutomaticFailover: enableRedundancy
-    haLocation: enableRedundancy ? cosmosDbHaLocation : ''
   }
 }
 
@@ -1072,7 +920,6 @@ module containerAppEnvironment './modules/compute/container-app-environment.bice
     solutionName: solutionSuffix
     location: location
     tags: tags
-    enableTelemetry: enableTelemetry
     logAnalyticsWorkspaceResourceId: logAnalyticsWorkspaceResourceId
     infrastructureSubnetId: enablePrivateNetworking ? containerSubnetResourceId : ''
     zoneRedundant: enableRedundancy
@@ -1085,7 +932,6 @@ module containerApp './modules/compute/container-app.bicep' = {
     name: 'ca-${solutionSuffix}'
     location: location
     tags: tags
-    enableTelemetry: enableTelemetry
     environmentResourceId: containerAppEnvironment.outputs.resourceId
     ingressExternal: true
     ingressTargetPort: 8000
@@ -1106,8 +952,10 @@ module containerApp './modules/compute/container-app.bicep' = {
         'OPTIONS'
       ]
     }
-    scaleMinReplicas: 1
-    scaleMaxReplicas: enableScalability ? 3 : 1
+    scaleSettings: {
+      minReplicas: 1
+      maxReplicas: enableScalability ? 3 : 1
+    }
     containers: [
       {
         name: 'backend'
@@ -1273,7 +1121,6 @@ module containerAppMcp './modules/compute/container-app.bicep' = {
     name: 'ca-mcp-${solutionSuffix}'
     location: location
     tags: tags
-    enableTelemetry: enableTelemetry
     environmentResourceId: containerAppEnvironment.outputs.resourceId
     ingressExternal: true
     ingressTargetPort: 9000
@@ -1287,8 +1134,10 @@ module containerAppMcp './modules/compute/container-app.bicep' = {
         'http://app-${solutionSuffix}.azurewebsites.net'
       ]
     }
-    scaleMinReplicas: 1
-    scaleMaxReplicas: enableScalability ? 3 : 1
+    scaleSettings: {
+      minReplicas: 1
+      maxReplicas: enableScalability ? 3 : 1
+    }
     containers: [
       {
         name: 'mcp'
@@ -1354,8 +1203,6 @@ module webServerFarm './modules/compute/app-service-plan.bicep' = {
     solutionName: solutionSuffix
     location: location
     tags: tags
-    enableTelemetry: enableTelemetry
-    diagnosticSettings: enableMonitoring ? monitoringDiagnosticSettings : []
     skuName: enableScalability || enableRedundancy ? 'P1v4' : 'B3'
     skuCapacity: enableScalability ? 3 : 1
     zoneRedundant: enableRedundancy
@@ -1368,7 +1215,6 @@ module webSite './modules/compute/app-service.bicep' = {
     solutionName: 'app-${solutionSuffix}'
     location: location
     tags: tags
-    enableTelemetry: enableTelemetry
     serverFarmResourceId: webServerFarm.outputs.resourceId
     linuxFxVersion: 'DOCKER|${frontendContainerRegistryHostname}/${frontendContainerImageName}:${frontendContainerImageTag}'
     appSettings: {
@@ -1380,7 +1226,6 @@ module webSite './modules/compute/app-service.bicep' = {
       AUTH_ENABLED: 'false'
       PROXY_API_REQUESTS: enablePrivateNetworking ? 'true' : 'false'
     }
-    diagnosticSettings: enableMonitoring ? monitoringDiagnosticSettings : []
     virtualNetworkSubnetId: enablePrivateNetworking ? virtualNetwork!.outputs.webserverfarmSubnetResourceId : ''
     publicNetworkAccess: 'Enabled'
   }

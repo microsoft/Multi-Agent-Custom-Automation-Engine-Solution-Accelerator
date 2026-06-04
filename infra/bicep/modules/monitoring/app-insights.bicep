@@ -1,40 +1,75 @@
-// ========== app-insights.bicep ========== //
-// Creates an Application Insights instance linked to a Log Analytics workspace.
+// ============================================================================
+// Module: Application Insights
+// Description: Vanilla Bicep module for Application Insights
+// Resource: Microsoft.Insights/components@2020-02-02
+// Docs: https://learn.microsoft.com/azure/templates/microsoft.insights/components
+// ============================================================================
 
-targetScope = 'resourceGroup'
-
-@description('The name of the solution, used for naming the Application Insights resource.')
+@description('Solution name suffix used to derive the resource name.')
 param solutionName string
 
-@description('The Azure region where Application Insights will be deployed.')
-param solutionLocation string
+@description('Optional. Override name for the Application Insights instance. Defaults to appi-{solutionName}.')
+param name string = 'appi-${solutionName}'
 
-@description('The resource ID of the Log Analytics workspace to link to.')
-param logAnalyticsWorkspaceId string
+@description('Azure region for the resource.')
+param location string
 
-var applicationInsightsName = 'appi-${solutionName}'
+@description('Tags to apply to the resource.')
+param tags object = {}
 
-// ========== Application Insights ========== //
+@description('Resource ID of the Log Analytics workspace to link to.')
+param workspaceResourceId string
 
-resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
-  name: applicationInsightsName
-  location: solutionLocation
-  kind: 'web'
+@description('Application type.')
+param applicationType string = 'web'
+
+@description('Retention period in days.')
+param retentionInDays int = 365
+
+@description('Disable IP masking for security.')
+param disableIpMasking bool = false
+
+@description('Flow type for Application Insights.')
+param flowType string = 'Bluefield'
+
+@description('Kind of Application Insights resource.')
+param kind string = 'web'
+
+// ============================================================================
+// Resource
+// ============================================================================
+
+resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
+  name: name
+  location: location
+  tags: tags
+  kind: kind
   properties: {
-    Application_Type: 'web'
+    Application_Type: applicationType
+    Flow_Type: flowType
+    WorkspaceResourceId: workspaceResourceId
+    RetentionInDays: retentionInDays
+    DisableIpMasking: disableIpMasking
     publicNetworkAccessForIngestion: 'Enabled'
     publicNetworkAccessForQuery: 'Enabled'
-    WorkspaceResourceId: logAnalyticsWorkspaceId
   }
 }
 
-// ========== Outputs ========== //
+// ============================================================================
+// Outputs
+// ============================================================================
 
-@description('The resource ID of the Application Insights instance.')
-output applicationInsightsId string = applicationInsights.id
+@description('Resource ID of the Application Insights instance.')
+output resourceId string = appInsights.id
 
-@description('The connection string for Application Insights.')
-output applicationInsightsConnectionString string = applicationInsights.properties.ConnectionString
+@description('Name of the Application Insights instance.')
+output name string = appInsights.name
 
-@description('The instrumentation key for Application Insights.')
-output applicationInsightsInstrumentationKey string = applicationInsights.properties.InstrumentationKey
+@description('Instrumentation key for the Application Insights instance.')
+output instrumentationKey string = appInsights.properties.InstrumentationKey
+
+@description('Connection string for the Application Insights instance.')
+output connectionString string = appInsights.properties.ConnectionString
+
+@description('Application ID of the Application Insights instance.')
+output applicationId string = appInsights.properties.AppId

@@ -1,14 +1,14 @@
 // ============================================================================
 // Module: App Service Plan
-// Description: AVM wrapper for Azure App Service Plan with WAF alignment
-// AVM Module: avm/res/web/serverfarm:0.4.1
-// WAF: https://learn.microsoft.com/azure/well-architected/service-guides/app-service-web-apps
+// Description: Creates an Azure App Service Plan
+// API: Microsoft.Web/serverfarms@2025-05-01
 // ============================================================================
 
 @description('Solution name suffix used to derive the resource name.')
 param solutionName string
 
-var appServicePlanName = 'asp-${solutionName}'
+@description('Name of the App Service Plan.')
+param name string = 'asp-${solutionName}'
 
 @description('Azure region for the resource.')
 param location string
@@ -26,36 +26,26 @@ param reserved bool = true
 @description('Kind of the App Service Plan.')
 param kind string = 'linux'
 
-@description('Optional. Enable/Disable usage telemetry for module.')
-param enableTelemetry bool = true
-
-// --- WAF: Monitoring ---
-@description('Diagnostic settings for monitoring.')
-param diagnosticSettings array = []
-
-// --- WAF: Scalability ---
-@description('Number of instances (workers). WAF recommends 3+ for production.')
+@description('Number of instances (workers).')
 param skuCapacity int = 1
 
-// --- WAF: Redundancy ---
 @description('Enable zone redundancy. Requires Premium SKU (P1v3+).')
 param zoneRedundant bool = false
 
 // ============================================================================
-// AVM Module Deployment
+// Resource Deployment
 // ============================================================================
-module appServicePlan 'br/public:avm/res/web/serverfarm:0.4.1' = {
-  name: take('avm.res.web.serverfarm.${appServicePlanName}', 64)
-  params: {
-    name: appServicePlanName
-    location: location
-    tags: tags
-    enableTelemetry: enableTelemetry
-    skuName: skuName
-    skuCapacity: skuCapacity
+resource appServicePlan 'Microsoft.Web/serverfarms@2025-05-01' = {
+  name: name
+  location: location
+  tags: tags
+  kind: kind
+  sku: {
+    name: skuName
+    capacity: skuCapacity
+  }
+  properties: {
     reserved: reserved
-    kind: kind
-    diagnosticSettings: !empty(diagnosticSettings) ? diagnosticSettings : []
     zoneRedundant: zoneRedundant
   }
 }
@@ -64,7 +54,7 @@ module appServicePlan 'br/public:avm/res/web/serverfarm:0.4.1' = {
 // Outputs
 // ============================================================================
 @description('Resource ID of the App Service Plan.')
-output resourceId string = appServicePlan.outputs.resourceId
+output resourceId string = appServicePlan.id
 
 @description('Name of the App Service Plan.')
-output name string = appServicePlan.outputs.name
+output name string = appServicePlan.name

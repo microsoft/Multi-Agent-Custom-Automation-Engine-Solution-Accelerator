@@ -137,6 +137,12 @@ param existingFoundryProjectResourceId string = ''
 @description('Optional. Enable or disable usage telemetry for this module.')
 param enableTelemetry bool = true
 
+@description('Optional. Enable or disable monitoring resources such as Application Insights.')
+param enableMonitoring bool = true
+
+@description('Optional. Enable or disable AI Search scalability.')
+param enableScalability bool = false
+
 @description('Optional. Additional tags to apply to deployed resources.')
 param tags object = {}
 
@@ -192,6 +198,7 @@ var aiFoundryAiServicesSubscriptionId = useExistingAiFoundryAiProject ? split(ex
 var aiFoundryAiServicesResourceGroupName = useExistingAiFoundryAiProject ? split(existingFoundryProjectResourceId, '/')[4] : resourceGroup().name
 var aiFoundryAiServicesResourceName = useExistingAiFoundryAiProject ? split(existingFoundryProjectResourceId, '/')[8] : 'aif-${solutionSuffix}'
 var aiFoundryAiProjectResourceName = useExistingAiFoundryAiProject ? split(existingFoundryProjectResourceId, '/')[10] : 'proj-${solutionSuffix}'
+var aiFoundryAiServicesResourceId = useExistingAiFoundryAiProject ? existing_project_setup!.outputs.aiFoundryResourceId : ai_foundry_project!.outputs.resourceId
 var aiFoundryOpenAIEndpoint = 'https://${aiFoundryAiServicesResourceName}.openai.azure.com/'
 var aiFoundryAiProjectEndpoint = 'https://${aiFoundryAiServicesResourceName}.services.ai.azure.com/api/projects/${aiFoundryAiProjectResourceName}'
 var aiSearchConnectionName = 'aifp-srch-connection-${solutionSuffix}'
@@ -245,6 +252,8 @@ resource resourceGroupTags 'Microsoft.Resources/tags@2023-07-01' = {
   }
 }
 
+var useExistingLogAnalytics = !empty(existingLogAnalyticsWorkspaceId)
+
 #disable-next-line no-deployments-resources
 resource avmTelemetry 'Microsoft.Resources/deployments@2025-04-01' = if (enableTelemetry) {
   name: '46d3xbcp.ptn.sa-multiagentcustauteng.bicep.${substring(uniqueString(deployment().name, location), 0, 4)}'
@@ -264,27 +273,32 @@ resource avmTelemetry 'Microsoft.Resources/deployments@2025-04-01' = if (enableT
   }
 }
 
-module log_analytics './modules/monitoring/log-analytics.bicep' = {
+module log_analytics './modules/monitoring/log-analytics.bicep' = if (!useExistingLogAnalytics) {
   name: take('module.log-analytics.${solutionSuffix}', 64)
   params: {
     solutionName: solutionSuffix
-    solutionLocation: solutionLocation
-    existingLogAnalyticsWorkspaceId: existingLogAnalyticsWorkspaceId
+    location: solutionLocation
+    tags: allTags
   }
 }
 
-module app_insights './modules/monitoring/app-insights.bicep' = {
+var logAnalyticsWorkspaceResourceId = useExistingLogAnalytics ? existingLogAnalyticsWorkspaceId : log_analytics!.outputs.resourceId
+var logAnalyticsWorkspaceName = useExistingLogAnalytics ? '' : log_analytics!.outputs.name
+
+module app_insights './modules/monitoring/app-insights.bicep' = if (enableMonitoring) {
   name: take('module.app-insights.${solutionSuffix}', 64)
   params: {
     solutionName: solutionSuffix
-    solutionLocation: solutionLocation
-    logAnalyticsWorkspaceId: log_analytics.outputs.logAnalyticsWorkspaceId
+    location: solutionLocation
+    tags: allTags
+    workspaceResourceId: logAnalyticsWorkspaceResourceId
   }
 }
 
 module userAssignedIdentity './modules/identity/managed-identity.bicep' = {
   name: take('module.user-assigned-identity.${solutionSuffix}', 64)
   params: {
+    solutionName: solutionSuffix
     identityName: 'id-${solutionSuffix}'
     location: solutionLocation
     tags: allTags
@@ -306,8 +320,8 @@ module existing_project_setup './modules/ai/existing-project-setup.bicep' = if (
   name: take('module.existing-project-setup.${solutionSuffix}', 64)
   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
   params: {
-    aiFoundryName: aiFoundryAiServicesResourceName
-    aiProjectName: aiFoundryAiProjectResourceName
+    name: aiFoundryAiServicesResourceName
+    projectName: aiFoundryAiProjectResourceName
   }
 }
 
@@ -361,7 +375,15 @@ module ai_search './modules/ai/ai-search.bicep' = {
   name: take('module.ai-search.${solutionSuffix}', 64)
   params: {
     solutionName: solutionSuffix
-    searchServiceLocation: solutionLocation
+    location: solutionLocation
+    tags: allTags
+    skuName: enableScalability ? 'standard' : 'basic'
+    replicaCount: 1
+    partitionCount: 1
+    hostingMode: 'Default'
+    semanticSearch: 'free'
+    disableLocalAuth: true
+    publicNetworkAccess: 'Enabled'
   }
 }
 
@@ -369,8 +391,42 @@ module storage_account './modules/data/storage-account.bicep' = {
   name: take('module.storage-account.${solutionSuffix}', 64)
   params: {
     solutionName: solutionSuffix
-    solutionLocation: solutionLocation
+    location: solutionLocation
     tags: allTags
+    containers: [
+      {
+        name: storageContainerNameRetailCustomer
+        publicAccess: 'None'
+      }
+      {
+        name: storageContainerNameRetailOrder
+        publicAccess: 'None'
+      }
+      {
+        name: storageContainerNameRFPSummary
+        publicAccess: 'None'
+      }
+      {
+        name: storageContainerNameRFPRisk
+        publicAccess: 'None'
+      }
+      {
+        name: storageContainerNameRFPCompliance
+        publicAccess: 'None'
+      }
+      {
+        name: storageContainerNameContractSummary
+        publicAccess: 'None'
+      }
+      {
+        name: storageContainerNameContractRisk
+        publicAccess: 'None'
+      }
+      {
+        name: storageContainerNameContractCompliance
+        publicAccess: 'None'
+      }
+    ]
   }
 }
 
@@ -378,113 +434,20 @@ resource storageAccountResource 'Microsoft.Storage/storageAccounts@2025-08-01' e
   name: storageAccountName
 }
 
-resource storageBlobService 'Microsoft.Storage/storageAccounts/blobServices@2025-08-01' existing = {
-  parent: storageAccountResource
-  name: 'default'
-}
-
-resource storageContainerRetailCustomer 'Microsoft.Storage/storageAccounts/blobServices/containers@2025-08-01' = {
-  parent: storageBlobService
-  name: storageContainerNameRetailCustomer
-  properties: {
-    publicAccess: 'None'
-  }
-}
-
-resource storageContainerRetailOrder 'Microsoft.Storage/storageAccounts/blobServices/containers@2025-08-01' = {
-  parent: storageBlobService
-  name: storageContainerNameRetailOrder
-  properties: {
-    publicAccess: 'None'
-  }
-}
-
-resource storageContainerRfpSummary 'Microsoft.Storage/storageAccounts/blobServices/containers@2025-08-01' = {
-  parent: storageBlobService
-  name: storageContainerNameRFPSummary
-  properties: {
-    publicAccess: 'None'
-  }
-}
-
-resource storageContainerRfpRisk 'Microsoft.Storage/storageAccounts/blobServices/containers@2025-08-01' = {
-  parent: storageBlobService
-  name: storageContainerNameRFPRisk
-  properties: {
-    publicAccess: 'None'
-  }
-}
-
-resource storageContainerRfpCompliance 'Microsoft.Storage/storageAccounts/blobServices/containers@2025-08-01' = {
-  parent: storageBlobService
-  name: storageContainerNameRFPCompliance
-  properties: {
-    publicAccess: 'None'
-  }
-}
-
-resource storageContainerContractSummary 'Microsoft.Storage/storageAccounts/blobServices/containers@2025-08-01' = {
-  parent: storageBlobService
-  name: storageContainerNameContractSummary
-  properties: {
-    publicAccess: 'None'
-  }
-}
-
-resource storageContainerContractRisk 'Microsoft.Storage/storageAccounts/blobServices/containers@2025-08-01' = {
-  parent: storageBlobService
-  name: storageContainerNameContractRisk
-  properties: {
-    publicAccess: 'None'
-  }
-}
-
-resource storageContainerContractCompliance 'Microsoft.Storage/storageAccounts/blobServices/containers@2025-08-01' = {
-  parent: storageBlobService
-  name: storageContainerNameContractCompliance
-  properties: {
-    publicAccess: 'None'
-  }
-}
-
-module cosmosDBModule './modules/data/cosmos-db.bicep' = {
+module cosmosDBModule './modules/data/cosmos-db-nosql.bicep' = {
   name: take('module.cosmos-db.${solutionSuffix}', 64)
   params: {
-    accountName: cosmosDbResourceName
-    solutionLocation: solutionLocation
+    solutionName: solutionSuffix
+    name: cosmosDbResourceName
+    location: solutionLocation
     tags: allTags
-  }
-}
-
-resource cosmosAccountResource 'Microsoft.DocumentDB/databaseAccounts@2025-10-15' existing = {
-  name: cosmosDbResourceName
-}
-
-resource cosmosMacaeDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2025-10-15' = {
-  parent: cosmosAccountResource
-  name: cosmosDbDatabaseName
-  properties: {
-    resource: {
-      id: cosmosDbDatabaseName
-    }
-  }
-}
-
-resource cosmosMacaeMemoryContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2025-10-15' = {
-  parent: cosmosMacaeDatabase
-  name: cosmosDbDatabaseMemoryContainerName
-  properties: {
-    resource: {
-      id: cosmosDbDatabaseMemoryContainerName
-      partitionKey: {
-        paths: [
-          cosmosDbDatabaseMemoryPartitionKey
-        ]
-        kind: 'Hash'
-        version: 2
+    databaseName: cosmosDbDatabaseName
+    containers: [
+      {
+        name: cosmosDbDatabaseMemoryContainerName
+        partitionKeyPath: cosmosDbDatabaseMemoryPartitionKey
       }
-    }
-    options: {}
+    ]
   }
 }
 
@@ -492,9 +455,9 @@ module container_app_environment './modules/compute/container-app-environment.bi
   name: take('module.container-app-environment.${solutionSuffix}', 64)
   params: {
     solutionName: solutionSuffix
-    solutionLocation: solutionLocation
+    location: solutionLocation
     tags: allTags
-    logAnalyticsWorkspaceId: log_analytics.outputs.logAnalyticsWorkspaceId
+    logAnalyticsWorkspaceResourceId: logAnalyticsWorkspaceResourceId
   }
 }
 
@@ -507,11 +470,11 @@ module foundry_search_connection './modules/ai/ai-foundry-connection.bicep' = {
     projectName: aiFoundryAiProjectResourceName
     connectionName: aiSearchConnectionName
     category: 'CognitiveSearch'
-    target: ai_search.outputs.aiSearchTarget
+    target: ai_search.outputs.endpoint
     authType: 'AAD'
     metadata: {
       ApiType: 'Azure'
-      ResourceId: ai_search.outputs.aiSearchId
+      ResourceId: ai_search.outputs.resourceId
     }
   }
 }
@@ -525,11 +488,11 @@ module foundry_storage_connection './modules/ai/ai-foundry-connection.bicep' = {
     projectName: aiFoundryAiProjectResourceName
     connectionName: aiStorageConnectionName
     category: 'AzureBlob'
-    target: storage_account.outputs.storageBlobEndpoint
+    target: storage_account.outputs.blobEndpoint
     authType: 'AAD'
     metadata: {
-      ResourceId: storage_account.outputs.storageAccountId
-      AccountName: storage_account.outputs.storageAccountName
+      ResourceId: storage_account.outputs.resourceId
+      AccountName: storage_account.outputs.name
       ContainerName: 'default'
     }
   }
@@ -544,13 +507,13 @@ module foundry_appi_connection './modules/ai/ai-foundry-connection.bicep' = if (
     projectName: aiFoundryAiProjectResourceName
     connectionName: aiAppInsightsConnectionName
     category: 'AppInsights'
-    target: app_insights.outputs.applicationInsightsId
+    target: app_insights.outputs.resourceId
     authType: 'ApiKey'
     isDefault: true
-    credentialsKey: app_insights.outputs.applicationInsightsInstrumentationKey
+    credentialsKey: app_insights.outputs.instrumentationKey
     metadata: {
       ApiType: 'Azure'
-      ResourceId: app_insights.outputs.applicationInsightsId
+      ResourceId: app_insights.outputs.resourceId
     }
   }
 }
@@ -559,14 +522,13 @@ module backend_container_app './modules/compute/container-app.bicep' = {
   name: take('module.backend-container-app.${solutionSuffix}', 64)
   params: {
     name: backendContainerAppName
-    solutionLocation: solutionLocation
+    location: solutionLocation
     tags: allTags
-    environmentId: container_app_environment.outputs.id
+    environmentResourceId: container_app_environment.outputs.resourceId
     ingressExternal: true
     ingressTargetPort: 8000
-    identityType: 'UserAssigned'
-    userAssignedIdentities: {
-      '${userAssignedIdentity.outputs.resourceId}': {}
+    managedIdentities: {
+      userAssignedResourceIds: [userAssignedIdentity.outputs.resourceId]
     }
     corsPolicy: {
       allowedOrigins: [
@@ -581,8 +543,10 @@ module backend_container_app './modules/compute/container-app.bicep' = {
         'OPTIONS'
       ]
     }
-    scaleMinReplicas: 1
-    scaleMaxReplicas: 1
+    scaleSettings: {
+      minReplicas: 1
+      maxReplicas: 1
+    }
     containers: [
       {
         name: 'backend'
@@ -594,7 +558,7 @@ module backend_container_app './modules/compute/container-app.bicep' = {
         env: [
           {
             name: 'COSMOSDB_ENDPOINT'
-            value: 'https://${cosmosDBModule.outputs.cosmosAccountName}.documents.azure.com:443/'
+            value: 'https://${cosmosDBModule.outputs.name}.documents.azure.com:443/'
           }
           {
             name: 'COSMOSDB_DATABASE'
@@ -626,11 +590,11 @@ module backend_container_app './modules/compute/container-app.bicep' = {
           }
           {
             name: 'APPLICATIONINSIGHTS_INSTRUMENTATION_KEY'
-            value: app_insights.outputs.applicationInsightsInstrumentationKey
+            value: app_insights.outputs.instrumentationKey
           }
           {
             name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-            value: app_insights.outputs.applicationInsightsConnectionString
+            value: app_insights.outputs.connectionString
           }
           {
             name: 'AZURE_AI_SUBSCRIPTION_ID'
@@ -662,7 +626,7 @@ module backend_container_app './modules/compute/container-app.bicep' = {
           }
           {
             name: 'AZURE_AI_SEARCH_ENDPOINT'
-            value: ai_search.outputs.aiSearchTarget
+            value: ai_search.outputs.endpoint
           }
           {
             name: 'AZURE_COGNITIVE_SERVICES'
@@ -706,7 +670,7 @@ module backend_container_app './modules/compute/container-app.bicep' = {
           }
           {
             name: 'AZURE_STORAGE_BLOB_URL'
-            value: storage_account.outputs.storageBlobEndpoint
+            value: storage_account.outputs.blobEndpoint
           }
           {
             name: 'AZURE_AI_PROJECT_ENDPOINT'
@@ -746,14 +710,13 @@ module mcp_container_app './modules/compute/container-app.bicep' = {
   name: take('module.mcp-container-app.${solutionSuffix}', 64)
   params: {
     name: mcpContainerAppName
-    solutionLocation: solutionLocation
+    location: solutionLocation
     tags: allTags
-    environmentId: container_app_environment.outputs.id
+    environmentResourceId: container_app_environment.outputs.resourceId
     ingressExternal: true
     ingressTargetPort: 9000
-    identityType: 'UserAssigned'
-    userAssignedIdentities: {
-      '${userAssignedIdentity.outputs.resourceId}': {}
+    managedIdentities: {
+      userAssignedResourceIds: [userAssignedIdentity.outputs.resourceId]
     }
     corsPolicy: {
       allowedOrigins: [
@@ -761,8 +724,10 @@ module mcp_container_app './modules/compute/container-app.bicep' = {
         'http://${frontendAppName}.azurewebsites.net'
       ]
     }
-    scaleMinReplicas: 1
-    scaleMaxReplicas: 1
+    scaleSettings: {
+      minReplicas: 1
+      maxReplicas: 1
+    }
     containers: [
       {
         name: 'mcp'
@@ -825,9 +790,11 @@ module mcp_container_app './modules/compute/container-app.bicep' = {
 module app_service_plan './modules/compute/app-service-plan.bicep' = {
   name: take('module.app-service-plan.${solutionSuffix}', 64)
   params: {
-    solutionLocation: solutionLocation
-    HostingPlanName: appServicePlanName
-    HostingPlanSku: 'B3'
+    solutionName: solutionSuffix
+    location: solutionLocation
+    tags: allTags
+    skuName: 'B3'
+    skuCapacity: 1
   }
 }
 
@@ -835,10 +802,10 @@ module frontend_app './modules/compute/app-service.bicep' = {
   name: take('module.frontend-app.${solutionSuffix}', 64)
   params: {
     solutionName: frontendAppName
-    solutionLocation: solutionLocation
-    appServicePlanId: app_service_plan.outputs.id
-    appImageName: 'DOCKER|${frontendContainerRegistryHostname}/${frontendContainerImageName}:${frontendContainerImageTag}'
-    userassignedIdentityId: userAssignedIdentity.outputs.resourceId
+    location: solutionLocation
+    tags: allTags
+    serverFarmResourceId: app_service_plan.outputs.resourceId
+    linuxFxVersion: 'DOCKER|${frontendContainerRegistryHostname}/${frontendContainerImageName}:${frontendContainerImageTag}'
     appSettings: {
       SCM_DO_BUILD_DURING_DEPLOYMENT: 'true'
       DOCKER_REGISTRY_SERVER_URL: 'https://${frontendContainerRegistryHostname}'
@@ -847,8 +814,8 @@ module frontend_app './modules/compute/app-service.bicep' = {
       BACKEND_API_URL: 'https://${backend_container_app.outputs.fqdn}'
       AUTH_ENABLED: 'false'
       PROXY_API_REQUESTS: 'false'
-      APPLICATIONINSIGHTS_CONNECTION_STRING: app_insights.outputs.applicationInsightsConnectionString
-      APPINSIGHTS_INSTRUMENTATIONKEY: app_insights.outputs.applicationInsightsInstrumentationKey
+      APPLICATIONINSIGHTS_CONNECTION_STRING: app_insights.outputs.connectionString
+      APPINSIGHTS_INSTRUMENTATIONKEY: app_insights.outputs.instrumentationKey
     }
   }
 }
@@ -857,18 +824,18 @@ module role_assignments './modules/identity/role-assignments.bicep' = {
   name: take('module.role-assignments.${solutionSuffix}', 64)
   params: {
     solutionName: solutionSuffix
+    useExistingAIProject: useExistingAiFoundryAiProject
     existingFoundryProjectResourceId: existingFoundryProjectResourceId
-    aiFoundryName: aiFoundryAiServicesResourceName
-    aiSearchName: ai_search.outputs.aiSearchName
-    storageAccountName: storage_account.outputs.storageAccountName
+    aiFoundryResourceId: aiFoundryAiServicesResourceId
+    aiSearchResourceId: ai_search.outputs.resourceId
+    storageAccountResourceId: storage_account.outputs.resourceId
     aiProjectPrincipalId: aiFoundryAiProjectPrincipalId
     existingAiProjectPrincipalId: useExistingAiFoundryAiProject ? existing_project_setup!.outputs.aiProjectPrincipalId : ''
-    searchPrincipalId: ai_search.outputs.searchPrincipalId
-    deployingUserPrincipalId: deployingUserPrincipalId
-    deployingUserPrincipalType: deployerPrincipalType
-    backendAppPrincipalId: userAssignedIdentity.outputs.principalId
-    backendCsApiPrincipalId: ''
-    cosmosAccountName: cosmosDBModule.outputs.cosmosAccountName
+    aiSearchPrincipalId: ai_search.outputs.identityPrincipalId
+    deployerPrincipalId: deployingUserPrincipalId
+    deployerPrincipalType: deployerPrincipalType
+    backendAppServicePrincipalId: userAssignedIdentity.outputs.principalId
+    cosmosDbAccountName: cosmosDBModule.outputs.name
   }
 }
 
@@ -936,9 +903,9 @@ output resourceGroupName string = resourceGroup().name
 @description('The default hostname of the frontend web app.')
 output webSiteDefaultHostname string = replace(frontend_app.outputs.appUrl, 'https://', '')
 
-output AZURE_STORAGE_BLOB_URL string = storage_account.outputs.storageBlobEndpoint
+output AZURE_STORAGE_BLOB_URL string = storage_account.outputs.blobEndpoint
 output AZURE_STORAGE_ACCOUNT_NAME string = storageAccountName
-output AZURE_AI_SEARCH_ENDPOINT string = ai_search.outputs.aiSearchTarget
+output AZURE_AI_SEARCH_ENDPOINT string = ai_search.outputs.endpoint
 output AZURE_AI_SEARCH_NAME string = aiSearchServiceName
 
 output COSMOSDB_ENDPOINT string = 'https://${cosmosDbResourceName}.documents.azure.com:443/'
@@ -956,7 +923,7 @@ output AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME string = gpt_model_deployment.output
 output APP_ENV string = 'Prod'
 output AI_FOUNDRY_RESOURCE_ID string = useExistingAiFoundryAiProject ? existingFoundryProjectResourceId : ai_foundry_project!.outputs.resourceId
 output COSMOSDB_ACCOUNT_NAME string = cosmosDbResourceName
-output AZURE_SEARCH_ENDPOINT string = ai_search.outputs.aiSearchTarget
+output AZURE_SEARCH_ENDPOINT string = ai_search.outputs.endpoint
 output AZURE_CLIENT_ID string = userAssignedIdentity.outputs.clientId
 output AZURE_TENANT_ID string = tenant().tenantId
 output AZURE_AI_SEARCH_CONNECTION_NAME string = foundry_search_connection.outputs.connectionName

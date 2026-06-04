@@ -1,5 +1,7 @@
 // ============================================================================
-// Module: Azure Container App (AVM)
+// Module: Azure Container App
+// Description: Creates an Azure Container App
+// API: Microsoft.App/containerApps@2024-10-02-preview
 // ============================================================================
 
 @description('Name of the container app.')
@@ -11,9 +13,6 @@ param location string
 @description('Resource tags.')
 param tags object = {}
 
-@description('Enable Azure telemetry collection.')
-param enableTelemetry bool = true
-
 @description('Resource ID of the Container Apps Environment.')
 param environmentResourceId string
 
@@ -24,7 +23,7 @@ param containers array
 param ingressExternal bool = true
 
 @description('Target port for ingress.')
-param ingressTargetPort int
+param ingressTargetPort int = 80
 
 @description('Ingress transport protocol.')
 @allowed(['auto', 'http', 'http2', 'tcp'])
@@ -33,61 +32,86 @@ param ingressTransport string = 'auto'
 @description('Whether to allow insecure ingress connections.')
 param ingressAllowInsecure bool = false
 
+@description('Disable ingress entirely (for background workers).')
+param disableIngress bool = false
+
 @description('Container registry configurations.')
-param registries array = []
+param registries array?
 
 @description('Secret definitions.')
-param secrets array = []
+param secrets array?
 
 @description('Managed identity configuration.')
 param managedIdentities object = {}
 
-@description('CORS policy configuration. Must include allowedOrigins if provided.')
+@description('CORS policy configuration.')
 param corsPolicy object = {}
 
-@description('Whether to apply CORS policy.')
-var applyCorsPolicy = !empty(corsPolicy)
+@description('Active revision mode.')
+@allowed(['Single', 'Multiple'])
+param activeRevisionsMode string = 'Single'
 
-@description('Minimum number of replicas.')
-param scaleMinReplicas int = 0
+@description('Scale settings (maxReplicas, minReplicas, rules).')
+param scaleSettings object = {
+  maxReplicas: 10
+  minReplicas: 0
+}
 
-@description('Maximum number of replicas.')
-param scaleMaxReplicas int = 10
+@description('Workload profile name.')
+param workloadProfileName string?
 
 // ============================================================================
-// Container App (AVM)
+// Resource Deployment
 // ============================================================================
+var identityConfig = empty(managedIdentities) ? { type: 'None' } : {
+  type: contains(managedIdentities, 'userAssignedResourceIds') ? (contains(managedIdentities, 'systemAssigned') && managedIdentities.systemAssigned ? 'SystemAssigned,UserAssigned' : 'UserAssigned') : 'SystemAssigned'
+  userAssignedIdentities: contains(managedIdentities, 'userAssignedResourceIds') ? reduce(managedIdentities.userAssignedResourceIds, {}, (cur, id) => union(cur, { '${id}': {} })) : null
+}
 
-module containerApp 'br/public:avm/res/app/container-app:0.12.0' = {
-  name: take('avm.res.app.containerapp.${name}', 64)
-  params: {
-    name: name
-    location: location
-    tags: tags
-    enableTelemetry: enableTelemetry
-    environmentResourceId: environmentResourceId
-    containers: containers
-    ingressExternal: ingressExternal
-    ingressTargetPort: ingressTargetPort
-    ingressTransport: ingressTransport
-    ingressAllowInsecure: ingressAllowInsecure
-    registries: !empty(registries) ? registries : []
-    managedIdentities: !empty(managedIdentities) ? managedIdentities : {}
-    corsPolicy: applyCorsPolicy ? corsPolicy : null
-    scaleMinReplicas: scaleMinReplicas
-    scaleMaxReplicas: scaleMaxReplicas
+var ingressConfig = disableIngress ? null : {
+  external: ingressExternal
+  targetPort: ingressTargetPort
+  transport: ingressTransport
+  allowInsecure: ingressAllowInsecure
+  corsPolicy: !empty(corsPolicy) ? corsPolicy : null
+}
+
+resource containerApp 'Microsoft.App/containerApps@2024-10-02-preview' = {
+  name: name
+  location: location
+  tags: tags
+  identity: identityConfig
+  properties: {
+    managedEnvironmentId: environmentResourceId
+    workloadProfileName: workloadProfileName
+    configuration: {
+      activeRevisionsMode: activeRevisionsMode
+      ingress: ingressConfig
+      registries: registries
+      secrets: secrets
+    }
+    template: {
+      containers: containers
+      scale: {
+        minReplicas: scaleSettings.minReplicas
+        maxReplicas: scaleSettings.maxReplicas
+        rules: contains(scaleSettings, 'rules') ? scaleSettings.rules : null
+      }
+    }
   }
 }
 
 // ============================================================================
 // Outputs
 // ============================================================================
-
 @description('The name of the container app.')
-output name string = containerApp.outputs.name
+output name string = containerApp.name
 
 @description('The resource ID of the container app.')
-output resourceId string = containerApp.outputs.resourceId
+output resourceId string = containerApp.id
 
 @description('The FQDN of the container app.')
-output fqdn string = containerApp.outputs.fqdn
+output fqdn string = !disableIngress ? containerApp.properties.configuration.ingress.fqdn : ''
+
+@description('System-assigned identity principal ID.')
+output principalId string = contains(containerApp.identity.type, 'SystemAssigned') ? containerApp.identity.principalId : ''

@@ -6,23 +6,23 @@
 //              modules for those concerns.
 // ============================================================================
 
-@description('The name of the existing AI Services account.')
-param aiFoundryName string
+@description('Required. The name of the existing Cognitive Services account.')
+param name string
 
-@description('The name of the existing AI project.')
-param aiProjectName string
+@description('Required. The name of the existing AI project.')
+param projectName string
 
 // ============================================================================
 // Existing Resource References
 // ============================================================================
 
 resource aiServices 'Microsoft.CognitiveServices/accounts@2025-12-01' existing = {
-  name: aiFoundryName
+  name: name
 }
 
 resource aiProject 'Microsoft.CognitiveServices/accounts/projects@2025-12-01' existing = {
   parent: aiServices
-  name: aiProjectName
+  name: projectName
 }
 
 // ============================================================================
@@ -39,13 +39,13 @@ output aiProjectPrincipalId string = contains(aiProject, 'identity') && contains
 output aiServicesAccountName string = aiServices.name
 
 @description('The name of the AI project.')
-output aiProjectNameOutput string = aiProject.name
+output aiProjectName string = aiProject.name
 
 @description('The endpoint URL for the Azure OpenAI service.')
-output aiFoundryEndpoint string = 'https://${aiFoundryName}.openai.azure.com/'
+output aiFoundryEndpoint string = 'https://${name}.openai.azure.com/'
 
 @description('The endpoint URL for the AI Foundry project.')
-output projectEndpoint string = 'https://${aiFoundryName}.services.ai.azure.com/api/projects/${aiProjectName}'
+output projectEndpoint string = 'https://${name}.services.ai.azure.com/api/projects/${projectName}'
 
 @description('The resource ID of the AI Services account.')
 output aiFoundryResourceId string = aiServices.id

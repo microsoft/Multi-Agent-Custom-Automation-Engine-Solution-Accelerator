@@ -1,14 +1,14 @@
 // ============================================================================
 // Module: App Service
-// Description: AVM wrapper for Azure App Service (Web App) with WAF alignment
-// AVM Module: avm/res/web/site:0.15.1
-// WAF: https://learn.microsoft.com/azure/well-architected/service-guides/app-service-web-apps
+// Description: Creates an Azure App Service (Web App)
+// API: Microsoft.Web/sites@2025-05-01
 // ============================================================================
 
 @description('Solution name suffix used to derive the resource name.')
 param solutionName string
 
-var appServiceName = solutionName
+@description('Name of the App Service.')
+param name string = solutionName
 
 @description('Azure region for the resource.')
 param location string
@@ -32,14 +32,6 @@ param alwaysOn bool = true
 @description('Kind of web app.')
 param kind string = 'app,linux'
 
-@description('Optional. Enable/Disable usage telemetry for module.')
-param enableTelemetry bool = true
-
-// --- WAF: Monitoring ---
-@description('Diagnostic settings for monitoring.')
-param diagnosticSettings array = []
-
-// --- WAF: Private Networking ---
 @description('Subnet resource ID for VNet integration.')
 param virtualNetworkSubnetId string = ''
 
@@ -47,66 +39,74 @@ param virtualNetworkSubnetId string = ''
 param publicNetworkAccess string = 'Enabled'
 
 // ============================================================================
-// AVM Module Deployment
+// Resource Deployment
 // ============================================================================
-module appService 'br/public:avm/res/web/site:0.15.1' = {
-  name: take('avm.res.web.site.${appServiceName}', 64)
-  params: {
-    name: appServiceName
-    location: location
-    tags: tags
-    kind: kind
-    enableTelemetry: enableTelemetry
-    serverFarmResourceId: serverFarmResourceId
-    managedIdentities: {
-      systemAssigned: true
-    }
+resource appService 'Microsoft.Web/sites@2025-05-01' = {
+  name: name
+  location: location
+  tags: tags
+  kind: kind
+  identity: {
+    type: 'SystemAssigned'
+  }
+  properties: {
+    serverFarmId: serverFarmResourceId
+    publicNetworkAccess: publicNetworkAccess
+    virtualNetworkSubnetId: !empty(virtualNetworkSubnetId) ? virtualNetworkSubnetId : null
     siteConfig: {
       alwaysOn: alwaysOn
       ftpsState: 'Disabled'
       linuxFxVersion: linuxFxVersion
-      minTlsVersion: '1.2'
-      vnetRouteAllEnabled: !empty(virtualNetworkSubnetId)
-      vnetImagePullEnabled: !empty(virtualNetworkSubnetId)
     }
-    e2eEncryptionEnabled: true
-    appSettingsKeyValuePairs: appSettings
-    publicNetworkAccess: publicNetworkAccess
-    virtualNetworkSubnetId: !empty(virtualNetworkSubnetId) ? virtualNetworkSubnetId : null
-    basicPublishingCredentialsPolicies: [
-      {
-        name: 'ftp'
-        allow: false
-      }
-      {
-        name: 'scm'
-        allow: false
-      }
-    ]
-    logsConfiguration: {
-      applicationLogs: { fileSystem: { level: 'Verbose' } }
-      detailedErrorMessages: { enabled: true }
-      failedRequestsTracing: { enabled: true }
-      httpLogs: { fileSystem: { enabled: true, retentionInDays: 1, retentionInMb: 35 } }
-    }
-    diagnosticSettings: !empty(diagnosticSettings) ? diagnosticSettings : []
+    endToEndEncryptionEnabled: true
   }
+
+  resource basicPublishingCredentialsPoliciesFtp 'basicPublishingCredentialsPolicies' = {
+    name: 'ftp'
+    properties: {
+      allow: false
+    }
+  }
+  resource basicPublishingCredentialsPoliciesScm 'basicPublishingCredentialsPolicies' = {
+    name: 'scm'
+    properties: {
+      allow: false
+    }
+  }
+}
+
+resource configAppSettings 'Microsoft.Web/sites/config@2025-05-01' = {
+  name: 'appsettings'
+  parent: appService
+  properties: appSettings
+}
+
+resource configLogs 'Microsoft.Web/sites/config@2025-05-01' = {
+  name: 'logs'
+  parent: appService
+  properties: {
+    applicationLogs: { fileSystem: { level: 'Verbose' } }
+    detailedErrorMessages: { enabled: true }
+    failedRequestsTracing: { enabled: true }
+    httpLogs: { fileSystem: { enabled: true, retentionInDays: 1, retentionInMb: 35 } }
+  }
+  dependsOn: [configAppSettings]
 }
 
 // ============================================================================
 // Outputs
 // ============================================================================
 @description('Resource ID of the App Service.')
-output resourceId string = appService.outputs.resourceId
+output resourceId string = appService.id
 
 @description('Name of the App Service.')
-output name string = appService.outputs.name
+output name string = appService.name
 
 @description('Default hostname of the App Service.')
-output defaultHostname string = appService.outputs.defaultHostname
+output defaultHostname string = appService.properties.defaultHostName
 
 @description('URL of the App Service.')
-output appUrl string = 'https://${appService.outputs.defaultHostname}'
+output appUrl string = 'https://${appService.properties.defaultHostName}'
 
 @description('System-assigned identity principal ID.')
-output identityPrincipalId string = appService.outputs.?systemAssignedMIPrincipalId ?? ''
+output identityPrincipalId string = appService.identity.principalId

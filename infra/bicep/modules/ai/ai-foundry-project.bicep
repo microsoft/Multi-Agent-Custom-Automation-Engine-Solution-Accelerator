@@ -18,6 +18,9 @@ param projectName string = 'proj-${solutionName}'
 @description('Required. Azure region for the resources.')
 param location string
 
+@description('Optional. Tags to apply to resources.')
+param tags object = {}
+
 @description('Optional. SKU name for the AI Services account.')
 param skuName string = 'S0'
 
@@ -30,24 +33,33 @@ param allowProjectManagement bool = true
 @description('Optional. Public network access setting.')
 param publicNetworkAccess string = 'Enabled'
 
+@description('Optional. Managed identity type for the resources.')
+@allowed(['SystemAssigned', 'UserAssigned', 'SystemAssigned, UserAssigned', 'None'])
+param identityType string = 'SystemAssigned'
+
+@description('Optional. Network ACLs default action.')
+@allowed(['Allow', 'Deny'])
+param networkAclsDefaultAction string = 'Allow'
+
 // ============================================================================
 // AI Services Account
 // ============================================================================
 resource aiServices 'Microsoft.CognitiveServices/accounts@2025-12-01' = {
   name: name
   location: location
+  tags: tags
   sku: {
     name: skuName
   }
   kind: 'AIServices'
   identity: {
-    type: 'SystemAssigned'
+    type: identityType
   }
   properties: {
     allowProjectManagement: allowProjectManagement
     customSubDomainName: name
     networkAcls: {
-      defaultAction: 'Allow'
+      defaultAction: networkAclsDefaultAction
       virtualNetworkRules: []
       ipRules: []
     }
@@ -65,7 +77,7 @@ resource aiProject 'Microsoft.CognitiveServices/accounts/projects@2025-12-01' = 
   location: location
   kind: 'AIServices'
   identity: {
-    type: 'SystemAssigned'
+    type: identityType
   }
   properties: {}
 }

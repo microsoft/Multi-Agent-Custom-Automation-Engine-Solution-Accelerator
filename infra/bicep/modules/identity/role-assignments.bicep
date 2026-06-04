@@ -3,398 +3,348 @@
 // Description: RG-level, cross-service, and data-plane role assignments.
 //              One place to audit "who has access to what".
 // ============================================================================
-targetScope = 'resourceGroup'
 
 // ============================================================================
 // Parameters
 // ============================================================================
 
-@description('The name of the solution, used as a base for naming all resources.')
-param solutionName string
+@description('Solution name suffix for generating unique role assignment GUIDs.')
+param solutionName string = ''
 
-@description('The resource ID of an existing Azure AI Foundry project. If provided, the existing project will be used instead of creating a new one.')
+@description('Whether to use an existing AI project (true) or create new (false).')
+param useExistingAIProject bool = false
+
+@description('Resource ID of the existing AI project (for deriving AI Services name/sub/RG).')
 param existingFoundryProjectResourceId string = ''
 
-@description('The name of the Azure AI Services account.')
-param aiFoundryName string = ''
+// --- Identity Principal IDs ---
 
-@description('The name of the Azure AI Search service.')
-param aiSearchName string = ''
-
-@description('The name of the storage account.')
-param storageAccountName string = ''
-
-@description('The principal ID of the AI Foundry project managed identity for newly created projects.')
+@description('Principal ID of the AI project identity.')
 param aiProjectPrincipalId string = ''
 
-@description('The principal ID of the AI Foundry project managed identity for existing projects (from identity setup).')
+@description('Principal ID of the existing AI project identity (for cross-service roles).')
 param existingAiProjectPrincipalId string = ''
 
-@description('The principal ID of the AI Search system-assigned managed identity.')
-param searchPrincipalId string = ''
+@description('Principal ID of the AI Search identity.')
+param aiSearchPrincipalId string = ''
 
-@description('The principal ID of the deploying user.')
-param deployingUserPrincipalId string = ''
+@description('Principal ID of the backend App Service system-assigned identity (empty if not deployed).')
+param backendAppServicePrincipalId string = ''
 
-@description('The principal type of the deploying user. Use ServicePrincipal for CI/CD pipelines with OIDC.')
+@description('Principal ID of the deploying user (for user access roles).')
+param deployerPrincipalId string = ''
+
+@description('Principal type of the deploying user.')
 @allowed(['User', 'ServicePrincipal'])
-param deployingUserPrincipalType string = 'User'
+param deployerPrincipalType string = 'User'
 
-@description('The system-assigned principal ID of the backend API App Service (Python).')
-param backendAppPrincipalId string = ''
+// --- Resource References ---
 
-@description('The system-assigned principal ID of the backend CSAPI App Service (.NET).')
-param backendCsApiPrincipalId string = ''
+@description('Resource ID of the AI Foundry account (empty if not deployed — new project path).')
+param aiFoundryResourceId string = ''
 
-@description('The name of the Cosmos DB account (for chat history).')
-param cosmosAccountName string = ''
+@description('Resource ID of the AI Search service (empty if not deployed).')
+param aiSearchResourceId string = ''
+
+@description('Resource ID of the Storage Account (empty if not deployed).')
+param storageAccountResourceId string = ''
+
+@description('Name of the Cosmos DB account (empty if not deployed).')
+param cosmosDbAccountName string = ''
 
 // ============================================================================
 // Derived Variables
 // ============================================================================
 
-var useExistingProject = !empty(existingFoundryProjectResourceId)
-var existingAIServicesName = useExistingProject ? split(existingFoundryProjectResourceId, '/')[8] : ''
-var existingAIProjectName = useExistingProject ? split(existingFoundryProjectResourceId, '/')[10] : ''
-var existingAIServiceSubscription = useExistingProject ? split(existingFoundryProjectResourceId, '/')[2] : subscription().subscriptionId
-var existingAIServiceResourceGroup = useExistingProject ? split(existingFoundryProjectResourceId, '/')[4] : resourceGroup().name
+var existingAIFoundryName = useExistingAIProject ? split(existingFoundryProjectResourceId, '/')[8] : ''
+var existingAIFoundrySubscription = useExistingAIProject ? split(existingFoundryProjectResourceId, '/')[2] : subscription().subscriptionId
+var existingAIFoundryResourceGroup = useExistingAIProject ? split(existingFoundryProjectResourceId, '/')[4] : resourceGroup().name
 
-// Resolve the active backend principal ID (whichever runtime is deployed)
-var activeBackendPrincipalId = !empty(backendAppPrincipalId) ? backendAppPrincipalId : backendCsApiPrincipalId
+// ============================================================================
+// Role Definitions
+// ============================================================================
+
+var roleDefinitions = {
+  azureAiUser: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Foundry User
+  cognitiveServicesUser: 'a97b65f3-24c7-4388-baec-2e87135dc908'
+  cognitiveServicesOpenAIUser: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
+  searchIndexDataReader: '1407120a-92aa-4202-b7e9-c0e197c71c8f'
+  searchIndexDataContributor: '8ebe5a00-799e-43f5-93ac-243d3dce84a7'
+  searchServiceContributor: '7ca78c08-252a-4471-8644-bb5ff32d4ba0'
+  storageBlobDataContributor: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
+  storageBlobDataReader: '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1'
+}
 
 // ============================================================================
 // Existing Resource References
 // ============================================================================
 
-resource aiServices 'Microsoft.CognitiveServices/accounts@2025-12-01' existing = if (!empty(aiFoundryName) && !useExistingProject) {
-  name: aiFoundryName
+resource aiFoundryAccount 'Microsoft.CognitiveServices/accounts@2025-12-01' existing = if (!empty(aiFoundryResourceId)) {
+  name: last(split(aiFoundryResourceId, '/'))
 }
 
-resource aiSearch 'Microsoft.Search/searchServices@2025-05-01' existing = if (!empty(aiSearchName)) {
-  name: aiSearchName
+resource aiSearchService 'Microsoft.Search/searchServices@2025-05-01' existing = if (!empty(aiSearchResourceId)) {
+  name: last(split(aiSearchResourceId, '/'))
 }
 
-resource storageAccount 'Microsoft.Storage/storageAccounts@2025-08-01' existing = if (!empty(storageAccountName)) {
-  name: storageAccountName
+resource storageAccount 'Microsoft.Storage/storageAccounts@2025-08-01' existing = if (!empty(storageAccountResourceId)) {
+  name: last(split(storageAccountResourceId, '/'))
 }
 
-resource cosmos 'Microsoft.DocumentDB/databaseAccounts@2025-10-15' existing = if (!empty(cosmosAccountName)) {
-  name: cosmosAccountName
+resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2025-10-15' existing = if (!empty(cosmosDbAccountName)) {
+  name: cosmosDbAccountName
 }
 
-resource cosmosContributorRoleDef 'Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions@2025-10-15' existing = if (!empty(cosmosAccountName)) {
-  parent: cosmos
+resource cosmosContributorRoleDefinition 'Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions@2025-10-15' existing = if (!empty(cosmosDbAccountName)) {
+  parent: cosmosAccount
   name: '00000000-0000-0000-0000-000000000002' // Cosmos DB Built-in Data Contributor
 }
 
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  ROLE DEFINITIONS                                           ║
-// ╚══════════════════════════════════════════════════════════════╝
+// ============================================================================
+// 1. AI SERVICES ROLE ASSIGNMENTS
+//    Cross-service roles scoped to AI Foundry account
+// ============================================================================
 
-resource azureAIUser 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
-  scope: subscription()
-  name: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Foundry User
-}
-
-resource cognitiveServicesOpenAIUser 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
-  scope: subscription()
-  name: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd' // Cognitive Services OpenAI User
-}
-
-resource cognitiveServicesUser 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
-  scope: subscription()
-  name: 'a97b65f3-24c7-4388-baec-2e87135dc908' // Cognitive Services User
-}
-
-resource searchIndexDataReader 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
-  scope: subscription()
-  name: '1407120a-92aa-4202-b7e9-c0e197c71c8f' // Search Index Data Reader
-}
-
-resource searchServiceContributor 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
-  scope: subscription()
-  name: '7ca78c08-252a-4471-8644-bb5ff32d4ba0' // Search Service Contributor
-}
-
-resource searchIndexDataContributor 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
-  scope: subscription()
-  name: '8ebe5a00-799e-43f5-93ac-243d3dce84a7' // Search Index Data Contributor
-}
-
-resource storageBlobDataContributor 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
-  scope: subscription()
-  name: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor
-}
-
-resource storageBlobDataReader 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
-  scope: subscription()
-  name: '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1' // Storage Blob Data Reader
-}
-
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  1. AI SERVICES ROLE ASSIGNMENTS                            ║
-// ║     Cross-service roles scoped to AI Foundry account        ║
-// ╚══════════════════════════════════════════════════════════════╝
-
-// --- AI Search → AI Services (new project, same RG) ---
-
-// AI Search → Cognitive Services OpenAI User on AI Services
-resource assignOpenAIRoleToAISearch 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingProject && !empty(searchPrincipalId) && !empty(aiFoundryName)) {
-  name: guid(resourceGroup().id, aiServices.id, cognitiveServicesOpenAIUser.id)
-  scope: aiServices
+// AI Search → Cognitive Services OpenAI User on AI Foundry (new project, same RG)
+resource assignOpenAIRoleToAISearch 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingAIProject && !empty(aiSearchPrincipalId) && !empty(aiFoundryResourceId)) {
+  name: guid(resourceGroup().id, aiFoundryAccount.id, roleDefinitions.cognitiveServicesOpenAIUser, 'search-openai')
+  scope: aiFoundryAccount
   properties: {
-    principalId: searchPrincipalId
-    roleDefinitionId: cognitiveServicesOpenAIUser.id
+    principalId: aiSearchPrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.cognitiveServicesOpenAIUser)
     principalType: 'ServicePrincipal'
   }
 }
 
-// --- Backend App Service → AI Services (cross-scope, handles both new + existing) ---
-
-// Backend App Service → Foundry User on AI Services (cross-scope)
-module assignAiUserToBackend './cross-scope-role-assignment.bicep' = if (!empty(activeBackendPrincipalId)) {
-  name: 'assignAiUserRoleToBackend'
-  scope: resourceGroup(existingAIServiceSubscription, existingAIServiceResourceGroup)
-  params: {
-    principalId: activeBackendPrincipalId
-    roleDefinitionId: azureAIUser.id
-    roleAssignmentName: guid(solutionName, 'backend', useExistingProject ? existingAIServicesName : aiFoundryName, azureAIUser.id)
-    aiFoundryName: useExistingProject ? existingAIServicesName : aiFoundryName
-  }
-}
-
-// --- AI Search → existing AI Services (cross-scope) ---
-
-// AI Search → Cognitive Services OpenAI User on existing AI Services (cross-scope)
-module assignOpenAIToSearchExisting './cross-scope-role-assignment.bicep' = if (useExistingProject && !empty(searchPrincipalId) && !empty(aiSearchName)) {
+// AI Search → Cognitive Services OpenAI User on existing AI Foundry (cross-scope)
+module assignOpenAIToSearchExisting './cross-scope-role-assignment.bicep' = if (useExistingAIProject && !empty(aiSearchPrincipalId)) {
   name: 'assignOpenAIRoleToAISearchExisting'
-  scope: resourceGroup(existingAIServiceSubscription, existingAIServiceResourceGroup)
+  scope: resourceGroup(existingAIFoundrySubscription, existingAIFoundryResourceGroup)
   params: {
-    principalId: searchPrincipalId
-    roleDefinitionId: cognitiveServicesOpenAIUser.id
-    roleAssignmentName: guid(resourceGroup().id, aiSearch.id, cognitiveServicesOpenAIUser.id, 'openai-foundry')
-    aiFoundryName: existingAIServicesName
+    principalId: aiSearchPrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.cognitiveServicesOpenAIUser)
+    roleAssignmentName: guid(solutionName, 'search-openai', existingAIFoundryName, roleDefinitions.cognitiveServicesOpenAIUser)
+    aiFoundryName: existingAIFoundryName
   }
 }
 
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  2. SEARCH SERVICE ROLE ASSIGNMENTS                         ║
-// ║     AI Project and Backend identities → AI Search           ║
-// ╚══════════════════════════════════════════════════════════════╝
-
-// --- AI Project (new) → AI Search ---
-
-// AI Project → Search Index Data Reader on AI Search
-resource assignSearchIndexDataReaderToAiProject 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingProject && !empty(aiProjectPrincipalId) && !empty(aiSearchName)) {
-  name: guid(resourceGroup().id, aiProjectPrincipalId, searchIndexDataReader.id)
-  scope: aiSearch
+// Backend App Service → Foundry User on AI Foundry (new project, same RG)
+resource backendAppAiUserAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingAIProject && !empty(aiFoundryResourceId) && !empty(backendAppServicePrincipalId)) {
+  name: guid(resourceGroup().id, backendAppServicePrincipalId, roleDefinitions.azureAiUser, 'backend-ai-services')
+  scope: aiFoundryAccount
   properties: {
-    principalId: aiProjectPrincipalId
-    roleDefinitionId: searchIndexDataReader.id
+    principalId: backendAppServicePrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.azureAiUser)
     principalType: 'ServicePrincipal'
   }
 }
 
-// AI Project → Search Service Contributor on AI Search
-resource assignSearchServiceContributorToAiProject 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingProject && !empty(aiProjectPrincipalId) && !empty(aiSearchName)) {
-  name: guid(resourceGroup().id, aiProjectPrincipalId, searchServiceContributor.id)
-  scope: aiSearch
+// Backend App Service → Foundry User on existing AI Foundry (cross-scope)
+module backendAppAiUserExisting './cross-scope-role-assignment.bicep' = if (useExistingAIProject && !empty(backendAppServicePrincipalId)) {
+  name: 'assignAiUserRoleToBackendExisting'
+  scope: resourceGroup(existingAIFoundrySubscription, existingAIFoundryResourceGroup)
+  params: {
+    principalId: backendAppServicePrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.azureAiUser)
+    roleAssignmentName: guid(solutionName, 'backend-aiuser', existingAIFoundryName, roleDefinitions.azureAiUser)
+    aiFoundryName: existingAIFoundryName
+  }
+}
+
+// ============================================================================
+// 2. SEARCH SERVICE ROLE ASSIGNMENTS
+//    AI Project and Backend identities → AI Search
+// ============================================================================
+
+// AI Project → Search Index Data Reader on AI Search (new project)
+resource projectSearchReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(aiSearchResourceId) && !empty(aiProjectPrincipalId)) {
+  name: guid(resourceGroup().id, aiProjectPrincipalId, roleDefinitions.searchIndexDataReader, 'project-search')
+  scope: aiSearchService
   properties: {
     principalId: aiProjectPrincipalId
-    roleDefinitionId: searchServiceContributor.id
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.searchIndexDataReader)
     principalType: 'ServicePrincipal'
   }
 }
 
-// --- AI Project (existing) → AI Search ---
+// AI Project → Search Service Contributor on AI Search (new project)
+resource projectSearchContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(aiSearchResourceId) && !empty(aiProjectPrincipalId)) {
+  name: guid(resourceGroup().id, aiProjectPrincipalId, roleDefinitions.searchServiceContributor, 'project-search')
+  scope: aiSearchService
+  properties: {
+    principalId: aiProjectPrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.searchServiceContributor)
+    principalType: 'ServicePrincipal'
+  }
+}
 
 // Existing AI Project → Search Index Data Reader on AI Search
-resource assignSearchIndexDataReaderToExistingAiProject 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (useExistingProject && !empty(aiSearchName)) {
-  name: guid(resourceGroup().id, existingAIProjectName, searchIndexDataReader.id, 'Existing')
-  scope: aiSearch
+resource existingProjectSearchReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (useExistingAIProject && !empty(aiSearchResourceId) && !empty(existingAiProjectPrincipalId)) {
+  name: guid(resourceGroup().id, existingAiProjectPrincipalId, roleDefinitions.searchIndexDataReader, 'existing-project-search')
+  scope: aiSearchService
   properties: {
     principalId: existingAiProjectPrincipalId
-    roleDefinitionId: searchIndexDataReader.id
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.searchIndexDataReader)
     principalType: 'ServicePrincipal'
   }
 }
 
 // Existing AI Project → Search Service Contributor on AI Search
-resource assignSearchServiceContributorToExistingAiProject 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (useExistingProject && !empty(aiSearchName)) {
-  name: guid(resourceGroup().id, existingAIProjectName, searchServiceContributor.id, 'Existing')
-  scope: aiSearch
+resource existingProjectSearchContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (useExistingAIProject && !empty(aiSearchResourceId) && !empty(existingAiProjectPrincipalId)) {
+  name: guid(resourceGroup().id, existingAiProjectPrincipalId, roleDefinitions.searchServiceContributor, 'existing-project-search')
+  scope: aiSearchService
   properties: {
     principalId: existingAiProjectPrincipalId
-    roleDefinitionId: searchServiceContributor.id
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.searchServiceContributor)
     principalType: 'ServicePrincipal'
   }
 }
-
-// --- Backend App Service → AI Search ---
 
 // Backend App Service → Search Index Data Reader on AI Search
-resource assignSearchIndexDataReaderToApi 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(activeBackendPrincipalId) && !empty(aiSearchName)) {
-  name: guid(solutionName, aiSearchName, searchIndexDataReader.id, activeBackendPrincipalId)
-  scope: aiSearch
+resource backendAppSearchReaderAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(aiSearchResourceId) && !empty(backendAppServicePrincipalId)) {
+  name: guid(resourceGroup().id, backendAppServicePrincipalId, roleDefinitions.searchIndexDataReader, 'backend-search')
+  scope: aiSearchService
   properties: {
-    principalId: activeBackendPrincipalId
-    roleDefinitionId: searchIndexDataReader.id
+    principalId: backendAppServicePrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.searchIndexDataReader)
     principalType: 'ServicePrincipal'
   }
 }
 
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  3. STORAGE ROLE ASSIGNMENTS                                ║
-// ║     AI Project, AI Search, and Existing Project → Storage   ║
-// ╚══════════════════════════════════════════════════════════════╝
+// ============================================================================
+// 3. STORAGE ROLE ASSIGNMENTS
+//    AI Project, AI Search, and Existing Project identities → Storage
+// ============================================================================
 
-// --- AI Project (new) → Storage ---
-
-// AI Project → Storage Blob Data Contributor
-resource projectStorageBlobContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingProject && !empty(aiProjectPrincipalId) && !empty(storageAccountName)) {
+// AI Project → Storage Blob Data Contributor (new project)
+resource projectStorageContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(storageAccountResourceId) && !empty(aiProjectPrincipalId)) {
+  name: guid(resourceGroup().id, aiProjectPrincipalId, roleDefinitions.storageBlobDataContributor, 'project-storage')
   scope: storageAccount
-  name: guid(storageAccount.id, aiProjectPrincipalId, storageBlobDataContributor.id)
   properties: {
     principalId: aiProjectPrincipalId
-    roleDefinitionId: storageBlobDataContributor.id
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.storageBlobDataContributor)
     principalType: 'ServicePrincipal'
   }
 }
 
-// AI Project → Storage Blob Data Reader
-resource projectStorageBlobReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingProject && !empty(aiProjectPrincipalId) && !empty(storageAccountName)) {
+// AI Project → Storage Blob Data Reader (new project)
+resource projectStorageReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(storageAccountResourceId) && !empty(aiProjectPrincipalId)) {
+  name: guid(resourceGroup().id, aiProjectPrincipalId, roleDefinitions.storageBlobDataReader, 'project-storage')
   scope: storageAccount
-  name: guid(storageAccount.id, aiProjectPrincipalId, storageBlobDataReader.id)
   properties: {
     principalId: aiProjectPrincipalId
-    roleDefinitionId: storageBlobDataReader.id
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.storageBlobDataReader)
     principalType: 'ServicePrincipal'
   }
 }
-
-// --- AI Project (existing) → Storage ---
 
 // Existing AI Project → Storage Blob Data Contributor
-resource existingProjectStorageBlobContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (useExistingProject && !empty(storageAccountName)) {
+resource existingProjectStorageContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (useExistingAIProject && !empty(storageAccountResourceId) && !empty(existingAiProjectPrincipalId)) {
+  name: guid(resourceGroup().id, existingAiProjectPrincipalId, roleDefinitions.storageBlobDataContributor, 'existing-project-storage')
   scope: storageAccount
-  name: guid(storageAccount.id, existingAIProjectName, storageBlobDataContributor.id)
   properties: {
     principalId: existingAiProjectPrincipalId
-    roleDefinitionId: storageBlobDataContributor.id
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.storageBlobDataContributor)
     principalType: 'ServicePrincipal'
   }
 }
 
 // Existing AI Project → Storage Blob Data Reader
-resource existingProjectStorageBlobReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (useExistingProject && !empty(storageAccountName)) {
+resource existingProjectStorageReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (useExistingAIProject && !empty(storageAccountResourceId) && !empty(existingAiProjectPrincipalId)) {
+  name: guid(resourceGroup().id, existingAiProjectPrincipalId, roleDefinitions.storageBlobDataReader, 'existing-project-storage')
   scope: storageAccount
-  name: guid(storageAccount.id, existingAIProjectName, storageBlobDataReader.id)
   properties: {
     principalId: existingAiProjectPrincipalId
-    roleDefinitionId: storageBlobDataReader.id
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.storageBlobDataReader)
     principalType: 'ServicePrincipal'
   }
 }
-
-// --- AI Search → Storage ---
 
 // AI Search → Storage Blob Data Reader
-resource searchStorageBlobDataReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(searchPrincipalId) && !empty(storageAccountName)) {
+resource searchStorageReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(storageAccountResourceId) && !empty(aiSearchPrincipalId)) {
+  name: guid(resourceGroup().id, aiSearchPrincipalId, roleDefinitions.storageBlobDataReader, 'search-storage')
   scope: storageAccount
-  name: guid(storageAccount.id, searchPrincipalId, storageBlobDataReader.id)
   properties: {
-    principalId: searchPrincipalId
-    roleDefinitionId: storageBlobDataReader.id
+    principalId: aiSearchPrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.storageBlobDataReader)
     principalType: 'ServicePrincipal'
   }
 }
 
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  4. COSMOS DB ROLE ASSIGNMENTS                              ║
-// ║     Backend App Service → Cosmos DB (data-plane)            ║
-// ╚══════════════════════════════════════════════════════════════╝
+// ============================================================================
+// 4. COSMOS DB ROLE ASSIGNMENTS
+//    Backend App Service → Cosmos DB (data-plane, uses sqlRoleAssignments)
+// ============================================================================
 
-// Backend App Service → Cosmos DB Built-in Data Contributor
-resource backendCosmosContributor 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2025-10-15' = if (!empty(activeBackendPrincipalId) && !empty(cosmosAccountName)) {
-  parent: cosmos
-  name: guid(cosmosContributorRoleDef.id, cosmos.id, activeBackendPrincipalId)
+resource backendAppCosmosRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2025-10-15' = if (!empty(cosmosDbAccountName) && !empty(backendAppServicePrincipalId)) {
+  parent: cosmosAccount
+  name: guid(cosmosContributorRoleDefinition.id, cosmosAccount.id, backendAppServicePrincipalId)
   properties: {
-    principalId: activeBackendPrincipalId
-    roleDefinitionId: cosmosContributorRoleDef.id
-    scope: cosmos.id
+    principalId: backendAppServicePrincipalId
+    roleDefinitionId: cosmosContributorRoleDefinition.id
+    scope: cosmosAccount.id
   }
 }
 
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  5. DEPLOYER / USER ACCESS ROLE ASSIGNMENTS                 ║
-// ║     Deploying user → AI Services, Search, Storage           ║
-// ╚══════════════════════════════════════════════════════════════╝
-
-// --- Deployer → AI Services (new project, same RG) ---
+// ============================================================================
+// 5. DEPLOYER (USER) ROLE ASSIGNMENTS
+//    Deploying user → AI Services, Search, Storage (Bicep-only)
+// ============================================================================
 
 // Deploying User → Cognitive Services User on AI Services
-resource userAIServicesAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingProject && !empty(deployingUserPrincipalId) && !empty(aiFoundryName)) {
-  scope: aiServices
-  name: guid(aiServices.id, deployingUserPrincipalId, cognitiveServicesUser.id)
+resource deployerAiServicesAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingAIProject && !empty(deployerPrincipalId) && !empty(aiFoundryResourceId)) {
+  scope: aiFoundryAccount
+  name: guid(aiFoundryAccount.id, deployerPrincipalId, roleDefinitions.cognitiveServicesUser)
   properties: {
-    principalId: deployingUserPrincipalId
-    roleDefinitionId: cognitiveServicesUser.id
-    principalType: deployingUserPrincipalType
+    principalId: deployerPrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.cognitiveServicesUser)
+    principalType: deployerPrincipalType
   }
 }
 
 // Deploying User → Foundry User on AI Services
-resource userAzureAIAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingProject && !empty(deployingUserPrincipalId) && !empty(aiFoundryName)) {
-  scope: aiServices
-  name: guid(aiServices.id, deployingUserPrincipalId, azureAIUser.id)
+resource deployerAzureAIAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingAIProject && !empty(deployerPrincipalId) && !empty(aiFoundryResourceId)) {
+  scope: aiFoundryAccount
+  name: guid(aiFoundryAccount.id, deployerPrincipalId, roleDefinitions.azureAiUser)
   properties: {
-    principalId: deployingUserPrincipalId
-    roleDefinitionId: azureAIUser.id
-    principalType: deployingUserPrincipalType
+    principalId: deployerPrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.azureAiUser)
+    principalType: deployerPrincipalType
   }
 }
 
-// --- Deployer → AI Search ---
-
 // Deploying User → Search Index Data Contributor on AI Search
-resource userSearchIndexContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(deployingUserPrincipalId) && !empty(aiSearchName)) {
-  scope: aiSearch
-  name: guid(aiSearch.id, deployingUserPrincipalId, searchIndexDataContributor.id)
+resource deployerSearchIndexContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(deployerPrincipalId) && !empty(aiSearchResourceId)) {
+  scope: aiSearchService
+  name: guid(aiSearchService.id, deployerPrincipalId, roleDefinitions.searchIndexDataContributor)
   properties: {
-    principalId: deployingUserPrincipalId
-    roleDefinitionId: searchIndexDataContributor.id
-    principalType: deployingUserPrincipalType
+    principalId: deployerPrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.searchIndexDataContributor)
+    principalType: deployerPrincipalType
   }
 }
 
 // Deploying User → Search Service Contributor on AI Search
-resource userSearchServiceContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(deployingUserPrincipalId) && !empty(aiSearchName)) {
-  scope: aiSearch
-  name: guid(aiSearch.id, deployingUserPrincipalId, searchServiceContributor.id)
+resource deployerSearchServiceContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(deployerPrincipalId) && !empty(aiSearchResourceId)) {
+  scope: aiSearchService
+  name: guid(aiSearchService.id, deployerPrincipalId, roleDefinitions.searchServiceContributor)
   properties: {
-    principalId: deployingUserPrincipalId
-    roleDefinitionId: searchServiceContributor.id
-    principalType: deployingUserPrincipalType
+    principalId: deployerPrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.searchServiceContributor)
+    principalType: deployerPrincipalType
   }
 }
-
-// --- Deployer → Storage ---
 
 // Deploying User → Storage Blob Data Contributor
-resource userStorageBlobContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(deployingUserPrincipalId) && !empty(storageAccountName)) {
+resource deployerStorageBlobContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(deployerPrincipalId) && !empty(storageAccountResourceId)) {
   scope: storageAccount
-  name: guid(storageAccount.id, deployingUserPrincipalId, storageBlobDataContributor.id)
+  name: guid(storageAccount.id, deployerPrincipalId, roleDefinitions.storageBlobDataContributor)
   properties: {
-    principalId: deployingUserPrincipalId
-    roleDefinitionId: storageBlobDataContributor.id
-    principalType: deployingUserPrincipalType
+    principalId: deployerPrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.storageBlobDataContributor)
+    principalType: deployerPrincipalType
   }
 }
 
-// --- Deployer → existing AI Services (cross-scope) ---
-// NOTE: These roles are now assigned via 00_build_solution.py to avoid conflicts
-// when the deployer already has the roles on the existing AI Foundry.
-
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  OUTPUTS                                                    ║
-// ╚══════════════════════════════════════════════════════════════╝
+// NOTE: Deployer roles on existing AI Foundry (cross-scope) are assigned via
+// 00_build_solution.py to avoid conflicts when the deployer already has the roles.

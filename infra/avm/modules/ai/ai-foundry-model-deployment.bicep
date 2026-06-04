@@ -1,9 +1,11 @@
 // ============================================================================
-// Module: Model Deployment
+// Module: Model Deployment — Vanilla Bicep
 // Description: Deploys a single AI model to an existing AI Services account.
 //              Called repetitively from main.bicep for each model in the array.
 //              Generic, reusable across GSAs.
 // ============================================================================
+
+targetScope = 'resourceGroup'
 
 @description('Required. Name of the parent AI Services account.')
 param aiServicesAccountName string

@@ -8,7 +8,8 @@
 @description('Solution name suffix used to derive the resource name.')
 param solutionName string
 
-var name = 'dcr-${solutionName}'
+@description('Optional. Override name for the data collection rule. Defaults to dcr-{solutionName}.')
+param name string = 'dcr-${solutionName}'
 
 @description('Azure region for the resource.')
 param location string
@@ -16,14 +17,14 @@ param location string
 @description('Tags to apply to the resource.')
 param tags object = {}
 
-@description('Optional. Enable/Disable usage telemetry for module.')
-param enableTelemetry bool = true
-
 @description('Resource ID of the Log Analytics workspace destination.')
 param logAnalyticsWorkspaceResourceId string
 
 @description('Name of the Log Analytics workspace (used for destination naming).')
 param logAnalyticsWorkspaceName string = ''
+
+@description('Optional. Enable/Disable usage telemetry for module.')
+param enableTelemetry bool = true
 
 var dcrLogAnalyticsDestinationName = !empty(logAnalyticsWorkspaceName) ? 'la-${logAnalyticsWorkspaceName}-destination' : 'la-${name}-destination'
 

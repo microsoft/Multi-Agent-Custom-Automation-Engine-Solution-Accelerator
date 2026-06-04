@@ -1,12 +1,17 @@
 // ============================================================================
-// Module: Azure Container Registry (Bicep)
+// Module: Azure Container Registry
+// Description: Creates an Azure Container Registry
+// API: Microsoft.ContainerRegistry/registries@2025-04-01
 // ============================================================================
 
 @description('Solution name used for naming convention.')
 param solutionName string
 
+@description('Name of the container registry.')
+param name string = replace('cr${solutionName}', '-', '')
+
 @description('Azure region for deployment.')
-param solutionLocation string
+param location string
 
 @description('Resource tags.')
 param tags object = {}
@@ -22,19 +27,15 @@ param adminUserEnabled bool = false
 @allowed(['Enabled', 'Disabled'])
 param publicNetworkAccess string = 'Enabled'
 
-// ============================================================================
-// Naming
-// ============================================================================
-
-var registryName = replace('cr${solutionName}', '-', '')
+@description('Export policy status.')
+param exportPolicyStatus string = 'enabled'
 
 // ============================================================================
-// Container Registry
+// Resource Deployment
 // ============================================================================
-
-resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
-  name: registryName
-  location: solutionLocation
+resource containerRegistry 'Microsoft.ContainerRegistry/registries@2025-04-01' = {
+  name: name
+  location: location
   tags: tags
   sku: {
     name: sku
@@ -45,6 +46,9 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' =
     dataEndpointEnabled: false
     networkRuleBypassOptions: 'AzureServices'
     policies: {
+      exportPolicy: {
+        status: exportPolicyStatus
+      }
       retentionPolicy: {
         status: 'enabled'
         days: 7
@@ -61,7 +65,6 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' =
 // ============================================================================
 // Outputs
 // ============================================================================
-
 @description('The name of the container registry.')
 output name string = containerRegistry.name
 
@@ -69,4 +72,4 @@ output name string = containerRegistry.name
 output loginServer string = containerRegistry.properties.loginServer
 
 @description('The resource ID of the container registry.')
-output id string = containerRegistry.id
+output resourceId string = containerRegistry.id
