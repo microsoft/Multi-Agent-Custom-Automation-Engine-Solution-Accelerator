@@ -1,0 +1,78 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "deploymentFlavor": {
+      "value": "${DEPLOYMENT_FLAVOR=bicep}"
+    },
+    "solutionName": {
+      "value": "${AZURE_ENV_NAME}"
+    },
+    "location": {
+      "value": "${AZURE_LOCATION}"
+    },
+    "secondaryLocation": {
+      "value": "${AZURE_ENV_SECONDARY_LOCATION}"
+    },
+    "deploymentType": {
+      "value": "${AZURE_ENV_MODEL_DEPLOYMENT_TYPE}"
+    },
+    "gptModelName": {
+      "value": "${AZURE_ENV_GPT_MODEL_NAME}"
+    },
+    "gptModelVersion": {
+      "value": "${AZURE_ENV_GPT_MODEL_VERSION}"
+    },
+    "azureOpenaiAPIVersion": {
+      "value": "${AZURE_ENV_OPENAI_API_VERSION}"
+    },
+    "gptDeploymentCapacity": {
+      "value": "${AZURE_ENV_GPT_MODEL_CAPACITY}"
+    },
+    "embeddingDeploymentCapacity": {
+      "value": "${AZURE_ENV_EMBEDDING_DEPLOYMENT_CAPACITY}"
+    },
+    "imageTag": {
+      "value": "${AZURE_ENV_IMAGE_TAG}"
+    },
+    "enableMonitoring": {
+      "value": true
+    },
+    "existingLogAnalyticsWorkspaceId": {
+      "value": "${AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID}"
+    },
+    "existingFoundryProjectResourceId": {
+      "value": "${AZURE_EXISTING_AIPROJECT_RESOURCE_ID}"
+    },
+    "backendRuntimeStack": {
+      "value": "${BACKEND_RUNTIME_STACK}"
+    },
+    "azureAiServiceLocation": {
+      "value": "${AZURE_ENV_AI_SERVICE_LOCATION}"
+    },
+    "containerRegistryName": {
+      "value": "${AZURE_ENV_CONTAINER_REGISTRY_NAME}"
+    },
+    "searchServiceLocation": {
+      "value": "${AZURE_ENV_SEARCH_SERVICE_LOCATION}"
+    },
+    "deployingUserPrincipalType": {
+      "value": "${DEPLOYING_USER_PRINCIPAL_TYPE=User}"
+    },
+    "useUserAccessToken":{
+      "value": "${USE_USER_ACCESS_TOKEN}"
+    },
+    "fabricWorkspaceId": {
+      "value": "${FABRIC_WORKSPACE_ID}"
+    },
+    "azureFabricCapacityName": {
+      "value": "${AZURE_FABRIC_CAPACITY_NAME}"
+    },
+    "fabricCapacitySku": {
+      "value": "${FABRIC_CAPACITY_SKU=F2}"
+    },
+    "fabricAdminMembers": {
+      "value": "${FABRIC_ADMIN_MEMBERS=[]}"
+    }
+  }
+}
