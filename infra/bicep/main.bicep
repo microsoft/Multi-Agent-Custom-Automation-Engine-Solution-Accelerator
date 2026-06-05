@@ -869,39 +869,6 @@ module assignBackendOpenAiUserToAiServices './modules/identity/cross-scope-role-
   }
 }
 
-resource storageBlobDataContributor 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
-  scope: subscription()
-  name: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
-}
-
-resource searchIndexDataContributor 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
-  scope: subscription()
-  name: '8ebe5a00-799e-43f5-93ac-243d3dce84a7'
-}
-
-resource aiSearchResource 'Microsoft.Search/searchServices@2025-05-01' existing = {
-  name: aiSearchServiceName
-}
-
-resource backendStorageBlobContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(resourceGroup().id, 'backend-uai-storage-blob-contributor', solutionSuffix)
-  scope: storageAccountResource
-  properties: {
-    principalId: userAssignedIdentity.outputs.principalId
-    roleDefinitionId: storageBlobDataContributor.id
-    principalType: 'ServicePrincipal'
-  }
-}
-
-resource backendSearchIndexContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(resourceGroup().id, 'backend-uai-search-index-contributor', solutionSuffix)
-  scope: aiSearchResource
-  properties: {
-    principalId: userAssignedIdentity.outputs.principalId
-    roleDefinitionId: searchIndexDataContributor.id
-    principalType: 'ServicePrincipal'
-  }
-}
 
 @description('The resource group the resources were deployed into.')
 output resourceGroupName string = resourceGroup().name

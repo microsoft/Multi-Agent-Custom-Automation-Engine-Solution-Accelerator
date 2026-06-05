@@ -211,6 +211,18 @@ resource backendAppSearchReaderAssignment 'Microsoft.Authorization/roleAssignmen
   }
 }
 
+// Backend App Service → Search Index Data Contributor on AI Search
+// Extended as per accelerator need
+resource backendAppSearchIndexContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(aiSearchResourceId) && !empty(backendAppServicePrincipalId)) {
+  name: guid(resourceGroup().id, backendAppServicePrincipalId, roleDefinitions.searchIndexDataContributor, 'backend-search')
+  scope: aiSearchService
+  properties: {
+    principalId: backendAppServicePrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.searchIndexDataContributor)
+    principalType: 'ServicePrincipal'
+  }
+}
+
 // ============================================================================
 // 3. STORAGE ROLE ASSIGNMENTS
 //    AI Project, AI Search, and Existing Project identities → Storage
@@ -222,6 +234,18 @@ resource projectStorageContributor 'Microsoft.Authorization/roleAssignments@2022
   scope: storageAccount
   properties: {
     principalId: aiProjectPrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.storageBlobDataContributor)
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Backend App Service → Storage Blob Data Contributor on Storage Account
+// Extended as per accelerator need
+resource backendAppStorageContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(storageAccountResourceId) && !empty(backendAppServicePrincipalId)) {
+  name: guid(resourceGroup().id, backendAppServicePrincipalId, roleDefinitions.storageBlobDataContributor, 'backend-storage')
+  scope: storageAccount
+  properties: {
+    principalId: backendAppServicePrincipalId
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.storageBlobDataContributor)
     principalType: 'ServicePrincipal'
   }

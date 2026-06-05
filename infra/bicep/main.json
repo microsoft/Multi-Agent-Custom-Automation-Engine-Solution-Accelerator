@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "2735781366649174779"
+      "templateHash": "1860115169440691000"
     },
     "name": "Multi-Agent Custom Automation Engine - Vanilla Bicep",
     "description": "Vanilla Bicep orchestrator for the Multi-Agent Custom Automation Engine accelerator. This deployment intentionally excludes WAF features such as private networking, scale-out, redundancy, bastion, and VM resources while keeping router-compatible outputs."
@@ -426,34 +426,6 @@
           }
         }
       }
-    },
-    {
-      "type": "Microsoft.Authorization/roleAssignments",
-      "apiVersion": "2022-04-01",
-      "scope": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
-      "name": "[guid(resourceGroup().id, 'backend-uai-storage-blob-contributor', variables('solutionSuffix'))]",
-      "properties": {
-        "principalId": "[reference(resourceId('Microsoft.Resources/deployments', take(format('module.user-assigned-identity.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.principalId.value]",
-        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
-        "principalType": "ServicePrincipal"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', take(format('module.user-assigned-identity.{0}', variables('solutionSuffix')), 64))]"
-      ]
-    },
-    {
-      "type": "Microsoft.Authorization/roleAssignments",
-      "apiVersion": "2022-04-01",
-      "scope": "[resourceId('Microsoft.Search/searchServices', variables('aiSearchServiceName'))]",
-      "name": "[guid(resourceGroup().id, 'backend-uai-search-index-contributor', variables('solutionSuffix'))]",
-      "properties": {
-        "principalId": "[reference(resourceId('Microsoft.Resources/deployments', take(format('module.user-assigned-identity.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.principalId.value]",
-        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '8ebe5a00-799e-43f5-93ac-243d3dce84a7')]",
-        "principalType": "ServicePrincipal"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', take(format('module.user-assigned-identity.{0}', variables('solutionSuffix')), 64))]"
-      ]
     },
     {
       "condition": "[not(variables('useExistingLogAnalytics'))]",
@@ -4236,7 +4208,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "9572951001648196352"
+              "templateHash": "13812116308871300778"
             }
           },
           "parameters": {
@@ -4437,6 +4409,18 @@
               }
             },
             {
+              "condition": "[and(not(empty(parameters('aiSearchResourceId'))), not(empty(parameters('backendAppServicePrincipalId'))))]",
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.Search/searchServices', last(split(parameters('aiSearchResourceId'), '/')))]",
+              "name": "[guid(resourceGroup().id, parameters('backendAppServicePrincipalId'), variables('roleDefinitions').searchIndexDataContributor, 'backend-search')]",
+              "properties": {
+                "principalId": "[parameters('backendAppServicePrincipalId')]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('roleDefinitions').searchIndexDataContributor)]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
               "condition": "[and(not(empty(parameters('storageAccountResourceId'))), not(empty(parameters('aiProjectPrincipalId'))))]",
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
@@ -4444,6 +4428,18 @@
               "name": "[guid(resourceGroup().id, parameters('aiProjectPrincipalId'), variables('roleDefinitions').storageBlobDataContributor, 'project-storage')]",
               "properties": {
                 "principalId": "[parameters('aiProjectPrincipalId')]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('roleDefinitions').storageBlobDataContributor)]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
+              "condition": "[and(not(empty(parameters('storageAccountResourceId'))), not(empty(parameters('backendAppServicePrincipalId'))))]",
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.Storage/storageAccounts', last(split(parameters('storageAccountResourceId'), '/')))]",
+              "name": "[guid(resourceGroup().id, parameters('backendAppServicePrincipalId'), variables('roleDefinitions').storageBlobDataContributor, 'backend-storage')]",
+              "properties": {
+                "principalId": "[parameters('backendAppServicePrincipalId')]",
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('roleDefinitions').storageBlobDataContributor)]",
                 "principalType": "ServicePrincipal"
               }
