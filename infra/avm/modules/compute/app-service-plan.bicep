@@ -1,7 +1,7 @@
 // ============================================================================
 // Module: App Service Plan
-// Description: Creates an Azure App Service Plan
-// API: Microsoft.Web/serverfarms@2025-05-01
+// Description: AVM wrapper for Azure App Service Plan
+// AVM Module: avm/res/web/serverfarm:0.7.0
 // ============================================================================
 
 @description('Solution name suffix used to derive the resource name.')
@@ -26,26 +26,33 @@ param reserved bool = true
 @description('Kind of the App Service Plan.')
 param kind string = 'linux'
 
+@description('Optional. Enable/Disable usage telemetry for module.')
+param enableTelemetry bool = true
+
 @description('Number of instances (workers).')
 param skuCapacity int = 1
+
+@description('Diagnostic settings for monitoring.')
+param diagnosticSettings array = []
 
 @description('Enable zone redundancy. Requires Premium SKU (P1v3+).')
 param zoneRedundant bool = false
 
 // ============================================================================
-// Resource Deployment
+// AVM Module Deployment
 // ============================================================================
-resource appServicePlan 'Microsoft.Web/serverfarms@2025-05-01' = {
-  name: name
-  location: location
-  tags: tags
-  kind: kind
-  sku: {
-    name: skuName
-    capacity: skuCapacity
-  }
-  properties: {
+module appServicePlan 'br/public:avm/res/web/serverfarm:0.7.0' = {
+  name: take('avm.res.web.serverfarm.${name}', 64)
+  params: {
+    name: name
+    location: location
+    tags: tags
+    enableTelemetry: enableTelemetry
+    skuName: skuName
+    skuCapacity: skuCapacity
     reserved: reserved
+    kind: kind
+    diagnosticSettings: !empty(diagnosticSettings) ? diagnosticSettings : []
     zoneRedundant: zoneRedundant
   }
 }
@@ -54,7 +61,7 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2025-05-01' = {
 // Outputs
 // ============================================================================
 @description('Resource ID of the App Service Plan.')
-output resourceId string = appServicePlan.id
+output resourceId string = appServicePlan.outputs.resourceId
 
 @description('Name of the App Service Plan.')
-output name string = appServicePlan.name
+output name string = appServicePlan.outputs.name

@@ -1,7 +1,8 @@
 // ============================================================================
 // Module: Storage Account
-// Description: Creates an Azure Storage Account with blob container
-// API: Microsoft.Storage/storageAccounts@2025-08-01
+// Description: AVM wrapper for Azure Storage Account with WAF alignment
+// AVM Module: avm/res/storage/storage-account:0.32.0
+// WAF: https://learn.microsoft.com/azure/well-architected/service-guides/storage-accounts
 // ============================================================================
 
 @description('Solution name suffix used to derive the resource name.')
@@ -32,6 +33,9 @@ param allowBlobPublicAccess bool = false
 @description('Allow shared key access.')
 param allowSharedKeyAccess bool = true
 
+@description('Optional. Enable/Disable usage telemetry for module.')
+param enableTelemetry bool = true
+
 @description('Blob containers to create.')
 param containers array = [
   {
@@ -40,62 +44,92 @@ param containers array = [
   }
 ]
 
+// --- WAF: Monitoring ---
+@description('Diagnostic settings for monitoring.')
+param diagnosticSettings array = []
+
+// --- WAF: Private Networking ---
+@description('Public network access setting.')
+param publicNetworkAccess string = 'Enabled'
+
+@description('Network ACLs for the storage account.')
+param networkAcls object = {
+  defaultAction: 'Allow'
+  bypass: 'AzureServices'
+}
+
+@description('Whether to enable private networking.')
+param enablePrivateNetworking bool = false
+
+@description('Subnet resource ID for the private endpoint.')
+param privateEndpointSubnetId string = ''
+
+@description('Private DNS zone resource IDs for Storage (blob).')
+param privateDnsZoneResourceIds array = []
+
+var privateDnsZoneConfigs = [for (zoneId, i) in privateDnsZoneResourceIds: {
+  name: 'dns-zone-${i}'
+  privateDnsZoneResourceId: zoneId
+}]
+
+// --- Role Assignments ---
+@description('Optional. Array of role assignments to create on the Storage Account.')
+param roleAssignments array = []
+
 // ============================================================================
-// Resource Deployment
+// AVM Module Deployment
 // ============================================================================
-resource storageAccount 'Microsoft.Storage/storageAccounts@2025-08-01' = {
-  name: name
-  location: location
-  tags: tags
-  kind: kind
-  sku: {
-    name: skuName
-  }
-  properties: {
+module storage 'br/public:avm/res/storage/storage-account:0.32.0' = {
+  name: take('avm.res.storage.storage-account.${name}', 64)
+  params: {
+    name: name
+    location: location
+    tags: tags
+    enableTelemetry: enableTelemetry
+    skuName: skuName
+    kind: kind
     accessTier: accessTier
     allowBlobPublicAccess: allowBlobPublicAccess
     allowSharedKeyAccess: allowSharedKeyAccess
     minimumTlsVersion: 'TLS1_2'
     supportsHttpsTrafficOnly: true
-    encryption: {
-      services: {
-        blob: {
-          enabled: true
-        }
-        file: {
-          enabled: true
+    requireInfrastructureEncryption: true
+    publicNetworkAccess: publicNetworkAccess
+    networkAcls: networkAcls
+    blobServices: {
+      containers: [for container in containers: {
+        name: container.name
+        publicAccess: container.publicAccess
+      }]
+      diagnosticSettings: !empty(diagnosticSettings) ? diagnosticSettings : []
+    }
+    diagnosticSettings: !empty(diagnosticSettings) ? diagnosticSettings : []
+    privateEndpoints: enablePrivateNetworking ? [
+      {
+        name: 'pep-${name}'
+        customNetworkInterfaceName: 'nic-${name}'
+        subnetResourceId: privateEndpointSubnetId
+        service: 'blob'
+        privateDnsZoneGroup: {
+          privateDnsZoneGroupConfigs: privateDnsZoneConfigs
         }
       }
-      keySource: 'Microsoft.Storage'
-      requireInfrastructureEncryption: true
-    }
+    ] : []
+    roleAssignments: !empty(roleAssignments) ? roleAssignments : []
   }
 }
-
-resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2025-08-01' = {
-  parent: storageAccount
-  name: 'default'
-}
-
-resource blobContainers 'Microsoft.Storage/storageAccounts/blobServices/containers@2025-08-01' = [for container in containers: {
-  parent: blobService
-  name: container.name
-  properties: {
-    publicAccess: container.publicAccess
-  }
-}]
 
 // ============================================================================
 // Outputs
 // ============================================================================
 @description('Resource ID of the Storage Account.')
-output resourceId string = storageAccount.id
+output resourceId string = storage.outputs.resourceId
 
 @description('Name of the Storage Account.')
-output name string = storageAccount.name
+output name string = storage.outputs.name
 
 @description('Primary blob endpoint.')
-output blobEndpoint string = storageAccount.properties.primaryEndpoints.blob
+output blobEndpoint string = storage.outputs.primaryBlobEndpoint
 
-@description('All service endpoints.')
-output serviceEndpoints object = storageAccount.properties.primaryEndpoints
+@description('Service endpoints.')
+output serviceEndpoints object = storage.outputs.serviceEndpoints

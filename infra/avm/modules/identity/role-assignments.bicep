@@ -34,10 +34,6 @@ param backendAppServicePrincipalId string = ''
 @description('Principal ID of the deploying user (for user access roles).')
 param deployerPrincipalId string = ''
 
-@description('Principal type of the deploying user.')
-@allowed(['User', 'ServicePrincipal'])
-param deployerPrincipalType string = 'User'
-
 // --- Resource References ---
 
 @description('Resource ID of the AI Foundry account (empty if not deployed — new project path).')
@@ -69,7 +65,6 @@ var roleDefinitions = {
   cognitiveServicesUser: 'a97b65f3-24c7-4388-baec-2e87135dc908'
   cognitiveServicesOpenAIUser: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
   searchIndexDataReader: '1407120a-92aa-4202-b7e9-c0e197c71c8f'
-  searchIndexDataContributor: '8ebe5a00-799e-43f5-93ac-243d3dce84a7'
   searchServiceContributor: '7ca78c08-252a-4471-8644-bb5ff32d4ba0'
   storageBlobDataContributor: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
   storageBlobDataReader: '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1'
@@ -288,63 +283,16 @@ resource backendAppCosmosRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/s
 
 // ============================================================================
 // 5. DEPLOYER (USER) ROLE ASSIGNMENTS
-//    Deploying user → AI Services, Search, Storage (Bicep-only)
+//    Deploying user → CosmosDB
 // ============================================================================
 
-// Deploying User → Cognitive Services User on AI Services
-resource deployerAiServicesAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingAIProject && !empty(deployerPrincipalId) && !empty(aiFoundryResourceId)) {
-  scope: aiFoundryAccount
-  name: guid(aiFoundryAccount.id, deployerPrincipalId, roleDefinitions.cognitiveServicesUser)
+//Deployer → Cosmos DB Contributor (data-plane, uses sqlRoleAssignments)
+resource deployerCosmosRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-11-15' = {
+  parent: cosmosAccount
+  name: guid(cosmosContributorRoleDefinition.id, cosmosAccount.id, deployerPrincipalId)
   properties: {
     principalId: deployerPrincipalId
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.cognitiveServicesUser)
-    principalType: deployerPrincipalType
+    roleDefinitionId: cosmosContributorRoleDefinition.id
+    scope: cosmosAccount.id
   }
 }
-
-// Deploying User → Foundry User on AI Services
-resource deployerAzureAIAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingAIProject && !empty(deployerPrincipalId) && !empty(aiFoundryResourceId)) {
-  scope: aiFoundryAccount
-  name: guid(aiFoundryAccount.id, deployerPrincipalId, roleDefinitions.azureAiUser)
-  properties: {
-    principalId: deployerPrincipalId
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.azureAiUser)
-    principalType: deployerPrincipalType
-  }
-}
-
-// Deploying User → Search Index Data Contributor on AI Search
-resource deployerSearchIndexContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(deployerPrincipalId) && !empty(aiSearchResourceId)) {
-  scope: aiSearchService
-  name: guid(aiSearchService.id, deployerPrincipalId, roleDefinitions.searchIndexDataContributor)
-  properties: {
-    principalId: deployerPrincipalId
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.searchIndexDataContributor)
-    principalType: deployerPrincipalType
-  }
-}
-
-// Deploying User → Search Service Contributor on AI Search
-resource deployerSearchServiceContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(deployerPrincipalId) && !empty(aiSearchResourceId)) {
-  scope: aiSearchService
-  name: guid(aiSearchService.id, deployerPrincipalId, roleDefinitions.searchServiceContributor)
-  properties: {
-    principalId: deployerPrincipalId
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.searchServiceContributor)
-    principalType: deployerPrincipalType
-  }
-}
-
-// Deploying User → Storage Blob Data Contributor
-resource deployerStorageBlobContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(deployerPrincipalId) && !empty(storageAccountResourceId)) {
-  scope: storageAccount
-  name: guid(storageAccount.id, deployerPrincipalId, roleDefinitions.storageBlobDataContributor)
-  properties: {
-    principalId: deployerPrincipalId
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.storageBlobDataContributor)
-    principalType: deployerPrincipalType
-  }
-}
-
-// NOTE: Deployer roles on existing AI Foundry (cross-scope) are assigned via
-// 00_build_solution.py to avoid conflicts when the deployer already has the roles.

@@ -1,10 +1,10 @@
 // ============================================================================
-// Module: AI Foundry Project (Account + Project) — Vanilla Bicep
-// Description: Creates an Azure AI Services account and AI Foundry project.
-//              Generic, reusable across GSAs — no app-specific parameters.
+// Module: AI Foundry Project (Account + Project)
+// Description: AVM wrapper for Azure AI Services account creation and
+//              AI Foundry project provisioning. Generic, reusable across GSAs.
+// AVM Module: avm/res/cognitive-services/account
+// WAF: https://learn.microsoft.com/azure/well-architected/service-guides/azure-openai
 // ============================================================================
-
-targetScope = 'resourceGroup'
 
 @description('Required. Solution name suffix used to generate resource names.')
 param solutionName string
@@ -41,21 +41,31 @@ param identityType string = 'SystemAssigned'
 @allowed(['Allow', 'Deny'])
 param networkAclsDefaultAction string = 'Allow'
 
+// --- WAF: Monitoring ---
+@description('Optional. Diagnostic settings for the resource.')
+param diagnosticSettings array?
+
+// --- WAF: Telemetry ---
+@description('Optional. Enable/Disable usage telemetry for module.')
+param enableTelemetry bool = true
+
+// --- Role Assignments ---
+@description('Optional. Array of role assignments to create on the AI Services account.')
+param roleAssignments array?
+
 // ============================================================================
-// AI Services Account
+// AI Services Account (AVM Module)
 // ============================================================================
-resource aiServices 'Microsoft.CognitiveServices/accounts@2025-12-01' = {
-  name: name
-  location: location
-  tags: tags
-  sku: {
-    name: skuName
-  }
-  kind: 'AIServices'
-  identity: {
-    type: identityType
-  }
-  properties: {
+module aiServicesAccount 'br/public:avm/res/cognitive-services/account:0.14.2' = {
+  name: take('avm.res.cognitive-services.account.${name}', 64)
+  params: {
+    name: name
+    location: location
+    tags: tags
+    enableTelemetry: enableTelemetry
+    sku: skuName
+    kind: 'AIServices'
+    disableLocalAuth: disableLocalAuth
     allowProjectManagement: allowProjectManagement
     customSubDomainName: name
     networkAcls: {
@@ -64,22 +74,36 @@ resource aiServices 'Microsoft.CognitiveServices/accounts@2025-12-01' = {
       ipRules: []
     }
     publicNetworkAccess: publicNetworkAccess
-    disableLocalAuth: disableLocalAuth
+    managedIdentities: {
+      systemAssigned: true
+    }
+    diagnosticSettings: diagnosticSettings
+    deployments: []
+    roleAssignments: roleAssignments
+    // Private endpoints deployed separately to avoid AccountProvisioningStateInvalid
+    privateEndpoints: []
   }
 }
 
 // ============================================================================
 // AI Foundry Project
 // ============================================================================
+resource aiServicesResource 'Microsoft.CognitiveServices/accounts@2025-12-01' existing = {
+  name: name
+  dependsOn: [aiServicesAccount]
+}
+
 resource aiProject 'Microsoft.CognitiveServices/accounts/projects@2025-12-01' = {
-  parent: aiServices
+  parent: aiServicesResource
   name: projectName
   location: location
+  tags: tags
   kind: 'AIServices'
   identity: {
     type: identityType
   }
   properties: {}
+  dependsOn: [aiServicesAccount]
 }
 
 // ============================================================================
@@ -87,16 +111,16 @@ resource aiProject 'Microsoft.CognitiveServices/accounts/projects@2025-12-01' = 
 // ============================================================================
 
 @description('Resource ID of the AI Services account.')
-output resourceId string = aiServices.id
+output resourceId string = aiServicesAccount.outputs.resourceId
 
 @description('Name of the AI Services account.')
-output name string = aiServices.name
+output name string = aiServicesAccount.outputs.name
 
-@description('Endpoint of the AI Services account (OpenAI Language Model Instance API).')
-output endpoint string = aiServices.properties.endpoints['OpenAI Language Model Instance API']
+@description('Endpoint of the AI Services account.')
+output endpoint string = aiServicesAccount.outputs.endpoint
 
 @description('System-assigned identity principal ID of the AI Services account.')
-output principalId string = aiServices.identity.principalId
+output principalId string = aiServicesAccount.outputs.systemAssignedMIPrincipalId
 
 @description('Resource ID of the AI Foundry project.')
 output projectResourceId string = aiProject.id

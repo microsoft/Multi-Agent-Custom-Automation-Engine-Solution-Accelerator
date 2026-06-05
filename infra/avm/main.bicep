@@ -605,6 +605,7 @@ module app_insights './modules/monitoring/app-insights.bicep' = if (enableMonito
     workspaceResourceId: logAnalyticsWorkspaceResourceId
     retentionInDays: 365
     disableIpMasking: false
+    enableTelemetry: enableTelemetry
   }
 }
 
@@ -859,6 +860,21 @@ module ai_search './modules/ai/ai-search.bicep' = {
     semanticSearch: 'free'
     disableLocalAuth: true
     publicNetworkAccess: 'Enabled'
+    enableTelemetry: enableTelemetry
+    diagnosticSettings: monitoringDiagnosticSettings
+    roleAssignments: [
+      {
+        roleDefinitionIdOrName: '8ebe5a00-799e-43f5-93ac-243d3dce84a7'
+        principalId: deployingUserPrincipalId
+        principalType: deployerPrincipalType
+      }
+      {
+        roleDefinitionIdOrName: '7ca78c08-252a-4471-8644-bb5ff32d4ba0'
+        principalId: deployingUserPrincipalId
+        principalType: deployerPrincipalType
+      }
+    ]
+    privateEndpoints: []
   }
 }
 
@@ -891,6 +907,27 @@ module storage_account './modules/data/storage-account.bicep' = {
     solutionName: solutionSuffix
     location: location
     tags: tags
+    enableTelemetry: enableTelemetry
+    publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
+    diagnosticSettings: monitoringDiagnosticSettings
+    containers: [
+      {
+        name: 'default'
+        publicAccess: 'None'
+      }
+    ]
+    roleAssignments: [
+      {
+        roleDefinitionIdOrName: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
+        principalId: deployingUserPrincipalId
+        principalType: deployerPrincipalType
+      }
+    ]
+    enablePrivateNetworking: enablePrivateNetworking
+    privateEndpointSubnetId: enablePrivateNetworking ? virtualNetwork!.outputs.backendSubnetResourceId : ''
+    privateDnsZoneResourceIds: enablePrivateNetworking ? [
+      privateDnsZoneDeployments[dnsZoneIndex.blob]!.outputs.resourceId
+    ] : []
   }
 }
 
@@ -900,6 +937,7 @@ module cosmosDBModule './modules/data/cosmos-db-nosql.bicep' = {
     solutionName: solutionSuffix
     location: location
     tags: tags
+    enableTelemetry: enableTelemetry
     databaseName: cosmosDbDatabaseName
     containers: [
       {
@@ -907,6 +945,16 @@ module cosmosDBModule './modules/data/cosmos-db-nosql.bicep' = {
         partitionKeyPath: '/session_id'
       }
     ]
+    publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
+    diagnosticSettings: monitoringDiagnosticSettings
+    zoneRedundant: enableRedundancy
+    enableAutomaticFailover: enableRedundancy
+    haLocation: cosmosDbHaLocation
+    enablePrivateNetworking: enablePrivateNetworking
+    privateEndpointSubnetId: enablePrivateNetworking ? virtualNetwork!.outputs.backendSubnetResourceId : ''
+    privateDnsZoneResourceIds: enablePrivateNetworking ? [
+      privateDnsZoneDeployments[dnsZoneIndex.cosmosDb]!.outputs.resourceId
+    ] : []
   }
 }
 
@@ -920,6 +968,7 @@ module containerAppEnvironment './modules/compute/container-app-environment.bice
     solutionName: solutionSuffix
     location: location
     tags: tags
+    enableTelemetry: enableTelemetry
     logAnalyticsWorkspaceResourceId: logAnalyticsWorkspaceResourceId
     infrastructureSubnetId: enablePrivateNetworking ? containerSubnetResourceId : ''
     zoneRedundant: enableRedundancy
@@ -936,6 +985,7 @@ module containerApp './modules/compute/container-app.bicep' = {
     ingressExternal: true
     ingressTargetPort: 8000
     ingressAllowInsecure: false
+    enableTelemetry: enableTelemetry
     managedIdentities: {
       userAssignedResourceIds: [managed_identity.outputs.resourceId]
     }
@@ -1125,6 +1175,7 @@ module containerAppMcp './modules/compute/container-app.bicep' = {
     ingressExternal: true
     ingressTargetPort: 9000
     ingressAllowInsecure: false
+    enableTelemetry: enableTelemetry
     managedIdentities: {
       userAssignedResourceIds: [managed_identity.outputs.resourceId]
     }
@@ -1203,9 +1254,11 @@ module webServerFarm './modules/compute/app-service-plan.bicep' = {
     solutionName: solutionSuffix
     location: location
     tags: tags
+    enableTelemetry: enableTelemetry
     skuName: enableScalability || enableRedundancy ? 'P1v4' : 'B3'
     skuCapacity: enableScalability ? 3 : 1
     zoneRedundant: enableRedundancy
+    diagnosticSettings: monitoringDiagnosticSettings
   }
 }
 
@@ -1215,6 +1268,7 @@ module webSite './modules/compute/app-service.bicep' = {
     solutionName: 'app-${solutionSuffix}'
     location: location
     tags: tags
+    enableTelemetry: enableTelemetry
     serverFarmResourceId: webServerFarm.outputs.resourceId
     linuxFxVersion: 'DOCKER|${frontendContainerRegistryHostname}/${frontendContainerImageName}:${frontendContainerImageTag}'
     appSettings: {
@@ -1228,41 +1282,13 @@ module webSite './modules/compute/app-service.bicep' = {
     }
     virtualNetworkSubnetId: enablePrivateNetworking ? virtualNetwork!.outputs.webserverfarmSubnetResourceId : ''
     publicNetworkAccess: 'Enabled'
+    diagnosticSettings: monitoringDiagnosticSettings
   }
 }
 
 // ============================================================================
 // Role Assignments
 // ============================================================================
-
-resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-11-15' existing = {
-  name: cosmosDbResourceName
-}
-
-resource cosmosContributorRoleDefinition 'Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions@2024-11-15' existing = {
-  parent: cosmosAccount
-  name: '00000000-0000-0000-0000-000000000002'
-}
-
-resource managedIdentityCosmosRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-11-15' = {
-  parent: cosmosAccount
-  name: guid(solutionSuffix, 'cosmos-managed-identity-contributor')
-  properties: {
-    principalId: managed_identity.outputs.principalId
-    roleDefinitionId: cosmosContributorRoleDefinition.id
-    scope: cosmosAccount.id
-  }
-}
-
-resource deployerCosmosRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-11-15' = {
-  parent: cosmosAccount
-  name: guid(solutionSuffix, 'cosmos-deployer-contributor')
-  properties: {
-    principalId: deployingUserPrincipalId
-    roleDefinitionId: cosmosContributorRoleDefinition.id
-    scope: cosmosAccount.id
-  }
-}
 
 module role_assignments_identity './modules/identity/role-assignments.bicep' = {
   name: take('module.role-assignments.identity.${solutionName}', 64)
@@ -1273,13 +1299,12 @@ module role_assignments_identity './modules/identity/role-assignments.bicep' = {
     aiProjectPrincipalId: !useExistingAIProject ? aiFoundryAiProjectPrincipalId : ''
     existingAiProjectPrincipalId: useExistingAIProject ? aiFoundryAiProjectPrincipalId : ''
     aiSearchPrincipalId: ai_search.outputs.identityPrincipalId
-    backendAppServicePrincipalId: ''
-    deployerPrincipalId: deployingUserPrincipalId
-    deployerPrincipalType: deployerPrincipalType
+    backendAppServicePrincipalId: managed_identity.outputs.principalId
     aiFoundryResourceId: !useExistingAIProject ? aiFoundryResourceId : ''
     aiSearchResourceId: ai_search.outputs.resourceId
     storageAccountResourceId: storage_account.outputs.resourceId
     cosmosDbAccountName: cosmosDBModule.outputs.name
+    deployerPrincipalId: deployingUserPrincipalId
   }
 }
 

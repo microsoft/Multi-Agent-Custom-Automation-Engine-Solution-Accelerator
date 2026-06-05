@@ -1,7 +1,6 @@
 // ============================================================================
-// Module: Azure Container Apps Environment
-// Description: Creates an Azure Container Apps managed environment
-// API: Microsoft.App/managedEnvironments@2024-03-01
+// Module: Azure Container Apps Environment (AVM)
+// AVM Module: avm/res/app/managed-environment:0.13.3
 // ============================================================================
 
 @description('Solution name used for naming convention.')
@@ -25,24 +24,24 @@ param infrastructureSubnetId string = ''
 @description('Enable zone redundancy.')
 param zoneRedundant bool = false
 
+@description('Enable Azure telemetry collection.')
+param enableTelemetry bool = true
+
 // ============================================================================
-// Resource Deployment
+// Container Apps Environment (AVM)
 // ============================================================================
-resource containerAppEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = {
-  name: name
-  location: location
-  tags: tags
-  properties: {
+module managedEnvironment 'br/public:avm/res/app/managed-environment:0.13.3' = {
+  name: take('avm.res.app.managedenvironment.${name}', 64)
+  params: {
+    name: name
+    location: location
+    tags: tags
+    enableTelemetry: enableTelemetry
     appLogsConfiguration: {
       destination: 'log-analytics'
-      logAnalyticsConfiguration: {
-        customerId: reference(logAnalyticsWorkspaceResourceId, '2023-09-01').customerId
-        sharedKey: listKeys(logAnalyticsWorkspaceResourceId, '2023-09-01').primarySharedKey
-      }
+      logAnalyticsWorkspaceResourceId: logAnalyticsWorkspaceResourceId
     }
-    vnetConfiguration: empty(infrastructureSubnetId) ? null : {
-      infrastructureSubnetId: infrastructureSubnetId
-    }
+    infrastructureSubnetResourceId: !empty(infrastructureSubnetId) ? infrastructureSubnetId : null
     zoneRedundant: zoneRedundant
   }
 }
@@ -51,13 +50,13 @@ resource containerAppEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' 
 // Outputs
 // ============================================================================
 @description('The name of the Container Apps Environment.')
-output name string = containerAppEnvironment.name
+output name string = managedEnvironment.outputs.name
 
 @description('The resource ID of the Container Apps Environment.')
-output resourceId string = containerAppEnvironment.id
+output resourceId string = managedEnvironment.outputs.resourceId
 
 @description('The default domain of the Container Apps Environment.')
-output defaultDomain string = containerAppEnvironment.properties.defaultDomain
+output defaultDomain string = managedEnvironment.outputs.defaultDomain
 
-@description('The static IP address of the Container Apps Environment.')
-output staticIp string = containerAppEnvironment.properties.staticIp
+@description('The static IP of the Container Apps Environment.')
+output staticIp string = managedEnvironment.outputs.staticIp

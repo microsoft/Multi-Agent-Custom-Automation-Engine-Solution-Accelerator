@@ -1,5 +1,5 @@
 // ============================================================================
-// Module: AI Foundry Project Connection (Single) — Vanilla Bicep
+// Module: AI Foundry Project Connection (Single)
 // Description: Creates a single connection on an AI Foundry project.
 //              Generic, reusable — call once per connection type from main.bicep.
 //              Supports any connection category (CognitiveSearch, AzureBlob,

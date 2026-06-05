@@ -1,7 +1,6 @@
 // ============================================================================
-// Module: Azure Container App
-// Description: Creates an Azure Container App
-// API: Microsoft.App/containerApps@2024-10-02-preview
+// Module: Azure Container App (AVM)
+// AVM Module: avm/res/app/container-app:0.22.1
 // ============================================================================
 
 @description('Name of the container app.')
@@ -51,7 +50,7 @@ param corsPolicy object = {}
 @allowed(['Single', 'Multiple'])
 param activeRevisionsMode string = 'Single'
 
-@description('Scale settings (maxReplicas, minReplicas, rules).')
+@description('Scale settings (maxReplicas, minReplicas, rules, cooldownPeriod, pollingInterval).')
 param scaleSettings object = {
   maxReplicas: 10
   minReplicas: 0
@@ -60,44 +59,33 @@ param scaleSettings object = {
 @description('Workload profile name.')
 param workloadProfileName string?
 
-// ============================================================================
-// Resource Deployment
-// ============================================================================
-var identityConfig = empty(managedIdentities) ? { type: 'None' } : {
-  type: contains(managedIdentities, 'userAssignedResourceIds') ? (contains(managedIdentities, 'systemAssigned') && managedIdentities.systemAssigned ? 'SystemAssigned,UserAssigned' : 'UserAssigned') : 'SystemAssigned'
-  userAssignedIdentities: contains(managedIdentities, 'userAssignedResourceIds') ? reduce(managedIdentities.userAssignedResourceIds, {}, (cur, id) => union(cur, { '${id}': {} })) : null
-}
+@description('Enable Azure telemetry collection.')
+param enableTelemetry bool = true
 
-var ingressConfig = disableIngress ? null : {
-  external: ingressExternal
-  targetPort: ingressTargetPort
-  transport: ingressTransport
-  allowInsecure: ingressAllowInsecure
-  corsPolicy: !empty(corsPolicy) ? corsPolicy : null
-}
-
-resource containerApp 'Microsoft.App/containerApps@2024-10-02-preview' = {
-  name: name
-  location: location
-  tags: tags
-  identity: identityConfig
-  properties: {
-    managedEnvironmentId: environmentResourceId
+// ============================================================================
+// Container App (AVM)
+// ============================================================================
+module containerApp 'br/public:avm/res/app/container-app:0.22.1' = {
+  name: take('avm.res.app.containerapp.${name}', 64)
+  params: {
+    name: name
+    location: location
+    tags: tags
+    enableTelemetry: enableTelemetry
+    environmentResourceId: environmentResourceId
+    containers: containers
+    ingressExternal: disableIngress ? false : ingressExternal
+    ingressTargetPort: ingressTargetPort
+    ingressTransport: ingressTransport
+    ingressAllowInsecure: ingressAllowInsecure
+    disableIngress: disableIngress
+    registries: registries
+    secrets: secrets
+    managedIdentities: !empty(managedIdentities) ? managedIdentities : {}
+    corsPolicy: !empty(corsPolicy) ? corsPolicy : null
+    activeRevisionsMode: activeRevisionsMode
+    scaleSettings: scaleSettings
     workloadProfileName: workloadProfileName
-    configuration: {
-      activeRevisionsMode: activeRevisionsMode
-      ingress: ingressConfig
-      registries: registries
-      secrets: secrets
-    }
-    template: {
-      containers: containers
-      scale: {
-        minReplicas: scaleSettings.minReplicas
-        maxReplicas: scaleSettings.maxReplicas
-        rules: contains(scaleSettings, 'rules') ? scaleSettings.rules : null
-      }
-    }
   }
 }
 
@@ -105,13 +93,13 @@ resource containerApp 'Microsoft.App/containerApps@2024-10-02-preview' = {
 // Outputs
 // ============================================================================
 @description('The name of the container app.')
-output name string = containerApp.name
+output name string = containerApp.outputs.name
 
 @description('The resource ID of the container app.')
-output resourceId string = containerApp.id
+output resourceId string = containerApp.outputs.resourceId
 
 @description('The FQDN of the container app.')
-output fqdn string = !disableIngress ? containerApp.properties.configuration.ingress.fqdn : ''
+output fqdn string = containerApp.outputs.fqdn
 
 @description('System-assigned identity principal ID.')
-output principalId string = contains(containerApp.identity.type, 'SystemAssigned') ? containerApp.identity.principalId : ''
+output principalId string = containerApp.outputs.?systemAssignedMIPrincipalId ?? ''

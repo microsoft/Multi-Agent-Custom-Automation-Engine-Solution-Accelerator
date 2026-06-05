@@ -370,5 +370,13 @@ resource deployerStorageBlobContributor 'Microsoft.Authorization/roleAssignments
   }
 }
 
-// NOTE: Deployer roles on existing AI Foundry (cross-scope) are assigned via
-// 00_build_solution.py to avoid conflicts when the deployer already has the roles.
+// Deploying User → Cosmos DB Contributor (data-plane, uses sqlRoleAssignments)
+resource deployerCosmosRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2025-10-15' = if (!empty(cosmosDbAccountName) && !empty(deployerPrincipalId)) {
+  parent: cosmosAccount
+  name: guid(cosmosContributorRoleDefinition.id, cosmosAccount.id, deployerPrincipalId)
+  properties: {
+    principalId: deployerPrincipalId
+    roleDefinitionId: cosmosContributorRoleDefinition.id
+    scope: cosmosAccount.id
+  }
+}
