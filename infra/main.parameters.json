@@ -54,7 +54,7 @@
       "value": "${AZURE_ENV_5MINI_MODEL_VERSION}"
     },
     "gpt5MiniModelDeploymentType": {
-      "value": "${AZURE_ENV_5MINI_MODEL_DEPLOYMENT_TYPE=latest_v4}"
+      "value": "${AZURE_ENV_5MINI_MODEL_DEPLOYMENT_TYPE}"
     },
      "backendContainerImageTag": {
       "value": "${AZURE_ENV_IMAGE_TAG=latest_v4}"
@@ -63,7 +63,7 @@
       "value": "${AZURE_ENV_5MINI_MODEL_CAPACITY}"
     },
     "gptImageModelName": {
-      "value": "${AZURE_ENV_IMAGE_MODEL_NAME=latest_v4}"
+      "value": "${AZURE_ENV_IMAGE_MODEL_NAME}"
     },
     "MCPContainerImageTag": {
       "value": "${AZURE_ENV_IMAGE_TAG=latest_v4}"

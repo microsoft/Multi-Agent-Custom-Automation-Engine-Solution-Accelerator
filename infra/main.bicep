@@ -172,37 +172,31 @@ param vmSize string = 'Standard_D2s_v5'
 // These parameters are changed for testing - please reset as part of publication
 
 @description('Optional. The Container Registry hostname where the docker images for the backend are located.')
-param backendContainerRegistryHostname string = 'macaetas273cr.azurecr.io'
+param backendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
 
 @description('Optional. The Container Image Name to deploy on the backend.')
 param backendContainerImageName string = 'macaebackend'
 
 @description('Optional. The Container Image Tag to deploy on the backend.')
-param backendContainerImageTag string = 'v1.4.0'
+param backendContainerImageTag string = 'latest_v4'
 
 @description('Optional. The Container Registry hostname where the docker images for the frontend are located.')
-param frontendContainerRegistryHostname string = 'macaetas273cr.azurecr.io'
+param frontendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
 
 @description('Optional. The Container Image Name to deploy on the frontend.')
 param frontendContainerImageName string = 'macaefrontend'
 
 @description('Optional. The Container Image Tag to deploy on the frontend.')
-param frontendContainerImageTag string = 'v1.3.0'
+param frontendContainerImageTag string = 'latest_v4'
 
 @description('Optional. The Container Registry hostname where the docker images for the MCP are located.')
-param MCPContainerRegistryHostname string = 'macaetas273cr.azurecr.io'
+param MCPContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
 
 @description('Optional. The Container Image Name to deploy on the MCP.')
 param MCPContainerImageName string = 'macaemcp'
 
 @description('Optional. The Container Image Tag to deploy on the MCP.')
-param MCPContainerImageTag string = 'v1.2.0'
-
-@description('Optional. The name of the external ACR to grant AcrPull access to. Derived from the registry hostname.')
-param externalAcrName string = split(backendContainerRegistryHostname, '.')[0]
-
-@description('Optional. The resource group containing the external ACR. Required when ACR is in a different resource group.')
-param externalAcrResourceGroup string = 'rg-macaetas27-3'
+param MCPContainerImageTag string = 'latest_v4'
 
 @description('Optional. Enable/Disable usage telemetry for module.')
 param enableTelemetry bool = true
@@ -431,18 +425,6 @@ module userAssignedIdentity 'br/public:avm/res/managed-identity/user-assigned-id
     location: location
     tags: tags
     enableTelemetry: enableTelemetry
-  }
-}
-
-// ========== ACR Pull Role Assignment ========== //
-// Grant the user-assigned identity AcrPull on the external container registry.
-var acrRoleTargetRg = !empty(externalAcrResourceGroup) ? externalAcrResourceGroup : resourceGroup().name
-module acrPullRole 'modules/acr-pull-role.bicep' = {
-  name: 'acrPullRoleAssignment-${externalAcrName}'
-  scope: resourceGroup(acrRoleTargetRg)
-  params: {
-    acrName: externalAcrName
-    principalId: userAssignedIdentity.outputs.principalId
   }
 }
 
@@ -1344,7 +1326,6 @@ module caeDnsZone 'br/public:avm/res/network/private-dns-zone:0.7.1' = if (enabl
 var containerAppResourceName = 'ca-${solutionSuffix}'
 module containerApp 'br/public:avm/res/app/container-app:0.22.0' = {
   name: take('avm.res.app.container-app.${containerAppResourceName}', 64)
-  dependsOn: [acrPullRole]
   params: {
     name: containerAppResourceName
     tags: tags
@@ -1352,12 +1333,6 @@ module containerApp 'br/public:avm/res/app/container-app:0.22.0' = {
     enableTelemetry: enableTelemetry
     environmentResourceId: containerAppEnvironment.outputs.resourceId
     managedIdentities: { userAssignedResourceIds: [userAssignedIdentity.outputs.resourceId] }
-    registries: [
-      {
-        server: backendContainerRegistryHostname
-        identity: userAssignedIdentity.outputs.resourceId
-      }
-    ]
     ingressTargetPort: 8000
     ingressExternal: true
     activeRevisionsMode: 'Single'
@@ -1396,7 +1371,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.22.0' = {
         name: 'backend'
         image: '${backendContainerRegistryHostname}/${backendContainerImageName}:${backendContainerImageTag}'
         resources: {
-          cpu: '2.0'
+          cpu: 2
           memory: '4.0Gi'
         }
         env: [
@@ -1540,7 +1515,6 @@ module containerApp 'br/public:avm/res/app/container-app:0.22.0' = {
 var containerAppMcpResourceName = 'ca-mcp-${solutionSuffix}'
 module containerAppMcp 'br/public:avm/res/app/container-app:0.22.0' = {
   name: take('avm.res.app.container-app.${containerAppMcpResourceName}', 64)
-  dependsOn: [acrPullRole]
   params: {
     name: containerAppMcpResourceName
     tags: tags
@@ -1548,12 +1522,6 @@ module containerAppMcp 'br/public:avm/res/app/container-app:0.22.0' = {
     enableTelemetry: enableTelemetry
     environmentResourceId: containerAppEnvironment.outputs.resourceId
     managedIdentities: { userAssignedResourceIds: [userAssignedIdentity.outputs.resourceId] }
-    registries: [
-      {
-        server: MCPContainerRegistryHostname
-        identity: userAssignedIdentity.outputs.resourceId
-      }
-    ]
     ingressTargetPort: 9000
     ingressExternal: true
     activeRevisionsMode: 'Single'
@@ -1585,7 +1553,7 @@ module containerAppMcp 'br/public:avm/res/app/container-app:0.22.0' = {
         name: 'mcp'
         image: '${MCPContainerRegistryHostname}/${MCPContainerImageName}:${MCPContainerImageTag}'
         resources: {
-          cpu: '2.0'
+          cpu: 2
           memory: '4.0Gi'
         }
         env: [
@@ -1690,7 +1658,6 @@ module webServerFarm 'br/public:avm/res/web/serverfarm:0.7.0' = {
 var webSiteResourceName = 'app-${solutionSuffix}'
 module webSite 'modules/web-sites.bicep' = {
   name: take('module.web-sites.${webSiteResourceName}', 64)
-  dependsOn: [acrPullRole]
   params: {
     name: webSiteResourceName
     tags: tags
@@ -1954,7 +1921,7 @@ module searchServiceOpenAIRole 'modules/search-openai-role.bicep' = {
   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
   params: {
     aiFoundryAccountName: aiFoundryAiServicesResourceName
-    searchServicePrincipalId: searchServiceIdentity.outputs.systemAssignedMIPrincipalId!
+    searchServicePrincipalId: searchServiceUpdate.outputs.systemAssignedMIPrincipalId!
     roleNameGuidSeed: searchServiceName
   }
 }
@@ -1973,9 +1940,6 @@ module aiSearchFoundryConnection 'modules/aifp-connections.bicep' = {
     searchServiceLocation: searchService.location
     searchServiceName: searchService.name
   }
-  dependsOn: [
-    aiFoundryAiServices
-  ]
 }
 
 // ============ //
@@ -2009,7 +1973,7 @@ output AZURE_AI_PROJECT_NAME string = aiFoundryAiProjectName
 // output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiProjectEndpoint
 output APP_ENV string = 'Prod'
 output AI_FOUNDRY_RESOURCE_ID string = !useExistingAiFoundryAiProject
-  ? aiFoundryAiServices.outputs.resourceId
+  ? aiFoundryAiServices!.outputs.resourceId
   : existingFoundryProjectResourceId
 output COSMOSDB_ACCOUNT_NAME string = cosmosDbResourceName
 output AZURE_SEARCH_ENDPOINT string = searchServiceUpdate.outputs.endpoint  
