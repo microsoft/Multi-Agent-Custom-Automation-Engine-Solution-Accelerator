@@ -1,32 +1,21 @@
 """
 Unit tests for backend.app module.
 
-IMPORTANT: This test file MUST run in isolation from other backend tests.
-Run it separately: python -m pytest tests/backend/test_app.py
+NOTE: This test module relies on conftest.py for path setup and external module mocking.
+When running the full test suite, modules are imported properly from the backend.
 
-It uses sys.modules mocking that conflicts with other v4 tests when run together.
-The CI/CD workflow runs all backend tests together, where this file will work 
-because it detects existing v4 imports and skips mocking.
+IMPORTANT: This module requires the real v4 package to be importable. Other test files
+that mock v4 at module level (sys.modules['v4'] = Mock()) will cause import failures
+when running the full test suite due to test collection order. If v4 is mocked before
+this file is imported, the tests will be skipped.
 """
 
 import pytest
 import sys
 import os
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-from types import ModuleType
+from unittest.mock import Mock, AsyncMock, patch, NonCallableMock
 
-# Add src to path
-src_path = os.path.join(os.path.dirname(__file__), '..', '..')
-src_path = os.path.abspath(src_path)
-if src_path not in sys.path:
-    sys.path.insert(0, src_path)
-
-# Add backend to path for relative imports
-backend_path = os.path.join(src_path, 'backend')
-if backend_path not in sys.path:
-    sys.path.insert(0, backend_path)
-
-# Set environment variables BEFORE importing backend.app
+# Environment variables are set by conftest.py, but ensure they're available
 os.environ.setdefault("APPLICATIONINSIGHTS_CONNECTION_STRING", "InstrumentationKey=test-key-12345")
 os.environ.setdefault("AZURE_OPENAI_API_KEY", "test-key")
 os.environ.setdefault("AZURE_OPENAI_ENDPOINT", "https://test.openai.azure.com")

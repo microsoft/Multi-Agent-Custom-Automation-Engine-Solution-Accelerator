@@ -72,6 +72,8 @@ Follow the quick deploy steps on the deployment guide to deploy this solution to
 
 > **Note:** This solution accelerator requires **Azure Developer CLI (azd) version 1.18.0 or higher**. Please ensure you have the latest version installed before proceeding with deployment. [Download azd here](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/install-azd).
 
+> **Note:** If deploying from a **local environment** (Option D in the deployment guide), this solution accelerator requires **Bicep CLI version 0.33.0 or higher** to compile infrastructure templates. [Install Bicep](https://learn.microsoft.com/azure/azure-resource-manager/bicep/install).
+
 [Click here to launch the deployment guide](./docs/DeploymentGuide.md)
 <br/><br/>
 
@@ -79,6 +81,8 @@ Follow the quick deploy steps on the deployment guide to deploy this solution to
 |---|---|---|
  
 <br/>
+
+> **Note**: Some tenants may have additional security restrictions that run periodically and could impact the application (e.g., blocking public network access). If you experience issues or the application stops working, check if these restrictions are the cause. In such cases, consider deploying the WAF-supported version to ensure compliance. To configure, [Click here](./docs/DeploymentGuide.md#31-choose-deployment-type-optional).
 
 > ⚠️ **Important: Check Azure OpenAI Quota Availability**
  <br/>To ensure sufficient quota is available in your subscription, please follow [quota check instructions guide](./docs/quota_check.md) before you deploy the solution.
@@ -91,7 +95,7 @@ To deploy this solution accelerator, ensure you have access to an [Azure subscri
 
 Check the [Azure Products by Region](https://azure.microsoft.com/en-us/explore/global-infrastructure/products-by-region/table) page and select a **region** where the following services are available: Microsoft Foundry Service, Foundry Models, Azure AI Search, and Search Semantic Ranker.
 
-Here are some example regions where the services are available: East US, East US2, Japan East, UK South, Sweden Central.
+Here are some example regions where the services are available: Australia East, East US2, France Central, Japan East, Norway East, Sweden Central, UK South, West US.
 
 Pricing varies per region and usage, so it isn't possible to predict exact costs for your usage. The majority of the Azure resources used in this infrastructure are on usage-based pricing tiers. However, Azure Container Registry has a fixed cost per registry per day.
 

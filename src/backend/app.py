@@ -2,7 +2,12 @@
 import logging
 from contextlib import asynccontextmanager
 
-from api.router import app_router
+from common.config.app_config import config
+
+# Configure logging levels FIRST, before any logging calls
+logging.basicConfig(level=getattr(logging, config.AZURE_BASIC_LOGGING_LEVEL.upper(), logging.INFO))
+
+
 from azure.monitor.opentelemetry import configure_azure_monitor
 from common.config.app_config import config
 from common.models.messages import UserLanguage
@@ -10,6 +15,9 @@ from config.agent_registry import agent_registry
 # FastAPI imports
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
 # Local imports
 from middleware.health_check import HealthCheckMiddleware
 # TEMPORARY — upstream PR #5690 (agent-framework 1.4.0) fixes the fc_ duplicate
@@ -63,7 +71,7 @@ else:
     )
 
 # Configure logging levels from environment variables
-logging.basicConfig(level=getattr(logging, config.AZURE_BASIC_LOGGING_LEVEL.upper(), logging.INFO))
+# logging.basicConfig(level=getattr(logging, config.AZURE_BASIC_LOGGING_LEVEL.upper(), logging.INFO))
 
 # Configure Azure package logging levels
 azure_level = getattr(logging, config.AZURE_PACKAGE_LOGGING_LEVEL.upper(), logging.WARNING)
@@ -75,10 +83,34 @@ if config.AZURE_LOGGING_PACKAGES:
 
 logging.getLogger("opentelemetry.sdk").setLevel(logging.ERROR)
 
+logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
+
+# Suppress noisy Azure Monitor exporter "Transmission succeeded" logs
+logging.getLogger("azure.monitor.opentelemetry.exporter.export._base").setLevel(logging.WARNING)
+
 # Initialize the FastAPI app
 app = FastAPI(lifespan=lifespan)
 
 frontend_url = config.FRONTEND_SITE_NAME
+# Configure Azure Monitor and instrument FastAPI for OpenTelemetry
+# This enables automatic request tracing, dependency tracking, and proper operation_id
+if config.APPLICATIONINSIGHTS_CONNECTION_STRING:
+    # Configure Application Insights telemetry with live metrics
+    configure_azure_monitor(
+        connection_string=config.APPLICATIONINSIGHTS_CONNECTION_STRING,
+        enable_live_metrics=True
+    )
+
+    # Instrument FastAPI app — exclude WebSocket URLs to reduce telemetry noise
+    FastAPIInstrumentor.instrument_app(
+        app,
+        excluded_urls="socket,ws"
+    )
+    logging.info("Application Insights configured with live metrics and WebSocket filtering")
+else:
+    logging.warning(
+        "No Application Insights connection string found. Telemetry disabled."
+    )
 
 # Add this near the top of your app.py, after initializing the app
 app.add_middleware(

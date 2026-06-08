@@ -9,19 +9,19 @@
       "value": "${AZURE_LOCATION}"
     },
     "azureAiServiceLocation": {
-      "value": "${AZURE_ENV_OPENAI_LOCATION}"
+      "value": "${AZURE_ENV_AI_SERVICE_LOCATION}"
     },
-    "gptModelDeploymentType": {
+    "deploymentType": {
       "value": "${AZURE_ENV_MODEL_DEPLOYMENT_TYPE}"
     },
     "gptModelName": {
-      "value": "${AZURE_ENV_MODEL_NAME}"
+      "value": "${AZURE_ENV_GPT_MODEL_NAME}"
     },
     "gptModelVersion": {
-      "value": "${AZURE_ENV_MODEL_VERSION}"
+      "value": "${AZURE_ENV_GPT_MODEL_VERSION}"
     },
-    "gptModelCapacity": {
-      "value": "${AZURE_ENV_MODEL_CAPACITY}"
+    "gptDeploymentCapacity": {
+      "value": "${AZURE_ENV_GPT_MODEL_CAPACITY}"
     },
     "gpt4_1ModelDeploymentType": {
       "value": "${AZURE_ENV_MODEL_4_1_DEPLOYMENT_TYPE}"
@@ -54,13 +54,19 @@
       "value": "${AZURE_ENV_5MINI_MODEL_VERSION}"
     },
     "gpt5MiniModelDeploymentType": {
-      "value": "${AZURE_ENV_5MINI_MODEL_DEPLOYMENT_TYPE}"
+      "value": "${AZURE_ENV_5MINI_MODEL_DEPLOYMENT_TYPE=latest_v4}"
+    },
+     "backendContainerImageTag": {
+      "value": "${AZURE_ENV_IMAGE_TAG=latest_v4}"
     },
     "gpt5MiniModelCapacity": {
       "value": "${AZURE_ENV_5MINI_MODEL_CAPACITY}"
     },
     "gptImageModelName": {
-      "value": "${AZURE_ENV_IMAGE_MODEL_NAME}"
+      "value": "${AZURE_ENV_IMAGE_MODEL_NAME=latest_v4}"
+    },
+    "MCPContainerImageTag": {
+      "value": "${AZURE_ENV_IMAGE_TAG=latest_v4}"
     },
     "gptImageModelVersion": {
       "value": "${AZURE_ENV_IMAGE_MODEL_VERSION}"
@@ -75,10 +81,19 @@
       "value": "${AZURE_ENV_ENABLE_TELEMETRY}"
     },
     "existingLogAnalyticsWorkspaceId": {
-      "value": "${AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID}"
+      "value": "${AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID}"
     },
-    "existingAiFoundryAiProjectResourceId": {
-      "value": "${AZURE_EXISTING_AI_PROJECT_RESOURCE_ID}"
+    "existingFoundryProjectResourceId": {
+      "value": "${AZURE_EXISTING_AIPROJECT_RESOURCE_ID}"
+    },
+    "backendContainerRegistryHostname": {
+      "value": "${AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT}"
+    },
+    "frontendContainerRegistryHostname": {
+      "value": "${AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT}"
+    },
+    "MCPContainerRegistryHostname": {
+      "value": "${AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT}"
     }
   }
 }

@@ -3,6 +3,10 @@ Unit tests for plan_to_mplan_converter.py module.
 
 This module tests the PlanToMPlanConverter class and its functionality for converting
 bullet-style plan text into MPlan objects with agent assignment and action extraction.
+
+IMPORTANT: This module requires the real v4.models.models module to be importable.
+Other test files that mock v4 at module level will cause import failures when running
+the full test suite due to test collection order.
 """
 
 import os

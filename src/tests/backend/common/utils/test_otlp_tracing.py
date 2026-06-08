@@ -2,7 +2,7 @@
 
 import sys
 import os
-from unittest.mock import Mock, patch, MagicMock, call
+from unittest.mock import Mock, patch, call
 import pytest
 
 # Mock external dependencies at module level

@@ -179,6 +179,9 @@ class TestCreateRAIAgent:
     def setup_method(self):
         """Setup for each test method."""
         self.mock_team = Mock(spec=TeamConfiguration)
+        # Setup model_copy to return a new mock that can be modified
+        self.mock_rai_team = Mock(spec=TeamConfiguration)
+        self.mock_team.model_copy = Mock(return_value=self.mock_rai_team)
         self.mock_memory_store = Mock(spec=DatabaseBase)
     
     @pytest.mark.asyncio
@@ -199,6 +202,9 @@ class TestCreateRAIAgent:
         # Execute
         result = await create_RAI_agent(self.mock_team, self.mock_memory_store)
         
+        # Verify team.model_copy() was called to create a copy
+        self.mock_team.model_copy.assert_called_once()
+        
         # Verify agent creation
         mock_agent_class.assert_called_once()
         call_args = mock_agent_class.call_args
@@ -213,10 +219,10 @@ class TestCreateRAIAgent:
         assert call_args[1]['team_config'] is self.mock_team
         assert call_args[1]['memory_store'] is self.mock_memory_store
         
-        # Verify team configuration updates
-        assert self.mock_team.team_id == "rai_team"
-        assert self.mock_team.name == "RAI Team"
-        assert self.mock_team.description == "Team responsible for Responsible AI checks"
+        # Verify the copied team configuration was updated (not the original)
+        assert self.mock_rai_team.team_id == "rai_team"
+        assert self.mock_rai_team.name == "RAI Team"
+        assert self.mock_rai_team.description == "Team responsible for Responsible AI checks"
         
         # Verify agent initialization
         mock_agent.open.assert_called_once()
