@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect} from 'react';
+import React, { useCallback, useEffect, useRef} from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Spinner, Text } from '@fluentui/react-components';
 
@@ -371,6 +371,7 @@ const PlanPage: React.FC = () => {
                                 processingApproval={processingApproval}
                                 handleApprovePlan={handleApprovePlan}
                                 handleRejectPlan={handleRejectPlan}
+                                finalResultRef={finalResultRef}
                             />
                         </>
                     )}
