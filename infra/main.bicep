@@ -85,9 +85,6 @@ param gptImageModelVersion string = '2025-12-16'
 @description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2024-12-01-preview.')
 param azureOpenaiAPIVersion string = '2024-12-01-preview'
 
-@description('Optional. Version of the Azure AI Agent API version. Defaults to 2025-01-01-preview.')
-param azureAiAgentAPIVersion string = '2025-01-01-preview'
-
 @minLength(1)
 @allowed([
   'Standard'
@@ -388,12 +385,6 @@ var logAnalyticsWorkspaceName = useExistingLogAnalytics
 var logAnalyticsWorkspaceResourceId = useExistingLogAnalytics
   ? existingLogAnalyticsWorkspaceId
   : logAnalyticsWorkspace!.outputs.resourceId
-var logAnalyticsPrimarySharedKey = useExistingLogAnalytics
-  ? existingLogAnalyticsWorkspace!.listKeys().primarySharedKey
-  : logAnalyticsWorkspace!.outputs!.primarySharedKey
-var logAnalyticsWorkspaceId = useExistingLogAnalytics
-  ? existingLogAnalyticsWorkspace!.properties.customerId
-  : logAnalyticsWorkspace!.outputs.logAnalyticsWorkspaceId
 
 // ========== Application Insights ========== //
 // WAF best practices for Application Insights: https://learn.microsoft.com/en-us/azure/well-architected/service-guides/application-insights
