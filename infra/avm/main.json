@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "5525801806845606076"
+      "templateHash": "15962130768530729376"
     },
     "name": "Multi-Agent Custom Automation Engine - AVM",
     "description": "AVM orchestrator for the Multi-Agent Custom Automation Engine accelerator. Deploys the same logical resources and preserves the same outputs as infra\\main.bicep using local AVM wrapper modules."
@@ -39,7 +39,8 @@
         "japaneast",
         "northeurope",
         "southeastasia",
-        "uksouth"
+        "uksouth",
+        "westus3"
       ],
       "metadata": {
         "azd": {
@@ -79,7 +80,8 @@
         "norwayeast",
         "swedencentral",
         "uksouth",
-        "westus"
+        "westus",
+        "westus3"
       ],
       "metadata": {
         "azd": {
@@ -138,18 +140,19 @@
         "description": "Optional. Version of the GPT reasoning model to deploy. Defaults to 2025-04-16."
       }
     },
-    "azureOpenaiAPIVersion": {
+    "gptImageModelName": {
       "type": "string",
-      "defaultValue": "2024-12-01-preview",
+      "defaultValue": "gpt-image-1.5",
+      "minLength": 1,
       "metadata": {
-        "description": "Optional. Version of the Azure OpenAI service to deploy. Defaults to 2024-12-01-preview."
+        "description": "Optional. Name of the image-generation model to deploy. Defaults to gpt-image-1.5."
       }
     },
-    "azureAiAgentAPIVersion": {
+    "gptImageModelVersion": {
       "type": "string",
-      "defaultValue": "2025-01-01-preview",
+      "defaultValue": "2025-12-16",
       "metadata": {
-        "description": "Optional. Version of the Azure AI Agent API version. Defaults to 2025-01-01-preview."
+        "description": "Optional. Version of the image-generation model to deploy. Defaults to 2025-12-16."
       }
     },
     "deploymentType": {
@@ -188,6 +191,18 @@
         "description": "Optional. GPT reasoning model deployment type. Defaults to GlobalStandard."
       }
     },
+    "gptImageModelDeploymentType": {
+      "type": "string",
+      "defaultValue": "GlobalStandard",
+      "allowedValues": [
+        "Standard",
+        "GlobalStandard"
+      ],
+      "minLength": 1,
+      "metadata": {
+        "description": "Optional. GPT image model deployment type. Defaults to GlobalStandard."
+      }
+    },
     "gptDeploymentCapacity": {
       "type": "int",
       "defaultValue": 50,
@@ -207,6 +222,27 @@
       "defaultValue": 50,
       "metadata": {
         "description": "Optional. AI model deployment token capacity. Defaults to 50 for optimal performance."
+      }
+    },
+    "gptImageModelCapacity": {
+      "type": "int",
+      "defaultValue": 5,
+      "metadata": {
+        "description": "Optional. gpt-image-1.5 deployment capacity (RPM). Defaults to 5 to support concurrent marketing-image generation across multiple sessions."
+      }
+    },
+    "azureOpenaiAPIVersion": {
+      "type": "string",
+      "defaultValue": "2024-12-01-preview",
+      "metadata": {
+        "description": "Optional. Version of the Azure OpenAI service to deploy. Defaults to 2024-12-01-preview."
+      }
+    },
+    "azureAiAgentAPIVersion": {
+      "type": "string",
+      "defaultValue": "2025-01-01-preview",
+      "metadata": {
+        "description": "Optional. Version of the Azure AI Agent API version. Defaults to 2025-01-01-preview."
       }
     },
     "backendContainerRegistryHostname": {
@@ -456,6 +492,13 @@
         "modelVersion": "[parameters('gptReasoningModelVersion')]",
         "skuName": "[parameters('gptReasoningModelDeploymentType')]",
         "skuCapacity": "[parameters('gptReasoningModelCapacity')]"
+      },
+      {
+        "deploymentName": "[parameters('gptImageModelName')]",
+        "modelName": "[parameters('gptImageModelName')]",
+        "modelVersion": "[parameters('gptImageModelVersion')]",
+        "skuName": "[parameters('gptImageModelDeploymentType')]",
+        "skuCapacity": "[parameters('gptImageModelCapacity')]"
       }
     ],
     "privateDnsZones": [
@@ -29402,9 +29445,9 @@
       },
       "dependsOn": [
         "ai_foundry_project",
-        "[format('privateDnsZoneDeployments[{0}]', variables('dnsZoneIndex').openAI)]",
         "[format('privateDnsZoneDeployments[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "[format('privateDnsZoneDeployments[{0}]', variables('dnsZoneIndex').aiServices)]",
+        "[format('privateDnsZoneDeployments[{0}]', variables('dnsZoneIndex').openAI)]",
         "virtualNetwork"
       ]
     },
@@ -46712,7 +46755,17 @@
           "infrastructureSubnetId": "[if(parameters('enablePrivateNetworking'), if(and(parameters('enablePrivateNetworking'), greaterOrEquals(if(parameters('enablePrivateNetworking'), indexOf(map(reference('virtualNetwork').outputs.subnets.value, lambda('subnet', lambdaVariables('subnet').name)), 'containers'), -1), 0)), createObject('value', reference('virtualNetwork').outputs.subnets.value[if(parameters('enablePrivateNetworking'), indexOf(map(reference('virtualNetwork').outputs.subnets.value, lambda('subnet', lambdaVariables('subnet').name)), 'containers'), -1)].resourceId), createObject('value', '')), createObject('value', ''))]",
           "zoneRedundant": {
             "value": "[parameters('enableRedundancy')]"
-          }
+          },
+          "enablePrivateNetworking": {
+            "value": "[parameters('enablePrivateNetworking')]"
+          },
+          "enableMonitoring": {
+            "value": "[parameters('enableMonitoring')]"
+          },
+          "enableRedundancy": {
+            "value": "[parameters('enableRedundancy')]"
+          },
+          "workloadProfiles": "[if(parameters('enableRedundancy'), createObject('value', createArray(createObject('maximumCount', 3, 'minimumCount', 3, 'name', 'CAW01', 'workloadProfileType', 'D4'))), createObject('value', createArray(createObject('name', 'Consumption', 'workloadProfileType', 'Consumption'))))]"
         },
         "template": {
           "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
@@ -46721,7 +46774,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "15830423550310603762"
+              "templateHash": "11627243098334835255"
             }
           },
           "parameters": {
@@ -46753,15 +46806,16 @@
             },
             "logAnalyticsWorkspaceResourceId": {
               "type": "string",
+              "defaultValue": "",
               "metadata": {
-                "description": "Resource ID of the Log Analytics workspace."
+                "description": "Resource ID of the Log Analytics workspace (required when enableMonitoring is true)."
               }
             },
             "infrastructureSubnetId": {
               "type": "string",
               "defaultValue": "",
               "metadata": {
-                "description": "Subnet resource ID for VNet integration (optional)."
+                "description": "Subnet resource ID for VNet integration (required when enablePrivateNetworking is true)."
               }
             },
             "zoneRedundant": {
@@ -46776,6 +46830,53 @@
               "defaultValue": true,
               "metadata": {
                 "description": "Enable Azure telemetry collection."
+              }
+            },
+            "enablePrivateNetworking": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Enable private networking (internal environment, public access disabled)."
+              }
+            },
+            "enableMonitoring": {
+              "type": "bool",
+              "defaultValue": true,
+              "metadata": {
+                "description": "Enable monitoring (Log Analytics + App Insights)."
+              }
+            },
+            "appInsightsConnectionString": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Application Insights connection string (optional, for App Insights integration)."
+              }
+            },
+            "enableRedundancy": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Enable redundancy (dedicated workload profiles + infra resource group)."
+              }
+            },
+            "infrastructureResourceGroupName": {
+              "type": "string",
+              "defaultValue": "[format('{0}-infra', resourceGroup().name)]",
+              "metadata": {
+                "description": "Infrastructure resource group name (used when zone redundancy is enabled). Defaults to \"{resourceGroup}-infra\" if empty."
+              }
+            },
+            "workloadProfiles": {
+              "type": "array",
+              "defaultValue": [
+                {
+                  "name": "Consumption",
+                  "workloadProfileType": "Consumption"
+                }
+              ],
+              "metadata": {
+                "description": "Workload profiles configuration (e.g., Consumption or dedicated D4 profiles)."
               }
             }
           },
@@ -46802,15 +46903,19 @@
                   "enableTelemetry": {
                     "value": "[parameters('enableTelemetry')]"
                   },
-                  "appLogsConfiguration": {
-                    "value": {
-                      "destination": "log-analytics",
-                      "logAnalyticsWorkspaceResourceId": "[parameters('logAnalyticsWorkspaceResourceId')]"
-                    }
+                  "publicNetworkAccess": "[if(parameters('enablePrivateNetworking'), createObject('value', 'Disabled'), createObject('value', 'Enabled'))]",
+                  "internal": {
+                    "value": "[parameters('enablePrivateNetworking')]"
                   },
                   "infrastructureSubnetResourceId": "[if(not(empty(parameters('infrastructureSubnetId'))), createObject('value', parameters('infrastructureSubnetId')), createObject('value', null()))]",
+                  "appLogsConfiguration": "[if(and(parameters('enableMonitoring'), not(empty(parameters('logAnalyticsWorkspaceResourceId')))), createObject('value', createObject('destination', 'log-analytics', 'logAnalyticsWorkspaceResourceId', parameters('logAnalyticsWorkspaceResourceId'))), createObject('value', null()))]",
+                  "appInsightsConnectionString": "[if(not(empty(parameters('appInsightsConnectionString'))), createObject('value', parameters('appInsightsConnectionString')), createObject('value', null()))]",
                   "zoneRedundant": {
-                    "value": "[parameters('zoneRedundant')]"
+                    "value": "[or(parameters('zoneRedundant'), parameters('enableRedundancy'))]"
+                  },
+                  "infrastructureResourceGroupName": "[if(not(empty(parameters('infrastructureResourceGroupName'))), createObject('value', parameters('infrastructureResourceGroupName')), createObject('value', null()))]",
+                  "workloadProfiles": {
+                    "value": "[parameters('workloadProfiles')]"
                   }
                 },
                 "template": {
@@ -52832,7 +52937,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "11057336572027162340"
+              "templateHash": "13108676498548695083"
             }
           },
           "parameters": {
@@ -52875,7 +52980,7 @@
               }
             },
             "appSettings": {
-              "type": "secureObject",
+              "type": "object",
               "defaultValue": {},
               "metadata": {
                 "description": "Application settings key-value pairs."

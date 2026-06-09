@@ -19,11 +19,16 @@ param tags object = {}
 @description('Resource ID of the Log Analytics workspace.')
 param logAnalyticsWorkspaceResourceId string
 
-@description('Subnet resource ID for VNet integration (optional).')
-param infrastructureSubnetId string = ''
-
 @description('Enable zone redundancy.')
 param zoneRedundant bool = false
+
+@description('Workload profiles configuration (e.g., Consumption or dedicated D4 profiles).')
+param workloadProfiles array = [
+  {
+    name: 'Consumption'
+    workloadProfileType: 'Consumption'
+  }
+]
 
 // ============================================================================
 // Resource Deployment
@@ -40,9 +45,7 @@ resource containerAppEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' 
         sharedKey: listKeys(logAnalyticsWorkspaceResourceId, '2023-09-01').primarySharedKey
       }
     }
-    vnetConfiguration: empty(infrastructureSubnetId) ? null : {
-      infrastructureSubnetId: infrastructureSubnetId
-    }
+    workloadProfiles: workloadProfiles
     zoneRedundant: zoneRedundant
   }
 }

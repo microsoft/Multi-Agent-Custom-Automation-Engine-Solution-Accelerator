@@ -23,7 +23,6 @@ param serverFarmResourceId string
 param linuxFxVersion string
 
 @description('Application settings key-value pairs.')
-@secure()
 param appSettings object = {}
 
 @description('Whether to enable Always On.')

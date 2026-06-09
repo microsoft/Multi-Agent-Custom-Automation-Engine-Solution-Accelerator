@@ -34,6 +34,7 @@ param solutionUniqueText string = take(uniqueString(subscription().id, resourceG
   'northeurope'
   'southeastasia'
   'uksouth'
+  'westus3'
 ])
 param location string
 
@@ -52,7 +53,7 @@ param createdBy string = contains(deployer(), 'userPrincipalName')
 // Parameters — AI
 // ============================================================================
 
-@allowed(['australiaeast', 'eastus2', 'francecentral', 'japaneast', 'norwayeast', 'swedencentral', 'uksouth', 'westus'])
+@allowed(['australiaeast', 'eastus2', 'francecentral', 'japaneast', 'norwayeast', 'swedencentral', 'uksouth', 'westus', 'westus3'])
 @metadata({
   azd: {
     type: 'location'
@@ -87,11 +88,12 @@ param gptReasoningModelName string = 'o4-mini'
 @description('Optional. Version of the GPT reasoning model to deploy. Defaults to 2025-04-16.')
 param gptReasoningModelVersion string = '2025-04-16'
 
-@description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2024-12-01-preview.')
-param azureOpenaiAPIVersion string = '2024-12-01-preview'
+@minLength(1)
+@description('Optional. Name of the image-generation model to deploy. Defaults to gpt-image-1.5.')
+param gptImageModelName string = 'gpt-image-1.5'
 
-@description('Optional. Version of the Azure AI Agent API version. Defaults to 2025-01-01-preview.')
-param azureAiAgentAPIVersion string = '2025-01-01-preview'
+@description('Optional. Version of the image-generation model to deploy. Defaults to 2025-12-16.')
+param gptImageModelVersion string = '2025-12-16'
 
 @minLength(1)
 @allowed([
@@ -117,6 +119,14 @@ param gpt4_1ModelDeploymentType string = 'GlobalStandard'
 @description('Optional. GPT reasoning model deployment type. Defaults to GlobalStandard.')
 param gptReasoningModelDeploymentType string = 'GlobalStandard'
 
+@minLength(1)
+@allowed([
+  'Standard'
+  'GlobalStandard'
+])
+@description('Optional. GPT image model deployment type. Defaults to GlobalStandard.')
+param gptImageModelDeploymentType string = 'GlobalStandard'
+
 @description('Optional. AI model deployment token capacity. Defaults to 50 for optimal performance.')
 param gptDeploymentCapacity int = 50
 
@@ -125,6 +135,15 @@ param gpt4_1ModelCapacity int = 150
 
 @description('Optional. AI model deployment token capacity. Defaults to 50 for optimal performance.')
 param gptReasoningModelCapacity int = 50
+
+@description('Optional. gpt-image-1.5 deployment capacity (RPM). Defaults to 5 to support concurrent marketing-image generation across multiple sessions.')
+param gptImageModelCapacity int = 5
+
+@description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2024-12-01-preview.')
+param azureOpenaiAPIVersion string = '2024-12-01-preview'
+
+@description('Optional. Version of the Azure AI Agent API version. Defaults to 2025-01-01-preview.')
+param azureAiAgentAPIVersion string = '2025-01-01-preview'
 
 // ============================================================================
 // Parameters — Compute
@@ -314,6 +333,13 @@ var aiModelDeployments = [
     modelVersion: gptReasoningModelVersion
     skuName: gptReasoningModelDeploymentType
     skuCapacity: gptReasoningModelCapacity
+  }
+  {
+    deploymentName: gptImageModelName
+    modelName: gptImageModelName
+    modelVersion: gptImageModelVersion
+    skuName: gptImageModelDeploymentType
+    skuCapacity: gptImageModelCapacity
   }
 ]
 
@@ -972,6 +998,24 @@ module containerAppEnvironment './modules/compute/container-app-environment.bice
     logAnalyticsWorkspaceResourceId: logAnalyticsWorkspaceResourceId
     infrastructureSubnetId: enablePrivateNetworking ? containerSubnetResourceId : ''
     zoneRedundant: enableRedundancy
+    enablePrivateNetworking: enablePrivateNetworking
+    enableMonitoring: enableMonitoring
+    enableRedundancy: enableRedundancy
+    workloadProfiles: enableRedundancy
+      ? [
+          {
+            maximumCount: 3
+            minimumCount: 3
+            name: 'CAW01'
+            workloadProfileType: 'D4'
+          }
+        ]
+      : [
+          {
+            name: 'Consumption'
+            workloadProfileType: 'Consumption'
+          }
+        ]
   }
 }
 

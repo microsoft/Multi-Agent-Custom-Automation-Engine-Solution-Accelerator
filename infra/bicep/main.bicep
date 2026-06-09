@@ -27,10 +27,11 @@ param solutionUniqueText string = take(uniqueString(subscription().id, resourceG
   'northeurope'
   'southeastasia'
   'uksouth'
+  'westus3'
 ])
 param location string
 
-@allowed(['australiaeast', 'eastus2', 'francecentral', 'japaneast', 'norwayeast', 'swedencentral', 'uksouth', 'westus'])
+@allowed(['australiaeast', 'eastus2', 'francecentral', 'japaneast', 'norwayeast', 'swedencentral', 'uksouth', 'westus', 'westus3'])
 @metadata({
   azd: {
     type: 'location'
@@ -94,6 +95,24 @@ param gptReasoningModelDeploymentType string = 'GlobalStandard'
 @minValue(1)
 @description('Optional. Capacity of the reasoning model deployment.')
 param gptReasoningModelCapacity int = 50
+
+@minLength(1)
+@description('Optional. Name of the image-generation model to deploy. Defaults to gpt-image-1.5.')
+param gptImageModelName string = 'gpt-image-1.5'
+
+@description('Optional. Version of the image-generation model to deploy. Defaults to 2025-12-16.')
+param gptImageModelVersion string = '2025-12-16'
+
+@minLength(1)
+@allowed([
+  'Standard'
+  'GlobalStandard'
+])
+@description('Optional. GPT image model deployment type. Defaults to GlobalStandard.')
+param gptImageModelDeploymentType string = 'GlobalStandard'
+
+@description('Optional. gpt-image-1.5 deployment capacity (RPM). Defaults to 5 to support concurrent marketing-image generation across multiple sessions.')
+param gptImageModelCapacity int = 5
 
 @description('Optional. Azure OpenAI API version.')
 param azureOpenaiAPIVersion string = '2024-12-01-preview'
@@ -204,6 +223,33 @@ var aiFoundryAiProjectEndpoint = 'https://${aiFoundryAiServicesResourceName}.ser
 var aiSearchConnectionName = 'aifp-srch-connection-${solutionSuffix}'
 var aiStorageConnectionName = 'aifp-blob-connection-${solutionSuffix}'
 var aiAppInsightsConnectionName = 'aifp-appi-connection-${solutionSuffix}'
+
+var modelDeployments = [
+  {
+    name: gptModelName
+    version: gptModelVersion
+    skuName: deploymentType
+    capacity: gptDeploymentCapacity
+  }
+  {
+    name: gpt4_1ModelName
+    version: gpt4_1ModelVersion
+    skuName: gpt4_1ModelDeploymentType
+    capacity: gpt4_1ModelCapacity
+  }
+  {
+    name: gptReasoningModelName
+    version: gptReasoningModelVersion
+    skuName: gptReasoningModelDeploymentType
+    capacity: gptReasoningModelCapacity
+  }
+  {
+    name: gptImageModelName
+    version: gptImageModelVersion
+    skuName: gptImageModelDeploymentType
+    capacity: gptImageModelCapacity
+  }
+]
 
 var cosmosDbResourceName = 'cosmos-${solutionSuffix}'
 var cosmosDbDatabaseName = 'macae'
@@ -329,50 +375,20 @@ var aiFoundryAiProjectPrincipalId = useExistingAiFoundryAiProject
   ? existing_project_setup!.outputs.aiProjectPrincipalId
   : ai_foundry_project!.outputs.projectIdentityPrincipalId
 
-module gpt_model_deployment './modules/ai/ai-foundry-model-deployment.bicep' = {
-  name: take('module.gpt-model-deployment.${solutionSuffix}', 64)
+@batchSize(1)
+module ai_model_deployment './modules/ai/ai-foundry-model-deployment.bicep' = [for (model, i) in modelDeployments: {
+  name: take('module.ai-model-${model.name}-${solutionSuffix}', 64)
   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
-  dependsOn: useExistingAiFoundryAiProject ? [existing_project_setup] : [ai_foundry_project!]
   params: {
     aiServicesAccountName: aiFoundryAiServicesResourceName
-    deploymentName: gptModelName
-    modelName: gptModelName
-    modelVersion: gptModelVersion
+    deploymentName: model.name
+    modelName: model.name
+    modelVersion: model.version
     raiPolicyName: 'Microsoft.Default'
-    skuName: deploymentType
-    skuCapacity: gptDeploymentCapacity
+    skuName: model.skuName
+    skuCapacity: model.capacity
   }
-}
-
-module gpt4_1_model_deployment './modules/ai/ai-foundry-model-deployment.bicep' = {
-  name: take('module.gpt41-model-deployment.${solutionSuffix}', 64)
-  scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
-  dependsOn: [gpt_model_deployment]
-  params: {
-    aiServicesAccountName: aiFoundryAiServicesResourceName
-    deploymentName: gpt4_1ModelName
-    modelName: gpt4_1ModelName
-    modelVersion: gpt4_1ModelVersion
-    raiPolicyName: 'Microsoft.Default'
-    skuName: gpt4_1ModelDeploymentType
-    skuCapacity: gpt4_1ModelCapacity
-  }
-}
-
-module reasoning_model_deployment './modules/ai/ai-foundry-model-deployment.bicep' = {
-  name: take('module.reasoning-model-deployment.${solutionSuffix}', 64)
-  scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
-  dependsOn: [gpt4_1_model_deployment]
-  params: {
-    aiServicesAccountName: aiFoundryAiServicesResourceName
-    deploymentName: gptReasoningModelName
-    modelName: gptReasoningModelName
-    modelVersion: gptReasoningModelVersion
-    raiPolicyName: 'Microsoft.Default'
-    skuName: gptReasoningModelDeploymentType
-    skuCapacity: gptReasoningModelCapacity
-  }
-}
+}]
 
 module ai_search './modules/ai/ai-search.bicep' = {
   name: take('module.ai-search.${solutionSuffix}', 64)
@@ -433,9 +449,6 @@ module storage_account './modules/data/storage-account.bicep' = {
   }
 }
 
-resource storageAccountResource 'Microsoft.Storage/storageAccounts@2025-08-01' existing = {
-  name: storageAccountName
-}
 
 module cosmosDBModule './modules/data/cosmos-db-nosql.bicep' = {
   name: take('module.cosmos-db.${solutionSuffix}', 64)
@@ -461,13 +474,19 @@ module container_app_environment './modules/compute/container-app-environment.bi
     location: solutionLocation
     tags: allTags
     logAnalyticsWorkspaceResourceId: logAnalyticsWorkspaceResourceId
+    workloadProfiles: [
+      {
+        name: 'Consumption'
+        workloadProfileType: 'Consumption'
+      }
+    ]
   }
 }
 
 module foundry_search_connection './modules/ai/ai-foundry-connection.bicep' = {
   name: take('module.foundry-search-connection.${solutionSuffix}', 64)
   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
-  dependsOn: [gpt_model_deployment, gpt4_1_model_deployment, reasoning_model_deployment]
+  dependsOn: [ ai_model_deployment ]
   params: {
     solutionName: solutionSuffix
     aiServicesAccountName: aiFoundryAiServicesResourceName
@@ -486,7 +505,7 @@ module foundry_search_connection './modules/ai/ai-foundry-connection.bicep' = {
 module foundry_storage_connection './modules/ai/ai-foundry-connection.bicep' = {
   name: take('module.foundry-storage-connection.${solutionSuffix}', 64)
   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
-  dependsOn: [gpt_model_deployment, gpt4_1_model_deployment, reasoning_model_deployment]
+  dependsOn: [ai_model_deployment]
   params: {
     solutionName: solutionSuffix
     aiServicesAccountName: aiFoundryAiServicesResourceName
@@ -506,7 +525,7 @@ module foundry_storage_connection './modules/ai/ai-foundry-connection.bicep' = {
 module foundry_appi_connection './modules/ai/ai-foundry-connection.bicep' = if (!useExistingAiFoundryAiProject) {
   name: take('module.foundry-appi-connection.${solutionSuffix}', 64)
   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
-  dependsOn: [gpt_model_deployment, gpt4_1_model_deployment, reasoning_model_deployment]
+  dependsOn: [ai_model_deployment]
   params: {
     solutionName: solutionSuffix
     aiServicesAccountName: aiFoundryAiServicesResourceName
@@ -580,15 +599,15 @@ module backend_container_app './modules/compute/container-app.bicep' = {
           }
           {
             name: 'AZURE_OPENAI_MODEL_NAME'
-            value: gpt_model_deployment.outputs.name
+            value: gptModelName
           }
           {
             name: 'AZURE_OPENAI_DEPLOYMENT_NAME'
-            value: gpt_model_deployment.outputs.name
+            value: gptModelName
           }
           {
             name: 'AZURE_OPENAI_RAI_DEPLOYMENT_NAME'
-            value: gpt4_1_model_deployment.outputs.name
+            value: gpt4_1ModelName
           }
           {
             name: 'AZURE_OPENAI_API_VERSION'
@@ -620,7 +639,7 @@ module backend_container_app './modules/compute/container-app.bicep' = {
           }
           {
             name: 'AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME'
-            value: gpt_model_deployment.outputs.name
+            value: gptModelName
           }
           {
             name: 'APP_ENV'
@@ -648,7 +667,7 @@ module backend_container_app './modules/compute/container-app.bicep' = {
           }
           {
             name: 'REASONING_MODEL_NAME'
-            value: reasoning_model_deployment.outputs.name
+            value: gptReasoningModelName
           }
           {
             name: 'MCP_SERVER_ENDPOINT'
@@ -885,14 +904,14 @@ output COSMOSDB_ENDPOINT string = 'https://${cosmosDbResourceName}.documents.azu
 output COSMOSDB_DATABASE string = cosmosDbDatabaseName
 output COSMOSDB_CONTAINER string = cosmosDbDatabaseMemoryContainerName
 output AZURE_OPENAI_ENDPOINT string = aiFoundryOpenAIEndpoint
-output AZURE_OPENAI_MODEL_NAME string = gpt_model_deployment.outputs.name
-output AZURE_OPENAI_DEPLOYMENT_NAME string = gpt_model_deployment.outputs.name
-output AZURE_OPENAI_RAI_DEPLOYMENT_NAME string = gpt4_1_model_deployment.outputs.name
+output AZURE_OPENAI_MODEL_NAME string = gptModelName
+output AZURE_OPENAI_DEPLOYMENT_NAME string = gptModelName
+output AZURE_OPENAI_RAI_DEPLOYMENT_NAME string = gpt4_1ModelName
 output AZURE_OPENAI_API_VERSION string = azureOpenaiAPIVersion
 output AZURE_AI_SUBSCRIPTION_ID string = subscription().subscriptionId
 output AZURE_AI_RESOURCE_GROUP string = resourceGroup().name
 output AZURE_AI_PROJECT_NAME string = aiFoundryAiProjectResourceName
-output AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME string = gpt_model_deployment.outputs.name
+output AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME string = gptModelName
 output APP_ENV string = 'Prod'
 output AI_FOUNDRY_RESOURCE_ID string = useExistingAiFoundryAiProject ? existingFoundryProjectResourceId : ai_foundry_project!.outputs.resourceId
 output COSMOSDB_ACCOUNT_NAME string = cosmosDbResourceName
@@ -901,7 +920,7 @@ output AZURE_CLIENT_ID string = userAssignedIdentity.outputs.clientId
 output AZURE_TENANT_ID string = tenant().tenantId
 output AZURE_AI_SEARCH_CONNECTION_NAME string = foundry_search_connection.outputs.connectionName
 output AZURE_COGNITIVE_SERVICES string = 'https://cognitiveservices.azure.com/.default'
-output REASONING_MODEL_NAME string = reasoning_model_deployment.outputs.name
+output REASONING_MODEL_NAME string = gptReasoningModelName
 output MCP_SERVER_NAME string = mcpServerName
 output MCP_SERVER_DESCRIPTION string = mcpServerDescription
 output SUPPORTED_MODELS string = supportedModels
