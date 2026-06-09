@@ -7,7 +7,7 @@ from common.config.app_config import config
 # Configure logging levels FIRST, before any logging calls
 logging.basicConfig(level=getattr(logging, config.AZURE_BASIC_LOGGING_LEVEL.upper(), logging.INFO))
 
-
+from api.router import app_router
 from azure.monitor.opentelemetry import configure_azure_monitor
 from common.config.app_config import config
 from common.models.messages import UserLanguage

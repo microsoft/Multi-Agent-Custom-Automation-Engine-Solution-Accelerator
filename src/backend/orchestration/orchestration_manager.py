@@ -145,7 +145,9 @@ class OrchestrationManager:
             max_round_count=orchestration_config.max_rounds,
             max_stall_count=5,
             checkpoint_storage=storage,
-            intermediate_outputs=True,
+            #intermediate_outputs=True,
+            output_from="all",
+            #intermediate_output_from="all_other",
             enable_plan_review=True,
             **prompt_kwargs,
         ).build()
