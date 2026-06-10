@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "15962130768530729376"
+      "templateHash": "17866747027586542818"
     },
     "name": "Multi-Agent Custom Automation Engine - AVM",
     "description": "AVM orchestrator for the Multi-Agent Custom Automation Engine accelerator. Deploys the same logical resources and preserves the same outputs as infra\\main.bicep using local AVM wrapper modules."
@@ -236,13 +236,6 @@
       "defaultValue": "2024-12-01-preview",
       "metadata": {
         "description": "Optional. Version of the Azure OpenAI service to deploy. Defaults to 2024-12-01-preview."
-      }
-    },
-    "azureAiAgentAPIVersion": {
-      "type": "string",
-      "defaultValue": "2025-01-01-preview",
-      "metadata": {
-        "description": "Optional. Version of the Azure AI Agent API version. Defaults to 2025-01-01-preview."
       }
     },
     "backendContainerRegistryHostname": {
@@ -501,6 +494,13 @@
         "skuCapacity": "[parameters('gptImageModelCapacity')]"
       }
     ],
+    "supportedModels": [
+      "[parameters('gptModelName')]",
+      "[parameters('gpt4_1ModelName')]",
+      "[parameters('gptReasoningModelName')]",
+      "[parameters('gptImageModelName')]"
+    ],
+    "containerAppName": "[format('ca-{0}', variables('solutionSuffix'))]",
     "privateDnsZones": [
       "privatelink.cognitiveservices.azure.com",
       "privatelink.openai.azure.com",
@@ -29446,8 +29446,8 @@
       "dependsOn": [
         "ai_foundry_project",
         "[format('privateDnsZoneDeployments[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
-        "[format('privateDnsZoneDeployments[{0}]', variables('dnsZoneIndex').aiServices)]",
         "[format('privateDnsZoneDeployments[{0}]', variables('dnsZoneIndex').openAI)]",
+        "[format('privateDnsZoneDeployments[{0}]', variables('dnsZoneIndex').aiServices)]",
         "virtualNetwork"
       ]
     },
@@ -29649,6 +29649,11 @@
                 "roleDefinitionIdOrName": "7ca78c08-252a-4471-8644-bb5ff32d4ba0",
                 "principalId": "[variables('deployingUserPrincipalId')]",
                 "principalType": "[variables('deployerPrincipalType')]"
+              },
+              {
+                "principalId": "[reference('managed_identity').outputs.principalId.value]",
+                "roleDefinitionIdOrName": "Search Service Contributor",
+                "principalType": "ServicePrincipal"
               }
             ]
           },
@@ -31932,7 +31937,8 @@
         }
       },
       "dependsOn": [
-        "log_analytics"
+        "log_analytics",
+        "managed_identity"
       ]
     },
     "aiSearchFoundryConnection": {
@@ -31971,6 +31977,9 @@
               "ApiType": "Azure",
               "ResourceId": "[reference('ai_search').outputs.resourceId.value]"
             }
+          },
+          "useWorkspaceManagedIdentity": {
+            "value": true
           }
         },
         "template": {
@@ -31980,7 +31989,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "17598394785963531330"
+              "templateHash": "386381294886679564"
             }
           },
           "parameters": {
@@ -32048,6 +32057,13 @@
                 "description": "Optional. Connection metadata object."
               }
             },
+            "useWorkspaceManagedIdentity": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Optional. Whether to use workspace-managed identity for authentication."
+              }
+            },
             "credentialsKey": {
               "type": "securestring",
               "defaultValue": "",
@@ -32062,7 +32078,8 @@
               "target": "[parameters('target')]",
               "authType": "[parameters('authType')]",
               "isSharedToAll": "[parameters('isSharedToAll')]",
-              "metadata": "[parameters('metadata')]"
+              "metadata": "[parameters('metadata')]",
+              "useWorkspaceManagedIdentity": "[parameters('useWorkspaceManagedIdentity')]"
             },
             "optionalDefault": "[if(parameters('isDefault'), createObject('isDefault', true()), createObject())]",
             "optionalCredentials": "[if(not(empty(parameters('credentialsKey'))), createObject('credentials', createObject('key', parameters('credentialsKey'))), createObject())]"
@@ -48122,7 +48139,7 @@
         "mode": "Incremental",
         "parameters": {
           "name": {
-            "value": "[format('ca-{0}', variables('solutionSuffix'))]"
+            "value": "[variables('containerAppName')]"
           },
           "location": {
             "value": "[parameters('location')]"
@@ -48200,10 +48217,6 @@
                     "value": "[if(variables('useExistingAIProject'), reference('existing_project_setup').outputs.aiFoundryEndpoint.value, reference('ai_foundry_project').outputs.endpoint.value)]"
                   },
                   {
-                    "name": "AZURE_OPENAI_MODEL_NAME",
-                    "value": "[parameters('gptModelName')]"
-                  },
-                  {
                     "name": "AZURE_OPENAI_DEPLOYMENT_NAME",
                     "value": "[parameters('gptModelName')]"
                   },
@@ -48240,16 +48253,8 @@
                     "value": "[format('https://app-{0}.azurewebsites.net', variables('solutionSuffix'))]"
                   },
                   {
-                    "name": "AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME",
-                    "value": "[parameters('gptModelName')]"
-                  },
-                  {
                     "name": "APP_ENV",
                     "value": "Prod"
-                  },
-                  {
-                    "name": "AZURE_AI_SEARCH_CONNECTION_NAME",
-                    "value": "[variables('aiSearchConnectionName')]"
                   },
                   {
                     "name": "AZURE_AI_SEARCH_ENDPOINT",
@@ -48260,16 +48265,12 @@
                     "value": "https://cognitiveservices.azure.com/.default"
                   },
                   {
-                    "name": "AZURE_BING_CONNECTION_NAME",
-                    "value": "binggrnd"
-                  },
-                  {
-                    "name": "BING_CONNECTION_NAME",
-                    "value": "binggrnd"
-                  },
-                  {
-                    "name": "REASONING_MODEL_NAME",
+                    "name": "ORCHESTRATOR_MODEL_NAME",
                     "value": "[parameters('gptReasoningModelName')]"
+                  },
+                  {
+                    "name": "AZURE_OPENAI_IMAGE_DEPLOYMENT",
+                    "value": "[parameters('gptImageModelName')]"
                   },
                   {
                     "name": "MCP_SERVER_ENDPOINT",
@@ -48293,7 +48294,7 @@
                   },
                   {
                     "name": "SUPPORTED_MODELS",
-                    "value": "[[\"o3\",\"o4-mini\",\"gpt-4.1\",\"gpt-4.1-mini\"]"
+                    "value": "[variables('supportedModels')]"
                   },
                   {
                     "name": "AZURE_STORAGE_BLOB_URL",
@@ -48306,14 +48307,6 @@
                   {
                     "name": "AZURE_AI_AGENT_ENDPOINT",
                     "value": "[if(variables('useExistingAIProject'), reference('existing_project_setup').outputs.projectEndpoint.value, reference('ai_foundry_project').outputs.projectEndpoint.value)]"
-                  },
-                  {
-                    "name": "AZURE_AI_AGENT_API_VERSION",
-                    "value": "[parameters('azureAiAgentAPIVersion')]"
-                  },
-                  {
-                    "name": "AZURE_AI_AGENT_PROJECT_CONNECTION_STRING",
-                    "value": "[format('{0}.services.ai.azure.com;{1};{2};{3}', variables('aiFoundryAiServicesResourceName'), variables('aiFoundryAiServicesSubscriptionId'), variables('aiFoundryAiServicesResourceGroupName'), variables('aiFoundryAiProjectResourceName'))]"
                   },
                   {
                     "name": "AZURE_BASIC_LOGGING_LEVEL",
@@ -50209,7 +50202,7 @@
                   },
                   {
                     "name": "JWKS_URI",
-                    "value": "[format('https://login.microsoftonline.com/{0}/discovery/v2.0/keys', tenant().tenantId)]"
+                    "value": "[format('{0}/{1}/discovery/v2.0/keys', environment().authentication.loginEndpoint, tenant().tenantId)]"
                   },
                   {
                     "name": "ISSUER",
@@ -50222,6 +50215,26 @@
                   {
                     "name": "DATASET_PATH",
                     "value": "./datasets"
+                  },
+                  {
+                    "name": "AZURE_CLIENT_ID",
+                    "value": "[reference('managed_identity').outputs.clientId.value]"
+                  },
+                  {
+                    "name": "AZURE_OPENAI_ENDPOINT",
+                    "value": "[format('https://{0}.openai.azure.com/', variables('aiFoundryAiServicesResourceName'))]"
+                  },
+                  {
+                    "name": "AZURE_OPENAI_IMAGE_DEPLOYMENT",
+                    "value": "[parameters('gptImageModelName')]"
+                  },
+                  {
+                    "name": "AZURE_STORAGE_BLOB_URL",
+                    "value": "[reference('storage_account').outputs.blobEndpoint.value]"
+                  },
+                  {
+                    "name": "BACKEND_URL",
+                    "value": "[format('https://{0}.{1}', variables('containerAppName'), reference('containerAppEnvironment').outputs.defaultDomain.value)]"
                   }
                 ]
               }
@@ -52000,7 +52013,8 @@
       },
       "dependsOn": [
         "containerAppEnvironment",
-        "managed_identity"
+        "managed_identity",
+        "storage_account"
       ]
     },
     "webServerFarm": {
@@ -67984,7 +67998,7 @@
           "aiSearchPrincipalId": {
             "value": "[reference('ai_search').outputs.identityPrincipalId.value]"
           },
-          "backendAppServicePrincipalId": {
+          "userAssignedManagedIdentityPrincipalId": {
             "value": "[reference('managed_identity').outputs.principalId.value]"
           },
           "aiFoundryResourceId": "[if(not(variables('useExistingAIProject')), if(variables('useExistingAIProject'), createObject('value', reference('existing_project_setup').outputs.aiFoundryResourceId.value), createObject('value', reference('ai_foundry_project').outputs.resourceId.value)), createObject('value', ''))]",
@@ -68008,7 +68022,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "3236852956238555570"
+              "templateHash": "115115160924595855"
             }
           },
           "parameters": {
@@ -68054,11 +68068,11 @@
                 "description": "Principal ID of the AI Search identity."
               }
             },
-            "backendAppServicePrincipalId": {
+            "userAssignedManagedIdentityPrincipalId": {
               "type": "string",
               "defaultValue": "",
               "metadata": {
-                "description": "Principal ID of the backend App Service system-assigned identity (empty if not deployed)."
+                "description": "Principal ID of the user-assigned managed identity (empty if not deployed)."
               }
             },
             "deployerPrincipalId": {
@@ -68105,6 +68119,7 @@
               "azureAiUser": "53ca6127-db72-4b80-b1b0-d745d6d5456d",
               "cognitiveServicesUser": "a97b65f3-24c7-4388-baec-2e87135dc908",
               "cognitiveServicesOpenAIUser": "5e0bd9bd-7b93-4f28-af87-19fc36ad61bd",
+              "cognitiveServicesOpenAIContributor": "a001fd3d-188f-4b5d-821b-7da978bf7442v",
               "searchIndexDataReader": "1407120a-92aa-4202-b7e9-c0e197c71c8f",
               "searchServiceContributor": "7ca78c08-252a-4471-8644-bb5ff32d4ba0",
               "storageBlobDataContributor": "ba92f5b4-2d11-453d-a403-e96b0029c9fe",
@@ -68125,14 +68140,26 @@
               }
             },
             {
-              "condition": "[and(and(not(parameters('useExistingAIProject')), not(empty(parameters('aiFoundryResourceId')))), not(empty(parameters('backendAppServicePrincipalId'))))]",
+              "condition": "[and(and(not(parameters('useExistingAIProject')), not(empty(parameters('aiFoundryResourceId')))), not(empty(parameters('userAssignedManagedIdentityPrincipalId'))))]",
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
               "scope": "[resourceId('Microsoft.CognitiveServices/accounts', last(split(parameters('aiFoundryResourceId'), '/')))]",
-              "name": "[guid(resourceGroup().id, parameters('backendAppServicePrincipalId'), variables('roleDefinitions').azureAiUser, 'backend-ai-services')]",
+              "name": "[guid(resourceGroup().id, parameters('userAssignedManagedIdentityPrincipalId'), variables('roleDefinitions').azureAiUser, 'user-assigned-managed-identity-ai-user')]",
               "properties": {
-                "principalId": "[parameters('backendAppServicePrincipalId')]",
+                "principalId": "[parameters('userAssignedManagedIdentityPrincipalId')]",
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('roleDefinitions').azureAiUser)]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
+              "condition": "[and(and(not(parameters('useExistingAIProject')), not(empty(parameters('aiFoundryResourceId')))), not(empty(parameters('userAssignedManagedIdentityPrincipalId'))))]",
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.CognitiveServices/accounts', last(split(parameters('aiFoundryResourceId'), '/')))]",
+              "name": "[guid(resourceGroup().id, parameters('userAssignedManagedIdentityPrincipalId'), variables('roleDefinitions').cognitiveServicesOpenAIContributor, 'user-assigned-managed-identity-openai')]",
+              "properties": {
+                "principalId": "[parameters('userAssignedManagedIdentityPrincipalId')]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('roleDefinitions').cognitiveServicesOpenAIContributor)]",
                 "principalType": "ServicePrincipal"
               }
             },
@@ -68185,13 +68212,13 @@
               }
             },
             {
-              "condition": "[and(not(empty(parameters('aiSearchResourceId'))), not(empty(parameters('backendAppServicePrincipalId'))))]",
+              "condition": "[and(not(empty(parameters('aiSearchResourceId'))), not(empty(parameters('userAssignedManagedIdentityPrincipalId'))))]",
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
               "scope": "[resourceId('Microsoft.Search/searchServices', last(split(parameters('aiSearchResourceId'), '/')))]",
-              "name": "[guid(resourceGroup().id, parameters('backendAppServicePrincipalId'), variables('roleDefinitions').searchIndexDataReader, 'backend-search')]",
+              "name": "[guid(resourceGroup().id, parameters('userAssignedManagedIdentityPrincipalId'), variables('roleDefinitions').searchIndexDataReader, 'user-assigned-managed-identity-search')]",
               "properties": {
-                "principalId": "[parameters('backendAppServicePrincipalId')]",
+                "principalId": "[parameters('userAssignedManagedIdentityPrincipalId')]",
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('roleDefinitions').searchIndexDataReader)]",
                 "principalType": "ServicePrincipal"
               }
@@ -68257,12 +68284,12 @@
               }
             },
             {
-              "condition": "[and(not(empty(parameters('cosmosDbAccountName'))), not(empty(parameters('backendAppServicePrincipalId'))))]",
+              "condition": "[and(not(empty(parameters('cosmosDbAccountName'))), not(empty(parameters('userAssignedManagedIdentityPrincipalId'))))]",
               "type": "Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments",
               "apiVersion": "2025-10-15",
-              "name": "[format('{0}/{1}', parameters('cosmosDbAccountName'), guid(resourceId('Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions', parameters('cosmosDbAccountName'), '00000000-0000-0000-0000-000000000002'), resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDbAccountName')), parameters('backendAppServicePrincipalId')))]",
+              "name": "[format('{0}/{1}', parameters('cosmosDbAccountName'), guid(resourceId('Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions', parameters('cosmosDbAccountName'), '00000000-0000-0000-0000-000000000002'), resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDbAccountName')), parameters('userAssignedManagedIdentityPrincipalId')))]",
               "properties": {
-                "principalId": "[parameters('backendAppServicePrincipalId')]",
+                "principalId": "[parameters('userAssignedManagedIdentityPrincipalId')]",
                 "roleDefinitionId": "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions', parameters('cosmosDbAccountName'), '00000000-0000-0000-0000-000000000002')]",
                 "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDbAccountName'))]"
               }
@@ -68367,7 +68394,7 @@
               }
             },
             {
-              "condition": "[and(parameters('useExistingAIProject'), not(empty(parameters('backendAppServicePrincipalId'))))]",
+              "condition": "[and(parameters('useExistingAIProject'), not(empty(parameters('userAssignedManagedIdentityPrincipalId'))))]",
               "type": "Microsoft.Resources/deployments",
               "apiVersion": "2025-04-01",
               "name": "assignAiUserRoleToBackendExisting",
@@ -68380,13 +68407,102 @@
                 "mode": "Incremental",
                 "parameters": {
                   "principalId": {
-                    "value": "[parameters('backendAppServicePrincipalId')]"
+                    "value": "[parameters('userAssignedManagedIdentityPrincipalId')]"
                   },
                   "roleDefinitionId": {
                     "value": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('roleDefinitions').azureAiUser)]"
                   },
                   "roleAssignmentName": {
                     "value": "[guid(parameters('solutionName'), 'backend-aiuser', variables('existingAIFoundryName'), variables('roleDefinitions').azureAiUser)]"
+                  },
+                  "aiFoundryName": {
+                    "value": "[variables('existingAIFoundryName')]"
+                  }
+                },
+                "template": {
+                  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                  "contentVersion": "1.0.0.0",
+                  "metadata": {
+                    "_generator": {
+                      "name": "bicep",
+                      "version": "0.43.8.12551",
+                      "templateHash": "7353258032010757384"
+                    }
+                  },
+                  "parameters": {
+                    "principalId": {
+                      "type": "string",
+                      "metadata": {
+                        "description": "The principal ID to assign the role to."
+                      }
+                    },
+                    "roleDefinitionId": {
+                      "type": "string",
+                      "metadata": {
+                        "description": "The resource ID of the role definition to assign."
+                      }
+                    },
+                    "roleAssignmentName": {
+                      "type": "string",
+                      "metadata": {
+                        "description": "A unique name for the role assignment."
+                      }
+                    },
+                    "aiFoundryName": {
+                      "type": "string",
+                      "metadata": {
+                        "description": "The name of the AI Foundry account to scope the role assignment to."
+                      }
+                    },
+                    "principalType": {
+                      "type": "string",
+                      "defaultValue": "ServicePrincipal",
+                      "allowedValues": [
+                        "ServicePrincipal",
+                        "User"
+                      ],
+                      "metadata": {
+                        "description": "The principal type of the identity being assigned."
+                      }
+                    }
+                  },
+                  "resources": [
+                    {
+                      "type": "Microsoft.Authorization/roleAssignments",
+                      "apiVersion": "2022-04-01",
+                      "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('aiFoundryName'))]",
+                      "name": "[parameters('roleAssignmentName')]",
+                      "properties": {
+                        "roleDefinitionId": "[parameters('roleDefinitionId')]",
+                        "principalId": "[parameters('principalId')]",
+                        "principalType": "[parameters('principalType')]"
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "condition": "[and(parameters('useExistingAIProject'), not(empty(parameters('userAssignedManagedIdentityPrincipalId'))))]",
+              "type": "Microsoft.Resources/deployments",
+              "apiVersion": "2025-04-01",
+              "name": "assignOpenAIContributorRoleToBackendExisting",
+              "subscriptionId": "[variables('existingAIFoundrySubscription')]",
+              "resourceGroup": "[variables('existingAIFoundryResourceGroup')]",
+              "properties": {
+                "expressionEvaluationOptions": {
+                  "scope": "inner"
+                },
+                "mode": "Incremental",
+                "parameters": {
+                  "principalId": {
+                    "value": "[parameters('userAssignedManagedIdentityPrincipalId')]"
+                  },
+                  "roleDefinitionId": {
+                    "value": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('roleDefinitions').cognitiveServicesOpenAIContributor)]"
+                  },
+                  "roleAssignmentName": {
+                    "value": "[guid(parameters('solutionName'), 'backend-openai-contributor', variables('existingAIFoundryName'), variables('roleDefinitions').cognitiveServicesOpenAIContributor)]"
                   },
                   "aiFoundryName": {
                     "value": "[variables('existingAIFoundryName')]"
@@ -68515,10 +68631,6 @@
       "type": "string",
       "value": "[if(variables('useExistingAIProject'), reference('existing_project_setup').outputs.aiFoundryEndpoint.value, reference('ai_foundry_project').outputs.endpoint.value)]"
     },
-    "AZURE_OPENAI_MODEL_NAME": {
-      "type": "string",
-      "value": "[parameters('gptModelName')]"
-    },
     "AZURE_OPENAI_DEPLOYMENT_NAME": {
       "type": "string",
       "value": "[parameters('gptModelName')]"
@@ -68571,15 +68683,11 @@
       "type": "string",
       "value": "[tenant().tenantId]"
     },
-    "AZURE_AI_SEARCH_CONNECTION_NAME": {
-      "type": "string",
-      "value": "[variables('aiSearchConnectionName')]"
-    },
     "AZURE_COGNITIVE_SERVICES": {
       "type": "string",
       "value": "https://cognitiveservices.azure.com/.default"
     },
-    "REASONING_MODEL_NAME": {
+    "ORCHESTRATOR_MODEL_NAME": {
       "type": "string",
       "value": "[parameters('gptReasoningModelName')]"
     },
@@ -68593,7 +68701,7 @@
     },
     "SUPPORTED_MODELS": {
       "type": "string",
-      "value": "[[\"o3\",\"o4-mini\",\"gpt-4.1\",\"gpt-4.1-mini\"]"
+      "value": "[string(variables('supportedModels'))]"
     },
     "BACKEND_URL": {
       "type": "string",
@@ -68606,14 +68714,6 @@
     "AZURE_AI_AGENT_ENDPOINT": {
       "type": "string",
       "value": "[if(variables('useExistingAIProject'), reference('existing_project_setup').outputs.projectEndpoint.value, reference('ai_foundry_project').outputs.projectEndpoint.value)]"
-    },
-    "AZURE_AI_AGENT_API_VERSION": {
-      "type": "string",
-      "value": "[parameters('azureAiAgentAPIVersion')]"
-    },
-    "AZURE_AI_AGENT_PROJECT_CONNECTION_STRING": {
-      "type": "string",
-      "value": "[format('{0}.services.ai.azure.com;{1};{2};{3}', variables('aiFoundryAiServicesResourceName'), variables('aiFoundryAiServicesSubscriptionId'), variables('aiFoundryAiServicesResourceGroupName'), variables('aiFoundryAiProjectResourceName'))]"
     },
     "AI_SERVICE_NAME": {
       "type": "string",

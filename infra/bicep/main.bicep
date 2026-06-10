@@ -117,9 +117,6 @@ param gptImageModelCapacity int = 5
 @description('Optional. Azure OpenAI API version.')
 param azureOpenaiAPIVersion string = '2024-12-01-preview'
 
-@description('Optional. Azure AI Agent API version.')
-param azureAiAgentAPIVersion string = '2025-01-01-preview'
-
 @description('Optional. The Container Registry hostname where the docker images for the backend are located.')
 param backendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
 
@@ -189,6 +186,9 @@ param storageContainerNameContractRisk string = 'contract-risk-dataset'
 @description('Optional. Blob container name for contract compliance documents.')
 param storageContainerNameContractCompliance string = 'contract-compliance-dataset'
 
+@description('Optional. Blob container name for generated images.')
+param storageContainerNameGeneratedImages string = 'generated-images'
+
 @description('Tag. Created by user name.')
 param createdBy string = contains(deployer(), 'userPrincipalName')
   ? split(deployer().userPrincipalName, '@')[0]
@@ -221,8 +221,8 @@ var aiFoundryAiServicesResourceId = useExistingAiFoundryAiProject ? existing_pro
 var aiFoundryOpenAIEndpoint = 'https://${aiFoundryAiServicesResourceName}.openai.azure.com/'
 var aiFoundryAiProjectEndpoint = 'https://${aiFoundryAiServicesResourceName}.services.ai.azure.com/api/projects/${aiFoundryAiProjectResourceName}'
 var aiSearchConnectionName = 'aifp-srch-connection-${solutionSuffix}'
-var aiStorageConnectionName = 'aifp-blob-connection-${solutionSuffix}'
-var aiAppInsightsConnectionName = 'aifp-appi-connection-${solutionSuffix}'
+// var aiStorageConnectionName = 'aifp-blob-connection-${solutionSuffix}'
+// var aiAppInsightsConnectionName = 'aifp-appi-connection-${solutionSuffix}'
 
 var modelDeployments = [
   {
@@ -250,6 +250,12 @@ var modelDeployments = [
     capacity: gptImageModelCapacity
   }
 ]
+var supportedModels = [
+  gptModelName
+  gpt4_1ModelName
+  gptReasoningModelName
+  gptImageModelName
+]
 
 var cosmosDbResourceName = 'cosmos-${solutionSuffix}'
 var cosmosDbDatabaseName = 'macae'
@@ -275,8 +281,6 @@ var aiSearchIndexNameForRFPCompliance = 'macae-rfp-compliance-index'
 
 var mcpServerName = 'MacaeMcpServer'
 var mcpServerDescription = 'MCP server with greeting, HR, and planning tools'
-var supportedModels = '["o3","o4-mini","gpt-4.1","gpt-4.1-mini"]'
-var aiAgentProjectConnectionString = '${aiFoundryAiServicesResourceName}.services.ai.azure.com;${aiFoundryAiServicesSubscriptionId};${aiFoundryAiServicesResourceGroupName};${aiFoundryAiProjectResourceName}'
 
 var azureAIDeveloperRoleDefinitionId = '/subscriptions/${aiFoundryAiServicesSubscriptionId}/providers/Microsoft.Authorization/roleDefinitions/64702f94-c441-49e6-a78b-ef80e0188fee'
 var cognitiveServicesOpenAIUserRoleDefinitionId = '/subscriptions/${aiFoundryAiServicesSubscriptionId}/providers/Microsoft.Authorization/roleDefinitions/5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
@@ -300,24 +304,6 @@ resource resourceGroupTags 'Microsoft.Resources/tags@2023-07-01' = {
 
 var useExistingLogAnalytics = !empty(existingLogAnalyticsWorkspaceId)
 
-#disable-next-line no-deployments-resources
-resource avmTelemetry 'Microsoft.Resources/deployments@2025-04-01' = if (enableTelemetry) {
-  name: '46d3xbcp.ptn.sa-multiagentcustauteng.bicep.${substring(uniqueString(deployment().name, location), 0, 4)}'
-  properties: {
-    mode: 'Incremental'
-    template: {
-      '$schema': 'https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#'
-      contentVersion: '1.0.0.0'
-      resources: []
-      outputs: {
-        telemetry: {
-          type: 'String'
-          value: 'Enabled'
-        }
-      }
-    }
-  }
-}
 
 module log_analytics './modules/monitoring/log-analytics.bicep' = if (!useExistingLogAnalytics) {
   name: take('module.log-analytics.${solutionSuffix}', 64)
@@ -445,6 +431,10 @@ module storage_account './modules/data/storage-account.bicep' = {
         name: storageContainerNameContractCompliance
         publicAccess: 'None'
       }
+      {
+        name: storageContainerNameGeneratedImages
+        publicAccess: 'None'
+      }
     ]
   }
 }
@@ -483,6 +473,10 @@ module container_app_environment './modules/compute/container-app-environment.bi
   }
 }
 
+// Base AI Search connection (CognitiveSearch / AAD).
+// Per-KB RemoteTool connections (ProjectManagedIdentity) are created by
+// infra/scripts/seed_kb_connections.py at post-deploy time because the KB
+// names are dynamic and depend on selected content packs.
 module foundry_search_connection './modules/ai/ai-foundry-connection.bicep' = {
   name: take('module.foundry-search-connection.${solutionSuffix}', 64)
   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
@@ -492,6 +486,7 @@ module foundry_search_connection './modules/ai/ai-foundry-connection.bicep' = {
     aiServicesAccountName: aiFoundryAiServicesResourceName
     projectName: aiFoundryAiProjectResourceName
     connectionName: aiSearchConnectionName
+    useWorkspaceManagedIdentity: true
     category: 'CognitiveSearch'
     target: ai_search.outputs.endpoint
     authType: 'AAD'
@@ -502,46 +497,46 @@ module foundry_search_connection './modules/ai/ai-foundry-connection.bicep' = {
   }
 }
 
-module foundry_storage_connection './modules/ai/ai-foundry-connection.bicep' = {
-  name: take('module.foundry-storage-connection.${solutionSuffix}', 64)
-  scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
-  dependsOn: [ai_model_deployment]
-  params: {
-    solutionName: solutionSuffix
-    aiServicesAccountName: aiFoundryAiServicesResourceName
-    projectName: aiFoundryAiProjectResourceName
-    connectionName: aiStorageConnectionName
-    category: 'AzureBlob'
-    target: storage_account.outputs.blobEndpoint
-    authType: 'AAD'
-    metadata: {
-      ResourceId: storage_account.outputs.resourceId
-      AccountName: storage_account.outputs.name
-      ContainerName: 'default'
-    }
-  }
-}
+// module foundry_storage_connection './modules/ai/ai-foundry-connection.bicep' = {
+//   name: take('module.foundry-storage-connection.${solutionSuffix}', 64)
+//   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
+//   dependsOn: [ai_model_deployment]
+//   params: {
+//     solutionName: solutionSuffix
+//     aiServicesAccountName: aiFoundryAiServicesResourceName
+//     projectName: aiFoundryAiProjectResourceName
+//     connectionName: aiStorageConnectionName
+//     category: 'AzureBlob'
+//     target: storage_account.outputs.blobEndpoint
+//     authType: 'AAD'
+//     metadata: {
+//       ResourceId: storage_account.outputs.resourceId
+//       AccountName: storage_account.outputs.name
+//       ContainerName: 'default'
+//     }
+//   }
+// }
 
-module foundry_appi_connection './modules/ai/ai-foundry-connection.bicep' = if (!useExistingAiFoundryAiProject) {
-  name: take('module.foundry-appi-connection.${solutionSuffix}', 64)
-  scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
-  dependsOn: [ai_model_deployment]
-  params: {
-    solutionName: solutionSuffix
-    aiServicesAccountName: aiFoundryAiServicesResourceName
-    projectName: aiFoundryAiProjectResourceName
-    connectionName: aiAppInsightsConnectionName
-    category: 'AppInsights'
-    target: app_insights.outputs.resourceId
-    authType: 'ApiKey'
-    isDefault: true
-    credentialsKey: app_insights.outputs.instrumentationKey
-    metadata: {
-      ApiType: 'Azure'
-      ResourceId: app_insights.outputs.resourceId
-    }
-  }
-}
+// module foundry_appi_connection './modules/ai/ai-foundry-connection.bicep' = if (!useExistingAiFoundryAiProject) {
+//   name: take('module.foundry-appi-connection.${solutionSuffix}', 64)
+//   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
+//   dependsOn: [ai_model_deployment]
+//   params: {
+//     solutionName: solutionSuffix
+//     aiServicesAccountName: aiFoundryAiServicesResourceName
+//     projectName: aiFoundryAiProjectResourceName
+//     connectionName: aiAppInsightsConnectionName
+//     category: 'AppInsights'
+//     target: app_insights.outputs.resourceId
+//     authType: 'ApiKey'
+//     isDefault: true
+//     credentialsKey: app_insights.outputs.instrumentationKey
+//     metadata: {
+//       ApiType: 'Azure'
+//       ResourceId: app_insights.outputs.resourceId
+//     }
+//   }
+// }
 
 module backend_container_app './modules/compute/container-app.bicep' = {
   name: take('module.backend-container-app.${solutionSuffix}', 64)
@@ -598,10 +593,6 @@ module backend_container_app './modules/compute/container-app.bicep' = {
             value: aiFoundryOpenAIEndpoint
           }
           {
-            name: 'AZURE_OPENAI_MODEL_NAME'
-            value: gptModelName
-          }
-          {
             name: 'AZURE_OPENAI_DEPLOYMENT_NAME'
             value: gptModelName
           }
@@ -638,17 +629,13 @@ module backend_container_app './modules/compute/container-app.bicep' = {
             value: frontendAppUrl
           }
           {
-            name: 'AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME'
-            value: gptModelName
-          }
-          {
             name: 'APP_ENV'
             value: 'Prod'
           }
-          {
-            name: 'AZURE_AI_SEARCH_CONNECTION_NAME'
-            value: aiSearchConnectionName
-          }
+          // NOTE: AZURE_AI_SEARCH_CONNECTION_NAME intentionally omitted.
+          // The app defaults to per-KB RemoteTool connection names (e.g.
+          // "macae-retail-customer-kb-mcp") which carry ProjectManagedIdentity
+          // auth required by the KB MCP endpoint.
           {
             name: 'AZURE_AI_SEARCH_ENDPOINT'
             value: ai_search.outputs.endpoint
@@ -658,16 +645,12 @@ module backend_container_app './modules/compute/container-app.bicep' = {
             value: 'https://cognitiveservices.azure.com/.default'
           }
           {
-            name: 'AZURE_BING_CONNECTION_NAME'
-            value: 'binggrnd'
-          }
-          {
-            name: 'BING_CONNECTION_NAME'
-            value: 'binggrnd'
-          }
-          {
-            name: 'REASONING_MODEL_NAME'
+            name: 'ORCHESTRATOR_MODEL_NAME'
             value: gptReasoningModelName
+          }
+          {
+            name: 'AZURE_OPENAI_IMAGE_DEPLOYMENT'
+            value: gptImageModelName
           }
           {
             name: 'MCP_SERVER_ENDPOINT'
@@ -704,14 +687,6 @@ module backend_container_app './modules/compute/container-app.bicep' = {
           {
             name: 'AZURE_AI_AGENT_ENDPOINT'
             value: aiFoundryAiProjectEndpoint
-          }
-          {
-            name: 'AZURE_AI_AGENT_API_VERSION'
-            value: azureAiAgentAPIVersion
-          }
-          {
-            name: 'AZURE_AI_AGENT_PROJECT_CONNECTION_STRING'
-            value: aiAgentProjectConnectionString
           }
           {
             name: 'AZURE_BASIC_LOGGING_LEVEL'
@@ -792,7 +767,7 @@ module mcp_container_app './modules/compute/container-app.bicep' = {
           }
           {
             name: 'JWKS_URI'
-            value: 'https://login.microsoftonline.com/${tenant().tenantId}/discovery/v2.0/keys'
+            value: '${environment().authentication.loginEndpoint}/${tenant().tenantId}/discovery/v2.0/keys'
           }
           {
             name: 'ISSUER'
@@ -805,6 +780,26 @@ module mcp_container_app './modules/compute/container-app.bicep' = {
           {
             name: 'DATASET_PATH'
             value: './datasets'
+          }
+          {
+            name: 'AZURE_CLIENT_ID'
+            value: userAssignedIdentity!.outputs.clientId
+          }
+          {
+            name: 'AZURE_OPENAI_ENDPOINT'
+            value: 'https://${aiFoundryAiServicesResourceName}.openai.azure.com/'
+          }
+          {
+            name: 'AZURE_OPENAI_IMAGE_DEPLOYMENT'
+            value: gptImageModelName
+          }
+          {
+            name: 'AZURE_STORAGE_BLOB_URL'
+            value: storage_account.outputs.blobEndpoint
+          }
+          {
+            name: 'BACKEND_URL'
+            value: 'https://${backendContainerAppName}.${container_app_environment.outputs.defaultDomain}'
           }
         ]
       }
@@ -859,7 +854,7 @@ module role_assignments './modules/identity/role-assignments.bicep' = {
     aiSearchPrincipalId: ai_search.outputs.identityPrincipalId
     deployerPrincipalId: deployingUserPrincipalId
     deployerPrincipalType: deployerPrincipalType
-    backendAppServicePrincipalId: userAssignedIdentity.outputs.principalId
+    userAssignedManagedIdentityPrincipalId: userAssignedIdentity.outputs.principalId
     cosmosDbAccountName: cosmosDBModule.outputs.name
   }
 }
@@ -904,31 +899,26 @@ output COSMOSDB_ENDPOINT string = 'https://${cosmosDbResourceName}.documents.azu
 output COSMOSDB_DATABASE string = cosmosDbDatabaseName
 output COSMOSDB_CONTAINER string = cosmosDbDatabaseMemoryContainerName
 output AZURE_OPENAI_ENDPOINT string = aiFoundryOpenAIEndpoint
-output AZURE_OPENAI_MODEL_NAME string = gptModelName
 output AZURE_OPENAI_DEPLOYMENT_NAME string = gptModelName
 output AZURE_OPENAI_RAI_DEPLOYMENT_NAME string = gpt4_1ModelName
 output AZURE_OPENAI_API_VERSION string = azureOpenaiAPIVersion
 output AZURE_AI_SUBSCRIPTION_ID string = subscription().subscriptionId
 output AZURE_AI_RESOURCE_GROUP string = resourceGroup().name
 output AZURE_AI_PROJECT_NAME string = aiFoundryAiProjectResourceName
-output AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME string = gptModelName
 output APP_ENV string = 'Prod'
 output AI_FOUNDRY_RESOURCE_ID string = useExistingAiFoundryAiProject ? existingFoundryProjectResourceId : ai_foundry_project!.outputs.resourceId
 output COSMOSDB_ACCOUNT_NAME string = cosmosDbResourceName
 output AZURE_SEARCH_ENDPOINT string = ai_search.outputs.endpoint
 output AZURE_CLIENT_ID string = userAssignedIdentity.outputs.clientId
 output AZURE_TENANT_ID string = tenant().tenantId
-output AZURE_AI_SEARCH_CONNECTION_NAME string = foundry_search_connection.outputs.connectionName
 output AZURE_COGNITIVE_SERVICES string = 'https://cognitiveservices.azure.com/.default'
-output REASONING_MODEL_NAME string = gptReasoningModelName
+output ORCHESTRATOR_MODEL_NAME string = gptReasoningModelName
 output MCP_SERVER_NAME string = mcpServerName
 output MCP_SERVER_DESCRIPTION string = mcpServerDescription
-output SUPPORTED_MODELS string = supportedModels
+output SUPPORTED_MODELS string = string(supportedModels)
 output BACKEND_URL string = 'https://${backend_container_app.outputs.fqdn}'
 output AZURE_AI_PROJECT_ENDPOINT string = aiFoundryAiProjectEndpoint
 output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiProjectEndpoint
-output AZURE_AI_AGENT_API_VERSION string = azureAiAgentAPIVersion
-output AZURE_AI_AGENT_PROJECT_CONNECTION_STRING string = aiAgentProjectConnectionString
 
 output AI_SERVICE_NAME string = aiFoundryAiServicesResourceName
 

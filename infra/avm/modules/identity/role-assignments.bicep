@@ -28,8 +28,8 @@ param existingAiProjectPrincipalId string = ''
 @description('Principal ID of the AI Search identity.')
 param aiSearchPrincipalId string = ''
 
-@description('Principal ID of the backend App Service system-assigned identity (empty if not deployed).')
-param backendAppServicePrincipalId string = ''
+@description('Principal ID of the user-assigned managed identity (empty if not deployed).')
+param userAssignedManagedIdentityPrincipalId string = ''
 
 @description('Principal ID of the deploying user (for user access roles).')
 param deployerPrincipalId string = ''
@@ -64,6 +64,7 @@ var roleDefinitions = {
   azureAiUser: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Foundry User
   cognitiveServicesUser: 'a97b65f3-24c7-4388-baec-2e87135dc908'
   cognitiveServicesOpenAIUser: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
+  cognitiveServicesOpenAIContributor: 'a001fd3d-188f-4b5d-821b-7da978bf7442v'
   searchIndexDataReader: '1407120a-92aa-4202-b7e9-c0e197c71c8f'
   searchServiceContributor: '7ca78c08-252a-4471-8644-bb5ff32d4ba0'
   storageBlobDataContributor: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
@@ -123,25 +124,50 @@ module assignOpenAIToSearchExisting './cross-scope-role-assignment.bicep' = if (
   }
 }
 
-// Backend App Service → Foundry User on AI Foundry (new project, same RG)
-resource backendAppAiUserAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingAIProject && !empty(aiFoundryResourceId) && !empty(backendAppServicePrincipalId)) {
-  name: guid(resourceGroup().id, backendAppServicePrincipalId, roleDefinitions.azureAiUser, 'backend-ai-services')
+// User-Assigned Managed Identity → Foundry User on AI Foundry (new project, same RG)
+resource userAssignedManagedIdentityAiUserAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingAIProject && !empty(aiFoundryResourceId) && !empty(userAssignedManagedIdentityPrincipalId)) {
+  name: guid(resourceGroup().id, userAssignedManagedIdentityPrincipalId, roleDefinitions.azureAiUser, 'user-assigned-managed-identity-ai-user')
   scope: aiFoundryAccount
   properties: {
-    principalId: backendAppServicePrincipalId
+    principalId: userAssignedManagedIdentityPrincipalId
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.azureAiUser)
     principalType: 'ServicePrincipal'
   }
 }
 
-// Backend App Service → Foundry User on existing AI Foundry (cross-scope)
-module backendAppAiUserExisting './cross-scope-role-assignment.bicep' = if (useExistingAIProject && !empty(backendAppServicePrincipalId)) {
+// User-Assigned Managed Identity → Cognitive Services OpenAI Contributor on AI Foundry (new project, same RG)
+// Extended as per accelerator need
+resource userAssignedManagedIdentityOpenAIContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingAIProject && !empty(aiFoundryResourceId) && !empty(userAssignedManagedIdentityPrincipalId)) {
+  name: guid(resourceGroup().id, userAssignedManagedIdentityPrincipalId, roleDefinitions.cognitiveServicesOpenAIContributor, 'user-assigned-managed-identity-openai')
+  scope: aiFoundryAccount
+  properties: {
+    principalId: userAssignedManagedIdentityPrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.cognitiveServicesOpenAIContributor)
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// User-Assigned Managed Identity → Foundry User on existing AI Foundry (cross-scope)
+module userAssignedManagedIdentityAiUserExisting './cross-scope-role-assignment.bicep' = if (useExistingAIProject && !empty(userAssignedManagedIdentityPrincipalId)) {
   name: 'assignAiUserRoleToBackendExisting'
   scope: resourceGroup(existingAIFoundrySubscription, existingAIFoundryResourceGroup)
   params: {
-    principalId: backendAppServicePrincipalId
+    principalId: userAssignedManagedIdentityPrincipalId
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.azureAiUser)
     roleAssignmentName: guid(solutionName, 'backend-aiuser', existingAIFoundryName, roleDefinitions.azureAiUser)
+    aiFoundryName: existingAIFoundryName
+  }
+}
+
+// User-Assigned Managed Identity → Cognitive Services OpenAI Contributor on existing AI Foundry (cross-scope)
+// Extended as per accelerator need
+module userAssignedManagedIdentityOpenAIContributorExisting './cross-scope-role-assignment.bicep' = if (useExistingAIProject && !empty(userAssignedManagedIdentityPrincipalId)) {
+  name: 'assignOpenAIContributorRoleToBackendExisting'
+  scope: resourceGroup(existingAIFoundrySubscription, existingAIFoundryResourceGroup)
+  params: {
+    principalId: userAssignedManagedIdentityPrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.cognitiveServicesOpenAIContributor)
+    roleAssignmentName: guid(solutionName, 'backend-openai-contributor', existingAIFoundryName, roleDefinitions.cognitiveServicesOpenAIContributor)
     aiFoundryName: existingAIFoundryName
   }
 }
@@ -195,12 +221,12 @@ resource existingProjectSearchContributor 'Microsoft.Authorization/roleAssignmen
   }
 }
 
-// Backend App Service → Search Index Data Reader on AI Search
-resource backendAppSearchReaderAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(aiSearchResourceId) && !empty(backendAppServicePrincipalId)) {
-  name: guid(resourceGroup().id, backendAppServicePrincipalId, roleDefinitions.searchIndexDataReader, 'backend-search')
+// User-Assigned Managed Identity → Search Index Data Reader on AI Search
+resource userAssignedManagedIdentitySearchReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(aiSearchResourceId) && !empty(userAssignedManagedIdentityPrincipalId)) {
+  name: guid(resourceGroup().id, userAssignedManagedIdentityPrincipalId, roleDefinitions.searchIndexDataReader, 'user-assigned-managed-identity-search')
   scope: aiSearchService
   properties: {
-    principalId: backendAppServicePrincipalId
+    principalId: userAssignedManagedIdentityPrincipalId
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.searchIndexDataReader)
     principalType: 'ServicePrincipal'
   }
@@ -268,14 +294,14 @@ resource searchStorageReader 'Microsoft.Authorization/roleAssignments@2022-04-01
 
 // ============================================================================
 // 4. COSMOS DB ROLE ASSIGNMENTS
-//    Backend App Service → Cosmos DB (data-plane, uses sqlRoleAssignments)
+//    User-Assigned Managed Identity → Cosmos DB (data-plane, uses sqlRoleAssignments)
 // ============================================================================
 
-resource backendAppCosmosRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2025-10-15' = if (!empty(cosmosDbAccountName) && !empty(backendAppServicePrincipalId)) {
+resource userAssignedManagedIdentityCosmosRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2025-10-15' = if (!empty(cosmosDbAccountName) && !empty(userAssignedManagedIdentityPrincipalId)) {
   parent: cosmosAccount
-  name: guid(cosmosContributorRoleDefinition.id, cosmosAccount.id, backendAppServicePrincipalId)
+  name: guid(cosmosContributorRoleDefinition.id, cosmosAccount.id, userAssignedManagedIdentityPrincipalId)
   properties: {
-    principalId: backendAppServicePrincipalId
+    principalId: userAssignedManagedIdentityPrincipalId
     roleDefinitionId: cosmosContributorRoleDefinition.id
     scope: cosmosAccount.id
   }

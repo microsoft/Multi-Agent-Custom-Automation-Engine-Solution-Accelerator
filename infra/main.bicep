@@ -253,28 +253,6 @@ param vmSize string = 'Standard_D2s_v5'
 var isAvm = deploymentFlavor == 'avm' || deploymentFlavor == 'avm-waf'
 var isBicep = deploymentFlavor == 'bicep'
 
-// ============================================================================
-// Telemetry
-// ============================================================================
-
-#disable-next-line no-deployments-resources
-resource avmTelemetry 'Microsoft.Resources/deployments@2025-04-01' = if (enableTelemetry) {
-  name: '46d3xbcp.ptn.sa-multiagentcustauteng.router.${substring(uniqueString(deployment().name, location), 0, 4)}'
-  properties: {
-    mode: 'Incremental'
-    template: {
-      '$schema': 'https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#'
-      contentVersion: '1.0.0.0'
-      resources: []
-      outputs: {
-        telemetry: {
-          type: 'String'
-          value: 'For more information, see https://aka.ms/avm/TelemetryInfo'
-        }
-      }
-    }
-  }
-}
 
 // ============================================================================
 // Module: AVM Deployment
@@ -296,7 +274,6 @@ module avmDeployment './avm/main.bicep' = if (isAvm) {
     gptReasoningModelName: gptReasoningModelName
     gptReasoningModelVersion: gptReasoningModelVersion
     azureOpenaiAPIVersion: azureOpenaiAPIVersion
-    azureAiAgentAPIVersion: azureAiAgentAPIVersion
     deploymentType: deploymentType
     gpt4_1ModelDeploymentType: gpt4_1ModelDeploymentType
     gptReasoningModelDeploymentType: gptReasoningModelDeploymentType
@@ -356,7 +333,6 @@ module bicepDeployment './bicep/main.bicep' = if (isBicep) {
     gptReasoningModelDeploymentType: gptReasoningModelDeploymentType
     gptReasoningModelCapacity: gptReasoningModelCapacity
     azureOpenaiAPIVersion: azureOpenaiAPIVersion
-    azureAiAgentAPIVersion: azureAiAgentAPIVersion
     backendContainerRegistryHostname: backendContainerRegistryHostname
     backendContainerImageName: backendContainerImageName
     backendContainerImageTag: backendContainerImageTag
@@ -395,31 +371,26 @@ output COSMOSDB_ENDPOINT string = isAvm ? avmDeployment!.outputs.COSMOSDB_ENDPOI
 output COSMOSDB_DATABASE string = isAvm ? avmDeployment!.outputs.COSMOSDB_DATABASE : bicepDeployment!.outputs.COSMOSDB_DATABASE
 output COSMOSDB_CONTAINER string = isAvm ? avmDeployment!.outputs.COSMOSDB_CONTAINER : bicepDeployment!.outputs.COSMOSDB_CONTAINER
 output AZURE_OPENAI_ENDPOINT string = isAvm ? avmDeployment!.outputs.AZURE_OPENAI_ENDPOINT : bicepDeployment!.outputs.AZURE_OPENAI_ENDPOINT
-output AZURE_OPENAI_MODEL_NAME string = isAvm ? avmDeployment!.outputs.AZURE_OPENAI_MODEL_NAME : bicepDeployment!.outputs.AZURE_OPENAI_MODEL_NAME
 output AZURE_OPENAI_DEPLOYMENT_NAME string = isAvm ? avmDeployment!.outputs.AZURE_OPENAI_DEPLOYMENT_NAME : bicepDeployment!.outputs.AZURE_OPENAI_DEPLOYMENT_NAME
 output AZURE_OPENAI_RAI_DEPLOYMENT_NAME string = isAvm ? avmDeployment!.outputs.AZURE_OPENAI_RAI_DEPLOYMENT_NAME : bicepDeployment!.outputs.AZURE_OPENAI_RAI_DEPLOYMENT_NAME
 output AZURE_OPENAI_API_VERSION string = isAvm ? avmDeployment!.outputs.AZURE_OPENAI_API_VERSION : bicepDeployment!.outputs.AZURE_OPENAI_API_VERSION
 output AZURE_AI_SUBSCRIPTION_ID string = isAvm ? avmDeployment!.outputs.AZURE_AI_SUBSCRIPTION_ID : bicepDeployment!.outputs.AZURE_AI_SUBSCRIPTION_ID
 output AZURE_AI_RESOURCE_GROUP string = isAvm ? avmDeployment!.outputs.AZURE_AI_RESOURCE_GROUP : bicepDeployment!.outputs.AZURE_AI_RESOURCE_GROUP
 output AZURE_AI_PROJECT_NAME string = isAvm ? avmDeployment!.outputs.AZURE_AI_PROJECT_NAME : bicepDeployment!.outputs.AZURE_AI_PROJECT_NAME
-output AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME string = isAvm ? avmDeployment!.outputs.AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME : bicepDeployment!.outputs.AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME
 output APP_ENV string = isAvm ? avmDeployment!.outputs.APP_ENV : bicepDeployment!.outputs.APP_ENV
 output AI_FOUNDRY_RESOURCE_ID string = isAvm ? avmDeployment!.outputs.AI_FOUNDRY_RESOURCE_ID : bicepDeployment!.outputs.AI_FOUNDRY_RESOURCE_ID
 output COSMOSDB_ACCOUNT_NAME string = isAvm ? avmDeployment!.outputs.COSMOSDB_ACCOUNT_NAME : bicepDeployment!.outputs.COSMOSDB_ACCOUNT_NAME
 output AZURE_SEARCH_ENDPOINT string = isAvm ? avmDeployment!.outputs.AZURE_SEARCH_ENDPOINT : bicepDeployment!.outputs.AZURE_SEARCH_ENDPOINT
 output AZURE_CLIENT_ID string = isAvm ? avmDeployment!.outputs.AZURE_CLIENT_ID : bicepDeployment!.outputs.AZURE_CLIENT_ID
 output AZURE_TENANT_ID string = isAvm ? avmDeployment!.outputs.AZURE_TENANT_ID : bicepDeployment!.outputs.AZURE_TENANT_ID
-output AZURE_AI_SEARCH_CONNECTION_NAME string = isAvm ? avmDeployment!.outputs.AZURE_AI_SEARCH_CONNECTION_NAME : bicepDeployment!.outputs.AZURE_AI_SEARCH_CONNECTION_NAME
 output AZURE_COGNITIVE_SERVICES string = isAvm ? avmDeployment!.outputs.AZURE_COGNITIVE_SERVICES : bicepDeployment!.outputs.AZURE_COGNITIVE_SERVICES
-output REASONING_MODEL_NAME string = isAvm ? avmDeployment!.outputs.REASONING_MODEL_NAME : bicepDeployment!.outputs.REASONING_MODEL_NAME
+output ORCHESTRATOR_MODEL_NAME string = isAvm ? avmDeployment!.outputs.ORCHESTRATOR_MODEL_NAME : bicepDeployment!.outputs.ORCHESTRATOR_MODEL_NAME
 output MCP_SERVER_NAME string = isAvm ? avmDeployment!.outputs.MCP_SERVER_NAME : bicepDeployment!.outputs.MCP_SERVER_NAME
 output MCP_SERVER_DESCRIPTION string = isAvm ? avmDeployment!.outputs.MCP_SERVER_DESCRIPTION : bicepDeployment!.outputs.MCP_SERVER_DESCRIPTION
 output SUPPORTED_MODELS string = isAvm ? avmDeployment!.outputs.SUPPORTED_MODELS : bicepDeployment!.outputs.SUPPORTED_MODELS
 output BACKEND_URL string = isAvm ? avmDeployment!.outputs.BACKEND_URL : bicepDeployment!.outputs.BACKEND_URL
 output AZURE_AI_PROJECT_ENDPOINT string = isAvm ? avmDeployment!.outputs.AZURE_AI_PROJECT_ENDPOINT : bicepDeployment!.outputs.AZURE_AI_PROJECT_ENDPOINT
 output AZURE_AI_AGENT_ENDPOINT string = isAvm ? avmDeployment!.outputs.AZURE_AI_AGENT_ENDPOINT : bicepDeployment!.outputs.AZURE_AI_AGENT_ENDPOINT
-output AZURE_AI_AGENT_API_VERSION string = isAvm ? avmDeployment!.outputs.AZURE_AI_AGENT_API_VERSION : bicepDeployment!.outputs.AZURE_AI_AGENT_API_VERSION
-output AZURE_AI_AGENT_PROJECT_CONNECTION_STRING string = isAvm ? avmDeployment!.outputs.AZURE_AI_AGENT_PROJECT_CONNECTION_STRING : bicepDeployment!.outputs.AZURE_AI_AGENT_PROJECT_CONNECTION_STRING
 output AI_SERVICE_NAME string = isAvm ? avmDeployment!.outputs.AI_SERVICE_NAME : bicepDeployment!.outputs.AI_SERVICE_NAME
 output AZURE_STORAGE_CONTAINER_NAME_RETAIL_CUSTOMER string = isAvm ? avmDeployment!.outputs.AZURE_STORAGE_CONTAINER_NAME_RETAIL_CUSTOMER : bicepDeployment!.outputs.AZURE_STORAGE_CONTAINER_NAME_RETAIL_CUSTOMER
 output AZURE_STORAGE_CONTAINER_NAME_RETAIL_ORDER string = isAvm ? avmDeployment!.outputs.AZURE_STORAGE_CONTAINER_NAME_RETAIL_ORDER : bicepDeployment!.outputs.AZURE_STORAGE_CONTAINER_NAME_RETAIL_ORDER

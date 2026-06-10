@@ -38,6 +38,9 @@ param isDefault bool = false
 @description('Optional. Connection metadata object.')
 param metadata object = {}
 
+@description('Optional. Whether to use workspace-managed identity for authentication.')
+param useWorkspaceManagedIdentity bool = false
+
 @secure()
 @description('Optional. Credentials key (for ApiKey auth type).')
 param credentialsKey string = ''
@@ -63,6 +66,7 @@ var baseProperties = {
   authType: authType
   isSharedToAll: isSharedToAll
   metadata: metadata
+  useWorkspaceManagedIdentity: useWorkspaceManagedIdentity
 }
 
 var optionalDefault = isDefault ? { isDefault: true } : {}
