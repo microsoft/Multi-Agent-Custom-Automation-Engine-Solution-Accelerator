@@ -7,7 +7,7 @@
     bases, and KB MCP connections.
 
 .DESCRIPTION
-    Mirrors the structure of infra/scripts/Selecting-Team-Config-And-Data.ps1.
+    Mirrors the structure of infra/scripts/post-provision/Selecting-Team-Config-And-Data.ps1.
     Configuration values are resolved using a 3-tier fallback strategy:
       1. azd env  -> 2. ARM deployment outputs  -> 3. resource naming convention
     Handles WAF deployments by temporarily enabling public network access on
@@ -18,8 +18,8 @@
     Optional resource group name. If omitted, values come from azd env.
 
 .EXAMPLE
-    .\infra\scripts\post_deploy.ps1
-    .\infra\scripts\post_deploy.ps1 -ResourceGroup rg-macae-dev
+    .\infra\scripts\post-provision\post_deploy.ps1
+    .\infra\scripts\post-provision\post_deploy.ps1 -ResourceGroup rg-macae-dev
 #>
 
 param(
@@ -373,7 +373,7 @@ function Deploy-ContentPack {
             }
 
             Write-Host "  Creating search index '$indexName' from container '$container'..."
-            $process = Start-Process -FilePath $PythonCmd -ArgumentList "infra/scripts/index_datasets.py", $StorageAccountName, $container, $AiSearchName, $indexName -Wait -NoNewWindow -PassThru
+            $process = Start-Process -FilePath $PythonCmd -ArgumentList "infra/scripts/post-provision/index_datasets.py", $StorageAccountName, $container, $AiSearchName, $indexName -Wait -NoNewWindow -PassThru
             if ($process.ExitCode -ne 0) {
                 Write-Host "  Error: Indexing failed for '$indexName'."
                 $hadFailure = $true
@@ -416,7 +416,7 @@ function Deploy-ContentPack {
             }
 
             Write-Host "  Creating search index '$indexName' from container '$container'..."
-            $process = Start-Process -FilePath $PythonCmd -ArgumentList "infra/scripts/index_datasets.py", $StorageAccountName, $container, $AiSearchName, $indexName -Wait -NoNewWindow -PassThru
+            $process = Start-Process -FilePath $PythonCmd -ArgumentList "infra/scripts/post-provision/index_datasets.py", $StorageAccountName, $container, $AiSearchName, $indexName -Wait -NoNewWindow -PassThru
             if ($process.ExitCode -ne 0) {
                 Write-Host "  Error: Indexing failed for '$indexName'."
                 $hadFailure = $true
@@ -439,7 +439,7 @@ function Upload-TeamConfig {
     Write-Host "Uploading Team Configuration for $Label..."
     try {
         $process = Start-Process -FilePath $PythonCmd `
-            -ArgumentList "infra/scripts/upload_team_config.py", $script:backendUrl, $TeamConfigDir, $script:userPrincipalId, $TeamId `
+            -ArgumentList "infra/scripts/post-provision/upload_team_config.py", $script:backendUrl, $TeamConfigDir, $script:userPrincipalId, $TeamId `
             -Wait -NoNewWindow -PassThru
         if ($process.ExitCode -ne 0) {
             Write-Host "Error: Team configuration for $Label upload failed." -ForegroundColor Red
@@ -627,7 +627,7 @@ try {
     if ($activateScript) { . $activateScript }
 
     Write-Host "Installing Python dependencies..."
-    pip install --quiet -r infra/scripts/requirements.txt
+    pip install --quiet -r infra/scripts/post-provision/requirements.txt
 
     # ── Export endpoints as process env vars for seed scripts ────────────────
     # Seed scripts read these via os.environ; we set them here so we don't
@@ -770,9 +770,9 @@ try {
             Write-Host ""
             Write-Host "── Creating vector stores ──" -ForegroundColor Green
             $vsFilter = ($selectedVectorStores -join ",")
-            $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/seed_vector_stores.py", "--only", $vsFilter -Wait -NoNewWindow -PassThru
+            $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/post-provision/seed_vector_stores.py", "--only", $vsFilter -Wait -NoNewWindow -PassThru
             if ($process.ExitCode -ne 0) {
-                Write-Host "  ERROR: Vector store creation failed. Run 'python infra/scripts/seed_vector_stores.py --only $vsFilter' manually." -ForegroundColor Red
+                Write-Host "  ERROR: Vector store creation failed. Run 'python infra/scripts/post-provision/seed_vector_stores.py --only $vsFilter' manually." -ForegroundColor Red
                 $script:hasErrors = $true
             } else {
                 Write-Host "  Vector stores created successfully."
@@ -785,9 +785,9 @@ try {
 
             Write-Host ""
             Write-Host "── Seeding Foundry IQ Knowledge Bases ──" -ForegroundColor Green
-            $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/seed_knowledge_bases.py", "--only", $kbFilter -Wait -NoNewWindow -PassThru
+            $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/post-provision/seed_knowledge_bases.py", "--only", $kbFilter -Wait -NoNewWindow -PassThru
             if ($process.ExitCode -ne 0) {
-                Write-Host "  ERROR: Knowledge base seeding failed. Run 'python infra/scripts/seed_knowledge_bases.py --only $kbFilter' manually." -ForegroundColor Red
+                Write-Host "  ERROR: Knowledge base seeding failed. Run 'python infra/scripts/post-provision/seed_knowledge_bases.py --only $kbFilter' manually." -ForegroundColor Red
                 $script:hasErrors = $true
             } else {
                 Write-Host "  Knowledge bases seeded successfully."
@@ -795,9 +795,9 @@ try {
 
             Write-Host ""
             Write-Host "── Creating KB MCP RemoteTool connections ──" -ForegroundColor Green
-            $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/seed_kb_connections.py", "--only", $kbFilter -Wait -NoNewWindow -PassThru
+            $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/post-provision/seed_kb_connections.py", "--only", $kbFilter -Wait -NoNewWindow -PassThru
             if ($process.ExitCode -ne 0) {
-                Write-Host "  ERROR: KB connection provisioning failed. Run 'python infra/scripts/seed_kb_connections.py --only $kbFilter' manually." -ForegroundColor Red
+                Write-Host "  ERROR: KB connection provisioning failed. Run 'python infra/scripts/post-provision/seed_kb_connections.py --only $kbFilter' manually." -ForegroundColor Red
                 $script:hasErrors = $true
             } else {
                 Write-Host "  KB MCP connections created successfully."

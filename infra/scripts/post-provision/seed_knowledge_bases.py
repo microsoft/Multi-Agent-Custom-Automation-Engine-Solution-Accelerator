@@ -1,7 +1,7 @@
 """Create Foundry IQ Knowledge Bases on Azure AI Search.
 
 Usage:
-    python scripts/seed_knowledge_bases.py
+    python infra/scripts/post-provision/seed_knowledge_bases.py
 
 Requires in src/backend/.env:
   - AZURE_AI_SEARCH_ENDPOINT
@@ -31,7 +31,7 @@ from azure.identity import DefaultAzureCredential
 from dotenv import load_dotenv
 
 # Load .env from src/backend/ (override=False so env vars set by post_deploy.ps1 take precedence)
-_backend_env = Path(__file__).parent.parent / "src" / "backend" / ".env"
+_backend_env = Path(__file__).parent.parent.parent.parent / "src" / "backend" / ".env"
 load_dotenv(str(_backend_env), override=False)
 
 SEARCH_ENDPOINT = os.environ.get("AZURE_AI_SEARCH_ENDPOINT", "").rstrip("/")

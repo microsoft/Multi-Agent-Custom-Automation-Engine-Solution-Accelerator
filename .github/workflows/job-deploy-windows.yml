@@ -365,7 +365,7 @@ jobs:
           
           # Upload team configurations and index sample data in one step
           # Automatically select "6" (All use cases) for non-interactive deployment
-          echo "6" | bash infra/scripts/selecting_team_config_and_data.sh
+          echo "6" | bash infra/scripts/post-provision/selecting_team_config_and_data.sh
 
       - name: Generate Deployment Summary
         if: always()

@@ -34,12 +34,12 @@ services:
       prepackage:
         windows:
           shell: pwsh
-          run: ../../infra/scripts/package_frontend.ps1
+          run: ../../infra/scripts/build/package_frontend.ps1
           interactive: true
           continueOnError: false
         posix:
           shell: sh
-          run: bash ../../infra/scripts/package_frontend.sh
+          run: bash ../../infra/scripts/build/package_frontend.sh
           interactive: true
           continueOnError: false
 
@@ -58,7 +58,7 @@ hooks:
 
           Write-Host " Upload Team Configurations and index sample data" -ForegroundColor White
           Write-Host "  👉 Run the following command in Bash:" -ForegroundColor White
-          Write-Host "   bash infra/scripts/selecting_team_config_and_data.sh" -ForegroundColor Cyan
+          Write-Host "   bash infra/scripts/post-provision/selecting_team_config_and_data.sh" -ForegroundColor Cyan
           Write-Host ""
 
           Write-Host "🌐 Access your deployed Frontend application at:" -ForegroundColor Green
@@ -74,7 +74,7 @@ hooks:
 
           Write-Host " Upload Team Configurations and index sample data" -ForegroundColor White
           Write-Host "  👉 Run the following command in PowerShell:" -ForegroundColor White
-          Write-Host "   infra\scripts\Selecting-Team-Config-And-Data.ps1" -ForegroundColor Cyan
+          Write-Host "   infra\scripts\post-provision\Selecting-Team-Config-And-Data.ps1" -ForegroundColor Cyan
           Write-Host ""
 
           Write-Host "🌐 Access your deployed Frontend application at:" -ForegroundColor Green
@@ -99,7 +99,7 @@ hooks:
 
         printf  "Upload Team Configurations and index sample data:\n"
         printf  "  👉 Run the following command in Bash:\n"
-        printf  "   ${Blue}bash infra/scripts/selecting_team_config_and_data.sh${NC}\n\n"
+        printf  "   ${Blue}bash infra/scripts/post-provision/selecting_team_config_and_data.sh${NC}\n\n"
 
         printf "🌐 Access your deployed Frontend application at:\n"
         printf "   ${Blue}https://%s${NC}\n\n" "$webSiteDefaultHostname"

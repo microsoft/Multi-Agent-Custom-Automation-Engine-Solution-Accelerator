@@ -540,7 +540,7 @@ fi
 
 # Install the requirements
 echo "Installing requirements"
-pip install --quiet -r infra/scripts/requirements.txt
+pip install --quiet -r infra/scripts/post-provision/requirements.txt
 echo "Requirements installed"
 
 isTeamConfigFailed=false
@@ -553,7 +553,7 @@ if [[ "$useCaseSelection" == "3" || "$useCaseSelection" == "all" || "$useCaseSel
     directoryPath="data/agent_teams"
     teamId="00000000-0000-0000-0000-000000000001"
     
-    if $pythonCmd infra/scripts/upload_team_config.py "$backendUrl" "$directoryPath" "$userPrincipalId" "$teamId"; then
+    if $pythonCmd infra/scripts/post-provision/upload_team_config.py "$backendUrl" "$directoryPath" "$userPrincipalId" "$teamId"; then
         echo "Successfully uploaded team configuration for HR Employee Onboarding."
     else
         echo "Error: Team configuration for HR Employee Onboarding upload failed."
@@ -568,7 +568,7 @@ if [[ "$useCaseSelection" == "4" || "$useCaseSelection" == "all" || "$useCaseSel
     directoryPath="data/agent_teams"
     teamId="00000000-0000-0000-0000-000000000002"
     
-    if $pythonCmd infra/scripts/upload_team_config.py "$backendUrl" "$directoryPath" "$userPrincipalId" "$teamId"; then
+    if $pythonCmd infra/scripts/post-provision/upload_team_config.py "$backendUrl" "$directoryPath" "$userPrincipalId" "$teamId"; then
         echo "Successfully uploaded team configuration for Marketing Press Release."
     else
         echo "Error: Team configuration for Marketing Press Release upload failed."
@@ -673,7 +673,7 @@ if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "all" || "$useCaseSel
     directoryPath="data/agent_teams"
     teamId="00000000-0000-0000-0000-000000000004"
     
-    if $pythonCmd infra/scripts/upload_team_config.py "$backendUrl" "$directoryPath" "$userPrincipalId" "$teamId"; then
+    if $pythonCmd infra/scripts/post-provision/upload_team_config.py "$backendUrl" "$directoryPath" "$userPrincipalId" "$teamId"; then
         echo "Uploaded Team Configuration for RFP Evaluation..."
     else
         echo "Error: Team configuration for RFP Evaluation upload failed."
@@ -707,21 +707,21 @@ if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "all" || "$useCaseSel
 
     # Run the Python script to index data
     echo "Running the python script to index data for RFP Evaluation"
-    if $pythonCmd infra/scripts/index_datasets.py "$storageAccount" "$blobContainerForRFPSummary" "$aiSearch" "$aiSearchIndexForRFPSummary"; then
+    if $pythonCmd infra/scripts/post-provision/index_datasets.py "$storageAccount" "$blobContainerForRFPSummary" "$aiSearch" "$aiSearchIndexForRFPSummary"; then
         echo "Python script to index data for RFP Summary successfully executed."
     else
         echo "Error: Indexing python script execution failed for RFP Summary."
         isSampleDataFailed=true
     fi
 
-    if $pythonCmd infra/scripts/index_datasets.py "$storageAccount" "$blobContainerForRFPRisk" "$aiSearch" "$aiSearchIndexForRFPRisk"; then
+    if $pythonCmd infra/scripts/post-provision/index_datasets.py "$storageAccount" "$blobContainerForRFPRisk" "$aiSearch" "$aiSearchIndexForRFPRisk"; then
         echo "Python script to index data for RFP Risk successfully executed."
     else
         echo "Error: Indexing python script execution failed for RFP Risk."
         isSampleDataFailed=true
     fi
 
-    if $pythonCmd infra/scripts/index_datasets.py "$storageAccount" "$blobContainerForRFPCompliance" "$aiSearch" "$aiSearchIndexForRFPCompliance"; then
+    if $pythonCmd infra/scripts/post-provision/index_datasets.py "$storageAccount" "$blobContainerForRFPCompliance" "$aiSearch" "$aiSearchIndexForRFPCompliance"; then
         echo "Python script to index data for RFP Compliance successfully executed."
     else
         echo "Error: Indexing python script execution failed for RFP Compliance."
@@ -736,7 +736,7 @@ if [[ "$useCaseSelection" == "5" || "$useCaseSelection" == "all" || "$useCaseSel
     directoryPath="data/agent_teams"
     teamId="00000000-0000-0000-0000-000000000005"
     
-    if $pythonCmd infra/scripts/upload_team_config.py "$backendUrl" "$directoryPath" "$userPrincipalId" "$teamId"; then
+    if $pythonCmd infra/scripts/post-provision/upload_team_config.py "$backendUrl" "$directoryPath" "$userPrincipalId" "$teamId"; then
         echo "Uploaded Team Configuration for Contract Compliance Review..."
     else
         echo "Error: Team configuration for Contract Compliance Review upload failed."
@@ -770,21 +770,21 @@ if [[ "$useCaseSelection" == "5" || "$useCaseSelection" == "all" || "$useCaseSel
 
     # Run the Python script to index data
     echo "Running the python script to index data for Contract Compliance Review"
-    if $pythonCmd infra/scripts/index_datasets.py "$storageAccount" "$blobContainerForContractSummary" "$aiSearch" "$aiSearchIndexForContractSummary"; then
+    if $pythonCmd infra/scripts/post-provision/index_datasets.py "$storageAccount" "$blobContainerForContractSummary" "$aiSearch" "$aiSearchIndexForContractSummary"; then
         echo "Python script to index data for Contract Summary successfully executed."
     else
         echo "Error: Indexing python script execution failed for Contract Summary."
         isSampleDataFailed=true
     fi
 
-    if $pythonCmd infra/scripts/index_datasets.py "$storageAccount" "$blobContainerForContractRisk" "$aiSearch" "$aiSearchIndexForContractRisk"; then
+    if $pythonCmd infra/scripts/post-provision/index_datasets.py "$storageAccount" "$blobContainerForContractRisk" "$aiSearch" "$aiSearchIndexForContractRisk"; then
         echo "Python script to index data for Contract Risk successfully executed."
     else
         echo "Error: Indexing python script execution failed for Contract Risk."
         isSampleDataFailed=true
     fi
 
-    if $pythonCmd infra/scripts/index_datasets.py "$storageAccount" "$blobContainerForContractCompliance" "$aiSearch" "$aiSearchIndexForContractCompliance"; then
+    if $pythonCmd infra/scripts/post-provision/index_datasets.py "$storageAccount" "$blobContainerForContractCompliance" "$aiSearch" "$aiSearchIndexForContractCompliance"; then
         echo "Python script to index data for Contract Compliance successfully executed."
     else
         echo "Error: Indexing python script execution failed for Contract Compliance."
@@ -799,7 +799,7 @@ if [[ "$useCaseSelection" == "2" || "$useCaseSelection" == "all" || "$useCaseSel
     directoryPath="data/agent_teams"
     teamId="00000000-0000-0000-0000-000000000003"
     
-    if $pythonCmd infra/scripts/upload_team_config.py "$backendUrl" "$directoryPath" "$userPrincipalId" "$teamId"; then
+    if $pythonCmd infra/scripts/post-provision/upload_team_config.py "$backendUrl" "$directoryPath" "$userPrincipalId" "$teamId"; then
         echo "Uploaded Team Configuration for Retail Customer Satisfaction..."
     else
         echo "Error: Team configuration for Retail Customer Satisfaction upload failed."
@@ -826,13 +826,13 @@ if [[ "$useCaseSelection" == "2" || "$useCaseSelection" == "all" || "$useCaseSel
 
     # Run the Python script to index data
     echo "Running the python script to index data for Retail Customer Satisfaction"
-    if ! $pythonCmd infra/scripts/index_datasets.py "$storageAccount" "retail-dataset-customer" "$aiSearch" "macae-retail-customer-index"; then
+    if ! $pythonCmd infra/scripts/post-provision/index_datasets.py "$storageAccount" "retail-dataset-customer" "$aiSearch" "macae-retail-customer-index"; then
         echo "Error: Indexing python script execution failed."
         isSampleDataFailed=true
         exit 1
     fi
     
-    if ! $pythonCmd infra/scripts/index_datasets.py "$storageAccount" "retail-dataset-order" "$aiSearch" "macae-retail-order-index"; then
+    if ! $pythonCmd infra/scripts/post-provision/index_datasets.py "$storageAccount" "retail-dataset-order" "$aiSearch" "macae-retail-order-index"; then
         echo "Error: Indexing python script execution failed."
         isSampleDataFailed=true
         exit 1
@@ -851,10 +851,10 @@ fi
 if [[ "$useCaseSelection" == "1" || "$useCaseSelection" == "2" || "$useCaseSelection" == "5" || "$useCaseSelection" == "6" || "$useCaseSelection" == "all" || "$useCaseSelection" == "7" ]]; then
     echo ""
     echo "Seeding Foundry IQ Knowledge Bases..."
-    if $pythonCmd scripts/seed_knowledge_bases.py; then
+    if $pythonCmd infra/scripts/post-provision/seed_knowledge_bases.py; then
         echo "Knowledge bases seeded successfully."
     else
-        echo "Warning: Knowledge base seeding failed. You can run 'python scripts/seed_knowledge_bases.py' manually after deployment."
+        echo "Warning: Knowledge base seeding failed. You can run 'python infra/scripts/post-provision/seed_knowledge_bases.py' manually after deployment."
     fi
 fi
 

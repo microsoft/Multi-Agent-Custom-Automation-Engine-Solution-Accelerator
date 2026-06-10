@@ -248,7 +248,7 @@ function Deploy-ContentPack {
             }
 
             Write-Host "  Creating search index '$indexName' from container '$container'..."
-            $process = Start-Process -FilePath $PythonCmd -ArgumentList "infra/scripts/index_datasets.py", $StorageAccountName, $container, $AiSearchName, $indexName -Wait -NoNewWindow -PassThru
+            $process = Start-Process -FilePath $PythonCmd -ArgumentList "infra/scripts/post-provision/index_datasets.py", $StorageAccountName, $container, $AiSearchName, $indexName -Wait -NoNewWindow -PassThru
             if ($process.ExitCode -ne 0) {
                 Write-Host "  Error: Indexing failed for '$indexName'."
                 $hadFailure = $true
@@ -296,7 +296,7 @@ function Deploy-ContentPack {
             }
 
             Write-Host "  Creating search index '$indexName' from container '$container'..."
-            $process = Start-Process -FilePath $PythonCmd -ArgumentList "infra/scripts/index_datasets.py", $StorageAccountName, $container, $AiSearchName, $indexName -Wait -NoNewWindow -PassThru
+            $process = Start-Process -FilePath $PythonCmd -ArgumentList "infra/scripts/post-provision/index_datasets.py", $StorageAccountName, $container, $AiSearchName, $indexName -Wait -NoNewWindow -PassThru
             if ($process.ExitCode -ne 0) {
                 Write-Host "  Error: Indexing failed for '$indexName'."
                 $hadFailure = $true
@@ -596,7 +596,7 @@ if ($activateScript) {
 
 # Install the requirements
 Write-Host "Installing requirements"
-pip install --quiet -r infra/scripts/requirements.txt
+pip install --quiet -r infra/scripts/post-provision/requirements.txt
 Write-Host "Requirements installed"
 
 $isTeamConfigFailed = $false
@@ -608,7 +608,7 @@ if($useCaseSelection -eq "3" -or $useCaseSelection -eq "all") {
     Write-Host "Uploading Team Configuration for HR Employee Onboarding..."
     $teamConfigDir = "content_packs/hr_onboarding/agent_teams"
     try {
-        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $teamConfigDir, $userPrincipalId, "00000000-0000-0000-0000-000000000001" -Wait -NoNewWindow -PassThru
+        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/post-provision/upload_team_config.py", $backendUrl, $teamConfigDir, $userPrincipalId, "00000000-0000-0000-0000-000000000001" -Wait -NoNewWindow -PassThru
         if ($process.ExitCode -ne 0) {
             Write-Host "Error: Team configuration for HR Employee Onboarding upload failed."
             $isTeamConfigFailed = $true
@@ -625,7 +625,7 @@ if($useCaseSelection -eq "4" -or $useCaseSelection -eq "all") {
     Write-Host "Uploading Team Configuration for Marketing Press Release..."
     $teamConfigDir = "content_packs/marketing_press_release/agent_teams"
     try {
-        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $teamConfigDir, $userPrincipalId, "00000000-0000-0000-0000-000000000002" -Wait -NoNewWindow -PassThru
+        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/post-provision/upload_team_config.py", $backendUrl, $teamConfigDir, $userPrincipalId, "00000000-0000-0000-0000-000000000002" -Wait -NoNewWindow -PassThru
         if ($process.ExitCode -ne 0) {
             Write-Host "Error: Team configuration for Marketing Press Release upload failed."
             $isTeamConfigFailed = $true
@@ -741,7 +741,7 @@ if($useCaseSelection -eq "1" -or $useCaseSelection -eq "all") {
     Write-Host "Uploading Team Configuration for RFP Evaluation..."
     $teamConfigDir = "content_packs/rfp_evaluation/agent_teams"
     try {
-        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $teamConfigDir, $userPrincipalId, "00000000-0000-0000-0000-000000000004" -Wait -NoNewWindow -PassThru
+        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/post-provision/upload_team_config.py", $backendUrl, $teamConfigDir, $userPrincipalId, "00000000-0000-0000-0000-000000000004" -Wait -NoNewWindow -PassThru
         if ($process.ExitCode -ne 0) {
             Write-Host "Error: Team configuration for RFP Evaluation upload failed."
             $failedTeamConfigs += 1
@@ -768,7 +768,7 @@ if($useCaseSelection -eq "5" -or $useCaseSelection -eq "all") {
     Write-Host "Uploading Team Configuration for Contract Compliance Review..."
     $teamConfigDir = "content_packs/contract_compliance/agent_teams"
     try {
-        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $teamConfigDir, $userPrincipalId, "00000000-0000-0000-0000-000000000005" -Wait -NoNewWindow -PassThru
+        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/post-provision/upload_team_config.py", $backendUrl, $teamConfigDir, $userPrincipalId, "00000000-0000-0000-0000-000000000005" -Wait -NoNewWindow -PassThru
         if ($process.ExitCode -ne 0) {
             Write-Host "Error: Team configuration for Contract Compliance Review upload failed."
             $failedTeamConfigs += 1
@@ -794,7 +794,7 @@ if($useCaseSelection -eq "2" -or $useCaseSelection -eq "all") {
     Write-Host "Uploading Team Configuration for Retail Customer Satisfaction..."
     $teamConfigDir = "content_packs/retail_customer/agent_teams"
     try {
-        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $teamConfigDir, $userPrincipalId, "00000000-0000-0000-0000-000000000003" -Wait -NoNewWindow -PassThru
+        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/post-provision/upload_team_config.py", $backendUrl, $teamConfigDir, $userPrincipalId, "00000000-0000-0000-0000-000000000003" -Wait -NoNewWindow -PassThru
         if ($process.ExitCode -ne 0) {
             Write-Host "Error: Team configuration for Retail Customer Satisfaction upload failed."
             $failedTeamConfigs += 1
@@ -820,7 +820,7 @@ if($useCaseSelection -eq "6" -or $useCaseSelection -eq "all") {
     Write-Host "Uploading Team Configuration for Content Generation..."
     $teamConfigDir = "content_packs/content_gen/agent_teams"
     try {
-        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $teamConfigDir, $userPrincipalId, "00000000-0000-0000-0000-000000000007" -Wait -NoNewWindow -PassThru
+        $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/post-provision/upload_team_config.py", $backendUrl, $teamConfigDir, $userPrincipalId, "00000000-0000-0000-0000-000000000007" -Wait -NoNewWindow -PassThru
         if ($process.ExitCode -ne 0) {
             Write-Host "Error: Team configuration for Content Generation upload failed."
             $failedTeamConfigs += 1
@@ -859,7 +859,7 @@ if($useCaseSelection -eq "6" -or $useCaseSelection -eq "all") {
 #     Write-Host "Uploading Team Configuration for Your Pack Name..."
 #     $teamConfigDir = "content_packs/your_pack/agent_teams"
 #     try {
-#         $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/upload_team_config.py", $backendUrl, $teamConfigDir, $userPrincipalId, "00000000-0000-0000-0000-000000000008" -Wait -NoNewWindow -PassThru
+#         $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/post-provision/upload_team_config.py", $backendUrl, $teamConfigDir, $userPrincipalId, "00000000-0000-0000-0000-000000000008" -Wait -NoNewWindow -PassThru
 #         if ($process.ExitCode -ne 0) {
 #             Write-Host "Error: Team configuration for Your Pack Name upload failed."
 #             $failedTeamConfigs += 1
@@ -900,18 +900,18 @@ if ($useCaseSelection -eq "1" -or $useCaseSelection -eq "2" -or $useCaseSelectio
     $env:AZURE_AI_PROJECT_ENDPOINT = $(azd env get-value AZURE_AI_PROJECT_ENDPOINT)
 
     Write-Host "`nSeeding Foundry IQ Knowledge Bases..."
-    $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/seed_knowledge_bases.py" -Wait -NoNewWindow -PassThru
+    $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/post-provision/seed_knowledge_bases.py" -Wait -NoNewWindow -PassThru
     if ($process.ExitCode -ne 0) {
-        Write-Host "Warning: Knowledge base seeding failed. You can run 'python infra/scripts/seed_knowledge_bases.py' manually after deployment."
+        Write-Host "Warning: Knowledge base seeding failed. You can run 'python infra/scripts/post-provision/seed_knowledge_bases.py' manually after deployment."
     } else {
         Write-Host "Knowledge bases seeded successfully."
     }
 
     # Create RemoteTool MCP connections in Foundry for each KB
     Write-Host "`nCreating KB MCP connections in Foundry..."
-    $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/seed_kb_connections.py" -Wait -NoNewWindow -PassThru
+    $process = Start-Process -FilePath $pythonCmd -ArgumentList "infra/scripts/post-provision/seed_kb_connections.py" -Wait -NoNewWindow -PassThru
     if ($process.ExitCode -ne 0) {
-        Write-Host "Warning: KB MCP connection provisioning failed. You can run 'python infra/scripts/seed_kb_connections.py' manually after deployment."
+        Write-Host "Warning: KB MCP connection provisioning failed. You can run 'python infra/scripts/post-provision/seed_kb_connections.py' manually after deployment."
     } else {
         Write-Host "KB MCP connections created successfully."
     }

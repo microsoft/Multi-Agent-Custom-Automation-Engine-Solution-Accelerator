@@ -149,7 +149,7 @@ referenced in the KB registration.
 
 ### Step 3 — Register the Knowledge Base
 
-Add an entry to `infra/scripts/seed_knowledge_bases.py` in the `KNOWLEDGE_BASES`
+Add an entry to `infra/scripts/post-provision/seed_knowledge_bases.py` in the `KNOWLEDGE_BASES`
 dict. Place it before the `# ── Example Pack ──` comment block:
 
 ```python
@@ -199,7 +199,7 @@ and **never hallucinate data**.
 
 ## Registering in the Deployment Script
 
-Edit `infra/scripts/Selecting-Team-Config-And-Data.ps1`. Search for `NEW CONTENT PACK`
+Edit `infra/scripts/post-provision/Selecting-Team-Config-And-Data.ps1`. Search for `NEW CONTENT PACK`
 — each insertion point has a comment template. There are **4 things** to do:
 
 | # | What | Where |
@@ -241,7 +241,7 @@ After adding your entry, update `$allOption` to `N + 1` so "All" is always last.
 azd up
 
 # 2. Provision pack resources — select your pack or "All"
-./infra/scripts/Selecting-Team-Config-And-Data.ps1 -ResourceGroup <rg>
+./infra/scripts/post-provision/Selecting-Team-Config-And-Data.ps1 -ResourceGroup <rg>
 ```
 
 ---

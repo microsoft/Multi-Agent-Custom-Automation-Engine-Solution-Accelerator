@@ -65,7 +65,7 @@ while IFS= read -r deployment; do
   capacity=$(echo "$deployment" | jq -r '.sku.capacity')
 
   echo "🔍 Validating model deployment: $name ..."
-    ./infra/scripts/validate_model_quota.sh --location "$LOCATION" --model "$model" --capacity $capacity --deployment-type $type
+    ./infra/scripts/pre-provision/validate_model_quota.sh --location "$LOCATION" --model "$model" --capacity $capacity --deployment-type $type
 
   # Check if the script failed
   exit_code=$?

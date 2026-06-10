@@ -24,7 +24,7 @@ from azure.identity import DefaultAzureCredential
 from dotenv import load_dotenv
 
 # Load .env from src/backend/ (override=False so env vars set by post_deploy.ps1 take precedence)
-_backend_env = Path(__file__).parent.parent / "src" / "backend" / ".env"
+_backend_env = Path(__file__).parent.parent.parent.parent / "src" / "backend" / ".env"
 load_dotenv(str(_backend_env), override=False)
 
 PROJECT_ENDPOINT = os.environ.get("AZURE_AI_PROJECT_ENDPOINT")
@@ -32,7 +32,7 @@ if not PROJECT_ENDPOINT:
     print("ERROR: AZURE_AI_PROJECT_ENDPOINT not set. Check src/backend/.env")
     sys.exit(1)
 
-DATA_DIR = Path(__file__).parent.parent / "data" / "datasets"
+DATA_DIR = Path(__file__).parent.parent.parent.parent / "data" / "datasets"
 
 # -------------------------------------------------------------------
 # Vector store definitions: name → list of data file paths

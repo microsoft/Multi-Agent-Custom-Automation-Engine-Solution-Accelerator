@@ -916,7 +916,7 @@ module ai_search './modules/ai/ai-search.bicep' = {
 
 // Base AI Search connection (CognitiveSearch / AAD).
 // Per-KB RemoteTool connections (ProjectManagedIdentity) are created by
-// infra/scripts/seed_kb_connections.py at post-deploy time because the KB
+// infra/scripts/post-provision/seed_kb_connections.py at post-deploy time because the KB
 // names are dynamic and depend on selected content packs.
 module aiSearchFoundryConnection './modules/ai/ai-foundry-connection.bicep' = {
   name: take('module.foundry-search-conn.${solutionName}', 64)

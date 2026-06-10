@@ -51,7 +51,7 @@ foreach ($deployment in $aiModelDeployments) {
     $capacity = $deployment.sku.capacity
 
     Write-Host "🔍 Validating model deployment: $name ..."
-    & .\infra\scripts\validate_model_quota.ps1 -Location $Location -Model $model -Capacity $capacity -DeploymentType $type
+    & .\infra\scripts\pre-provision\validate_model_quota.ps1 -Location $Location -Model $model -Capacity $capacity -DeploymentType $type
 
     # Check if the script failed
     $exitCode = $LASTEXITCODE

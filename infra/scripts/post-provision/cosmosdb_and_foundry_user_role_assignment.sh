@@ -145,7 +145,7 @@ fi
 
 # Call add_cosmosdb_access.sh
 echo "Running add_cosmosdb_access.sh"
-bash infra/scripts/add_cosmosdb_access.sh "$resourceGroupName" "$cosmosDbAccountName" "$principal_ids" "$managedIdentityClientId" 
+bash infra/scripts/post-provision/add_cosmosdb_access.sh "$resourceGroupName" "$cosmosDbAccountName" "$principal_ids" "$managedIdentityClientId" 
 if [ $? -ne 0 ]; then
     echo "Error: add_cosmosdb_access.sh failed."
     exit 1
@@ -155,7 +155,7 @@ echo "add_cosmosdb_access.sh completed successfully."
 
 # Call assign_foundry_user_role.sh
 echo "Running assign_foundry_user_role.sh"
-bash infra/scripts/assign_foundry_user_role.sh "$resourceGroupName" "$aif_resource_id" "$principal_ids" "$managedIdentityClientId"
+bash infra/scripts/post-provision/assign_foundry_user_role.sh "$resourceGroupName" "$aif_resource_id" "$principal_ids" "$managedIdentityClientId"
 if [ $? -ne 0 ]; then
     echo "Error: assign_foundry_user_role.sh failed."
     exit 1
