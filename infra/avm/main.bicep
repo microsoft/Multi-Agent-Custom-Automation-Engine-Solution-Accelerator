@@ -790,7 +790,7 @@ module ai_foundry_project './modules/ai/ai-foundry-project.bicep' = if (!useExis
     solutionName: solutionSuffix
     location: azureAiServiceLocation
     tags: tags
-    publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
+    publicNetworkAccess: 'Enabled' // Always enabled, as MCP KnowledgeBase Connections doesn't work private endpoints
   }
 }
 
@@ -820,41 +820,41 @@ module existingAiFoundryDeployerRoleAssignments './modules/identity/cross-scope-
   }
 }]
 
-module aiFoundryPrivateEndpoint './modules/networking/private-endpoint.bicep' = if (enablePrivateNetworking && !useExistingAIProject) {
-  name: take('module.pe-ai-foundry.${solutionName}', 64)
-  params: {
-    name: 'pep-${aiFoundryAiServicesResourceName}'
-    customNetworkInterfaceName: 'nic-${aiFoundryAiServicesResourceName}'
-    location: location
-    tags: tags
-    subnetResourceId: virtualNetwork!.outputs.backendSubnetResourceId
-    privateLinkServiceConnections: [
-      {
-        name: 'pep-${aiFoundryAiServicesResourceName}-connection'
-        properties: {
-          privateLinkServiceId: ai_foundry_project!.outputs.resourceId
-          groupIds: ['account']
-        }
-      }
-    ]
-    privateDnsZoneGroup: {
-      privateDnsZoneGroupConfigs: [
-        {
-          name: 'ai-services-dns-zone-cognitiveservices'
-          privateDnsZoneResourceId: privateDnsZoneDeployments[dnsZoneIndex.cognitiveServices]!.outputs.resourceId
-        }
-        {
-          name: 'ai-services-dns-zone-openai'
-          privateDnsZoneResourceId: privateDnsZoneDeployments[dnsZoneIndex.openAI]!.outputs.resourceId
-        }
-        {
-          name: 'ai-services-dns-zone-aiservices'
-          privateDnsZoneResourceId: privateDnsZoneDeployments[dnsZoneIndex.aiServices]!.outputs.resourceId
-        }
-      ]
-    }
-  }
-}
+// module aiFoundryPrivateEndpoint './modules/networking/private-endpoint.bicep' = if (enablePrivateNetworking && !useExistingAIProject) {
+//   name: take('module.pe-ai-foundry.${solutionName}', 64)
+//   params: {
+//     name: 'pep-${aiFoundryAiServicesResourceName}'
+//     customNetworkInterfaceName: 'nic-${aiFoundryAiServicesResourceName}'
+//     location: location
+//     tags: tags
+//     subnetResourceId: virtualNetwork!.outputs.backendSubnetResourceId
+//     privateLinkServiceConnections: [
+//       {
+//         name: 'pep-${aiFoundryAiServicesResourceName}-connection'
+//         properties: {
+//           privateLinkServiceId: ai_foundry_project!.outputs.resourceId
+//           groupIds: ['account']
+//         }
+//       }
+//     ]
+//     privateDnsZoneGroup: {
+//       privateDnsZoneGroupConfigs: [
+//         {
+//           name: 'ai-services-dns-zone-cognitiveservices'
+//           privateDnsZoneResourceId: privateDnsZoneDeployments[dnsZoneIndex.cognitiveServices]!.outputs.resourceId
+//         }
+//         {
+//           name: 'ai-services-dns-zone-openai'
+//           privateDnsZoneResourceId: privateDnsZoneDeployments[dnsZoneIndex.openAI]!.outputs.resourceId
+//         }
+//         {
+//           name: 'ai-services-dns-zone-aiservices'
+//           privateDnsZoneResourceId: privateDnsZoneDeployments[dnsZoneIndex.aiServices]!.outputs.resourceId
+//         }
+//       ]
+//     }
+//   }
+// }
 
 var aiFoundryAiProjectName = useExistingAIProject ? existing_project_setup!.outputs.aiProjectName : ai_foundry_project!.outputs.projectName
 var aiFoundryAiProjectEndpoint = useExistingAIProject ? existing_project_setup!.outputs.projectEndpoint : ai_foundry_project!.outputs.projectEndpoint
@@ -1172,7 +1172,7 @@ module containerApp './modules/compute/container-app.bicep' = {
           }
           {
             name: 'SUPPORTED_MODELS'
-            value: supportedModels
+            value: string(supportedModels)
           }
           {
             name: 'AZURE_STORAGE_BLOB_URL'

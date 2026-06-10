@@ -365,6 +365,7 @@ var aiFoundryAiProjectPrincipalId = useExistingAiFoundryAiProject
 module ai_model_deployment './modules/ai/ai-foundry-model-deployment.bicep' = [for (model, i) in modelDeployments: {
   name: take('module.ai-model-${model.name}-${solutionSuffix}', 64)
   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
+  dependsOn: useExistingAiFoundryAiProject ? [existing_project_setup] : [ai_foundry_project]
   params: {
     aiServicesAccountName: aiFoundryAiServicesResourceName
     deploymentName: model.name
@@ -674,7 +675,7 @@ module backend_container_app './modules/compute/container-app.bicep' = {
           }
           {
             name: 'SUPPORTED_MODELS'
-            value: supportedModels
+            value: string(supportedModels)
           }
           {
             name: 'AZURE_STORAGE_BLOB_URL'
