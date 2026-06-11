@@ -81,9 +81,15 @@ if config.AZURE_LOGGING_PACKAGES:
     for logger_name in packages:
         logging.getLogger(logger_name).setLevel(azure_level)
 
+for _af_logger in ("agent_framework", "agent_framework.openai"):
+    logging.getLogger(_af_logger).setLevel(azure_level)
+
 logging.getLogger("opentelemetry.sdk").setLevel(logging.ERROR)
 
 logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
+
+# Suppress noisy Azure Cosmos DB HTTP request/response logging
+logging.getLogger("azure.cosmos._cosmos_http_logging_policy").setLevel(logging.WARNING)
 
 # Suppress noisy Azure Monitor exporter "Transmission succeeded" logs
 logging.getLogger("azure.monitor.opentelemetry.exporter.export._base").setLevel(logging.WARNING)
