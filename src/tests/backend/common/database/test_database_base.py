@@ -495,7 +495,7 @@ class TestDatabaseBaseContextManager:
         database = MockDatabase()
         
         async def run_database_context():
-            async with database as db:
+            async with database:
                 assert database.initialized is True
                 # Raise an exception to test cleanup
                 raise ValueError("Test exception")
