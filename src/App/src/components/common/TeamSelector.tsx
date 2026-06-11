@@ -721,7 +721,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
                 Are you sure you want to delete "{teamToDelete?.name}"?
               </DialogTitle>
               <Text className={styles.deleteConfirmText}>
-                This team configurations and its agents are shared across all users in the system. Deleting this team will permanently remove it for everyone, and this action cannot be undone.
+                This team configuration and its agents are shared across all users in the system. Deleting this team will permanently remove it for everyone, and this action cannot be undone.
               </Text>
             </DialogBody>
             <div className={styles.deleteDialogActions}>
