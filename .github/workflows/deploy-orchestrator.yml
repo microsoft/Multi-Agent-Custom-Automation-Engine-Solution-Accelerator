@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       azure_location:
-        description: 'Azure Location For Deployment'
+        description: 'Azure Region (Non-AI Services)'
         required: false
         default: 'australiaeast'
         type: string
@@ -18,22 +18,27 @@ on:
         default: ''
         type: string
       waf_enabled:
-        description: 'Enable WAF'
+        description: 'Deploy WAF'
+        required: false
+        default: false
+        type: boolean
+      enable_scalability:
+        description: 'Enable Scalability features for WAF deployments (opt-in, defaults to false)'
         required: false
         default: false
         type: boolean
       EXP:
-        description: 'Enable EXP'
+        description: 'Deploy EXP'
         required: false
         default: false
         type: boolean
       build_docker_image:
-        description: 'Build And Push Docker Image (Optional)'
+        description: 'Build & Use Custom Images (Optional)'
         required: false
         default: false
         type: boolean
       cleanup_resources:
-        description: 'Cleanup Deployed Resources'
+        description: 'Auto Delete RG'
         required: false
         default: false
         type: boolean
@@ -42,18 +47,18 @@ on:
         required: false
         default: 'GoldenPath-Testing'
         type: string
-      AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID:
-        description: 'Log Analytics Workspace ID (Optional)'
+      AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID:
+        description: 'Existing Log Analytics Workspace Resource ID (Optional)'
         required: false
         default: ''
         type: string
-      AZURE_EXISTING_AI_PROJECT_RESOURCE_ID:
-        description: 'AI Project Resource ID (Optional)'
+      AZURE_EXISTING_AIPROJECT_RESOURCE_ID:
+        description: 'Existing AI Project Resource ID (Optional)'
         required: false
         default: ''
         type: string
       existing_webapp_url:
-        description: 'Existing Container WebApp URL (Skips Deployment)'
+        description: 'Run Tests Against Existing RG (Provide Web App URL)'
         required: false
         default: ''
         type: string
@@ -83,11 +88,12 @@ jobs:
       azure_location: ${{ inputs.azure_location }}
       resource_group_name: ${{ inputs.resource_group_name }}
       waf_enabled: ${{ inputs.waf_enabled }}
+      enable_scalability: ${{ inputs.enable_scalability }}
       EXP: ${{ inputs.EXP }}
       build_docker_image: ${{ inputs.build_docker_image }}
       existing_webapp_url: ${{ inputs.existing_webapp_url }}
-      AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID: ${{ inputs.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID }}
-      AZURE_EXISTING_AI_PROJECT_RESOURCE_ID: ${{ inputs.AZURE_EXISTING_AI_PROJECT_RESOURCE_ID }}
+      AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID: ${{ inputs.AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID }}
+      AZURE_EXISTING_AIPROJECT_RESOURCE_ID: ${{ inputs.AZURE_EXISTING_AIPROJECT_RESOURCE_ID }}
       docker_image_tag: ${{ needs.docker-build.outputs.IMAGE_TAG }}
       run_e2e_tests: ${{ inputs.run_e2e_tests }}
       cleanup_resources: ${{ inputs.cleanup_resources }}
@@ -104,9 +110,25 @@ jobs:
       TEST_SUITE: ${{ inputs.trigger_type == 'workflow_dispatch' && inputs.run_e2e_tests || 'GoldenPath-Testing' }}
     secrets: inherit
 
+  cleanup-deployment:
+    if: "!cancelled() && needs.deploy.outputs.RESOURCE_GROUP_NAME != '' && inputs.existing_webapp_url == '' && (inputs.trigger_type != 'workflow_dispatch' || inputs.cleanup_resources)"
+    needs: [docker-build, deploy, e2e-test]
+    uses: ./.github/workflows/job-cleanup-deployment.yml
+    with:
+      runner_os: ${{ inputs.runner_os }}
+      trigger_type: ${{ inputs.trigger_type }}
+      cleanup_resources: ${{ inputs.cleanup_resources }}
+      existing_webapp_url: ${{ inputs.existing_webapp_url }}
+      RESOURCE_GROUP_NAME: ${{ needs.deploy.outputs.RESOURCE_GROUP_NAME }}
+      AZURE_LOCATION: ${{ needs.deploy.outputs.AZURE_LOCATION }}
+      AZURE_ENV_AI_SERVICE_LOCATION: ${{ needs.deploy.outputs.AZURE_ENV_AI_SERVICE_LOCATION }}
+      ENV_NAME: ${{ needs.deploy.outputs.ENV_NAME }}
+      IMAGE_TAG: ${{ needs.deploy.outputs.IMAGE_TAG }}
+    secrets: inherit
+
   send-notification:
     if: "!cancelled()"
-    needs: [docker-build, deploy, e2e-test]
+    needs: [docker-build, deploy, e2e-test, cleanup-deployment]
     uses: ./.github/workflows/job-send-notification.yml
     with:
       trigger_type: ${{ inputs.trigger_type }}
@@ -121,20 +143,5 @@ jobs:
       QUOTA_FAILED: ${{ needs.deploy.outputs.QUOTA_FAILED }}
       TEST_SUCCESS: ${{ needs.e2e-test.outputs.TEST_SUCCESS }}
       TEST_REPORT_URL: ${{ needs.e2e-test.outputs.TEST_REPORT_URL }}
-    secrets: inherit
-
-  cleanup-deployment:
-    if: "!cancelled() && needs.deploy.outputs.RESOURCE_GROUP_NAME != '' && inputs.existing_webapp_url == '' && (inputs.trigger_type != 'workflow_dispatch' || inputs.cleanup_resources)"
-    needs: [docker-build, deploy, e2e-test]
-    uses: ./.github/workflows/job-cleanup-deployment.yml
-    with:
-      runner_os: ${{ inputs.runner_os }}
-      trigger_type: ${{ inputs.trigger_type }}
-      cleanup_resources: ${{ inputs.cleanup_resources }}
-      existing_webapp_url: ${{ inputs.existing_webapp_url }}
-      RESOURCE_GROUP_NAME: ${{ needs.deploy.outputs.RESOURCE_GROUP_NAME }}
-      AZURE_LOCATION: ${{ needs.deploy.outputs.AZURE_LOCATION }}
-      AZURE_ENV_OPENAI_LOCATION: ${{ needs.deploy.outputs.AZURE_ENV_OPENAI_LOCATION }}
-      ENV_NAME: ${{ needs.deploy.outputs.ENV_NAME }}
-      IMAGE_TAG: ${{ needs.deploy.outputs.IMAGE_TAG }}
+      cleanup_result: ${{ needs.cleanup-deployment.result }}
     secrets: inherit

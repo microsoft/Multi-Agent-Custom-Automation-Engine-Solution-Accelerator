@@ -3,7 +3,7 @@ name: multi-agent-custom-automation-engine-solution-accelerator
 metadata:
   template: multi-agent-custom-automation-engine-solution-accelerator@1.0
 requiredVersions:
-  azd: '>= 1.18.0'
+  azd: '>= 1.18.0 != 1.23.9'
 hooks:
   postdeploy:
     windows:

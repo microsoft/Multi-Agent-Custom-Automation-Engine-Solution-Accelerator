@@ -51,18 +51,26 @@ def _setup_agent_framework_mock():
         # Names used as base classes or in Union type hints MUST be real classes
         # to avoid SyntaxError from typing module's forward reference evaluation.
         _class_names = [
-            'AgentResponse', 'AgentResponseUpdate', 'AgentRunUpdateEvent',
-            'AgentThread', 'BaseAgent', 'ChatAgent', 'ChatMessage',
+            'Agent', 'AgentResponse', 'AgentResponseUpdate', 'AgentRunUpdateEvent',
+            'AgentSession', 'AgentThread', 'BaseAgent', 'ChatAgent', 'ChatMessage',
             'ChatOptions', 'Content', 'ExecutorCompletedEvent',
             'GroupChatRequestSentEvent', 'GroupChatResponseReceivedEvent',
             'HostedCodeInterpreterTool', 'HostedMCPTool',
             'InMemoryCheckpointStorage', 'MCPStreamableHTTPTool',
             'MagenticBuilder', 'MagenticOrchestratorEvent',
-            'MagenticProgressLedger', 'Role', 'UsageDetails',
+            'MagenticProgressLedger', 'Message', 'Role', 'UsageDetails',
             'WorkflowOutputEvent',
         ]
         for name in _class_names:
-            setattr(mock_af, name, type(name, (), {}))
+            setattr(mock_af, name, type(name, (), {
+                '__init__': lambda self, *args, **kwargs: None,
+            }))
+
+        # Sub-module: agent_framework._types
+        mock_af_types = ModuleType('agent_framework._types')
+        mock_af_types.ResponseStream = type('ResponseStream', (), {})
+        mock_af._types = mock_af_types
+        sys.modules['agent_framework._types'] = mock_af_types
 
         # Sub-module: agent_framework.azure
         mock_af_azure = ModuleType('agent_framework.azure')
@@ -90,6 +98,37 @@ def _setup_agent_framework_mock():
         sys.modules['agent_framework.azure'] = mock_af_azure
         sys.modules['agent_framework._workflows'] = mock_af_workflows
         sys.modules['agent_framework._workflows._magentic'] = mock_af_magentic
+
+    if 'agent_framework_orchestrations' not in sys.modules:
+        mock_af_orch = ModuleType('agent_framework_orchestrations')
+        mock_af_orch.MagenticBuilder = type('MagenticBuilder', (), {
+            '__init__': lambda self, *args, **kwargs: None,
+            'build': lambda self: Mock(),
+        })
+        sys.modules['agent_framework_orchestrations'] = mock_af_orch
+
+        mock_af_orch_base = ModuleType('agent_framework_orchestrations._base_group_chat_orchestrator')
+        for name in ['GroupChatRequestSentEvent', 'GroupChatResponseReceivedEvent']:
+            setattr(mock_af_orch_base, name, type(name, (), {}))
+        sys.modules['agent_framework_orchestrations._base_group_chat_orchestrator'] = mock_af_orch_base
+
+        mock_af_orch_mag = ModuleType('agent_framework_orchestrations._magentic')
+        for name in ['MagenticContext', 'MagenticProgressLedger']:
+            setattr(mock_af_orch_mag, name, type(name, (), {}))
+        # StandardMagenticManager needs a proper __init__ that accepts args/kwargs
+        # because HumanApprovalMagenticManager calls super().__init__(agent, *args, **kwargs)
+        setattr(mock_af_orch_mag, 'StandardMagenticManager',
+                type('StandardMagenticManager', (), {
+                    '__init__': lambda self, *args, **kwargs: None
+                }))
+        for name in [
+            'ORCHESTRATOR_FINAL_ANSWER_PROMPT',
+            'ORCHESTRATOR_PROGRESS_LEDGER_PROMPT',
+            'ORCHESTRATOR_TASK_LEDGER_PLAN_PROMPT',
+            'ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT',
+        ]:
+            setattr(mock_af_orch_mag, name, 'mock_prompt_string')
+        sys.modules['agent_framework_orchestrations._magentic'] = mock_af_orch_mag
 
     if 'agent_framework_azure_ai' not in sys.modules:
         mock_af_ai = ModuleType('agent_framework_azure_ai')
