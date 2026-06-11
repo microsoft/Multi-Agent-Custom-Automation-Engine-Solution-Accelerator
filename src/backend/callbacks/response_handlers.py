@@ -108,20 +108,15 @@ async def streaming_agent_response_callback(
         return
 
     try:
-        # Handle various streaming update object shapes
         chunk_text = getattr(update, "text", None)
-
-        # If text is None, don't fall back to str(update) as that would show object repr
-        # Just skip if there's no actual text content
-        if chunk_text is None:
-            # Check if update is a Message
-            if isinstance(update, Message):
-                chunk_text = update.text or ""
-            elif hasattr(update, "content"):
-                chunk_text = str(update.content) if update.content else ""
-            else:
-                # Skip if no text content available
-                return
+        if not chunk_text:
+            contents = getattr(update, "contents", []) or []
+            collected = []
+            for item in contents:
+                txt = getattr(item, "text", None)
+                if txt:
+                    collected.append(str(txt))
+            chunk_text = "".join(collected) if collected else ""
 
         cleaned = clean_citations(chunk_text or "")
 
