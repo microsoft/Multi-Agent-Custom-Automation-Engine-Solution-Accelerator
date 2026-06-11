@@ -45,7 +45,7 @@ const ChatExample: React.FC = () => {
             <div className="bot-tag">BOT</div>
           </div>
           <div className="message-content">
-            You got it! I've initiated a background check and everything looks good to go— You're ready to move onto helping Jessica set up an Office 365 account. Want me to hand that over to your Manager Agent?
+            You got it! I've initiated a background check and everything looks good to go — you're ready to move on to helping Jessica set up an Office 365 account. Want me to hand that over to your Manager Agent?
           </div>
           <div className="message-actions">
             <button className="action-button">👍</button>

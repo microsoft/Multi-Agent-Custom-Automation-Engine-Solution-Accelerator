@@ -69,7 +69,6 @@ _Sample operation:_
   department: hr, role: manager, start date: 11/23/2025, orientation date: 11/25/2025, location: onsite, email: js@contoso.com, mentor: Jim Shorts, benefits package:   standard, ID Card: yes, salary: 70000, Laptop : Dell 14 Plus
   ```
   > _Observe: It will trigger "Generating Plan Action" and "Proposed Plan" with 4 or more Steps_
-</br>
 
 - Task: Click on **"Approve Task Plan"** Button.
   > _Note: Average response time is around 01 minute 15 seconds._ <br>
@@ -90,7 +89,6 @@ _Sample operation:_
   
   > _Note: Average response time is 10–15 minutes._ <br>
   > _Observe: It will trigger the "Generating Plan Action" and give the Proposed Plan with 5 or more Steps_
-</br>
 
 - Task: Click on **"Approve Task Plan"** Button.
   > _Note: Average response time is around 01 minute._ <br>
@@ -111,7 +109,6 @@ _Sample operation:_
   
   > _Note: Average response time is 10–15 minutes._ <br>
   > _Observe: It will trigger the "Generating Plan Action" and give the Proposed Plan with 4 or more Steps_
-</br>
 
 - Task: Click on **"Approve Task Plan"** Button.
   > _Note: Average response time is around 01 minute._ <br>
@@ -132,7 +129,6 @@ _Sample operation:_
 
   > _Note: Average response time is 30–60 seconds for plan generation._ <br>
   > _Observe: It will trigger the "Generating Plan Action" and give the Proposed Plan with 5 or more Steps (Planning → Research → Text Content → Image Content → Compliance)._
-</br>
 
 - Task: Click on **"Approve Task Plan"** Button.
   > _Note: Average response time is around 02–03 minutes (image generation included)._ <br>
