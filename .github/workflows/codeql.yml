@@ -13,7 +13,7 @@ name: "CodeQL Advanced"
 
 on:
   push:
-    branches: [ "main", "dev", "demo" ]
+    branches: [ "main", "dev", "demo" , "psl-codeqlfixes"]
     paths:
       - 'src/**/*.py'
       - 'src/**/*.js'

@@ -494,11 +494,14 @@ class TestDatabaseBaseContextManager:
         
         database = MockDatabase()
         
-        with pytest.raises(ValueError):
-            async with database:
+        async def run_database_context():
+            async with database as db:
                 assert database.initialized is True
                 # Raise an exception to test cleanup
                 raise ValueError("Test exception")
+
+        with pytest.raises(ValueError):
+            await run_database_context()
 
         # Even with exception, close should have been called
         assert database.closed is True
