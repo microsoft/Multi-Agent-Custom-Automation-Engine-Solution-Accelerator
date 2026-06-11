@@ -500,7 +500,7 @@ class TestDatabaseBaseContextManager:
                 # Raise an exception to test cleanup
                 raise ValueError("Test exception")
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Test exception"):
             await run_database_context()
 
         # Even with exception, close should have been called
