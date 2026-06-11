@@ -8,11 +8,11 @@ set -e
 
 echo "Setting up Backend..."
 cd ./src/backend
-uv sync --frozen
+uv sync --frozen --extra dev
 cd ../../
 
 echo "Setting up Frontend..."
-cd ./src/frontend
+cd ./src/App
 npm install
 pip install -r requirements.txt
 cd ../../

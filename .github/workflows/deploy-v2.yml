@@ -24,7 +24,7 @@ on:
           - 'Local'
         default: 'codespace'
       azure_location:
-        description: 'Azure Location For Deployment'
+        description: 'Azure Region (Non-AI Services)'
         required: false
         default: 'australiaeast'
         type: choice
@@ -43,24 +43,31 @@ on:
         default: ''
         type: string
 
+      build_docker_image:
+        description: 'Build & Use Custom Images (Optional)'
+        required: false
+        default: false
+        type: boolean
+
       waf_enabled:
-        description: 'Enable WAF'
+        description: 'Deploy WAF'
         required: false
         default: false
         type: boolean
       EXP:
-        description: 'Enable EXP'
+        description: 'Deploy EXP'
         required: false
         default: false
         type: boolean
-      build_docker_image:
-        description: 'Build & Push Docker Image (Optional)'
+
+      enable_scalability:
+        description: 'Enable Scalability (WAF only)'
         required: false
         default: false
         type: boolean
       
       cleanup_resources:
-        description: 'Cleanup Deployed Resources'
+        description: 'Auto Delete RG'
         required: false
         default: false
         type: boolean
@@ -75,18 +82,18 @@ on:
           - 'Smoke-Testing'
           - 'None'
       
-      AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID:
-        description: 'Log Analytics Workspace ID (Optional)'
+      AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID:
+        description: 'Existing Log Analytics Workspace Resource ID (Optional)'
         required: false
         default: ''
         type: string
-      AZURE_EXISTING_AI_PROJECT_RESOURCE_ID:
-        description: 'AI Project Resource ID (Optional)'
+      AZURE_EXISTING_AIPROJECT_RESOURCE_ID:
+        description: 'Existing AI Project Resource ID (Optional)'
         required: false
         default: ''
         type: string
       existing_webapp_url:
-        description: 'Existing WebApp URL (Skips Deployment)'
+        description: 'Run Tests Against Existing RG (Provide Web App URL)'
         required: false
         default: ''
         type: string
@@ -103,12 +110,13 @@ jobs:
       azure_location: ${{ steps.validate.outputs.azure_location }}
       resource_group_name: ${{ steps.validate.outputs.resource_group_name }}
       waf_enabled: ${{ steps.validate.outputs.waf_enabled }}
+      enable_scalability: ${{ steps.validate.outputs.enable_scalability }}
       exp: ${{ steps.validate.outputs.exp }}
       build_docker_image: ${{ steps.validate.outputs.build_docker_image }}
       cleanup_resources: ${{ steps.validate.outputs.cleanup_resources }}
       run_e2e_tests: ${{ steps.validate.outputs.run_e2e_tests }}
-      azure_env_log_analytics_workspace_id: ${{ steps.validate.outputs.azure_env_log_analytics_workspace_id }}
-      azure_existing_ai_project_resource_id: ${{ steps.validate.outputs.azure_existing_ai_project_resource_id }}
+      azure_env_existing_log_analytics_workspace_rid: ${{ steps.validate.outputs.azure_env_existing_log_analytics_workspace_rid }}
+      azure_existing_aiproject_resource_id: ${{ steps.validate.outputs.azure_existing_aiproject_resource_id }}
       existing_webapp_url: ${{ steps.validate.outputs.existing_webapp_url }}
     steps:
       - name: Validate Workflow Input Parameters
@@ -119,12 +127,13 @@ jobs:
           INPUT_AZURE_LOCATION: ${{ github.event.inputs.azure_location }}
           INPUT_RESOURCE_GROUP_NAME: ${{ github.event.inputs.resource_group_name }}
           INPUT_WAF_ENABLED: ${{ github.event.inputs.waf_enabled }}
+          INPUT_ENABLE_SCALABILITY: ${{ github.event.inputs.enable_scalability }}
           INPUT_EXP: ${{ github.event.inputs.EXP }}
           INPUT_BUILD_DOCKER_IMAGE: ${{ github.event.inputs.build_docker_image }}
           INPUT_CLEANUP_RESOURCES: ${{ github.event.inputs.cleanup_resources }}
           INPUT_RUN_E2E_TESTS: ${{ github.event.inputs.run_e2e_tests }}
-          INPUT_AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID: ${{ github.event.inputs.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID }}
-          INPUT_AZURE_EXISTING_AI_PROJECT_RESOURCE_ID: ${{ github.event.inputs.AZURE_EXISTING_AI_PROJECT_RESOURCE_ID }}
+          INPUT_AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID: ${{ github.event.inputs.AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID }}
+          INPUT_AZURE_EXISTING_AIPROJECT_RESOURCE_ID: ${{ github.event.inputs.AZURE_EXISTING_AIPROJECT_RESOURCE_ID }}
           INPUT_EXISTING_WEBAPP_URL: ${{ github.event.inputs.existing_webapp_url }}
         run: |
           echo "🔍 Validating workflow input parameters..."
@@ -178,6 +187,15 @@ jobs:
             echo "✅ waf_enabled: '$WAF_ENABLED' is valid"
           fi
           
+          # Validate enable_scalability (boolean, opt-in for WAF deployments)
+          ENABLE_SCALABILITY="${INPUT_ENABLE_SCALABILITY:-false}"
+          if [[ "$ENABLE_SCALABILITY" != "true" && "$ENABLE_SCALABILITY" != "false" ]]; then
+            echo "❌ ERROR: enable_scalability must be 'true' or 'false', got: '$ENABLE_SCALABILITY'"
+            VALIDATION_FAILED=true
+          else
+            echo "✅ enable_scalability: '$ENABLE_SCALABILITY' is valid"
+          fi
+          
           # Validate EXP (boolean)
           EXP_ENABLED="${INPUT_EXP:-false}"
           if [[ "$EXP_ENABLED" != "true" && "$EXP_ENABLED" != "false" ]]; then
@@ -214,32 +232,32 @@ jobs:
             echo "✅ run_e2e_tests: '$TEST_OPTION' is valid"
           fi
           
-          # Validate AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID (optional, Azure Resource ID format)
-          if [[ -n "$INPUT_AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID" ]]; then
-            if [[ ! "$INPUT_AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID" =~ ^/subscriptions/[a-fA-F0-9-]+/[Rr]esource[Gg]roups/[^/]+/providers/[Mm]icrosoft\.[Oo]perational[Ii]nsights/[Ww]orkspaces/[^/]+$ ]]; then
-              echo "❌ ERROR: AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID is invalid. Must be a valid Azure Resource ID format:"
+          # Validate AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID (optional, Azure Resource ID format)
+          if [[ -n "$INPUT_AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID" ]]; then
+            if [[ ! "$INPUT_AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID" =~ ^/subscriptions/[a-fA-F0-9-]+/[Rr]esource[Gg]roups/[^/]+/providers/[Mm]icrosoft\.[Oo]perational[Ii]nsights/[Ww]orkspaces/[^/]+$ ]]; then
+              echo "❌ ERROR: AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID is invalid. Must be a valid Azure Resource ID format:"
               echo "   /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.OperationalInsights/workspaces/{workspaceName}"
-              echo "   Got: '$INPUT_AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID'"
+              echo "   Got: '$INPUT_AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID'"
               VALIDATION_FAILED=true
             else
-              echo "✅ AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID: Valid Resource ID format"
+              echo "✅ AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID: Valid Resource ID format"
             fi
           else
-            echo "✅ AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID: Not provided (optional)"
+            echo "✅ AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID: Not provided (optional)"
           fi
           
-          # Validate AZURE_EXISTING_AI_PROJECT_RESOURCE_ID (optional, Azure Resource ID format)
-          if [[ -n "$INPUT_AZURE_EXISTING_AI_PROJECT_RESOURCE_ID" ]]; then
-            if [[ ! "$INPUT_AZURE_EXISTING_AI_PROJECT_RESOURCE_ID" =~ ^/subscriptions/[a-fA-F0-9-]+/[Rr]esource[Gg]roups/[^/]+/providers/([Mm]icrosoft\.[Mm]achine[Ll]earning[Ss]ervices/([Ww]orkspaces|[Pp]rojects)/[^/]+|[Mm]icrosoft\.[Cc]ognitive[Ss]ervices/[Aa]ccounts/[^/]+/[Pp]rojects/[^/]+)$ ]]; then
-              echo "❌ ERROR: AZURE_EXISTING_AI_PROJECT_RESOURCE_ID is invalid. Must be a valid Azure Resource ID format:"
+          # Validate AZURE_EXISTING_AIPROJECT_RESOURCE_ID (optional, Azure Resource ID format)
+          if [[ -n "$INPUT_AZURE_EXISTING_AIPROJECT_RESOURCE_ID" ]]; then
+            if [[ ! "$INPUT_AZURE_EXISTING_AIPROJECT_RESOURCE_ID" =~ ^/subscriptions/[a-fA-F0-9-]+/[Rr]esource[Gg]roups/[^/]+/providers/([Mm]icrosoft\.[Mm]achine[Ll]earning[Ss]ervices/([Ww]orkspaces|[Pp]rojects)/[^/]+|[Mm]icrosoft\.[Cc]ognitive[Ss]ervices/[Aa]ccounts/[^/]+/[Pp]rojects/[^/]+)$ ]]; then
+              echo "❌ ERROR: AZURE_EXISTING_AIPROJECT_RESOURCE_ID is invalid. Must be a valid Azure Resource ID format:"
               echo "   /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CognitiveServices/accounts/{accountName}/projects/{projectName}"
-              echo "   Got: '$INPUT_AZURE_EXISTING_AI_PROJECT_RESOURCE_ID'"
+              echo "   Got: '$INPUT_AZURE_EXISTING_AIPROJECT_RESOURCE_ID'"
               VALIDATION_FAILED=true
             else
-              echo "✅ AZURE_EXISTING_AI_PROJECT_RESOURCE_ID: Valid Resource ID format"
+              echo "✅ AZURE_EXISTING_AIPROJECT_RESOURCE_ID: Valid Resource ID format"
             fi
           else
-            echo "✅ AZURE_EXISTING_AI_PROJECT_RESOURCE_ID: Not provided (optional)"
+            echo "✅ AZURE_EXISTING_AIPROJECT_RESOURCE_ID: Not provided (optional)"
           fi
           
           # Validate existing_webapp_url (optional, must start with https)
@@ -270,12 +288,13 @@ jobs:
           echo "azure_location=$LOCATION" >> $GITHUB_OUTPUT
           echo "resource_group_name=$INPUT_RESOURCE_GROUP_NAME" >> $GITHUB_OUTPUT
           echo "waf_enabled=$WAF_ENABLED" >> $GITHUB_OUTPUT
+          echo "enable_scalability=$ENABLE_SCALABILITY" >> $GITHUB_OUTPUT
           echo "exp=$EXP_ENABLED" >> $GITHUB_OUTPUT
           echo "build_docker_image=$BUILD_DOCKER" >> $GITHUB_OUTPUT
           echo "cleanup_resources=$CLEANUP_RESOURCES" >> $GITHUB_OUTPUT
           echo "run_e2e_tests=$TEST_OPTION" >> $GITHUB_OUTPUT
-          echo "azure_env_log_analytics_workspace_id=$INPUT_AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID" >> $GITHUB_OUTPUT
-          echo "azure_existing_ai_project_resource_id=$INPUT_AZURE_EXISTING_AI_PROJECT_RESOURCE_ID" >> $GITHUB_OUTPUT
+          echo "azure_env_existing_log_analytics_workspace_rid=$INPUT_AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID" >> $GITHUB_OUTPUT
+          echo "azure_existing_aiproject_resource_id=$INPUT_AZURE_EXISTING_AIPROJECT_RESOURCE_ID" >> $GITHUB_OUTPUT
           echo "existing_webapp_url=$INPUT_EXISTING_WEBAPP_URL" >> $GITHUB_OUTPUT
 
   Run:
@@ -287,12 +306,13 @@ jobs:
       azure_location: ${{ needs.validate-inputs.outputs.azure_location || 'australiaeast' }}
       resource_group_name: ${{ needs.validate-inputs.outputs.resource_group_name || '' }}
       waf_enabled: ${{ needs.validate-inputs.outputs.waf_enabled == 'true' }}
+      enable_scalability: ${{ needs.validate-inputs.outputs.enable_scalability == 'true' }}
       EXP: ${{ needs.validate-inputs.outputs.exp == 'true' }}
       build_docker_image: ${{ needs.validate-inputs.outputs.build_docker_image == 'true' }}
       cleanup_resources: ${{ needs.validate-inputs.outputs.cleanup_resources == 'true' }}
       run_e2e_tests: ${{ needs.validate-inputs.outputs.run_e2e_tests || 'GoldenPath-Testing' }}
-      AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID: ${{ needs.validate-inputs.outputs.azure_env_log_analytics_workspace_id || '' }}
-      AZURE_EXISTING_AI_PROJECT_RESOURCE_ID: ${{ needs.validate-inputs.outputs.azure_existing_ai_project_resource_id || '' }}
+      AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID: ${{ needs.validate-inputs.outputs.azure_env_existing_log_analytics_workspace_rid || '' }}
+      AZURE_EXISTING_AIPROJECT_RESOURCE_ID: ${{ needs.validate-inputs.outputs.azure_existing_aiproject_resource_id || '' }}
       existing_webapp_url: ${{ needs.validate-inputs.outputs.existing_webapp_url || '' }}
       trigger_type: ${{ github.event_name }}
     secrets: inherit

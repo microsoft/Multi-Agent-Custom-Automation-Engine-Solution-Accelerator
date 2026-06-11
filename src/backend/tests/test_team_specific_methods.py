@@ -11,12 +11,15 @@ import sys
 import uuid
 from datetime import datetime, timezone
 
+import pytest
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 from common.models.messages_af import StartingTask, TeamAgent, TeamConfiguration
 
 
+@pytest.mark.asyncio
 async def test_team_specific_methods():
     """Test all team-specific methods."""
     print("=== Testing Team-Specific Methods ===\n")

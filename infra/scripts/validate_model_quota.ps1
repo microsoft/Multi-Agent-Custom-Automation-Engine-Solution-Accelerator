@@ -97,9 +97,9 @@ if ($FallbackRegions.Count -gt 0) {
     }
 
     Write-Host "`n🔧 To proceed, run:"
-    Write-Host "    azd env set AZURE_ENV_OPENAI_LOCATION '<region>'"
+    Write-Host "    azd env set AZURE_ENV_AI_SERVICE_LOCATION '<region>'"
     Write-Host "📌 To confirm it's set correctly, run:"
-    Write-Host "    azd env get-value AZURE_ENV_OPENAI_LOCATION"
+    Write-Host "    azd env get-value AZURE_ENV_AI_SERVICE_LOCATION"
     Write-Host "▶️  Once confirmed, re-run azd up to deploy the model in the new region."
     exit 2
 }

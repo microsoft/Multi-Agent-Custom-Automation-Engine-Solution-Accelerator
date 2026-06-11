@@ -45,8 +45,9 @@ sys.modules['azure.search.documents.indexes'] = Mock()
 sys.modules['azure.core'] = Mock()
 sys.modules['azure.core.exceptions'] = Mock()
 sys.modules['azure.identity'] = Mock()
+sys.modules['azure.identity.aio'] = Mock()
 sys.modules['azure.cosmos'] = Mock(CosmosClient=Mock)
-sys.modules['agent_framework'] = Mock(ChatAgent=Mock, ChatMessage=Mock, HostedCodeInterpreterTool=Mock, Role=Mock)
+sys.modules['agent_framework'] = Mock(Agent=Mock, Message=Mock, ChatOptions=Mock, ChatMessage=Mock, Role=Mock)
 sys.modules['agent_framework_azure_ai'] = Mock(AzureAIClient=Mock)
 
 # Mock additional Azure modules that may be needed
@@ -303,16 +304,12 @@ class TestFoundryAgentTemplate:
         assert result is False
 
     @pytest.mark.asyncio
-    @patch('backend.v4.magentic_agents.foundry_agent.HostedCodeInterpreterTool')
     @patch('backend.v4.magentic_agents.foundry_agent.config')
     @patch('backend.v4.magentic_agents.foundry_agent.logging.getLogger')
-    async def test_collect_tools_with_code_interpreter(self, mock_get_logger, mock_config, mock_code_tool_class):
-        """Test _collect_tools with code interpreter enabled."""
+    async def test_collect_tools_with_code_interpreter(self, mock_get_logger, mock_config):
+        """Test _collect_tools with code interpreter enabled - now handled server-side."""
         mock_logger = Mock()
         mock_get_logger.return_value = mock_logger
-        
-        mock_code_tool = Mock()
-        mock_code_tool_class.return_value = mock_code_tool
         
         agent = FoundryAgentTemplate(
             agent_name="TestAgent",
@@ -329,22 +326,18 @@ class TestFoundryAgentTemplate:
         
         tools = await agent._collect_tools()
         
-        assert len(tools) == 1
-        assert tools[0] == mock_code_tool
-        mock_code_tool_class.assert_called_once()
-        mock_logger.info.assert_any_call("Added Code Interpreter tool.")
-        mock_logger.info.assert_any_call("Total tools collected (MCP path): %d", 1)
+        # HostedCodeInterpreterTool was removed in rc4; code interpreter is now server-side
+        assert len(tools) == 0
+        mock_logger.info.assert_any_call("Code Interpreter requested \u2014 handled server-side by AzureAIClient.")
+        mock_logger.info.assert_any_call("Total tools collected (MCP path): %d", 0)
 
     @pytest.mark.asyncio
-    @patch('backend.v4.magentic_agents.foundry_agent.HostedCodeInterpreterTool')
     @patch('backend.v4.magentic_agents.foundry_agent.config')
     @patch('backend.v4.magentic_agents.foundry_agent.logging.getLogger')
-    async def test_collect_tools_code_interpreter_exception(self, mock_get_logger, mock_config, mock_code_tool_class):
-        """Test _collect_tools when code interpreter creation fails."""
+    async def test_collect_tools_code_interpreter_server_side(self, mock_get_logger, mock_config):
+        """Test _collect_tools when code interpreter is enabled - handled server-side in rc4."""
         mock_logger = Mock()
         mock_get_logger.return_value = mock_logger
-        
-        mock_code_tool_class.side_effect = Exception("Code interpreter failed")
         
         agent = FoundryAgentTemplate(
             agent_name="TestAgent",
@@ -361,8 +354,9 @@ class TestFoundryAgentTemplate:
         
         tools = await agent._collect_tools()
         
+        # No tools created locally; code interpreter is handled server-side
         assert len(tools) == 0
-        mock_logger.error.assert_called_with("Code Interpreter tool creation failed: %s", mock_code_tool_class.side_effect)
+        mock_logger.info.assert_any_call("Code Interpreter requested \u2014 handled server-side by AzureAIClient.")
 
     @pytest.mark.asyncio
     @patch('backend.v4.magentic_agents.foundry_agent.config')
@@ -639,7 +633,7 @@ class TestFoundryAgentTemplate:
         # Verify error was logged (removed specific assertion due to mock corruption issues)
 
     @pytest.mark.asyncio
-    @patch('backend.v4.magentic_agents.foundry_agent.ChatAgent')
+    @patch('backend.v4.magentic_agents.foundry_agent.Agent')
     @patch('backend.v4.magentic_agents.foundry_agent.agent_registry')
     @patch('backend.v4.magentic_agents.foundry_agent.config')
     @patch('backend.v4.magentic_agents.foundry_agent.logging.getLogger')
@@ -676,11 +670,11 @@ class TestFoundryAgentTemplate:
             "TestAgent",
             "test-index"
         )
-        mock_logger.info.assert_any_call("Initialized ChatAgent '%s'", "TestAgent")
+        mock_logger.info.assert_any_call("Initialized Agent '%s'", "TestAgent")
         mock_registry.register_agent.assert_called_once_with(agent)
 
     @pytest.mark.asyncio
-    @patch('backend.v4.magentic_agents.foundry_agent.ChatAgent')
+    @patch('backend.v4.magentic_agents.foundry_agent.Agent')
     @patch('backend.v4.magentic_agents.foundry_agent.agent_registry')
     @patch('backend.v4.magentic_agents.foundry_agent.config')
     @patch('backend.v4.magentic_agents.foundry_agent.logging.getLogger')
@@ -712,11 +706,11 @@ class TestFoundryAgentTemplate:
         
         mock_logger.info.assert_any_call("Initializing agent in Foundry mode.")
         mock_logger.info.assert_any_call("Initializing agent in MCP mode.")
-        mock_logger.info.assert_any_call("Initialized ChatAgent '%s'", "TestAgent")
+        mock_logger.info.assert_any_call("Initialized Agent '%s'", "TestAgent")
         mock_registry.register_agent.assert_called_once_with(agent)
 
     @pytest.mark.asyncio
-    @patch('backend.v4.magentic_agents.foundry_agent.ChatAgent')
+    @patch('backend.v4.magentic_agents.foundry_agent.Agent')
     @patch('backend.v4.magentic_agents.foundry_agent.agent_registry')
     @patch('backend.v4.magentic_agents.foundry_agent.config')
     @patch('backend.v4.magentic_agents.foundry_agent.logging.getLogger')
@@ -745,16 +739,16 @@ class TestFoundryAgentTemplate:
         assert "Azure AI Search mode requested but setup failed." in str(exc_info.value)
 
     @pytest.mark.asyncio
-    @patch('backend.v4.magentic_agents.foundry_agent.ChatAgent')
+    @patch('backend.v4.magentic_agents.foundry_agent.Agent')
     @patch('backend.v4.magentic_agents.foundry_agent.agent_registry')
     @patch('backend.v4.magentic_agents.foundry_agent.config')
     @patch('backend.v4.magentic_agents.foundry_agent.logging.getLogger')
     async def test_after_open_chat_agent_creation_error(self, mock_get_logger, mock_config, mock_registry, mock_chat_agent_class):
-        """Test _after_open when ChatAgent creation fails."""
+        """Test _after_open when Agent creation fails."""
         mock_logger = Mock()
         mock_get_logger.return_value = mock_logger
         
-        mock_chat_agent_class.side_effect = Exception("ChatAgent creation failed")
+        mock_chat_agent_class.side_effect = Exception("Agent creation failed")
         
         agent = FoundryAgentTemplate(
             agent_name="TestAgent",
@@ -774,11 +768,11 @@ class TestFoundryAgentTemplate:
         with pytest.raises(Exception) as exc_info:
             await agent._after_open()
         
-        assert "ChatAgent creation failed" in str(exc_info.value)
-        mock_logger.error.assert_called_with("Failed to initialize ChatAgent: %s", mock_chat_agent_class.side_effect)
+        assert "Agent creation failed" in str(exc_info.value)
+        mock_logger.error.assert_called_with("Failed to initialize Agent: %s", mock_chat_agent_class.side_effect)
 
     @pytest.mark.asyncio
-    @patch('backend.v4.magentic_agents.foundry_agent.ChatAgent')
+    @patch('backend.v4.magentic_agents.foundry_agent.Agent')
     @patch('backend.v4.magentic_agents.foundry_agent.agent_registry')
     @patch('backend.v4.magentic_agents.foundry_agent.config')
     @patch('backend.v4.magentic_agents.foundry_agent.logging.getLogger')
@@ -817,11 +811,10 @@ class TestFoundryAgentTemplate:
         )
 
     @pytest.mark.asyncio
-    @patch('backend.v4.magentic_agents.foundry_agent.ChatMessage')
-    @patch('backend.v4.magentic_agents.foundry_agent.Role')
+    @patch('backend.v4.magentic_agents.foundry_agent.Message')
     @patch('backend.v4.magentic_agents.foundry_agent.config')
     @patch('backend.v4.magentic_agents.foundry_agent.logging.getLogger')
-    async def test_invoke_success(self, mock_get_logger, mock_config, mock_role, mock_chat_message_class):
+    async def test_invoke_success(self, mock_get_logger, mock_config, mock_message_class):
         """Test invoke method successfully streams responses."""
         mock_logger = Mock()
         mock_get_logger.return_value = mock_logger
@@ -830,15 +823,14 @@ class TestFoundryAgentTemplate:
         mock_update1 = Mock()
         mock_update2 = Mock()
         
-        # Mock run_stream to return an async iterator
-        async def mock_run_stream(messages):
+        # Mock run to return an async iterator (source uses self._agent.run, not run_stream)
+        async def mock_run(messages, stream=True):
             yield mock_update1
             yield mock_update2
-        mock_agent.run_stream = mock_run_stream
+        mock_agent.run = mock_run
         
         mock_message = Mock()
-        mock_chat_message_class.return_value = mock_message
-        mock_role.USER = "user"
+        mock_message_class.return_value = mock_message
         
         agent = FoundryAgentTemplate(
             agent_name="TestAgent",
@@ -857,7 +849,7 @@ class TestFoundryAgentTemplate:
             updates.append(update)
         
         assert updates == [mock_update1, mock_update2]
-        mock_chat_message_class.assert_called_once_with(role=mock_role.USER, text="Test prompt")
+        mock_message_class.assert_called_once_with(role="user", text="Test prompt")
 
     @pytest.mark.asyncio
     @patch('backend.v4.magentic_agents.foundry_agent.config')
