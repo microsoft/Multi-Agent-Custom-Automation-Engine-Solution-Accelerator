@@ -13,7 +13,7 @@ name: "CodeQL Advanced"
 
 on:
   push:
-    branches: [ "main", "dev", "demo" , "psl-codeqlfixes"]
+    branches: [ "main", "dev", "demo", "psl-codeqlfixes" ]
     paths:
       - 'src/**/*.py'
       - 'src/**/*.js'
@@ -22,7 +22,7 @@ on:
       - 'tests/**/*.py'
       - '.github/workflows/codeql.yml'
   pull_request:
-    branches: [ "main", "dev", "demo" ]
+    branches: [ "main", "dev", "demo", "psl-codeqlfixes" ]
     paths:
       - 'src/**/*.py'
       - 'src/**/*.js'
@@ -32,6 +32,12 @@ on:
       - '.github/workflows/codeql.yml'
   schedule:
     - cron: '44 20 * * 2'
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch name to analyze'
+        required: false
+        default: 'main'
 
 jobs:
   analyze:
@@ -72,6 +78,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.inputs.branch || github.ref }}
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
