@@ -53,7 +53,7 @@ param createdBy string = contains(deployer(), 'userPrincipalName')
 // Parameters — AI
 // ============================================================================
 
-@allowed(['australiaeast', 'eastus2', 'francecentral', 'japaneast', 'norwayeast', 'swedencentral', 'uksouth', 'westus', 'westus3'])
+@allowed(['australiaeast', 'eastus2', 'francecentral', 'japaneast', 'norwayeast', 'swedencentral', 'uksouth', 'westus', 'westus3', 'polandcentral', 'uaenorth'])
 @metadata({
   azd: {
     type: 'location'
@@ -61,6 +61,7 @@ param createdBy string = contains(deployer(), 'userPrincipalName')
       'OpenAI.GlobalStandard.gpt4.1, 150'
       'OpenAI.GlobalStandard.o4-mini, 50'
       'OpenAI.GlobalStandard.gpt4.1-mini, 50'
+      'OpenAI.GlobalStandard.gpt-image-1.5, 5'
     ]
   }
 })
@@ -555,37 +556,37 @@ var aiSearchIndexNameForRFPSummary = 'macae-rfp-summary-index'
 var aiSearchIndexNameForRFPRisk = 'macae-rfp-risk-index'
 var aiSearchIndexNameForRFPCompliance = 'macae-rfp-compliance-index'
 
-var aiFoundryRoleIds = {
-  foundryUser: '53ca6127-db72-4b80-b1b0-d745d6d5456d'
-  azureAiDeveloper: '64702f94-c441-49e6-a78b-ef80e0188fee'
-  cognitiveServicesOpenAIUser: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
-}
+// var aiFoundryRoleIds = {
+//   foundryUser: '53ca6127-db72-4b80-b1b0-d745d6d5456d'
+//   azureAiDeveloper: '64702f94-c441-49e6-a78b-ef80e0188fee'
+//   cognitiveServicesOpenAIUser: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
+// }
 
-var existingAiFoundryManagedIdentityRoles = [
-  {
-    suffix: 'managedidentity-foundry-user'
-    roleDefinitionId: format('/subscriptions/{0}/providers/Microsoft.Authorization/roleDefinitions/{1}', aiFoundryAiServicesSubscriptionId, aiFoundryRoleIds.foundryUser)
-  }
-  {
-    suffix: 'managedidentity-ai-developer'
-    roleDefinitionId: format('/subscriptions/{0}/providers/Microsoft.Authorization/roleDefinitions/{1}', aiFoundryAiServicesSubscriptionId, aiFoundryRoleIds.azureAiDeveloper)
-  }
-  {
-    suffix: 'managedidentity-openai-user'
-    roleDefinitionId: format('/subscriptions/{0}/providers/Microsoft.Authorization/roleDefinitions/{1}', aiFoundryAiServicesSubscriptionId, aiFoundryRoleIds.cognitiveServicesOpenAIUser)
-  }
-]
+// var existingAiFoundryManagedIdentityRoles = [
+//   {
+//     suffix: 'managedidentity-foundry-user'
+//     roleDefinitionId: format('/subscriptions/{0}/providers/Microsoft.Authorization/roleDefinitions/{1}', aiFoundryAiServicesSubscriptionId, aiFoundryRoleIds.foundryUser)
+//   }
+//   {
+//     suffix: 'managedidentity-ai-developer'
+//     roleDefinitionId: format('/subscriptions/{0}/providers/Microsoft.Authorization/roleDefinitions/{1}', aiFoundryAiServicesSubscriptionId, aiFoundryRoleIds.azureAiDeveloper)
+//   }
+//   {
+//     suffix: 'managedidentity-openai-user'
+//     roleDefinitionId: format('/subscriptions/{0}/providers/Microsoft.Authorization/roleDefinitions/{1}', aiFoundryAiServicesSubscriptionId, aiFoundryRoleIds.cognitiveServicesOpenAIUser)
+//   }
+// ]
 
-var existingAiFoundryDeployerRoles = [
-  {
-    suffix: 'deployer-foundry-user'
-    roleDefinitionId: format('/subscriptions/{0}/providers/Microsoft.Authorization/roleDefinitions/{1}', aiFoundryAiServicesSubscriptionId, aiFoundryRoleIds.foundryUser)
-  }
-  {
-    suffix: 'deployer-ai-developer'
-    roleDefinitionId: format('/subscriptions/{0}/providers/Microsoft.Authorization/roleDefinitions/{1}', aiFoundryAiServicesSubscriptionId, aiFoundryRoleIds.azureAiDeveloper)
-  }
-]
+// var existingAiFoundryDeployerRoles = [
+//   {
+//     suffix: 'deployer-foundry-user'
+//     roleDefinitionId: format('/subscriptions/{0}/providers/Microsoft.Authorization/roleDefinitions/{1}', aiFoundryAiServicesSubscriptionId, aiFoundryRoleIds.foundryUser)
+//   }
+//   {
+//     suffix: 'deployer-ai-developer'
+//     roleDefinitionId: format('/subscriptions/{0}/providers/Microsoft.Authorization/roleDefinitions/{1}', aiFoundryAiServicesSubscriptionId, aiFoundryRoleIds.azureAiDeveloper)
+//   }
+// ]
 
 // ============================================================================
 // Resource Group Tags
@@ -794,31 +795,31 @@ module ai_foundry_project './modules/ai/ai-foundry-project.bicep' = if (!useExis
   }
 }
 
-@batchSize(1)
-module existingAiFoundryManagedIdentityRoleAssignments './modules/identity/cross-scope-role-assignment.bicep' = [for role in existingAiFoundryManagedIdentityRoles: if (useExistingAIProject) {
-  name: take('module.existing-aif-mi-${role.suffix}.${solutionName}', 64)
-  scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
-  params: {
-    principalId: managed_identity.outputs.principalId
-    roleDefinitionId: role.roleDefinitionId
-    roleAssignmentName: guid(solutionSuffix, aiFoundryAiServicesResourceName, role.suffix)
-    aiFoundryName: aiFoundryAiServicesResourceName
-    principalType: 'ServicePrincipal'
-  }
-}]
+// @batchSize(1)
+// module existingAiFoundryManagedIdentityRoleAssignments './modules/identity/cross-scope-role-assignment.bicep' = [for role in existingAiFoundryManagedIdentityRoles: if (useExistingAIProject) {
+//   name: take('module.existing-aif-mi-${role.suffix}.${solutionName}', 64)
+//   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
+//   params: {
+//     principalId: managed_identity.outputs.principalId
+//     roleDefinitionId: role.roleDefinitionId
+//     roleAssignmentName: guid(solutionSuffix, aiFoundryAiServicesResourceName, role.suffix)
+//     aiFoundryName: aiFoundryAiServicesResourceName
+//     principalType: 'ServicePrincipal'
+//   }
+// }]
 
-@batchSize(1)
-module existingAiFoundryDeployerRoleAssignments './modules/identity/cross-scope-role-assignment.bicep' = [for role in existingAiFoundryDeployerRoles: if (useExistingAIProject) {
-  name: take('module.existing-aif-deployer-${role.suffix}.${solutionName}', 64)
-  scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
-  params: {
-    principalId: deployingUserPrincipalId
-    roleDefinitionId: role.roleDefinitionId
-    roleAssignmentName: guid(solutionSuffix, aiFoundryAiServicesResourceName, role.suffix)
-    aiFoundryName: aiFoundryAiServicesResourceName
-    principalType: deployerPrincipalType
-  }
-}]
+// @batchSize(1)
+// module existingAiFoundryDeployerRoleAssignments './modules/identity/cross-scope-role-assignment.bicep' = [for role in existingAiFoundryDeployerRoles: if (useExistingAIProject) {
+//   name: take('module.existing-aif-deployer-${role.suffix}.${solutionName}', 64)
+//   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
+//   params: {
+//     principalId: deployingUserPrincipalId
+//     roleDefinitionId: role.roleDefinitionId
+//     roleAssignmentName: guid(solutionSuffix, aiFoundryAiServicesResourceName, role.suffix)
+//     aiFoundryName: aiFoundryAiServicesResourceName
+//     principalType: deployerPrincipalType
+//   }
+// }]
 
 // module aiFoundryPrivateEndpoint './modules/networking/private-endpoint.bicep' = if (enablePrivateNetworking && !useExistingAIProject) {
 //   name: take('module.pe-ai-foundry.${solutionName}', 64)
@@ -895,18 +896,33 @@ module ai_search './modules/ai/ai-search.bicep' = {
     diagnosticSettings: monitoringDiagnosticSettings
     roleAssignments: [
       {
-        roleDefinitionIdOrName: '8ebe5a00-799e-43f5-93ac-243d3dce84a7'
-        principalId: deployingUserPrincipalId
-        principalType: deployerPrincipalType
-      }
-      {
-        roleDefinitionIdOrName: '7ca78c08-252a-4471-8644-bb5ff32d4ba0'
+        roleDefinitionIdOrName: '8ebe5a00-799e-43f5-93ac-243d3dce84a7' // Search Index Data Contributor
         principalId: deployingUserPrincipalId
         principalType: deployerPrincipalType
       }
       {
         principalId: managed_identity.outputs.principalId
-        roleDefinitionIdOrName: 'Search Service Contributor'
+        roleDefinitionIdOrName: '8ebe5a00-799e-43f5-93ac-243d3dce84a7' // Search Index Data Contributor
+        principalType: 'ServicePrincipal'
+      }
+      // {
+      //   roleDefinitionIdOrName: '7ca78c08-252a-4471-8644-bb5ff32d4ba0' // Search Service Contributor
+      //   principalId: deployingUserPrincipalId
+      //   principalType: deployerPrincipalType
+      // }
+      {
+        principalId: managed_identity.outputs.principalId
+        roleDefinitionIdOrName: '7ca78c08-252a-4471-8644-bb5ff32d4ba0' // Search Service Contributor
+        principalType: 'ServicePrincipal'
+      }
+      {
+        principalId: aiFoundryAiProjectPrincipalId
+        roleDefinitionIdOrName: '7ca78c08-252a-4471-8644-bb5ff32d4ba0' // Search Service Contributor
+        principalType: 'ServicePrincipal'
+      }
+      {
+        principalId: aiFoundryAiProjectPrincipalId
+        roleDefinitionIdOrName: '1407120a-92aa-4202-b7e9-c0e197c71c8f'// Search Index Data Reader'
         principalType: 'ServicePrincipal'
       }
     ]
@@ -959,9 +975,14 @@ module storage_account './modules/data/storage-account.bicep' = {
     ]
     roleAssignments: [
       {
-        roleDefinitionIdOrName: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
+        roleDefinitionIdOrName: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor
         principalId: deployingUserPrincipalId
         principalType: deployerPrincipalType
+      }
+      {
+        principalId: managed_identity.outputs.principalId
+        roleDefinitionIdOrName: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor
+        principalType: 'ServicePrincipal'
       }
     ]
     enablePrivateNetworking: enablePrivateNetworking
@@ -1031,6 +1052,30 @@ module containerAppEnvironment './modules/compute/container-app-environment.bice
             workloadProfileType: 'Consumption'
           }
         ]
+  }
+}
+
+module containerAppEnvDNSZone './modules/networking/private-dns-zone.bicep' = if (enablePrivateNetworking) {
+  name: take('module.ca-env-dns-zone.${solutionName}', 64)
+  params: {
+    name: containerAppEnvironment.outputs.defaultDomain
+    tags: tags
+    enableTelemetry: enableTelemetry
+    virtualNetworkLinks: [
+      {
+        name: take('vnetlink-${virtualNetwork!.outputs.name}-caenv', 80)
+        virtualNetworkResourceId: virtualNetwork!.outputs.resourceId
+      }
+    ]
+    a: [
+      {
+        name: '*'
+        aRecords: [
+          { ipv4Address: containerAppEnvironment.outputs.staticIp }
+        ]
+        ttl: 300
+      }
+    ]
   }
 }
 
@@ -1355,8 +1400,7 @@ module role_assignments_identity './modules/identity/role-assignments.bicep' = {
     solutionName: solutionSuffix
     useExistingAIProject: useExistingAIProject
     existingFoundryProjectResourceId: existingFoundryProjectResourceId
-    aiProjectPrincipalId: !useExistingAIProject ? aiFoundryAiProjectPrincipalId : ''
-    existingAiProjectPrincipalId: useExistingAIProject ? aiFoundryAiProjectPrincipalId : ''
+    aiProjectPrincipalId: aiFoundryAiProjectPrincipalId
     aiSearchPrincipalId: ai_search.outputs.identityPrincipalId
     userAssignedManagedIdentityPrincipalId: managed_identity.outputs.principalId
     aiFoundryResourceId: !useExistingAIProject ? aiFoundryResourceId : ''
