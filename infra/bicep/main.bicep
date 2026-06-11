@@ -31,7 +31,7 @@ param solutionUniqueText string = take(uniqueString(subscription().id, resourceG
 ])
 param location string
 
-@allowed(['australiaeast', 'eastus2', 'francecentral', 'japaneast', 'norwayeast', 'swedencentral', 'uksouth', 'westus', 'westus3'])
+@allowed(['australiaeast', 'eastus2', 'francecentral', 'japaneast', 'norwayeast', 'swedencentral', 'uksouth', 'westus', 'westus3', 'polandcentral', 'uaenorth'])
 @metadata({
   azd: {
     type: 'location'
@@ -39,6 +39,7 @@ param location string
       'OpenAI.GlobalStandard.gpt4.1, 150'
       'OpenAI.GlobalStandard.o4-mini, 50'
       'OpenAI.GlobalStandard.gpt4.1-mini, 50'
+      'OpenAI.GlobalStandard.gpt-image-1.5, 5'
     ]
   }
 })
@@ -149,15 +150,6 @@ param existingLogAnalyticsWorkspaceId string = ''
 
 @description('Optional. Resource ID of an existing AI Foundry project.')
 param existingFoundryProjectResourceId string = ''
-
-@description('Optional. Enable or disable usage telemetry for this module.')
-param enableTelemetry bool = true
-
-@description('Optional. Enable or disable monitoring resources such as Application Insights.')
-param enableMonitoring bool = true
-
-@description('Optional. Enable or disable AI Search scalability.')
-param enableScalability bool = false
 
 @description('Optional. Additional tags to apply to deployed resources.')
 param tags object = {}
@@ -282,8 +274,8 @@ var aiSearchIndexNameForRFPCompliance = 'macae-rfp-compliance-index'
 var mcpServerName = 'MacaeMcpServer'
 var mcpServerDescription = 'MCP server with greeting, HR, and planning tools'
 
-var azureAIDeveloperRoleDefinitionId = '/subscriptions/${aiFoundryAiServicesSubscriptionId}/providers/Microsoft.Authorization/roleDefinitions/64702f94-c441-49e6-a78b-ef80e0188fee'
-var cognitiveServicesOpenAIUserRoleDefinitionId = '/subscriptions/${aiFoundryAiServicesSubscriptionId}/providers/Microsoft.Authorization/roleDefinitions/5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
+// var azureAIDeveloperRoleDefinitionId = '/subscriptions/${aiFoundryAiServicesSubscriptionId}/providers/Microsoft.Authorization/roleDefinitions/64702f94-c441-49e6-a78b-ef80e0188fee'
+// var cognitiveServicesOpenAIUserRoleDefinitionId = '/subscriptions/${aiFoundryAiServicesSubscriptionId}/providers/Microsoft.Authorization/roleDefinitions/5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
 
 resource resourceGroupTags 'Microsoft.Resources/tags@2023-07-01' = {
   name: 'default'
@@ -315,9 +307,9 @@ module log_analytics './modules/monitoring/log-analytics.bicep' = if (!useExisti
 }
 
 var logAnalyticsWorkspaceResourceId = useExistingLogAnalytics ? existingLogAnalyticsWorkspaceId : log_analytics!.outputs.resourceId
-var logAnalyticsWorkspaceName = useExistingLogAnalytics ? '' : log_analytics!.outputs.name
+// var logAnalyticsWorkspaceName = useExistingLogAnalytics ? '' : log_analytics!.outputs.name
 
-module app_insights './modules/monitoring/app-insights.bicep' = if (enableMonitoring) {
+module app_insights './modules/monitoring/app-insights.bicep' = {
   name: take('module.app-insights.${solutionSuffix}', 64)
   params: {
     solutionName: solutionSuffix
@@ -383,7 +375,7 @@ module ai_search './modules/ai/ai-search.bicep' = {
     solutionName: solutionSuffix
     location: solutionLocation
     tags: allTags
-    skuName: enableScalability ? 'standard' : 'basic'
+    skuName: 'basic'
     replicaCount: 1
     partitionCount: 1
     hostingMode: 'Default'
@@ -851,7 +843,6 @@ module role_assignments './modules/identity/role-assignments.bicep' = {
     aiSearchResourceId: ai_search.outputs.resourceId
     storageAccountResourceId: storage_account.outputs.resourceId
     aiProjectPrincipalId: aiFoundryAiProjectPrincipalId
-    existingAiProjectPrincipalId: useExistingAiFoundryAiProject ? existing_project_setup!.outputs.aiProjectPrincipalId : ''
     aiSearchPrincipalId: ai_search.outputs.identityPrincipalId
     deployerPrincipalId: deployingUserPrincipalId
     deployerPrincipalType: deployerPrincipalType
@@ -860,29 +851,29 @@ module role_assignments './modules/identity/role-assignments.bicep' = {
   }
 }
 
-module assignBackendAiDeveloperToAiServices './modules/identity/cross-scope-role-assignment.bicep' = {
-  name: take('module.backend-ai-developer.${solutionSuffix}', 64)
-  scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
-  params: {
-    principalId: userAssignedIdentity.outputs.principalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: azureAIDeveloperRoleDefinitionId
-    roleAssignmentName: guid(solutionSuffix, 'backend-uai', aiFoundryAiServicesResourceName, azureAIDeveloperRoleDefinitionId)
-    aiFoundryName: aiFoundryAiServicesResourceName
-  }
-}
+// module assignBackendAiDeveloperToAiServices './modules/identity/cross-scope-role-assignment.bicep' = {
+//   name: take('module.backend-ai-developer.${solutionSuffix}', 64)
+//   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
+//   params: {
+//     principalId: userAssignedIdentity.outputs.principalId
+//     principalType: 'ServicePrincipal'
+//     roleDefinitionId: azureAIDeveloperRoleDefinitionId
+//     roleAssignmentName: guid(solutionSuffix, 'backend-uai', aiFoundryAiServicesResourceName, azureAIDeveloperRoleDefinitionId)
+//     aiFoundryName: aiFoundryAiServicesResourceName
+//   }
+// }
 
-module assignBackendOpenAiUserToAiServices './modules/identity/cross-scope-role-assignment.bicep' = {
-  name: take('module.backend-openai-user.${solutionSuffix}', 64)
-  scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
-  params: {
-    principalId: userAssignedIdentity.outputs.principalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: cognitiveServicesOpenAIUserRoleDefinitionId
-    roleAssignmentName: guid(solutionSuffix, 'backend-uai', aiFoundryAiServicesResourceName, cognitiveServicesOpenAIUserRoleDefinitionId)
-    aiFoundryName: aiFoundryAiServicesResourceName
-  }
-}
+// module assignBackendOpenAiUserToAiServices './modules/identity/cross-scope-role-assignment.bicep' = {
+//   name: take('module.backend-openai-user.${solutionSuffix}', 64)
+//   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
+//   params: {
+//     principalId: userAssignedIdentity.outputs.principalId
+//     principalType: 'ServicePrincipal'
+//     roleDefinitionId: cognitiveServicesOpenAIUserRoleDefinitionId
+//     roleAssignmentName: guid(solutionSuffix, 'backend-uai', aiFoundryAiServicesResourceName, cognitiveServicesOpenAIUserRoleDefinitionId)
+//     aiFoundryName: aiFoundryAiServicesResourceName
+//   }
+// }
 
 
 @description('The resource group the resources were deployed into.')

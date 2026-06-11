@@ -49,7 +49,7 @@ param solutionUniqueText string = take(uniqueString(subscription().id, resourceG
 ])
 param location string
 
-@allowed(['australiaeast', 'eastus2', 'francecentral', 'japaneast', 'norwayeast', 'swedencentral', 'uksouth', 'westus', 'westus3'])
+@allowed(['australiaeast', 'eastus2', 'francecentral', 'japaneast', 'norwayeast', 'swedencentral', 'uksouth', 'westus', 'westus3', 'polandcentral', 'uaenorth'])
 @metadata({
   azd: {
     type: 'location'
@@ -57,6 +57,7 @@ param location string
       'OpenAI.GlobalStandard.gpt4.1, 150'
       'OpenAI.GlobalStandard.o4-mini, 50'
       'OpenAI.GlobalStandard.gpt4.1-mini, 50'
+      'OpenAI.GlobalStandard.gpt-image-1.5, 5'
     ]
   }
 })
@@ -140,9 +141,6 @@ param gptImageModelCapacity int = 5
 
 @description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2024-12-01-preview.')
 param azureOpenaiAPIVersion string = '2024-12-01-preview'
-
-@description('Optional. Version of the Azure AI Agent API version. Defaults to 2025-01-01-preview.')
-param azureAiAgentAPIVersion string = '2025-01-01-preview'
 
 // ============================================================================
 // Parameters — Compute
@@ -280,6 +278,10 @@ module avmDeployment './avm/main.bicep' = if (isAvm) {
     gptDeploymentCapacity: gptDeploymentCapacity
     gpt4_1ModelCapacity: gpt4_1ModelCapacity
     gptReasoningModelCapacity: gptReasoningModelCapacity
+    gptImageModelName: gptImageModelName
+    gptImageModelVersion: gptImageModelVersion
+    gptImageModelDeploymentType: gptImageModelDeploymentType
+    gptImageModelCapacity: gptImageModelCapacity
     backendContainerRegistryHostname: backendContainerRegistryHostname
     backendContainerImageName: backendContainerImageName
     backendContainerImageTag: backendContainerImageTag
@@ -332,6 +334,10 @@ module bicepDeployment './bicep/main.bicep' = if (isBicep) {
     gptReasoningModelVersion: gptReasoningModelVersion
     gptReasoningModelDeploymentType: gptReasoningModelDeploymentType
     gptReasoningModelCapacity: gptReasoningModelCapacity
+    gptImageModelName: gptImageModelName
+    gptImageModelVersion: gptImageModelVersion
+    gptImageModelDeploymentType: gptImageModelDeploymentType
+    gptImageModelCapacity: gptImageModelCapacity
     azureOpenaiAPIVersion: azureOpenaiAPIVersion
     backendContainerRegistryHostname: backendContainerRegistryHostname
     backendContainerImageName: backendContainerImageName
@@ -344,7 +350,6 @@ module bicepDeployment './bicep/main.bicep' = if (isBicep) {
     MCPContainerImageTag: MCPContainerImageTag
     existingLogAnalyticsWorkspaceId: existingLogAnalyticsWorkspaceId
     existingFoundryProjectResourceId: existingFoundryProjectResourceId
-    enableTelemetry: enableTelemetry
     tags: tags
     storageContainerNameRetailCustomer: storageContainerNameRetailCustomer
     storageContainerNameRetailOrder: storageContainerNameRetailOrder
