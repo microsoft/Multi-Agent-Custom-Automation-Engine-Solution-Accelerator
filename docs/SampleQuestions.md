@@ -135,7 +135,7 @@ _Sample operation:_
 </br>
 
 - Task: Click on **"Approve Task Plan"** Button.
-  > _Note: Average response time is around 2–3 minutes (image generation included)._ <br>
+  > _Note: Average response time is around 02–03 minutes (image generation included)._ <br>
   > _Observe: It goes into "Thinking Process", "Processing your plan" and "coordinating with AI Agents". The final output includes marketing copy (headline, body, CTA, hashtags), a rendered campaign image, and a compliance review._ <br>
   > _Review the output._
 
