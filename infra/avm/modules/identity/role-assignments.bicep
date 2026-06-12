@@ -288,6 +288,17 @@ resource deployerAiUserAssignment 'Microsoft.Authorization/roleAssignments@2022-
   }
 }
 
+// Deploying User → Cognitive Services User on AI Services
+// resource deployerAiServicesAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingAIProject && !empty(deployerPrincipalId) && !empty(aiFoundryResourceId)) {
+//   scope: aiFoundryAccount
+//   name: guid(solutionName, aiFoundryAccount.id, deployerPrincipalId, roleDefinitions.cognitiveServicesUser)
+//   properties: {
+//     principalId: deployerPrincipalId
+//     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.cognitiveServicesUser)
+//     principalType: 'User'
+//   }
+// }
+
 // // Deployer → Foundry User on existing AI Foundry (cross-scope)
 // // Extended as per accelerator need
 // module deployerAiUserExisting './cross-scope-role-assignment.bicep' = if (useExistingAIProject && !empty(deployerPrincipalId)) {

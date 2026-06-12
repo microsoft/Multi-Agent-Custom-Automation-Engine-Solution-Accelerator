@@ -45,7 +45,6 @@ param solutionUniqueText string = take(uniqueString(subscription().id, resourceG
   'northeurope'
   'southeastasia'
   'uksouth'
-  'westus3'
 ])
 param location string
 

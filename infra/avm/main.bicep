@@ -34,7 +34,6 @@ param solutionUniqueText string = take(uniqueString(subscription().id, resourceG
   'northeurope'
   'southeastasia'
   'uksouth'
-  'westus3'
 ])
 param location string
 
@@ -617,6 +616,45 @@ module log_analytics './modules/monitoring/log-analytics.bicep' = if (!useExisti
     location: location
     tags: tags
     retentionInDays: 365
+    dailyQuotaGb: enableRedundancy ? '150' : null
+    replicationLocation: enableRedundancy ? replicaLocation : ''
+    enableTelemetry: enableTelemetry
+    publicNetworkAccessForIngestion: enablePrivateNetworking ? 'Disabled' : 'Enabled'
+    publicNetworkAccessForQuery: enablePrivateNetworking ? 'Disabled' : 'Enabled'
+    dataSources: enablePrivateNetworking
+      ? [
+          {
+            tags: tags
+            eventLogName: 'Application'
+            eventTypes: [
+              {
+                eventType: 'Error'
+              }
+              {
+                eventType: 'Warning'
+              }
+              {
+                eventType: 'Information'
+              }
+            ]
+            kind: 'WindowsEvent'
+            name: 'applicationEvent'
+          }
+          {
+            counterName: '% Processor Time'
+            instanceName: '*'
+            intervalSeconds: 60
+            kind: 'WindowsPerformanceCounter'
+            name: 'windowsPerfCounter1'
+            objectName: 'Processor'
+          }
+          {
+            kind: 'IISLogs'
+            name: 'sampleIISLog1'
+            state: 'OnPremiseEnabled'
+          }
+        ]
+      : null
   }
 }
 
@@ -861,6 +899,7 @@ var aiFoundryAiProjectName = useExistingAIProject ? existing_project_setup!.outp
 var aiFoundryAiProjectEndpoint = useExistingAIProject ? existing_project_setup!.outputs.projectEndpoint : ai_foundry_project!.outputs.projectEndpoint
 var aiFoundryAiProjectPrincipalId = useExistingAIProject ? existing_project_setup!.outputs.aiProjectPrincipalId : ai_foundry_project!.outputs.projectIdentityPrincipalId
 var aiFoundryAiServicesEndpoint = useExistingAIProject ? existing_project_setup!.outputs.aiFoundryEndpoint : ai_foundry_project!.outputs.endpoint
+var aiFoundryOpenAIEndpoint = 'https://${aiFoundryAiServicesResourceName}.openai.azure.com/'
 var aiFoundryResourceId = useExistingAIProject ? existing_project_setup!.outputs.aiFoundryResourceId : ai_foundry_project!.outputs.resourceId
 
 @batchSize(1)
@@ -1133,7 +1172,7 @@ module containerApp './modules/compute/container-app.bicep' = {
           }
           {
             name: 'AZURE_OPENAI_ENDPOINT'
-            value: aiFoundryAiServicesEndpoint
+            value: aiFoundryOpenAIEndpoint
           }
           {
             name: 'AZURE_OPENAI_DEPLOYMENT_NAME'
@@ -1429,7 +1468,7 @@ output AZURE_AI_SEARCH_NAME string = ai_search.outputs.name
 output COSMOSDB_ENDPOINT string = cosmosDBModule.outputs.endpoint
 output COSMOSDB_DATABASE string = cosmosDbDatabaseName
 output COSMOSDB_CONTAINER string = cosmosDbDatabaseMemoryContainerName
-output AZURE_OPENAI_ENDPOINT string = aiFoundryAiServicesEndpoint
+output AZURE_OPENAI_ENDPOINT string = aiFoundryOpenAIEndpoint
 output AZURE_OPENAI_DEPLOYMENT_NAME string = gptModelName
 output AZURE_OPENAI_RAI_DEPLOYMENT_NAME string = gpt4_1ModelName
 output AZURE_OPENAI_API_VERSION string = azureOpenaiAPIVersion
