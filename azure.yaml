@@ -3,16 +3,7 @@ name: multi-agent-custom-automation-engine-solution-accelerator
 metadata:
   template: multi-agent-custom-automation-engine-solution-accelerator@1.0
 requiredVersions:
-  azd: '>= 1.18.0'
-
-# Default deployment uses main.bicep which pulls pre-built container images
-# from the public Microsoft registry (biabcontainerreg.azurecr.io).
-# No local Docker build is needed — azd provisions infra and runs hooks only.
-# For custom/dev builds from source, use: azd up --config azure_custom.yaml
-infra:
-  path: infra
-  module: main
-
+  azd: '>= 1.18.0 != 1.23.9'
 hooks:
   postdeploy:
     windows:

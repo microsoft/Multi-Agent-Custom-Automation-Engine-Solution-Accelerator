@@ -1,7 +1,7 @@
 ## Check Quota Availability Before Deployment
 
 Before deploying the accelerator, **ensure sufficient quota availability** for the required model.
-> **For Global Standard | GPT-4o - the capacity to at least 150k tokens for optimal performance.**
+> **For Global Standard | GPT-4.1 — ensure a capacity of at least 150k tokens for optimal performance.**
 
 ### Login if you have not done so already
 ```
@@ -76,7 +76,7 @@ The final table lists regions with available quota. You can select any of these 
    **To check quota for the deployment**  
 
     ```sh
-    curl -L -o quota_check_params.sh "https://raw.githubusercontent.com/microsoft/document-generation-solution-accelerator/main/scripts/quota_check_params.sh"
+    curl -L -o quota_check_params.sh "https://raw.githubusercontent.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/main/infra/scripts/quota_check_params.sh"
     chmod +x quota_check_params.sh
     ./quota_check_params.sh
     ```

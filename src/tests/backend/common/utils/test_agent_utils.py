@@ -1,14 +1,12 @@
 """
 Unit tests for agent_utils.py module.
 
-This module tests the utility functions for agent ID generation and database operations.
+This module tests the utility functions for agent ID generation.
 """
 
-import logging
 import string
-import sys
 import unittest
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import patch
 
 # Mock external dependencies at module level 
 sys.modules['azure'] = Mock()

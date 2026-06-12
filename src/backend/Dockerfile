@@ -15,9 +15,6 @@ RUN uv sync --frozen --no-install-project --no-dev
 # Backend app setup
 COPY . /app  
 RUN uv sync --frozen --no-dev
-# Fix: agent-framework-azure-ai-search ships an empty agent_framework/__init__.py
-# that overwrites the real one from agent-framework-core. Reinstall core last.
-RUN uv pip install --reinstall --no-deps agent-framework-core==1.2.2
 
 
 FROM base

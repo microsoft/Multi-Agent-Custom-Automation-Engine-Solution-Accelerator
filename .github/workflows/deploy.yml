@@ -34,10 +34,10 @@ jobs:
       CONTAINER_APP: ${{steps.get_backend_url.outputs.CONTAINER_APP}}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Login to Azure
-        uses: azure/login@v2
+        uses: azure/login@v3
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -101,9 +101,18 @@ jobs:
         id: check_create_rg
         run: |
           set -e
+          OWNER_TAG_VALUE="${{ github.actor }}"
+          echo "🔍 Checking if resource group '${{ env.RESOURCE_GROUP_NAME }}' exists..."
           rg_exists=$(az group exists --name ${{ env.RESOURCE_GROUP_NAME }})
           if [ "$rg_exists" = "false" ]; then
-            az group create --name ${{ env.RESOURCE_GROUP_NAME }} --location ${{ env.AZURE_LOCATION }}
+            echo "📦 Resource group does not exist. Creating new resource group '${{ env.RESOURCE_GROUP_NAME }}' in location '${{ env.AZURE_LOCATION }}'..."
+            echo "🏷️  Adding Owner tag: Owner=${OWNER_TAG_VALUE}"
+            az group create --name ${{ env.RESOURCE_GROUP_NAME }} --location ${{ env.AZURE_LOCATION }} --tags "Owner=${OWNER_TAG_VALUE}" || { echo "❌ Error creating resource group"; exit 1; }
+            echo "✅ Resource group '${{ env.RESOURCE_GROUP_NAME }}' created successfully."
+          else
+            echo "✅ Resource group '${{ env.RESOURCE_GROUP_NAME }}' already exists. Deploying to existing resource group."
+            echo "🏷️  Merging Owner tag on existing resource group: Owner=${OWNER_TAG_VALUE}"
+            az group update --name "${{ env.RESOURCE_GROUP_NAME }}" --set tags.Owner="${OWNER_TAG_VALUE}" --output none || echo "⚠️  Warning: failed to update Owner tag on existing resource group '${{ env.RESOURCE_GROUP_NAME }}'."
           fi
           echo "RESOURCE_GROUP_NAME=${{ env.RESOURCE_GROUP_NAME }}" >> $GITHUB_OUTPUT
 
@@ -138,13 +147,13 @@ jobs:
             --parameters \
               solutionName=${{ env.SOLUTION_PREFIX }} \
               location="${{ env.AZURE_LOCATION }}" \
-              gptModelDeploymentType="GlobalStandard" \
+              deploymentType="GlobalStandard" \
               gptModelName="gpt-4.1-mini" \
               gptModelVersion="2025-04-14" \
               backendContainerImageTag="${IMAGE_TAG}" \
               frontendContainerImageTag="${IMAGE_TAG}" \
               azureAiServiceLocation='${{ env.AZURE_LOCATION }}' \
-              gptModelCapacity=50 \
+              gptDeploymentCapacity=50 \
               createdBy="Pipeline" \
               tags="{'Purpose':'Deploying and Cleaning Up Resources for Validation','CreatedDate':'$current_date'}" \
             --output json
@@ -219,7 +228,7 @@ jobs:
       RESOURCE_GROUP_NAME: ${{ needs.deploy.outputs.RESOURCE_GROUP_NAME }}
     steps:
       - name: Login to Azure
-        uses: azure/login@v2
+        uses: azure/login@v3
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}

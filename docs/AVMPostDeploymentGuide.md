@@ -26,9 +26,10 @@ Before starting the post-deployment process, ensure you have the following:
 
 2. **[Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli)** <small>(v2.50+)</small> - Command-line tool for managing Azure resources
 
-3. **[Python](https://www.python.org/downloads/)** <small>(v4.9+ recommended)</small> - Required for data processing scripts
+3. **[Python](https://www.python.org/downloads/)** <small>(v3.9+ recommended)</small> - Required for data processing scripts
 
 4. **[Git](https://git-scm.com/downloads/)** - Version control system for cloning the repository
+5. **[Bicep CLI](https://learn.microsoft.com/azure/azure-resource-manager/bicep/install)** <small>(v0.33.0+)</small> - Required for compiling infrastructure templates
 
 ### Azure Requirements
 
