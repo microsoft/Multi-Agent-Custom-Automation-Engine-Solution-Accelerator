@@ -202,7 +202,11 @@ class ImageAgent(BaseAgent):
                         self.user_id,
                         message_type=WebsocketMessageType.AGENT_MESSAGE,
                     )
-                    logger.info("ImageAgent '%s': image sent to user '%s' via WebSocket", self.agent_name, self.user_id)
+                    logger.info(
+                        "ImageAgent '%s': image sent to user '%s' via WebSocket "
+                        "(response_id=%s message_id=%s, NOT in orchestrator final text)",
+                        self.agent_name, self.user_id, response_id, message_id,
+                    )
                 except Exception as ws_exc:
                     logger.error("ImageAgent '%s': failed to send image via WebSocket: %s", self.agent_name, ws_exc)
 

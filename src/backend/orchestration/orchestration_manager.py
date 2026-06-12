@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import uuid
+import re
 from typing import List, Optional
 
 import models.messages as messages
@@ -32,6 +33,26 @@ from services.team_service import TeamService
 # participants in GroupChat, triggering "No tool call found for call_id" 400 errors.
 # See localspec/bugs/framework/F1-tool-history-leak.md
 apply_tool_history_leak_patch()
+
+_BARE_IMAGE_URL_RE = re.compile(
+    r"(?<![\(\]])"                        
+    r"(?<!\]\()"                          
+    r"(https?://[^\s)]+?"
+    r"(?:/api/v4/images/[^\s)]+?|[^\s)]+?\.(?:png|jpe?g|gif|webp)))"
+    r"(?=[\s)\]]|$)",
+    re.IGNORECASE,
+)
+
+
+def _embed_bare_image_urls(text: str) -> str:
+    """Wrap bare image URLs in markdown image syntax so the UI renders them inline.
+
+    Skips URLs already inside ``![alt](url)`` or ``[text](url)`` (handled by the
+    negative lookbehinds), so it never double-wraps an existing markdown embed.
+    """
+    if not text:
+        return text
+    return _BARE_IMAGE_URL_RE.sub(r"![Generated image](\1)", text)
 
 class OrchestrationManager:
     """Manager for handling orchestration logic using agent_framework Magentic workflow."""
@@ -378,6 +399,21 @@ class OrchestrationManager:
             # accumulated orchestrator streaming chunks.
             final_text = final_output_ref[0] or "".join(orchestrator_chunks)
 
+            final_text = _embed_bare_image_urls(final_text)
+
+            # Issue 1 diagnostic: confirm the final answer carries a renderable image
+            # embed. has_image_markdown tracks TRUE markdown (![]) — the renderable form;
+            # has_image_url tracks any image reference, even a bare URL.
+            final_source = "executor" if final_output_ref[0] else "chunks"
+            has_image_markdown = "![" in final_text
+            has_image_url = "/api/v4/images/" in final_text
+            self.logger.info(
+                "[FINAL-ASSEMBLY] job=%s user=%s source=%s len=%d "
+                "has_image_markdown=%s has_image_url=%s",
+                job_id, user_id, final_source, len(final_text),
+                has_image_markdown, has_image_url,
+            )
+            
             # Log results
             self.logger.info("\nAgent responses:")
             self.logger.info(
@@ -721,15 +757,16 @@ class OrchestrationManager:
                                     executor, cb_err,
                                 )
 
-                        try:
-                            await streaming_agent_response_callback(
-                                executor, output_data, False, user_id,
-                            )
-                        except Exception as cb_err:
-                            self.logger.error(
-                                "Error in streaming callback for %s: %s",
-                                executor, cb_err,
-                            )
+                        if executor != "magentic_orchestrator":
+                            try:
+                                await streaming_agent_response_callback(
+                                    executor, output_data, False, user_id,
+                                )
+                            except Exception as cb_err:
+                                self.logger.error(
+                                    "Error in streaming callback for %s: %s",
+                                    executor, cb_err,
+                                )
 
                 # Executor completed
                 elif (
