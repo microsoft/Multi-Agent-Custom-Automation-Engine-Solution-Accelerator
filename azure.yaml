@@ -7,7 +7,7 @@ requiredVersions:
 hooks:
   postdeploy:
     windows:
-      run: infra/scripts/post_deploy.ps1
+      run: infra/scripts/post-provision/post_deploy.ps1
       shell: pwsh
       interactive: true
     posix:
@@ -25,7 +25,7 @@ hooks:
 
         printf  "Upload Team Configurations and index sample data:\n"
         printf  "  👉 Run the following command in Bash:\n"
-        printf  "   ${Blue}bash infra/scripts/selecting_team_config_and_data.sh${NC}\n\n"
+        printf  "   ${Blue}bash infra/scripts/post-provision/selecting_team_config_and_data.sh${NC}\n\n"
 
         printf "🌐 Access your deployed Frontend application at:\n"
         printf "   ${Blue}https://%s${NC}\n\n" "$webSiteDefaultHostname"
