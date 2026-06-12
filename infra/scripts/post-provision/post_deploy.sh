@@ -435,7 +435,7 @@ PY
         fi
         first_blob_container="$container"
         info "  Creating search index '$index_name' from container '$container'..."
-        if ! run_python "infra/scripts/index_datasets.py" "$storage_account_name" "$container" "$ai_search_name" "$index_name"; then
+        if ! run_python "scripts/post-provision/index_datasets.py" "$storage_account_name" "$container" "$ai_search_name" "$index_name"; then
           error "  Indexing failed for '$index_name'."
           had_failure=true
         fi
@@ -462,7 +462,7 @@ PY
           continue
         fi
         info "  Creating search index '$index_name' from container '$first_blob_container'..."
-        if ! run_python "infra/scripts/index_datasets.py" "$storage_account_name" "$first_blob_container" "$ai_search_name" "$index_name"; then
+        if ! run_python "scripts/post-provision/index_datasets.py" "$storage_account_name" "$first_blob_container" "$ai_search_name" "$index_name"; then
           error "  Indexing failed for '$index_name'."
           had_failure=true
         fi
@@ -487,7 +487,7 @@ upload_team_config() {
 
   info ""
   info "Uploading Team Configuration for $label..."
-  if ! run_python "infra/scripts/upload_team_config.py" "$backend_url" "$team_config_dir" "$user_principal_id" "$team_id"; then
+  if ! run_python "scripts/post-provision/upload_team_config.py" "$backend_url" "$team_config_dir" "$user_principal_id" "$team_id"; then
     error "Team configuration for $label upload failed."
     has_errors=true
     return 1
@@ -624,6 +624,27 @@ main() {
 
   select_use_case
 
+  # WAF/Private Networking: If the Container App has IP restrictions or internal ingress,
+  # the backendUrl is not reachable from the developer's machine. Route through the frontend
+  # App Service proxy instead, which is public and forwards /api/* to the private backend over VNet.
+  solutionSuffix=$(az group show --name "$resource_group" --query "tags.SolutionSuffix" -o tsv 2>/dev/null)
+  if [[ -n "$solutionSuffix" ]]; then
+      containerAppName="ca-${solutionSuffix}"
+      isExternal=$(az containerapp show --name "$containerAppName" --resource-group "$resource_group" \
+          --query "properties.configuration.ingress.external" -o tsv 2>/dev/null)
+      hasIpRestrictions=$(az containerapp show --name "$containerAppName" --resource-group "$resource_group" \
+          --query "length(properties.configuration.ingress.ipSecurityRestrictions || \`[]\`)" -o tsv 2>/dev/null)
+      proxyEnabled=$(az webapp config appsettings list --name "app-${solutionSuffix}" --resource-group "$resource_group" \
+          --query "[?name=='PROXY_API_REQUESTS'].value" -o tsv 2>/dev/null)
+      if [[ "$isExternal" == "false" ]] || [[ "$hasIpRestrictions" -gt 0 ]] || [[ "$proxyEnabled" == "true" ]]; then
+          frontendHostname="app-${solutionSuffix}"
+          frontendUrl="https://${frontendHostname}.azurewebsites.net"
+          echo "Private networking detected: Container App has restricted access."
+          echo "Routing API calls through frontend App Service: $frontendUrl"
+          backend_url="$frontendUrl"
+      fi
+  fi
+
   echo ""
   echo "==============================================="
   echo "Values to be used:" 
@@ -759,8 +780,8 @@ main() {
     if [ -n "$selected_vector_stores" ]; then
       info ""
       info "── Creating vector stores ──"
-      if ! run_python "infra/scripts/seed_vector_stores.py" "--only" "$selected_vector_stores"; then
-        error "Vector store creation failed. Run 'python infra/scripts/seed_vector_stores.py --only $selected_vector_stores' manually."
+      if ! run_python "scripts/post-provision/seed_vector_stores.py" "--only" "$selected_vector_stores"; then
+        error "Vector store creation failed. Run 'python scripts/post-provision/seed_vector_stores.py --only $selected_vector_stores' manually."
         has_errors=true
       else
         info "Vector stores created successfully."
@@ -770,8 +791,8 @@ main() {
     if [ -n "$selected_kbs" ]; then
       info ""
       info "── Seeding Foundry IQ Knowledge Bases ──"
-      if ! run_python "infra/scripts/seed_knowledge_bases.py" "--only" "$selected_kbs"; then
-        error "Knowledge base seeding failed. Run 'python infra/scripts/seed_knowledge_bases.py --only $selected_kbs' manually."
+      if ! run_python "scripts/post-provision/seed_knowledge_bases.py" "--only" "$selected_kbs"; then
+        error "Knowledge base seeding failed. Run 'python scripts/post-provision/seed_knowledge_bases.py --only $selected_kbs' manually."
         has_errors=true
       else
         info "Knowledge bases seeded successfully."
@@ -779,8 +800,8 @@ main() {
 
       info ""
       info "── Creating KB MCP RemoteTool connections ──"
-      if ! run_python "infra/scripts/seed_kb_connections.py" "--only" "$selected_kbs"; then
-        error "KB connection provisioning failed. Run 'python infra/scripts/seed_kb_connections.py --only $selected_kbs' manually."
+      if ! run_python "scripts/post-provision/seed_kb_connections.py" "--only" "$selected_kbs"; then
+        error "KB connection provisioning failed. Run 'python scripts/post-provision/seed_kb_connections.py --only $selected_kbs' manually."
         has_errors=true
       else
         info "KB MCP connections created successfully."
