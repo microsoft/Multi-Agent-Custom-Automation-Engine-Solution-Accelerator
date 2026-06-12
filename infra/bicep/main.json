@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.44.1.10279",
-      "templateHash": "16867662880324747728"
+      "templateHash": "17984472900333261239"
     },
     "name": "Multi-Agent Custom Automation Engine - Vanilla Bicep",
     "description": "Vanilla Bicep orchestrator for the Multi-Agent Custom Automation Engine accelerator. This deployment intentionally excludes WAF features such as private networking, scale-out, redundancy, bastion, and VM resources while keeping router-compatible outputs."
@@ -38,8 +38,7 @@
         "japaneast",
         "northeurope",
         "southeastasia",
-        "uksouth",
-        "westus3"
+        "uksouth"
       ],
       "metadata": {
         "azd": {
