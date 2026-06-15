@@ -101,7 +101,7 @@ resource cosmosContributorRoleDefinition 'Microsoft.DocumentDB/databaseAccounts/
 
 // AI Search → Cognitive Services OpenAI User on AI Foundry (new project, same RG)
 resource assignOpenAIRoleToAISearch 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingAIProject && !empty(aiSearchPrincipalId) && !empty(aiFoundryResourceId)) {
-  name: guid(solutionName, aiFoundryResourceId, aiSearchPrincipalId, roleDefinitions.cognitiveServicesOpenAIUser)
+  name: guid(solutionName, aiFoundryAccount.id, aiSearchPrincipalId, roleDefinitions.cognitiveServicesOpenAIUser)
   scope: aiFoundryAccount
   properties: {
     principalId: aiSearchPrincipalId
@@ -124,7 +124,7 @@ module assignOpenAIToSearchExisting './cross-scope-role-assignment.bicep' = if (
 
 // User-Assigned Managed Identity → Foundry User on AI Foundry (new project, same RG)
 resource userAssignedManagedIdentityAiUserAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingAIProject && !empty(aiFoundryResourceId) && !empty(userAssignedManagedIdentityPrincipalId)) {
-  name: guid(solutionName, aiFoundryResourceId, userAssignedManagedIdentityPrincipalId, roleDefinitions.azureAiUser)
+  name: guid(solutionName, aiFoundryAccount.id, userAssignedManagedIdentityPrincipalId, roleDefinitions.azureAiUser)
   scope: aiFoundryAccount
   properties: {
     principalId: userAssignedManagedIdentityPrincipalId
@@ -136,7 +136,7 @@ resource userAssignedManagedIdentityAiUserAssignment 'Microsoft.Authorization/ro
 // User-Assigned Managed Identity → Cognitive Services OpenAI Contributor on AI Foundry (new project, same RG)
 // Extended as per accelerator need
 resource userAssignedManagedIdentityOpenAIContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingAIProject && !empty(aiFoundryResourceId) && !empty(userAssignedManagedIdentityPrincipalId)) {
-  name: guid(solutionName, aiFoundryResourceId, userAssignedManagedIdentityPrincipalId, roleDefinitions.cognitiveServicesOpenAIContributor)
+  name: guid(solutionName, aiFoundryAccount.id, userAssignedManagedIdentityPrincipalId, roleDefinitions.cognitiveServicesOpenAIContributor)
   scope: aiFoundryAccount
   properties: {
     principalId: userAssignedManagedIdentityPrincipalId
@@ -279,7 +279,7 @@ resource deployerCosmosRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sql
 // Deployer → Foundry User on AI Foundry (new project, same RG)
 // Extended as per accelerator need
 resource deployerAiUserAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingAIProject && !empty(aiFoundryResourceId) && !empty(deployerPrincipalId)) {
-  name: guid(solutionName, aiFoundryResourceId, deployerPrincipalId, roleDefinitions.azureAiUser)
+  name: guid(solutionName, aiFoundryAccount.id, deployerPrincipalId, roleDefinitions.azureAiUser)
   scope: aiFoundryAccount
   properties: {
     principalId: deployerPrincipalId

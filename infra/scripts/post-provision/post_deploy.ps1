@@ -42,6 +42,7 @@ $script:srchIsPublicAccessDisabled = $false
 $script:aiFoundryIsPublicAccessDisabled = $false
 $script:aiFoundryAccountName      = ""
 $script:aiFoundryResourceGroup    = ""
+$script:aiFoundryResourceId = ""
 $script:hasErrors                  = $false
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -251,6 +252,7 @@ function Get-ValuesFromAzdEnv {
     $script:openaiEndpoint   = $(azd env get-value AZURE_OPENAI_ENDPOINT 2>$null)
     $script:projectEndpoint  = $(azd env get-value AZURE_AI_PROJECT_ENDPOINT 2>$null)
     $script:ResourceGroup    = $(azd env get-value AZURE_RESOURCE_GROUP 2>$null)
+    $script:aiFoundryResourceId = $(azd env get-value AI_FOUNDRY_RESOURCE_ID 2>$null)
 
     if (-not $script:backendUrl -or -not $script:storageAccount -or -not $script:aiSearch -or -not $script:ResourceGroup) {
         Write-Host "Error: Could not retrieve all required values from azd environment."
@@ -283,6 +285,7 @@ function Get-ValuesFromAzDeployment {
     $script:aiSearchEndpoint = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_SEARCH_ENDPOINT"      -FallbackKey "azureSearchEndpoint"
     $script:openaiEndpoint   = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_OPENAI_ENDPOINT"      -FallbackKey "azureOpenaiEndpoint"
     $script:projectEndpoint  = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_PROJECT_ENDPOINT"  -FallbackKey "azureAiProjectEndpoint"
+    $script:aiFoundryResourceId = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "aI_FOUNDRY_RESOURCE_ID"  -FallbackKey "aiFoundryResourceId"
 
     if (-not $script:storageAccount -or -not $script:aiSearch -or -not $script:backendUrl) {
         Write-Host "Error: Could not extract all required values from deployment outputs."
@@ -327,6 +330,47 @@ function Get-ValuesUsingSolutionSuffix {
     Write-Host "Successfully reconstructed values from resource naming convention."
     return $true
 }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Role assignments for Creating KB MCP RemoteTool connections (if needed)
+# ─────────────────────────────────────────────────────────────────────────────
+function Ensure-RoleAssignmentsForKBMCP {
+    param(
+        [string]$AiFoundryResourceId,
+        [string]$UserPrincipalId
+    )
+
+    Write-Host ""
+    Write-Host "Ensuring Azure AI User / Foundry User role assignment for KB MCP connection creation..."
+
+    $foundryUserRoleId = '53ca6127-db72-4b80-b1b0-d745d6d5456d'
+
+    try {
+        $hasFoundryUserRole = az role assignment list --assignee $UserPrincipalId --scope $AiFoundryResourceId --query "[?roleDefinitionId=='$foundryUserRoleId']" -o tsv 2>$null
+        if (-not $hasFoundryUserRole) {
+            Write-Host "Assigning Foundry User role to principal ID $UserPrincipalId on scope $AiFoundryResourceId"
+            az role assignment create --assignee $UserPrincipalId --role $foundryUserRoleId --scope $AiFoundryResourceId --output none
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "Error: Failed to assign Foundry User role." -ForegroundColor Red
+                return $false
+            }
+            Write-Host "✓ Foundry User role assigned successfully"
+            
+            Write-Host "Waiting 60 seconds for role assignment to propagate..."
+            Start-Sleep -Seconds 60
+
+        } else {
+            Write-Host "✓ Principal ID $UserPrincipalId already has Foundry User role on scope $AiFoundryResourceId"
+        }
+    } catch {
+        Write-Host "Error: Failed to check or assign Foundry User role." -ForegroundColor Red
+        return $false
+    }
+
+    Write-Host "✓ Role assignments for KB MCP ensured."
+    return $true
+}
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Content pack deployment (blob upload + index creation)
@@ -612,6 +656,7 @@ try {
     Write-Host "Storage Account:   $($script:storageAccount)"
     Write-Host "AI Search:         $($script:aiSearch)"
     Write-Host "AI Project:        $($script:projectEndpoint)"
+    Write-Host "Foundry Res ID:    $($script:aiFoundryResourceId)"
     Write-Host "Subscription ID:   $($script:azSubscriptionId)"
     Write-Host "==============================================="
     Write-Host ""
@@ -622,6 +667,13 @@ try {
         Write-Host "Error: Could not retrieve signed-in user principal id." -ForegroundColor Red
         exit 1
     }
+
+    # ── Ensure role assignments for KB MCP connection creation ───────
+    $isRoleAssigned = Ensure-RoleAssignmentsForKBMCP -AiFoundryResourceId $script:aiFoundryResourceId -UserPrincipalId $script:userPrincipalId
+    if (-not $isRoleAssigned) {
+        Write-Host "Error: Failed to ensure role assignments for KB MCP. You may need to manually assign the Foundry User role to the signed-in user." -ForegroundColor Red
+    }
+    Write-Host ""
 
     # ── Python environment ────────────────────────────────────────────────────
     $pythonCmd = $null
