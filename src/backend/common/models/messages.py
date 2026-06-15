@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 # Enumerations
 # ---------------------------------------------------------------------------
 
+
 class DataType(str, Enum):
     session = "session"
     plan = "plan"

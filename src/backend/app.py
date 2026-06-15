@@ -29,9 +29,6 @@ magentic_duplicate_fc_id.apply()
 
 # Azure monitoring
 
-
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage FastAPI application lifecycle - startup and shutdown."""

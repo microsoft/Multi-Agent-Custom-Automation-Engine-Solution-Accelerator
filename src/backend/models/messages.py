@@ -1,18 +1,17 @@
 # Copyright (c) Microsoft. All rights reserved.
 """Messages from the backend to the frontend via WebSocket."""
 
-import time
 from dataclasses import asdict, dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from common.models.messages import AgentMessageType
 from models.plan_models import MPlan, PlanStatus
-from pydantic import BaseModel
 
 # ---------------------------------------------------------------------------
 # Dataclass message payloads
 # ---------------------------------------------------------------------------
+
 
 @dataclass(slots=True)
 class AgentMessage:
