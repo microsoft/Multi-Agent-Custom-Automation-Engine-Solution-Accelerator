@@ -33,7 +33,7 @@ var deployerInfo = deployer()
 var deployingUserPrincipalId = deployerInfo.objectId
 
 // Restricting deployment to only supported Azure OpenAI regions validated with GPT-4o model
-@allowed(['australiaeast', 'eastus2', 'francecentral', 'japaneast', 'norwayeast', 'swedencentral', 'uksouth', 'westus', 'westus3'])
+@allowed(['polandcentral', 'uaenorth', 'australiaeast', 'eastus2', 'francecentral', 'japaneast', 'norwayeast', 'swedencentral', 'uksouth', 'westus', 'westus3'])
 @metadata({
   azd: {
     type: 'location'
