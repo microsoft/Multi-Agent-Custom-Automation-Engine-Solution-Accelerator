@@ -11,6 +11,8 @@ ai_search=""
 ai_search_endpoint=""
 openai_endpoint=""
 project_endpoint=""
+ai_foundry_resource_id=""
+ai_project_name=""
 az_subscription_id=""
 resource_group=""
 user_principal_id=""
@@ -297,6 +299,8 @@ get_values_from_azd_env() {
   if [ -z "$project_endpoint" ]; then
     project_endpoint="$(azd env get-value AZURE_AI_AGENT_ENDPOINT 2>/dev/null || true)"
   fi
+  ai_foundry_resource_id="$(azd env get-value AI_FOUNDRY_RESOURCE_ID 2>/dev/null || true)"
+  ai_project_name="$(azd env get-value AZURE_AI_PROJECT_NAME 2>/dev/null || true)"
   resource_group="$(azd env get-value AZURE_RESOURCE_GROUP 2>/dev/null || true)"
 
   if [ -z "$backend_url" ] || [ -z "$storage_account" ] || [ -z "$ai_search" ] || [ -z "$resource_group" ]; then
@@ -325,7 +329,7 @@ get_values_from_az_deployment() {
     return 1
   fi
 
-  local dep_storage_account dep_ai_search dep_backend_url dep_ai_search_endpoint dep_openai_endpoint dep_project_endpoint
+  local dep_storage_account dep_ai_search dep_backend_url dep_ai_search_endpoint dep_openai_endpoint dep_project_endpoint dep_ai_foundry_resource_id dep_ai_project_name
   dep_storage_account="$(printf '%s' "$deployment_outputs" | get_value_from_deployment "azurE_STORAGE_ACCOUNT_NAME" "azureStorageAccountName" 2>/dev/null || true)"
   dep_ai_search="$(printf '%s' "$deployment_outputs" | get_value_from_deployment "azurE_AI_SEARCH_NAME" "azureAiSearchName" 2>/dev/null || true)"
   dep_backend_url="$(printf '%s' "$deployment_outputs" | get_value_from_deployment "backenD_URL" "backendUrl" 2>/dev/null || true)"
@@ -338,6 +342,8 @@ get_values_from_az_deployment() {
   if [ -z "$dep_project_endpoint" ]; then
     dep_project_endpoint="$(printf '%s' "$deployment_outputs" | get_value_from_deployment "azurE_AI_AGENT_ENDPOINT" "azureAiAgentEndpoint" 2>/dev/null || true)"
   fi
+  dep_ai_foundry_resource_id="$(printf '%s' "$deployment_outputs" | get_value_from_deployment "aI_FOUNDRY_RESOURCE_ID" "aiFoundryResourceId" 2>/dev/null || true)"
+  dep_ai_project_name="$(printf '%s' "$deployment_outputs" | get_value_from_deployment "azurE_AI_PROJECT_NAME" "azureAiProjectName" 2>/dev/null || true)"
 
   if [ -n "$dep_storage_account" ]; then
     storage_account="$dep_storage_account"
@@ -356,6 +362,12 @@ get_values_from_az_deployment() {
   fi
   if [ -n "$dep_project_endpoint" ]; then
     project_endpoint="$dep_project_endpoint"
+  fi
+  if [ -n "$dep_ai_foundry_resource_id" ]; then
+    ai_foundry_resource_id="$dep_ai_foundry_resource_id"
+  fi
+  if [ -n "$dep_ai_project_name" ]; then
+    ai_project_name="$dep_ai_project_name"
   fi
 
   if [ -z "$storage_account" ] || [ -z "$ai_search" ] || [ -z "$backend_url" ]; then
@@ -721,6 +733,45 @@ main() {
     export AZURE_OPENAI_ENDPOINT="$openai_endpoint"
   else
     warn "AZURE_OPENAI_ENDPOINT is not set. Knowledge base reasoning may fall back to default or fail."
+  fi
+
+  # Resolve AI Foundry account resource ID and project name. Prefer the values
+  # already retrieved from azd env / deployment outputs; otherwise fall back to
+  # querying the resource group with az CLI. These are exported so that
+  # seed_kb_connections.py can construct the project ARM resource ID directly,
+  # avoiding fragile data-plane discovery that fails for service principals on
+  # fresh deployments.
+  if [ -z "$ai_foundry_resource_id" ] && [ -n "$resource_group" ] && [ -n "$openai_endpoint" ]; then
+    local foundry_account_name=""
+    if [[ "$openai_endpoint" =~ ^https?://([^.]+)\. ]]; then
+      foundry_account_name="${BASH_REMATCH[1]}"
+    fi
+    if [ -n "$foundry_account_name" ]; then
+      ai_foundry_resource_id="$(az cognitiveservices account show --name "$foundry_account_name" --resource-group "$resource_group" --query id -o tsv 2>/dev/null || true)"
+    fi
+  fi
+  if [ -z "$ai_project_name" ] && [ -n "$project_endpoint" ]; then
+    # Project endpoint format: https://{account}.services.ai.azure.com/api/projects/{project}
+    ai_project_name="${project_endpoint##*/}"
+  fi
+
+  if [ -n "$ai_foundry_resource_id" ]; then
+    export AI_FOUNDRY_RESOURCE_ID="$ai_foundry_resource_id"
+  fi
+  if [ -n "$ai_project_name" ]; then
+    export AZURE_AI_PROJECT_NAME="$ai_project_name"
+  fi
+  if [ -n "$az_subscription_id" ]; then
+    export AZURE_AI_SUBSCRIPTION_ID="$az_subscription_id"
+    export AZURE_SUBSCRIPTION_ID="$az_subscription_id"
+  fi
+  if [ -n "$resource_group" ]; then
+    export AZURE_AI_RESOURCE_GROUP="$resource_group"
+    export AZURE_RESOURCE_GROUP="$resource_group"
+  fi
+
+  if [ -z "$ai_foundry_resource_id" ] || [ -z "$ai_project_name" ]; then
+    warn "AI_FOUNDRY_RESOURCE_ID or AZURE_AI_PROJECT_NAME not resolved. KB MCP connection provisioning may fall back to data-plane discovery."
   fi
 
   local uses_data=false

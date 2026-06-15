@@ -250,6 +250,8 @@ function Get-ValuesFromAzdEnv {
     $script:aiSearchEndpoint = $(azd env get-value AZURE_SEARCH_ENDPOINT 2>$null)
     $script:openaiEndpoint   = $(azd env get-value AZURE_OPENAI_ENDPOINT 2>$null)
     $script:projectEndpoint  = $(azd env get-value AZURE_AI_PROJECT_ENDPOINT 2>$null)
+    $script:aiFoundryResourceId = $(azd env get-value AI_FOUNDRY_RESOURCE_ID 2>$null)
+    $script:aiProjectName    = $(azd env get-value AZURE_AI_PROJECT_NAME 2>$null)
     $script:ResourceGroup    = $(azd env get-value AZURE_RESOURCE_GROUP 2>$null)
 
     if (-not $script:backendUrl -or -not $script:storageAccount -or -not $script:aiSearch -or -not $script:ResourceGroup) {
@@ -283,6 +285,8 @@ function Get-ValuesFromAzDeployment {
     $script:aiSearchEndpoint = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_SEARCH_ENDPOINT"      -FallbackKey "azureSearchEndpoint"
     $script:openaiEndpoint   = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_OPENAI_ENDPOINT"      -FallbackKey "azureOpenaiEndpoint"
     $script:projectEndpoint  = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_PROJECT_ENDPOINT"  -FallbackKey "azureAiProjectEndpoint"
+    $script:aiFoundryResourceId = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "aI_FOUNDRY_RESOURCE_ID"  -FallbackKey "aiFoundryResourceId"
+    $script:aiProjectName    = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_PROJECT_NAME"      -FallbackKey "azureAiProjectName"
 
     if (-not $script:storageAccount -or -not $script:aiSearch -or -not $script:backendUrl) {
         Write-Host "Error: Could not extract all required values from deployment outputs."
@@ -635,6 +639,40 @@ try {
     if ($script:projectEndpoint)  { $env:AZURE_AI_PROJECT_ENDPOINT = $script:projectEndpoint }
     if ($script:aiSearchEndpoint) { $env:AZURE_AI_SEARCH_ENDPOINT  = $script:aiSearchEndpoint }
     if ($script:openaiEndpoint)   { $env:AZURE_OPENAI_ENDPOINT     = $script:openaiEndpoint }
+
+    # Resolve AI Foundry account resource ID and project name. Prefer values
+    # from azd env / deployment outputs; otherwise fall back to az CLI lookup.
+    # These are exported so seed_kb_connections.py can construct the project
+    # ARM resource ID directly, avoiding fragile data-plane discovery that
+    # fails for service principals on fresh deployments.
+    if (-not $script:aiFoundryResourceId -and $script:openaiEndpoint -and $script:ResourceGroup) {
+        $foundryAccountName = $null
+        if ($script:openaiEndpoint -match '^https?://([^.]+)\.') {
+            $foundryAccountName = $Matches[1]
+        }
+        if ($foundryAccountName) {
+            $script:aiFoundryResourceId = az cognitiveservices account show --name $foundryAccountName --resource-group $script:ResourceGroup --query id -o tsv 2>$null
+        }
+    }
+    if (-not $script:aiProjectName -and $script:projectEndpoint) {
+        # Project endpoint format: https://{account}.services.ai.azure.com/api/projects/{project}
+        $script:aiProjectName = ($script:projectEndpoint.TrimEnd('/') -split '/')[-1]
+    }
+
+    if ($script:aiFoundryResourceId) { $env:AI_FOUNDRY_RESOURCE_ID = $script:aiFoundryResourceId }
+    if ($script:aiProjectName)       { $env:AZURE_AI_PROJECT_NAME  = $script:aiProjectName }
+    if ($script:azSubscriptionId) {
+        $env:AZURE_AI_SUBSCRIPTION_ID = $script:azSubscriptionId
+        $env:AZURE_SUBSCRIPTION_ID    = $script:azSubscriptionId
+    }
+    if ($script:ResourceGroup) {
+        $env:AZURE_AI_RESOURCE_GROUP = $script:ResourceGroup
+        $env:AZURE_RESOURCE_GROUP    = $script:ResourceGroup
+    }
+
+    if (-not $script:aiFoundryResourceId -or -not $script:aiProjectName) {
+        Write-Host "Warning: AI_FOUNDRY_RESOURCE_ID or AZURE_AI_PROJECT_NAME not resolved. KB MCP connection provisioning may fall back to data-plane discovery." -ForegroundColor Yellow
+    }
 
     # ── WAF: temporarily enable public access for use cases that need data ──
     $usesData = $useCaseSelection -in @("1","2","5","6","7")
