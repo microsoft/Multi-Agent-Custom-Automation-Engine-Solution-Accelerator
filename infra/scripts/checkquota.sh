@@ -7,13 +7,13 @@ SUBSCRIPTION_ID="${AZURE_SUBSCRIPTION_ID}"
 GPT_MIN_CAPACITY="${GPT_MIN_CAPACITY}"
 O4_MINI_MIN_CAPACITY="${O4_MINI_MIN_CAPACITY}"
 GPT41_MINI_MIN_CAPACITY="${GPT41_MINI_MIN_CAPACITY}"
-GPT_IMAGE_MIN_CAPACITY="${GPT_IMAGE_MIN_CAPACITY:-5}"
+GPT_IMAGE_MIN_CAPACITY="${GPT_IMAGE_MIN_CAPACITY:-4}"
 
 echo "🔄 Validating required environment variables..."
 if [[ -z "$SUBSCRIPTION_ID" || -z "$REGIONS" ]]; then
     echo "❌ ERROR: Missing required environment variables."
     echo "Required: AZURE_SUBSCRIPTION_ID, AZURE_REGIONS"
-    echo "Optional: O4_MINI_MIN_CAPACITY (default: 50), GPT41_MINI_MIN_CAPACITY (default: 50), GPT_IMAGE_MIN_CAPACITY (default: 5)"
+    echo "Optional: O4_MINI_MIN_CAPACITY (default: 50), GPT41_MINI_MIN_CAPACITY (default: 50), GPT_IMAGE_MIN_CAPACITY (default: 4)"
     exit 1
 fi
 
