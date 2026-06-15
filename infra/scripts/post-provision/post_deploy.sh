@@ -832,4 +832,32 @@ main() {
   fi
 }
 
+main "$@"uccessfully."
+      fi
+    fi
+  fi
+
+  echo ""
+  if [ "$has_errors" = true ]; then
+    echo "========================================"
+    echo " Post-deployment seeding completed with ERRORS"
+    echo "========================================"
+    frontend_host="$(azd env get-value webSiteDefaultHostname 2>/dev/null || true)"
+    if [ -n "$frontend_host" ]; then
+      echo "Frontend: https://$frontend_host"
+    fi
+    echo ""
+    exit 1
+  else
+    echo "========================================"
+    echo " Post-deployment data seeding complete!"
+    echo "========================================"
+    frontend_host="$(azd env get-value webSiteDefaultHostname 2>/dev/null || true)"
+    if [ -n "$frontend_host" ]; then
+      echo "Frontend: https://$frontend_host"
+    fi
+    echo ""
+  fi
+}
+
 main "$@"
