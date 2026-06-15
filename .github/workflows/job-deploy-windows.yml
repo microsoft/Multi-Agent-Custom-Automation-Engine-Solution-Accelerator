@@ -353,19 +353,38 @@ jobs:
           INPUT_RESOURCE_GROUP_NAME: ${{ inputs.RESOURCE_GROUP_NAME }}
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           AZURE_RESOURCE_GROUP: ${{ inputs.RESOURCE_GROUP_NAME }}
+          AZURE_ENV_NAME: ${{ steps.get_output_windows.outputs.AZURE_ENV_NAME }}
           BACKEND_URL: ${{ steps.get_output_windows.outputs.BACKEND_URL }}
           AZURE_STORAGE_ACCOUNT_NAME: ${{ steps.get_output_windows.outputs.AZURE_STORAGE_ACCOUNT_NAME }}
           AZURE_STORAGE_CONTAINER_NAME: sample-dataset
           AZURE_AI_SEARCH_NAME: ${{ steps.get_output_windows.outputs.AZURE_AI_SEARCH_NAME }}
           AZURE_AI_SEARCH_INDEX_NAME: sample-dataset-index
-          AZURE_ENV_NAME: ${{ steps.get_output_windows.outputs.AZURE_ENV_NAME }}
+          # Needed by post_deploy.sh to resolve the principal id when the workflow
+          # is signed in as a service principal (no interactive user).
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
         run: |
           set -e
+          # Use the same login pattern as selecting_team_config_and_data.sh:
+          # confirm an Azure CLI session is active. The preceding "Refresh Azure
+          # login" step re-establishes credentials, so we only verify here.
+          if az account show >/dev/null 2>&1; then
+            echo "Already authenticated with Azure."
+          else
+            echo "ERROR: Not authenticated with Azure. The 'Refresh Azure login' step must run before this step."
+            exit 1
+          fi
           az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-          
+
           # Upload team configurations and index sample data in one step
           # Automatically select "6" (All use cases) for non-interactive deployment
           echo "6" | bash infra/scripts/selecting_team_config_and_data.sh
+          # Run the unified post-deploy script non-interactively.
+          # --use-case 7 installs all use cases; --resource-group enables fallbacks
+          # to deployment outputs / naming-convention if azd env values are missing.
+          bash infra/scripts/post_deploy.sh \
+            --resource-group "$INPUT_RESOURCE_GROUP_NAME" \
+            --use-case 7 \
+            --non-interactive
 
       - name: Generate Deployment Summary
         if: always()

@@ -101,6 +101,7 @@ env:
   GPT_MIN_CAPACITY: 150
   O4_MINI_MIN_CAPACITY: 50
   GPT41_MINI_MIN_CAPACITY: 50
+  GPT_IMAGE_MIN_CAPACITY: 5
   BRANCH_NAME: ${{ github.event.workflow_run.head_branch || github.head_ref || github.ref_name }}
   WAF_ENABLED: ${{ inputs.trigger_type == 'workflow_dispatch' && (inputs.waf_enabled || false) || false }}
   EXP: ${{ inputs.trigger_type == 'workflow_dispatch' && (inputs.EXP || false) || false }}
@@ -309,6 +310,7 @@ jobs:
           GPT_MIN_CAPACITY: ${{ env.GPT_MIN_CAPACITY }}
           O4_MINI_MIN_CAPACITY: ${{ env.O4_MINI_MIN_CAPACITY }}
           GPT41_MINI_MIN_CAPACITY: ${{ env.GPT41_MINI_MIN_CAPACITY }}
+          GPT_IMAGE_MIN_CAPACITY: ${{ env.GPT_IMAGE_MIN_CAPACITY }}
           AZURE_REGIONS: ${{ vars.AZURE_REGIONS }}
         run: |
           chmod +x infra/scripts/checkquota.sh
