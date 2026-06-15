@@ -17,6 +17,10 @@ user_principal_id=""
 python_cmd=""
 venv_path="$SCRIPT_DIR/scriptenv"
 
+selected_use_case=""
+selected_use_case_label=""
+non_interactive=false
+
 st_is_public_access_disabled=false
 srch_is_public_access_disabled=false
 ai_foundry_is_public_access_disabled=false
@@ -55,12 +59,34 @@ parse_args() {
         resource_group="$2"
         shift 2
         ;;
+      -u|--use-case)
+        if [ -z "${2-}" ]; then
+          fatal "Missing value for $1"
+        fi
+        case "$2" in
+          1) selected_use_case="1"; selected_use_case_label="RFP Evaluation" ;;
+          2) selected_use_case="2"; selected_use_case_label="Retail Customer Satisfaction" ;;
+          3) selected_use_case="3"; selected_use_case_label="HR Employee Onboarding" ;;
+          4) selected_use_case="4"; selected_use_case_label="Marketing Press Release" ;;
+          5) selected_use_case="5"; selected_use_case_label="Contract Compliance Review" ;;
+          6) selected_use_case="6"; selected_use_case_label="Content Generation" ;;
+          7|all|All|ALL) selected_use_case="7"; selected_use_case_label="All" ;;
+          *) fatal "Invalid value for --use-case: '$2'. Valid values: 1-7 or 'all'." ;;
+        esac
+        shift 2
+        ;;
+      --non-interactive)
+        non_interactive=true
+        shift
+        ;;
       --help|-h)
         cat <<'EOF'
-Usage: post_deploy.sh [--resource-group <name>]
+Usage: post_deploy.sh [--resource-group <name>] [--use-case <1-7|all>] [--non-interactive]
 
 Options:
   -g, --resource-group   Resource group name for deployment fallback resolution
+  -u, --use-case         Use case to install (1-7 or 'all'). Skips interactive prompt.
+      --non-interactive  Do not prompt; fail if a required input is missing.
   -h, --help             Show this help message
 EOF
         exit 0
@@ -497,6 +523,15 @@ upload_team_config() {
 }
 
 select_use_case() {
+  if [ -n "$selected_use_case" ]; then
+    info "Use case pre-selected via argument: $selected_use_case_label ($selected_use_case)"
+    return 0
+  fi
+
+  if [ "$non_interactive" = true ]; then
+    fatal "--non-interactive set but no --use-case provided. Pass --use-case <1-7|all>."
+  fi
+
   echo ""
   echo "==============================================="
   echo "Available Use Cases:"
@@ -538,6 +573,11 @@ select_subscription() {
   current_subscription_name="$(az account show --query name -o tsv 2>/dev/null || true)"
 
   if [ -n "$az_subscription_id" ] && [ "$current_subscription_id" != "$az_subscription_id" ]; then
+    if [ "$non_interactive" = true ]; then
+      info "Non-interactive mode: switching to subscription $az_subscription_id"
+      az account set --subscription "$az_subscription_id"
+      return 0
+    fi
     echo "Current subscription is $current_subscription_name ($current_subscription_id)."
     read -rp "Do you want to continue with this subscription? (y/n) " continue_choice
     if [[ ! "$continue_choice" =~ ^[Yy]$ ]]; then
