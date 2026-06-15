@@ -253,22 +253,27 @@ enable_public_access_if_waf() {
 }
 
 get_value_from_deployment() {
-  local deployment_outputs="$1"
-  local primary_key="$2"
-  local fallback_key="$3"
+  # Deployment outputs JSON is piped on stdin; positional args are key names.
+  # JSON is forwarded via an env var because `python3 - <<PY` would otherwise
+  # consume stdin for the heredoc, leaving nothing for json.load(sys.stdin).
+  local primary_key="$1"
+  local fallback_key="$2"
+  local outputs_json
+  outputs_json="$(cat)"
 
-  python3 - <<PY
-import json
-import sys
-outputs = json.load(sys.stdin)
-keys = ["$primary_key", "$fallback_key"]
+  DEPLOYMENT_OUTPUTS_JSON="$outputs_json" \
+  PRIMARY_KEY="$primary_key" \
+  FALLBACK_KEY="$fallback_key" \
+  python3 - <<'PY'
+import json, os, sys
+outputs = json.loads(os.environ.get("DEPLOYMENT_OUTPUTS_JSON", "") or "{}")
+keys = [k for k in (os.environ.get("PRIMARY_KEY", ""), os.environ.get("FALLBACK_KEY", "")) if k]
 output_keys = {k.lower(): k for k in outputs}
 for key in keys:
-    for candidate in [key, key.lower(), key.upper(), key.capitalize()]:
-        actual = output_keys.get(candidate.lower())
-        if actual and isinstance(outputs[actual], dict) and outputs[actual].get("value") is not None:
-            print(outputs[actual]["value"])
-            sys.exit(0)
+    actual = output_keys.get(key.lower())
+    if actual and isinstance(outputs[actual], dict) and outputs[actual].get("value") is not None:
+        print(outputs[actual]["value"])
+        sys.exit(0)
 sys.exit(1)
 PY
 }
@@ -678,9 +683,22 @@ main() {
   echo "==============================================="
   echo ""
 
-  user_principal_id="$(az ad signed-in-user show --query id -o tsv 2>/dev/null || true)"
+  # Resolve the principal id to use for team-config uploads. In CI the workflow
+  # logs in as a service principal (OIDC), so `az ad signed-in-user show` returns
+  # nothing. Fall back to an explicit USER_PRINCIPAL_ID env var, then to the SP
+  # object id looked up via AZURE_CLIENT_ID.
+  if [ -n "${USER_PRINCIPAL_ID:-}" ]; then
+    user_principal_id="$USER_PRINCIPAL_ID"
+    info "Using principal id from USER_PRINCIPAL_ID env var."
+  else
+    user_principal_id="$(az ad signed-in-user show --query id -o tsv 2>/dev/null || true)"
+    if [ -z "$user_principal_id" ] && [ -n "${AZURE_CLIENT_ID:-}" ]; then
+      info "No interactive user — falling back to service principal object id (AZURE_CLIENT_ID=$AZURE_CLIENT_ID)."
+      user_principal_id="$(az ad sp show --id "$AZURE_CLIENT_ID" --query id -o tsv 2>/dev/null || true)"
+    fi
+  fi
   if [ -z "$user_principal_id" ]; then
-    fatal "Could not retrieve signed-in user principal id."
+    fatal "Could not retrieve signed-in user principal id. In CI, set USER_PRINCIPAL_ID or ensure AZURE_CLIENT_ID is exported and the SP is visible to Microsoft Graph."
   fi
 
   activate_python_env
