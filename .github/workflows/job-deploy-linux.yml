@@ -269,7 +269,7 @@ jobs:
           azd env set AZURE_ENV_IMAGE_TAG="$INPUT_IMAGE_TAG"
           
           if [[ "$INPUT_BUILD_DOCKER_IMAGE" == "true" ]]; then
-            ACR_NAME=$(echo "${{ secrets.ACR_TEST_LOGIN_SERVER }}")
+            ACR_NAME=$(echo "${{ vars.ACR_TEST_LOGIN_SERVER }}")
             azd env set AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT="$ACR_NAME"
             echo "Set ACR name to: $ACR_NAME"
           else
