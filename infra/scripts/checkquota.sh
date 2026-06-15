@@ -28,6 +28,7 @@ declare -A MIN_CAPACITY=(
     ["OpenAI.GlobalStandard.o4-mini"]="${O4_MINI_MIN_CAPACITY}"
     ["OpenAI.GlobalStandard.gpt4.1"]="${GPT_MIN_CAPACITY}"
     ["OpenAI.GlobalStandard.gpt4.1-mini"]="${GPT41_MINI_MIN_CAPACITY}"
+    ["OpenAI.GlobalStandard.gpt-image-1.5"]=5
 )
 
 VALID_REGION=""
