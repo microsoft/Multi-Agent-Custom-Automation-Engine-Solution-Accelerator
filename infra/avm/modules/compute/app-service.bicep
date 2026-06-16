@@ -25,10 +25,36 @@ param linuxFxVersion string
 @description('Application settings key-value pairs.')
 param appSettings object = {}
 
+@description('Optional. Resource ID of Application Insights for monitoring integration.')
+param applicationInsightResourceId string = ''
+
 @description('Whether to enable Always On.')
 param alwaysOn bool = true
 
-@description('Kind of web app.')
+@description('Optional. Health check path for the app.')
+param healthCheckPath string = ''
+
+@description('Optional. Whether to enable WebSockets.')
+param webSocketsEnabled bool = false
+
+@description('Optional. Command line for the application.')
+param appCommandLine string = ''
+
+@description('Required. Type of site to deploy.')
+@allowed([
+  'functionapp' // function app windows os
+  'functionapp,linux' // function app linux os
+  'functionapp,workflowapp' // logic app workflow
+  'functionapp,workflowapp,linux' // logic app docker container
+  'functionapp,linux,container' // function app linux container
+  'functionapp,linux,container,azurecontainerapps' // function app linux container azure container apps
+  'app,linux' // linux web app
+  'app' // windows web app
+  'linux,api' // linux api app
+  'api' // windows api app
+  'app,linux,container' // linux container app
+  'app,container,windows' // windows container app
+])
 param kind string = 'app,linux'
 
 @description('Optional. Enable/Disable usage telemetry for module.')
@@ -76,12 +102,16 @@ module appService 'br/public:avm/res/web/site:0.23.1' = {
       ftpsState: 'Disabled'
       linuxFxVersion: linuxFxVersion
       minTlsVersion: '1.2'
+      healthCheckPath: !empty(healthCheckPath) ? healthCheckPath : null
+      webSocketsEnabled: webSocketsEnabled
+      appCommandLine: appCommandLine
     }
     e2eEncryptionEnabled: true
     configs: [
       {
         name: 'appsettings'
         properties: appSettings
+        applicationInsightResourceId: !empty(applicationInsightResourceId) ? applicationInsightResourceId : null
       }
       {
         name: 'logs'

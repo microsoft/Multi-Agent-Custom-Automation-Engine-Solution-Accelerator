@@ -35,6 +35,12 @@ param semanticSearch string = 'free'
 @description('Whether to disable local authentication.')
 param disableLocalAuth bool = true
 
+@description('Optional. Authentication options for the search service.')
+param authOptions object = {}
+
+@description('Optional. Network rule set for the search service.')
+param networkRuleSet object = {}
+
 @description('Managed identity type for the search service.')
 param managedIdentityType string = 'SystemAssigned'
 
@@ -58,6 +64,8 @@ resource searchServiceUpdate 'Microsoft.Search/searchServices@2025-05-01' = {
     semanticSearch: semanticSearch
     disableLocalAuth: disableLocalAuth
     publicNetworkAccess: publicNetworkAccess
+    authOptions: !empty(authOptions) ? authOptions : null
+    networkRuleSet: !empty(networkRuleSet) ? networkRuleSet : null
   }
 }
 

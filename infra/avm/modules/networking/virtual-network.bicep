@@ -43,6 +43,31 @@ param subnets subnetType[] = [
     }
   }
   {
+    name: 'containers'
+    addressPrefixes: ['10.0.2.0/23']
+    delegation: 'Microsoft.App/environments'
+    privateEndpointNetworkPolicies: 'Enabled'
+    privateLinkServiceNetworkPolicies: 'Enabled'
+    networkSecurityGroup: {
+      name: 'nsg-containers'
+      securityRules: [
+        {
+          name: 'deny-hop-outbound'
+          properties: {
+            access: 'Deny'
+            destinationAddressPrefix: '*'
+            destinationPortRanges: ['22', '3389']
+            direction: 'Outbound'
+            priority: 200
+            protocol: 'Tcp'
+            sourceAddressPrefix: 'VirtualNetwork'
+            sourcePortRange: '*'
+          }
+        }
+      ]
+    }
+  }
+  {
     name: 'webserverfarm'
     addressPrefixes: ['10.0.4.0/27']
     delegation: 'Microsoft.Web/serverfarms'
@@ -241,6 +266,9 @@ output subnets subnetOutputType[] = [
 // Individual subnet outputs for backward compatibility
 output backendSubnetResourceId string = contains(map(subnets, subnet => subnet.name), 'backend')
   ? virtualNetwork.outputs.subnetResourceIds[indexOf(map(subnets, subnet => subnet.name), 'backend')]
+  : ''
+output containerSubnetResourceId string = contains(map(subnets, subnet => subnet.name), 'containers')
+  ? virtualNetwork.outputs.subnetResourceIds[indexOf(map(subnets, subnet => subnet.name), 'containers')]
   : ''
 output webserverfarmSubnetResourceId string = contains(map(subnets, subnet => subnet.name), 'webserverfarm')
   ? virtualNetwork.outputs.subnetResourceIds[indexOf(map(subnets, subnet => subnet.name), 'webserverfarm')]

@@ -1371,6 +1371,7 @@ module webSite './modules/compute/app-service.bicep' = {
     virtualNetworkSubnetId: enablePrivateNetworking ? virtualNetwork!.outputs.webserverfarmSubnetResourceId : ''
     publicNetworkAccess: 'Enabled'
     diagnosticSettings: monitoringDiagnosticSettings
+    applicationInsightResourceId: enableMonitoring ? app_insights!.outputs.resourceId : ''
   }
 }
 
