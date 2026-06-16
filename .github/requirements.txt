@@ -22,9 +22,9 @@ azure-search-documents
 azure-ai-evaluation
 
 # Date and internationalization
-babel>=2.9.0
+babel==2.18.0
 
 # Testing tools
-pytest>=8.2,<9  # Compatible version for pytest-asyncio
+pytest==8.4.2 # Compatible version for pytest-asyncio
 pytest-asyncio==0.24.0
 pytest-cov==5.0.0
