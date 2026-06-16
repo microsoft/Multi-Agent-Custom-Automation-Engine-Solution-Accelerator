@@ -12,6 +12,67 @@ interface StreamingBufferMessageProps {
     isStreaming?: boolean;
 }
 
+/**
+ * Wrap any raw JSON object/array blocks in markdown fenced code blocks so the
+ * Details section renders them as formatted code rather than plain text.
+ * Lines that already sit inside an existing fenced block are left alone.
+ */
+const formatBufferContent = (content: string): string => {
+    if (!content) return content;
+
+    const lines = content.split('\n');
+    const out: string[] = [];
+    let insideExistingFence = false;
+    let i = 0;
+
+    while (i < lines.length) {
+        const line = lines[i];
+        const trimmed = line.trim();
+
+        if (trimmed.startsWith('```')) {
+            insideExistingFence = !insideExistingFence;
+            out.push(line);
+            i++;
+            continue;
+        }
+
+        if (!insideExistingFence && (trimmed.startsWith('{') || trimmed.startsWith('['))) {
+            // Try to capture a balanced JSON block starting at this line
+            let depth = 0;
+            let endIdx = -1;
+            for (let j = i; j < lines.length; j++) {
+                const l = lines[j];
+                for (const ch of l) {
+                    if (ch === '{' || ch === '[') depth++;
+                    else if (ch === '}' || ch === ']') depth--;
+                }
+                if (depth === 0) {
+                    endIdx = j;
+                    break;
+                }
+            }
+            if (endIdx !== -1) {
+                const block = lines.slice(i, endIdx + 1).join('\n');
+                try {
+                    const parsed = JSON.parse(block);
+                    out.push('```json');
+                    out.push(JSON.stringify(parsed, null, 2));
+                    out.push('```');
+                    i = endIdx + 1;
+                    continue;
+                } catch {
+                    // Not valid JSON — fall through and keep the original line
+                }
+            }
+        }
+
+        out.push(line);
+        i++;
+    }
+
+    return out.join('\n');
+};
+
 // Convert to a proper React component instead of a function
 const StreamingBufferMessage: React.FC<StreamingBufferMessageProps> = ({
     streamingMessageBuffer,
@@ -41,6 +102,8 @@ const StreamingBufferMessage: React.FC<StreamingBufferMessageProps> = ({
     }, [streamingMessageBuffer, isStreaming, isExpanded]);
 
     if (!streamingMessageBuffer || streamingMessageBuffer.trim() === "") return null;
+
+    const formattedBuffer = formatBufferContent(streamingMessageBuffer);
 
     return (
         <div style={{
@@ -182,7 +245,7 @@ const StreamingBufferMessage: React.FC<StreamingBufferMessageProps> = ({
                                         )
                                     }}
                                 >
-                                    {streamingMessageBuffer}
+                                    {formattedBuffer}
                                 </ReactMarkdown>
                             </div>
                         </div>
@@ -216,7 +279,7 @@ const StreamingBufferMessage: React.FC<StreamingBufferMessageProps> = ({
                                 )
                             }}
                         >
-                            {streamingMessageBuffer}
+                            {formattedBuffer}
                         </ReactMarkdown>
                     </div>
                 )}
