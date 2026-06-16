@@ -209,17 +209,6 @@ resource projectSearchContributor 'Microsoft.Authorization/roleAssignments@2022-
   }
 }
 
-// User-Assigned Managed Identity → Search Index Data Reader on AI Search
-resource userAssignedManagedIdentitySearchReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(aiSearchResourceId) && !empty(userAssignedManagedIdentityPrincipalId)) {
-  name: guid(solutionName, aiSearchResourceId, userAssignedManagedIdentityPrincipalId, roleDefinitions.searchIndexDataReader)
-  scope: aiSearchService
-  properties: {
-    principalId: userAssignedManagedIdentityPrincipalId
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.searchIndexDataReader)
-    principalType: 'ServicePrincipal'
-  }
-}
-
 // User-Assigned Managed Identity → Search Index Data Contributor on AI Search
 // Extended as per accelerator need
 resource userAssignedManagedIdentitySearchIndexContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(aiSearchResourceId) && !empty(userAssignedManagedIdentityPrincipalId)) {
@@ -249,17 +238,6 @@ resource userAssignedManagedIdentitySearchServiceContributor 'Microsoft.Authoriz
 //    AI Project, AI Search, and Existing Project identities → Storage
 // ============================================================================
 
-// AI Project (New OR Existing) → Storage Blob Data Contributor
-resource projectStorageContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(storageAccountResourceId) && !empty(aiProjectPrincipalId)) {
-  name: guid(solutionName, storageAccountResourceId, aiProjectPrincipalId, roleDefinitions.storageBlobDataContributor)
-  scope: storageAccount
-  properties: {
-    principalId: aiProjectPrincipalId
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.storageBlobDataContributor)
-    principalType: 'ServicePrincipal'
-  }
-}
-
 // User-Assigned Managed Identity → Storage Blob Data Contributor on Storage Account
 // Extended as per accelerator need
 resource userAssignedManagedIdentityStorageContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(storageAccountResourceId) && !empty(userAssignedManagedIdentityPrincipalId)) {
@@ -268,28 +246,6 @@ resource userAssignedManagedIdentityStorageContributor 'Microsoft.Authorization/
   properties: {
     principalId: userAssignedManagedIdentityPrincipalId
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.storageBlobDataContributor)
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// AI Project (New OR Existing) → Storage Blob Data Reader
-resource projectStorageReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(storageAccountResourceId) && !empty(aiProjectPrincipalId)) {
-  name: guid(solutionName, storageAccountResourceId, aiProjectPrincipalId, roleDefinitions.storageBlobDataReader)
-  scope: storageAccount
-  properties: {
-    principalId: aiProjectPrincipalId
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.storageBlobDataReader)
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// AI Search → Storage Blob Data Reader
-resource searchStorageReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(storageAccountResourceId) && !empty(aiSearchPrincipalId)) {
-  name: guid(solutionName, storageAccountResourceId, aiSearchPrincipalId, roleDefinitions.storageBlobDataReader)
-  scope: storageAccount
-  properties: {
-    principalId: aiSearchPrincipalId
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.storageBlobDataReader)
     principalType: 'ServicePrincipal'
   }
 }

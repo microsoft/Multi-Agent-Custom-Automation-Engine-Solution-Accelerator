@@ -171,61 +171,7 @@ module userAssignedManagedIdentityOpenAIContributorExisting './cross-scope-role-
 }
 
 // ============================================================================
-// 2. SEARCH SERVICE ROLE ASSIGNMENTS
-//    AI Project and Backend identities → AI Search
-// ============================================================================
-
-// User-Assigned Managed Identity → Search Index Data Reader on AI Search
-resource userAssignedManagedIdentitySearchReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(aiSearchResourceId) && !empty(userAssignedManagedIdentityPrincipalId)) {
-  name: guid(solutionName, aiSearchResourceId, userAssignedManagedIdentityPrincipalId, roleDefinitions.searchIndexDataReader)
-  scope: aiSearchService
-  properties: {
-    principalId: userAssignedManagedIdentityPrincipalId
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.searchIndexDataReader)
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// ============================================================================
-// 3. STORAGE ROLE ASSIGNMENTS
-//    AI Project, AI Search, and Existing Project identities → Storage
-// ============================================================================
-
-// AI Project (New and Existing) → Storage Blob Data Contributor
-resource projectStorageContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(storageAccountResourceId) && !empty(aiProjectPrincipalId)) {
-  name: guid(solutionName, storageAccountResourceId, aiProjectPrincipalId, roleDefinitions.storageBlobDataContributor)
-  scope: storageAccount
-  properties: {
-    principalId: aiProjectPrincipalId
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.storageBlobDataContributor)
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// AI Project (New and Existing) → Storage Blob Data Reader
-resource projectStorageReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(storageAccountResourceId) && !empty(aiProjectPrincipalId)) {
-  name: guid(solutionName, storageAccountResourceId, aiProjectPrincipalId, roleDefinitions.storageBlobDataReader)
-  scope: storageAccount
-  properties: {
-    principalId: aiProjectPrincipalId
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.storageBlobDataReader)
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// AI Search → Storage Blob Data Reader
-resource searchStorageReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(storageAccountResourceId) && !empty(aiSearchPrincipalId)) {
-  name: guid(solutionName, storageAccountResourceId, aiSearchPrincipalId, roleDefinitions.storageBlobDataReader)
-  scope: storageAccount
-  properties: {
-    principalId: aiSearchPrincipalId
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.storageBlobDataReader)
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// ============================================================================
-// 4. COSMOS DB ROLE ASSIGNMENTS
+// 2. COSMOS DB ROLE ASSIGNMENTS
 //    User-Assigned Managed Identity → Cosmos DB (data-plane, uses sqlRoleAssignments)
 // ============================================================================
 
