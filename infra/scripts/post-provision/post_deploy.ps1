@@ -686,7 +686,7 @@ try {
         exit 1
     }
 
-    $venvPath = "infra/scripts/scriptenv"
+    $venvPath = "infra/scripts/post-provision/scriptenv"
     if (-not (Test-Path $venvPath)) {
         Write-Host "Creating virtual environment..."
         & $pythonCmd -m venv $venvPath
@@ -698,6 +698,10 @@ try {
                       elseif (Test-Path "$venvPath/bin/Activate.ps1") { "$venvPath/bin/Activate.ps1" }
                       else { $null }
     if ($activateScript) { . $activateScript }
+
+    # Pin pythonCmd to the venv interpreter so subsequent calls always use the venv.
+    if (Test-Path "$venvPath/Scripts/python.exe") { $pythonCmd = (Resolve-Path "$venvPath/Scripts/python.exe").Path }
+    elseif (Test-Path "$venvPath/bin/python")     { $pythonCmd = (Resolve-Path "$venvPath/bin/python").Path }
 
     Write-Host "Installing Python dependencies..."
     pip install --quiet -r infra/scripts/post-provision/requirements.txt

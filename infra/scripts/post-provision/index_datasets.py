@@ -86,11 +86,13 @@ if len(sys.argv) < 4:
     print("Usage: python index_datasets.py <storage_account_name> <blob_container_name> <ai_search_endpoint> [<ai_search_index_name>]")
     sys.exit(1)
 
-storage_account_name = sys.argv[1]
-blob_container_name = sys.argv[2]
-ai_search_endpoint = sys.argv[3]
-ai_search_index_name = sys.argv[4] if len(sys.argv) > 4 else "sample-dataset-index"
-if not ai_search_endpoint.__contains__("search.windows.net"):
+# Strip whitespace and trailing CR (Windows CRLF in env values can leave a \r in argv values,
+# which produces invalid URLs like 'https://srch-name\r.search.windows.net' -> 400 Bad Request)
+storage_account_name = sys.argv[1].strip().strip("\r\n")
+blob_container_name = sys.argv[2].strip().strip("\r\n")
+ai_search_endpoint = sys.argv[3].strip().strip("\r\n")
+ai_search_index_name = (sys.argv[4] if len(sys.argv) > 4 else "sample-dataset-index").strip().strip("\r\n")
+if "search.windows.net" not in ai_search_endpoint:
     ai_search_endpoint = f"https://{ai_search_endpoint}.search.windows.net"
 
 credential = AzureCliCredential()

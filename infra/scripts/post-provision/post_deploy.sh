@@ -231,7 +231,7 @@ get_value_from_deployment() {
   local primary_key="$2"
   local fallback_key="$3"
 
-  python3 - <<PY
+  "${python_cmd:-python3}" - <<PY
 import json
 import sys
 outputs = json.load(sys.stdin)
@@ -388,10 +388,10 @@ deploy_content_pack() {
     return 0
   fi
 
-  info "  Deploying data for content pack: $(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["name"])' "$pack_json_path")"
+  info "  Deploying data for content pack: $("${python_cmd:-python3}" -c 'import json,sys; print(json.load(open(sys.argv[1]))["name"])' "$pack_json_path")"
   local had_failure=false
 
-  python3 - "$pack_json_path" <<'PY' > "$SCRIPT_DIR/.pack_items.tmp"
+  "${python_cmd:-python3}" - "$pack_json_path" <<'PY' > "$SCRIPT_DIR/.pack_items.tmp"
 import json, sys
 pack = json.load(open(sys.argv[1]))
 root = sys.argv[1]
@@ -559,12 +559,19 @@ select_subscription() {
 }
 
 activate_python_env() {
-  if command_exists python3; then
-    python_cmd="python3"
-  elif command_exists python; then
-    python_cmd="python"
-  else
-    fatal "Python not found. Install Python 3.10+ and add it to PATH."
+  # Pick a working python interpreter. On Windows, `python3` may resolve to the
+  # Microsoft Store alias which prints "Python was not found..." instead of running.
+  # We validate by actually executing it.
+  for candidate in python3 python python3.exe python.exe; do
+    if command_exists "$candidate"; then
+      if "$candidate" -c "import sys" >/dev/null 2>&1; then
+        python_cmd="$candidate"
+        break
+      fi
+    fi
+  done
+  if [ -z "$python_cmd" ]; then
+    fatal "Python not found or not runnable. Install Python 3.10+ and add it to PATH (and disable Windows App Execution Aliases for python/python3 if on Windows)."
   fi
 
   if [ ! -d "$venv_path" ]; then
@@ -574,9 +581,21 @@ activate_python_env() {
     info "Virtual environment already exists. Skipping creation."
   fi
 
+  # Activate the venv (Linux/macOS use bin/, Windows uses Scripts/)
   if [ -f "$venv_path/bin/activate" ]; then
     # shellcheck disable=SC1091
     . "$venv_path/bin/activate"
+  elif [ -f "$venv_path/Scripts/activate" ]; then
+    # shellcheck disable=SC1091
+    . "$venv_path/Scripts/activate"
+  fi
+
+  # Pin python_cmd to the venv interpreter so subsequent calls don't accidentally
+  # hit the Microsoft Store alias on Windows.
+  if [ -x "$venv_path/bin/python" ]; then
+    python_cmd="$venv_path/bin/python"
+  elif [ -x "$venv_path/Scripts/python.exe" ]; then
+    python_cmd="$venv_path/Scripts/python.exe"
   fi
 
   info "Installing Python dependencies..."
@@ -831,33 +850,4 @@ main() {
     echo ""
   fi
 }
-
-main "$@"uccessfully."
-      fi
-    fi
-  fi
-
-  echo ""
-  if [ "$has_errors" = true ]; then
-    echo "========================================"
-    echo " Post-deployment seeding completed with ERRORS"
-    echo "========================================"
-    frontend_host="$(azd env get-value webSiteDefaultHostname 2>/dev/null || true)"
-    if [ -n "$frontend_host" ]; then
-      echo "Frontend: https://$frontend_host"
-    fi
-    echo ""
-    exit 1
-  else
-    echo "========================================"
-    echo " Post-deployment data seeding complete!"
-    echo "========================================"
-    frontend_host="$(azd env get-value webSiteDefaultHostname 2>/dev/null || true)"
-    if [ -n "$frontend_host" ]; then
-      echo "Frontend: https://$frontend_host"
-    fi
-    echo ""
-  fi
-}
-
 main "$@"
