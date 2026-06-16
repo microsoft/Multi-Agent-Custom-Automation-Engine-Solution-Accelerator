@@ -356,9 +356,7 @@ jobs:
           AZURE_ENV_NAME: ${{ steps.get_output_windows.outputs.AZURE_ENV_NAME }}
           BACKEND_URL: ${{ steps.get_output_windows.outputs.BACKEND_URL }}
           AZURE_STORAGE_ACCOUNT_NAME: ${{ steps.get_output_windows.outputs.AZURE_STORAGE_ACCOUNT_NAME }}
-          AZURE_STORAGE_CONTAINER_NAME: sample-dataset
           AZURE_AI_SEARCH_NAME: ${{ steps.get_output_windows.outputs.AZURE_AI_SEARCH_NAME }}
-          AZURE_AI_SEARCH_INDEX_NAME: sample-dataset-index
           # Needed by post_deploy.sh to resolve the principal id when the workflow
           # is signed in as a service principal (no interactive user).
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
