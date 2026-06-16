@@ -5,8 +5,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.43.8.12551",
-      "templateHash": "6587818059632090787"
+      "version": "0.44.1.10279",
+      "templateHash": "6213053748074171937"
     },
     "name": "Multi-Agent Custom Automation Engine",
     "description": "This module contains the resources required to deploy the [Multi-Agent Custom Automation Engine solution accelerator](https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) for both Sandbox environments and WAF aligned environments.\n\n> **Note:** This module is not intended for broad, generic use, as it was designed by the Commercial Solution Areas CTO team, as a Microsoft Solution Accelerator. Feature requests and bug fix requests are welcome if they support the needs of this organization but may not be incorporated if they aim to make this module more generic than what it needs to be for its primary use case. This module will likely be updated to leverage AVM resource modules in the future. This may result in breaking changes in upcoming versions when these features are implemented.\n"
@@ -4992,8 +4992,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "9540091515555271756"
+              "version": "0.44.1.10279",
+              "templateHash": "16578961703143216826"
             }
           },
           "definitions": {
@@ -24310,8 +24310,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "7866379492866507946"
+              "version": "0.44.1.10279",
+              "templateHash": "9937220877261080488"
             }
           },
           "definitions": {
@@ -27976,8 +27976,8 @@
       "dependsOn": [
         "aiFoundryAiServices",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "virtualNetwork"
       ]
     },
@@ -28014,8 +28014,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "2868048678223903575"
+              "version": "0.44.1.10279",
+              "templateHash": "8001462637037527844"
             }
           },
           "parameters": {
@@ -42569,8 +42569,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "18345308984648474640"
+              "version": "0.44.1.10279",
+              "templateHash": "7693002176758630395"
             }
           },
           "definitions": {
@@ -43601,8 +43601,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.43.8.12551",
-                      "templateHash": "1009721598684973971"
+                      "version": "0.44.1.10279",
+                      "templateHash": "16045336481224683590"
                     },
                     "name": "Site App Settings",
                     "description": "This module deploys a Site App Setting."
@@ -44525,12 +44525,12 @@
             "value": [
               {
                 "principalId": "[reference('userAssignedIdentity').outputs.principalId.value]",
-                "roleDefinitionIdOrName": "Storage Blob Data Contributor",
+                "roleDefinitionIdOrName": "ba92f5b4-2d11-453d-a403-e96b0029c9fe",
                 "principalType": "ServicePrincipal"
               },
               {
                 "principalId": "[variables('deployingUserPrincipalId')]",
-                "roleDefinitionIdOrName": "Storage Blob Data Contributor",
+                "roleDefinitionIdOrName": "ba92f5b4-2d11-453d-a403-e96b0029c9fe",
                 "principalType": "[variables('deployerPrincipalType')]"
               }
             ]
@@ -52753,22 +52753,22 @@
             "value": [
               {
                 "principalId": "[reference('userAssignedIdentity').outputs.principalId.value]",
-                "roleDefinitionIdOrName": "Search Index Data Contributor",
+                "roleDefinitionIdOrName": "8ebe5a00-799e-43f5-93ac-243d3dce84a7",
                 "principalType": "ServicePrincipal"
               },
               {
                 "principalId": "[variables('deployingUserPrincipalId')]",
-                "roleDefinitionIdOrName": "Search Index Data Contributor",
+                "roleDefinitionIdOrName": "8ebe5a00-799e-43f5-93ac-243d3dce84a7",
                 "principalType": "[variables('deployerPrincipalType')]"
               },
               {
                 "principalId": "[if(variables('useExistingAiFoundryAiProject'), reference('existingAiFoundryAiServicesProject', '2025-12-01', 'full').identity.principalId, reference('aiFoundryAiServicesProject').outputs.principalId.value)]",
-                "roleDefinitionIdOrName": "Search Index Data Reader",
+                "roleDefinitionIdOrName": "1407120a-92aa-4202-b7e9-c0e197c71c8f",
                 "principalType": "ServicePrincipal"
               },
               {
                 "principalId": "[if(variables('useExistingAiFoundryAiProject'), reference('existingAiFoundryAiServicesProject', '2025-12-01', 'full').identity.principalId, reference('aiFoundryAiServicesProject').outputs.principalId.value)]",
-                "roleDefinitionIdOrName": "Search Service Contributor",
+                "roleDefinitionIdOrName": "7ca78c08-252a-4471-8644-bb5ff32d4ba0",
                 "principalType": "ServicePrincipal"
               }
             ]
@@ -54851,8 +54851,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "9739523049889844356"
+              "version": "0.44.1.10279",
+              "templateHash": "1221855634359106261"
             }
           },
           "parameters": {
