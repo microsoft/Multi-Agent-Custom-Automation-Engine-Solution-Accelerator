@@ -375,9 +375,6 @@ jobs:
           fi
           az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
 
-          # Upload team configurations and index sample data in one step
-          # Automatically select "6" (All use cases) for non-interactive deployment
-          echo "6" | bash infra/scripts/selecting_team_config_and_data.sh
           # Run the unified post-deploy script non-interactively.
           # --use-case 7 installs all use cases; --resource-group enables fallbacks
           # to deployment outputs / naming-convention if azd env values are missing.
