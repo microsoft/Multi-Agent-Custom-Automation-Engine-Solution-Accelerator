@@ -1604,12 +1604,12 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.32.0' = {
     roleAssignments: [
       {
         principalId: userAssignedIdentity.outputs.principalId
-        roleDefinitionIdOrName: 'Storage Blob Data Contributor'
+        roleDefinitionIdOrName: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor
         principalType: 'ServicePrincipal'
       }
       {
         principalId: deployingUserPrincipalId
-        roleDefinitionIdOrName: 'Storage Blob Data Contributor'
+        roleDefinitionIdOrName: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor
         principalType: deployerPrincipalType
       }
     ]
@@ -1732,22 +1732,22 @@ module searchServiceUpdate 'br/public:avm/res/search/search-service:0.12.0' = {
     roleAssignments: [
       {
         principalId: userAssignedIdentity.outputs.principalId
-        roleDefinitionIdOrName: 'Search Index Data Contributor'
+        roleDefinitionIdOrName: '8ebe5a00-799e-43f5-93ac-243d3dce84a7' // Search Index Data Contributor
         principalType: 'ServicePrincipal'
       }
       {
         principalId: deployingUserPrincipalId
-        roleDefinitionIdOrName: 'Search Index Data Contributor'
+        roleDefinitionIdOrName: '8ebe5a00-799e-43f5-93ac-243d3dce84a7' // Search Index Data Contributor
         principalType: deployerPrincipalType
       }
       {
         principalId: aiFoundryAiProjectPrincipalId
-        roleDefinitionIdOrName: 'Search Index Data Reader'
+        roleDefinitionIdOrName: '1407120a-92aa-4202-b7e9-c0e197c71c8f' // Search Index Data Reader
         principalType: 'ServicePrincipal'
       }
       {
         principalId: aiFoundryAiProjectPrincipalId
-        roleDefinitionIdOrName: 'Search Service Contributor'
+        roleDefinitionIdOrName: '7ca78c08-252a-4471-8644-bb5ff32d4ba0' // Search Service Contributor
         principalType: 'ServicePrincipal'
       }
     ]
