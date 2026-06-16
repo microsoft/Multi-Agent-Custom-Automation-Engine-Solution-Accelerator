@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.44.1.10279",
-      "templateHash": "6213053748074171937"
+      "templateHash": "9418658342402137838"
     },
     "name": "Multi-Agent Custom Automation Engine",
     "description": "This module contains the resources required to deploy the [Multi-Agent Custom Automation Engine solution accelerator](https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) for both Sandbox environments and WAF aligned environments.\n\n> **Note:** This module is not intended for broad, generic use, as it was designed by the Commercial Solution Areas CTO team, as a Microsoft Solution Accelerator. Feature requests and bug fix requests are welcome if they support the needs of this organization but may not be incorporated if they aim to make this module more generic than what it needs to be for its primary use case. This module will likely be updated to leverage AVM resource modules in the future. This may result in breaking changes in upcoming versions when these features are implemented.\n"
@@ -64,7 +64,7 @@
         "azd": {
           "type": "location",
           "usageName": [
-            "OpenAI.GlobalStandard.gpt4.1, 150",
+            "OpenAI.GlobalStandard.gpt4.1, 50",
             "OpenAI.GlobalStandard.o4-mini, 50",
             "OpenAI.GlobalStandard.gpt4.1-mini, 50"
           ]
@@ -176,9 +176,9 @@
     },
     "gpt4_1ModelCapacity": {
       "type": "int",
-      "defaultValue": 150,
+      "defaultValue": 50,
       "metadata": {
-        "description": "Optional. AI model deployment token capacity. Defaults to 150 for optimal performance."
+        "description": "Optional. AI model deployment token capacity. Defaults to 50 for optimal performance."
       }
     },
     "gptReasoningModelCapacity": {
@@ -27975,9 +27975,9 @@
       },
       "dependsOn": [
         "aiFoundryAiServices",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
         "virtualNetwork"
       ]
     },
