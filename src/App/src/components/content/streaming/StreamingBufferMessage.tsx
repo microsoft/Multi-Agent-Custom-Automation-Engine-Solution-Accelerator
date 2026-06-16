@@ -13,9 +13,59 @@ interface StreamingBufferMessageProps {
 }
 
 /**
- * Wrap any raw JSON object/array blocks in markdown fenced code blocks so the
- * Details section renders them as formatted code rather than plain text.
- * Lines that already sit inside an existing fenced block are left alone.
+ * Format a key from snake_case / camelCase / kebab-case into a readable label.
+ */
+const humanizeKey = (key: string): string => {
+    if (!key) return key;
+    const spaced = key
+        .replace(/[_-]+/g, ' ')
+        .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+        .trim();
+    return spaced.replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
+/**
+ * Render a parsed JSON value as readable Markdown (bullet list of
+ * "**Key**: value" entries, recursing into nested objects/arrays).
+ */
+const jsonToMarkdown = (value: any, depth = 0): string => {
+    const indent = '  '.repeat(depth);
+
+    if (value === null || value === undefined) return `${indent}_n/a_`;
+
+    if (Array.isArray(value)) {
+        if (value.length === 0) return `${indent}_(none)_`;
+        return value
+            .map((item) => {
+                if (item !== null && typeof item === 'object') {
+                    return `${indent}- \n${jsonToMarkdown(item, depth + 1)}`;
+                }
+                return `${indent}- ${String(item)}`;
+            })
+            .join('\n');
+    }
+
+    if (typeof value === 'object') {
+        const entries = Object.entries(value);
+        if (entries.length === 0) return `${indent}_(empty)_`;
+        return entries
+            .map(([k, v]) => {
+                const label = humanizeKey(k);
+                if (v !== null && typeof v === 'object') {
+                    return `${indent}- **${label}:**\n${jsonToMarkdown(v, depth + 1)}`;
+                }
+                return `${indent}- **${label}:** ${v === null || v === undefined ? '' : String(v)}`;
+            })
+            .join('\n');
+    }
+
+    return `${indent}${String(value)}`;
+};
+
+/**
+ * Detect raw JSON blocks in the streaming buffer and replace them with a
+ * readable Markdown rendering so the Details section doesn't expose raw JSON.
+ * Lines that already sit inside an existing fenced code block are left alone.
  */
 const formatBufferContent = (content: string): string => {
     if (!content) return content;
@@ -55,9 +105,8 @@ const formatBufferContent = (content: string): string => {
                 const block = lines.slice(i, endIdx + 1).join('\n');
                 try {
                     const parsed = JSON.parse(block);
-                    out.push('```json');
-                    out.push(JSON.stringify(parsed, null, 2));
-                    out.push('```');
+                    out.push(jsonToMarkdown(parsed));
+                    out.push('');
                     i = endIdx + 1;
                     continue;
                 } catch {
