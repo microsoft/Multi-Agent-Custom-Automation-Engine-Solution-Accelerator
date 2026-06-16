@@ -24,7 +24,7 @@ param a array = []
 // AVM Module Deployment
 // ============================================================================
 module privateDnsZone 'br/public:avm/res/network/private-dns-zone:0.8.1' = {
-  name: take('avm.res.network.private-dns-zone.${name}', 64)
+  name: take('avm.res.network.private-dns-zone.${split(name, '.')[1]}', 64)
   params: {
     name: name
     tags: tags

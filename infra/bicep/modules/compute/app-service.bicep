@@ -28,11 +28,31 @@ param appSettings object = {}
 @description('Whether to enable Always On.')
 param alwaysOn bool = true
 
-@description('Kind of web app.')
-param kind string = 'app,linux'
+@description('Optional. Health check path for the app.')
+param healthCheckPath string = ''
 
-@description('Subnet resource ID for VNet integration.')
-param virtualNetworkSubnetId string = ''
+@description('Optional. Whether to enable WebSockets.')
+param webSocketsEnabled bool = false
+
+@description('Optional. Command line for the application.')
+param appCommandLine string = ''
+
+@description('Required. Type of site to deploy.')
+@allowed([
+  'functionapp' // function app windows os
+  'functionapp,linux' // function app linux os
+  'functionapp,workflowapp' // logic app workflow
+  'functionapp,workflowapp,linux' // logic app docker container
+  'functionapp,linux,container' // function app linux container
+  'functionapp,linux,container,azurecontainerapps' // function app linux container azure container apps
+  'app,linux' // linux web app
+  'app' // windows web app
+  'linux,api' // linux api app
+  'api' // windows api app
+  'app,linux,container' // linux container app
+  'app,container,windows' // windows container app
+])
+param kind string = 'app,linux'
 
 @description('Public network access setting.')
 param publicNetworkAccess string = 'Enabled'
@@ -51,11 +71,14 @@ resource appService 'Microsoft.Web/sites@2025-05-01' = {
   properties: {
     serverFarmId: serverFarmResourceId
     publicNetworkAccess: publicNetworkAccess
-    virtualNetworkSubnetId: !empty(virtualNetworkSubnetId) ? virtualNetworkSubnetId : null
     siteConfig: {
       alwaysOn: alwaysOn
       ftpsState: 'Disabled'
       linuxFxVersion: linuxFxVersion
+      minTlsVersion: '1.2'
+      healthCheckPath: !empty(healthCheckPath) ? healthCheckPath : null
+      webSocketsEnabled: webSocketsEnabled
+      appCommandLine: appCommandLine
     }
     endToEndEncryptionEnabled: true
   }

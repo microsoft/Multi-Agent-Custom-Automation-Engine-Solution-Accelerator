@@ -46,62 +46,10 @@ services:
 hooks:
   postdeploy:
     windows:
-      run: |
-        # Detect if running in Git Bash or similar Bash environment
-        if ($env:SHELL -like "*bash*" -or $env:MSYSTEM) {
-          # Running in Git Bash/MSYS2 environment
-          Write-Host ""
-          Write-Host "===============================================================" -ForegroundColor Yellow
-          Write-Host " POST-DEPLOYMENT STEPS (Bash)" -ForegroundColor Green  
-          Write-Host "===============================================================" -ForegroundColor Yellow
-          Write-Host ""
-
-          Write-Host " Upload Team Configurations and index sample data" -ForegroundColor White
-          Write-Host "  👉 Run the following command in Bash:" -ForegroundColor White
-          Write-Host "   bash infra/scripts/post-provision/selecting_team_config_and_data.sh" -ForegroundColor Cyan
-          Write-Host ""
-
-          Write-Host "🌐 Access your deployed Frontend application at:" -ForegroundColor Green
-          Write-Host "   https://$env:webSiteDefaultHostname" -ForegroundColor Cyan
-          Write-Host ""
-        } else {
-          # Running in PowerShell
-          Write-Host ""
-          Write-Host "===============================================================" -ForegroundColor Yellow
-          Write-Host " POST-DEPLOYMENT STEP (PowerShell) " -ForegroundColor Green
-          Write-Host "===============================================================" -ForegroundColor Yellow
-          Write-Host ""
-
-          Write-Host " Upload Team Configurations and index sample data" -ForegroundColor White
-          Write-Host "  👉 Run the following command in PowerShell:" -ForegroundColor White
-          Write-Host "   infra\scripts\post-provision\Selecting-Team-Config-And-Data.ps1" -ForegroundColor Cyan
-          Write-Host ""
-
-          Write-Host "🌐 Access your deployed Frontend application at:" -ForegroundColor Green
-          Write-Host "   https://$env:webSiteDefaultHostname" -ForegroundColor Cyan
-          Write-Host ""
-        }
-        
+      run: infra/scripts/post-provision/post_deploy.ps1
       shell: pwsh
       interactive: true
     posix:
-      run: |
-        Blue='\033[0;34m'
-        Green='\033[0;32m'
-        Yellow='\033[1;33m'
-        NC='\033[0m'
-
-        printf "\n"
-
-        printf "${Yellow}===============================================================\n"
-        printf "${Green} POST-DEPLOYMENT STEPS (Bash)\n"
-        printf "${Yellow}===============================================================${NC}\n\n"
-
-        printf  "Upload Team Configurations and index sample data:\n"
-        printf  "  👉 Run the following command in Bash:\n"
-        printf  "   ${Blue}bash infra/scripts/post-provision/selecting_team_config_and_data.sh${NC}\n\n"
-
-        printf "🌐 Access your deployed Frontend application at:\n"
-        printf "   ${Blue}https://%s${NC}\n\n" "$webSiteDefaultHostname"
+      run: bash infra/scripts/post-provision/post_deploy.sh
       shell: sh
       interactive: true

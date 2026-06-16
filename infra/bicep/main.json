@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.44.1.10279",
-      "templateHash": "17984472900333261239"
+      "templateHash": "17693244970226019294"
     },
     "name": "Multi-Agent Custom Automation Engine - Vanilla Bicep",
     "description": "Vanilla Bicep orchestrator for the Multi-Agent Custom Automation Engine accelerator. This deployment intentionally excludes WAF features such as private networking, scale-out, redundancy, bastion, and VM resources while keeping router-compatible outputs."
@@ -869,7 +869,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "3352830307687170703"
+              "templateHash": "13273853593348360979"
             }
           },
           "parameters": {
@@ -1022,6 +1022,20 @@
               },
               "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('name')), '2025-12-01').endpoints['OpenAI Language Model Instance API']]"
             },
+            "cognitiveServicesEndpoint": {
+              "type": "string",
+              "metadata": {
+                "description": "Endpoint of the AI Services account (Cognitive Services)."
+              },
+              "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('name')), '2025-12-01').endpoint]"
+            },
+            "azureOpenAiCuEndpoint": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure OpenAI Content Understanding endpoint URL."
+              },
+              "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('name')), '2025-12-01').endpoints['Content Understanding']]"
+            },
             "principalId": {
               "type": "string",
               "metadata": {
@@ -1088,7 +1102,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "12433685250197645612"
+              "templateHash": "11426307275851055409"
             }
           },
           "parameters": {
@@ -1107,54 +1121,75 @@
           },
           "resources": [],
           "outputs": {
-            "aiFoundryPrincipalId": {
+            "resourceId": {
               "type": "string",
               "metadata": {
-                "description": "The principal ID of the AI Foundry system-assigned managed identity."
+                "description": "Resource ID of the AI Services account."
               },
-              "value": "[if(and(contains(reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('name')), '2025-12-01', 'full'), 'identity'), contains(reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('name')), '2025-12-01', 'full').identity, 'principalId')), reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('name')), '2025-12-01', 'full').identity.principalId, '')]"
+              "value": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('name'))]"
             },
-            "aiProjectPrincipalId": {
+            "name": {
               "type": "string",
               "metadata": {
-                "description": "The principal ID of the AI Project system-assigned managed identity."
-              },
-              "value": "[if(and(contains(reference(resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('name'), parameters('projectName')), '2025-12-01', 'full'), 'identity'), contains(reference(resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('name'), parameters('projectName')), '2025-12-01', 'full').identity, 'principalId')), reference(resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('name'), parameters('projectName')), '2025-12-01', 'full').identity.principalId, '')]"
-            },
-            "aiServicesAccountName": {
-              "type": "string",
-              "metadata": {
-                "description": "The name of the AI Services account."
+                "description": "Name of the AI Services account."
               },
               "value": "[parameters('name')]"
             },
-            "aiProjectName": {
+            "endpoint": {
               "type": "string",
               "metadata": {
-                "description": "The name of the AI project."
+                "description": "Endpoint of the AI Services account (OpenAI Language Model Instance API)."
+              },
+              "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('name')), '2025-12-01').endpoints['OpenAI Language Model Instance API']]"
+            },
+            "cognitiveServicesEndpoint": {
+              "type": "string",
+              "metadata": {
+                "description": "Endpoint of the AI Services account (Cognitive Services)."
+              },
+              "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('name')), '2025-12-01').endpoint]"
+            },
+            "azureOpenAiCuEndpoint": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure OpenAI Content Understanding endpoint URL."
+              },
+              "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('name')), '2025-12-01').endpoints['Content Understanding']]"
+            },
+            "principalId": {
+              "type": "string",
+              "metadata": {
+                "description": "System-assigned identity principal ID of the AI Services account (empty if none)."
+              },
+              "value": "[if(and(contains(reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('name')), '2025-12-01', 'full'), 'identity'), contains(reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('name')), '2025-12-01', 'full').identity, 'principalId')), reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('name')), '2025-12-01', 'full').identity.principalId, '')]"
+            },
+            "projectResourceId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the AI Foundry project."
+              },
+              "value": "[resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('name'), parameters('projectName'))]"
+            },
+            "projectName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the AI Foundry project."
               },
               "value": "[parameters('projectName')]"
-            },
-            "aiFoundryEndpoint": {
-              "type": "string",
-              "metadata": {
-                "description": "The endpoint URL for the Azure OpenAI service."
-              },
-              "value": "[format('https://{0}.openai.azure.com/', parameters('name'))]"
             },
             "projectEndpoint": {
               "type": "string",
               "metadata": {
-                "description": "The endpoint URL for the AI Foundry project."
+                "description": "AI Foundry project endpoint."
               },
-              "value": "[format('https://{0}.services.ai.azure.com/api/projects/{1}', parameters('name'), parameters('projectName'))]"
+              "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('name'), parameters('projectName')), '2025-12-01').endpoints['AI Foundry API']]"
             },
-            "aiFoundryResourceId": {
+            "projectIdentityPrincipalId": {
               "type": "string",
               "metadata": {
-                "description": "The resource ID of the AI Services account."
+                "description": "System-assigned identity principal ID of the project (empty if none)."
               },
-              "value": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('name'))]"
+              "value": "[if(and(contains(reference(resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('name'), parameters('projectName')), '2025-12-01', 'full'), 'identity'), contains(reference(resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('name'), parameters('projectName')), '2025-12-01', 'full').identity, 'principalId')), reference(resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('name'), parameters('projectName')), '2025-12-01', 'full').identity.principalId, '')]"
             }
           }
         }
@@ -1353,7 +1388,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "6257848814063201814"
+              "templateHash": "1497887351577571547"
             }
           },
           "parameters": {
@@ -1444,6 +1479,20 @@
                 "description": "Whether to disable local authentication."
               }
             },
+            "authOptions": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Optional. Authentication options for the search service."
+              }
+            },
+            "networkRuleSet": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Optional. Network rule set for the search service."
+              }
+            },
             "managedIdentityType": {
               "type": "string",
               "defaultValue": "SystemAssigned",
@@ -1506,6 +1555,12 @@
                   "disableLocalAuth": {
                     "value": "[parameters('disableLocalAuth')]"
                   },
+                  "authOptions": {
+                    "value": "[parameters('authOptions')]"
+                  },
+                  "networkRuleSet": {
+                    "value": "[parameters('networkRuleSet')]"
+                  },
                   "managedIdentityType": {
                     "value": "[parameters('managedIdentityType')]"
                   },
@@ -1520,7 +1575,7 @@
                     "_generator": {
                       "name": "bicep",
                       "version": "0.44.1.10279",
-                      "templateHash": "11018325800773519753"
+                      "templateHash": "10414963800025954513"
                     }
                   },
                   "parameters": {
@@ -1589,6 +1644,20 @@
                         "description": "Whether to disable local authentication."
                       }
                     },
+                    "authOptions": {
+                      "type": "object",
+                      "defaultValue": {},
+                      "metadata": {
+                        "description": "Optional. Authentication options for the search service."
+                      }
+                    },
+                    "networkRuleSet": {
+                      "type": "object",
+                      "defaultValue": {},
+                      "metadata": {
+                        "description": "Optional. Network rule set for the search service."
+                      }
+                    },
                     "managedIdentityType": {
                       "type": "string",
                       "defaultValue": "SystemAssigned",
@@ -1623,7 +1692,9 @@
                         "hostingMode": "[parameters('hostingMode')]",
                         "semanticSearch": "[parameters('semanticSearch')]",
                         "disableLocalAuth": "[parameters('disableLocalAuth')]",
-                        "publicNetworkAccess": "[parameters('publicNetworkAccess')]"
+                        "publicNetworkAccess": "[parameters('publicNetworkAccess')]",
+                        "authOptions": "[if(not(empty(parameters('authOptions'))), parameters('authOptions'), null())]",
+                        "networkRuleSet": "[if(not(empty(parameters('networkRuleSet'))), parameters('networkRuleSet'), null())]"
                       }
                     }
                   ],
@@ -1743,7 +1814,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "1975611088752225629"
+              "templateHash": "2631611108118541891"
             }
           },
           "parameters": {
@@ -1812,6 +1883,13 @@
                 "description": "Allow shared key access."
               }
             },
+            "enableHierarchicalNamespace": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Enable hierarchical namespace (Data Lake Storage Gen2)."
+              }
+            },
             "containers": {
               "type": "array",
               "defaultValue": [
@@ -1842,6 +1920,7 @@
                 "allowSharedKeyAccess": "[parameters('allowSharedKeyAccess')]",
                 "minimumTlsVersion": "TLS1_2",
                 "supportsHttpsTrafficOnly": true,
+                "isHnsEnabled": "[parameters('enableHierarchicalNamespace')]",
                 "encryption": {
                   "services": {
                     "blob": {
@@ -3382,7 +3461,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "13974117254762023166"
+              "templateHash": "12440474002685425911"
             }
           },
           "parameters": {
@@ -3438,18 +3517,46 @@
                 "description": "Whether to enable Always On."
               }
             },
-            "kind": {
-              "type": "string",
-              "defaultValue": "app,linux",
-              "metadata": {
-                "description": "Kind of web app."
-              }
-            },
-            "virtualNetworkSubnetId": {
+            "healthCheckPath": {
               "type": "string",
               "defaultValue": "",
               "metadata": {
-                "description": "Subnet resource ID for VNet integration."
+                "description": "Optional. Health check path for the app."
+              }
+            },
+            "webSocketsEnabled": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Optional. Whether to enable WebSockets."
+              }
+            },
+            "appCommandLine": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Optional. Command line for the application."
+              }
+            },
+            "kind": {
+              "type": "string",
+              "defaultValue": "app,linux",
+              "allowedValues": [
+                "functionapp",
+                "functionapp,linux",
+                "functionapp,workflowapp",
+                "functionapp,workflowapp,linux",
+                "functionapp,linux,container",
+                "functionapp,linux,container,azurecontainerapps",
+                "app,linux",
+                "app",
+                "linux,api",
+                "api",
+                "app,linux,container",
+                "app,container,windows"
+              ],
+              "metadata": {
+                "description": "Required. Type of site to deploy."
               }
             },
             "publicNetworkAccess": {
@@ -3496,11 +3603,14 @@
               "properties": {
                 "serverFarmId": "[parameters('serverFarmResourceId')]",
                 "publicNetworkAccess": "[parameters('publicNetworkAccess')]",
-                "virtualNetworkSubnetId": "[if(not(empty(parameters('virtualNetworkSubnetId'))), parameters('virtualNetworkSubnetId'), null())]",
                 "siteConfig": {
                   "alwaysOn": "[parameters('alwaysOn')]",
                   "ftpsState": "Disabled",
-                  "linuxFxVersion": "[parameters('linuxFxVersion')]"
+                  "linuxFxVersion": "[parameters('linuxFxVersion')]",
+                  "minTlsVersion": "1.2",
+                  "healthCheckPath": "[if(not(empty(parameters('healthCheckPath'))), parameters('healthCheckPath'), null())]",
+                  "webSocketsEnabled": "[parameters('webSocketsEnabled')]",
+                  "appCommandLine": "[parameters('appCommandLine')]"
                 },
                 "endToEndEncryptionEnabled": true
               }
@@ -3608,14 +3718,14 @@
           "existingFoundryProjectResourceId": {
             "value": "[parameters('existingFoundryProjectResourceId')]"
           },
-          "aiFoundryResourceId": "[if(variables('useExistingAiFoundryAiProject'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('aiFoundryAiServicesSubscriptionId'), variables('aiFoundryAiServicesResourceGroupName')), 'Microsoft.Resources/deployments', take(format('module.existing-project-setup.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.aiFoundryResourceId.value), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('aiFoundryAiServicesSubscriptionId'), variables('aiFoundryAiServicesResourceGroupName')), 'Microsoft.Resources/deployments', take(format('module.ai-foundry-project.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.resourceId.value))]",
+          "aiFoundryResourceId": "[if(variables('useExistingAiFoundryAiProject'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('aiFoundryAiServicesSubscriptionId'), variables('aiFoundryAiServicesResourceGroupName')), 'Microsoft.Resources/deployments', take(format('module.existing-project-setup.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.resourceId.value), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('aiFoundryAiServicesSubscriptionId'), variables('aiFoundryAiServicesResourceGroupName')), 'Microsoft.Resources/deployments', take(format('module.ai-foundry-project.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.resourceId.value))]",
           "aiSearchResourceId": {
             "value": "[reference(resourceId('Microsoft.Resources/deployments', take(format('module.ai-search.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.resourceId.value]"
           },
           "storageAccountResourceId": {
             "value": "[reference(resourceId('Microsoft.Resources/deployments', take(format('module.storage-account.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.resourceId.value]"
           },
-          "aiProjectPrincipalId": "[if(variables('useExistingAiFoundryAiProject'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('aiFoundryAiServicesSubscriptionId'), variables('aiFoundryAiServicesResourceGroupName')), 'Microsoft.Resources/deployments', take(format('module.existing-project-setup.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.aiProjectPrincipalId.value), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('aiFoundryAiServicesSubscriptionId'), variables('aiFoundryAiServicesResourceGroupName')), 'Microsoft.Resources/deployments', take(format('module.ai-foundry-project.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.projectIdentityPrincipalId.value))]",
+          "aiProjectPrincipalId": "[if(variables('useExistingAiFoundryAiProject'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('aiFoundryAiServicesSubscriptionId'), variables('aiFoundryAiServicesResourceGroupName')), 'Microsoft.Resources/deployments', take(format('module.existing-project-setup.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.projectIdentityPrincipalId.value), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('aiFoundryAiServicesSubscriptionId'), variables('aiFoundryAiServicesResourceGroupName')), 'Microsoft.Resources/deployments', take(format('module.ai-foundry-project.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.projectIdentityPrincipalId.value))]",
           "aiSearchPrincipalId": {
             "value": "[reference(resourceId('Microsoft.Resources/deployments', take(format('module.ai-search.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.identityPrincipalId.value]"
           },
@@ -4332,7 +4442,7 @@
     },
     "AI_FOUNDRY_RESOURCE_ID": {
       "type": "string",
-      "value": "[if(variables('useExistingAiFoundryAiProject'), parameters('existingFoundryProjectResourceId'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('aiFoundryAiServicesSubscriptionId'), variables('aiFoundryAiServicesResourceGroupName')), 'Microsoft.Resources/deployments', take(format('module.ai-foundry-project.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.resourceId.value)]"
+      "value": "[if(variables('useExistingAiFoundryAiProject'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('aiFoundryAiServicesSubscriptionId'), variables('aiFoundryAiServicesResourceGroupName')), 'Microsoft.Resources/deployments', take(format('module.existing-project-setup.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.resourceId.value, reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('aiFoundryAiServicesSubscriptionId'), variables('aiFoundryAiServicesResourceGroupName')), 'Microsoft.Resources/deployments', take(format('module.ai-foundry-project.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.resourceId.value)]"
     },
     "COSMOSDB_ACCOUNT_NAME": {
       "type": "string",

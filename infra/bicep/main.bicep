@@ -185,6 +185,9 @@ param createdBy string = contains(deployer(), 'userPrincipalName')
   ? split(deployer().userPrincipalName, '@')[0]
   : deployer().objectId
 
+@description('Optional. Flag to indicate if this is a custom code deployment. If true, some resources may be skipped or configured differently.')
+param isCustom bool = false
+
 var deployerInfo = deployer()
 var deployingUserPrincipalId = deployerInfo.objectId
 var deployerPrincipalType = contains(deployerInfo, 'userPrincipalName') ? 'User' : 'ServicePrincipal'
@@ -208,12 +211,10 @@ var aiFoundryAiServicesSubscriptionId = useExistingAiFoundryAiProject ? split(ex
 var aiFoundryAiServicesResourceGroupName = useExistingAiFoundryAiProject ? split(existingFoundryProjectResourceId, '/')[4] : resourceGroup().name
 var aiFoundryAiServicesResourceName = useExistingAiFoundryAiProject ? split(existingFoundryProjectResourceId, '/')[8] : 'aif-${solutionSuffix}'
 var aiFoundryAiProjectResourceName = useExistingAiFoundryAiProject ? split(existingFoundryProjectResourceId, '/')[10] : 'proj-${solutionSuffix}'
-var aiFoundryAiServicesResourceId = useExistingAiFoundryAiProject ? existing_project_setup!.outputs.aiFoundryResourceId : ai_foundry_project!.outputs.resourceId
+var aiFoundryAiServicesResourceId = useExistingAiFoundryAiProject ? existing_project_setup!.outputs.resourceId : ai_foundry_project!.outputs.resourceId
 var aiFoundryOpenAIEndpoint = 'https://${aiFoundryAiServicesResourceName}.openai.azure.com/'
 var aiFoundryAiProjectEndpoint = 'https://${aiFoundryAiServicesResourceName}.services.ai.azure.com/api/projects/${aiFoundryAiProjectResourceName}'
 var aiSearchConnectionName = 'aifp-srch-connection-${solutionSuffix}'
-// var aiStorageConnectionName = 'aifp-blob-connection-${solutionSuffix}'
-// var aiAppInsightsConnectionName = 'aifp-appi-connection-${solutionSuffix}'
 
 var modelDeployments = [
   {
@@ -273,8 +274,6 @@ var aiSearchIndexNameForRFPCompliance = 'macae-rfp-compliance-index'
 var mcpServerName = 'MacaeMcpServer'
 var mcpServerDescription = 'MCP server with greeting, HR, and planning tools'
 
-// var azureAIDeveloperRoleDefinitionId = '/subscriptions/${aiFoundryAiServicesSubscriptionId}/providers/Microsoft.Authorization/roleDefinitions/64702f94-c441-49e6-a78b-ef80e0188fee'
-// var cognitiveServicesOpenAIUserRoleDefinitionId = '/subscriptions/${aiFoundryAiServicesSubscriptionId}/providers/Microsoft.Authorization/roleDefinitions/5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
 
 resource resourceGroupTags 'Microsoft.Resources/tags@2023-07-01' = {
   name: 'default'
@@ -349,7 +348,7 @@ module existing_project_setup './modules/ai/existing-project-setup.bicep' = if (
 }
 
 var aiFoundryAiProjectPrincipalId = useExistingAiFoundryAiProject
-  ? existing_project_setup!.outputs.aiProjectPrincipalId
+  ? existing_project_setup!.outputs.projectIdentityPrincipalId
   : ai_foundry_project!.outputs.projectIdentityPrincipalId
 
 @batchSize(1)
@@ -489,53 +488,27 @@ module foundry_search_connection './modules/ai/ai-foundry-connection.bicep' = {
   }
 }
 
-// module foundry_storage_connection './modules/ai/ai-foundry-connection.bicep' = {
-//   name: take('module.foundry-storage-connection.${solutionSuffix}', 64)
-//   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
-//   dependsOn: [ai_model_deployment]
-//   params: {
-//     solutionName: solutionSuffix
-//     aiServicesAccountName: aiFoundryAiServicesResourceName
-//     projectName: aiFoundryAiProjectResourceName
-//     connectionName: aiStorageConnectionName
-//     category: 'AzureBlob'
-//     target: storage_account.outputs.blobEndpoint
-//     authType: 'AAD'
-//     metadata: {
-//       ResourceId: storage_account.outputs.resourceId
-//       AccountName: storage_account.outputs.name
-//       ContainerName: 'default'
-//     }
-//   }
-// }
-
-// module foundry_appi_connection './modules/ai/ai-foundry-connection.bicep' = if (!useExistingAiFoundryAiProject) {
-//   name: take('module.foundry-appi-connection.${solutionSuffix}', 64)
-//   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
-//   dependsOn: [ai_model_deployment]
-//   params: {
-//     solutionName: solutionSuffix
-//     aiServicesAccountName: aiFoundryAiServicesResourceName
-//     projectName: aiFoundryAiProjectResourceName
-//     connectionName: aiAppInsightsConnectionName
-//     category: 'AppInsights'
-//     target: app_insights.outputs.resourceId
-//     authType: 'ApiKey'
-//     isDefault: true
-//     credentialsKey: app_insights.outputs.instrumentationKey
-//     metadata: {
-//       ApiType: 'Azure'
-//       ResourceId: app_insights.outputs.resourceId
-//     }
-//   }
-// }
+module container_registry './modules/compute/container-registry.bicep' = if(isCustom) {
+  name: take('module.container-registry.${solutionSuffix}', 64)
+  params: {
+    solutionName: solutionSuffix
+    name: 'cr${solutionSuffix}'
+    location: solutionLocation
+    tags: allTags
+    sku: 'Basic'
+    adminUserEnabled: false
+    publicNetworkAccess: 'Enabled'
+    exportPolicyStatus: 'enabled'
+    retentionPolicyStatus: 'disabled'
+  }
+}
 
 module backend_container_app './modules/compute/container-app.bicep' = {
   name: take('module.backend-container-app.${solutionSuffix}', 64)
   params: {
     name: backendContainerAppName
     location: solutionLocation
-    tags: allTags
+    tags: isCustom ? union(allTags, { 'azd-service-name': 'backend' }) : allTags
     environmentResourceId: container_app_environment.outputs.resourceId
     ingressExternal: true
     ingressTargetPort: 8000
@@ -559,6 +532,12 @@ module backend_container_app './modules/compute/container-app.bicep' = {
       minReplicas: 1
       maxReplicas: 1
     }
+    registries: isCustom ? [
+      {
+        server: container_registry!.outputs.loginServer
+        identity: userAssignedIdentity.outputs.resourceId
+      }
+    ] : []
     containers: [
       {
         name: 'backend'
@@ -703,7 +682,7 @@ module mcp_container_app './modules/compute/container-app.bicep' = {
   params: {
     name: mcpContainerAppName
     location: solutionLocation
-    tags: allTags
+    tags: isCustom ? union(allTags, { 'azd-service-name': 'mcp' }) : allTags
     environmentResourceId: container_app_environment.outputs.resourceId
     ingressExternal: true
     ingressTargetPort: 9000
@@ -720,6 +699,12 @@ module mcp_container_app './modules/compute/container-app.bicep' = {
       minReplicas: 1
       maxReplicas: 1
     }
+    registries: isCustom ? [
+      {
+        server: container_registry!.outputs.loginServer
+        identity: userAssignedIdentity.outputs.resourceId
+      }
+    ] : []
     containers: [
       {
         name: 'mcp'
@@ -815,10 +800,21 @@ module frontend_app './modules/compute/app-service.bicep' = {
   params: {
     solutionName: frontendAppName
     location: solutionLocation
-    tags: allTags
+    tags: isCustom ? union(allTags, { 'azd-service-name': 'frontend' }) : allTags
     serverFarmResourceId: app_service_plan.outputs.resourceId
-    linuxFxVersion: 'DOCKER|${frontendContainerRegistryHostname}/${frontendContainerImageName}:${frontendContainerImageTag}'
-    appSettings: {
+    linuxFxVersion: isCustom ? 'python|3.11' : 'DOCKER|${frontendContainerRegistryHostname}/${frontendContainerImageName}:${frontendContainerImageTag}'
+    appCommandLine: isCustom ? 'python3 -m uvicorn frontend_server:app --host 0.0.0.0 --port 8000' : ''
+    appSettings: isCustom ? {
+      SCM_DO_BUILD_DURING_DEPLOYMENT: 'True'
+      WEBSITES_PORT: '8000'
+      BACKEND_API_URL: 'https://${backend_container_app.outputs.fqdn}'
+      AUTH_ENABLED: 'false'
+      PROXY_API_REQUESTS: 'false'
+      ENABLE_ORYX_BUILD: 'True'
+      APPLICATIONINSIGHTS_CONNECTION_STRING: app_insights.outputs.connectionString
+      APPINSIGHTS_INSTRUMENTATIONKEY: app_insights.outputs.instrumentationKey
+    }
+    : {
       SCM_DO_BUILD_DURING_DEPLOYMENT: 'true'
       DOCKER_REGISTRY_SERVER_URL: 'https://${frontendContainerRegistryHostname}'
       WEBSITES_PORT: '3000'
@@ -847,32 +843,9 @@ module role_assignments './modules/identity/role-assignments.bicep' = {
     deployerPrincipalType: deployerPrincipalType
     userAssignedManagedIdentityPrincipalId: userAssignedIdentity.outputs.principalId
     cosmosDbAccountName: cosmosDBModule.outputs.name
+    containerRegistryResourceId: isCustom ? container_registry!.outputs.resourceId : ''
   }
 }
-
-// module assignBackendAiDeveloperToAiServices './modules/identity/cross-scope-role-assignment.bicep' = {
-//   name: take('module.backend-ai-developer.${solutionSuffix}', 64)
-//   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
-//   params: {
-//     principalId: userAssignedIdentity.outputs.principalId
-//     principalType: 'ServicePrincipal'
-//     roleDefinitionId: azureAIDeveloperRoleDefinitionId
-//     roleAssignmentName: guid(solutionSuffix, 'backend-uai', aiFoundryAiServicesResourceName, azureAIDeveloperRoleDefinitionId)
-//     aiFoundryName: aiFoundryAiServicesResourceName
-//   }
-// }
-
-// module assignBackendOpenAiUserToAiServices './modules/identity/cross-scope-role-assignment.bicep' = {
-//   name: take('module.backend-openai-user.${solutionSuffix}', 64)
-//   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
-//   params: {
-//     principalId: userAssignedIdentity.outputs.principalId
-//     principalType: 'ServicePrincipal'
-//     roleDefinitionId: cognitiveServicesOpenAIUserRoleDefinitionId
-//     roleAssignmentName: guid(solutionSuffix, 'backend-uai', aiFoundryAiServicesResourceName, cognitiveServicesOpenAIUserRoleDefinitionId)
-//     aiFoundryName: aiFoundryAiServicesResourceName
-//   }
-// }
 
 
 @description('The resource group the resources were deployed into.')
@@ -897,7 +870,7 @@ output AZURE_AI_SUBSCRIPTION_ID string = subscription().subscriptionId
 output AZURE_AI_RESOURCE_GROUP string = resourceGroup().name
 output AZURE_AI_PROJECT_NAME string = aiFoundryAiProjectResourceName
 output APP_ENV string = 'Prod'
-output AI_FOUNDRY_RESOURCE_ID string = useExistingAiFoundryAiProject ? existing_project_setup!.outputs.aiFoundryResourceId : ai_foundry_project!.outputs.resourceId
+output AI_FOUNDRY_RESOURCE_ID string = useExistingAiFoundryAiProject ? existing_project_setup!.outputs.resourceId : ai_foundry_project!.outputs.resourceId
 output COSMOSDB_ACCOUNT_NAME string = cosmosDbResourceName
 output AZURE_SEARCH_ENDPOINT string = ai_search.outputs.endpoint
 output AZURE_CLIENT_ID string = userAssignedIdentity.outputs.clientId
@@ -929,3 +902,7 @@ output AZURE_AI_SEARCH_INDEX_NAME_RFP_COMPLIANCE string = aiSearchIndexNameForRF
 output AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_SUMMARY string = aiSearchIndexNameForContractSummary
 output AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_RISK string = aiSearchIndexNameForContractRisk
 output AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_COMPLIANCE string = aiSearchIndexNameForContractCompliance
+
+// Container Registry Outputs
+output AZURE_CONTAINER_REGISTRY_ENDPOINT string? = isCustom ? container_registry!.outputs.loginServer : null
+output AZURE_CONTAINER_REGISTRY_NAME string? = isCustom ? container_registry!.outputs.name : null
