@@ -16,12 +16,10 @@ opentelemetry-exporter-otlp-proto-http
 
 semantic-kernel[azure]==1.32.2
 azure-ai-projects==1.0.0b11
-openai==1.84.0 
-azure-ai-inference==1.0.0b9 
-azure-search-documents 
+openai==1.84.0
+azure-ai-inference==1.0.0b9
+azure-search-documents
 azure-ai-evaluation
-
-opentelemetry-exporter-otlp-proto-grpc
 
 # Date and internationalization
 babel>=2.9.0
