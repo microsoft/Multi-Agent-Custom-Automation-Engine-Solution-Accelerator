@@ -33,6 +33,9 @@ param allowBlobPublicAccess bool = false
 @description('Allow shared key access.')
 param allowSharedKeyAccess bool = true
 
+@description('Enable hierarchical namespace (Data Lake Storage Gen2).')
+param enableHierarchicalNamespace bool = false
+
 @description('Optional. Enable/Disable usage telemetry for module.')
 param enableTelemetry bool = true
 
@@ -91,6 +94,7 @@ module storage 'br/public:avm/res/storage/storage-account:0.32.0' = {
     accessTier: accessTier
     allowBlobPublicAccess: allowBlobPublicAccess
     allowSharedKeyAccess: allowSharedKeyAccess
+    enableHierarchicalNamespace: enableHierarchicalNamespace
     minimumTlsVersion: 'TLS1_2'
     supportsHttpsTrafficOnly: true
     requireInfrastructureEncryption: true

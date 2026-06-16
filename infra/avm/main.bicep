@@ -555,37 +555,6 @@ var aiSearchIndexNameForRFPSummary = 'macae-rfp-summary-index'
 var aiSearchIndexNameForRFPRisk = 'macae-rfp-risk-index'
 var aiSearchIndexNameForRFPCompliance = 'macae-rfp-compliance-index'
 
-// var aiFoundryRoleIds = {
-//   foundryUser: '53ca6127-db72-4b80-b1b0-d745d6d5456d'
-//   azureAiDeveloper: '64702f94-c441-49e6-a78b-ef80e0188fee'
-//   cognitiveServicesOpenAIUser: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
-// }
-
-// var existingAiFoundryManagedIdentityRoles = [
-//   {
-//     suffix: 'managedidentity-foundry-user'
-//     roleDefinitionId: format('/subscriptions/{0}/providers/Microsoft.Authorization/roleDefinitions/{1}', aiFoundryAiServicesSubscriptionId, aiFoundryRoleIds.foundryUser)
-//   }
-//   {
-//     suffix: 'managedidentity-ai-developer'
-//     roleDefinitionId: format('/subscriptions/{0}/providers/Microsoft.Authorization/roleDefinitions/{1}', aiFoundryAiServicesSubscriptionId, aiFoundryRoleIds.azureAiDeveloper)
-//   }
-//   {
-//     suffix: 'managedidentity-openai-user'
-//     roleDefinitionId: format('/subscriptions/{0}/providers/Microsoft.Authorization/roleDefinitions/{1}', aiFoundryAiServicesSubscriptionId, aiFoundryRoleIds.cognitiveServicesOpenAIUser)
-//   }
-// ]
-
-// var existingAiFoundryDeployerRoles = [
-//   {
-//     suffix: 'deployer-foundry-user'
-//     roleDefinitionId: format('/subscriptions/{0}/providers/Microsoft.Authorization/roleDefinitions/{1}', aiFoundryAiServicesSubscriptionId, aiFoundryRoleIds.foundryUser)
-//   }
-//   {
-//     suffix: 'deployer-ai-developer'
-//     roleDefinitionId: format('/subscriptions/{0}/providers/Microsoft.Authorization/roleDefinitions/{1}', aiFoundryAiServicesSubscriptionId, aiFoundryRoleIds.azureAiDeveloper)
-//   }
-// ]
 
 // ============================================================================
 // Resource Group Tags
@@ -758,6 +727,7 @@ module virtualMachine './modules/compute/virtual-machine.bicep' = if (enablePriv
     location: location
     tags: tags
     enableTelemetry: enableTelemetry
+    deployingUserPrincipalId: deployingUserPrincipalId
     vmSize: vmSize
     adminUsername: vmAdminUsername ?? 'JumpboxAdminUser'
     adminPassword: vmAdminPassword ?? 'JumpboxAdminP@ssw0rd1234!'
@@ -833,32 +803,7 @@ module ai_foundry_project './modules/ai/ai-foundry-project.bicep' = if (!useExis
   }
 }
 
-// @batchSize(1)
-// module existingAiFoundryManagedIdentityRoleAssignments './modules/identity/cross-scope-role-assignment.bicep' = [for role in existingAiFoundryManagedIdentityRoles: if (useExistingAIProject) {
-//   name: take('module.existing-aif-mi-${role.suffix}.${solutionName}', 64)
-//   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
-//   params: {
-//     principalId: managed_identity.outputs.principalId
-//     roleDefinitionId: role.roleDefinitionId
-//     roleAssignmentName: guid(solutionSuffix, aiFoundryAiServicesResourceName, role.suffix)
-//     aiFoundryName: aiFoundryAiServicesResourceName
-//     principalType: 'ServicePrincipal'
-//   }
-// }]
-
-// @batchSize(1)
-// module existingAiFoundryDeployerRoleAssignments './modules/identity/cross-scope-role-assignment.bicep' = [for role in existingAiFoundryDeployerRoles: if (useExistingAIProject) {
-//   name: take('module.existing-aif-deployer-${role.suffix}.${solutionName}', 64)
-//   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
-//   params: {
-//     principalId: deployingUserPrincipalId
-//     roleDefinitionId: role.roleDefinitionId
-//     roleAssignmentName: guid(solutionSuffix, aiFoundryAiServicesResourceName, role.suffix)
-//     aiFoundryName: aiFoundryAiServicesResourceName
-//     principalType: deployerPrincipalType
-//   }
-// }]
-
+// Commented Private Endpoints as MCP KnowledgeBase Connections doesn't work private endpoints
 // module aiFoundryPrivateEndpoint './modules/networking/private-endpoint.bicep' = if (enablePrivateNetworking && !useExistingAIProject) {
 //   name: take('module.pe-ai-foundry.${solutionName}', 64)
 //   params: {
@@ -895,12 +840,12 @@ module ai_foundry_project './modules/ai/ai-foundry-project.bicep' = if (!useExis
 //   }
 // }
 
-var aiFoundryAiProjectName = useExistingAIProject ? existing_project_setup!.outputs.aiProjectName : ai_foundry_project!.outputs.projectName
+var aiFoundryAiProjectName = useExistingAIProject ? existing_project_setup!.outputs.projectName : ai_foundry_project!.outputs.projectName
 var aiFoundryAiProjectEndpoint = useExistingAIProject ? existing_project_setup!.outputs.projectEndpoint : ai_foundry_project!.outputs.projectEndpoint
-var aiFoundryAiProjectPrincipalId = useExistingAIProject ? existing_project_setup!.outputs.aiProjectPrincipalId : ai_foundry_project!.outputs.projectIdentityPrincipalId
-var aiFoundryAiServicesEndpoint = useExistingAIProject ? existing_project_setup!.outputs.aiFoundryEndpoint : ai_foundry_project!.outputs.endpoint
+var aiFoundryAiProjectPrincipalId = useExistingAIProject ? existing_project_setup!.outputs.projectIdentityPrincipalId : ai_foundry_project!.outputs.projectIdentityPrincipalId
+var aiFoundryAiServicesEndpoint = useExistingAIProject ? existing_project_setup!.outputs.endpoint : ai_foundry_project!.outputs.endpoint
 var aiFoundryOpenAIEndpoint = 'https://${aiFoundryAiServicesResourceName}.openai.azure.com/'
-var aiFoundryResourceId = useExistingAIProject ? existing_project_setup!.outputs.aiFoundryResourceId : ai_foundry_project!.outputs.resourceId
+var aiFoundryResourceId = useExistingAIProject ? existing_project_setup!.outputs.resourceId : ai_foundry_project!.outputs.resourceId
 
 @batchSize(1)
 module model_deployments './modules/ai/ai-foundry-model-deployment.bicep' = [for (deployment, i) in aiModelDeployments: {

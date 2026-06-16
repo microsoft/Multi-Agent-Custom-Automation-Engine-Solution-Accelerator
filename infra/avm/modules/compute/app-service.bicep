@@ -43,6 +43,19 @@ param virtualNetworkSubnetId string = ''
 @description('Public network access setting.')
 param publicNetworkAccess string = 'Enabled'
 
+@description('Optional. Whether to route all outbound traffic through the virtual network.')
+param vnetRouteAllEnabled bool = false
+
+@description('Optional. Whether to route image pull traffic through the virtual network.')
+param imagePullTraffic bool = false
+
+@description('Optional. Whether to route content share traffic through the virtual network.')
+param contentShareTraffic bool = false
+
+import { privateEndpointSingleServiceType } from 'br/public:avm/utl/types/avm-common-types:0.5.1'
+@description('Optional. Configuration details for private endpoints. For security reasons, it is recommended to use private endpoints whenever possible.')
+param privateEndpoints privateEndpointSingleServiceType[]?
+
 // ============================================================================
 // AVM Module Deployment
 // ============================================================================
@@ -79,8 +92,19 @@ module appService 'br/public:avm/res/web/site:0.23.1' = {
           httpLogs: { fileSystem: { enabled: true, retentionInDays: 1, retentionInMb: 35 } }
         }
       }
+      {
+        name:'web'
+        properties: {
+          vnetRouteAllEnabled: vnetRouteAllEnabled
+          }
+      }
     ]
+    outboundVnetRouting: {
+      contentShareTraffic: contentShareTraffic
+      imagePullTraffic: imagePullTraffic
+    }
     publicNetworkAccess: publicNetworkAccess
+    privateEndpoints: privateEndpoints
     virtualNetworkSubnetResourceId: !empty(virtualNetworkSubnetId) ? virtualNetworkSubnetId : null
     basicPublishingCredentialsPolicies: [
       {

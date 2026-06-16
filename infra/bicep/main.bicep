@@ -208,12 +208,10 @@ var aiFoundryAiServicesSubscriptionId = useExistingAiFoundryAiProject ? split(ex
 var aiFoundryAiServicesResourceGroupName = useExistingAiFoundryAiProject ? split(existingFoundryProjectResourceId, '/')[4] : resourceGroup().name
 var aiFoundryAiServicesResourceName = useExistingAiFoundryAiProject ? split(existingFoundryProjectResourceId, '/')[8] : 'aif-${solutionSuffix}'
 var aiFoundryAiProjectResourceName = useExistingAiFoundryAiProject ? split(existingFoundryProjectResourceId, '/')[10] : 'proj-${solutionSuffix}'
-var aiFoundryAiServicesResourceId = useExistingAiFoundryAiProject ? existing_project_setup!.outputs.aiFoundryResourceId : ai_foundry_project!.outputs.resourceId
+var aiFoundryAiServicesResourceId = useExistingAiFoundryAiProject ? existing_project_setup!.outputs.resourceId : ai_foundry_project!.outputs.resourceId
 var aiFoundryOpenAIEndpoint = 'https://${aiFoundryAiServicesResourceName}.openai.azure.com/'
 var aiFoundryAiProjectEndpoint = 'https://${aiFoundryAiServicesResourceName}.services.ai.azure.com/api/projects/${aiFoundryAiProjectResourceName}'
 var aiSearchConnectionName = 'aifp-srch-connection-${solutionSuffix}'
-// var aiStorageConnectionName = 'aifp-blob-connection-${solutionSuffix}'
-// var aiAppInsightsConnectionName = 'aifp-appi-connection-${solutionSuffix}'
 
 var modelDeployments = [
   {
@@ -273,8 +271,6 @@ var aiSearchIndexNameForRFPCompliance = 'macae-rfp-compliance-index'
 var mcpServerName = 'MacaeMcpServer'
 var mcpServerDescription = 'MCP server with greeting, HR, and planning tools'
 
-// var azureAIDeveloperRoleDefinitionId = '/subscriptions/${aiFoundryAiServicesSubscriptionId}/providers/Microsoft.Authorization/roleDefinitions/64702f94-c441-49e6-a78b-ef80e0188fee'
-// var cognitiveServicesOpenAIUserRoleDefinitionId = '/subscriptions/${aiFoundryAiServicesSubscriptionId}/providers/Microsoft.Authorization/roleDefinitions/5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
 
 resource resourceGroupTags 'Microsoft.Resources/tags@2023-07-01' = {
   name: 'default'
@@ -349,7 +345,7 @@ module existing_project_setup './modules/ai/existing-project-setup.bicep' = if (
 }
 
 var aiFoundryAiProjectPrincipalId = useExistingAiFoundryAiProject
-  ? existing_project_setup!.outputs.aiProjectPrincipalId
+  ? existing_project_setup!.outputs.projectIdentityPrincipalId
   : ai_foundry_project!.outputs.projectIdentityPrincipalId
 
 @batchSize(1)
@@ -488,47 +484,6 @@ module foundry_search_connection './modules/ai/ai-foundry-connection.bicep' = {
     }
   }
 }
-
-// module foundry_storage_connection './modules/ai/ai-foundry-connection.bicep' = {
-//   name: take('module.foundry-storage-connection.${solutionSuffix}', 64)
-//   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
-//   dependsOn: [ai_model_deployment]
-//   params: {
-//     solutionName: solutionSuffix
-//     aiServicesAccountName: aiFoundryAiServicesResourceName
-//     projectName: aiFoundryAiProjectResourceName
-//     connectionName: aiStorageConnectionName
-//     category: 'AzureBlob'
-//     target: storage_account.outputs.blobEndpoint
-//     authType: 'AAD'
-//     metadata: {
-//       ResourceId: storage_account.outputs.resourceId
-//       AccountName: storage_account.outputs.name
-//       ContainerName: 'default'
-//     }
-//   }
-// }
-
-// module foundry_appi_connection './modules/ai/ai-foundry-connection.bicep' = if (!useExistingAiFoundryAiProject) {
-//   name: take('module.foundry-appi-connection.${solutionSuffix}', 64)
-//   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
-//   dependsOn: [ai_model_deployment]
-//   params: {
-//     solutionName: solutionSuffix
-//     aiServicesAccountName: aiFoundryAiServicesResourceName
-//     projectName: aiFoundryAiProjectResourceName
-//     connectionName: aiAppInsightsConnectionName
-//     category: 'AppInsights'
-//     target: app_insights.outputs.resourceId
-//     authType: 'ApiKey'
-//     isDefault: true
-//     credentialsKey: app_insights.outputs.instrumentationKey
-//     metadata: {
-//       ApiType: 'Azure'
-//       ResourceId: app_insights.outputs.resourceId
-//     }
-//   }
-// }
 
 module backend_container_app './modules/compute/container-app.bicep' = {
   name: take('module.backend-container-app.${solutionSuffix}', 64)
@@ -850,30 +805,6 @@ module role_assignments './modules/identity/role-assignments.bicep' = {
   }
 }
 
-// module assignBackendAiDeveloperToAiServices './modules/identity/cross-scope-role-assignment.bicep' = {
-//   name: take('module.backend-ai-developer.${solutionSuffix}', 64)
-//   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
-//   params: {
-//     principalId: userAssignedIdentity.outputs.principalId
-//     principalType: 'ServicePrincipal'
-//     roleDefinitionId: azureAIDeveloperRoleDefinitionId
-//     roleAssignmentName: guid(solutionSuffix, 'backend-uai', aiFoundryAiServicesResourceName, azureAIDeveloperRoleDefinitionId)
-//     aiFoundryName: aiFoundryAiServicesResourceName
-//   }
-// }
-
-// module assignBackendOpenAiUserToAiServices './modules/identity/cross-scope-role-assignment.bicep' = {
-//   name: take('module.backend-openai-user.${solutionSuffix}', 64)
-//   scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
-//   params: {
-//     principalId: userAssignedIdentity.outputs.principalId
-//     principalType: 'ServicePrincipal'
-//     roleDefinitionId: cognitiveServicesOpenAIUserRoleDefinitionId
-//     roleAssignmentName: guid(solutionSuffix, 'backend-uai', aiFoundryAiServicesResourceName, cognitiveServicesOpenAIUserRoleDefinitionId)
-//     aiFoundryName: aiFoundryAiServicesResourceName
-//   }
-// }
-
 
 @description('The resource group the resources were deployed into.')
 output resourceGroupName string = resourceGroup().name
@@ -897,7 +828,7 @@ output AZURE_AI_SUBSCRIPTION_ID string = subscription().subscriptionId
 output AZURE_AI_RESOURCE_GROUP string = resourceGroup().name
 output AZURE_AI_PROJECT_NAME string = aiFoundryAiProjectResourceName
 output APP_ENV string = 'Prod'
-output AI_FOUNDRY_RESOURCE_ID string = useExistingAiFoundryAiProject ? existing_project_setup!.outputs.aiFoundryResourceId : ai_foundry_project!.outputs.resourceId
+output AI_FOUNDRY_RESOURCE_ID string = useExistingAiFoundryAiProject ? existing_project_setup!.outputs.resourceId : ai_foundry_project!.outputs.resourceId
 output COSMOSDB_ACCOUNT_NAME string = cosmosDbResourceName
 output AZURE_SEARCH_ENDPOINT string = ai_search.outputs.endpoint
 output AZURE_CLIENT_ID string = userAssignedIdentity.outputs.clientId

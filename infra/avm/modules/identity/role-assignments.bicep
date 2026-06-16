@@ -175,28 +175,6 @@ module userAssignedManagedIdentityOpenAIContributorExisting './cross-scope-role-
 //    AI Project and Backend identities → AI Search
 // ============================================================================
 
-// // AI Project (New and Existing) → Search Index Data Reader on AI Search
-// resource projectSearchReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(aiSearchResourceId) && !empty(aiProjectPrincipalId)) {
-//   name: guid(solutionName, aiSearchResourceId, aiProjectPrincipalId, roleDefinitions.searchIndexDataReader)
-//   scope: aiSearchService
-//   properties: {
-//     principalId: aiProjectPrincipalId
-//     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.searchIndexDataReader)
-//     principalType: 'ServicePrincipal'
-//   }
-// }
-
-// // AI Project (New and Existing) → Search Service Contributor on AI Search
-// resource projectSearchContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(aiSearchResourceId) && !empty(aiProjectPrincipalId)) {
-//   name: guid(solutionName, aiSearchResourceId, aiProjectPrincipalId, roleDefinitions.searchServiceContributor)
-//   scope: aiSearchService
-//   properties: {
-//     principalId: aiProjectPrincipalId
-//     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.searchServiceContributor)
-//     principalType: 'ServicePrincipal'
-//   }
-// }
-
 // User-Assigned Managed Identity → Search Index Data Reader on AI Search
 resource userAssignedManagedIdentitySearchReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(aiSearchResourceId) && !empty(userAssignedManagedIdentityPrincipalId)) {
   name: guid(solutionName, aiSearchResourceId, userAssignedManagedIdentityPrincipalId, roleDefinitions.searchIndexDataReader)
@@ -289,15 +267,15 @@ resource deployerAiUserAssignment 'Microsoft.Authorization/roleAssignments@2022-
 }
 
 // Deploying User → Cognitive Services User on AI Services
-// resource deployerAiServicesAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingAIProject && !empty(deployerPrincipalId) && !empty(aiFoundryResourceId)) {
-//   scope: aiFoundryAccount
-//   name: guid(solutionName, aiFoundryAccount.id, deployerPrincipalId, roleDefinitions.cognitiveServicesUser)
-//   properties: {
-//     principalId: deployerPrincipalId
-//     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.cognitiveServicesUser)
-//     principalType: 'User'
-//   }
-// }
+resource deployerAiServicesAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingAIProject && !empty(deployerPrincipalId) && !empty(aiFoundryResourceId)) {
+  scope: aiFoundryAccount
+  name: guid(solutionName, aiFoundryAccount.id, deployerPrincipalId, roleDefinitions.cognitiveServicesUser)
+  properties: {
+    principalId: deployerPrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.cognitiveServicesUser)
+    principalType: 'User'
+  }
+}
 
 // // Deployer → Foundry User on existing AI Foundry (cross-scope)
 // // Extended as per accelerator need

@@ -15,36 +15,43 @@ param projectName string
 // ============================================================================
 // Existing Resource References
 // ============================================================================
-resource cognitiveService 'Microsoft.CognitiveServices/accounts@2025-12-01' existing = {
+resource aiServices 'Microsoft.CognitiveServices/accounts@2025-12-01' existing = {
   name: name
 }
 
 resource aiProject 'Microsoft.CognitiveServices/accounts/projects@2025-12-01' existing = {
-  parent: cognitiveService
+  parent: aiServices
   name: projectName
 }
 
 // ============================================================================
-// Outputs
+// Outputs (aligned with ai-foundry-project.bicep)
 // ============================================================================
-@description('The principal ID of the AI Foundry system-assigned managed identity (empty if none).')
-output aiFoundryPrincipalId string = cognitiveService.identity.?principalId ?? ''
 
-@description('The principal ID of the AI Project system-assigned managed identity (empty if none).')
-output aiProjectPrincipalId string = aiProject.identity.?principalId ?? ''
+@description('Resource ID of the AI Services account.')
+output resourceId string = aiServices.id
 
-@description('The name of the AI Services account.')
-output aiServicesAccountName string = cognitiveService.name
+@description('Name of the AI Services account.')
+output name string = aiServices.name
 
-@description('The name of the AI project.')
-output aiProjectName string = aiProject.name
+@description('Endpoint of the AI Services account (OpenAI Language Model Instance API).')
+output endpoint string = aiServices.properties.endpoints['OpenAI Language Model Instance API']
 
-@description('The endpoint URL for the Azure OpenAI service.')
-output aiFoundryEndpoint string = 'https://${name}.openai.azure.com/'
+@description('Azure OpenAI Content Understanding endpoint URL.')
+output azureOpenAiCuEndpoint string = aiServices.properties.endpoints['Content Understanding']
 
-@description('The endpoint URL for the AI Foundry project.')
-output projectEndpoint string = 'https://${name}.services.ai.azure.com/api/projects/${projectName}'
+@description('System-assigned identity principal ID of the AI Services account (empty if none).')
+output principalId string = aiServices.identity.?principalId ?? ''
 
-@description('The resource ID of the AI Services account.')
-output aiFoundryResourceId string = cognitiveService.id
+@description('Resource ID of the AI Foundry project.')
+output projectResourceId string = aiProject.id
+
+@description('Name of the AI Foundry project.')
+output projectName string = aiProject.name
+
+@description('AI Foundry project endpoint.')
+output projectEndpoint string = aiProject.properties.endpoints['AI Foundry API']
+
+@description('System-assigned identity principal ID of the project (empty if none).')
+output projectIdentityPrincipalId string = aiProject.identity.?principalId ?? ''
 

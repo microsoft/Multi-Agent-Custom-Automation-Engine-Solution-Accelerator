@@ -95,6 +95,9 @@ output name string = aiServices.name
 @description('Endpoint of the AI Services account (OpenAI Language Model Instance API).')
 output endpoint string = aiServices.properties.endpoints['OpenAI Language Model Instance API']
 
+@description('Azure OpenAI Content Understanding endpoint URL.')
+output azureOpenAiCuEndpoint string = aiServices.properties.endpoints['Content Understanding']
+
 @description('System-assigned identity principal ID of the AI Services account.')
 output principalId string = aiServices.identity.principalId
 

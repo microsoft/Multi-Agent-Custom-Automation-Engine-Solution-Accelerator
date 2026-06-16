@@ -88,13 +88,13 @@ module aiServicesAccount 'br/public:avm/res/cognitive-services/account:0.14.2' =
 // ============================================================================
 // AI Foundry Project
 // ============================================================================
-resource aiServicesResource 'Microsoft.CognitiveServices/accounts@2025-12-01' existing = {
+resource aiServices 'Microsoft.CognitiveServices/accounts@2025-12-01' existing = {
   name: name
   dependsOn: [aiServicesAccount]
 }
 
 resource aiProject 'Microsoft.CognitiveServices/accounts/projects@2025-12-01' = {
-  parent: aiServicesResource
+  parent: aiServices
   name: projectName
   location: location
   tags: tags
@@ -111,16 +111,19 @@ resource aiProject 'Microsoft.CognitiveServices/accounts/projects@2025-12-01' = 
 // ============================================================================
 
 @description('Resource ID of the AI Services account.')
-output resourceId string = aiServicesAccount.outputs.resourceId
+output resourceId string = aiServices.id
 
 @description('Name of the AI Services account.')
-output name string = aiServicesAccount.outputs.name
+output name string = aiServices.name
 
-@description('Endpoint of the AI Services account.')
-output endpoint string = aiServicesAccount.outputs.endpoint
+@description('Endpoint of the AI Services account (OpenAI Language Model Instance API).')
+output endpoint string = aiServices.properties.endpoints['OpenAI Language Model Instance API']
+
+@description('Azure OpenAI Content Understanding endpoint URL.')
+output azureOpenAiCuEndpoint string = aiServices.properties.endpoints['Content Understanding']
 
 @description('System-assigned identity principal ID of the AI Services account.')
-output principalId string = aiServicesAccount.outputs.systemAssignedMIPrincipalId
+output principalId string = aiServices.identity.principalId
 
 @description('Resource ID of the AI Foundry project.')
 output projectResourceId string = aiProject.id
