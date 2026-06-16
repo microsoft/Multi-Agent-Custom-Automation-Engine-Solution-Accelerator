@@ -5,8 +5,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.43.8.12551",
-      "templateHash": "6616252504872714292"
+      "version": "0.44.1.10279",
+      "templateHash": "9418658342402137838"
     },
     "name": "Multi-Agent Custom Automation Engine",
     "description": "This module contains the resources required to deploy the [Multi-Agent Custom Automation Engine solution accelerator](https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) for both Sandbox environments and WAF aligned environments.\n\n> **Note:** This module is not intended for broad, generic use, as it was designed by the Commercial Solution Areas CTO team, as a Microsoft Solution Accelerator. Feature requests and bug fix requests are welcome if they support the needs of this organization but may not be incorporated if they aim to make this module more generic than what it needs to be for its primary use case. This module will likely be updated to leverage AVM resource modules in the future. This may result in breaking changes in upcoming versions when these features are implemented.\n"
@@ -4992,8 +4992,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "9540091515555271756"
+              "version": "0.44.1.10279",
+              "templateHash": "16578961703143216826"
             }
           },
           "definitions": {
@@ -24310,8 +24310,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "7866379492866507946"
+              "version": "0.44.1.10279",
+              "templateHash": "9937220877261080488"
             }
           },
           "definitions": {
@@ -27975,8 +27975,8 @@
       },
       "dependsOn": [
         "aiFoundryAiServices",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').aiServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
         "virtualNetwork"
       ]
@@ -28014,8 +28014,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "2868048678223903575"
+              "version": "0.44.1.10279",
+              "templateHash": "8001462637037527844"
             }
           },
           "parameters": {
@@ -42569,8 +42569,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "18345308984648474640"
+              "version": "0.44.1.10279",
+              "templateHash": "7693002176758630395"
             }
           },
           "definitions": {
@@ -43601,8 +43601,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.43.8.12551",
-                      "templateHash": "1009721598684973971"
+                      "version": "0.44.1.10279",
+                      "templateHash": "16045336481224683590"
                     },
                     "name": "Site App Settings",
                     "description": "This module deploys a Site App Setting."
@@ -54851,8 +54851,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "9739523049889844356"
+              "version": "0.44.1.10279",
+              "templateHash": "1221855634359106261"
             }
           },
           "parameters": {
