@@ -49,6 +49,9 @@ param storageAccountResourceId string = ''
 @description('Name of the Cosmos DB account (empty if not deployed).')
 param cosmosDbAccountName string = ''
 
+@description('Resource ID of the Container Registry (empty if not deployed).')
+param containerRegistryResourceId string = ''
+
 // ============================================================================
 // Derived Variables
 // ============================================================================
@@ -71,6 +74,7 @@ var roleDefinitions = {
   searchServiceContributor: '7ca78c08-252a-4471-8644-bb5ff32d4ba0'
   storageBlobDataContributor: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
   storageBlobDataReader: '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1'
+  acrPull: '7f951dda-4ed3-4680-a7ca-43fe172d538d'
 }
 
 // ============================================================================
@@ -96,6 +100,10 @@ resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2025-10-15' existi
 resource cosmosContributorRoleDefinition 'Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions@2025-10-15' existing = if (!empty(cosmosDbAccountName)) {
   parent: cosmosAccount
   name: '00000000-0000-0000-0000-000000000002' // Cosmos DB Built-in Data Contributor
+}
+
+resource containerRegistry 'Microsoft.ContainerRegistry/registries@2025-04-01' existing = if (!empty(containerRegistryResourceId)) {
+  name: last(split(containerRegistryResourceId, '/'))
 }
 
 // ============================================================================
@@ -399,3 +407,20 @@ resource deployerCosmosRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sql
     scope: cosmosAccount.id
   }
 }
+
+
+// ============================================================================
+// 6. ACR ROLE ASSIGNMENTS
+// ============================================================================
+
+// User-Assigned Managed Identity → AcrPull on Container Registry
+resource userAssignedManagedIdentityAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(containerRegistryResourceId) && !empty(userAssignedManagedIdentityPrincipalId)) {
+  name: guid(solutionName, containerRegistry.id, userAssignedManagedIdentityPrincipalId, roleDefinitions.acrPull)
+  scope: containerRegistry
+  properties: {
+    principalId: userAssignedManagedIdentityPrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.acrPull)
+    principalType: 'ServicePrincipal'
+  }
+}
+

@@ -185,6 +185,9 @@ param createdBy string = contains(deployer(), 'userPrincipalName')
   ? split(deployer().userPrincipalName, '@')[0]
   : deployer().objectId
 
+@description('Optional. Flag to indicate if this is a custom code deployment. If true, some resources may be skipped or configured differently.')
+param isCustom bool = false
+
 var deployerInfo = deployer()
 var deployingUserPrincipalId = deployerInfo.objectId
 var deployerPrincipalType = contains(deployerInfo, 'userPrincipalName') ? 'User' : 'ServicePrincipal'
@@ -485,12 +488,27 @@ module foundry_search_connection './modules/ai/ai-foundry-connection.bicep' = {
   }
 }
 
+module container_registry './modules/compute/container-registry.bicep' = if(isCustom) {
+  name: take('module.container-registry.${solutionSuffix}', 64)
+  params: {
+    solutionName: solutionSuffix
+    name: 'cr${solutionSuffix}'
+    location: solutionLocation
+    tags: allTags
+    sku: 'Basic'
+    adminUserEnabled: false
+    publicNetworkAccess: 'Enabled'
+    exportPolicyStatus: 'enabled'
+    retentionPolicyStatus: 'disabled'
+  }
+}
+
 module backend_container_app './modules/compute/container-app.bicep' = {
   name: take('module.backend-container-app.${solutionSuffix}', 64)
   params: {
     name: backendContainerAppName
     location: solutionLocation
-    tags: allTags
+    tags: isCustom ? union(allTags, { 'azd-service-name': 'backend' }) : allTags
     environmentResourceId: container_app_environment.outputs.resourceId
     ingressExternal: true
     ingressTargetPort: 8000
@@ -514,6 +532,12 @@ module backend_container_app './modules/compute/container-app.bicep' = {
       minReplicas: 1
       maxReplicas: 1
     }
+    registries: isCustom ? [
+      {
+        server: container_registry!.outputs.loginServer
+        identity: userAssignedIdentity.outputs.resourceId
+      }
+    ] : []
     containers: [
       {
         name: 'backend'
@@ -658,7 +682,7 @@ module mcp_container_app './modules/compute/container-app.bicep' = {
   params: {
     name: mcpContainerAppName
     location: solutionLocation
-    tags: allTags
+    tags: isCustom ? union(allTags, { 'azd-service-name': 'mcp' }) : allTags
     environmentResourceId: container_app_environment.outputs.resourceId
     ingressExternal: true
     ingressTargetPort: 9000
@@ -675,6 +699,12 @@ module mcp_container_app './modules/compute/container-app.bicep' = {
       minReplicas: 1
       maxReplicas: 1
     }
+    registries: isCustom ? [
+      {
+        server: container_registry!.outputs.loginServer
+        identity: userAssignedIdentity.outputs.resourceId
+      }
+    ] : []
     containers: [
       {
         name: 'mcp'
@@ -770,10 +800,21 @@ module frontend_app './modules/compute/app-service.bicep' = {
   params: {
     solutionName: frontendAppName
     location: solutionLocation
-    tags: allTags
+    tags: isCustom ? union(allTags, { 'azd-service-name': 'frontend' }) : allTags
     serverFarmResourceId: app_service_plan.outputs.resourceId
-    linuxFxVersion: 'DOCKER|${frontendContainerRegistryHostname}/${frontendContainerImageName}:${frontendContainerImageTag}'
-    appSettings: {
+    linuxFxVersion: isCustom ? 'python|3.11' : 'DOCKER|${frontendContainerRegistryHostname}/${frontendContainerImageName}:${frontendContainerImageTag}'
+    appCommandLine: isCustom ? 'python3 -m uvicorn frontend_server:app --host 0.0.0.0 --port 8000' : ''
+    appSettings: isCustom ? {
+      SCM_DO_BUILD_DURING_DEPLOYMENT: 'True'
+      WEBSITES_PORT: '8000'
+      BACKEND_API_URL: 'https://${backend_container_app.outputs.fqdn}'
+      AUTH_ENABLED: 'false'
+      PROXY_API_REQUESTS: 'false'
+      ENABLE_ORYX_BUILD: 'True'
+      APPLICATIONINSIGHTS_CONNECTION_STRING: app_insights.outputs.connectionString
+      APPINSIGHTS_INSTRUMENTATIONKEY: app_insights.outputs.instrumentationKey
+    }
+    : {
       SCM_DO_BUILD_DURING_DEPLOYMENT: 'true'
       DOCKER_REGISTRY_SERVER_URL: 'https://${frontendContainerRegistryHostname}'
       WEBSITES_PORT: '3000'
@@ -802,6 +843,7 @@ module role_assignments './modules/identity/role-assignments.bicep' = {
     deployerPrincipalType: deployerPrincipalType
     userAssignedManagedIdentityPrincipalId: userAssignedIdentity.outputs.principalId
     cosmosDbAccountName: cosmosDBModule.outputs.name
+    containerRegistryResourceId: isCustom ? container_registry!.outputs.resourceId : ''
   }
 }
 
@@ -860,3 +902,7 @@ output AZURE_AI_SEARCH_INDEX_NAME_RFP_COMPLIANCE string = aiSearchIndexNameForRF
 output AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_SUMMARY string = aiSearchIndexNameForContractSummary
 output AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_RISK string = aiSearchIndexNameForContractRisk
 output AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_COMPLIANCE string = aiSearchIndexNameForContractCompliance
+
+// Container Registry Outputs
+output AZURE_CONTAINER_REGISTRY_ENDPOINT string? = isCustom ? container_registry!.outputs.loginServer : null
+output AZURE_CONTAINER_REGISTRY_NAME string? = isCustom ? container_registry!.outputs.name : null

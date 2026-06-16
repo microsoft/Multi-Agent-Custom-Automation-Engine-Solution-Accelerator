@@ -1,5 +1,5 @@
 # Base Python image
-FROM python:3.11-slim-bullseye AS base
+FROM python:3.11-slim-bookworm AS base
 WORKDIR /app
 
 FROM base AS builder

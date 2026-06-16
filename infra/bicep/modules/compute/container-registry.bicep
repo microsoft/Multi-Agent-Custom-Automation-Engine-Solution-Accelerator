@@ -30,6 +30,9 @@ param publicNetworkAccess string = 'Enabled'
 @description('Export policy status.')
 param exportPolicyStatus string = 'enabled'
 
+@description('Retention policy status.')
+param retentionPolicyStatus string = 'disabled'
+
 // ============================================================================
 // Resource Deployment
 // ============================================================================
@@ -50,7 +53,7 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2025-04-01' =
         status: exportPolicyStatus
       }
       retentionPolicy: {
-        status: 'enabled'
+        status: retentionPolicyStatus
         days: 7
       }
       trustPolicy: {
