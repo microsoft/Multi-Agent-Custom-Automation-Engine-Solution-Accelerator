@@ -137,7 +137,7 @@ param gpt5MiniModelCapacity int = 50
 @description('Optional. GPT image model deployment type. Defaults to GlobalStandard.')
 param gptImageModelDeploymentType string = 'GlobalStandard'
 
-@description('Optional. gpt-image-1.5 deployment capacity (RPM). Defaults to 1 to support concurrent marketing-image generation across multiple sessions.')
+@description('Optional. gpt-image-1.5 deployment capacity (RPM). Defaults to 4 to support concurrent marketing-image generation across multiple sessions.')
 param gptImageModelCapacity int = 4
 
 @description('Optional. The tags to apply to all deployed Azure resources.')
