@@ -124,7 +124,7 @@ param gpt4_1ModelCapacity int = 150
 param gptReasoningModelCapacity int = 100
 
 @description('Optional. gpt-image-1.5 deployment capacity (RPM). Defaults to 1 to support concurrent marketing-image generation across multiple sessions.')
-param gptImageModelCapacity int = 1
+param gptImageModelCapacity int = 4
 
 @description('Optional. The tags to apply to all deployed Azure resources.')
 param tags resourceInput<'Microsoft.Resources/resourceGroups@2025-04-01'>.tags = {}
