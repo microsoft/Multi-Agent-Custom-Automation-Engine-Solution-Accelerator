@@ -357,9 +357,9 @@ jobs:
           BACKEND_URL: ${{ steps.get_output_windows.outputs.BACKEND_URL }}
           AZURE_STORAGE_ACCOUNT_NAME: ${{ steps.get_output_windows.outputs.AZURE_STORAGE_ACCOUNT_NAME }}
           AZURE_AI_SEARCH_NAME: ${{ steps.get_output_windows.outputs.AZURE_AI_SEARCH_NAME }}
-          # Needed by post_deploy.ps1 to resolve the principal id when the workflow
-          # is signed in as a service principal (no interactive user).
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          PYTHONUTF8: '1'
+          PYTHONIOENCODING: 'utf-8'
         run: |
           $ErrorActionPreference = "Stop"
           # Confirm an Azure CLI session is active. The preceding "Refresh Azure
