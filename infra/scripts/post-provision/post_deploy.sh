@@ -14,6 +14,7 @@ project_endpoint=""
 az_subscription_id=""
 resource_group=""
 user_principal_id=""
+ai_foundry_resource_id=""
 python_cmd=""
 venv_path="$SCRIPT_DIR/scriptenv"
 
@@ -267,6 +268,7 @@ get_values_from_azd_env() {
     project_endpoint="$(azd env get-value AZURE_AI_AGENT_ENDPOINT 2>/dev/null || true)"
   fi
   resource_group="$(azd env get-value AZURE_RESOURCE_GROUP 2>/dev/null || true)"
+  ai_foundry_resource_id="$(azd env get-value AI_FOUNDRY_RESOURCE_ID 2>/dev/null || true)"
 
   if [ -z "$backend_url" ] || [ -z "$storage_account" ] || [ -z "$ai_search" ] || [ -z "$resource_group" ]; then
     error "Could not retrieve all required values from azd environment."
@@ -294,7 +296,7 @@ get_values_from_az_deployment() {
     return 1
   fi
 
-  local dep_storage_account dep_ai_search dep_backend_url dep_ai_search_endpoint dep_openai_endpoint dep_project_endpoint
+  local dep_storage_account dep_ai_search dep_backend_url dep_ai_search_endpoint dep_openai_endpoint dep_project_endpoint dep_ai_foundry_resource_id
   dep_storage_account="$(printf '%s' "$deployment_outputs" | get_value_from_deployment "azurE_STORAGE_ACCOUNT_NAME" "azureStorageAccountName" 2>/dev/null || true)"
   dep_ai_search="$(printf '%s' "$deployment_outputs" | get_value_from_deployment "azurE_AI_SEARCH_NAME" "azureAiSearchName" 2>/dev/null || true)"
   dep_backend_url="$(printf '%s' "$deployment_outputs" | get_value_from_deployment "backenD_URL" "backendUrl" 2>/dev/null || true)"
@@ -307,6 +309,7 @@ get_values_from_az_deployment() {
   if [ -z "$dep_project_endpoint" ]; then
     dep_project_endpoint="$(printf '%s' "$deployment_outputs" | get_value_from_deployment "azurE_AI_AGENT_ENDPOINT" "azureAiAgentEndpoint" 2>/dev/null || true)"
   fi
+  dep_ai_foundry_resource_id="$(printf '%s' "$deployment_outputs" | get_value_from_deployment "aI_FOUNDRY_RESOURCE_ID" "aiFoundryResourceId" 2>/dev/null || true)"
 
   if [ -n "$dep_storage_account" ]; then
     storage_account="$dep_storage_account"
@@ -325,6 +328,9 @@ get_values_from_az_deployment() {
   fi
   if [ -n "$dep_project_endpoint" ]; then
     project_endpoint="$dep_project_endpoint"
+  fi
+  if [ -n "$dep_ai_foundry_resource_id" ]; then
+    ai_foundry_resource_id="$dep_ai_foundry_resource_id"
   fi
 
   if [ -z "$storage_account" ] || [ -z "$ai_search" ] || [ -z "$backend_url" ]; then
@@ -375,6 +381,39 @@ run_python() {
   local module="$1"
   shift
   "$python_cmd" "$REPO_ROOT/$module" "$@"
+}
+
+ensure_role_assignments_for_kbmcp() {
+  local foundry_resource_id="$1"
+  local principal_id="$2"
+
+  if [ -z "$foundry_resource_id" ] || [ -z "$principal_id" ]; then
+    warn "Skipping Foundry User role assignment: missing AI Foundry resource id or user principal id."
+    return 1
+  fi
+
+  info ""
+  info "Ensuring Azure AI User / Foundry User role assignment for KB MCP connection creation..."
+
+  local foundry_user_role_id='53ca6127-db72-4b80-b1b0-d745d6d5456d'
+
+  local existing_role
+  existing_role="$(az role assignment list --assignee "$principal_id" --scope "$foundry_resource_id" --query "[?roleDefinitionId=='$foundry_user_role_id']" -o tsv 2>/dev/null || true)"
+  if [ -z "$existing_role" ]; then
+    info "Assigning Foundry User role to principal ID $principal_id on scope $foundry_resource_id"
+    if ! az role assignment create --assignee "$principal_id" --role "$foundry_user_role_id" --scope "$foundry_resource_id" --output none; then
+      error "Failed to assign Foundry User role."
+      return 1
+    fi
+    info "✓ Foundry User role assigned successfully"
+    info "Waiting 60 seconds for role assignment to propagate..."
+    sleep 60
+  else
+    info "✓ Principal ID $principal_id already has Foundry User role on scope $foundry_resource_id"
+  fi
+
+  info "✓ Role assignments for KB MCP ensured."
+  return 0
 }
 
 deploy_content_pack() {
@@ -674,6 +713,7 @@ main() {
   echo "Storage Account:   $storage_account"
   echo "AI Search:         $ai_search"
   echo "AI Project:        $project_endpoint"
+  echo "Foundry Res ID:    $ai_foundry_resource_id"
   echo "Subscription ID:   $az_subscription_id"
   echo "==============================================="
   echo ""
@@ -682,6 +722,11 @@ main() {
   if [ -z "$user_principal_id" ]; then
     fatal "Could not retrieve signed-in user principal id."
   fi
+
+  if ! ensure_role_assignments_for_kbmcp "$ai_foundry_resource_id" "$user_principal_id"; then
+    warn "Failed to ensure role assignments for KB MCP. You may need to manually assign the Foundry User role to the signed-in user."
+  fi
+  echo ""
 
   activate_python_env
 

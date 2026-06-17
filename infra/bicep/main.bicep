@@ -854,55 +854,144 @@ output resourceGroupName string = resourceGroup().name
 @description('The default hostname of the frontend web app.')
 output webSiteDefaultHostname string = replace(frontend_app.outputs.appUrl, 'https://', '')
 
+@description('The blob service endpoint of the deployed storage account.')
 output AZURE_STORAGE_BLOB_URL string = storage_account.outputs.blobEndpoint
+
+@description('The name of the deployed storage account.')
 output AZURE_STORAGE_ACCOUNT_NAME string = storageAccountName
+
+@description('The endpoint URL of the deployed Azure AI Search service.')
 output AZURE_AI_SEARCH_ENDPOINT string = ai_search.outputs.endpoint
+
+@description('The name of the deployed Azure AI Search service.')
 output AZURE_AI_SEARCH_NAME string = aiSearchServiceName
 
+@description('The endpoint URL of the deployed Cosmos DB account.')
 output COSMOSDB_ENDPOINT string = 'https://${cosmosDbResourceName}.documents.azure.com:443/'
+
+@description('The Cosmos DB database name used by the application.')
 output COSMOSDB_DATABASE string = cosmosDbDatabaseName
+
+@description('The Cosmos DB container name used to persist agent memory.')
 output COSMOSDB_CONTAINER string = cosmosDbDatabaseMemoryContainerName
+
+@description('The Azure OpenAI endpoint URL for the AI Foundry / AI Services account.')
 output AZURE_OPENAI_ENDPOINT string = aiFoundryOpenAIEndpoint
+
+@description('The default GPT model deployment name.')
 output AZURE_OPENAI_DEPLOYMENT_NAME string = gptModelName
+
+@description('The RAI (Responsible AI) GPT model deployment name.')
 output AZURE_OPENAI_RAI_DEPLOYMENT_NAME string = gpt4_1ModelName
+
+@description('The Azure OpenAI API version used by the application.')
 output AZURE_OPENAI_API_VERSION string = azureOpenaiAPIVersion
+
+@description('The subscription id that hosts the AI Foundry / AI Services resources.')
 output AZURE_AI_SUBSCRIPTION_ID string = subscription().subscriptionId
+
+@description('The resource group that hosts the AI Foundry / AI Services resources.')
 output AZURE_AI_RESOURCE_GROUP string = resourceGroup().name
+
+@description('The name of the AI Foundry project resource.')
 output AZURE_AI_PROJECT_NAME string = aiFoundryAiProjectResourceName
+
+@description('The application environment label (e.g. Dev, Prod).')
 output APP_ENV string = 'Prod'
+
+@description('The AI Foundry resource id (existing project resource id when reusing, otherwise the newly created project).')
 output AI_FOUNDRY_RESOURCE_ID string = useExistingAiFoundryAiProject ? existing_project_setup!.outputs.resourceId : ai_foundry_project!.outputs.resourceId
+
+@description('The name of the deployed Cosmos DB account.')
 output COSMOSDB_ACCOUNT_NAME string = cosmosDbResourceName
+
+@description('Alias for AZURE_AI_SEARCH_ENDPOINT — kept for backward compatibility with seed scripts and the backend.')
 output AZURE_SEARCH_ENDPOINT string = ai_search.outputs.endpoint
+
+@description('The client id of the user-assigned managed identity used by backend and MCP container apps.')
 output AZURE_CLIENT_ID string = userAssignedIdentity.outputs.clientId
+
+@description('The Azure AD tenant id of the deployment.')
 output AZURE_TENANT_ID string = tenant().tenantId
+
+@description('The default Cognitive Services resource scope used to acquire AAD tokens.')
 output AZURE_COGNITIVE_SERVICES string = 'https://cognitiveservices.azure.com/.default'
+
+@description('The model deployment name used by the orchestrator/manager (reasoning model).')
 output ORCHESTRATOR_MODEL_NAME string = gptReasoningModelName
+
+@description('The display name of the MCP server.')
 output MCP_SERVER_NAME string = mcpServerName
+
+@description('Human-readable description of the MCP server.')
 output MCP_SERVER_DESCRIPTION string = mcpServerDescription
+
+@description('JSON-serialized list of model deployment names supported by this deployment.')
 output SUPPORTED_MODELS string = string(supportedModels)
+
+@description('Public HTTPS URL of the backend Container App.')
 output BACKEND_URL string = 'https://${backend_container_app.outputs.fqdn}'
+
+@description('AI Foundry project endpoint URL used by the agents.')
 output AZURE_AI_PROJECT_ENDPOINT string = aiFoundryAiProjectEndpoint
+
+@description('Alias for AZURE_AI_PROJECT_ENDPOINT — kept for backward compatibility with the agent SDK.')
 output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiProjectEndpoint
 
+@description('The name of the AI Foundry / AI Services account hosting the project.')
 output AI_SERVICE_NAME string = aiFoundryAiServicesResourceName
 
+@description('Storage container name for retail customer data.')
 output AZURE_STORAGE_CONTAINER_NAME_RETAIL_CUSTOMER string = storageContainerNameRetailCustomer
+
+@description('Storage container name for retail order data.')
 output AZURE_STORAGE_CONTAINER_NAME_RETAIL_ORDER string = storageContainerNameRetailOrder
+
+@description('Storage container name for RFP summary documents.')
 output AZURE_STORAGE_CONTAINER_NAME_RFP_SUMMARY string = storageContainerNameRFPSummary
+
+@description('Storage container name for RFP risk documents.')
 output AZURE_STORAGE_CONTAINER_NAME_RFP_RISK string = storageContainerNameRFPRisk
+
+@description('Storage container name for RFP compliance documents.')
 output AZURE_STORAGE_CONTAINER_NAME_RFP_COMPLIANCE string = storageContainerNameRFPCompliance
+
+@description('Storage container name for contract summary documents.')
 output AZURE_STORAGE_CONTAINER_NAME_CONTRACT_SUMMARY string = storageContainerNameContractSummary
+
+@description('Storage container name for contract risk documents.')
 output AZURE_STORAGE_CONTAINER_NAME_CONTRACT_RISK string = storageContainerNameContractRisk
+
+@description('Storage container name for contract compliance documents.')
 output AZURE_STORAGE_CONTAINER_NAME_CONTRACT_COMPLIANCE string = storageContainerNameContractCompliance
+
+@description('AI Search index name for retail customer data.')
 output AZURE_AI_SEARCH_INDEX_NAME_RETAIL_CUSTOMER string = aiSearchIndexNameForRetailCustomer
+
+@description('AI Search index name for retail order data.')
 output AZURE_AI_SEARCH_INDEX_NAME_RETAIL_ORDER string = aiSearchIndexNameForRetailOrder
+
+@description('AI Search index name for RFP summary documents.')
 output AZURE_AI_SEARCH_INDEX_NAME_RFP_SUMMARY string = aiSearchIndexNameForRFPSummary
+
+@description('AI Search index name for RFP risk documents.')
 output AZURE_AI_SEARCH_INDEX_NAME_RFP_RISK string = aiSearchIndexNameForRFPRisk
+
+@description('AI Search index name for RFP compliance documents.')
 output AZURE_AI_SEARCH_INDEX_NAME_RFP_COMPLIANCE string = aiSearchIndexNameForRFPCompliance
+
+@description('AI Search index name for contract summary documents.')
 output AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_SUMMARY string = aiSearchIndexNameForContractSummary
+
+@description('AI Search index name for contract risk documents.')
 output AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_RISK string = aiSearchIndexNameForContractRisk
+
+@description('AI Search index name for contract compliance documents.')
 output AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_COMPLIANCE string = aiSearchIndexNameForContractCompliance
 
 // Container Registry Outputs
+@description('Login server (endpoint) of the Azure Container Registry. Only populated when isCustom is true.')
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string? = isCustom ? container_registry!.outputs.loginServer : null
+
+@description('Name of the Azure Container Registry. Only populated when isCustom is true.')
 output AZURE_CONTAINER_REGISTRY_NAME string? = isCustom ? container_registry!.outputs.name : null
