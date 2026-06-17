@@ -348,7 +348,7 @@ jobs:
           azd auth login --client-id "${{ secrets.AZURE_CLIENT_ID }}" --federated-credential-provider "github" --tenant-id "${{ secrets.AZURE_TENANT_ID }}"
 
       - name: Run Post deployment scripts
-        shell: bash
+        shell: pwsh
         env:
           INPUT_RESOURCE_GROUP_NAME: ${{ inputs.RESOURCE_GROUP_NAME }}
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
@@ -357,29 +357,29 @@ jobs:
           BACKEND_URL: ${{ steps.get_output_windows.outputs.BACKEND_URL }}
           AZURE_STORAGE_ACCOUNT_NAME: ${{ steps.get_output_windows.outputs.AZURE_STORAGE_ACCOUNT_NAME }}
           AZURE_AI_SEARCH_NAME: ${{ steps.get_output_windows.outputs.AZURE_AI_SEARCH_NAME }}
-          # Needed by post_deploy.sh to resolve the principal id when the workflow
+          # Needed by post_deploy.ps1 to resolve the principal id when the workflow
           # is signed in as a service principal (no interactive user).
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
         run: |
-          set -e
-          # Use the same login pattern as selecting_team_config_and_data.sh:
-          # confirm an Azure CLI session is active. The preceding "Refresh Azure
+          $ErrorActionPreference = "Stop"
+          # Confirm an Azure CLI session is active. The preceding "Refresh Azure
           # login" step re-establishes credentials, so we only verify here.
-          if az account show >/dev/null 2>&1; then
-            echo "Already authenticated with Azure."
-          else
-            echo "ERROR: Not authenticated with Azure. The 'Refresh Azure login' step must run before this step."
+          az account show 2>$null | Out-Null
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Not authenticated with Azure. The 'Refresh Azure login' step must run before this step."
             exit 1
-          fi
-          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          }
+          Write-Host "Already authenticated with Azure."
+          az account set --subscription "$env:AZURE_SUBSCRIPTION_ID"
 
-          # Run the unified post-deploy script non-interactively.
-          # --use-case 7 installs all use cases; --resource-group enables fallbacks
+          # Run the unified PowerShell post-deploy script non-interactively.
+          # -UseCase 7 installs all use cases; -ResourceGroup enables fallbacks
           # to deployment outputs / naming-convention if azd env values are missing.
-          bash infra/scripts/post_deploy.sh \
-            --resource-group "$INPUT_RESOURCE_GROUP_NAME" \
-            --use-case 7 \
-            --non-interactive
+          ./infra/scripts/post_deploy.ps1 `
+            -ResourceGroup "$env:INPUT_RESOURCE_GROUP_NAME" `
+            -UseCase 7 `
+            -NonInteractive
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Generate Deployment Summary
         if: always()

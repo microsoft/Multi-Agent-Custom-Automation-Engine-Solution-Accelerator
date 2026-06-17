@@ -23,7 +23,10 @@
 #>
 
 param(
-    [string]$ResourceGroup
+    [string]$ResourceGroup,
+    [ValidateSet("1", "2", "3", "4", "5", "6", "7", "all", "All", "ALL")]
+    [string]$UseCase,
+    [switch]$NonInteractive
 )
 
 Set-StrictMode -Version Latest
@@ -491,7 +494,7 @@ try {
     $currentSubscriptionId   = az account show --query id   -o tsv
     $currentSubscriptionName = az account show --query name -o tsv
 
-    if ($script:azSubscriptionId -and $currentSubscriptionId -ne $script:azSubscriptionId) {
+    if (-not $NonInteractive -and $script:azSubscriptionId -and $currentSubscriptionId -ne $script:azSubscriptionId) {
         Write-Host "Current subscription is $currentSubscriptionName ( $currentSubscriptionId )."
         $confirmation = Read-Host "Do you want to continue with this subscription? (y/n)"
         if ($confirmation -notin @("y", "Y")) {
@@ -553,37 +556,56 @@ try {
     }
 
     # ── Use case selection ────────────────────────────────────────────────────
-    Write-Host ""
-    Write-Host "==============================================="
-    Write-Host "Available Use Cases:"
-    Write-Host "==============================================="
-    Write-Host "1. RFP Evaluation"
-    Write-Host "2. Retail Customer Satisfaction"
-    Write-Host "3. HR Employee Onboarding"
-    Write-Host "4. Marketing Press Release"
-    Write-Host "5. Contract Compliance Review"
-    Write-Host "6. Content Generation"
-    Write-Host "7. All"
-    Write-Host "==============================================="
-    Write-Host ""
+    $useCaseLabels = @{
+        "1" = "RFP Evaluation"
+        "2" = "Retail Customer Satisfaction"
+        "3" = "HR Employee Onboarding"
+        "4" = "Marketing Press Release"
+        "5" = "Contract Compliance Review"
+        "6" = "Content Generation"
+        "7" = "All"
+    }
 
-    do {
-        $useCaseSelection = Read-Host "Please enter the number of the use case you would like to install (1-7)"
-        switch ($useCaseSelection) {
-            "1" { $selectedUseCase = "RFP Evaluation";              $useCaseValid = $true }
-            "2" { $selectedUseCase = "Retail Customer Satisfaction"; $useCaseValid = $true }
-            "3" { $selectedUseCase = "HR Employee Onboarding";       $useCaseValid = $true }
-            "4" { $selectedUseCase = "Marketing Press Release";      $useCaseValid = $true }
-            "5" { $selectedUseCase = "Contract Compliance Review";   $useCaseValid = $true }
-            "6" { $selectedUseCase = "Content Generation";           $useCaseValid = $true }
-            "7" { $selectedUseCase = "All";                          $useCaseValid = $true }
-            "all" { $useCaseSelection = "7"; $selectedUseCase = "All"; $useCaseValid = $true }
-            default {
-                $useCaseValid = $false
-                Write-Host "Invalid selection. Please enter a number from 1-7." -ForegroundColor Red
+    if ($UseCase) {
+        $useCaseSelection = if ($UseCase -in @("all", "All", "ALL")) { "7" } else { $UseCase }
+        $selectedUseCase = $useCaseLabels[$useCaseSelection]
+        Write-Host "Use case pre-selected via -UseCase parameter: $selectedUseCase ($useCaseSelection)"
+    } elseif ($NonInteractive) {
+        Write-Host "Error: -UseCase is required when running with -NonInteractive." -ForegroundColor Red
+        exit 1
+    } else {
+        Write-Host ""
+        Write-Host "==============================================="
+        Write-Host "Available Use Cases:"
+        Write-Host "==============================================="
+        Write-Host "1. RFP Evaluation"
+        Write-Host "2. Retail Customer Satisfaction"
+        Write-Host "3. HR Employee Onboarding"
+        Write-Host "4. Marketing Press Release"
+        Write-Host "5. Contract Compliance Review"
+        Write-Host "6. Content Generation"
+        Write-Host "7. All"
+        Write-Host "==============================================="
+        Write-Host ""
+
+        do {
+            $useCaseSelection = Read-Host "Please enter the number of the use case you would like to install (1-7)"
+            switch ($useCaseSelection) {
+                "1" { $selectedUseCase = "RFP Evaluation";              $useCaseValid = $true }
+                "2" { $selectedUseCase = "Retail Customer Satisfaction"; $useCaseValid = $true }
+                "3" { $selectedUseCase = "HR Employee Onboarding";       $useCaseValid = $true }
+                "4" { $selectedUseCase = "Marketing Press Release";      $useCaseValid = $true }
+                "5" { $selectedUseCase = "Contract Compliance Review";   $useCaseValid = $true }
+                "6" { $selectedUseCase = "Content Generation";           $useCaseValid = $true }
+                "7" { $selectedUseCase = "All";                          $useCaseValid = $true }
+                "all" { $useCaseSelection = "7"; $selectedUseCase = "All"; $useCaseValid = $true }
+                default {
+                    $useCaseValid = $false
+                    Write-Host "Invalid selection. Please enter a number from 1-7." -ForegroundColor Red
+                }
             }
-        }
-    } while (-not $useCaseValid)
+        } while (-not $useCaseValid)
+    }
 
     Write-Host ""
     Write-Host "==============================================="
@@ -600,9 +622,22 @@ try {
     Write-Host ""
 
     # ── Signed-in user principal id (for backend API auth header) ─────────────
-    $script:userPrincipalId = az ad signed-in-user show --query id -o tsv
+    # In CI the workflow logs in as a service principal (OIDC), so
+    # `az ad signed-in-user show` returns nothing. Fall back to an explicit
+    # USER_PRINCIPAL_ID env var, then to the SP object id looked up via
+    # AZURE_CLIENT_ID.
+    if ($env:USER_PRINCIPAL_ID) {
+        $script:userPrincipalId = $env:USER_PRINCIPAL_ID
+        Write-Host "Using principal id from USER_PRINCIPAL_ID env var."
+    } else {
+        $script:userPrincipalId = az ad signed-in-user show --query id -o tsv 2>$null
+        if (-not $script:userPrincipalId -and $env:AZURE_CLIENT_ID) {
+            Write-Host "No interactive user — falling back to service principal object id (AZURE_CLIENT_ID=$($env:AZURE_CLIENT_ID))."
+            $script:userPrincipalId = az ad sp show --id $env:AZURE_CLIENT_ID --query id -o tsv 2>$null
+        }
+    }
     if (-not $script:userPrincipalId) {
-        Write-Host "Error: Could not retrieve signed-in user principal id." -ForegroundColor Red
+        Write-Host "Error: Could not retrieve signed-in user principal id. In CI, set USER_PRINCIPAL_ID or ensure AZURE_CLIENT_ID is exported and the SP is visible to Microsoft Graph." -ForegroundColor Red
         exit 1
     }
 
