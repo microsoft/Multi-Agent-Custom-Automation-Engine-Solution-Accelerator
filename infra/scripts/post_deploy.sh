@@ -462,6 +462,13 @@ PY
 
   local first_blob_container=""
   while IFS='|' read -r item_type container source pattern index_name; do
+    # The temp file is written by Windows Python (CRLF), so the last field read
+    # here may carry a trailing carriage return that corrupts the index URL.
+    item_type="${item_type//$'\r'/}"
+    container="${container//$'\r'/}"
+    source="${source//$'\r'/}"
+    pattern="${pattern//$'\r'/}"
+    index_name="${index_name//$'\r'/}"
     case "$item_type" in
       BLOB_INDEX)
         if [ ! -d "$pack_path/$source" ]; then
@@ -679,6 +686,21 @@ main() {
     fi
   fi
 
+  # On Windows runners the resolved values come from Windows builds of az/azd
+  # and Python, which emit CRLF line endings. A stray carriage return survives
+  # command substitution and corrupts any URL built from these values (HTTP 400
+  # "Bad Request - Invalid URL" from Azure Search/Storage). Strip CR defensively
+  # so the script behaves identically on Linux and Windows.
+  backend_url="${backend_url//$'\r'/}"
+  storage_account="${storage_account//$'\r'/}"
+  ai_search="${ai_search//$'\r'/}"
+  ai_search_endpoint="${ai_search_endpoint//$'\r'/}"
+  openai_endpoint="${openai_endpoint//$'\r'/}"
+  project_endpoint="${project_endpoint//$'\r'/}"
+  ai_foundry_resource_id="${ai_foundry_resource_id//$'\r'/}"
+  ai_project_name="${ai_project_name//$'\r'/}"
+  resource_group="${resource_group//$'\r'/}"
+
   select_use_case
 
   echo ""
@@ -709,6 +731,7 @@ main() {
       user_principal_id="$(az ad sp show --id "$AZURE_CLIENT_ID" --query id -o tsv 2>/dev/null || true)"
     fi
   fi
+  user_principal_id="${user_principal_id//$'\r'/}"
   if [ -z "$user_principal_id" ]; then
     fatal "Could not retrieve signed-in user principal id. In CI, set USER_PRINCIPAL_ID or ensure AZURE_CLIENT_ID is exported and the SP is visible to Microsoft Graph."
   fi
