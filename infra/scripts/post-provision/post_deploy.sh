@@ -883,6 +883,16 @@ main() {
       echo "Frontend: https://$frontend_host"
     fi
     echo ""
+    echo "To re-run ONLY the post-deployment step (without redeploying infra/app):"
+    echo "  azd hooks run postdeploy"
+    echo ""
+    echo "Or run the script directly:"
+    echo "  Bash       : bash ./infra/scripts/post-provision/post_deploy.sh"
+    echo "  PowerShell : pwsh ./infra/scripts/post-provision/post_deploy.ps1"
+    echo ""
+    echo "Common fixes before retry:"
+    echo "  - Ensure 'az login' / 'azd auth login' are current"
+    echo ""
     exit 1
   else
     echo "========================================"

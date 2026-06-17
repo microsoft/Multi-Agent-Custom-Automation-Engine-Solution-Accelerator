@@ -899,6 +899,16 @@ if ($script:hasErrors) {
     $frontendHost = $(azd env get-value webSiteDefaultHostname 2>$null)
     if ($frontendHost) { Write-Host "Frontend: https://$frontendHost" }
     Write-Host ""
+    Write-Host "To re-run ONLY the post-deployment step (without redeploying infra/app):" -ForegroundColor Yellow
+    Write-Host "  azd hooks run postdeploy" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "Or run the script directly:" -ForegroundColor Yellow
+    Write-Host "  PowerShell : pwsh ./infra/scripts/post-provision/post_deploy.ps1" -ForegroundColor Yellow
+    Write-Host "  Bash       : bash ./infra/scripts/post-provision/post_deploy.sh" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "Common fixes before retry:" -ForegroundColor Yellow
+    Write-Host "  - Ensure 'az login' / 'azd auth login' are current" -ForegroundColor Yellow
+    Write-Host ""
     exit 1
 } else {
     Write-Host ""
