@@ -494,40 +494,50 @@ try {
     $currentSubscriptionId   = az account show --query id   -o tsv
     $currentSubscriptionName = az account show --query name -o tsv
 
-    if (-not $NonInteractive -and $script:azSubscriptionId -and $currentSubscriptionId -ne $script:azSubscriptionId) {
-        Write-Host "Current subscription is $currentSubscriptionName ( $currentSubscriptionId )."
-        $confirmation = Read-Host "Do you want to continue with this subscription? (y/n)"
-        if ($confirmation -notin @("y", "Y")) {
-            $availableSubscriptions = az account list --query "[?state=='Enabled'].[name,id]" --output tsv
-            $subscriptions = $availableSubscriptions -split "`n" | ForEach-Object { $_.Split("`t") }
-
-            do {
-                Write-Host ""
-                Write-Host "Available Subscriptions:"
-                Write-Host "========================"
-                for ($i = 0; $i -lt $subscriptions.Count; $i += 2) {
-                    $index = ($i / 2) + 1
-                    Write-Host "$index. $($subscriptions[$i]) ( $($subscriptions[$i + 1]) )"
-                }
-                Write-Host "========================"
-
-                $subscriptionIndex = Read-Host "Enter the number of the subscription (1-$([int]($subscriptions.Count / 2)))"
-
-                if ($subscriptionIndex -match '^\d+$' -and [int]$subscriptionIndex -ge 1 -and [int]$subscriptionIndex -le ($subscriptions.Count / 2)) {
-                    $selectedIndex = ([int]$subscriptionIndex - 1) * 2
-                    $selectedSubscriptionName = $subscriptions[$selectedIndex]
-                    $selectedSubscriptionId   = $subscriptions[$selectedIndex + 1]
-                    az account set --subscription $selectedSubscriptionId
-                    Write-Host "Switched to subscription: $selectedSubscriptionName ( $selectedSubscriptionId )"
-                    $script:azSubscriptionId = $selectedSubscriptionId
-                    break
-                } else {
-                    Write-Host "Invalid selection. Please try again." -ForegroundColor Red
-                }
-            } while ($true)
+    if ($script:azSubscriptionId -and $currentSubscriptionId -ne $script:azSubscriptionId) {
+        if ($NonInteractive) {
+            # In non-interactive mode, auto-switch to target subscription
+            $targetSubscriptionName = az account show --subscription $script:azSubscriptionId --query name -o tsv
+            Write-Host "Switching to target subscription: $targetSubscriptionName ( $script:azSubscriptionId )"
+            az account set --subscription $script:azSubscriptionId
+            $currentSubscriptionId = $script:azSubscriptionId
+            $currentSubscriptionName = $targetSubscriptionName
         } else {
-            az account set --subscription $currentSubscriptionId
-            $script:azSubscriptionId = $currentSubscriptionId
+            # In interactive mode, prompt user
+            Write-Host "Current subscription is $currentSubscriptionName ( $currentSubscriptionId )."
+            $confirmation = Read-Host "Do you want to continue with this subscription? (y/n)"
+            if ($confirmation -notin @("y", "Y")) {
+                $availableSubscriptions = az account list --query "[?state=='Enabled'].[name,id]" --output tsv
+                $subscriptions = $availableSubscriptions -split "`n" | ForEach-Object { $_.Split("`t") }
+
+                do {
+                    Write-Host ""
+                    Write-Host "Available Subscriptions:"
+                    Write-Host "========================"
+                    for ($i = 0; $i -lt $subscriptions.Count; $i += 2) {
+                        $index = ($i / 2) + 1
+                        Write-Host "$index. $($subscriptions[$i]) ( $($subscriptions[$i + 1]) )"
+                    }
+                    Write-Host "========================"
+
+                    $subscriptionIndex = Read-Host "Enter the number of the subscription (1-$([int]($subscriptions.Count / 2)))"
+
+                    if ($subscriptionIndex -match '^\d+$' -and [int]$subscriptionIndex -ge 1 -and [int]$subscriptionIndex -le ($subscriptions.Count / 2)) {
+                        $selectedIndex = ([int]$subscriptionIndex - 1) * 2
+                        $selectedSubscriptionName = $subscriptions[$selectedIndex]
+                        $selectedSubscriptionId   = $subscriptions[$selectedIndex + 1]
+                        az account set --subscription $selectedSubscriptionId
+                        Write-Host "Switched to subscription: $selectedSubscriptionName ( $selectedSubscriptionId )"
+                        $script:azSubscriptionId = $selectedSubscriptionId
+                        break
+                    } else {
+                        Write-Host "Invalid selection. Please try again." -ForegroundColor Red
+                    }
+                } while ($true)
+            } else {
+                az account set --subscription $currentSubscriptionId
+                $script:azSubscriptionId = $currentSubscriptionId
+            }
         }
     } else {
         Write-Host "Proceeding with subscription: $currentSubscriptionName ( $currentSubscriptionId )"
