@@ -35,8 +35,8 @@ from services.team_service import TeamService
 apply_tool_history_leak_patch()
 
 _BARE_IMAGE_URL_RE = re.compile(
-    r"(?<![\(\]])"                        
-    r"(?<!\]\()"                          
+    r"(?<![\(\]])"
+    r"(?<!\]\()"
     r"(https?://[^\s)]+?"
     r"(?:/api/v4/images/[^\s)]+?|[^\s)]+?\.(?:png|jpe?g|gif|webp)))"
     r"(?=[\s)\]]|$)",
@@ -53,6 +53,7 @@ def _embed_bare_image_urls(text: str) -> str:
     if not text:
         return text
     return _BARE_IMAGE_URL_RE.sub(r"![Generated image](\1)", text)
+
 
 class OrchestrationManager:
     """Manager for handling orchestration logic using agent_framework Magentic workflow."""
@@ -166,9 +167,7 @@ class OrchestrationManager:
             max_round_count=orchestration_config.max_rounds,
             max_stall_count=5,
             checkpoint_storage=storage,
-            #intermediate_outputs=True,
             output_from="all",
-            #intermediate_output_from="all_other",
             enable_plan_review=True,
             **prompt_kwargs,
         ).build()
@@ -413,7 +412,7 @@ class OrchestrationManager:
                 job_id, user_id, final_source, len(final_text),
                 has_image_markdown, has_image_url,
             )
-            
+
             # Log results
             self.logger.info("\nAgent responses:")
             self.logger.info(

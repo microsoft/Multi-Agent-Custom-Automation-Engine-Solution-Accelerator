@@ -18,7 +18,6 @@ from common.utils.team_utils import (find_first_available_team, rai_success,
                                      rai_validate_team_config)
 from fastapi import (APIRouter, BackgroundTasks, File, HTTPException, Query,
                      Request, UploadFile, WebSocket, WebSocketDisconnect)
-from models.messages import WebsocketMessageType
 from orchestration.connection_config import (connection_config,
                                              orchestration_config, team_config)
 from orchestration.orchestration_manager import OrchestrationManager
@@ -314,7 +313,6 @@ async def process_request(
             overall_status=PlanStatus.in_progress,
         )
         await memory_store.add_plan(plan)
-
 
         track_event_if_configured(
             "Plan_Created",
@@ -1429,6 +1427,7 @@ async def get_plan_by_id(
     except Exception as e:
         logging.error(f"Error retrieving plan: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error occurred")
+
 
 @app_router.get("/images/{blob_name:path}")
 async def get_generated_image(blob_name: str):
