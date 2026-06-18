@@ -123,8 +123,8 @@ param gpt4_1ModelCapacity int = 150
 @description('Optional. o4-mini deployment capacity (thousand TPM). Used by the Magentic manager (multi-turn planning + reflection). Defaults to 100.')
 param gptReasoningModelCapacity int = 100
 
-@description('Optional. gpt-image-1.5 deployment capacity (RPM). Defaults to 5 to support concurrent marketing-image generation across multiple sessions.')
-param gptImageModelCapacity int = 5
+@description('Optional. gpt-image-1.5 deployment capacity (RPM). Defaults to 4 to support concurrent marketing-image generation across multiple sessions.')
+param gptImageModelCapacity int = 4
 
 @description('Optional. The tags to apply to all deployed Azure resources.')
 param tags resourceInput<'Microsoft.Resources/resourceGroups@2025-04-01'>.tags = {}

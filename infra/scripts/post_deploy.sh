@@ -11,11 +11,17 @@ ai_search=""
 ai_search_endpoint=""
 openai_endpoint=""
 project_endpoint=""
+ai_foundry_resource_id=""
+ai_project_name=""
 az_subscription_id=""
 resource_group=""
 user_principal_id=""
 python_cmd=""
 venv_path="$SCRIPT_DIR/scriptenv"
+
+selected_use_case=""
+selected_use_case_label=""
+non_interactive=false
 
 st_is_public_access_disabled=false
 srch_is_public_access_disabled=false
@@ -55,12 +61,34 @@ parse_args() {
         resource_group="$2"
         shift 2
         ;;
+      -u|--use-case)
+        if [ -z "${2-}" ]; then
+          fatal "Missing value for $1"
+        fi
+        case "$2" in
+          1) selected_use_case="1"; selected_use_case_label="RFP Evaluation" ;;
+          2) selected_use_case="2"; selected_use_case_label="Retail Customer Satisfaction" ;;
+          3) selected_use_case="3"; selected_use_case_label="HR Employee Onboarding" ;;
+          4) selected_use_case="4"; selected_use_case_label="Marketing Press Release" ;;
+          5) selected_use_case="5"; selected_use_case_label="Contract Compliance Review" ;;
+          6) selected_use_case="6"; selected_use_case_label="Content Generation" ;;
+          7|all|All|ALL) selected_use_case="7"; selected_use_case_label="All" ;;
+          *) fatal "Invalid value for --use-case: '$2'. Valid values: 1-7 or 'all'." ;;
+        esac
+        shift 2
+        ;;
+      --non-interactive)
+        non_interactive=true
+        shift
+        ;;
       --help|-h)
         cat <<'EOF'
-Usage: post_deploy.sh [--resource-group <name>]
+Usage: post_deploy.sh [--resource-group <name>] [--use-case <1-7|all>] [--non-interactive]
 
 Options:
   -g, --resource-group   Resource group name for deployment fallback resolution
+  -u, --use-case         Use case to install (1-7 or 'all'). Skips interactive prompt.
+      --non-interactive  Do not prompt; fail if a required input is missing.
   -h, --help             Show this help message
 EOF
         exit 0
@@ -227,22 +255,27 @@ enable_public_access_if_waf() {
 }
 
 get_value_from_deployment() {
-  local deployment_outputs="$1"
-  local primary_key="$2"
-  local fallback_key="$3"
+  # Deployment outputs JSON is piped on stdin; positional args are key names.
+  # JSON is forwarded via an env var because `python3 - <<PY` would otherwise
+  # consume stdin for the heredoc, leaving nothing for json.load(sys.stdin).
+  local primary_key="$1"
+  local fallback_key="$2"
+  local outputs_json
+  outputs_json="$(cat)"
 
-  python3 - <<PY
-import json
-import sys
-outputs = json.load(sys.stdin)
-keys = ["$primary_key", "$fallback_key"]
+  DEPLOYMENT_OUTPUTS_JSON="$outputs_json" \
+  PRIMARY_KEY="$primary_key" \
+  FALLBACK_KEY="$fallback_key" \
+  python3 - <<'PY'
+import json, os, sys
+outputs = json.loads(os.environ.get("DEPLOYMENT_OUTPUTS_JSON", "") or "{}")
+keys = [k for k in (os.environ.get("PRIMARY_KEY", ""), os.environ.get("FALLBACK_KEY", "")) if k]
 output_keys = {k.lower(): k for k in outputs}
 for key in keys:
-    for candidate in [key, key.lower(), key.upper(), key.capitalize()]:
-        actual = output_keys.get(candidate.lower())
-        if actual and isinstance(outputs[actual], dict) and outputs[actual].get("value") is not None:
-            print(outputs[actual]["value"])
-            sys.exit(0)
+    actual = output_keys.get(key.lower())
+    if actual and isinstance(outputs[actual], dict) and outputs[actual].get("value") is not None:
+        print(outputs[actual]["value"])
+        sys.exit(0)
 sys.exit(1)
 PY
 }
@@ -266,6 +299,8 @@ get_values_from_azd_env() {
   if [ -z "$project_endpoint" ]; then
     project_endpoint="$(azd env get-value AZURE_AI_AGENT_ENDPOINT 2>/dev/null || true)"
   fi
+  ai_foundry_resource_id="$(azd env get-value AI_FOUNDRY_RESOURCE_ID 2>/dev/null || true)"
+  ai_project_name="$(azd env get-value AZURE_AI_PROJECT_NAME 2>/dev/null || true)"
   resource_group="$(azd env get-value AZURE_RESOURCE_GROUP 2>/dev/null || true)"
 
   if [ -z "$backend_url" ] || [ -z "$storage_account" ] || [ -z "$ai_search" ] || [ -z "$resource_group" ]; then
@@ -294,7 +329,7 @@ get_values_from_az_deployment() {
     return 1
   fi
 
-  local dep_storage_account dep_ai_search dep_backend_url dep_ai_search_endpoint dep_openai_endpoint dep_project_endpoint
+  local dep_storage_account dep_ai_search dep_backend_url dep_ai_search_endpoint dep_openai_endpoint dep_project_endpoint dep_ai_foundry_resource_id dep_ai_project_name
   dep_storage_account="$(printf '%s' "$deployment_outputs" | get_value_from_deployment "azurE_STORAGE_ACCOUNT_NAME" "azureStorageAccountName" 2>/dev/null || true)"
   dep_ai_search="$(printf '%s' "$deployment_outputs" | get_value_from_deployment "azurE_AI_SEARCH_NAME" "azureAiSearchName" 2>/dev/null || true)"
   dep_backend_url="$(printf '%s' "$deployment_outputs" | get_value_from_deployment "backenD_URL" "backendUrl" 2>/dev/null || true)"
@@ -307,6 +342,8 @@ get_values_from_az_deployment() {
   if [ -z "$dep_project_endpoint" ]; then
     dep_project_endpoint="$(printf '%s' "$deployment_outputs" | get_value_from_deployment "azurE_AI_AGENT_ENDPOINT" "azureAiAgentEndpoint" 2>/dev/null || true)"
   fi
+  dep_ai_foundry_resource_id="$(printf '%s' "$deployment_outputs" | get_value_from_deployment "aI_FOUNDRY_RESOURCE_ID" "aiFoundryResourceId" 2>/dev/null || true)"
+  dep_ai_project_name="$(printf '%s' "$deployment_outputs" | get_value_from_deployment "azurE_AI_PROJECT_NAME" "azureAiProjectName" 2>/dev/null || true)"
 
   if [ -n "$dep_storage_account" ]; then
     storage_account="$dep_storage_account"
@@ -325,6 +362,12 @@ get_values_from_az_deployment() {
   fi
   if [ -n "$dep_project_endpoint" ]; then
     project_endpoint="$dep_project_endpoint"
+  fi
+  if [ -n "$dep_ai_foundry_resource_id" ]; then
+    ai_foundry_resource_id="$dep_ai_foundry_resource_id"
+  fi
+  if [ -n "$dep_ai_project_name" ]; then
+    ai_project_name="$dep_ai_project_name"
   fi
 
   if [ -z "$storage_account" ] || [ -z "$ai_search" ] || [ -z "$backend_url" ]; then
@@ -497,6 +540,15 @@ upload_team_config() {
 }
 
 select_use_case() {
+  if [ -n "$selected_use_case" ]; then
+    info "Use case pre-selected via argument: $selected_use_case_label ($selected_use_case)"
+    return 0
+  fi
+
+  if [ "$non_interactive" = true ]; then
+    fatal "--non-interactive set but no --use-case provided. Pass --use-case <1-7|all>."
+  fi
+
   echo ""
   echo "==============================================="
   echo "Available Use Cases:"
@@ -538,6 +590,11 @@ select_subscription() {
   current_subscription_name="$(az account show --query name -o tsv 2>/dev/null || true)"
 
   if [ -n "$az_subscription_id" ] && [ "$current_subscription_id" != "$az_subscription_id" ]; then
+    if [ "$non_interactive" = true ]; then
+      info "Non-interactive mode: switching to subscription $az_subscription_id"
+      az account set --subscription "$az_subscription_id"
+      return 0
+    fi
     echo "Current subscription is $current_subscription_name ($current_subscription_id)."
     read -rp "Do you want to continue with this subscription? (y/n) " continue_choice
     if [[ ! "$continue_choice" =~ ^[Yy]$ ]]; then
@@ -638,9 +695,22 @@ main() {
   echo "==============================================="
   echo ""
 
-  user_principal_id="$(az ad signed-in-user show --query id -o tsv 2>/dev/null || true)"
+  # Resolve the principal id to use for team-config uploads. In CI the workflow
+  # logs in as a service principal (OIDC), so `az ad signed-in-user show` returns
+  # nothing. Fall back to an explicit USER_PRINCIPAL_ID env var, then to the SP
+  # object id looked up via AZURE_CLIENT_ID.
+  if [ -n "${USER_PRINCIPAL_ID:-}" ]; then
+    user_principal_id="$USER_PRINCIPAL_ID"
+    info "Using principal id from USER_PRINCIPAL_ID env var."
+  else
+    user_principal_id="$(az ad signed-in-user show --query id -o tsv 2>/dev/null || true)"
+    if [ -z "$user_principal_id" ] && [ -n "${AZURE_CLIENT_ID:-}" ]; then
+      info "No interactive user — falling back to service principal object id (AZURE_CLIENT_ID=$AZURE_CLIENT_ID)."
+      user_principal_id="$(az ad sp show --id "$AZURE_CLIENT_ID" --query id -o tsv 2>/dev/null || true)"
+    fi
+  fi
   if [ -z "$user_principal_id" ]; then
-    fatal "Could not retrieve signed-in user principal id."
+    fatal "Could not retrieve signed-in user principal id. In CI, set USER_PRINCIPAL_ID or ensure AZURE_CLIENT_ID is exported and the SP is visible to Microsoft Graph."
   fi
 
   activate_python_env
@@ -663,6 +733,45 @@ main() {
     export AZURE_OPENAI_ENDPOINT="$openai_endpoint"
   else
     warn "AZURE_OPENAI_ENDPOINT is not set. Knowledge base reasoning may fall back to default or fail."
+  fi
+
+  # Resolve AI Foundry account resource ID and project name. Prefer the values
+  # already retrieved from azd env / deployment outputs; otherwise fall back to
+  # querying the resource group with az CLI. These are exported so that
+  # seed_kb_connections.py can construct the project ARM resource ID directly,
+  # avoiding fragile data-plane discovery that fails for service principals on
+  # fresh deployments.
+  if [ -z "$ai_foundry_resource_id" ] && [ -n "$resource_group" ] && [ -n "$openai_endpoint" ]; then
+    local foundry_account_name=""
+    if [[ "$openai_endpoint" =~ ^https?://([^.]+)\. ]]; then
+      foundry_account_name="${BASH_REMATCH[1]}"
+    fi
+    if [ -n "$foundry_account_name" ]; then
+      ai_foundry_resource_id="$(az cognitiveservices account show --name "$foundry_account_name" --resource-group "$resource_group" --query id -o tsv 2>/dev/null || true)"
+    fi
+  fi
+  if [ -z "$ai_project_name" ] && [ -n "$project_endpoint" ]; then
+    # Project endpoint format: https://{account}.services.ai.azure.com/api/projects/{project}
+    ai_project_name="${project_endpoint##*/}"
+  fi
+
+  if [ -n "$ai_foundry_resource_id" ]; then
+    export AI_FOUNDRY_RESOURCE_ID="$ai_foundry_resource_id"
+  fi
+  if [ -n "$ai_project_name" ]; then
+    export AZURE_AI_PROJECT_NAME="$ai_project_name"
+  fi
+  if [ -n "$az_subscription_id" ]; then
+    export AZURE_AI_SUBSCRIPTION_ID="$az_subscription_id"
+    export AZURE_SUBSCRIPTION_ID="$az_subscription_id"
+  fi
+  if [ -n "$resource_group" ]; then
+    export AZURE_AI_RESOURCE_GROUP="$resource_group"
+    export AZURE_RESOURCE_GROUP="$resource_group"
+  fi
+
+  if [ -z "$ai_foundry_resource_id" ] || [ -z "$ai_project_name" ]; then
+    warn "AI_FOUNDRY_RESOURCE_ID or AZURE_AI_PROJECT_NAME not resolved. KB MCP connection provisioning may fall back to data-plane discovery."
   fi
 
   local uses_data=false

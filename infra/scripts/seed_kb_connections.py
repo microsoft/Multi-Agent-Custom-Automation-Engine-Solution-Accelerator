@@ -13,6 +13,15 @@ Requires in src/backend/.env (or environment):
   - AZURE_AI_SEARCH_ENDPOINT
   - AZURE_AI_PROJECT_ENDPOINT  (the full project endpoint URL)
 
+Optional (preferred — used to construct the project ARM resource ID directly,
+avoiding fragile data-plane discovery that fails for service principals on
+fresh deployments):
+  - AI_FOUNDRY_RESOURCE_ID    (the AI Foundry / Cognitive Services account ARM id)
+  - AZURE_AI_PROJECT_NAME     (the project name under the account)
+  - AZURE_AI_PROJECT_RESOURCE_ID (explicit full project ARM id; overrides the above)
+  - AZURE_AI_SUBSCRIPTION_ID  (or AZURE_SUBSCRIPTION_ID)
+  - AZURE_AI_RESOURCE_GROUP   (or AZURE_RESOURCE_GROUP)
+
 Authentication: DefaultAzureCredential — caller needs Contributor on the AI project.
 Idempotent: PUTs connections (creates or updates).
 """
@@ -20,6 +29,7 @@ Idempotent: PUTs connections (creates or updates).
 import os
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
 
 import httpx
 from azure.identity import DefaultAzureCredential
@@ -115,6 +125,63 @@ def _discover_project_resource_id(credential: DefaultAzureCredential) -> str:
     return ""
 
 
+def _build_project_resource_id_from_env() -> str:
+    """Construct the project ARM resource ID from environment variables.
+
+    Preferred resolution order:
+      1. AZURE_AI_PROJECT_RESOURCE_ID (explicit override)
+      2. AI_FOUNDRY_RESOURCE_ID + AZURE_AI_PROJECT_NAME
+      3. (subscription, resource group) + (account, project) parsed from PROJECT_ENDPOINT
+
+    Returns empty string if it cannot be constructed.
+    """
+    explicit = os.environ.get("AZURE_AI_PROJECT_RESOURCE_ID", "").strip().rstrip("/")
+    if explicit:
+        return explicit
+
+    foundry_id = os.environ.get("AI_FOUNDRY_RESOURCE_ID", "").strip().rstrip("/")
+    project_name_env = os.environ.get("AZURE_AI_PROJECT_NAME", "").strip()
+
+    # Parse account name and project name from the project endpoint as a fallback.
+    parsed = urlparse(PROJECT_ENDPOINT) if PROJECT_ENDPOINT else None
+    parsed_account = ""
+    parsed_project = ""
+    if parsed and parsed.hostname:
+        parsed_account = parsed.hostname.split(".", 1)[0]
+        path_parts = [p for p in (parsed.path or "").split("/") if p]
+        if path_parts:
+            parsed_project = path_parts[-1]
+
+    project_name = project_name_env or parsed_project
+
+    # Path 2: foundry resource id + project name
+    if foundry_id and project_name:
+        # Ensure the id points to the account (not the project itself) before appending.
+        if "/projects/" in foundry_id.lower():
+            return foundry_id
+        return f"{foundry_id}/projects/{project_name}"
+
+    # Path 3: build from sub + rg + parsed account/project
+    sub = (
+        os.environ.get("AZURE_AI_SUBSCRIPTION_ID")
+        or os.environ.get("AZURE_SUBSCRIPTION_ID")
+        or ""
+    ).strip()
+    rg = (
+        os.environ.get("AZURE_AI_RESOURCE_GROUP")
+        or os.environ.get("AZURE_RESOURCE_GROUP")
+        or ""
+    ).strip()
+    if sub and rg and parsed_account and project_name:
+        return (
+            f"/subscriptions/{sub}/resourceGroups/{rg}"
+            f"/providers/Microsoft.CognitiveServices/accounts/{parsed_account}"
+            f"/projects/{project_name}"
+        )
+
+    return ""
+
+
 def _create_connection_via_arm(
     resource_id: str, connection_name: str, target_url: str, credential: DefaultAzureCredential
 ) -> bool:
@@ -171,27 +238,47 @@ def main() -> None:
 
     credential = DefaultAzureCredential()
 
-    # Discover the ARM resource ID of the project
-    print("Discovering project resource ID...")
-    resource_id = _discover_project_resource_id(credential)
-    if not resource_id:
-        # Try to get it from an existing connection
-        print("  Could not discover via data-plane. Trying existing connection...")
-        from azure.ai.projects import AIProjectClient
+    # Resolve the project ARM resource ID.
+    # Preferred path: build it directly from environment variables exported by
+    # post_deploy.{sh,ps1} (these come from azd env / deployment outputs). This
+    # avoids fragile data-plane discovery that fails for service principals on
+    # fresh deployments where no connections exist yet.
+    print("Resolving project resource ID...")
+    resource_id = _build_project_resource_id_from_env()
+    if resource_id:
+        print(f"  Using project resource ID from environment: {resource_id}")
+    else:
+        print("  Env-based resolution unavailable. Trying data-plane discovery...")
+        resource_id = _discover_project_resource_id(credential)
+        if not resource_id:
+            # Last-resort: parse from any existing connection.
+            print("  Could not discover via data-plane. Trying existing connection...")
+            try:
+                from azure.ai.projects import AIProjectClient
 
-        client = AIProjectClient(endpoint=PROJECT_ENDPOINT, credential=credential)
-        connections = list(client.connections.list())
-        if connections:
-            # Parse resource ID from any connection's ID
-            # Format: /subscriptions/.../connections/name
-            conn_id = connections[0].id
-            # Remove the /connections/... suffix to get the project resource ID
-            resource_id = conn_id.rsplit("/connections/", 1)[0]
-        client.close()
+                client = AIProjectClient(endpoint=PROJECT_ENDPOINT, credential=credential)
+                try:
+                    connections = list(client.connections.list())
+                except Exception as exc:  # noqa: BLE001
+                    print(f"  Connection list failed: {exc}")
+                    connections = []
+                finally:
+                    client.close()
+                if connections:
+                    # Format: /subscriptions/.../connections/name
+                    conn_id = connections[0].id
+                    resource_id = conn_id.rsplit("/connections/", 1)[0]
+            except Exception as exc:  # noqa: BLE001
+                print(f"  AIProjectClient fallback failed: {exc}")
 
     if not resource_id:
         print("ERROR: Could not determine project ARM resource ID.")
-        print("  Ensure at least one connection exists or AZURE_AI_PROJECT_ENDPOINT is correct.")
+        print(
+            "  Set one of the following so the script can build the resource ID:\n"
+            "    - AZURE_AI_PROJECT_RESOURCE_ID (full ARM id), OR\n"
+            "    - AI_FOUNDRY_RESOURCE_ID + AZURE_AI_PROJECT_NAME, OR\n"
+            "    - AZURE_AI_SUBSCRIPTION_ID + AZURE_AI_RESOURCE_GROUP + AZURE_AI_PROJECT_ENDPOINT."
+        )
         sys.exit(1)
 
     print(f"  Project resource ID: {resource_id}")

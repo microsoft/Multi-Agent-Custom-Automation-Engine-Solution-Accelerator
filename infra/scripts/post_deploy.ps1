@@ -23,7 +23,10 @@
 #>
 
 param(
-    [string]$ResourceGroup
+    [string]$ResourceGroup,
+    [ValidateSet("1", "2", "3", "4", "5", "6", "7", "all", "All", "ALL")]
+    [string]$UseCase,
+    [switch]$NonInteractive
 )
 
 Set-StrictMode -Version Latest
@@ -250,6 +253,8 @@ function Get-ValuesFromAzdEnv {
     $script:aiSearchEndpoint = $(azd env get-value AZURE_SEARCH_ENDPOINT 2>$null)
     $script:openaiEndpoint   = $(azd env get-value AZURE_OPENAI_ENDPOINT 2>$null)
     $script:projectEndpoint  = $(azd env get-value AZURE_AI_PROJECT_ENDPOINT 2>$null)
+    $script:aiFoundryResourceId = $(azd env get-value AI_FOUNDRY_RESOURCE_ID 2>$null)
+    $script:aiProjectName    = $(azd env get-value AZURE_AI_PROJECT_NAME 2>$null)
     $script:ResourceGroup    = $(azd env get-value AZURE_RESOURCE_GROUP 2>$null)
 
     if (-not $script:backendUrl -or -not $script:storageAccount -or -not $script:aiSearch -or -not $script:ResourceGroup) {
@@ -283,6 +288,8 @@ function Get-ValuesFromAzDeployment {
     $script:aiSearchEndpoint = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_SEARCH_ENDPOINT"      -FallbackKey "azureSearchEndpoint"
     $script:openaiEndpoint   = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_OPENAI_ENDPOINT"      -FallbackKey "azureOpenaiEndpoint"
     $script:projectEndpoint  = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_PROJECT_ENDPOINT"  -FallbackKey "azureAiProjectEndpoint"
+    $script:aiFoundryResourceId = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "aI_FOUNDRY_RESOURCE_ID"  -FallbackKey "aiFoundryResourceId"
+    $script:aiProjectName    = Get-DeploymentValue -DeploymentOutputs $deploymentOutputs -PrimaryKey "azurE_AI_PROJECT_NAME"      -FallbackKey "azureAiProjectName"
 
     if (-not $script:storageAccount -or -not $script:aiSearch -or -not $script:backendUrl) {
         Write-Host "Error: Could not extract all required values from deployment outputs."
@@ -488,39 +495,49 @@ try {
     $currentSubscriptionName = az account show --query name -o tsv
 
     if ($script:azSubscriptionId -and $currentSubscriptionId -ne $script:azSubscriptionId) {
-        Write-Host "Current subscription is $currentSubscriptionName ( $currentSubscriptionId )."
-        $confirmation = Read-Host "Do you want to continue with this subscription? (y/n)"
-        if ($confirmation -notin @("y", "Y")) {
-            $availableSubscriptions = az account list --query "[?state=='Enabled'].[name,id]" --output tsv
-            $subscriptions = $availableSubscriptions -split "`n" | ForEach-Object { $_.Split("`t") }
-
-            do {
-                Write-Host ""
-                Write-Host "Available Subscriptions:"
-                Write-Host "========================"
-                for ($i = 0; $i -lt $subscriptions.Count; $i += 2) {
-                    $index = ($i / 2) + 1
-                    Write-Host "$index. $($subscriptions[$i]) ( $($subscriptions[$i + 1]) )"
-                }
-                Write-Host "========================"
-
-                $subscriptionIndex = Read-Host "Enter the number of the subscription (1-$([int]($subscriptions.Count / 2)))"
-
-                if ($subscriptionIndex -match '^\d+$' -and [int]$subscriptionIndex -ge 1 -and [int]$subscriptionIndex -le ($subscriptions.Count / 2)) {
-                    $selectedIndex = ([int]$subscriptionIndex - 1) * 2
-                    $selectedSubscriptionName = $subscriptions[$selectedIndex]
-                    $selectedSubscriptionId   = $subscriptions[$selectedIndex + 1]
-                    az account set --subscription $selectedSubscriptionId
-                    Write-Host "Switched to subscription: $selectedSubscriptionName ( $selectedSubscriptionId )"
-                    $script:azSubscriptionId = $selectedSubscriptionId
-                    break
-                } else {
-                    Write-Host "Invalid selection. Please try again." -ForegroundColor Red
-                }
-            } while ($true)
+        if ($NonInteractive) {
+            # In non-interactive mode, auto-switch to target subscription
+            $targetSubscriptionName = az account show --subscription $script:azSubscriptionId --query name -o tsv
+            Write-Host "Switching to target subscription: $targetSubscriptionName ( $script:azSubscriptionId )"
+            az account set --subscription $script:azSubscriptionId
+            $currentSubscriptionId = $script:azSubscriptionId
+            $currentSubscriptionName = $targetSubscriptionName
         } else {
-            az account set --subscription $currentSubscriptionId
-            $script:azSubscriptionId = $currentSubscriptionId
+            # In interactive mode, prompt user
+            Write-Host "Current subscription is $currentSubscriptionName ( $currentSubscriptionId )."
+            $confirmation = Read-Host "Do you want to continue with this subscription? (y/n)"
+            if ($confirmation -notin @("y", "Y")) {
+                $availableSubscriptions = az account list --query "[?state=='Enabled'].[name,id]" --output tsv
+                $subscriptions = $availableSubscriptions -split "`n" | ForEach-Object { $_.Split("`t") }
+
+                do {
+                    Write-Host ""
+                    Write-Host "Available Subscriptions:"
+                    Write-Host "========================"
+                    for ($i = 0; $i -lt $subscriptions.Count; $i += 2) {
+                        $index = ($i / 2) + 1
+                        Write-Host "$index. $($subscriptions[$i]) ( $($subscriptions[$i + 1]) )"
+                    }
+                    Write-Host "========================"
+
+                    $subscriptionIndex = Read-Host "Enter the number of the subscription (1-$([int]($subscriptions.Count / 2)))"
+
+                    if ($subscriptionIndex -match '^\d+$' -and [int]$subscriptionIndex -ge 1 -and [int]$subscriptionIndex -le ($subscriptions.Count / 2)) {
+                        $selectedIndex = ([int]$subscriptionIndex - 1) * 2
+                        $selectedSubscriptionName = $subscriptions[$selectedIndex]
+                        $selectedSubscriptionId   = $subscriptions[$selectedIndex + 1]
+                        az account set --subscription $selectedSubscriptionId
+                        Write-Host "Switched to subscription: $selectedSubscriptionName ( $selectedSubscriptionId )"
+                        $script:azSubscriptionId = $selectedSubscriptionId
+                        break
+                    } else {
+                        Write-Host "Invalid selection. Please try again." -ForegroundColor Red
+                    }
+                } while ($true)
+            } else {
+                az account set --subscription $currentSubscriptionId
+                $script:azSubscriptionId = $currentSubscriptionId
+            }
         }
     } else {
         Write-Host "Proceeding with subscription: $currentSubscriptionName ( $currentSubscriptionId )"
@@ -549,37 +566,56 @@ try {
     }
 
     # ── Use case selection ────────────────────────────────────────────────────
-    Write-Host ""
-    Write-Host "==============================================="
-    Write-Host "Available Use Cases:"
-    Write-Host "==============================================="
-    Write-Host "1. RFP Evaluation"
-    Write-Host "2. Retail Customer Satisfaction"
-    Write-Host "3. HR Employee Onboarding"
-    Write-Host "4. Marketing Press Release"
-    Write-Host "5. Contract Compliance Review"
-    Write-Host "6. Content Generation"
-    Write-Host "7. All"
-    Write-Host "==============================================="
-    Write-Host ""
+    $useCaseLabels = @{
+        "1" = "RFP Evaluation"
+        "2" = "Retail Customer Satisfaction"
+        "3" = "HR Employee Onboarding"
+        "4" = "Marketing Press Release"
+        "5" = "Contract Compliance Review"
+        "6" = "Content Generation"
+        "7" = "All"
+    }
 
-    do {
-        $useCaseSelection = Read-Host "Please enter the number of the use case you would like to install (1-7)"
-        switch ($useCaseSelection) {
-            "1" { $selectedUseCase = "RFP Evaluation";              $useCaseValid = $true }
-            "2" { $selectedUseCase = "Retail Customer Satisfaction"; $useCaseValid = $true }
-            "3" { $selectedUseCase = "HR Employee Onboarding";       $useCaseValid = $true }
-            "4" { $selectedUseCase = "Marketing Press Release";      $useCaseValid = $true }
-            "5" { $selectedUseCase = "Contract Compliance Review";   $useCaseValid = $true }
-            "6" { $selectedUseCase = "Content Generation";           $useCaseValid = $true }
-            "7" { $selectedUseCase = "All";                          $useCaseValid = $true }
-            "all" { $useCaseSelection = "7"; $selectedUseCase = "All"; $useCaseValid = $true }
-            default {
-                $useCaseValid = $false
-                Write-Host "Invalid selection. Please enter a number from 1-7." -ForegroundColor Red
+    if ($UseCase) {
+        $useCaseSelection = if ($UseCase -in @("all", "All", "ALL")) { "7" } else { $UseCase }
+        $selectedUseCase = $useCaseLabels[$useCaseSelection]
+        Write-Host "Use case pre-selected via -UseCase parameter: $selectedUseCase ($useCaseSelection)"
+    } elseif ($NonInteractive) {
+        Write-Host "Error: -UseCase is required when running with -NonInteractive." -ForegroundColor Red
+        exit 1
+    } else {
+        Write-Host ""
+        Write-Host "==============================================="
+        Write-Host "Available Use Cases:"
+        Write-Host "==============================================="
+        Write-Host "1. RFP Evaluation"
+        Write-Host "2. Retail Customer Satisfaction"
+        Write-Host "3. HR Employee Onboarding"
+        Write-Host "4. Marketing Press Release"
+        Write-Host "5. Contract Compliance Review"
+        Write-Host "6. Content Generation"
+        Write-Host "7. All"
+        Write-Host "==============================================="
+        Write-Host ""
+
+        do {
+            $useCaseSelection = Read-Host "Please enter the number of the use case you would like to install (1-7)"
+            switch ($useCaseSelection) {
+                "1" { $selectedUseCase = "RFP Evaluation";              $useCaseValid = $true }
+                "2" { $selectedUseCase = "Retail Customer Satisfaction"; $useCaseValid = $true }
+                "3" { $selectedUseCase = "HR Employee Onboarding";       $useCaseValid = $true }
+                "4" { $selectedUseCase = "Marketing Press Release";      $useCaseValid = $true }
+                "5" { $selectedUseCase = "Contract Compliance Review";   $useCaseValid = $true }
+                "6" { $selectedUseCase = "Content Generation";           $useCaseValid = $true }
+                "7" { $selectedUseCase = "All";                          $useCaseValid = $true }
+                "all" { $useCaseSelection = "7"; $selectedUseCase = "All"; $useCaseValid = $true }
+                default {
+                    $useCaseValid = $false
+                    Write-Host "Invalid selection. Please enter a number from 1-7." -ForegroundColor Red
+                }
             }
-        }
-    } while (-not $useCaseValid)
+        } while (-not $useCaseValid)
+    }
 
     Write-Host ""
     Write-Host "==============================================="
@@ -596,9 +632,22 @@ try {
     Write-Host ""
 
     # ── Signed-in user principal id (for backend API auth header) ─────────────
-    $script:userPrincipalId = az ad signed-in-user show --query id -o tsv
+    # In CI the workflow logs in as a service principal (OIDC), so
+    # `az ad signed-in-user show` returns nothing. Fall back to an explicit
+    # USER_PRINCIPAL_ID env var, then to the SP object id looked up via
+    # AZURE_CLIENT_ID.
+    if ($env:USER_PRINCIPAL_ID) {
+        $script:userPrincipalId = $env:USER_PRINCIPAL_ID
+        Write-Host "Using principal id from USER_PRINCIPAL_ID env var."
+    } else {
+        $script:userPrincipalId = az ad signed-in-user show --query id -o tsv 2>$null
+        if (-not $script:userPrincipalId -and $env:AZURE_CLIENT_ID) {
+            Write-Host "No interactive user — falling back to service principal object id (AZURE_CLIENT_ID=$($env:AZURE_CLIENT_ID))."
+            $script:userPrincipalId = az ad sp show --id $env:AZURE_CLIENT_ID --query id -o tsv 2>$null
+        }
+    }
     if (-not $script:userPrincipalId) {
-        Write-Host "Error: Could not retrieve signed-in user principal id." -ForegroundColor Red
+        Write-Host "Error: Could not retrieve signed-in user principal id. In CI, set USER_PRINCIPAL_ID or ensure AZURE_CLIENT_ID is exported and the SP is visible to Microsoft Graph." -ForegroundColor Red
         exit 1
     }
 
@@ -635,6 +684,40 @@ try {
     if ($script:projectEndpoint)  { $env:AZURE_AI_PROJECT_ENDPOINT = $script:projectEndpoint }
     if ($script:aiSearchEndpoint) { $env:AZURE_AI_SEARCH_ENDPOINT  = $script:aiSearchEndpoint }
     if ($script:openaiEndpoint)   { $env:AZURE_OPENAI_ENDPOINT     = $script:openaiEndpoint }
+
+    # Resolve AI Foundry account resource ID and project name. Prefer values
+    # from azd env / deployment outputs; otherwise fall back to az CLI lookup.
+    # These are exported so seed_kb_connections.py can construct the project
+    # ARM resource ID directly, avoiding fragile data-plane discovery that
+    # fails for service principals on fresh deployments.
+    if (-not $script:aiFoundryResourceId -and $script:openaiEndpoint -and $script:ResourceGroup) {
+        $foundryAccountName = $null
+        if ($script:openaiEndpoint -match '^https?://([^.]+)\.') {
+            $foundryAccountName = $Matches[1]
+        }
+        if ($foundryAccountName) {
+            $script:aiFoundryResourceId = az cognitiveservices account show --name $foundryAccountName --resource-group $script:ResourceGroup --query id -o tsv 2>$null
+        }
+    }
+    if (-not $script:aiProjectName -and $script:projectEndpoint) {
+        # Project endpoint format: https://{account}.services.ai.azure.com/api/projects/{project}
+        $script:aiProjectName = ($script:projectEndpoint.TrimEnd('/') -split '/')[-1]
+    }
+
+    if ($script:aiFoundryResourceId) { $env:AI_FOUNDRY_RESOURCE_ID = $script:aiFoundryResourceId }
+    if ($script:aiProjectName)       { $env:AZURE_AI_PROJECT_NAME  = $script:aiProjectName }
+    if ($script:azSubscriptionId) {
+        $env:AZURE_AI_SUBSCRIPTION_ID = $script:azSubscriptionId
+        $env:AZURE_SUBSCRIPTION_ID    = $script:azSubscriptionId
+    }
+    if ($script:ResourceGroup) {
+        $env:AZURE_AI_RESOURCE_GROUP = $script:ResourceGroup
+        $env:AZURE_RESOURCE_GROUP    = $script:ResourceGroup
+    }
+
+    if (-not $script:aiFoundryResourceId -or -not $script:aiProjectName) {
+        Write-Host "Warning: AI_FOUNDRY_RESOURCE_ID or AZURE_AI_PROJECT_NAME not resolved. KB MCP connection provisioning may fall back to data-plane discovery." -ForegroundColor Yellow
+    }
 
     # ── WAF: temporarily enable public access for use cases that need data ──
     $usesData = $useCaseSelection -in @("1","2","5","6","7")

@@ -25,6 +25,7 @@ jobs:
       GPT_MIN_CAPACITY: 1
       O4_MINI_MIN_CAPACITY: 1
       GPT41_MINI_MIN_CAPACITY: 1
+      GPT_IMAGE_MIN_CAPACITY: 1
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
@@ -43,6 +44,7 @@ jobs:
           GPT_MIN_CAPACITY: ${{ env.GPT_MIN_CAPACITY }}
           O4_MINI_MIN_CAPACITY: ${{ env.O4_MINI_MIN_CAPACITY }}
           GPT41_MINI_MIN_CAPACITY: ${{ env.GPT41_MINI_MIN_CAPACITY }}
+          GPT_IMAGE_MIN_CAPACITY: ${{ env.GPT_IMAGE_MIN_CAPACITY }}
           AZURE_REGIONS: ${{ vars.AZURE_REGIONS }}
         run: |
           chmod +x infra/scripts/checkquota.sh
