@@ -25,8 +25,11 @@ param aiProjectPrincipalId string = ''
 @description('Principal ID of the AI Search identity.')
 param aiSearchPrincipalId string = ''
 
-@description('Principal ID of the user-assigned managed identity (empty if not deployed).')
+@description('Principal ID of the user-assigned managed identity (empty if not deployed). Kept for backward compatibility; prefer workloadPrincipalIds.')
 param userAssignedManagedIdentityPrincipalId string = ''
+
+@description('Optional. List of workload identity principal IDs (e.g. system-assigned identities of backend, MCP, and frontend hosts) that should receive the same data-plane roles previously granted to the UAMI. When non-empty, this list takes precedence over userAssignedManagedIdentityPrincipalId.')
+param workloadPrincipalIds array = []
 
 @description('Principal ID of the deploying user (for user access roles).')
 param deployerPrincipalId string = ''
@@ -52,6 +55,12 @@ param cosmosDbAccountName string = ''
 var existingAIFoundryName = useExistingAIProject ? split(existingFoundryProjectResourceId, '/')[8] : ''
 var existingAIFoundrySubscription = useExistingAIProject ? split(existingFoundryProjectResourceId, '/')[2] : subscription().subscriptionId
 var existingAIFoundryResourceGroup = useExistingAIProject ? split(existingFoundryProjectResourceId, '/')[4] : resourceGroup().name
+
+// Unified workload identity list — supports both:
+//   - UAMI flavor (today): caller passes userAssignedManagedIdentityPrincipalId
+//   - SAMI flavor (future): caller passes workloadPrincipalIds = [<backend.identity.principalId>, <mcp.identity.principalId>, <frontend.identity.principalId>]
+// If workloadPrincipalIds is provided, it wins. Otherwise we wrap the legacy UAMI principal into a single-element list.
+var workloadPrincipals = !empty(workloadPrincipalIds) ? workloadPrincipalIds : (empty(userAssignedManagedIdentityPrincipalId) ? [] : [userAssignedManagedIdentityPrincipalId])
 
 // ============================================================================
 // Role Definitions
@@ -122,68 +131,68 @@ module assignOpenAIToSearchExisting './cross-scope-role-assignment.bicep' = if (
   }
 }
 
-// User-Assigned Managed Identity → Foundry User on AI Foundry (new project, same RG)
-resource userAssignedManagedIdentityAiUserAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingAIProject && !empty(aiFoundryResourceId) && !empty(userAssignedManagedIdentityPrincipalId)) {
-  name: guid(solutionName, aiFoundryAccount.id, userAssignedManagedIdentityPrincipalId, roleDefinitions.azureAiUser)
+// Workload identities (UAMI or SAMI) → Foundry User on AI Foundry (new project, same RG)
+resource workloadAiUserAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for principalId in workloadPrincipals: if (!useExistingAIProject && !empty(aiFoundryResourceId) && !empty(principalId)) {
+  name: guid(solutionName, aiFoundryAccount.id, principalId, roleDefinitions.azureAiUser)
   scope: aiFoundryAccount
   properties: {
-    principalId: userAssignedManagedIdentityPrincipalId
+    principalId: principalId
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.azureAiUser)
     principalType: 'ServicePrincipal'
   }
-}
+}]
 
-// User-Assigned Managed Identity → Cognitive Services OpenAI Contributor on AI Foundry (new project, same RG)
+// Workload identities (UAMI or SAMI) → Cognitive Services OpenAI Contributor on AI Foundry (new project, same RG)
 // Extended as per accelerator need
-resource userAssignedManagedIdentityOpenAIContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!useExistingAIProject && !empty(aiFoundryResourceId) && !empty(userAssignedManagedIdentityPrincipalId)) {
-  name: guid(solutionName, aiFoundryAccount.id, userAssignedManagedIdentityPrincipalId, roleDefinitions.cognitiveServicesOpenAIContributor)
+resource workloadOpenAIContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for principalId in workloadPrincipals: if (!useExistingAIProject && !empty(aiFoundryResourceId) && !empty(principalId)) {
+  name: guid(solutionName, aiFoundryAccount.id, principalId, roleDefinitions.cognitiveServicesOpenAIContributor)
   scope: aiFoundryAccount
   properties: {
-    principalId: userAssignedManagedIdentityPrincipalId
+    principalId: principalId
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.cognitiveServicesOpenAIContributor)
     principalType: 'ServicePrincipal'
   }
-}
+}]
 
-// User-Assigned Managed Identity → Foundry User on existing AI Foundry (cross-scope)
-module userAssignedManagedIdentityAiUserExisting './cross-scope-role-assignment.bicep' = if (useExistingAIProject && !empty(userAssignedManagedIdentityPrincipalId)) {
-  name: 'assignAiUserRoleToBackendExisting'
+// Workload identities (UAMI or SAMI) → Foundry User on existing AI Foundry (cross-scope)
+module workloadAiUserExisting './cross-scope-role-assignment.bicep' = [for (principalId, i) in workloadPrincipals: if (useExistingAIProject && !empty(principalId)) {
+  name: 'assignAiUserRoleToWorkloadExisting-${i}'
   scope: resourceGroup(existingAIFoundrySubscription, existingAIFoundryResourceGroup)
   params: {
-    principalId: userAssignedManagedIdentityPrincipalId
+    principalId: principalId
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.azureAiUser)
-    roleAssignmentName: guid(solutionName, existingAIFoundryName, userAssignedManagedIdentityPrincipalId, roleDefinitions.azureAiUser)
+    roleAssignmentName: guid(solutionName, existingAIFoundryName, principalId, roleDefinitions.azureAiUser)
     aiFoundryName: existingAIFoundryName
   }
-}
+}]
 
-// User-Assigned Managed Identity → Cognitive Services OpenAI Contributor on existing AI Foundry (cross-scope)
+// Workload identities (UAMI or SAMI) → Cognitive Services OpenAI Contributor on existing AI Foundry (cross-scope)
 // Extended as per accelerator need
-module userAssignedManagedIdentityOpenAIContributorExisting './cross-scope-role-assignment.bicep' = if (useExistingAIProject && !empty(userAssignedManagedIdentityPrincipalId)) {
-  name: 'assignOpenAIContributorRoleToBackendExisting'
+module workloadOpenAIContributorExisting './cross-scope-role-assignment.bicep' = [for (principalId, i) in workloadPrincipals: if (useExistingAIProject && !empty(principalId)) {
+  name: 'assignOpenAIContributorRoleToWorkloadExisting-${i}'
   scope: resourceGroup(existingAIFoundrySubscription, existingAIFoundryResourceGroup)
   params: {
-    principalId: userAssignedManagedIdentityPrincipalId
+    principalId: principalId
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.cognitiveServicesOpenAIContributor)
-    roleAssignmentName: guid(solutionName, existingAIFoundryName, userAssignedManagedIdentityPrincipalId, roleDefinitions.cognitiveServicesOpenAIContributor)
+    roleAssignmentName: guid(solutionName, existingAIFoundryName, principalId, roleDefinitions.cognitiveServicesOpenAIContributor)
     aiFoundryName: existingAIFoundryName
   }
-}
+}]
 
 // ============================================================================
 // 2. COSMOS DB ROLE ASSIGNMENTS
 //    User-Assigned Managed Identity → Cosmos DB (data-plane, uses sqlRoleAssignments)
 // ============================================================================
 
-resource userAssignedManagedIdentityCosmosRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2025-10-15' = if (!empty(cosmosDbAccountName) && !empty(userAssignedManagedIdentityPrincipalId)) {
+resource workloadCosmosRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2025-10-15' = [for principalId in workloadPrincipals: if (!empty(cosmosDbAccountName) && !empty(principalId)) {
   parent: cosmosAccount
-  name: guid(solutionName, cosmosAccount.id, userAssignedManagedIdentityPrincipalId, cosmosContributorRoleDefinition.id)
+  name: guid(solutionName, cosmosAccount.id, principalId, cosmosContributorRoleDefinition.id)
   properties: {
-    principalId: userAssignedManagedIdentityPrincipalId
+    principalId: principalId
     roleDefinitionId: cosmosContributorRoleDefinition.id
     scope: cosmosAccount.id
   }
-}
+}]
 
 // ============================================================================
 // 5. DEPLOYER (USER) ROLE ASSIGNMENTS
