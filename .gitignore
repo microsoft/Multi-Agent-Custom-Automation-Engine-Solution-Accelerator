@@ -17,6 +17,8 @@ appsettings.json
 # Distribution / packaging
 .Python
 build/
+!infra/scripts/build/
+!infra/scripts/build/**
 develop-eggs/
 dist/
 downloads/

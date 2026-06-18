@@ -19,7 +19,7 @@ hooks:
 
           Write-Host " Upload Team Configurations, index sample data and create the Knowledge base from content Packs" -ForegroundColor White
           Write-Host "  👉 Run the following command in Bash:" -ForegroundColor White
-          Write-Host "   bash infra/scripts/post_deploy.sh" -ForegroundColor Cyan
+          Write-Host "   bash infra/scripts/post-provision/post_deploy.sh" -ForegroundColor Cyan
           Write-Host ""
 
           Write-Host "🌐 Access your deployed Frontend application at:" -ForegroundColor Green
@@ -35,7 +35,7 @@ hooks:
 
           Write-Host " Upload Team Configurations, index sample data and create the Knowledge base from content Packs" -ForegroundColor White
           Write-Host "  👉 Run the following command in PowerShell:" -ForegroundColor White
-          Write-Host "   infra\scripts\post_deploy.ps1" -ForegroundColor Cyan
+          Write-Host "   infra\scripts\post-provision\post_deploy.ps1" -ForegroundColor Cyan
           Write-Host ""
 
           Write-Host "🌐 Access your deployed Frontend application at:" -ForegroundColor Green
@@ -60,7 +60,7 @@ hooks:
 
         printf  "Upload Team Configurations, index sample data and create the Knowledge base from content Packs:\n"
         printf  "  👉 Run the following command in Bash:\n"
-        printf  "   ${Blue}bash infra/scripts/post_deploy.sh${NC}\n\n"
+        printf  "   ${Blue}bash infra/scripts/post-provision/post_deploy.sh${NC}\n\n"
 
         printf "🌐 Access your deployed Frontend application at:\n"
         printf "   ${Blue}https://%s${NC}\n\n" "$webSiteDefaultHostname"
