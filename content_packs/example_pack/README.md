@@ -107,7 +107,7 @@ Replace `datasets/data/<your_data>` with your source data. Supported formats:
 
 ### Step 4 — Register the Knowledge Base
 
-Add an entry to `infra/scripts/seed_knowledge_bases.py` in the `KNOWLEDGE_BASES` dict:
+Add an entry to `infra/scripts/post-provision/seed_knowledge_bases.py` in the `KNOWLEDGE_BASES` dict:
 
 ```python
     # ── Your Pack ──
@@ -184,7 +184,7 @@ Create `agent_teams/your_pack.json`. Key fields:
 
 ### Step 6 — Register your pack in the deployment script
 
-Edit `infra/scripts/Selecting-Team-Config-And-Data.ps1`. There are **4 locations**
+Edit `infra/scripts/post-provision/Selecting-Team-Config-And-Data.ps1`. There are **4 locations**
 to update (each is marked with a `NEW CONTENT PACK` comment block in the script):
 
 | # | Section | What to add |
@@ -206,7 +206,7 @@ azd up
 
 # 2. Provision pack resources (indexes, blob uploads, team configs, KBs)
 #    Run the post-deploy script and select your pack or "All"
-./infra/scripts/Selecting-Team-Config-And-Data.ps1 -ResourceGroup <rg>
+./infra/scripts/post-provision/Selecting-Team-Config-And-Data.ps1 -ResourceGroup <rg>
 ```
 
 The script handles everything: team config upload, data indexing, and KB seeding.
@@ -214,14 +214,14 @@ For manual runs of individual steps:
 
 ```bash
 # Upload team config only
-python infra/scripts/upload_team_config.py \
+python infra/scripts/post-provision/upload_team_config.py \
   "https://<backend-url>" \
   "content_packs/your_pack/agent_teams" \
   "<user-principal-id>" \
   "<team-uuid>"
 
 # Seed KBs only (after indexes exist)
-python infra/scripts/seed_knowledge_bases.py
+python infra/scripts/post-provision/seed_knowledge_bases.py
 ```
 
 ---
@@ -249,7 +249,7 @@ Use this checklist to verify completeness:
 - [ ] `content_packs/<pack>/datasets/` contains source data files
 - [ ] `content_packs/<pack>/agent_teams/<pack>.json` exists with valid agents
 - [ ] At least one agent has `"use_knowledge_base": true` with a valid `knowledge_base_name`
-- [ ] KB entry added to `infra/scripts/seed_knowledge_bases.py` (index_name matches pack.json)
+- [ ] KB entry added to `infra/scripts/post-provision/seed_knowledge_bases.py` (index_name matches pack.json)
 - [ ] `team_id` is a stable UUID (prevents duplicate teams on re-upload)
 - [ ] `starting_tasks` has at least one example prompt
 - [ ] Agent `system_message` instructs the agent to use its search tool (not hallucinate)

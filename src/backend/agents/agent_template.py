@@ -195,7 +195,7 @@ class AgentTemplate:
                 if not self._resolved_vector_store_id:
                     raise ValueError(
                         f"Vector store '{vs_name}' not found. "
-                        f"Run infra/scripts/seed_vector_stores.py to create it."
+                        f"Run infra/scripts/post-provision/seed_vector_stores.py to create it."
                     )
 
             # Step 1c — Ensure portal MCPTool matches team JSON KB config.

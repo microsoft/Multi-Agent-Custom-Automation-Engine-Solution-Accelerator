@@ -6,6 +6,8 @@ This guide walks you through deploying the Multi Agent Custom Automation Engine 
 
 🆘 **Need Help?** If you encounter any issues during deployment, check our [Troubleshooting Guide](./TroubleShootingSteps.md) for solutions to common problems.
 
+> **Note**: Some tenants may have additional security restrictions that run periodically and could impact the application (e.g., blocking public network access). If you experience issues or the application stops working, check if these restrictions are the cause. In such cases, consider deploying the WAF-supported version to ensure compliance. To configure, [Click here](#31-choose-deployment-type-optional).
+
 ## Step 1: Prerequisites & Setup
 
 ### 1.1 Azure Account Requirements
@@ -16,7 +18,7 @@ Ensure you have access to an [Azure subscription](https://azure.microsoft.com/fr
 |------------------------------|-----------|-------------|
 | **Contributor** | Subscription level | Create and manage Azure resources |
 | **User Access Administrator** | Subscription level | Manage user access and role assignments |
-| **Role Based Access Control** | Subscription/Resource Group level | Configure RBAC permissions |
+| **Role Based Access Control Admin** | Subscription/Resource Group level | Configure RBAC permissions |
 | **App Registration Creation** | Azure Active Directory | Create and configure authentication |
 
 **🔍 How to Check Your Permissions:**
@@ -66,7 +68,7 @@ Ensure you have access to an [Azure subscription](https://azure.microsoft.com/fr
 📖 **Follow:** [Quota Check Instructions](./quota_check.md) to ensure sufficient capacity.
 
 **Default Quota Configuration:**
-- **GPT-4.1:** 150k tokens
+- **GPT-4.1:** 50k tokens
 - **o4-mini:** 50k tokens
 - **GPT-4.1-mini:** 50k tokens
 
@@ -151,6 +153,7 @@ Select one of the following options to deploy the Multi Agent Custom Automation 
 **Required Tools:**
 - [PowerShell 7.0+](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell) 
 - [Azure Developer CLI (azd) 1.18.0+](https://aka.ms/install-azd)
+- [Bicep CLI 0.33.0+](https://learn.microsoft.com/azure/azure-resource-manager/bicep/install) - command-line Bicep compiler required for deployments (separate from the VS Code Bicep extension)
 - [Python 3.9+](https://www.python.org/downloads/)
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - [Git](https://git-scm.com/downloads)
@@ -243,7 +246,7 @@ You can customize various deployment settings before running `azd up`, including
 <details>
   <summary><b>[Optional] Quota Recommendations</b></summary>
 
-By default, the **GPT model capacity** in deployment is set to **150k tokens**.
+By default, the **GPT model capacity** in deployment is set to **50k tokens**.
 
 To adjust quota settings, follow these [steps](./AzureGPTQuotaSettings.md).
 
@@ -300,6 +303,10 @@ azd auth login --tenant-id <tenant-id>
 3. Under the **Overview** section, locate the **Tenant ID** field. Copy the value displayed
 
 ### 4.2 Start Deployment
+**NOTE:** If you are running the latest azd version (version 1.23.9), please run the following command. 
+```bash 
+azd config set provision.preflight off
+```
 
 ```shell
 azd up
@@ -338,12 +345,12 @@ After successful deployment:
 
   - **For Bash (Linux/macOS/WSL):**
     ```bash
-    bash infra/scripts/selecting_team_config_and_data.sh
+    bash infra/scripts/post-provision/selecting_team_config_and_data.sh
     ```
 
   - **For PowerShell (Windows):**
     ```powershell
-    infra\scripts\Selecting-Team-Config-And-Data.ps1
+    infra\scripts\post-provision\Selecting-Team-Config-And-Data.ps1
     ```
 
 

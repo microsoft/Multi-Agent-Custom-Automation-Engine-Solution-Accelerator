@@ -1,0 +1,997 @@
+targetScope = 'resourceGroup'
+
+metadata name = 'Multi-Agent Custom Automation Engine - Vanilla Bicep'
+metadata description = 'Vanilla Bicep orchestrator for the Multi-Agent Custom Automation Engine accelerator. This deployment intentionally excludes WAF features such as private networking, scale-out, redundancy, bastion, and VM resources while keeping router-compatible outputs.'
+
+@description('Optional. A unique application/solution name for all resources in this deployment. This should be 3-16 characters long.')
+@minLength(3)
+@maxLength(16)
+param solutionName string = 'macae'
+
+@maxLength(5)
+@description('Optional. A unique text value for the solution. This is used to ensure resource names are unique for global resources.')
+param solutionUniqueText string = take(uniqueString(subscription().id, resourceGroup().name, solutionName), 5)
+
+@metadata({
+  azd: {
+    type: 'location'
+  }
+})
+@description('Required. Azure region for app, data, and monitoring resources.')
+@allowed([
+  'australiaeast'
+  'centralus'
+  'eastasia'
+  'eastus2'
+  'japaneast'
+  'northeurope'
+  'southeastasia'
+  'uksouth'
+])
+param location string
+
+@allowed(['australiaeast', 'eastus2', 'francecentral', 'japaneast', 'norwayeast', 'swedencentral', 'uksouth', 'westus', 'westus3', 'polandcentral', 'uaenorth'])
+@metadata({
+  azd: {
+    type: 'location'
+    usageName: [
+      'OpenAI.GlobalStandard.gpt4.1, 150'
+      'OpenAI.GlobalStandard.o4-mini, 50'
+      'OpenAI.GlobalStandard.gpt4.1-mini, 50'
+      'OpenAI.GlobalStandard.gpt-image-1.5, 5'
+    ]
+  }
+})
+@description('Required. Location for Azure AI Services and Azure AI Foundry resources.')
+param azureAiServiceLocation string
+
+@description('Optional. Name of the default GPT model deployment.')
+param gptModelName string = 'gpt-4.1-mini'
+
+@description('Optional. Version of the default GPT model deployment.')
+param gptModelVersion string = '2025-04-14'
+
+@allowed([
+  'Standard'
+  'GlobalStandard'
+])
+@description('Optional. Deployment type for the default GPT model deployment.')
+param deploymentType string = 'GlobalStandard'
+
+@minValue(1)
+@description('Optional. Capacity of the default GPT model deployment.')
+param gptDeploymentCapacity int = 50
+
+@description('Optional. Name of the RAI GPT model deployment.')
+param gpt4_1ModelName string = 'gpt-4.1'
+
+@description('Optional. Version of the RAI GPT model deployment.')
+param gpt4_1ModelVersion string = '2025-04-14'
+
+@allowed([
+  'Standard'
+  'GlobalStandard'
+])
+@description('Optional. Deployment type for the RAI GPT model deployment.')
+param gpt4_1ModelDeploymentType string = 'GlobalStandard'
+
+@minValue(1)
+@description('Optional. Capacity of the RAI GPT model deployment.')
+param gpt4_1ModelCapacity int = 150
+
+@description('Optional. Name of the reasoning model deployment.')
+param gptReasoningModelName string = 'o4-mini'
+
+@description('Optional. Version of the reasoning model deployment.')
+param gptReasoningModelVersion string = '2025-04-16'
+
+@allowed([
+  'Standard'
+  'GlobalStandard'
+])
+@description('Optional. Deployment type for the reasoning model deployment.')
+param gptReasoningModelDeploymentType string = 'GlobalStandard'
+
+@minValue(1)
+@description('Optional. Capacity of the reasoning model deployment.')
+param gptReasoningModelCapacity int = 50
+
+@minLength(1)
+@description('Optional. Name of the image-generation model to deploy. Defaults to gpt-image-1.5.')
+param gptImageModelName string = 'gpt-image-1.5'
+
+@description('Optional. Version of the image-generation model to deploy. Defaults to 2025-12-16.')
+param gptImageModelVersion string = '2025-12-16'
+
+@minLength(1)
+@allowed([
+  'Standard'
+  'GlobalStandard'
+])
+@description('Optional. GPT image model deployment type. Defaults to GlobalStandard.')
+param gptImageModelDeploymentType string = 'GlobalStandard'
+
+@description('Optional. gpt-image-1.5 deployment capacity (RPM). Defaults to 5 to support concurrent marketing-image generation across multiple sessions.')
+param gptImageModelCapacity int = 5
+
+@description('Optional. Azure OpenAI API version.')
+param azureOpenaiAPIVersion string = '2024-12-01-preview'
+
+@description('Optional. The Container Registry hostname where the docker images for the backend are located.')
+param backendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
+
+@description('Optional. The Container Image Name to deploy on the backend.')
+param backendContainerImageName string = 'macaebackend'
+
+@description('Optional. The Container Image Tag to deploy on the backend.')
+param backendContainerImageTag string = 'latest_v4'
+
+@description('Optional. The Container Registry hostname where the docker images for the frontend are located.')
+param frontendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
+
+@description('Optional. The Container Image Name to deploy on the frontend.')
+param frontendContainerImageName string = 'macaefrontend'
+
+@description('Optional. The Container Image Tag to deploy on the frontend.')
+param frontendContainerImageTag string = 'latest_v4'
+
+@description('Optional. The Container Registry hostname where the docker images for the MCP are located.')
+param MCPContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
+
+@description('Optional. The Container Image Name to deploy on the MCP.')
+param MCPContainerImageName string = 'macaemcp'
+
+@description('Optional. The Container Image Tag to deploy on the MCP.')
+param MCPContainerImageTag string = 'latest_v4'
+
+@description('Optional. Resource ID of an existing Log Analytics Workspace.')
+param existingLogAnalyticsWorkspaceId string = ''
+
+@description('Optional. Resource ID of an existing AI Foundry project.')
+param existingFoundryProjectResourceId string = ''
+
+@description('Optional. Additional tags to apply to deployed resources.')
+param tags object = {}
+
+@description('Optional. Blob container name for retail customer documents.')
+param storageContainerNameRetailCustomer string = 'retail-dataset-customer'
+
+@description('Optional. Blob container name for retail order documents.')
+param storageContainerNameRetailOrder string = 'retail-dataset-order'
+
+@description('Optional. Blob container name for RFP summary documents.')
+param storageContainerNameRFPSummary string = 'rfp-summary-dataset'
+
+@description('Optional. Blob container name for RFP risk documents.')
+param storageContainerNameRFPRisk string = 'rfp-risk-dataset'
+
+@description('Optional. Blob container name for RFP compliance documents.')
+param storageContainerNameRFPCompliance string = 'rfp-compliance-dataset'
+
+@description('Optional. Blob container name for contract summary documents.')
+param storageContainerNameContractSummary string = 'contract-summary-dataset'
+
+@description('Optional. Blob container name for contract risk documents.')
+param storageContainerNameContractRisk string = 'contract-risk-dataset'
+
+@description('Optional. Blob container name for contract compliance documents.')
+param storageContainerNameContractCompliance string = 'contract-compliance-dataset'
+
+@description('Optional. Blob container name for generated images.')
+param storageContainerNameGeneratedImages string = 'generated-images'
+
+@description('Tag. Created by user name.')
+param createdBy string = contains(deployer(), 'userPrincipalName')
+  ? split(deployer().userPrincipalName, '@')[0]
+  : deployer().objectId
+
+@description('Optional. Flag to indicate if this is a custom code deployment. If true, some resources may be skipped or configured differently.')
+param isCustom bool = false
+
+var deployerInfo = deployer()
+var deployingUserPrincipalId = deployerInfo.objectId
+var deployerPrincipalType = contains(deployerInfo, 'userPrincipalName') ? 'User' : 'ServicePrincipal'
+var solutionLocation = location
+var solutionSuffix = toLower(trim(replace(
+  replace(
+    replace(replace(replace(replace('${solutionName}${solutionUniqueText}', '-', ''), '_', ''), '.', ''), '/', ''),
+    ' ',
+    ''
+  ),
+  '*',
+  ''
+)))
+var existingTags = resourceGroup().tags ?? {}
+var allTags = union({
+  'azd-env-name': solutionName
+}, tags)
+
+var useExistingAiFoundryAiProject = !empty(existingFoundryProjectResourceId)
+var aiFoundryAiServicesSubscriptionId = useExistingAiFoundryAiProject ? split(existingFoundryProjectResourceId, '/')[2] : subscription().subscriptionId
+var aiFoundryAiServicesResourceGroupName = useExistingAiFoundryAiProject ? split(existingFoundryProjectResourceId, '/')[4] : resourceGroup().name
+var aiFoundryAiServicesResourceName = useExistingAiFoundryAiProject ? split(existingFoundryProjectResourceId, '/')[8] : 'aif-${solutionSuffix}'
+var aiFoundryAiProjectResourceName = useExistingAiFoundryAiProject ? split(existingFoundryProjectResourceId, '/')[10] : 'proj-${solutionSuffix}'
+var aiFoundryAiServicesResourceId = useExistingAiFoundryAiProject ? existing_project_setup!.outputs.resourceId : ai_foundry_project!.outputs.resourceId
+var aiFoundryOpenAIEndpoint = 'https://${aiFoundryAiServicesResourceName}.openai.azure.com/'
+var aiFoundryAiProjectEndpoint = 'https://${aiFoundryAiServicesResourceName}.services.ai.azure.com/api/projects/${aiFoundryAiProjectResourceName}'
+var aiSearchConnectionName = 'aifp-srch-connection-${solutionSuffix}'
+
+var modelDeployments = [
+  {
+    name: gptModelName
+    version: gptModelVersion
+    skuName: deploymentType
+    capacity: gptDeploymentCapacity
+  }
+  {
+    name: gpt4_1ModelName
+    version: gpt4_1ModelVersion
+    skuName: gpt4_1ModelDeploymentType
+    capacity: gpt4_1ModelCapacity
+  }
+  {
+    name: gptReasoningModelName
+    version: gptReasoningModelVersion
+    skuName: gptReasoningModelDeploymentType
+    capacity: gptReasoningModelCapacity
+  }
+  {
+    name: gptImageModelName
+    version: gptImageModelVersion
+    skuName: gptImageModelDeploymentType
+    capacity: gptImageModelCapacity
+  }
+]
+var supportedModels = [
+  gptModelName
+  gpt4_1ModelName
+  gptReasoningModelName
+  gptImageModelName
+]
+
+var cosmosDbResourceName = 'cosmos-${solutionSuffix}'
+var cosmosDbDatabaseName = 'macae'
+var cosmosDbDatabaseMemoryContainerName = 'memory'
+var cosmosDbDatabaseMemoryPartitionKey = '/session_id'
+
+var frontendAppName = 'app-${solutionSuffix}'
+var frontendAppUrl = 'https://${frontendAppName}.azurewebsites.net'
+var appServicePlanName = 'asp-${solutionSuffix}'
+var backendContainerAppName = 'ca-${solutionSuffix}'
+var mcpContainerAppName = 'ca-mcp-${solutionSuffix}'
+var storageAccountName = take('st${toLower(replace(solutionSuffix, '-', ''))}', 24)
+var aiSearchServiceName = 'srch-${solutionSuffix}'
+
+var aiSearchIndexNameForContractSummary = 'contract-summary-doc-index'
+var aiSearchIndexNameForContractRisk = 'contract-risk-doc-index'
+var aiSearchIndexNameForContractCompliance = 'contract-compliance-doc-index'
+var aiSearchIndexNameForRetailCustomer = 'macae-retail-customer-index'
+var aiSearchIndexNameForRetailOrder = 'macae-retail-order-index'
+var aiSearchIndexNameForRFPSummary = 'macae-rfp-summary-index'
+var aiSearchIndexNameForRFPRisk = 'macae-rfp-risk-index'
+var aiSearchIndexNameForRFPCompliance = 'macae-rfp-compliance-index'
+
+var mcpServerName = 'MacaeMcpServer'
+var mcpServerDescription = 'MCP server with greeting, HR, and planning tools'
+
+
+resource resourceGroupTags 'Microsoft.Resources/tags@2023-07-01' = {
+  name: 'default'
+  properties: {
+    tags: union(
+      existingTags,
+      allTags,
+      {
+        TemplateName: 'MACAE'
+        Type: 'Non-WAF'
+        CreatedBy: createdBy
+        DeploymentName: deployment().name
+        SolutionSuffix: solutionSuffix
+      }
+    )
+  }
+}
+
+var useExistingLogAnalytics = !empty(existingLogAnalyticsWorkspaceId)
+
+
+module log_analytics './modules/monitoring/log-analytics.bicep' = if (!useExistingLogAnalytics) {
+  name: take('module.log-analytics.${solutionSuffix}', 64)
+  params: {
+    solutionName: solutionSuffix
+    location: solutionLocation
+    tags: allTags
+  }
+}
+
+var logAnalyticsWorkspaceResourceId = useExistingLogAnalytics ? existingLogAnalyticsWorkspaceId : log_analytics!.outputs.resourceId
+// var logAnalyticsWorkspaceName = useExistingLogAnalytics ? '' : log_analytics!.outputs.name
+
+module app_insights './modules/monitoring/app-insights.bicep' = {
+  name: take('module.app-insights.${solutionSuffix}', 64)
+  params: {
+    solutionName: solutionSuffix
+    location: solutionLocation
+    tags: allTags
+    workspaceResourceId: logAnalyticsWorkspaceResourceId
+  }
+}
+
+module userAssignedIdentity './modules/identity/managed-identity.bicep' = {
+  name: take('module.user-assigned-identity.${solutionSuffix}', 64)
+  params: {
+    solutionName: solutionSuffix
+    identityName: 'id-${solutionSuffix}'
+    location: solutionLocation
+    tags: allTags
+  }
+}
+
+module ai_foundry_project './modules/ai/ai-foundry-project.bicep' = if (!useExistingAiFoundryAiProject) {
+  name: take('module.ai-foundry-project.${solutionSuffix}', 64)
+  scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
+  params: {
+    solutionName: solutionSuffix
+    name: aiFoundryAiServicesResourceName
+    projectName: aiFoundryAiProjectResourceName
+    location: azureAiServiceLocation
+  }
+}
+
+module existing_project_setup './modules/ai/existing-project-setup.bicep' = if (useExistingAiFoundryAiProject) {
+  name: take('module.existing-project-setup.${solutionSuffix}', 64)
+  scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
+  params: {
+    name: aiFoundryAiServicesResourceName
+    projectName: aiFoundryAiProjectResourceName
+  }
+}
+
+var aiFoundryAiProjectPrincipalId = useExistingAiFoundryAiProject
+  ? existing_project_setup!.outputs.projectIdentityPrincipalId
+  : ai_foundry_project!.outputs.projectIdentityPrincipalId
+
+@batchSize(1)
+module ai_model_deployment './modules/ai/ai-foundry-model-deployment.bicep' = [for (model, i) in modelDeployments: {
+  name: take('module.ai-model-${model.name}-${solutionSuffix}', 64)
+  scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
+  dependsOn: useExistingAiFoundryAiProject ? [existing_project_setup] : [ai_foundry_project]
+  params: {
+    aiServicesAccountName: aiFoundryAiServicesResourceName
+    deploymentName: model.name
+    modelName: model.name
+    modelVersion: model.version
+    raiPolicyName: 'Microsoft.Default'
+    skuName: model.skuName
+    skuCapacity: model.capacity
+  }
+}]
+
+module ai_search './modules/ai/ai-search.bicep' = {
+  name: take('module.ai-search.${solutionSuffix}', 64)
+  params: {
+    solutionName: solutionSuffix
+    location: solutionLocation
+    tags: allTags
+    skuName: 'basic'
+    replicaCount: 1
+    partitionCount: 1
+    hostingMode: 'Default'
+    semanticSearch: 'free'
+    disableLocalAuth: true
+    publicNetworkAccess: 'Enabled'
+  }
+}
+
+module storage_account './modules/data/storage-account.bicep' = {
+  name: take('module.storage-account.${solutionSuffix}', 64)
+  params: {
+    solutionName: solutionSuffix
+    location: solutionLocation
+    tags: allTags
+    containers: [
+      {
+        name: storageContainerNameRetailCustomer
+        publicAccess: 'None'
+      }
+      {
+        name: storageContainerNameRetailOrder
+        publicAccess: 'None'
+      }
+      {
+        name: storageContainerNameRFPSummary
+        publicAccess: 'None'
+      }
+      {
+        name: storageContainerNameRFPRisk
+        publicAccess: 'None'
+      }
+      {
+        name: storageContainerNameRFPCompliance
+        publicAccess: 'None'
+      }
+      {
+        name: storageContainerNameContractSummary
+        publicAccess: 'None'
+      }
+      {
+        name: storageContainerNameContractRisk
+        publicAccess: 'None'
+      }
+      {
+        name: storageContainerNameContractCompliance
+        publicAccess: 'None'
+      }
+      {
+        name: storageContainerNameGeneratedImages
+        publicAccess: 'None'
+      }
+    ]
+  }
+}
+
+
+module cosmosDBModule './modules/data/cosmos-db-nosql.bicep' = {
+  name: take('module.cosmos-db.${solutionSuffix}', 64)
+  params: {
+    solutionName: solutionSuffix
+    name: cosmosDbResourceName
+    location: solutionLocation
+    tags: allTags
+    databaseName: cosmosDbDatabaseName
+    containers: [
+      {
+        name: cosmosDbDatabaseMemoryContainerName
+        partitionKeyPath: cosmosDbDatabaseMemoryPartitionKey
+      }
+    ]
+  }
+}
+
+module container_app_environment './modules/compute/container-app-environment.bicep' = {
+  name: take('module.container-app-environment.${solutionSuffix}', 64)
+  params: {
+    solutionName: solutionSuffix
+    location: solutionLocation
+    tags: allTags
+    logAnalyticsWorkspaceResourceId: logAnalyticsWorkspaceResourceId
+    workloadProfiles: [
+      {
+        name: 'Consumption'
+        workloadProfileType: 'Consumption'
+      }
+    ]
+  }
+}
+
+// Base AI Search connection (CognitiveSearch / AAD).
+// Per-KB RemoteTool connections (ProjectManagedIdentity) are created by
+// infra/scripts/post-provision/seed_kb_connections.py at post-deploy time because the KB
+// names are dynamic and depend on selected content packs.
+module foundry_search_connection './modules/ai/ai-foundry-connection.bicep' = {
+  name: take('module.foundry-search-connection.${solutionSuffix}', 64)
+  scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
+  dependsOn: [ ai_model_deployment ]
+  params: {
+    solutionName: solutionSuffix
+    aiServicesAccountName: aiFoundryAiServicesResourceName
+    projectName: aiFoundryAiProjectResourceName
+    connectionName: aiSearchConnectionName
+    useWorkspaceManagedIdentity: true
+    category: 'CognitiveSearch'
+    target: ai_search.outputs.endpoint
+    authType: 'AAD'
+    metadata: {
+      ApiType: 'Azure'
+      ResourceId: ai_search.outputs.resourceId
+    }
+  }
+}
+
+module container_registry './modules/compute/container-registry.bicep' = if(isCustom) {
+  name: take('module.container-registry.${solutionSuffix}', 64)
+  params: {
+    solutionName: solutionSuffix
+    name: 'cr${solutionSuffix}'
+    location: solutionLocation
+    tags: allTags
+    sku: 'Basic'
+    adminUserEnabled: false
+    publicNetworkAccess: 'Enabled'
+    exportPolicyStatus: 'enabled'
+    retentionPolicyStatus: 'disabled'
+  }
+}
+
+module backend_container_app './modules/compute/container-app.bicep' = {
+  name: take('module.backend-container-app.${solutionSuffix}', 64)
+  params: {
+    name: backendContainerAppName
+    location: solutionLocation
+    tags: isCustom ? union(allTags, { 'azd-service-name': 'backend' }) : allTags
+    environmentResourceId: container_app_environment.outputs.resourceId
+    ingressExternal: true
+    ingressTargetPort: 8000
+    managedIdentities: {
+      userAssignedResourceIds: [userAssignedIdentity.outputs.resourceId]
+    }
+    corsPolicy: {
+      allowedOrigins: [
+        frontendAppUrl
+        'http://${frontendAppName}.azurewebsites.net'
+      ]
+      allowedMethods: [
+        'GET'
+        'POST'
+        'PUT'
+        'DELETE'
+        'OPTIONS'
+      ]
+    }
+    scaleSettings: {
+      minReplicas: 1
+      maxReplicas: 1
+    }
+    registries: isCustom ? [
+      {
+        server: container_registry!.outputs.loginServer
+        identity: userAssignedIdentity.outputs.resourceId
+      }
+    ] : []
+    containers: [
+      {
+        name: 'backend'
+        image: '${backendContainerRegistryHostname}/${backendContainerImageName}:${backendContainerImageTag}'
+        resources: {
+          cpu: 2
+          memory: '4Gi'
+        }
+        env: [
+          {
+            name: 'COSMOSDB_ENDPOINT'
+            value: 'https://${cosmosDBModule.outputs.name}.documents.azure.com:443/'
+          }
+          {
+            name: 'COSMOSDB_DATABASE'
+            value: cosmosDbDatabaseName
+          }
+          {
+            name: 'COSMOSDB_CONTAINER'
+            value: cosmosDbDatabaseMemoryContainerName
+          }
+          {
+            name: 'AZURE_OPENAI_ENDPOINT'
+            value: aiFoundryOpenAIEndpoint
+          }
+          {
+            name: 'AZURE_OPENAI_DEPLOYMENT_NAME'
+            value: gptModelName
+          }
+          {
+            name: 'AZURE_OPENAI_RAI_DEPLOYMENT_NAME'
+            value: gpt4_1ModelName
+          }
+          {
+            name: 'AZURE_OPENAI_API_VERSION'
+            value: azureOpenaiAPIVersion
+          }
+          {
+            name: 'APPLICATIONINSIGHTS_INSTRUMENTATION_KEY'
+            value: app_insights.outputs.instrumentationKey
+          }
+          {
+            name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+            value: app_insights.outputs.connectionString
+          }
+          {
+            name: 'AZURE_AI_SUBSCRIPTION_ID'
+            value: aiFoundryAiServicesSubscriptionId
+          }
+          {
+            name: 'AZURE_AI_RESOURCE_GROUP'
+            value: aiFoundryAiServicesResourceGroupName
+          }
+          {
+            name: 'AZURE_AI_PROJECT_NAME'
+            value: aiFoundryAiProjectResourceName
+          }
+          {
+            name: 'FRONTEND_SITE_NAME'
+            value: frontendAppUrl
+          }
+          {
+            name: 'APP_ENV'
+            value: 'Prod'
+          }
+          // NOTE: AZURE_AI_SEARCH_CONNECTION_NAME intentionally omitted.
+          // The app defaults to per-KB RemoteTool connection names (e.g.
+          // "macae-retail-customer-kb-mcp") which carry ProjectManagedIdentity
+          // auth required by the KB MCP endpoint.
+          {
+            name: 'AZURE_AI_SEARCH_ENDPOINT'
+            value: ai_search.outputs.endpoint
+          }
+          {
+            name: 'AZURE_COGNITIVE_SERVICES'
+            value: 'https://cognitiveservices.azure.com/.default'
+          }
+          {
+            name: 'ORCHESTRATOR_MODEL_NAME'
+            value: gptReasoningModelName
+          }
+          {
+            name: 'AZURE_OPENAI_IMAGE_DEPLOYMENT'
+            value: gptImageModelName
+          }
+          {
+            name: 'MCP_SERVER_ENDPOINT'
+            value: 'https://${mcp_container_app.outputs.fqdn}/mcp'
+          }
+          {
+            name: 'MCP_SERVER_NAME'
+            value: mcpServerName
+          }
+          {
+            name: 'MCP_SERVER_DESCRIPTION'
+            value: mcpServerDescription
+          }
+          {
+            name: 'AZURE_TENANT_ID'
+            value: tenant().tenantId
+          }
+          {
+            name: 'AZURE_CLIENT_ID'
+            value: userAssignedIdentity.outputs.clientId
+          }
+          {
+            name: 'SUPPORTED_MODELS'
+            value: string(supportedModels)
+          }
+          {
+            name: 'AZURE_STORAGE_BLOB_URL'
+            value: storage_account.outputs.blobEndpoint
+          }
+          {
+            name: 'AZURE_AI_PROJECT_ENDPOINT'
+            value: aiFoundryAiProjectEndpoint
+          }
+          {
+            name: 'AZURE_AI_AGENT_ENDPOINT'
+            value: aiFoundryAiProjectEndpoint
+          }
+          {
+            name: 'AZURE_BASIC_LOGGING_LEVEL'
+            value: 'INFO'
+          }
+          {
+            name: 'AZURE_PACKAGE_LOGGING_LEVEL'
+            value: 'WARNING'
+          }
+          {
+            name: 'AZURE_LOGGING_PACKAGES'
+            value: ''
+          }
+        ]
+      }
+    ]
+  }
+}
+
+module mcp_container_app './modules/compute/container-app.bicep' = {
+  name: take('module.mcp-container-app.${solutionSuffix}', 64)
+  params: {
+    name: mcpContainerAppName
+    location: solutionLocation
+    tags: isCustom ? union(allTags, { 'azd-service-name': 'mcp' }) : allTags
+    environmentResourceId: container_app_environment.outputs.resourceId
+    ingressExternal: true
+    ingressTargetPort: 9000
+    managedIdentities: {
+      userAssignedResourceIds: [userAssignedIdentity.outputs.resourceId]
+    }
+    corsPolicy: {
+      allowedOrigins: [
+        frontendAppUrl
+        'http://${frontendAppName}.azurewebsites.net'
+      ]
+    }
+    scaleSettings: {
+      minReplicas: 1
+      maxReplicas: 1
+    }
+    registries: isCustom ? [
+      {
+        server: container_registry!.outputs.loginServer
+        identity: userAssignedIdentity.outputs.resourceId
+      }
+    ] : []
+    containers: [
+      {
+        name: 'mcp'
+        image: '${MCPContainerRegistryHostname}/${MCPContainerImageName}:${MCPContainerImageTag}'
+        resources: {
+          cpu: 2
+          memory: '4Gi'
+        }
+        env: [
+          {
+            name: 'HOST'
+            value: '0.0.0.0'
+          }
+          {
+            name: 'PORT'
+            value: '9000'
+          }
+          {
+            name: 'DEBUG'
+            value: 'false'
+          }
+          {
+            name: 'SERVER_NAME'
+            value: mcpServerName
+          }
+          {
+            name: 'ENABLE_AUTH'
+            value: 'false'
+          }
+          {
+            name: 'TENANT_ID'
+            value: tenant().tenantId
+          }
+          {
+            name: 'CLIENT_ID'
+            value: userAssignedIdentity.outputs.clientId
+          }
+          {
+            name: 'JWKS_URI'
+            value: '${environment().authentication.loginEndpoint}/${tenant().tenantId}/discovery/v2.0/keys'
+          }
+          {
+            name: 'ISSUER'
+            value: 'https://sts.windows.net/${tenant().tenantId}/'
+          }
+          {
+            name: 'AUDIENCE'
+            value: 'api://${userAssignedIdentity.outputs.clientId}'
+          }
+          {
+            name: 'DATASET_PATH'
+            value: './datasets'
+          }
+          {
+            name: 'AZURE_CLIENT_ID'
+            value: userAssignedIdentity!.outputs.clientId
+          }
+          {
+            name: 'AZURE_OPENAI_ENDPOINT'
+            value: 'https://${aiFoundryAiServicesResourceName}.openai.azure.com/'
+          }
+          {
+            name: 'AZURE_OPENAI_IMAGE_DEPLOYMENT'
+            value: gptImageModelName
+          }
+          {
+            name: 'AZURE_STORAGE_BLOB_URL'
+            value: storage_account.outputs.blobEndpoint
+          }
+          {
+            name: 'BACKEND_URL'
+            value: 'https://${backendContainerAppName}.${container_app_environment.outputs.defaultDomain}'
+          }
+        ]
+      }
+    ]
+  }
+}
+
+module app_service_plan './modules/compute/app-service-plan.bicep' = {
+  name: take('module.app-service-plan.${solutionSuffix}', 64)
+  params: {
+    solutionName: solutionSuffix
+    location: solutionLocation
+    tags: allTags
+    skuName: 'B3'
+    skuCapacity: 1
+  }
+}
+
+module frontend_app './modules/compute/app-service.bicep' = {
+  name: take('module.frontend-app.${solutionSuffix}', 64)
+  params: {
+    solutionName: frontendAppName
+    location: solutionLocation
+    tags: isCustom ? union(allTags, { 'azd-service-name': 'frontend' }) : allTags
+    serverFarmResourceId: app_service_plan.outputs.resourceId
+    linuxFxVersion: isCustom ? 'python|3.11' : 'DOCKER|${frontendContainerRegistryHostname}/${frontendContainerImageName}:${frontendContainerImageTag}'
+    appCommandLine: isCustom ? 'python3 -m uvicorn frontend_server:app --host 0.0.0.0 --port 8000' : ''
+    appSettings: isCustom ? {
+      SCM_DO_BUILD_DURING_DEPLOYMENT: 'True'
+      WEBSITES_PORT: '8000'
+      BACKEND_API_URL: 'https://${backend_container_app.outputs.fqdn}'
+      AUTH_ENABLED: 'false'
+      PROXY_API_REQUESTS: 'false'
+      ENABLE_ORYX_BUILD: 'True'
+      APPLICATIONINSIGHTS_CONNECTION_STRING: app_insights.outputs.connectionString
+      APPINSIGHTS_INSTRUMENTATIONKEY: app_insights.outputs.instrumentationKey
+    }
+    : {
+      SCM_DO_BUILD_DURING_DEPLOYMENT: 'true'
+      DOCKER_REGISTRY_SERVER_URL: 'https://${frontendContainerRegistryHostname}'
+      WEBSITES_PORT: '3000'
+      WEBSITES_CONTAINER_START_TIME_LIMIT: '1800'
+      BACKEND_API_URL: 'https://${backend_container_app.outputs.fqdn}'
+      AUTH_ENABLED: 'false'
+      PROXY_API_REQUESTS: 'false'
+      APPLICATIONINSIGHTS_CONNECTION_STRING: app_insights.outputs.connectionString
+      APPINSIGHTS_INSTRUMENTATIONKEY: app_insights.outputs.instrumentationKey
+    }
+  }
+}
+
+module role_assignments './modules/identity/role-assignments.bicep' = {
+  name: take('module.role-assignments.${solutionSuffix}', 64)
+  params: {
+    solutionName: solutionSuffix
+    useExistingAIProject: useExistingAiFoundryAiProject
+    existingFoundryProjectResourceId: existingFoundryProjectResourceId
+    aiFoundryResourceId: aiFoundryAiServicesResourceId
+    aiSearchResourceId: ai_search.outputs.resourceId
+    storageAccountResourceId: storage_account.outputs.resourceId
+    aiProjectPrincipalId: aiFoundryAiProjectPrincipalId
+    aiSearchPrincipalId: ai_search.outputs.identityPrincipalId
+    deployerPrincipalId: deployingUserPrincipalId
+    deployerPrincipalType: deployerPrincipalType
+    userAssignedManagedIdentityPrincipalId: userAssignedIdentity.outputs.principalId
+    cosmosDbAccountName: cosmosDBModule.outputs.name
+    containerRegistryResourceId: isCustom ? container_registry!.outputs.resourceId : ''
+  }
+}
+
+
+@description('The resource group the resources were deployed into.')
+output resourceGroupName string = resourceGroup().name
+
+@description('The default hostname of the frontend web app.')
+output webSiteDefaultHostname string = replace(frontend_app.outputs.appUrl, 'https://', '')
+
+@description('The blob service endpoint of the deployed storage account.')
+output AZURE_STORAGE_BLOB_URL string = storage_account.outputs.blobEndpoint
+
+@description('The name of the deployed storage account.')
+output AZURE_STORAGE_ACCOUNT_NAME string = storageAccountName
+
+@description('The endpoint URL of the deployed Azure AI Search service.')
+output AZURE_AI_SEARCH_ENDPOINT string = ai_search.outputs.endpoint
+
+@description('The name of the deployed Azure AI Search service.')
+output AZURE_AI_SEARCH_NAME string = aiSearchServiceName
+
+@description('The endpoint URL of the deployed Cosmos DB account.')
+output COSMOSDB_ENDPOINT string = 'https://${cosmosDbResourceName}.documents.azure.com:443/'
+
+@description('The Cosmos DB database name used by the application.')
+output COSMOSDB_DATABASE string = cosmosDbDatabaseName
+
+@description('The Cosmos DB container name used to persist agent memory.')
+output COSMOSDB_CONTAINER string = cosmosDbDatabaseMemoryContainerName
+
+@description('The Azure OpenAI endpoint URL for the AI Foundry / AI Services account.')
+output AZURE_OPENAI_ENDPOINT string = aiFoundryOpenAIEndpoint
+
+@description('The default GPT model deployment name.')
+output AZURE_OPENAI_DEPLOYMENT_NAME string = gptModelName
+
+@description('The RAI (Responsible AI) GPT model deployment name.')
+output AZURE_OPENAI_RAI_DEPLOYMENT_NAME string = gpt4_1ModelName
+
+@description('The Azure OpenAI API version used by the application.')
+output AZURE_OPENAI_API_VERSION string = azureOpenaiAPIVersion
+
+@description('The subscription id that hosts the AI Foundry / AI Services resources.')
+output AZURE_AI_SUBSCRIPTION_ID string = subscription().subscriptionId
+
+@description('The resource group that hosts the AI Foundry / AI Services resources.')
+output AZURE_AI_RESOURCE_GROUP string = resourceGroup().name
+
+@description('The name of the AI Foundry project resource.')
+output AZURE_AI_PROJECT_NAME string = aiFoundryAiProjectResourceName
+
+@description('The application environment label (e.g. Dev, Prod).')
+output APP_ENV string = 'Prod'
+
+@description('The AI Foundry resource id (existing project resource id when reusing, otherwise the newly created project).')
+output AI_FOUNDRY_RESOURCE_ID string = useExistingAiFoundryAiProject ? existing_project_setup!.outputs.resourceId : ai_foundry_project!.outputs.resourceId
+
+@description('The name of the deployed Cosmos DB account.')
+output COSMOSDB_ACCOUNT_NAME string = cosmosDbResourceName
+
+@description('Alias for AZURE_AI_SEARCH_ENDPOINT — kept for backward compatibility with seed scripts and the backend.')
+output AZURE_SEARCH_ENDPOINT string = ai_search.outputs.endpoint
+
+@description('The client id of the user-assigned managed identity used by backend and MCP container apps.')
+output AZURE_CLIENT_ID string = userAssignedIdentity.outputs.clientId
+
+@description('The Azure AD tenant id of the deployment.')
+output AZURE_TENANT_ID string = tenant().tenantId
+
+@description('The default Cognitive Services resource scope used to acquire AAD tokens.')
+output AZURE_COGNITIVE_SERVICES string = 'https://cognitiveservices.azure.com/.default'
+
+@description('The model deployment name used by the orchestrator/manager (reasoning model).')
+output ORCHESTRATOR_MODEL_NAME string = gptReasoningModelName
+
+@description('The display name of the MCP server.')
+output MCP_SERVER_NAME string = mcpServerName
+
+@description('Human-readable description of the MCP server.')
+output MCP_SERVER_DESCRIPTION string = mcpServerDescription
+
+@description('JSON-serialized list of model deployment names supported by this deployment.')
+output SUPPORTED_MODELS string = string(supportedModels)
+
+@description('Public HTTPS URL of the backend Container App.')
+output BACKEND_URL string = 'https://${backend_container_app.outputs.fqdn}'
+
+@description('AI Foundry project endpoint URL used by the agents.')
+output AZURE_AI_PROJECT_ENDPOINT string = aiFoundryAiProjectEndpoint
+
+@description('Alias for AZURE_AI_PROJECT_ENDPOINT — kept for backward compatibility with the agent SDK.')
+output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiProjectEndpoint
+
+@description('The name of the AI Foundry / AI Services account hosting the project.')
+output AI_SERVICE_NAME string = aiFoundryAiServicesResourceName
+
+@description('Storage container name for retail customer data.')
+output AZURE_STORAGE_CONTAINER_NAME_RETAIL_CUSTOMER string = storageContainerNameRetailCustomer
+
+@description('Storage container name for retail order data.')
+output AZURE_STORAGE_CONTAINER_NAME_RETAIL_ORDER string = storageContainerNameRetailOrder
+
+@description('Storage container name for RFP summary documents.')
+output AZURE_STORAGE_CONTAINER_NAME_RFP_SUMMARY string = storageContainerNameRFPSummary
+
+@description('Storage container name for RFP risk documents.')
+output AZURE_STORAGE_CONTAINER_NAME_RFP_RISK string = storageContainerNameRFPRisk
+
+@description('Storage container name for RFP compliance documents.')
+output AZURE_STORAGE_CONTAINER_NAME_RFP_COMPLIANCE string = storageContainerNameRFPCompliance
+
+@description('Storage container name for contract summary documents.')
+output AZURE_STORAGE_CONTAINER_NAME_CONTRACT_SUMMARY string = storageContainerNameContractSummary
+
+@description('Storage container name for contract risk documents.')
+output AZURE_STORAGE_CONTAINER_NAME_CONTRACT_RISK string = storageContainerNameContractRisk
+
+@description('Storage container name for contract compliance documents.')
+output AZURE_STORAGE_CONTAINER_NAME_CONTRACT_COMPLIANCE string = storageContainerNameContractCompliance
+
+@description('AI Search index name for retail customer data.')
+output AZURE_AI_SEARCH_INDEX_NAME_RETAIL_CUSTOMER string = aiSearchIndexNameForRetailCustomer
+
+@description('AI Search index name for retail order data.')
+output AZURE_AI_SEARCH_INDEX_NAME_RETAIL_ORDER string = aiSearchIndexNameForRetailOrder
+
+@description('AI Search index name for RFP summary documents.')
+output AZURE_AI_SEARCH_INDEX_NAME_RFP_SUMMARY string = aiSearchIndexNameForRFPSummary
+
+@description('AI Search index name for RFP risk documents.')
+output AZURE_AI_SEARCH_INDEX_NAME_RFP_RISK string = aiSearchIndexNameForRFPRisk
+
+@description('AI Search index name for RFP compliance documents.')
+output AZURE_AI_SEARCH_INDEX_NAME_RFP_COMPLIANCE string = aiSearchIndexNameForRFPCompliance
+
+@description('AI Search index name for contract summary documents.')
+output AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_SUMMARY string = aiSearchIndexNameForContractSummary
+
+@description('AI Search index name for contract risk documents.')
+output AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_RISK string = aiSearchIndexNameForContractRisk
+
+@description('AI Search index name for contract compliance documents.')
+output AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_COMPLIANCE string = aiSearchIndexNameForContractCompliance
+
+// Container Registry Outputs
+@description('Login server (endpoint) of the Azure Container Registry. Only populated when isCustom is true.')
+output AZURE_CONTAINER_REGISTRY_ENDPOINT string? = isCustom ? container_registry!.outputs.loginServer : null
+
+@description('Name of the Azure Container Registry. Only populated when isCustom is true.')
+output AZURE_CONTAINER_REGISTRY_NAME string? = isCustom ? container_registry!.outputs.name : null
