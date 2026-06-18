@@ -7,6 +7,7 @@ import { Body1, Tag, makeStyles, tokens, Button } from "@fluentui/react-componen
 import { TaskService } from "@/store";
 import { PersonRegular, ArrowDownloadRegular } from "@fluentui/react-icons";
 import { getAgentIcon, getAgentDisplayName } from '@/utils/agentIconUtils';
+import { formatJsonInText } from '@/utils/jsonFormatter';
 
 interface StreamingAgentMessageProps {
   agentMessages: AgentMessageData[];
@@ -306,7 +307,7 @@ const renderAgentMessages = (
                       )
                     }}
                 >
-                  {TaskService.cleanHRAgent(msg.content) || ""}
+                  {formatJsonInText(TaskService.cleanHRAgent(msg.content) || "")}
                 </ReactMarkdown>
               </div>
             </div>

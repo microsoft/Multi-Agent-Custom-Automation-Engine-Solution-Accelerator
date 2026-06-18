@@ -6,158 +6,12 @@ import { CheckmarkCircle20Regular, ArrowTurnDownRightRegular } from '@fluentui/r
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypePrism from "rehype-prism";
+import { formatJsonInText } from "@/utils/jsonFormatter";
 
 interface StreamingBufferMessageProps {
     streamingMessageBuffer: string;
     isStreaming?: boolean;
 }
-
-/**
- * Format a key from snake_case / camelCase / kebab-case into a readable label.
- */
-const humanizeKey = (key: string): string => {
-    if (!key) return key;
-    const spaced = key
-        .replace(/[_-]+/g, ' ')
-        .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-        .trim();
-    return spaced.replace(/\b\w/g, (c) => c.toUpperCase());
-};
-
-/**
- * Render a parsed JSON value as readable Markdown (bullet list of
- * "**Key**: value" entries, recursing into nested objects/arrays).
- */
-const jsonToMarkdown = (value: any, depth = 0): string => {
-    const indent = '  '.repeat(depth);
-
-    if (value === null || value === undefined) return `${indent}_n/a_`;
-
-    if (Array.isArray(value)) {
-        if (value.length === 0) return `${indent}_(none)_`;
-        return value
-            .map((item) => {
-                if (item !== null && typeof item === 'object') {
-                    return `${indent}- \n${jsonToMarkdown(item, depth + 1)}`;
-                }
-                return `${indent}- ${String(item)}`;
-            })
-            .join('\n');
-    }
-
-    if (typeof value === 'object') {
-        const entries = Object.entries(value);
-        if (entries.length === 0) return `${indent}_(empty)_`;
-        return entries
-            .map(([k, v]) => {
-                const label = humanizeKey(k);
-                if (v !== null && typeof v === 'object') {
-                    return `${indent}- **${label}:**\n${jsonToMarkdown(v, depth + 1)}`;
-                }
-                return `${indent}- **${label}:** ${v === null || v === undefined ? '' : String(v)}`;
-            })
-            .join('\n');
-    }
-
-    return `${indent}${String(value)}`;
-};
-
-/**
- * Detect raw JSON blocks in the streaming buffer and replace them with a
- * readable Markdown rendering so the Details section doesn't expose raw JSON.
- * Handles both bare JSON blocks and fenced code blocks containing JSON
- * (e.g. ```json ... ``` or ``` { ... } ```).
- */
-const formatBufferContent = (content: string): string => {
-    if (!content) return content;
-
-    const lines = content.split('\n');
-    const out: string[] = [];
-    let i = 0;
-
-    const tryRenderJsonBlock = (block: string): string | null => {
-        const trimmed = block.trim();
-        if (!trimmed) return null;
-        if (!(trimmed.startsWith('{') || trimmed.startsWith('['))) return null;
-        try {
-            const parsed = JSON.parse(trimmed);
-            if (parsed === null || typeof parsed !== 'object') return null;
-            return jsonToMarkdown(parsed);
-        } catch {
-            return null;
-        }
-    };
-
-    while (i < lines.length) {
-        const line = lines[i];
-        const trimmed = line.trim();
-
-        // Fenced code block — try to render as readable JSON if applicable
-        if (trimmed.startsWith('```')) {
-            const fenceLang = trimmed.replace(/^```/, '').trim().toLowerCase();
-            // Find closing fence
-            let endIdx = -1;
-            for (let j = i + 1; j < lines.length; j++) {
-                if (lines[j].trim().startsWith('```')) {
-                    endIdx = j;
-                    break;
-                }
-            }
-            if (endIdx === -1) {
-                // Unterminated fence — pass remaining lines through unchanged
-                out.push(line);
-                i++;
-                continue;
-            }
-
-            const inner = lines.slice(i + 1, endIdx).join('\n');
-            const isJsonLang = fenceLang === 'json' || fenceLang === '';
-            const rendered = isJsonLang ? tryRenderJsonBlock(inner) : null;
-            if (rendered !== null) {
-                out.push(rendered);
-                out.push('');
-            } else {
-                // Keep original fenced block as-is
-                out.push(line);
-                for (let j = i + 1; j <= endIdx; j++) out.push(lines[j]);
-            }
-            i = endIdx + 1;
-            continue;
-        }
-
-        // Bare JSON block (not inside a fence)
-        if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-            let depth = 0;
-            let endIdx = -1;
-            for (let j = i; j < lines.length; j++) {
-                const l = lines[j];
-                for (const ch of l) {
-                    if (ch === '{' || ch === '[') depth++;
-                    else if (ch === '}' || ch === ']') depth--;
-                }
-                if (depth === 0) {
-                    endIdx = j;
-                    break;
-                }
-            }
-            if (endIdx !== -1) {
-                const block = lines.slice(i, endIdx + 1).join('\n');
-                const rendered = tryRenderJsonBlock(block);
-                if (rendered !== null) {
-                    out.push(rendered);
-                    out.push('');
-                    i = endIdx + 1;
-                    continue;
-                }
-            }
-        }
-
-        out.push(line);
-        i++;
-    }
-
-    return out.join('\n');
-};
 
 // Convert to a proper React component instead of a function
 const StreamingBufferMessage: React.FC<StreamingBufferMessageProps> = ({
@@ -189,7 +43,7 @@ const StreamingBufferMessage: React.FC<StreamingBufferMessageProps> = ({
 
     if (!streamingMessageBuffer || streamingMessageBuffer.trim() === "") return null;
 
-    const formattedBuffer = formatBufferContent(streamingMessageBuffer);
+    const formattedBuffer = formatJsonInText(streamingMessageBuffer);
 
     return (
         <div style={{
