@@ -16,7 +16,7 @@ az login --use-device-code
 
 ### 📌 Default Models & Capacities:
 ```
-gpt4.1:150,o4-mini:50,gpt4.1-mini:50
+gpt4.1:50,o4-mini:50,gpt4.1-mini:50
 ```
 ### 📌 Default Regions:
 ```
@@ -42,7 +42,7 @@ australiaeast, eastus2, francecentral, japaneast, norwayeast, swedencentral, uks
    ```
 ✔️ Check specific model(s) in default regions:
   ```
-  ./quota_check_params.sh --models gpt4.1:150
+  ./quota_check_params.sh --models gpt4.1:50
   ```
 ✔️ Check default models in specific region(s):
   ```
@@ -50,15 +50,15 @@ australiaeast, eastus2, francecentral, japaneast, norwayeast, swedencentral, uks
   ```
 ✔️ Passing Both models and regions:  
   ```
-  ./quota_check_params.sh --models gpt4.1:150 --regions eastus2,westus
+  ./quota_check_params.sh --models gpt4.1:50 --regions eastus2,westus
   ```
 ✔️ All parameters combined:
   ```
- ./quota_check_params.sh --models gpt4.1:150 --regions eastus2,westus --verbose
+ ./quota_check_params.sh --models gpt4.1:50 --regions eastus2,westus --verbose
   ```
 ✔️ Multiple models with single region:
   ```
- ./quota_check_params.sh --models gpt4.1:150,gpt4.1-mini:50 --regions eastus2 --verbose
+ ./quota_check_params.sh --models gpt4.1:50,gpt4.1-mini:50 --regions eastus2 --verbose
   ```
 
 ### **Sample Output**
@@ -76,7 +76,7 @@ The final table lists regions with available quota. You can select any of these 
    **To check quota for the deployment**  
 
     ```sh
-    curl -L -o quota_check_params.sh "https://raw.githubusercontent.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/main/infra/scripts/quota_check_params.sh"
+    curl -L -o quota_check_params.sh "https://raw.githubusercontent.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/main/infra/scripts/pre-provision/quota_check_params.sh"
     chmod +x quota_check_params.sh
     ./quota_check_params.sh
     ```

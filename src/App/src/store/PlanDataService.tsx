@@ -384,21 +384,14 @@ export class PlanDataService {
           .replace(/\\"/g, '"') || '';
 
       const steps: MPlanData['steps'] = [];
-      const stepRegex = /MStep\(([^)]*?)\)/g;
+     const stepRegex = /MStep\(\s*agent=(['"])([\s\S]*?)\1\s*,\s*action=(['"])([\s\S]*?)\3\s*\)/g;
       let stepMatch: RegExpExecArray | null;
       let idx = 1;
       const seen = new Set<string>();
       while ((stepMatch = stepRegex.exec(body)) !== null) {
-        const chunk = stepMatch[1];
-        const agent =
-          chunk.match(/agent='([^']+)'/)?.[1] ||
-          chunk.match(/agent="([^"]+)"/)?.[1] ||
-          'System';
-        const actionRaw =
-          chunk.match(/action='([^']+)'/)?.[1] ||
-          chunk.match(/action="([^"]+)"/)?.[1] ||
-          '';
-        if (!actionRaw) continue;
+       const agent = stepMatch[2] || 'System';
+       const actionRaw = stepMatch[4] || '';
+       if (!actionRaw.trim()) continue;
 
         const cleanAction = actionRaw
           .replace(/\*\*/g, '')

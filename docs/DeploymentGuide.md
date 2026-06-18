@@ -68,7 +68,7 @@ Ensure you have access to an [Azure subscription](https://azure.microsoft.com/fr
 📖 **Follow:** [Quota Check Instructions](./quota_check.md) to ensure sufficient capacity.
 
 **Default Quota Configuration:**
-- **GPT-4.1:** 150k tokens
+- **GPT-4.1:** 50k tokens
 - **o4-mini:** 50k tokens
 - **GPT-4.1-mini:** 50k tokens
 
@@ -246,7 +246,7 @@ You can customize various deployment settings before running `azd up`, including
 <details>
   <summary><b>[Optional] Quota Recommendations</b></summary>
 
-By default, the **GPT model capacity** in deployment is set to **150k tokens**.
+By default, the **GPT model capacity** in deployment is set to **50k tokens**.
 
 To adjust quota settings, follow these [steps](./AzureGPTQuotaSettings.md).
 
@@ -345,12 +345,12 @@ After successful deployment:
 
   - **For Bash (Linux/macOS/WSL):**
     ```bash
-    bash infra/scripts/selecting_team_config_and_data.sh
+    bash infra/scripts/post-provision/selecting_team_config_and_data.sh
     ```
 
   - **For PowerShell (Windows):**
     ```powershell
-    infra\scripts\Selecting-Team-Config-And-Data.ps1
+    infra\scripts\post-provision\Selecting-Team-Config-And-Data.ps1
     ```
 
 

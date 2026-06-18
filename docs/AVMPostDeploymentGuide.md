@@ -82,12 +82,12 @@ The post-deployment process is automated through a single PowerShell or Bash scr
    - **For PowerShell (Windows/Linux/macOS):**
 
      ```powershell
-     infra\scripts\Selecting-Team-Config-And-Data.ps1 -ResourceGroup "<your-resource-group-name>"
+     infra\scripts\post-provision\Selecting-Team-Config-And-Data.ps1 -ResourceGroup "<your-resource-group-name>"
      ```
 
    - **For Bash (Linux/macOS/WSL):**
      ```bash
-     bash infra/scripts/selecting_team_config_and_data.sh --resource-group "<your-resource-group-name>"
+     bash infra/scripts/post-provision/selecting_team_config_and_data.sh --resource-group "<your-resource-group-name>"
      ```
 
    > **Note**: Replace `<your-resource-group-name>` with the actual name of the resource group containing your deployed Azure resources.
