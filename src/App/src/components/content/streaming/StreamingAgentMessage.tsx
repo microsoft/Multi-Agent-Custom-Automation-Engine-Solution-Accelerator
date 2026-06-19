@@ -7,6 +7,7 @@ import { Body1, Tag, makeStyles, tokens, Button } from "@fluentui/react-componen
 import { TaskService } from "@/store";
 import { PersonRegular, ArrowDownloadRegular } from "@fluentui/react-icons";
 import { getAgentIcon, getAgentDisplayName } from '@/utils/agentIconUtils';
+import { formatJsonInText } from '@/utils/jsonFormatter';
 
 interface StreamingAgentMessageProps {
   agentMessages: AgentMessageData[];
@@ -82,6 +83,9 @@ const useStyles = makeStyles({
     backgroundColor: 'var(--colorNeutralBackground2)',
     color: 'var(--colorNeutralForeground1)',
     maxWidth: '100%',
+    width: '100%',
+    boxSizing: 'border-box',
+    overflowX: 'hidden',
     alignSelf: 'flex-start',
 
   },
@@ -219,10 +223,10 @@ const renderAgentMessages = (
                         />
                       ),
                       img: ({ node: _imgNode, ...props }) => (
-                        <div style={{ position: 'relative', display: 'inline-block', marginTop: '8px' }}>
+                        <div style={{ position: 'relative', display: 'block', width: '100%', maxWidth: '100%', marginTop: '8px', overflow: 'hidden' }}>
                           <img
                             {...props}
-                            style={{ maxWidth: '100%', borderRadius: '8px', display: 'block' }}
+                            style={{ display: 'block', width: '100%', maxWidth: '100%', height: 'auto', borderRadius: '8px' }}
                           />
                           <Button
                             appearance="subtle"
@@ -239,13 +243,27 @@ const renderAgentMessages = (
                               color: 'white',
                               borderRadius: '4px',
                             }}
-                            onClick={() => {
+                            onClick={async () => {
                               const url = props.src;
-                              if (url) {
+                              if (!url) return;
+                              const filename = `ad-image-${Date.now()}.png`;
+                              try {
+                                const response = await fetch(url, { mode: 'cors' });
+                                if (!response.ok) throw new Error(`Failed to fetch image (${response.status})`);
+                                const blob = await response.blob();
+                                const blobUrl = URL.createObjectURL(blob);
+                                const link = document.createElement('a');
+                                link.href = blobUrl;
+                                link.download = filename;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                URL.revokeObjectURL(blobUrl);
+                              } catch (err) {
+                                // Fallback: trigger direct download (works for same-origin or CORS-enabled URLs)
                                 const link = document.createElement('a');
                                 link.href = url;
-                                link.download = `ad-image-${Date.now()}.png`;
-                                link.target = '_blank';
+                                link.download = filename;
                                 document.body.appendChild(link);
                                 link.click();
                                 document.body.removeChild(link);
@@ -254,10 +272,42 @@ const renderAgentMessages = (
                             title="Download image"
                           />
                         </div>
+                      ),
+                      p: ({ node: _pNode, ...props }) => (
+                        <p {...props} style={{ margin: '0 0 8px 0' }} />
+                      ),
+                      h1: ({ node: _hNode, ...props }) => (
+                        <h1 {...props} style={{ fontSize: '20px', fontWeight: 600, margin: '16px 0 8px 0', lineHeight: '1.3' }} />
+                      ),
+                      h2: ({ node: _hNode, ...props }) => (
+                        <h2 {...props} style={{ fontSize: '17px', fontWeight: 600, margin: '14px 0 8px 0', lineHeight: '1.3' }} />
+                      ),
+                      h3: ({ node: _hNode, ...props }) => (
+                        <h3 {...props} style={{ fontSize: '15px', fontWeight: 600, margin: '12px 0 6px 0', lineHeight: '1.3' }} />
+                      ),
+                      ul: ({ node: _ulNode, ...props }) => (
+                        <ul {...props} style={{ margin: '8px 0', paddingLeft: '24px' }} />
+                      ),
+                      ol: ({ node: _olNode, ...props }) => (
+                        <ol {...props} style={{ margin: '8px 0', paddingLeft: '24px' }} />
+                      ),
+                      li: ({ node: _liNode, ...props }) => (
+                        <li {...props} style={{ margin: '4px 0', lineHeight: '1.5' }} />
+                      ),
+                      blockquote: ({ node: _bqNode, ...props }) => (
+                        <blockquote
+                          {...props}
+                          style={{
+                            margin: '8px 0',
+                            padding: '8px 12px',
+                            borderLeft: '3px solid var(--colorNeutralStroke1)',
+                            color: 'var(--colorNeutralForeground2)'
+                          }}
+                        />
                       )
                     }}
                 >
-                  {TaskService.cleanHRAgent(msg.content) || ""}
+                  {formatJsonInText(TaskService.cleanHRAgent(msg.content) || "")}
                 </ReactMarkdown>
               </div>
             </div>
