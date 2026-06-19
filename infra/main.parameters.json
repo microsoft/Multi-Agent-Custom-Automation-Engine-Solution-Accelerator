@@ -75,19 +75,19 @@
       "value": "${AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT}"
     },
      "backendContainerImageTag": {
-      "value": "${AZURE_ENV_IMAGE_TAG=latest_v4}"
+      "value": "${AZURE_ENV_IMAGE_TAG=latest_v5}"
     },
     "frontendContainerRegistryHostname": {
       "value": "${AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT}"
     },
     "frontendContainerImageTag": {
-      "value": "${AZURE_ENV_IMAGE_TAG=latest_v4}"
+      "value": "${AZURE_ENV_IMAGE_TAG=latest_v5}"
     },
     "MCPContainerRegistryHostname": {
       "value": "${AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT}"
     },
     "MCPContainerImageTag": {
-      "value": "${AZURE_ENV_IMAGE_TAG=latest_v4}"
+      "value": "${AZURE_ENV_IMAGE_TAG=latest_v5}"
     }
   }
 }

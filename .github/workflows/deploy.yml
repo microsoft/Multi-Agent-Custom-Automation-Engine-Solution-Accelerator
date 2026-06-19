@@ -11,7 +11,7 @@ on:
       - completed
     branches:
       - main
-      - dev-v4
+      - dev
       - hotfix
   schedule:
     - cron: "0 11,23 * * *" # Runs at 11:00 AM and 11:00 PM GMT
@@ -129,13 +129,13 @@ jobs:
         id: deploy
         run: |
           if [[ "${{ env.BRANCH_NAME }}" == "main" ]]; then
-            IMAGE_TAG="latest_v4"
-          elif [[ "${{ env.BRANCH_NAME }}" == "dev-v4" ]]; then
-            IMAGE_TAG="dev_v4"
+            IMAGE_TAG="latest_v5"
+          elif [[ "${{ env.BRANCH_NAME }}" == "dev" ]]; then
+            IMAGE_TAG="dev_v5"
           elif [[ "${{ env.BRANCH_NAME }}" == "hotfix" ]]; then
             IMAGE_TAG="hotfix"
           else
-            IMAGE_TAG="latest_v4"
+            IMAGE_TAG="latest_v5"
           fi
 
           # Generate current timestamp in desired format: YYYY-MM-DDTHH:MM:SS.SSSSSSSZ
