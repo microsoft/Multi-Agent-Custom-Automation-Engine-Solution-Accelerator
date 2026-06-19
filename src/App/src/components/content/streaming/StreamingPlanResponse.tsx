@@ -61,7 +61,9 @@ const useStyles = makeStyles({
         borderRadius: '8px',
         fontSize: '14px',
         lineHeight: '1.5',
-        wordWrap: 'break-word'
+        wordWrap: 'break-word',
+        marginLeft: '48px',
+        boxSizing: 'border-box'
     },
     factsSection: {
         backgroundColor: 'var(--colorNeutralBackground2)',

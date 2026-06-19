@@ -6,12 +6,13 @@ import { CheckmarkCircle20Regular, ArrowTurnDownRightRegular } from '@fluentui/r
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypePrism from "rehype-prism";
-
+import { formatJsonInText } from "@/utils/jsonFormatter";
+ 
 interface StreamingBufferMessageProps {
     streamingMessageBuffer: string;
     isStreaming?: boolean;
 }
-
+ 
 // Convert to a proper React component instead of a function
 const StreamingBufferMessage: React.FC<StreamingBufferMessageProps> = ({
     streamingMessageBuffer,
@@ -21,7 +22,7 @@ const StreamingBufferMessage: React.FC<StreamingBufferMessageProps> = ({
     const [shouldFade, setShouldFade] = useState<boolean>(false);
     const contentRef = useRef<HTMLDivElement>(null);
     const prevBufferLength = useRef<number>(0);
-
+ 
     // Trigger fade effect when new content is being streamed
     useEffect(() => {
         if (isStreaming && streamingMessageBuffer.length > prevBufferLength.current) {
@@ -32,16 +33,18 @@ const StreamingBufferMessage: React.FC<StreamingBufferMessageProps> = ({
         }
         prevBufferLength.current = streamingMessageBuffer.length;
     }, [streamingMessageBuffer, isStreaming]);
-
+ 
     // Auto-scroll to bottom when streaming
     useEffect(() => {
         if (isStreaming && !isExpanded && contentRef.current) {
             contentRef.current.scrollTop = contentRef.current.scrollHeight;
         }
     }, [streamingMessageBuffer, isStreaming, isExpanded]);
-
+ 
     if (!streamingMessageBuffer || streamingMessageBuffer.trim() === "") return null;
-
+ 
+    const formattedBuffer = formatJsonInText(streamingMessageBuffer);
+ 
     return (
         <div style={{
             maxWidth: '800px',
@@ -90,7 +93,7 @@ const StreamingBufferMessage: React.FC<StreamingBufferMessageProps> = ({
                             AI Thinking Process
                         </span>
                     </div>
-
+ 
                     <Button
                         appearance="secondary"
                         size="small"
@@ -106,7 +109,7 @@ const StreamingBufferMessage: React.FC<StreamingBufferMessageProps> = ({
                         {isExpanded ? 'Hide' : 'Details'}
                     </Button>
                 </div>
-
+ 
                 {/* Content area - collapsed state */}
                 {!isExpanded && (
                     <div
@@ -132,7 +135,7 @@ const StreamingBufferMessage: React.FC<StreamingBufferMessageProps> = ({
                             pointerEvents: 'none',
                             zIndex: 1
                         }} />
-
+ 
                         <div style={{
                             display: 'flex',
                             alignItems: 'flex-end',
@@ -175,20 +178,36 @@ const StreamingBufferMessage: React.FC<StreamingBufferMessageProps> = ({
                                                 onMouseLeave={(e) => {
                                                     e.currentTarget.style.textDecoration = 'none';
                                                 }}
-                                            />
-                                        ),
-                                        p: ({ node, ...props }) => (
-                                            <p {...props} style={{ margin: '0 0 8px 0' }} />
-                                        )
-                                    }}
+                                                    />
+                                                ),
+ 
+                                                p: ({ node, ...props }) => (
+                                                    <p {...props} style={{ margin: '0 0 8px 0' }} />
+                                                ),
+ 
+                                        img: ({ node, ...props }) => (
+                                            <img
+                                                {...props}
+                                                style={{
+                                                    maxWidth: '100%',
+                                                    width: '100%',                    
+                                                    height: 'auto',
+                                                    objectFit: 'contain',     // resize, don't crop
+                                                    display: 'block',
+                                                    borderRadius: '8px',
+                                                    marginTop: '8px'
+                                                    }}
+                                                    />
+                                                )
+                                            }}
                                 >
-                                    {streamingMessageBuffer}
+                                    {formattedBuffer}
                                 </ReactMarkdown>
                             </div>
                         </div>
                     </div>
                 )}
-
+ 
                 {/* Content area - expanded state */}
                 {isExpanded && (
                     <div style={{
@@ -199,24 +218,39 @@ const StreamingBufferMessage: React.FC<StreamingBufferMessageProps> = ({
                             remarkPlugins={[remarkGfm]}
                             rehypePlugins={[rehypePrism]}
                             components={{
-                                a: ({ node, ...props }) => (
-                                    <a
-                                        {...props}
-                                        style={{
-                                            color: 'var(--colorNeutralBrandForeground1)',
-                                            textDecoration: 'none'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.textDecoration = 'underline';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.textDecoration = 'none';
-                                        }}
-                                    />
-                                )
-                            }}
+                                        a: ({ node, ...props }) => (
+                                            <a
+                                                {...props}
+                                                style={{
+                                                    color: 'var(--colorNeutralBrandForeground1)',
+                                                    textDecoration: 'none'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.textDecoration = 'underline';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.textDecoration = 'none';
+                                                }}
+                                            />
+                                        ),
+ 
+                                        img: ({ node, ...props }) => (
+                                            <img
+                                                {...props}
+                                                style={{
+                                                    maxWidth: '100%',
+                                                    width: '100%',
+                                                    height: 'auto',
+                                                    objectFit: 'contain',    // no cropping
+                                                    display: 'block',
+                                                    borderRadius: '8px',
+                                                    marginTop: '8px'
+                                                }}
+                                            />
+                                        )
+                                    }}
                         >
-                            {streamingMessageBuffer}
+                            {formattedBuffer}
                         </ReactMarkdown>
                     </div>
                 )}
@@ -224,7 +258,7 @@ const StreamingBufferMessage: React.FC<StreamingBufferMessageProps> = ({
         </div>
     );
 };
-
+ 
 const MemoizedStreamingBufferMessage = React.memo(StreamingBufferMessage);
 MemoizedStreamingBufferMessage.displayName = 'StreamingBufferMessage';
 export default MemoizedStreamingBufferMessage;
