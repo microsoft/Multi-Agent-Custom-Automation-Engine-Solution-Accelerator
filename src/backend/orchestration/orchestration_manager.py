@@ -202,10 +202,35 @@ class OrchestrationManager:
         current = orchestration_config.get_current_orchestration(user_id)
         workflow_terminated = getattr(current, "_terminated", False)
 
-        # Full rebuild: no workflow exists or team explicitly changed
-        needs_full_rebuild = current is None or team_switched
+        # Detect a stale cached orchestration: it was built for a different team
+        # than the one now selected. Without this, /select_team leaves the prior
+        # team's workflow cached and the next run executes the wrong agents until
+        # a page refresh rebuilds it. The team_id tag is set on every workflow we
+        # build/reset below.
+        current_team_id = getattr(current, "_team_id", None)
+        team_changed = (
+            current is not None and current_team_id != team_config.team_id
+        )
 
-        # Lightweight reset: workflow finished but agents are still valid
+
+        cls.logger.info(
+            "get_current_or_new_orchestration: user='%s' selected_team='%s' "
+            "cached_team='%s' team_switched=%s team_changed=%s current_is_none=%s",
+            user_id, team_config.team_id, current_team_id,
+            team_switched, team_changed, current is None,
+        )
+
+
+        # Full rebuild: no workflow exists, team explicitly switched, or the
+        # cached workflow belongs to a different team than the selected one.
+        needs_full_rebuild = current is None or team_switched or team_changed
+
+
+        # Lightweight reset: workflow finished but agents are still valid for the
+        # same team (a team change always routes to full rebuild above so we
+        # never reuse the previous team's agents here).
+
+
         needs_workflow_reset = not needs_full_rebuild and workflow_terminated
 
         if needs_full_rebuild:

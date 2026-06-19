@@ -341,19 +341,31 @@ async def process_request(
 
     # Ensure the workflow is valid (rebuild if terminated or stuck from a prior run)
     current_workflow = orchestration_config.get_current_orchestration(user_id)
+
+    cached_team_id = getattr(current_workflow, "_team_id", None)
+    team_mismatch = (
+        current_workflow is not None and cached_team_id != team_id
+    )
+
     workflow_unusable = (
         current_workflow is None
         or getattr(current_workflow, "_terminated", False)
         or getattr(current_workflow, "_is_running", False)
+        or team_mismatch
     )
     if workflow_unusable:
         logger.info(
-            "Workflow unusable for user '%s' (None=%s, terminated=%s, is_running=%s) — rebuilding",
+            "Workflow unusable for user '%s' (None=%s, terminated=%s, is_running=%s, "
+            "team_mismatch=%s cached_team=%s selected_team=%s) — rebuilding",
             user_id,
             current_workflow is None,
             getattr(current_workflow, "_terminated", False),
             getattr(current_workflow, "_is_running", False),
+            team_mismatch,
+            cached_team_id,
+            team_id,
         )
+
         # Force-clear the running flag so get_current_or_new_orchestration
         # sees it as terminated and takes the lightweight reset path.
         if current_workflow is not None and getattr(current_workflow, "_is_running", False):
