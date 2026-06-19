@@ -152,7 +152,7 @@ param backendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
 param backendContainerImageName string = 'macaebackend'
 
 @description('Optional. The Container Image Tag to deploy on the backend.')
-param backendContainerImageTag string = 'latest_v4'
+param backendContainerImageTag string = 'latest_v5'
 
 @description('Optional. The Container Registry hostname where the docker images for the frontend are located.')
 param frontendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
@@ -161,7 +161,7 @@ param frontendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
 param frontendContainerImageName string = 'macaefrontend'
 
 @description('Optional. The Container Image Tag to deploy on the frontend.')
-param frontendContainerImageTag string = 'latest_v4'
+param frontendContainerImageTag string = 'latest_v5'
 
 @description('Optional. The Container Registry hostname where the docker images for the MCP are located.')
 param MCPContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
@@ -170,7 +170,7 @@ param MCPContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
 param MCPContainerImageName string = 'macaemcp'
 
 @description('Optional. The Container Image Tag to deploy on the MCP.')
-param MCPContainerImageTag string = 'latest_v4'
+param MCPContainerImageTag string = 'latest_v5'
 
 // ============================================================================
 // Parameters — Existing Resources and Governance

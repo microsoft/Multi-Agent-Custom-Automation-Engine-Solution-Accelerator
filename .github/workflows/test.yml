@@ -5,7 +5,7 @@ on:
     branches:
       - main
       - demo-v4
-      - dev-v4
+      - dev
     paths:
       - 'src/backend/**/*.py'
       - 'src/tests/**/*.py'
@@ -24,7 +24,7 @@ on:
     branches:
       - main
       - demo-v4
-      - dev-v4
+      - dev
     paths:
       - 'src/backend/**/*.py'
       - 'src/tests/**/*.py'
