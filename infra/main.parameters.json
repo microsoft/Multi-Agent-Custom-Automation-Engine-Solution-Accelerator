@@ -2,6 +2,9 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
+    "deploymentFlavor": {
+      "value": "${AZURE_ENV_DEPLOYMENT_FLAVOR=bicep}"
+    },
     "solutionName": {
       "value": "${AZURE_ENV_NAME}"
     },
@@ -47,14 +50,17 @@
     "gptReasoningModelCapacity": {
       "value": "${AZURE_ENV_REASONING_MODEL_CAPACITY}"
     },
-    "backendContainerImageTag": {
-      "value": "${AZURE_ENV_IMAGE_TAG=latest_v4}"
+    "gptImageModelName": {
+      "value": "${AZURE_ENV_IMAGE_MODEL_NAME}"
     },
-    "frontendContainerImageTag": {
-      "value": "${AZURE_ENV_IMAGE_TAG=latest_v4}"
+    "gptImageModelVersion": {
+      "value": "${AZURE_ENV_IMAGE_MODEL_VERSION}"
     },
-    "MCPContainerImageTag": {
-      "value": "${AZURE_ENV_IMAGE_TAG=latest_v4}"
+    "gptImageModelDeploymentType": {
+      "value": "${AZURE_ENV_IMAGE_MODEL_DEPLOYMENT_TYPE}"
+    },
+    "gptImageModelCapacity": {
+      "value": "${AZURE_ENV_IMAGE_MODEL_CAPACITY}"
     },
     "enableTelemetry": {
       "value": "${AZURE_ENV_ENABLE_TELEMETRY}"
@@ -68,11 +74,20 @@
     "backendContainerRegistryHostname": {
       "value": "${AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT}"
     },
+     "backendContainerImageTag": {
+      "value": "${AZURE_ENV_IMAGE_TAG=latest_v5}"
+    },
     "frontendContainerRegistryHostname": {
       "value": "${AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT}"
     },
+    "frontendContainerImageTag": {
+      "value": "${AZURE_ENV_IMAGE_TAG=latest_v5}"
+    },
     "MCPContainerRegistryHostname": {
       "value": "${AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT}"
+    },
+    "MCPContainerImageTag": {
+      "value": "${AZURE_ENV_IMAGE_TAG=latest_v5}"
     }
   }
 }

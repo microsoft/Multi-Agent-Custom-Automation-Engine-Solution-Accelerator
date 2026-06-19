@@ -12,9 +12,9 @@ from azure.identity.aio import (
 )
 from dotenv import load_dotenv
 
-
 # Load environment variables from .env file
-load_dotenv()
+# override=True ensures .env values take precedence over any pre-existing process env vars
+load_dotenv(override=True)
 
 
 class AppConfig:
@@ -33,7 +33,7 @@ class AppConfig:
         self.COSMOSDB_DATABASE = self._get_optional("COSMOSDB_DATABASE")
         self.COSMOSDB_CONTAINER = self._get_optional("COSMOSDB_CONTAINER")
 
-        self.APPLICATIONINSIGHTS_CONNECTION_STRING = self._get_required(
+        self.APPLICATIONINSIGHTS_CONNECTION_STRING = self._get_optional(
             "APPLICATIONINSIGHTS_CONNECTION_STRING"
         )
         self.APP_ENV = self._get_required("APP_ENV", "prod")
@@ -58,7 +58,7 @@ class AppConfig:
             "AZURE_OPENAI_API_VERSION", "2024-11-20"
         )
         self.AZURE_OPENAI_ENDPOINT = self._get_required("AZURE_OPENAI_ENDPOINT")
-        self.REASONING_MODEL_NAME = self._get_optional("REASONING_MODEL_NAME", "o3")
+        self.ORCHESTRATOR_MODEL_NAME = self._get_optional("ORCHESTRATOR_MODEL_NAME", "o4-mini")
         # self.AZURE_BING_CONNECTION_NAME = self._get_optional(
         #     "AZURE_BING_CONNECTION_NAME"
         # )
@@ -79,7 +79,7 @@ class AppConfig:
         self.AZURE_SEARCH_ENDPOINT = self._get_optional("AZURE_AI_SEARCH_ENDPOINT")
 
         # Logging settings
-        self.AZURE_BASIC_LOGGING_LEVEL = self._get_optional("AZURE_BASIC_LOGGING_LEVEL", "INFO")
+        self.AZURE_BASIC_LOGGING_LEVEL = self._get_optional("AZURE_BASIC_LOGGING_LEVEL", "WARNING")
         self.AZURE_PACKAGE_LOGGING_LEVEL = self._get_optional("AZURE_PACKAGE_LOGGING_LEVEL", "WARNING")
         self.AZURE_LOGGING_PACKAGES = self._get_optional("AZURE_LOGGING_PACKAGES")
 
@@ -92,18 +92,22 @@ class AppConfig:
         self.MCP_SERVER_DESCRIPTION = self._get_optional(
             "MCP_SERVER_DESCRIPTION", "MCP server with greeting and planning tools"
         )
+        # Foundry project connection ID for the MCP server (optional — only needed
+        # when the MCP server requires a managed-connection credential in Foundry).
+        self.MCP_SERVER_CONNECTION_ID = self._get_optional("MCP_SERVER_CONNECTION_ID")
         self.TENANT_ID = self._get_optional("AZURE_TENANT_ID")
         self.CLIENT_ID = self._get_optional("AZURE_CLIENT_ID")
         self.AZURE_AI_SEARCH_CONNECTION_NAME = self._get_optional(
             "AZURE_AI_SEARCH_CONNECTION_NAME"
         )
         self.AZURE_AI_SEARCH_ENDPOINT = self._get_optional("AZURE_AI_SEARCH_ENDPOINT")
-        self.AZURE_AI_SEARCH_API_KEY = self._get_optional("AZURE_AI_SEARCH_API_KEY")
+
+        # Storage settings
+        self.AZURE_STORAGE_BLOB_URL = self._get_optional("AZURE_STORAGE_BLOB_URL")
+        self.AZURE_STORAGE_IMAGES_CONTAINER = self._get_optional(
+            "AZURE_STORAGE_IMAGES_CONTAINER", "generated-images"
+        )
         # self.BING_CONNECTION_NAME = self._get_optional("BING_CONNECTION_NAME")
-
-        test_team_json = self._get_optional("TEST_TEAM_JSON")
-
-        self.AGENT_TEAM_FILE = f"../../data/agent_teams/{test_team_json}.json"
 
         # Cached clients and resources
         self._azure_credentials = None
@@ -259,8 +263,14 @@ class AppConfig:
                 )
 
             endpoint = self.AZURE_AI_AGENT_ENDPOINT
+            # Extended HTTP timeouts to reduce transient "Request timed out"
+            # responses that cause the Magentic orchestrator to reset.
             self._ai_project_client = AIProjectClient(
-                endpoint=endpoint, credential=credential
+                endpoint=endpoint,
+                credential=credential,
+                connection_timeout=30,
+                read_timeout=180,
+                retry_total=5,
             )
 
             return self._ai_project_client

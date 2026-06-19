@@ -38,9 +38,14 @@ const PlanPanelRight: React.FC<PlanDetailsProps> = ({
     return planApprovalRequest.steps.map((step, index) => {
       const action = step.action || step.cleanAction || '';
       const isHeading = action.trim().endsWith(':');
+      const rawAgent = step.agent || '';
+      const isFallback = !rawAgent || rawAgent.toLowerCase() === 'magenticagent';
+      const agentName = isFallback ? '' : getAgentDisplayNameWithSuffix(rawAgent);
+      const fullText = agentName ? `${agentName} ${action.trim()}` : action.trim();
 
       return {
-        text: action.trim(),
+        text: fullText,
+        agentName,
         isHeading,
         key: `${index}-${action.substring(0, 20)}`
       };
@@ -63,19 +68,27 @@ const PlanPanelRight: React.FC<PlanDetailsProps> = ({
           </div>
         ) : (
           <div className="plan-steps">
-            {planSteps.map((step, index) => (
-              <div key={step.key} className="plan-step">
+            {planSteps.map((step) => (
+              <div key={step.key} className={`plan-step ${step.isHeading ? 'plan-step--heading' : 'plan-step--substep'}`}>
                 {step.isHeading ? (
                   // Heading - larger text, bold
                   <Body1 className="plan-step__heading">
-                    {step.text}
+                    {step.agentName ? (
+                      <><strong>{step.agentName}</strong> {step.text.slice(step.agentName.length + 1)}</>
+                    ) : (
+                      step.text
+                    )}
                   </Body1>
                 ) : (
                   // Sub-step - with arrow
                   <div className="plan-step__content">
                     <ArrowTurnDownRightRegular className="plan-step__arrow" />
                     <Body1 className="plan-step__text">
-                      {step.text}
+                      {step.agentName ? (
+                        <><strong>{step.agentName}</strong> {step.text.slice(step.agentName.length + 1)}</>
+                      ) : (
+                        step.text
+                      )}
                     </Body1>
                   </div>
                 )}
