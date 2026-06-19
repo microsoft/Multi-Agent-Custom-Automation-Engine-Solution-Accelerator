@@ -770,44 +770,12 @@ module aiFoundryAiServices 'br:mcr.microsoft.com/bicep/avm/res/cognitive-service
     apiProperties: {
       //staticsEnabled: false
     }
-    deployments: [
-      {
-        name: aiFoundryAiServicesModelDeployment.name
-        model: {
-          format: aiFoundryAiServicesModelDeployment.format
-          name: aiFoundryAiServicesModelDeployment.name
-          version: aiFoundryAiServicesModelDeployment.version
-        }
-        raiPolicyName: aiFoundryAiServicesModelDeployment.raiPolicyName
-        sku: {
-          name: aiFoundryAiServicesModelDeployment.sku.name
-          capacity: aiFoundryAiServicesModelDeployment.sku.capacity
-        }
-      }
-    ]
     networkAcls: {
       defaultAction: 'Allow'
       virtualNetworkRules: []
       ipRules: []
     }
     managedIdentities: { userAssignedResourceIds: [userAssignedIdentity!.outputs.resourceId] } //To create accounts or projects, you must enable a managed identity on your resource
-    roleAssignments: [
-      {
-        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
-        principalId: userAssignedIdentity.outputs.principalId
-        principalType: 'ServicePrincipal'
-      }
-      {
-        roleDefinitionIdOrName: '64702f94-c441-49e6-a78b-ef80e0188fee' // Azure AI Developer
-        principalId: userAssignedIdentity.outputs.principalId
-        principalType: 'ServicePrincipal'
-      }
-      {
-        roleDefinitionIdOrName: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd' // Cognitive Services OpenAI User
-        principalId: userAssignedIdentity.outputs.principalId
-        principalType: 'ServicePrincipal'
-      }
-    ]
     // WAF aligned configuration for Monitoring
     diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : null
     publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
@@ -837,6 +805,54 @@ module aiFoundryAiServices 'br:mcr.microsoft.com/bicep/avm/res/cognitive-service
         ])
       : []
   }
+  dependsOn: enablePrivateNetworking
+    ? [
+        virtualNetwork
+        avmPrivateDnsZones
+      ]
+    : []
+}
+
+module aiFoundryAiServicesDeployments 'modules/ai-services-deployments.bicep' = if (!useExistingAiFoundryAiProject) {
+  name: take('module.ai-services-model-deployments.${aiFoundryAiServicesResourceName}', 64)
+  params: {
+    name: aiFoundryAiServicesResourceName
+    deployments: [
+      {
+        name: aiFoundryAiServicesModelDeployment.name
+        model: {
+          format: aiFoundryAiServicesModelDeployment.format
+          name: aiFoundryAiServicesModelDeployment.name
+          version: aiFoundryAiServicesModelDeployment.version
+        }
+        raiPolicyName: aiFoundryAiServicesModelDeployment.raiPolicyName
+        sku: {
+          name: aiFoundryAiServicesModelDeployment.sku.name
+          capacity: aiFoundryAiServicesModelDeployment.sku.capacity
+        }
+      }
+    ]
+    roleAssignments: [
+      {
+        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
+        principalId: userAssignedIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
+      }
+      {
+        roleDefinitionIdOrName: '64702f94-c441-49e6-a78b-ef80e0188fee' // Azure AI Developer
+        principalId: userAssignedIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
+      }
+      {
+        roleDefinitionIdOrName: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd' // Cognitive Services OpenAI User
+        principalId: userAssignedIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
+      }
+    ]
+  }
+  dependsOn: [
+    aiFoundryAiServices
+  ]
 }
 
 resource existingAiFoundryAiServicesProject 'Microsoft.CognitiveServices/accounts/projects@2025-06-01' existing = if (useExistingAiFoundryAiProject) {
