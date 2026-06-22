@@ -99,13 +99,13 @@ export class PlanDataService {
         deployment_name: agentBE.deployment_name,
         system_message: agentBE.system_message,
         description: agentBE.description,
-        icon: agentBE.icon,
-        index_name: agentBE.index_name,
-        use_rag: agentBE.use_rag,
-        use_mcp: agentBE.use_mcp,
         coding_tools: agentBE.coding_tools,
         // Additional fields that exist in Agent but not in TeamAgentBE
+        icon: undefined,
+        index_name: undefined,
         index_endpoint: undefined,
+        use_rag: undefined,
+        use_mcp: undefined,
         id: undefined,
         capabilities: undefined,
         role: undefined
@@ -384,21 +384,14 @@ export class PlanDataService {
           .replace(/\\"/g, '"') || '';
 
       const steps: MPlanData['steps'] = [];
-      const stepRegex = /MStep\(([^)]*?)\)/g;
+     const stepRegex = /MStep\(\s*agent=(['"])([\s\S]*?)\1\s*,\s*action=(['"])([\s\S]*?)\3\s*\)/g;
       let stepMatch: RegExpExecArray | null;
       let idx = 1;
       const seen = new Set<string>();
       while ((stepMatch = stepRegex.exec(body)) !== null) {
-        const chunk = stepMatch[1];
-        const agent =
-          chunk.match(/agent='([^']+)'/)?.[1] ||
-          chunk.match(/agent="([^"]+)"/)?.[1] ||
-          'System';
-        const actionRaw =
-          chunk.match(/action='([^']+)'/)?.[1] ||
-          chunk.match(/action="([^"]+)"/)?.[1] ||
-          '';
-        if (!actionRaw) continue;
+       const agent = stepMatch[2] || 'System';
+       const actionRaw = stepMatch[4] || '';
+       if (!actionRaw.trim()) continue;
 
         const cleanAction = actionRaw
           .replace(/\*\*/g, '')
@@ -764,30 +757,30 @@ export class PlanDataService {
    */
   static parseUserClarificationRequest(rawData: any): ParsedUserClarification | null {
     try {
-      // First try direct JSON extraction (clean dict format from backend)
-      const extractDirect = (val: any, depth = 0): ParsedUserClarification | null => {
-        if (depth > 10 || !val || typeof val !== 'object') return null;
-        if (typeof val.question === 'string' && typeof val.request_id === 'string') {
-          return {
-            type: WebsocketMessageType.USER_CLARIFICATION_REQUEST,
-            question: val.question.trim(),
-            request_id: val.request_id,
-          };
-        }
-        if (val.data !== undefined) return extractDirect(val.data, depth + 1);
-        return null;
-      };
-      const direct = extractDirect(rawData);
-      if (direct) return direct;
+      // --- New structured JSON format (from approval-mode tool) ---
+      // After send_status_update_async wraps, the shape arriving is:
+      // { type, data: { type, data: { request_id, questions, agent_name } } }
+      // Walk up to 3 levels of .data nesting to find the object with request_id.
+      let structured = rawData?.data;
+      for (let i = 0; i < 3 && structured && typeof structured === 'object' && !structured.request_id; i++) {
+        structured = structured.data;
+      }
+      if (structured && typeof structured === 'object' && structured.request_id) {
+        const question = structured.questions || structured.question || '';
+        return {
+          type: WebsocketMessageType.USER_CLARIFICATION_REQUEST,
+          question,
+          request_id: structured.request_id,
+        };
+      }
 
-      // Fallback: extract from Python repr string (legacy format)
+      // --- Legacy string format: UserClarificationRequest(question="...", request_id="...") ---
       const extractString = (val: any, depth = 0): string | null => {
         if (depth > 15) return null;
         if (typeof val === 'string') {
           return val.startsWith('UserClarificationRequest(') ? val : null;
         }
         if (val && typeof val === 'object') {
-          // Prefer .data traversal
           if (val.data !== undefined) {
             const inner = extractString(val.data, depth + 1);
             if (inner) return inner;

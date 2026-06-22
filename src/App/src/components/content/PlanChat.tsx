@@ -16,6 +16,7 @@ interface SimplifiedPlanChatProps extends PlanChatProps {
   planApprovalRequest: MPlanData | null;
   waitingForPlan: boolean;
   messagesContainerRef: React.RefObject<HTMLDivElement>;
+  finalResultRef: React.RefObject<HTMLDivElement>;
   streamingMessageBuffer: string;
   showBufferingText: boolean;
   agentMessages: AgentMessageData[];
@@ -39,6 +40,7 @@ const PlanChat: React.FC<SimplifiedPlanChatProps> = ({
   planApprovalRequest,
   waitingForPlan,
   messagesContainerRef,
+  finalResultRef,
   streamingMessageBuffer,
   showBufferingText,
   agentMessages,
@@ -82,11 +84,13 @@ const PlanChat: React.FC<SimplifiedPlanChatProps> = ({
 
         {/* Plan response with all information */}
         {renderPlanResponse(planApprovalRequest, handleApprovePlan, handleRejectPlan, processingApproval, showApprovalButtons)}
-        {renderAgentMessages(agentMessages)}
+        {renderAgentMessages(agentMessages, undefined, undefined, finalResultRef)}
 
         {showProcessingPlanSpinner && renderPlanExecutionMessage()}
-        {/* Streaming plan updates */}
-        {showBufferingText && (
+        {/* Streaming plan updates — hidden while an approval prompt is pending so
+            the approval action is presented at the appropriate step instead of
+            after the thinking process visibly completes. */}
+        {showBufferingText && !showApprovalButtons && (
           <StreamingBufferMessage
             streamingMessageBuffer={streamingMessageBuffer}
             isStreaming={true}

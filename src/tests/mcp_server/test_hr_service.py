@@ -3,6 +3,8 @@ Tests for HR service.
 """
 
 import pytest
+
+pytest.importorskip("fastmcp", reason="fastmcp not installed in backend venv; run with mcp_server venv")
 from src.mcp_server.core.factory import Domain
 
 

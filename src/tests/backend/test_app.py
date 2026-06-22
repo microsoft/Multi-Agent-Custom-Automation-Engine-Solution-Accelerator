@@ -34,20 +34,35 @@ os.environ.setdefault("AZURE_AI_AGENT_ENDPOINT", "https://test.endpoint.azure.co
 os.environ.setdefault("APP_ENV", "dev")
 os.environ.setdefault("AZURE_OPENAI_RAI_DEPLOYMENT_NAME", "test-rai-deployment")
 
-# Check if v4 has been mocked by another test file (prevents import errors)
-# Use NonCallableMock to catch all mock subclasses (Mock, MagicMock, etc.)
-_v4_is_mocked = 'v4' in sys.modules and isinstance(sys.modules['v4'], NonCallableMock)
-if _v4_is_mocked:
-    # Skip this module - v4 has been mocked by another test file
-    pytest.skip(
-        "Skipping test_app.py: v4 module has been mocked by another test file. "
-        "Run this file individually with: pytest src/tests/backend/test_app.py",
-        allow_module_level=True
-    )
 
-# Import from backend - conftest.py handles path setup
+# Clear any module-level Mock pollution from earlier tests in the suite.
+# common.models.* gets mocked by test_agent_utils.py, test_response_handlers.py, etc.
+from types import ModuleType as _ModuleType
+for _ma_key in [
+    'common', 'common.models', 'common.models.messages',
+    'backend.common.models.messages',
+    'common.config', 'common.config.app_config',
+]:
+    if _ma_key in sys.modules and not isinstance(sys.modules[_ma_key], _ModuleType):
+        del sys.modules[_ma_key]
+
+# Mock external dependencies that may not be installed in test environment
+from fastapi import APIRouter
+
+# Mock azure.monitor.opentelemetry module
+mock_azure_monitor_module = ModuleType('configure_azure_monitor')
+mock_azure_monitor_module.configure_azure_monitor = lambda *args, **kwargs: None
+sys.modules['azure.monitor.opentelemetry'] = mock_azure_monitor_module
+
+# Mock middleware.health_check module (both backend. and relative paths)
+mock_health_check_module = ModuleType('health_check')
+mock_health_check_module.HealthCheckMiddleware = MagicMock()
+sys.modules['backend.middleware.health_check'] = mock_health_check_module
+sys.modules['middleware.health_check'] = mock_health_check_module
+
+# Now import backend.app
 from backend.app import app, user_browser_language_endpoint, lifespan
-from backend.common.models.messages_af import UserLanguage
+from backend.common.models.messages import UserLanguage
 
 
 def test_app_initialization():
@@ -202,8 +217,7 @@ async def test_lifespan_cleanup_success():
     mock_cleanup = AsyncMock(return_value=None)
     
     # Patch at the module level where it's imported
-    with patch.object(sys.modules.get('v4.config.agent_registry', sys.modules.get('backend.v4.config.agent_registry')), 
-                      'agent_registry') as mock_registry:
+    with patch('backend.config.agent_registry.agent_registry') as mock_registry:
         mock_registry.cleanup_all_agents = mock_cleanup
         
         async with lifespan(app):

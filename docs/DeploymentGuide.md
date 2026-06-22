@@ -345,12 +345,12 @@ After successful deployment:
 
   - **For Bash (Linux/macOS/WSL):**
     ```bash
-    bash infra/scripts/selecting_team_config_and_data.sh
+    bash infra/scripts/post-provision/selecting_team_config_and_data.sh
     ```
 
   - **For PowerShell (Windows):**
     ```powershell
-    infra\scripts\Selecting-Team-Config-And-Data.ps1
+    infra\scripts\post-provision\Selecting-Team-Config-And-Data.ps1
     ```
 
 
