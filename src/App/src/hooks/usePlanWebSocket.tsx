@@ -46,6 +46,7 @@ import {
 } from '@/models';
 import { APIService } from '@/api/apiService';
 import { ToastIntent } from '@/components/toast/InlineToaster';
+import { formatElapsedTime } from '@/utils';
 
 const apiService = new APIService();
 
@@ -56,16 +57,6 @@ interface UsePlanWebSocketProps {
     formatErrorMessage: (content: string) => string;
     showToast: (content: React.ReactNode, intent?: ToastIntent, options?: { dismissible?: boolean; timeoutMs?: number | null }) => number;
 }
-
-const formatElapsedTime = (elapsedSeconds: number): string => {
-    if (elapsedSeconds < 60) {
-        return `${elapsedSeconds}s`;
-    }
-
-    const minutes = Math.floor(elapsedSeconds / 60);
-    const seconds = elapsedSeconds % 60;
-    return `${minutes}min ${seconds}sec`;
-};
 
 /**
  * Creates an AgentMessageResponse and persists it, then optionally reloads the task list.
@@ -115,8 +106,12 @@ export function usePlanWebSocket({
     const processingStartedAtRef = React.useRef<number | null>(null);
 
     useEffect(() => {
-        if (showProcessingPlanSpinner && processingStartedAtRef.current === null) {
-            processingStartedAtRef.current = Date.now();
+        if (showProcessingPlanSpinner) {
+            if (processingStartedAtRef.current === null) {
+                processingStartedAtRef.current = Date.now();
+            }
+        } else {
+            processingStartedAtRef.current = null;
         }
     }, [showProcessingPlanSpinner]);
 
@@ -282,7 +277,6 @@ export function usePlanWebSocket({
                 };
                 dispatch(addAgentMessage(errorAgent));
                 dispatch(planFailedFinal());
-                dispatch(setShowProcessingPlanSpinner(false));
                 processingStartedAtRef.current = null;
                 dispatch(setShowBufferingText(false));
                 dispatch(setSubmittingChatDisableInput(true));

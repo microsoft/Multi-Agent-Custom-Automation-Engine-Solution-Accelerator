@@ -1,26 +1,17 @@
 import { Spinner } from '@fluentui/react-components';
+import { formatElapsedTime } from '@/utils';
 
 interface ProcessingStatusIndicatorProps {
     message: string;
     elapsedSeconds?: number;
 }
 
-const formatElapsedTime = (elapsedSeconds: number): string => {
-    if (elapsedSeconds < 60) {
-        return `${elapsedSeconds}s`;
-    }
-
-    const minutes = Math.floor(elapsedSeconds / 60);
-    const seconds = elapsedSeconds % 60;
-    return `${minutes}min ${seconds}sec`;
-};
-
 const ProcessingStatusIndicator = ({
     message,
     elapsedSeconds,
 }: ProcessingStatusIndicatorProps) => {
-    const showElapsedSuffix = Number.isFinite(elapsedSeconds) && (elapsedSeconds as number) > 0;
-    const elapsedSuffix = showElapsedSuffix ? ` (${formatElapsedTime(elapsedSeconds as number)})` : '';
+    const showElapsedSuffix = typeof elapsedSeconds === 'number' && elapsedSeconds > 0;
+    const elapsedSuffix = showElapsedSuffix ? ` (${formatElapsedTime(elapsedSeconds)})` : '';
 
     return (
         <div
