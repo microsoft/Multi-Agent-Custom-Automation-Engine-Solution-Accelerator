@@ -37,7 +37,7 @@ var deployingUserPrincipalId = deployerInfo.objectId
   azd: {
     type: 'location'
     usageName: [
-      'OpenAI.GlobalStandard.gpt4.1, 150'
+      'OpenAI.GlobalStandard.gpt4.1, 50'
       'OpenAI.GlobalStandard.o4-mini, 50'
       'OpenAI.GlobalStandard.gpt4.1-mini, 50'
     ]
@@ -100,8 +100,8 @@ param gptReasoningModelDeploymentType string = 'GlobalStandard'
 @description('Optional. AI model deployment token capacity. Defaults to 50 for optimal performance.')
 param gptDeploymentCapacity int = 50
 
-@description('Optional. AI model deployment token capacity. Defaults to 150 for optimal performance.')
-param gpt4_1ModelCapacity int = 150
+@description('Optional. AI model deployment token capacity. Defaults to 50 for optimal performance.')
+param gpt4_1ModelCapacity int = 50
 
 @description('Optional. AI model deployment token capacity. Defaults to 50 for optimal performance.')
 param gptReasoningModelCapacity int = 50
@@ -1604,12 +1604,12 @@ module avmStorageAccount 'br/public:avm/res/storage/storage-account:0.32.0' = {
     roleAssignments: [
       {
         principalId: userAssignedIdentity.outputs.principalId
-        roleDefinitionIdOrName: 'Storage Blob Data Contributor'
+        roleDefinitionIdOrName: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor
         principalType: 'ServicePrincipal'
       }
       {
         principalId: deployingUserPrincipalId
-        roleDefinitionIdOrName: 'Storage Blob Data Contributor'
+        roleDefinitionIdOrName: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor
         principalType: deployerPrincipalType
       }
     ]
@@ -1732,22 +1732,22 @@ module searchServiceUpdate 'br/public:avm/res/search/search-service:0.12.0' = {
     roleAssignments: [
       {
         principalId: userAssignedIdentity.outputs.principalId
-        roleDefinitionIdOrName: 'Search Index Data Contributor'
+        roleDefinitionIdOrName: '8ebe5a00-799e-43f5-93ac-243d3dce84a7' // Search Index Data Contributor
         principalType: 'ServicePrincipal'
       }
       {
         principalId: deployingUserPrincipalId
-        roleDefinitionIdOrName: 'Search Index Data Contributor'
+        roleDefinitionIdOrName: '8ebe5a00-799e-43f5-93ac-243d3dce84a7' // Search Index Data Contributor
         principalType: deployerPrincipalType
       }
       {
         principalId: aiFoundryAiProjectPrincipalId
-        roleDefinitionIdOrName: 'Search Index Data Reader'
+        roleDefinitionIdOrName: '1407120a-92aa-4202-b7e9-c0e197c71c8f' // Search Index Data Reader
         principalType: 'ServicePrincipal'
       }
       {
         principalId: aiFoundryAiProjectPrincipalId
-        roleDefinitionIdOrName: 'Search Service Contributor'
+        roleDefinitionIdOrName: '7ca78c08-252a-4471-8644-bb5ff32d4ba0' // Search Service Contributor
         principalType: 'ServicePrincipal'
       }
     ]

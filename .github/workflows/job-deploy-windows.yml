@@ -271,7 +271,7 @@ jobs:
           
           # Set ACR name only when building Docker image
           if ($env:INPUT_BUILD_DOCKER_IMAGE -eq "true") {
-            $ACR_NAME = "${{ secrets.ACR_TEST_LOGIN_SERVER }}"
+            $ACR_NAME = "${{ vars.ACR_TEST_LOGIN_SERVER }}"
             azd env set AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT="$ACR_NAME"
             Write-Host "Set ACR name to: $ACR_NAME"
           } else {
