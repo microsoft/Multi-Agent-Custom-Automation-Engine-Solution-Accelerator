@@ -52,6 +52,7 @@ const apiService = new APIService();
 interface UsePlanWebSocketProps {
     planId: string | undefined;
     scrollToBottom: () => void;
+    scrollToFinalResult: () => void;
     formatErrorMessage: (content: string) => string;
     showToast: (content: React.ReactNode, intent?: ToastIntent, options?: { dismissible?: boolean; timeoutMs?: number | null }) => number;
 }
@@ -101,6 +102,7 @@ function persistAgentMessage(
 export function usePlanWebSocket({
     planId,
     scrollToBottom,
+    scrollToFinalResult,
     formatErrorMessage,
     showToast,
 }: UsePlanWebSocketProps) {
@@ -150,13 +152,14 @@ export function usePlanWebSocket({
         const unsub = webSocketService.on(
             WebsocketMessageType.AGENT_MESSAGE_STREAMING,
             (msg: any) => {
-                const line = PlanDataService.simplifyHumanClarification(msg.data.content);
+                const line = PlanDataService.simplifyHumanClarification(msg.data?.content || msg.content || '');
                 dispatch(setShowBufferingText(true));
                 dispatch(appendToStreamingBuffer(line));
+                scrollToBottom();
             },
         );
         return unsub;
-    }, [dispatch]);
+    }, [dispatch, scrollToBottom]);
 
     // ── USER_CLARIFICATION_REQUEST ────────────────────────────────
     useEffect(() => {
@@ -213,7 +216,7 @@ export function usePlanWebSocket({
                         timestamp: Date.now(),
                         steps: [],
                         next_steps: [],
-                        content: '\u{1F389}\u{1F389} ' + (finalMessage.data?.content || '') + completionTimeLine,
+                        content: finalMessage.data?.content || '',
                         raw_data: finalMessage,
                     };
                     dispatch(setShowBufferingText(true));
@@ -221,8 +224,7 @@ export function usePlanWebSocket({
                     dispatch(setSelectedTeam(planData?.team || null));
                     /* P0: single compound action replaces setShowProcessingPlanSpinner(false) + markPlanCompleted() */
                     dispatch(planCompletedFinal());
-                    processingStartedAtRef.current = null;
-                    scrollToBottom();
+                    scrollToFinalResult();
                     webSocketService.disconnect();
                     persistAgentMessage(agentMessageData, planData, dispatch, true, streamingMessageBuffer);
                 } else if (messageStatus === 'error') {
@@ -235,11 +237,12 @@ export function usePlanWebSocket({
                         steps: [],
                         next_steps: [],
                         content: formatErrorMessage(errorContent),
-                        raw_data: finalMessage || '',
+                        raw_data: finalMessage,
                     };
                     dispatch(addAgentMessage(errorAgent));
                     dispatch(planFailedFinal());
                     dispatch(setShowBufferingText(false));
+                    dispatch(setSubmittingChatDisableInput(true));
                     scrollToBottom();
                     showToast(errorContent, 'error');
                     webSocketService.disconnect();
@@ -247,7 +250,7 @@ export function usePlanWebSocket({
             },
         );
         return unsub;
-    }, [dispatch, scrollToBottom, planData, streamingMessageBuffer, formatErrorMessage, showToast]);
+    }, [dispatch, scrollToBottom, scrollToFinalResult, planData, streamingMessageBuffer, formatErrorMessage, showToast]);
 
     // ── ERROR_MESSAGE ─────────────────────────────────────────────
     useEffect(() => {
@@ -282,7 +285,7 @@ export function usePlanWebSocket({
                 dispatch(setShowProcessingPlanSpinner(false));
                 processingStartedAtRef.current = null;
                 dispatch(setShowBufferingText(false));
-                dispatch(setSubmittingChatDisableInput(false));
+                dispatch(setSubmittingChatDisableInput(true));
                 scrollToBottom();
                 showToast(errorContent, 'error');
                 webSocketService.disconnect();

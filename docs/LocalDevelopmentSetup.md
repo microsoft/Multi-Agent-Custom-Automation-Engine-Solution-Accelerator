@@ -273,8 +273,8 @@ az cosmosdb sql role assignment create --resource-group <solution-accelerator-rg
 **Assign the required roles:**
 
 ```bash
-# Azure AI User role
-az role assignment create --assignee <aad-user-upn> --role "Azure AI User" --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.CognitiveServices/accounts/<foundry-account-name>/projects/<foundry-project-name>
+# Foundry User role
+az role assignment create --assignee <aad-user-upn> --role "Foundry User" --scope /subscriptions/<subscription-id>/resourceGroups/<solution-accelerator-rg>/providers/Microsoft.CognitiveServices/accounts/<foundry-account-name>/projects/<foundry-project-name>
 ```
 
 ```bash
@@ -351,6 +351,13 @@ In your `.env` file, make these changes:
   - `BACKEND_API_URL=http://localhost:8000`
   - `FRONTEND_SITE_NAME=*`
   - `MCP_SERVER_ENDPOINT=http://localhost:9000/mcp`
+- Leave `MCP_SERVER_CONNECTION_ID` **empty** (or remove it).  
+  When this variable is empty the backend connects to the MCP server
+  directly from the Python process using `MCPStreamableHTTPTool` (client-side),
+  which can reach `localhost:9000`.  
+  In a deployed environment `MCP_SERVER_CONNECTION_ID` is set to a Foundry
+  project connection ID so that the server-side `MCPTool` is also registered
+  in the Toolbox, enabling agents to be tested from the Foundry Playground.
 
 ### 4.3. Install Backend Dependencies
 
@@ -434,9 +441,8 @@ uv sync --python 3.12
 ### 5.3. Run the MCP Server
 
 ```bash
-
-# Run with uvicorn
-python mcp_server.py --transport streamable-http --host 0.0.0.0 --port 9000
+# Run with per-domain routing (recommended)
+python mcp_server.py -t streamable-http --host 0.0.0.0 --port 9000 --no-auth
 ```
 
 ## Step 6: Frontend (UI) Setup & Run Instructions
@@ -561,7 +567,7 @@ Before using the application, confirm all three services are running in separate
 | Terminal | Service | Command | Expected Output | URL |
 |----------|---------|---------|-----------------|-----|
 | **Terminal 1** | Backend | `python app.py` | `INFO: Application startup complete.`  | http://localhost:8000 |
-| **Terminal 2** | MCP Server | `python mcp_server.py --transport streamable-http --host 0.0.0.0 --port 9000` | `INFO: Uvicorn running on http://0.0.0.0:9000 (Press CTRL+C to quit)` | http://localhost:9000 |
+| **Terminal 2** | MCP Server | `python mcp_server.py -t streamable-http --host 0.0.0.0 --port 9000 --no-auth` | `INFO: Uvicorn running on http://0.0.0.0:9000 (Press CTRL+C to quit)` | http://localhost:9000 |
 | **Terminal 3** | Frontend | `python frontend_server.py` | `Local: http://localhost:3000/` | http://localhost:3000 |
 
 ### Quick Verification

@@ -44,9 +44,9 @@ Replace `<Existing Foundry Project Resource ID>` with the value obtained from St
 Proceed with the next steps in the [deployment guide](DeploymentGuide.md#deployment-steps).
 
 > **Note:**  
-> After deployment, if you want to access agents created by the accelerator via the Azure AI Foundry Portal, or if you plan to debug or run the application locally, you must assign yourself either the **Azure AI User** or **Azure AI Developer** role for the Foundry resource.  
+> After deployment, if you want to access agents created by the accelerator via the Azure AI Foundry Portal, or if you plan to debug or run the application locally, you must assign yourself either the **Foundry User** or **Azure AI Developer** role for the Foundry resource.  
 > You can do this in the Azure Portal under the Foundry resource's "Access control (IAM)" section,  
 > **or** run the following command in your terminal (replace `<aad-user-upn>` with your Azure AD user principal name and `<resource-id>` with the Resource ID you copied in Step 5):
 > ```bash
-> az role assignment create --assignee <aad-user-upn> --role "Azure AI User" --scope <resource-id>
+> az role assignment create --assignee <aad-user-upn> --role "Foundry User" --scope <resource-id>
 > ```

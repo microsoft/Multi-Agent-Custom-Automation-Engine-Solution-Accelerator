@@ -11,7 +11,7 @@ on:
       - completed
     branches:
       - main
-      - dev-v4
+      - dev
       - hotfix
   workflow_dispatch:
     inputs:
@@ -24,7 +24,7 @@ on:
           - 'Local'
         default: 'codespace'
       azure_location:
-        description: 'Azure Location For Deployment'
+        description: 'Azure Region (Non-AI Services)'
         required: false
         default: 'australiaeast'
         type: choice
@@ -43,24 +43,31 @@ on:
         default: ''
         type: string
 
+      build_docker_image:
+        description: 'Build & Use Custom Images (Optional)'
+        required: false
+        default: false
+        type: boolean
+
       waf_enabled:
-        description: 'Enable WAF'
+        description: 'Deploy WAF'
         required: false
         default: false
         type: boolean
       EXP:
-        description: 'Enable EXP'
+        description: 'Deploy EXP'
         required: false
         default: false
         type: boolean
-      build_docker_image:
-        description: 'Build & Push Docker Image (Optional)'
+
+      enable_scalability:
+        description: 'Enable Scalability (WAF only)'
         required: false
         default: false
         type: boolean
       
       cleanup_resources:
-        description: 'Cleanup Deployed Resources'
+        description: 'Auto Delete RG'
         required: false
         default: false
         type: boolean
@@ -76,17 +83,17 @@ on:
           - 'None'
       
       AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID:
-        description: 'Log Analytics Workspace ID (Optional)'
+        description: 'Existing Log Analytics Workspace Resource ID (Optional)'
         required: false
         default: ''
         type: string
       AZURE_EXISTING_AIPROJECT_RESOURCE_ID:
-        description: 'AI Project Resource ID (Optional)'
+        description: 'Existing AI Project Resource ID (Optional)'
         required: false
         default: ''
         type: string
       existing_webapp_url:
-        description: 'Existing WebApp URL (Skips Deployment)'
+        description: 'Run Tests Against Existing RG (Provide Web App URL)'
         required: false
         default: ''
         type: string
@@ -103,6 +110,7 @@ jobs:
       azure_location: ${{ steps.validate.outputs.azure_location }}
       resource_group_name: ${{ steps.validate.outputs.resource_group_name }}
       waf_enabled: ${{ steps.validate.outputs.waf_enabled }}
+      enable_scalability: ${{ steps.validate.outputs.enable_scalability }}
       exp: ${{ steps.validate.outputs.exp }}
       build_docker_image: ${{ steps.validate.outputs.build_docker_image }}
       cleanup_resources: ${{ steps.validate.outputs.cleanup_resources }}
@@ -119,6 +127,7 @@ jobs:
           INPUT_AZURE_LOCATION: ${{ github.event.inputs.azure_location }}
           INPUT_RESOURCE_GROUP_NAME: ${{ github.event.inputs.resource_group_name }}
           INPUT_WAF_ENABLED: ${{ github.event.inputs.waf_enabled }}
+          INPUT_ENABLE_SCALABILITY: ${{ github.event.inputs.enable_scalability }}
           INPUT_EXP: ${{ github.event.inputs.EXP }}
           INPUT_BUILD_DOCKER_IMAGE: ${{ github.event.inputs.build_docker_image }}
           INPUT_CLEANUP_RESOURCES: ${{ github.event.inputs.cleanup_resources }}
@@ -176,6 +185,15 @@ jobs:
             VALIDATION_FAILED=true
           else
             echo "✅ waf_enabled: '$WAF_ENABLED' is valid"
+          fi
+          
+          # Validate enable_scalability (boolean, opt-in for WAF deployments)
+          ENABLE_SCALABILITY="${INPUT_ENABLE_SCALABILITY:-false}"
+          if [[ "$ENABLE_SCALABILITY" != "true" && "$ENABLE_SCALABILITY" != "false" ]]; then
+            echo "❌ ERROR: enable_scalability must be 'true' or 'false', got: '$ENABLE_SCALABILITY'"
+            VALIDATION_FAILED=true
+          else
+            echo "✅ enable_scalability: '$ENABLE_SCALABILITY' is valid"
           fi
           
           # Validate EXP (boolean)
@@ -270,6 +288,7 @@ jobs:
           echo "azure_location=$LOCATION" >> $GITHUB_OUTPUT
           echo "resource_group_name=$INPUT_RESOURCE_GROUP_NAME" >> $GITHUB_OUTPUT
           echo "waf_enabled=$WAF_ENABLED" >> $GITHUB_OUTPUT
+          echo "enable_scalability=$ENABLE_SCALABILITY" >> $GITHUB_OUTPUT
           echo "exp=$EXP_ENABLED" >> $GITHUB_OUTPUT
           echo "build_docker_image=$BUILD_DOCKER" >> $GITHUB_OUTPUT
           echo "cleanup_resources=$CLEANUP_RESOURCES" >> $GITHUB_OUTPUT
@@ -287,6 +306,7 @@ jobs:
       azure_location: ${{ needs.validate-inputs.outputs.azure_location || 'australiaeast' }}
       resource_group_name: ${{ needs.validate-inputs.outputs.resource_group_name || '' }}
       waf_enabled: ${{ needs.validate-inputs.outputs.waf_enabled == 'true' }}
+      enable_scalability: ${{ needs.validate-inputs.outputs.enable_scalability == 'true' }}
       EXP: ${{ needs.validate-inputs.outputs.exp == 'true' }}
       build_docker_image: ${{ needs.validate-inputs.outputs.build_docker_image == 'true' }}
       cleanup_resources: ${{ needs.validate-inputs.outputs.cleanup_resources == 'true' }}

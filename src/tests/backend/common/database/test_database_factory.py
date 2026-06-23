@@ -42,10 +42,6 @@ sys.modules['azure.identity.aio'] = Mock()
 sys.modules['azure.keyvault'] = Mock()
 sys.modules['azure.keyvault.secrets'] = Mock()
 sys.modules['azure.keyvault.secrets.aio'] = Mock()
-# Mock v4 modules that may be imported by database components
-sys.modules['v4'] = Mock()
-sys.modules['v4.models'] = Mock()
-sys.modules['v4.models.messages'] = Mock()
 
 # Import the REAL modules using backend.* paths for proper coverage tracking
 from backend.common.database.database_factory import DatabaseFactory

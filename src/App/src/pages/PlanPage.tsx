@@ -106,7 +106,7 @@ const PlanPage: React.FC = () => {
     const navigate = useNavigate();
     const dispatch = useAppDispatch();
     const { showToast, dismissToast } = useInlineToaster();
-    const { messagesContainerRef, scrollToBottom } = useAutoScroll();
+    const { messagesContainerRef, finalResultRef, scrollToBottom, scrollToFinalResult } = useAutoScroll();
     const { loadPlanData, resetPlanVariables } = usePlanActions();
 
     /* ── Redux Selectors (granular — Point 10) ──────────────── */
@@ -156,7 +156,7 @@ const PlanPage: React.FC = () => {
     }, []);
 
     /* ── WebSocket subscriptions (extracted hook) ───────────── */
-    usePlanWebSocket({ planId, scrollToBottom, formatErrorMessage, showToast });
+    usePlanWebSocket({ planId, scrollToBottom, scrollToFinalResult, formatErrorMessage, showToast });
 
     /* ── Navigation with cancellation check ─────────────────── */
     const handleNavigationWithAlert = useCallback(
@@ -399,6 +399,7 @@ const PlanPage: React.FC = () => {
                                 planApprovalRequest={planApprovalRequest}
                                 waitingForPlan={waitingForPlan}
                                 messagesContainerRef={messagesContainerRef}
+                                finalResultRef={finalResultRef}
                                 streamingMessageBuffer={streamingMessageBuffer}
                                 showBufferingText={showBufferingText}
                                 agentMessages={agentMessages}
