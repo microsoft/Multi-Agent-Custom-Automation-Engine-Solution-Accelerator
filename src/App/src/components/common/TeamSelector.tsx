@@ -67,23 +67,8 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
   const [uploadSuccessMessage, setUploadSuccessMessage] = useState<string | null>(null);
   // Helper function to check if a team is a default team
 const isDefaultTeam = (team: TeamConfig): boolean => {
-  const defaultTeamIds = [
-    'team-1',
-    'team-2',
-    'team-3',
-    'team-clm-1',
-    'team-compliance-1',
-    'content-gen-team'
-  ];
-
-  const defaultTeamNames = [
-    'Human Resources Team',
-    'Product Marketing Team',
-    'Retail Customer Success Team',
-    'RFP Team',
-    'Contract Compliance Review Team',
-    'Retail Marketing Content Generation Team'
-  ];
+  const defaultTeamIds = ['team-1', 'team-2', 'team-3', 'team-clm-1', 'team-compliance-1', 'content-gen-team'];
+  const defaultTeamNames = ['Human Resources Team', 'Product Marketing Team', 'Retail Customer Success Team', 'RFP Team', 'Contract Compliance Review Team', 'Retail Marketing Content Generation Team'];
 
   return defaultTeamIds.includes(team.team_id) ||
          defaultTeamNames.includes(team.name);
