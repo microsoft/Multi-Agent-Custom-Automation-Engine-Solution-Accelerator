@@ -155,11 +155,10 @@ export function usePlanWebSocket({
                 const line = PlanDataService.simplifyHumanClarification(msg.data?.content || msg.content || '');
                 dispatch(setShowBufferingText(true));
                 dispatch(appendToStreamingBuffer(line));
-                scrollToBottom();
             },
         );
         return unsub;
-    }, [dispatch, scrollToBottom]);
+    }, [dispatch]);
 
     // ── USER_CLARIFICATION_REQUEST ────────────────────────────────
     useEffect(() => {
