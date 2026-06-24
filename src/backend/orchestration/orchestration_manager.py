@@ -35,12 +35,18 @@ from services.team_service import TeamService
 apply_tool_history_leak_patch()
 
 _BARE_IMAGE_URL_RE = re.compile(
-    r"(?<![\(\]])"
-    r"(?<!\]\()"
-    r"(https?://[^\s)]+?"
-    r"(?:/api/v4/images/[^\s)]+?|[^\s)]+?\.(?:png|jpe?g|gif|webp)))"
-    r"(?=[\s)\]]|$)",
-    re.IGNORECASE,
+   r"(?<![\(\]])"
+   r"(?<!\]\()"
+   r"("
+   # Absolute image URL (any host, or a backend /api/v4/images path)
+   r"https?://[^\s)]+?(?:/api/v4/images/[^\s)]+?|[^\s)]+?\.(?:png|jpe?g|gif|webp))"
+   # Bare relative backend image path (emitted by the MCP/backend image tools).
+   # The (?<![^\s]) guard requires the path to start at whitespace/string-start so
+   # it never matches the same substring inside an absolute URL.
+   r"|(?<![^\s])/api/v4/images/[^\s)]+?\.(?:png|jpe?g|gif|webp)"
+   r")"
+   r"(?=[\s)\]]|$)",
+   re.IGNORECASE,
 )
 
 
