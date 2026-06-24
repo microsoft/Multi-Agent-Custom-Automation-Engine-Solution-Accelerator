@@ -9,6 +9,7 @@ import {
   ToolbarDivider,
 } from "@fluentui/react-components";
 import { Copy, Send } from "../imports/bundleicons";
+import { resolveApiAssetUrl } from "@/api/config";
 import { ChatDismiss20Regular, HeartRegular } from "@fluentui/react-icons";
 import ChatInput from "./ChatInput";
 import "./Chat.css";
@@ -182,7 +183,7 @@ const Chat: React.FC<ChatProps> = ({
           <div key={index} className={`message ${msg.role}`}>
             <Body1>
               <div style={{ display: "flex", flexDirection: "column", whiteSpace: "pre-wrap", width: "100%" }}>
-                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrism]}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePrism]} urlTransform={resolveApiAssetUrl}>
                   {msg.content}
                 </ReactMarkdown>
                 {msg.role === "assistant" && (
