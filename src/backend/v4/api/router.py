@@ -369,6 +369,10 @@ async def process_request(
         raise HTTPException(status_code=500, detail="Failed to create plan") from e
 
     try:
+        # Cancel any stale pending approvals from previous plans for this user.
+        # This ensures old background tasks (still waiting for approval) terminate
+        # silently instead of sending timeout errors to the user's current WebSocket.
+        orchestration_config.cancel_pending_approvals_for_user(user_id)
 
         async def run_orchestration_task():
             try:

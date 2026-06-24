@@ -56,6 +56,8 @@ export interface PlanState {
     showCancellationDialog: boolean;
     /** Is a cancellation API call in progress? */
     cancellingPlan: boolean;
+    /** Show timeout popup when plan approval times out */
+    showTimeoutDialog: boolean;
     /** Loading message for spinners */
     loadingMessage: string;
 }
@@ -74,6 +76,7 @@ const initialState: PlanState = {
     reloadLeftList: true,
     showCancellationDialog: false,
     cancellingPlan: false,
+    showTimeoutDialog: false,
     loadingMessage: '',
 };
 
@@ -119,6 +122,9 @@ const planSlice = createSlice({
         },
         setCancellingPlan(state, action: PayloadAction<boolean>) {
             state.cancellingPlan = action.payload;
+        },
+        setShowTimeoutDialog(state, action: PayloadAction<boolean>) {
+            state.showTimeoutDialog = action.payload;
         },
         setLoadingMessage(state, action: PayloadAction<string>) {
             state.loadingMessage = action.payload;
@@ -231,6 +237,7 @@ export const {
     setReloadLeftList,
     setShowCancellationDialog,
     setCancellingPlan,
+    setShowTimeoutDialog,
     setLoadingMessage,
     markPlanCompleted,
     planApprovalAccepted,
@@ -254,6 +261,7 @@ export const selectContinueWithWebsocketFlow = (s: RootState) => s.plan.continue
 export const selectReloadLeftList = (s: RootState) => s.plan.reloadLeftList;
 export const selectShowCancellationDialog = (s: RootState) => s.plan.showCancellationDialog;
 export const selectCancellingPlan = (s: RootState) => s.plan.cancellingPlan;
+export const selectShowTimeoutDialog = (s: RootState) => s.plan.showTimeoutDialog;
 export const selectLoadingMessage = (s: RootState) => s.plan.loadingMessage;
 export const selectPlanStatus = (s: RootState) => s.plan.planData?.plan?.overall_status ?? null;
 export const selectPlanApproved = (s: RootState) => s.plan.planApproved;
