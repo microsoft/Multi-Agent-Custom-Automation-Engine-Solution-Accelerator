@@ -11,6 +11,7 @@ class WebSocketService {
     private listeners: Map<string, Set<(message: StreamMessage) => void>> = new Map();
     private planSubscriptions: Set<string> = new Set();
     private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    private keepaliveTimer: ReturnType<typeof setInterval> | null = null;
     private isConnecting = false;
     private intentionalDisconnect = false;
     private lastPlanId: string | undefined;
@@ -59,6 +60,7 @@ class WebSocketService {
                         clearTimeout(this.reconnectTimer);
                         this.reconnectTimer = null;
                     }
+                    this.startKeepalive();
                     this.emit('connection_status', { connected: true });
                     resolve();
                 };
@@ -75,6 +77,7 @@ class WebSocketService {
                 this.ws.onclose = (event) => {
                     this.isConnecting = false;
                     this.ws = null;
+                    this.stopKeepalive();
                     this.emit('connection_status', { connected: false });
                     /* P1: Only auto-reconnect if not intentional and not a clean close */
                     if (!this.intentionalDisconnect && event.code !== 1000 &&
@@ -99,6 +102,7 @@ class WebSocketService {
 
     disconnect(): void {
         this.intentionalDisconnect = true;
+        this.stopKeepalive();
         if (this.reconnectTimer) {
             clearTimeout(this.reconnectTimer);
             this.reconnectTimer = null;
@@ -197,6 +201,11 @@ class WebSocketService {
     }
 
     private handleMessage(message: StreamMessage): void {
+        // Ignore keepalive ping/pong messages from the server
+        const msgType = message.type as string;
+        if (msgType === 'ping' || msgType === 'pong') {
+            return;
+        }
 
         switch (message.type) {
             case WebsocketMessageType.PLAN_APPROVAL_REQUEST: {
@@ -274,6 +283,28 @@ class WebSocketService {
                 this.emit(message.type, message);
                 break;
             }
+        }
+    }
+
+    private startKeepalive(): void {
+        this.stopKeepalive();
+        // Send a ping every 30 seconds to prevent idle timeout from
+        // Azure Container Apps / reverse proxies closing the WebSocket.
+        this.keepaliveTimer = setInterval(() => {
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                try {
+                    this.ws.send(JSON.stringify({ type: 'pong' }));
+                } catch {
+                    // If send fails, the onclose handler will trigger reconnect
+                }
+            }
+        }, 30_000);
+    }
+
+    private stopKeepalive(): void {
+        if (this.keepaliveTimer) {
+            clearInterval(this.keepaliveTimer);
+            this.keepaliveTimer = null;
         }
     }
 

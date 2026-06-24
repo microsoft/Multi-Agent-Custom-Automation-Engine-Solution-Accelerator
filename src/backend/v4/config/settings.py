@@ -97,8 +97,8 @@ class OrchestrationConfig:
         self._approval_events: Dict[str, asyncio.Event] = {}
         self._clarification_events: Dict[str, asyncio.Event] = {}
 
-        # Default timeout (seconds) for waiting operations
-        self.default_timeout: float = 300.0
+        # Default timeout (seconds) for waiting operations.
+        self.default_timeout: float = 1800.0
 
     def get_current_orchestration(self, user_id: str) -> Any:
         """Get existing orchestration workflow instance for user_id."""

@@ -182,19 +182,37 @@ const PlanPage: React.FC = () => {
         if (!planApprovalRequest) return;
         dispatch(setProcessingApproval(true));
         const id = showToast('Submitting Approval', 'progress');
-        try {
-            await apiService.approvePlan({
+
+        const submitApproval = () =>
+            apiService.approvePlan({
                 m_plan_id: planApprovalRequest.id,
                 plan_id: planData?.plan?.id ?? '',
                 approved: true,
                 feedback: 'Plan approved by user',
             });
+
+        try {
+            await submitApproval();
             dismissToast(id);
             /* P0: single compound action replaces 3 separate dispatches */
             dispatch(planApprovalAccepted());
-        } catch {
-            dismissToast(id);
-            showToast('Failed to submit approval', 'error');
+        } catch (firstError) {
+            // Approval failed — the backend may have timed out or the WS dropped.
+            // Reconnect the WebSocket and retry once before giving up.
+            try {
+                if (!webSocketService.isConnected() && planData?.plan?.id) {
+                    await webSocketService.connect(planData.plan.id);
+                }
+                await submitApproval();
+                dismissToast(id);
+                dispatch(planApprovalAccepted());
+            } catch {
+                dismissToast(id);
+                showToast(
+                    'Failed to submit approval. The plan may have timed out — please start a new task and try again.',
+                    'error',
+                );
+            }
         } finally {
             dispatch(setProcessingApproval(false));
         }
