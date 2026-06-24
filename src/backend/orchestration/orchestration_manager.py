@@ -361,6 +361,7 @@ class OrchestrationManager:
             self.logger.info("Participant names: %s", participant_names)
 
             self.logger.info("Starting workflow execution...")
+            plan_already_approved = False
 
             # Initial run — stream events, collect any pending requests
             pending = await self._process_event_stream(
@@ -380,18 +381,30 @@ class OrchestrationManager:
 
                 # Handle plan reviews (present to user, wait for approval)
                 if plan_requests:
-                    self.logger.info(
-                        "Workflow paused with %d plan review request(s)",
-                        len(plan_requests),
-                    )
-                    plan_responses = await self._handle_plan_reviews(
-                        plan_requests,
-                        participant_names=participant_names,
-                        task_text=task_text,
-                        user_id=user_id,
-                    )
-                    if plan_responses is None:
-                        raise RuntimeError("Plan execution cancelled by user")
+                    if plan_already_approved:
+                        self.logger.info(
+                            "Auto-approving replanned workflow"
+                        )
+                        plan_responses = {
+                            request_id: plan_review.approve()
+                            for request_id, plan_review in plan_requests.items()
+                        }
+                    else:
+                        self.logger.info(
+                            "Workflow paused with %d plan review request(s)",
+                            len(plan_requests),
+                        )
+                        plan_responses = await self._handle_plan_reviews(
+                            plan_requests,
+                            participant_names=participant_names,
+                            task_text=task_text,
+                            user_id=user_id,
+                        )
+                        if plan_responses is None:
+                            raise RuntimeError("Plan execution cancelled by user")
+
+                        plan_already_approved = True
+
                     responses.update(plan_responses)
 
                 # Handle tool approval requests (clarification from user)
