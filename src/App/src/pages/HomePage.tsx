@@ -35,6 +35,15 @@ const HomePage: React.FC = () => {
         const initTeam = async () => {
             dispatch(setIsLoadingTeam(true));
             try {
+                // Check localStorage first for a previously uploaded team
+                const storedTeam = TeamService.getStoredTeam();
+                if (storedTeam) {
+                    dispatch(setSelectedTeam(storedTeam));
+                    showToast(`${storedTeam.name} team restored from previous session`, 'success');
+                    dispatch(setIsLoadingTeam(false));
+                    return;
+                }
+
                 const initResponse = await TeamService.initializeTeam();
 
                 if (initResponse.data?.status === 'Request started successfully' && initResponse.data?.team_id) {
@@ -124,6 +133,7 @@ const HomePage: React.FC = () => {
             if (uploadedTeam) {
                 const teamName = uploadedTeam.name || 'Uploaded Team';
                 dispatch(setSelectedTeam(uploadedTeam));
+                TeamService.storageTeam(uploadedTeam);
                 showToast(`Default team set to ${teamName}`, 'success');
             } else {
                 console.warn('No uploaded team provided to handleTeamUpload');
