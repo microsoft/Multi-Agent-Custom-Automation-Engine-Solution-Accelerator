@@ -37,18 +37,18 @@ from services.team_service import TeamService
 apply_tool_history_leak_patch()
 
 _BARE_IMAGE_URL_RE = re.compile(
-   r"(?<![\(\]])"
-   r"(?<!\]\()"
-   r"("
-   # Absolute image URL (any host, or a backend /api/v4/images path)
-   r"https?://[^\s)]+?(?:/api/v4/images/[^\s)]+?|[^\s)]+?\.(?:png|jpe?g|gif|webp))"
-   # Bare relative backend image path (emitted by the MCP/backend image tools).
-   # The (?<![^\s]) guard requires the path to start at whitespace/string-start so
-   # it never matches the same substring inside an absolute URL.
-   r"|(?<![^\s])/api/v4/images/[^\s)]+?\.(?:png|jpe?g|gif|webp)"
-   r")"
-   r"(?=[\s)\]]|$)",
-   re.IGNORECASE,
+    r"(?<![\(\]])"
+    r"(?<!\]\()"
+    r"("
+    # Absolute image URL (any host, or a backend /api/v4/images path)
+    r"https?://[^\s)]+?(?:/api/v4/images/[^\s)]+?|[^\s)]+?\.(?:png|jpe?g|gif|webp))"
+    # Bare relative backend image path (emitted by the MCP/backend image tools).
+    # The (?<![^\s]) guard requires the path to start at whitespace/string-start so
+    # it never matches the same substring inside an absolute URL.
+    r"|(?<![^\s])/api/v4/images/[^\s)]+?\.(?:png|jpe?g|gif|webp)"
+    r")"
+    r"(?=[\s)\]]|$)",
+    re.IGNORECASE,
 )
 
 
@@ -220,7 +220,6 @@ class OrchestrationManager:
             current is not None and current_team_id != team_config.team_id
         )
 
-
         cls.logger.info(
             "get_current_or_new_orchestration: user='%s' selected_team='%s' "
             "cached_team='%s' team_switched=%s team_changed=%s current_is_none=%s",
@@ -228,17 +227,13 @@ class OrchestrationManager:
             team_switched, team_changed, current is None,
         )
 
-
         # Full rebuild: no workflow exists, team explicitly switched, or the
         # cached workflow belongs to a different team than the selected one.
         needs_full_rebuild = current is None or team_switched or team_changed
 
-
         # Lightweight reset: workflow finished but agents are still valid for the
         # same team (a team change always routes to full rebuild above so we
         # never reuse the previous team's agents here).
-
-
         needs_workflow_reset = not needs_full_rebuild and workflow_terminated
 
         if needs_full_rebuild:

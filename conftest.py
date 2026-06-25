@@ -2,11 +2,15 @@
 Test configuration for agent tests.
 """
 
+import sys
+from pathlib import Path
+
 import pytest
 
 # Add the agents path
 agents_path = Path(__file__).parent.parent.parent / "backend" / "v4" / "magentic_agents"
 sys.path.insert(0, str(agents_path))
+
 
 @pytest.fixture
 def agent_env_vars():
@@ -14,7 +18,7 @@ def agent_env_vars():
     return {
         "BING_CONNECTION_NAME": "test_bing_connection",
         "MCP_SERVER_ENDPOINT": "http://test-mcp-server",
-        "MCP_SERVER_NAME": "test_mcp_server", 
+        "MCP_SERVER_NAME": "test_mcp_server",
         "MCP_SERVER_DESCRIPTION": "Test MCP server",
         "TENANT_ID": "test_tenant_id",
         "CLIENT_ID": "test_client_id",
