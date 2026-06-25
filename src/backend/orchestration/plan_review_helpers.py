@@ -76,6 +76,15 @@ PLAN RULES:
 - Steps are HIGH-LEVEL task assignments — one step per agent. Do NOT prescribe
   sub-tasks, parameters, or data retrieval. Agents discover their own processes.
 """ + clarification_policy + """
+
+MANDATORY AGENT INCLUSION (CRITICAL):
+- Your plan MUST include EVERY agent from the team list above. No exceptions.
+- Even if an agent's role seems redundant or overlapping with your own capabilities,
+    you MUST include it in the plan. Each agent has unique tools and domain knowledge
+    that only they can access.
+- Do NOT skip an agent because its description sounds similar to another agent.
+- The plan must assign at least one step to EVERY available agent.
+
 OUTPUT FORMAT (CRITICAL — use EXACTLY this JSON structure, nothing else):
 ```json
 [
@@ -143,13 +152,37 @@ FINAL ANSWER RULES:
             ORCHESTRATOR_TASK_LEDGER_FACTS_PROMPT + facts_append
         )
 
-        progress_append = """
+    # --- COMPLETION CHECK: applies to ALL teams (not just user_responses) ---
+    # Without this, the LLM can mark is_request_satisfied=true before all
+    # agents have run (e.g., Content Gen skipping ComplianceAgent).
+    progress_append = """
 
 EXECUTION RULES:
 - When selecting next_speaker, prefer a work agent that has NOT yet been invoked.
 - MagenticManager MUST NOT generate answers, ask questions, or list missing info.
   It only routes tasks to the appropriate agent.
 - There is NO UserInteractionAgent. Do NOT select it as next_speaker.
+
+COMPLETION CHECK (CRITICAL):
+Before setting is_request_satisfied to true, you MUST verify:
+1. Review the conversation history and list every agent that has actually produced
+   a substantive response (called tools and returned results).
+2. Compare that list against the plan steps. If ANY plan-step agent has NOT been
+   invoked and produced a substantive response, set is_request_satisfied to false
+   and select the next uninvoked agent as next_speaker.
+3. is_request_satisfied = true ONLY when ALL plan-step agents have completed
+   their work successfully (called their tools, returned results).
+- Each agent handles a DISTINCT domain. One agent's output does NOT satisfy
+  another agent's step.
+- Do NOT re-invoke an agent that already completed its step successfully.
+- IGNORE agent-level completion language (e.g. "all steps are complete",
+  "onboarding is done"). An individual agent only knows about its own domain.
+  The workflow is NOT complete until every plan-step agent has been invoked."""
+
+    if has_user_responses:
+        progress_append += """
+
+USER-CLARIFICATION ROUTING:
 - Domain agents that need user info will call their request_user_clarification
   tool. The framework handles the pause/resume automatically via
   function_approval_request events. You do NOT need to route to any special agent.
@@ -168,26 +201,11 @@ RE-INVOCATION RULE (AFTER USER ANSWERS):
 STALL DETECTION OVERRIDE:
 - An agent calling request_user_clarification is NOT stalling. The framework
   pauses automatically. Set is_progress_being_made=true and is_in_loop=false.
-- Do NOT treat a framework pause as a stall or loop.
+- Do NOT treat a framework pause as a stall or loop."""
 
-COMPLETION CHECK (CRITICAL):
-Before setting is_request_satisfied to true, you MUST verify:
-1. Review the conversation history and list every agent that has actually produced
-   a substantive response (called tools and returned results).
-2. Compare that list against the plan steps. If ANY plan-step agent has NOT been
-   invoked and produced a substantive response, set is_request_satisfied to false
-   and select the next uninvoked agent as next_speaker.
-3. is_request_satisfied = true ONLY when ALL plan-step agents have completed
-   their work successfully (called their tools, returned results).
-- Each agent handles a DISTINCT domain. One agent's output does NOT satisfy
-  another agent's step.
-- Do NOT re-invoke an agent that already completed its step successfully.
-- IGNORE agent-level completion language (e.g. "all steps are complete",
-  "onboarding is done"). An individual agent only knows about its own domain.
-  The workflow is NOT complete until every plan-step agent has been invoked."""
-        kwargs["progress_ledger_prompt"] = (
-            ORCHESTRATOR_PROGRESS_LEDGER_PROMPT + progress_append
-        )
+    kwargs["progress_ledger_prompt"] = (
+        ORCHESTRATOR_PROGRESS_LEDGER_PROMPT + progress_append
+    )
 
     return kwargs
 
