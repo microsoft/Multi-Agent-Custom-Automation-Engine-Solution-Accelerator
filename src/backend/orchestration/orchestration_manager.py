@@ -20,6 +20,10 @@ from callbacks.response_handlers import (agent_response_callback,
 from common.config.app_config import config
 from common.database.database_base import DatabaseBase
 from common.models.messages import TeamConfiguration
+from common.utils.markdown_utils import (
+    normalize_markdown_tables as _normalize_markdown_tables,
+    reflow_collapsed_table_line as _reflow_collapsed_table_line,
+)
 from models.messages import AgentMessageStreaming, WebsocketMessageType
 from orchestration.connection_config import (connection_config,
                                              orchestration_config)
@@ -441,6 +445,9 @@ class OrchestrationManager:
             # Use executor_completed Message if available; otherwise fall back to
             # accumulated orchestrator streaming chunks.
             final_text = final_output_ref[0] or "".join(orchestrator_chunks)
+
+            # Repair collapsed markdown tables before rendering (Bug 47810).
+            final_text = _normalize_markdown_tables(final_text)
 
             final_text = _embed_bare_image_urls(final_text)
 
