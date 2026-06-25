@@ -78,12 +78,8 @@ PLAN RULES:
 """ + clarification_policy + """
 
 MANDATORY AGENT INCLUSION (CRITICAL):
-- Your plan MUST include EVERY agent from the team list above. No exceptions.
-- Even if an agent's role seems redundant or overlapping with your own capabilities,
-    you MUST include it in the plan. Each agent has unique tools and domain knowledge
-    that only they can access.
-- Do NOT skip an agent because its description sounds similar to another agent.
-- The plan must assign at least one step to EVERY available agent.
+- Your plan MUST assign at least one step to EVERY agent in the team list above —
+  even if roles seem to overlap. Never skip an agent.
 
 OUTPUT FORMAT (CRITICAL — use EXACTLY this JSON structure, nothing else):
 ```json

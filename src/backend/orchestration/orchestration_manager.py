@@ -361,11 +361,8 @@ class OrchestrationManager:
         if current_team and getattr(current_team, "plan", None):
             task_text = (
                 f"{task_text}\n\n"
-                f"--- MANDATORY WORKFLOW PLAN (follow this sequence exactly) ---\n"
-                f"{current_team.plan}\n"
-                f"--- END WORKFLOW PLAN ---\n"
-                f"You MUST invoke EVERY agent listed above in order. "
-                f"Do NOT skip any agent."
+                f"--- MANDATORY WORKFLOW PLAN (run EVERY agent in order, skip none) ---\n"
+                f"{current_team.plan}"
             )
             self.logger.info("Injected team plan into task_text for user '%s'", user_id)
 
