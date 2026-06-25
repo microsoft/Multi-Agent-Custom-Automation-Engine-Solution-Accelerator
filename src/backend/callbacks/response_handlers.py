@@ -21,8 +21,9 @@ def format_agent_display_name(raw_name: str) -> str:
     """Convert raw agent IDs (e.g. 'HRHelperAgent', 'hr_helper_agent') to
     human-readable display names (e.g. 'HR Helper Agent').
 
-    Mirrors the frontend's getAgentDisplayName logic so names are consistent
-    across the AI Thinking buffer and agent message headers.
+    Applies similar splitting/casing logic as the frontend's
+    ``cleanTextToSpaces`` + ``getAgentDisplayName`` pipeline, but does NOT
+    strip the "Agent" suffix (the frontend handles that separately).
     """
     if not raw_name:
         return "Assistant"
@@ -33,7 +34,7 @@ def format_agent_display_name(raw_name: str) -> str:
     name = name.replace("_", " ")
 
     # Insert space before each uppercase letter preceded by a lowercase letter
-    # e.g. "HRHelperAgent" → "H R Helper Agent" (handled next)
+    # e.g. "HelperAgent" → "Helper Agent"
     name = re.sub(r'([a-z])([A-Z])', r'\1 \2', name)
 
     # Insert space between consecutive uppercase and an uppercase+lowercase pair
@@ -46,11 +47,11 @@ def format_agent_display_name(raw_name: str) -> str:
     # Title-case each word
     name = name.title()
 
-    # Fix common acronyms back to uppercase
-    for acronym in ['Hr', 'It', 'Ai', 'Api', 'Ui', 'Db', 'Kb']:
-        name = name.replace(acronym, acronym.upper())
-    # Fix double-uppercase replacements (e.g. "HRR" from "Hrr")
-    name = name.replace('HRR', 'HR R').replace('ITT', 'IT T')
+    # Fix common acronyms back to uppercase (word-boundary safe)
+    _ACRONYMS = {'Hr': 'HR', 'It': 'IT', 'Ai': 'AI', 'Api': 'API',
+                 'Ui': 'UI', 'Db': 'DB', 'Kb': 'KB'}
+    for title_form, upper_form in _ACRONYMS.items():
+        name = re.sub(rf'\b{title_form}\b', upper_form, name)
 
     return name
 
