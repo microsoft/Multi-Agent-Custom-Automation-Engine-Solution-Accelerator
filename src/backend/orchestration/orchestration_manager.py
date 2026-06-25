@@ -22,8 +22,7 @@ from common.database.database_base import DatabaseBase
 from common.models.messages import TeamConfiguration
 from models.messages import AgentMessageStreaming, WebsocketMessageType
 from orchestration.connection_config import (connection_config,
-                                             orchestration_config,
-                                             team_config)
+                                             orchestration_config)
 from orchestration.plan_review_helpers import (convert_plan_review_to_mplan,
                                                get_magentic_prompt_kwargs,
                                                wait_for_plan_approval)
@@ -354,17 +353,6 @@ class OrchestrationManager:
         # Build task from input
         task_text = getattr(input_task, "description", str(input_task))
         self.logger.debug("Task: %s", task_text)
-
-        # Inject team plan into task_text so MagenticManager sees the required
-        # workflow steps (including TriageAgent) as part of the task context.
-        current_team = team_config.get_current_team(user_id)
-        if current_team and getattr(current_team, "plan", None):
-            task_text = (
-                f"{task_text}\n\n"
-                f"--- MANDATORY WORKFLOW PLAN (run EVERY agent in order, skip none) ---\n"
-                f"{current_team.plan}"
-            )
-            self.logger.info("Injected team plan into task_text for user '%s'", user_id)
 
         try:
             final_output_ref: list = [None]
