@@ -1006,12 +1006,12 @@ class TestOrchestrationManagerInit:
         assert isinstance(manager.logger, logging.Logger)
 
 
-# =========================================================================
 # _normalize_markdown_tables (Bug 47810)
-# =========================================================================
 from backend.orchestration.orchestration_manager import (  # noqa: E402
     _normalize_markdown_tables,
-    _reflow_collapsed_table_line,
+)
+from common.utils.markdown_utils import (  # noqa: E402
+    reflow_collapsed_table_line as _reflow_collapsed_table_line,
 )
 
 
