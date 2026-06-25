@@ -17,6 +17,44 @@ from orchestration.connection_config import connection_config
 logger = logging.getLogger(__name__)
 
 
+def format_agent_display_name(raw_name: str) -> str:
+    """Convert raw agent IDs (e.g. 'HRHelperAgent', 'hr_helper_agent') to
+    human-readable display names (e.g. 'HR Helper Agent').
+
+    Mirrors the frontend's getAgentDisplayName logic so names are consistent
+    across the AI Thinking buffer and agent message headers.
+    """
+    if not raw_name:
+        return "Assistant"
+
+    name = raw_name
+
+    # Replace underscores with spaces
+    name = name.replace("_", " ")
+
+    # Insert space before each uppercase letter preceded by a lowercase letter
+    # e.g. "HRHelperAgent" → "H R Helper Agent" (handled next)
+    name = re.sub(r'([a-z])([A-Z])', r'\1 \2', name)
+
+    # Insert space between consecutive uppercase and an uppercase+lowercase pair
+    # e.g. "HRHelper" → "HR Helper"
+    name = re.sub(r'([A-Z]+)([A-Z][a-z])', r'\1 \2', name)
+
+    # Collapse multiple spaces
+    name = re.sub(r'\s+', ' ', name).strip()
+
+    # Title-case each word
+    name = name.title()
+
+    # Fix common acronyms back to uppercase
+    for acronym in ['Hr', 'It', 'Ai', 'Api', 'Ui', 'Db', 'Kb']:
+        name = name.replace(acronym, acronym.upper())
+    # Fix double-uppercase replacements (e.g. "HRR" from "Hrr")
+    name = name.replace('HRR', 'HR R').replace('ITT', 'IT T')
+
+    return name
+
+
 def clean_citations(text: str) -> str:
     """Remove citation markers from agent responses while preserving formatting."""
     if not text:
@@ -66,6 +104,7 @@ def agent_response_callback(
     Final (non-streaming) agent response callback using agent_framework Message.
     """
     agent_name = getattr(message, "author_name", None) or agent_id or "Unknown Agent"
+    agent_name = format_agent_display_name(agent_name)
     role = getattr(message, "role", "assistant")
 
     # Message has a .text property that concatenates all TextContent items
@@ -107,6 +146,8 @@ async def streaming_agent_response_callback(
     if not user_id:
         return
 
+    display_name = format_agent_display_name(agent_id)
+
     try:
         chunk_text = getattr(update, "text", None)
         if not chunk_text:
@@ -123,7 +164,7 @@ async def streaming_agent_response_callback(
         contents = getattr(update, "contents", []) or []
         tool_calls = _extract_tool_calls_from_contents(contents)
         if tool_calls:
-            tool_message = AgentToolMessage(agent_name=agent_id)
+            tool_message = AgentToolMessage(agent_name=display_name)
             tool_message.tool_calls.extend(tool_calls)
             await connection_config.send_status_update_async(
                 tool_message,
@@ -134,7 +175,7 @@ async def streaming_agent_response_callback(
 
         if cleaned:
             streaming_payload = AgentMessageStreaming(
-                agent_name=agent_id,
+                agent_name=display_name,
                 content=cleaned,
                 is_final=is_final,
             )
