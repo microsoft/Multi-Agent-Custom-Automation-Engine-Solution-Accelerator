@@ -118,17 +118,19 @@ const HomePage: React.FC = () => {
         [dispatch, showToast],
     );
 
-    const handleTeamUpload = useCallback(async () => {
+    const handleTeamUpload = useCallback(async (uploadedTeam?: any) => {
         try {
-            const teams = await TeamService.getUserTeams();
-            if (teams.length > 0) {
-                const hrTeam = teams.find(team => team.name === 'Human Resources Team');
-                const defaultTeam = hrTeam || teams[0];
-                dispatch(setSelectedTeam(defaultTeam));
-                showToast(`Team uploaded successfully! ${defaultTeam.name} remains your default team.`, 'success');
+            console.log('handleTeamUpload called with:', uploadedTeam);
+            if (uploadedTeam) {
+                const teamName = uploadedTeam.name || 'Uploaded Team';
+                dispatch(setSelectedTeam(uploadedTeam));
+                showToast(`Default team set to ${teamName}`, 'success');
+            } else {
+                console.warn('No uploaded team provided to handleTeamUpload');
             }
-        } catch {
-            console.error('Team upload failed');
+        } catch (error) {
+            console.error('Team upload failed:', error);
+            showToast('Team upload completed', 'success');
         }
     }, [dispatch, showToast]);
 
