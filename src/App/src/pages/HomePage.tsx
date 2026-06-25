@@ -35,19 +35,30 @@ const HomePage: React.FC = () => {
         const initTeam = async () => {
             dispatch(setIsLoadingTeam(true));
             try {
-                // Check localStorage first for a previously uploaded team
+                // Get available teams first
+                const teams = await TeamService.getUserTeams();
+                
+                // Check if we have a stored team and if it still exists in the backend
                 const storedTeam = TeamService.getStoredTeam();
                 if (storedTeam) {
-                    dispatch(setSelectedTeam(storedTeam));
-                    showToast(`${storedTeam.name} team restored from previous session`, 'success');
-                    dispatch(setIsLoadingTeam(false));
-                    return;
+                    const existsInBackend = teams.some(t => t.team_id === storedTeam.team_id);
+                    if (existsInBackend) {
+                        // Stored team still exists, use it
+                        dispatch(setSelectedTeam(storedTeam));
+                        showToast(`${storedTeam.name} team restored from storage`, 'success');
+                        dispatch(setIsLoadingTeam(false));
+                        return;
+                    } else {
+                        // Stored team was deleted, clear localStorage
+                        console.warn(`Stored team ${storedTeam.team_id} no longer exists, clearing storage`);
+                        // Don't call storageTeam with null, just let init response guide us
+                    }
                 }
 
+                // Now initialize team from backend
                 const initResponse = await TeamService.initializeTeam();
 
                 if (initResponse.data?.status === 'Request started successfully' && initResponse.data?.team_id) {
-                    const teams = await TeamService.getUserTeams();
                     const initializedTeam = teams.find(team => team.team_id === initResponse.data?.team_id);
 
                     if (initializedTeam) {
@@ -67,7 +78,6 @@ const HomePage: React.FC = () => {
                     dispatch(setSelectedTeam(null));
                     showToast('Welcome! Please upload a team configuration file to get started.', 'info');
                 } else if (!initResponse.success) {
-                    // API call failed — surface the error
                     console.error('Team init failed:', initResponse.error);
                     showToast(initResponse.error || 'Team initialization failed. Please try again.', 'warning');
                 }
@@ -91,6 +101,12 @@ const HomePage: React.FC = () => {
         async (team: TeamConfig | null) => {
             dispatch(setSelectedTeam(team));
             dispatch(setReloadLeftList(true));
+            
+            // Immediately save selected team to localStorage so it persists on reload
+            if (team) {
+                TeamService.storageTeam(team);
+            }
+            
             if (team) {
                 try {
                     dispatch(setIsLoadingTeam(true));
@@ -135,6 +151,17 @@ const HomePage: React.FC = () => {
                 dispatch(setSelectedTeam(uploadedTeam));
                 TeamService.storageTeam(uploadedTeam);
                 showToast(`Default team set to ${teamName}`, 'success');
+
+                // Also inform backend to use this team for the session
+                if (uploadedTeam.team_id) {
+                    try {
+                        await TeamService.selectTeam(uploadedTeam.team_id);
+                        console.log('Team selected in backend:', uploadedTeam.team_id);
+                    } catch (selectError) {
+                        console.warn('Failed to select team in backend:', selectError);
+                        // Don't fail the upload if backend selection fails
+                    }
+                }
             } else {
                 console.warn('No uploaded team provided to handleTeamUpload');
             }
