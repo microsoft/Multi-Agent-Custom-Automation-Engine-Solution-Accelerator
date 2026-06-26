@@ -41,17 +41,17 @@ const HomePage: React.FC = () => {
                 // Check if we have a stored team and if it still exists in the backend
                 const storedTeam = TeamService.getStoredTeam();
                 if (storedTeam) {
-                    const existsInBackend = teams.some(t => t.team_id === storedTeam.team_id);
-                    if (existsInBackend) {
-                        // Stored team still exists, use it
-                        dispatch(setSelectedTeam(storedTeam));
-                        showToast(`${storedTeam.name} team restored from storage`, 'success');
+                    const backendTeam = teams.find(t => t.team_id === storedTeam.team_id);
+                    if (backendTeam) {
+                        // Stored team still exists, use backend-fresh object
+                        dispatch(setSelectedTeam(backendTeam));
+                        showToast(`${backendTeam.name} team restored from storage`, 'success');
                         dispatch(setIsLoadingTeam(false));
                         return;
                     } else {
                         // Stored team was deleted, clear localStorage
                         console.warn(`Stored team ${storedTeam.team_id} no longer exists, clearing storage`);
-                        // Don't call storageTeam with null, just let init response guide us
+                        TeamService.clearStoredTeam();
                     }
                 }
 
@@ -143,7 +143,7 @@ const HomePage: React.FC = () => {
         [dispatch, showToast],
     );
 
-    const handleTeamUpload = useCallback(async (uploadedTeam?: any) => {
+    const handleTeamUpload = useCallback(async (uploadedTeam?: TeamConfig) => {
         try {
             console.log('handleTeamUpload called with:', uploadedTeam);
             if (uploadedTeam) {
@@ -167,7 +167,7 @@ const HomePage: React.FC = () => {
             }
         } catch (error) {
             console.error('Team upload failed:', error);
-            showToast('Team upload completed', 'success');
+            showToast('Team upload failed. Please try again.', 'warning');
         }
     }, [dispatch, showToast]);
 
