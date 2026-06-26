@@ -62,6 +62,9 @@ param workloadProfileName string?
 @description('Enable Azure telemetry collection.')
 param enableTelemetry bool = true
 
+@description('Enable sticky session affinity.')
+param enableSessionAffinity bool = false
+
 // ============================================================================
 // Container App (AVM)
 // ============================================================================
@@ -74,6 +77,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.22.1' = {
     enableTelemetry: enableTelemetry
     environmentResourceId: environmentResourceId
     containers: containers
+    stickySessionsAffinity: enableSessionAffinity? 'sticky': 'none'
     ingressExternal: disableIngress ? false : ingressExternal
     ingressTargetPort: ingressTargetPort
     ingressTransport: ingressTransport
