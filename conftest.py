@@ -2,6 +2,9 @@
 Test configuration for agent tests.
 """
 
+import sys
+from pathlib import Path
+
 import pytest
 
 # Add the agents path
