@@ -142,8 +142,20 @@ class OrchestrationManager:
 
         manager_agent = Agent(manager_chat_client, name="MagenticManager")
 
+        # Collect participant agent names so the orchestrator plan prompt can
+        # enforce mandatory inclusion of every team agent (e.g. TriageAgent,
+        # ComplianceAgent) — otherwise the manager silently drops them.
+        participant_agent_names = []
+        for ag in agents:
+            nm = getattr(ag, "agent_name", None) or getattr(ag, "name", None)
+            if nm:
+                participant_agent_names.append(nm)
+
         # Get prompt customization kwargs
-        prompt_kwargs = get_magentic_prompt_kwargs(has_user_responses=has_user_responses)
+        prompt_kwargs = get_magentic_prompt_kwargs(
+            has_user_responses=has_user_responses,
+            participant_names=participant_agent_names,
+        )
 
         cls.logger.info(
             "Building MagenticBuilder for user '%s' with max_rounds=%d, "
