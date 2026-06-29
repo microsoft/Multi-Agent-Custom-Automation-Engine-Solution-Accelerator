@@ -19,8 +19,37 @@ logger = logging.getLogger(__name__)
 # When set, agent_template will pass this as MCPStreamableHTTPTool(allowed_tools=...)
 # so the LLM only sees the relevant subset (avoids cross-pack tool confusion when
 # the MCP server exposes every function at the base /mcp endpoint).
+# The ``ask_user`` tool is auto-registered as a shared service on every domain
+# endpoint by the MCP server, so it does not need to be listed here.
 DOMAIN_ALLOWED_TOOLS: dict[str, list[str]] = {
-    "image": ["generate_marketing_image"],
+    "hr": [
+        "get_workflow_blueprint",
+        "schedule_orientation_session",
+        "assign_mentor",
+        "register_for_benefits",
+        "provide_employee_handbook",
+        "initiate_background_check",
+        "request_id_card",
+        "set_up_payroll"
+    ],
+    "tech_support": [
+        "get_workflow_blueprint",
+        "send_welcome_email",
+        "set_up_office_365_account",
+        "configure_laptop",
+        "setup_vpn_access",
+        "create_system_accounts"
+    ],
+    "marketing": [
+        "generate_press_release",
+        "handle_influencer_collaboration"
+    ],
+    "product": [
+        "get_product_info"
+    ],
+    "image": [
+        "generate_marketing_image"
+    ],
 }
 
 
@@ -55,10 +84,24 @@ class MCPConfig:
         if not all([url, name, description, tenant_id, client_id]):
             raise ValueError(f"{cls.__name__}: missing required environment variables")
 
-        # NOTE: URL rewriting to /<domain>/mcp is disabled because the
-        # currently-deployed MCP server only exposes the catch-all /mcp
-        # endpoint. We rely on the client-side ``allowed_tools`` filter
-        # below to scope the LLM's tool surface to the right domain.
+        # Rewrite base URL to the domain-scoped endpoint so the agent
+        # connects to e.g. ``http://host:9000/hr/mcp`` instead of the
+        # catch-all ``/mcp``.  The MCP server mounts per-domain FastMCP
+        # sub-apps at ``/<domain>`` (see mcp_server.py), each serving
+        # only that domain's tools plus shared services (ask_user).
+        # The ``allowed_tools`` client-side filter below acts as a
+        # redundant safety net in case the server layout changes.
+        if domain:
+            stripped = url.rstrip("/")
+            if stripped.endswith("/mcp"):
+                # Base URL includes the /mcp path (e.g. https://host/mcp)
+                # → insert domain before /mcp: https://host/hr/mcp
+                stripped = stripped[: -len("/mcp")]
+                url = stripped + f"/{domain}/mcp"
+            else:
+                # Base URL has no /mcp suffix → append /{domain}
+                url = stripped + f"/{domain}"
+
         allowed_tools = DOMAIN_ALLOWED_TOOLS.get(domain) if domain else None
 
         return cls(

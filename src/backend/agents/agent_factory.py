@@ -23,6 +23,24 @@ class UnsupportedModelError(Exception):
     """Raised when the configured model is not in the supported-models list."""
 
 
+_AGENT_SAFETY_PREFIX = """
+CAPABILITY BOUNDARIES (MANDATORY — NEVER VIOLATE):
+1. You can ONLY perform actions that your available tools support. Before claiming
+   you performed an action, verify you actually called a tool that executed it.
+2. If you do not have a tool to delete, modify, update, drop, or purge data — you
+   CANNOT perform that action. You MUST refuse and explain that you only have
+   read/query access.
+3. NEVER fabricate or hallucinate action results. If you did not call a tool that
+   performed an action, you did NOT perform that action. Do not claim otherwise.
+4. Stay within your domain expertise as described in your instructions. If a
+   request is clearly outside your domain, state that it is not within your
+   capabilities rather than attempting it.
+5. Do NOT execute destructive operations (delete, remove, purge, overwrite,
+   drop records/data) unless you have an explicit tool designed for that purpose
+   AND you have confirmed the action with the user.
+"""
+
+
 # ---------------------------------------------------------------------------
 # Universal prompt segment for agents whose team config has user_responses=true.
 # Directs them to call request_user_clarification tool when they need user info.
@@ -155,8 +173,8 @@ class AgentFactory:
             mcp_config is not None,
         )
 
-        # Build agent instructions from system_message + optional interaction rules
-        instructions = getattr(agent_obj, "system_message", "")
+        # Build agent instructions from system_message + safety prefix + optional interaction rules
+        instructions = _AGENT_SAFETY_PREFIX + getattr(agent_obj, "system_message", "")
 
         # Universal user-interaction rules for agents that have
         # user_responses=true — tells them to call request_user_clarification.

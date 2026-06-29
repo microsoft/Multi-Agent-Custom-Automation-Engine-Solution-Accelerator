@@ -156,6 +156,7 @@ class OrchestrationManager:
         prompt_kwargs = get_magentic_prompt_kwargs(
             has_user_responses=has_user_responses,
             participant_names=participant_agent_names,
+            team_config=team_config,
         )
 
         cls.logger.info(

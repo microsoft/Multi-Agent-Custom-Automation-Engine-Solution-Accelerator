@@ -19,6 +19,7 @@ from agent_framework_orchestrations._magentic import (
     ORCHESTRATOR_TASK_LEDGER_FACTS_PROMPT,
     ORCHESTRATOR_TASK_LEDGER_PLAN_PROMPT,
     ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT)
+from common.models.messages import TeamConfiguration
 from models.plan_models import MPlan, MStep
 from orchestration.connection_config import (connection_config,
                                              orchestration_config)
@@ -26,6 +27,59 @@ from orchestration.helper.plan_to_mplan_converter import PlanToMPlanConverter
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Scope enforcement builder
+# ---------------------------------------------------------------------------
+
+def _build_scope_enforcement(team_config: TeamConfiguration | None) -> str:
+    """Build a SCOPE ENFORCEMENT prompt block from team metadata.
+    Uses the team's existing ``description``, agent descriptions, and
+    ``starting_tasks`` to tell the MagenticManager what this team handles
+    and instruct it to refuse out-of-scope or destructive requests.
+    """
+    if not team_config:
+        return ""
+
+    team_desc = getattr(team_config, "description", "") or ""
+
+    # Build example tasks list for the scope block
+    example_prompts: list[str] = []
+    for st in getattr(team_config, "starting_tasks", []):
+        p = getattr(st, "prompt", "") or getattr(st, "name", "")
+        if p:
+            example_prompts.append(f'  - "{p}"')
+    examples_block = "\n".join(example_prompts) if example_prompts else "  (none)"
+
+    # Build knowledge bases list
+    kb_names: list[str] = []
+    for ag in getattr(team_config, "agents", []):
+        kb = getattr(ag, "knowledge_base_name", "")
+        if kb:
+            kb_names.append(kb)
+    kb_block = ", ".join(kb_names) if kb_names else "(no knowledge bases)"
+
+    return f"""
+SCOPE GATE:
+This team's purpose: "{team_desc}"
+This team's knowledge bases: {kb_block}
+Example tasks this team handles:
+{examples_block}
+IN-SCOPE (proceed normally with a multi-agent plan):
+- Any request that relates to this team's purpose, agents, or example tasks above
+- Variations, follow-ups, or deeper questions about the same domain
+- WHEN IN DOUBT, the request IS in scope -- proceed with a normal multi-agent plan
+OUT-OF-SCOPE (produce single-step MagenticManager refusal ONLY for these):
+- The request clearly belongs to a DIFFERENT team's domain and data (e.g., asking
+  an NDA/contract team about RFP documents, or asking an RFP team to review NDAs,
+  or asking a customer analytics team to generate marketing content)
+- The request requires knowledge bases or data this team does not have
+If out-of-scope, output ONLY:
+[{{{{\"agent\": \"MagenticManager\", \"action\": \"Inform the user that this request is outside the scope of this team which handles: {team_desc}. Suggest they switch to an appropriate team.\"}}}}]
+DESTRUCTIVE OPERATIONS: If the user asks to delete, purge, or destroy data AND
+no agent has an explicit deletion tool (knowledge-base agents have read-only
+access), output a single-step MagenticManager plan informing the user that this
+team cannot perform destructive operations on stored data.
+"""
 
 # ---------------------------------------------------------------------------
 # Prompt kwargs builder
@@ -35,6 +89,7 @@ def get_magentic_prompt_kwargs(
     *,
     has_user_responses: bool = False,
     participant_names: Optional[list[str]] = None,
+    team_config: TeamConfiguration | None = None,
 ) -> dict:
     """Build the prompt-override kwargs dict for ``MagenticBuilder``.
 
@@ -48,10 +103,14 @@ def get_magentic_prompt_kwargs(
             clause requiring every one of these agents to appear as a plan step,
             so coordinator-like agents (e.g. TriageAgent) and final-validation
             agents (e.g. ComplianceAgent) are not silently dropped.
+        team_config: The active team configuration.  Used to inject scope
+            enforcement rules so the orchestrator refuses out-of-scope or
+            destructive requests.
 
     Returns:
         A dict suitable for unpacking into ``MagenticBuilder(**kwargs)``.
     """
+    scope_enforcement = _build_scope_enforcement(team_config)
     if has_user_responses:
         clarification_policy = """
 USER CLARIFICATION POLICY (tool-based — no separate interaction agent):
@@ -93,7 +152,7 @@ CLARIFYING QUESTIONS POLICY (CRITICAL — ZERO QUESTIONS):
             "is INVALID — regenerate it\nuntil every listed agent appears as a step.\n"
         )
 
-    plan_append = """
+    plan_append = scope_enforcement + """
 
 PLAN RULES:
 - Steps are HIGH-LEVEL task assignments — one step per agent. Do NOT prescribe
@@ -120,9 +179,13 @@ without asking the user any questions.
 Example plan:
 [
   {{"agent": "HRHelperAgent", "action": "execute the onboarding process for the new employee"}},
-  {{"agent": "TechnicalSupportAgent", "action": "provision IT resources and accounts for the new employee"}},
-  {{"agent": "MagenticManager", "action": "compile a final onboarding summary for the user"}}
+  {{"agent": "TechnicalSupportAgent", "action": "provision IT resources and accounts for the new employee"}}
 ]
+
+Do NOT include MagenticManager as a step in normal plans. MagenticManager
+automatically compiles the final answer from agent outputs — it is not a plan
+participant. MagenticManager should ONLY appear in single-step refusal plans
+(scope violations or destructive operation denials).
 
 MagenticManager NEVER asks the user questions directly. MagenticManager NEVER
 lists missing information or asks clarifying questions — it ONLY routes tasks.
@@ -151,6 +214,15 @@ FINAL ANSWER RULES:
         "task_ledger_plan_update_prompt": ORCHESTRATOR_TASK_LEDGER_PLAN_UPDATE_PROMPT + plan_append,
         "final_answer_prompt": ORCHESTRATOR_FINAL_ANSWER_PROMPT + final_append,
     }
+
+    # Base progress rule for ALL teams — ensures single-step manager plans
+    # (e.g., scope violations) complete immediately without invoking agents.
+    base_progress_append = """
+SINGLE-STEP MANAGER PLAN:
+- If the plan contains ONLY a MagenticManager step (no domain agent steps), the
+  request is satisfied immediately. Set is_request_satisfied=true and produce the
+  final answer with the message from the plan action. Do NOT invoke domain agents.
+"""
 
     if has_user_responses:
         facts_append = """
@@ -181,6 +253,13 @@ EXECUTION RULES:
 - When selecting next_speaker, prefer a work agent that has NOT yet been invoked.
 - MagenticManager MUST NOT generate answers or fabricate content on behalf of
   work agents. It only routes tasks and compiles the final output.
+
+
+SINGLE-STEP MANAGER PLAN (scope violation or informational):
+- If the plan contains ONLY a MagenticManager step (no domain agent steps), the
+  request is satisfied immediately. Set is_request_satisfied=true and produce
+  the final answer with the message from the plan action. Do NOT attempt to
+  invoke domain agents that are not in the plan.
 
 COMPLETION CHECK (CRITICAL):
 Before setting is_request_satisfied to true, you MUST verify:
@@ -226,9 +305,16 @@ STALL DETECTION OVERRIDE:
   pauses automatically. Set is_progress_being_made=true and is_in_loop=false.
 - Do NOT treat a framework pause as a stall or loop."""
 
-    kwargs["progress_ledger_prompt"] = (
-        ORCHESTRATOR_PROGRESS_LEDGER_PROMPT + progress_append
-    )
+        kwargs["progress_ledger_prompt"] = (
+            ORCHESTRATOR_PROGRESS_LEDGER_PROMPT + progress_append
+        )
+
+    else:
+        # For teams without user_responses, still add the single-step manager
+        # plan rule so scope violations complete immediately.
+        kwargs["progress_ledger_prompt"] = (
+            ORCHESTRATOR_PROGRESS_LEDGER_PROMPT + base_progress_append
+        )
 
     return kwargs
 
