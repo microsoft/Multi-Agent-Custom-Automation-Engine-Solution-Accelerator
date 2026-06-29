@@ -31,7 +31,11 @@ logger = logging.getLogger(__name__)
 # Prompt kwargs builder
 # ---------------------------------------------------------------------------
 
-def get_magentic_prompt_kwargs(*, has_user_responses: bool = False) -> dict:
+def get_magentic_prompt_kwargs(
+    *,
+    has_user_responses: bool = False,
+    participant_names: Optional[list[str]] = None,
+) -> dict:
     """Build the prompt-override kwargs dict for ``MagenticBuilder``.
 
     Args:
@@ -39,6 +43,11 @@ def get_magentic_prompt_kwargs(*, has_user_responses: bool = False) -> dict:
             giving it access to the ``ask_user`` tool for user clarification.
             When True, prompts allow agents to gather info via their tools;
             when False, agents must use defaults only.
+        participant_names: Names of the team's participant agents. When provided,
+            the orchestrator plan prompt is augmented with a MANDATORY AGENTS
+            clause requiring every one of these agents to appear as a plan step,
+            so coordinator-like agents (e.g. TriageAgent) and final-validation
+            agents (e.g. ComplianceAgent) are not silently dropped.
 
     Returns:
         A dict suitable for unpacking into ``MagenticBuilder(**kwargs)``.
@@ -70,12 +79,26 @@ CLARIFYING QUESTIONS POLICY (CRITICAL — ZERO QUESTIONS):
 - Ask EXACTLY 0 questions. Always proceed with sensible defaults.
 """
 
+    mandatory_block = ""
+    if participant_names:
+        agent_lines = "\n".join(f"- {name}" for name in participant_names)
+        mandatory_block = (
+            "\n\nMANDATORY AGENTS (CRITICAL — NON-NEGOTIABLE):\n"
+            "Every plan you generate MUST include EVERY ONE of the following agents,\n"
+            "each as its own distinct step, each invoked at least once:\n"
+            + agent_lines
+            + "\nDo NOT omit any of these agents, even if a step seems optional,\n"
+            "redundant, already covered by another agent, or something you "
+            "(MagenticManager)\ncould do yourself. A plan missing any listed agent "
+            "is INVALID — regenerate it\nuntil every listed agent appears as a step.\n"
+        )
+
     plan_append = """
 
 PLAN RULES:
 - Steps are HIGH-LEVEL task assignments — one step per agent. Do NOT prescribe
   sub-tasks, parameters, or data retrieval. Agents discover their own processes.
-""" + clarification_policy + """
+""" + mandatory_block + clarification_policy + """
 OUTPUT FORMAT (CRITICAL — use EXACTLY this JSON structure, nothing else):
 ```json
 [
@@ -86,11 +109,14 @@ OUTPUT FORMAT (CRITICAL — use EXACTLY this JSON structure, nothing else):
 Use exact agent names from the team list above. Output ONLY the JSON array — no
 markdown fences, no commentary before or after.
 
-IMPORTANT: There is NO UserInteractionAgent. Do NOT include any user-interaction
+""" + ("""IMPORTANT: There is NO UserInteractionAgent. Do NOT include any user-interaction
 agent in the plan. Domain agents gather user info themselves via their
 request_user_clarification tool — the framework pauses automatically when they
 call it and resumes when the user answers.
-
+""" if has_user_responses else """IMPORTANT: There is NO UserInteractionAgent. Do NOT include any user-interaction
+agent in the plan. Agents apply sensible defaults for missing details and proceed
+without asking the user any questions.
+""") + """
 Example plan:
 [
   {{"agent": "HRHelperAgent", "action": "execute the onboarding process for the new employee"}},
@@ -143,12 +169,42 @@ FINAL ANSWER RULES:
             ORCHESTRATOR_TASK_LEDGER_FACTS_PROMPT + facts_append
         )
 
-        progress_append = """
+    # Completion-enforcement progress-ledger rules. Applied ALWAYS (not only when
+    # has_user_responses) so that EVERY plan-step agent — e.g. TriageAgent and
+    # ComplianceAgent in the content_gen team, whose agents all have
+    # user_responses=false — must actually run before the request can be marked
+    # satisfied, and the orchestrator re-selects any uninvoked plan-step agent
+    # instead of silently finishing early.
+    progress_append = """
 
 EXECUTION RULES:
 - When selecting next_speaker, prefer a work agent that has NOT yet been invoked.
-- MagenticManager MUST NOT generate answers, ask questions, or list missing info.
-  It only routes tasks to the appropriate agent.
+- MagenticManager MUST NOT generate answers or fabricate content on behalf of
+  work agents. It only routes tasks and compiles the final output.
+
+COMPLETION CHECK (CRITICAL):
+Before setting is_request_satisfied to true, you MUST verify:
+1. Review the conversation history and list every agent that has actually produced
+   a substantive response (meaningful output — calling tools and returning results
+   where the agent has tools, or producing a substantive text response otherwise).
+2. Compare that list against the plan steps. If ANY plan-step agent has NOT been
+   invoked and produced a substantive response, set is_request_satisfied to false
+   and select the next uninvoked agent as next_speaker.
+3. is_request_satisfied = true ONLY when ALL plan-step agents have completed
+   their work (produced a substantive response — tool results, or meaningful text
+   output for agents that have no tools).
+- Each agent handles a DISTINCT domain. One agent's output does NOT satisfy
+  another agent's step.
+- Do NOT re-invoke an agent that already completed its step successfully.
+- IGNORE agent-level completion language (e.g. "all steps are complete",
+  "onboarding is done"). An individual agent only knows about its own domain.
+  The workflow is NOT complete until every plan-step agent has been invoked."""
+
+    if has_user_responses:
+        progress_append += """
+
+USER-CLARIFICATION EXECUTION RULES:
+- MagenticManager MUST NOT ask questions or list missing info — it only routes.
 - There is NO UserInteractionAgent. Do NOT select it as next_speaker.
 - Domain agents that need user info will call their request_user_clarification
   tool. The framework handles the pause/resume automatically via
@@ -168,26 +224,11 @@ RE-INVOCATION RULE (AFTER USER ANSWERS):
 STALL DETECTION OVERRIDE:
 - An agent calling request_user_clarification is NOT stalling. The framework
   pauses automatically. Set is_progress_being_made=true and is_in_loop=false.
-- Do NOT treat a framework pause as a stall or loop.
+- Do NOT treat a framework pause as a stall or loop."""
 
-COMPLETION CHECK (CRITICAL):
-Before setting is_request_satisfied to true, you MUST verify:
-1. Review the conversation history and list every agent that has actually produced
-   a substantive response (called tools and returned results).
-2. Compare that list against the plan steps. If ANY plan-step agent has NOT been
-   invoked and produced a substantive response, set is_request_satisfied to false
-   and select the next uninvoked agent as next_speaker.
-3. is_request_satisfied = true ONLY when ALL plan-step agents have completed
-   their work successfully (called their tools, returned results).
-- Each agent handles a DISTINCT domain. One agent's output does NOT satisfy
-  another agent's step.
-- Do NOT re-invoke an agent that already completed its step successfully.
-- IGNORE agent-level completion language (e.g. "all steps are complete",
-  "onboarding is done"). An individual agent only knows about its own domain.
-  The workflow is NOT complete until every plan-step agent has been invoked."""
-        kwargs["progress_ledger_prompt"] = (
-            ORCHESTRATOR_PROGRESS_LEDGER_PROMPT + progress_append
-        )
+    kwargs["progress_ledger_prompt"] = (
+        ORCHESTRATOR_PROGRESS_LEDGER_PROMPT + progress_append
+    )
 
     return kwargs
 
