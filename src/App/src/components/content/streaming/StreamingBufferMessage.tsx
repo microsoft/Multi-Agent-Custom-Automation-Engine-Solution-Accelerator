@@ -7,6 +7,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypePrism from "rehype-prism";
 import { formatJsonInText } from "@/utils/jsonFormatter";
+import { resolveApiAssetUrl } from "@/api/config";
  
 interface StreamingBufferMessageProps {
     streamingMessageBuffer: string;
@@ -164,6 +165,7 @@ const StreamingBufferMessage: React.FC<StreamingBufferMessageProps> = ({
                                 <ReactMarkdown
                                     remarkPlugins={[remarkGfm]}
                                     rehypePlugins={[rehypePrism]}
+                                    urlTransform={resolveApiAssetUrl}
                                     components={{
                                         a: ({ node, ...props }) => (
                                             <a
@@ -217,6 +219,7 @@ const StreamingBufferMessage: React.FC<StreamingBufferMessageProps> = ({
                         <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
                             rehypePlugins={[rehypePrism]}
+                            urlTransform={resolveApiAssetUrl}
                             components={{
                                         a: ({ node, ...props }) => (
                                             <a

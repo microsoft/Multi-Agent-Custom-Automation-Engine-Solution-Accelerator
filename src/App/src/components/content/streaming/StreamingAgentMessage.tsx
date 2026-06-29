@@ -8,6 +8,7 @@ import { TaskService } from "@/store";
 import { PersonRegular, ArrowDownloadRegular } from "@fluentui/react-icons";
 import { getAgentIcon, getAgentDisplayName } from '@/utils/agentIconUtils';
 import { formatJsonInText } from '@/utils/jsonFormatter';
+import { resolveApiAssetUrl } from "@/api/config";
 
 interface StreamingAgentMessageProps {
   agentMessages: AgentMessageData[];
@@ -205,7 +206,7 @@ const renderAgentMessages = (
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypePrism]}
-                  urlTransform={(url: string) => url}
+                  urlTransform={resolveApiAssetUrl}
                   components={{
                       a: ({ node: _node, ...props }) => (
                         <a

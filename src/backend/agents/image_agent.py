@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import base64
 import logging
-import os
 import uuid
 from typing import Any, AsyncIterable, Awaitable
 
@@ -178,12 +177,11 @@ class ImageAgent(BaseAgent):
             blob_name = await _upload_image_to_blob(png_bytes, image_id)
 
             if blob_name:
-                # Build the image URL pointing at the backend proxy endpoint
-                backend_base = (config.AZURE_AI_AGENT_ENDPOINT or "").rstrip("/")
-                backend_origin = os.environ.get("BACKEND_URL", "").rstrip("/")
-                if not backend_origin:
-                    backend_origin = backend_base
-                image_src = f"{backend_origin}/api/v4/images/{blob_name}"
+                # Relative backend proxy path. The browser resolves it against the
+                # SPA's configured API origin, so it works in both the standard
+                # deployment (public backend) and the WAF/private deployment (the
+                # frontend's same-origin reverse proxy forwards to the internal backend).
+                image_src = f"/api/v4/images/{blob_name}"
                 image_content = f"![Generated Marketing Image]({image_src})"
             else:
                 # Fallback: embed base64 directly

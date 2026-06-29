@@ -114,6 +114,9 @@ FINAL ANSWER RULES:
 - Compile ONLY from messages agents actually produced. Quote verbatim where appropriate.
 - Do NOT fabricate URLs, results, or content that no agent produced.
 - If a required agent step did not run, state it plainly — do not pretend it did.
+- If an agent produced an image (a markdown image ![alt](url) or an image URL such as one
+  under /api/v4/images/), embed it in your answer using markdown image syntax
+  ![description](url). NEVER present an image as a bare URL or a plain link.
 - Do NOT offer further help. Provide the answer and end with a polite closing.
 """
 

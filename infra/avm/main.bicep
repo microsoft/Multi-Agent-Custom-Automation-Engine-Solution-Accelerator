@@ -1236,6 +1236,7 @@ module containerApp './modules/compute/container-app.bicep' = {
 module containerAppMcp './modules/compute/container-app.bicep' = {
   name: take('module.container-app-mcp.${solutionName}', 64)
   params: {
+    stickySessionsAffinity : enableScalability? 'sticky': 'none'
     name: 'ca-mcp-${solutionSuffix}'
     location: location
     tags: tags
