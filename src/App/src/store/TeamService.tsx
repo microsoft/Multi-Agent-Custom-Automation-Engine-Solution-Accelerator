@@ -73,6 +73,17 @@ export class TeamService {
         }
     }
 
+    static clearStoredTeam(): boolean {
+        // Remove persisted team from localStorage
+        if (typeof window === 'undefined' || !window.localStorage) return false;
+        try {
+            window.localStorage.removeItem(TeamService.STORAGE_KEY);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
     static async uploadCustomTeam(teamFile: File): Promise<{
         modelError?: any; success: boolean; team?: TeamConfig; error?: string; raiError?: any; searchError?: any
     }> {
