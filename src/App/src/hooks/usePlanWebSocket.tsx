@@ -15,6 +15,7 @@ import {
     selectPlanData,
     selectContinueWithWebsocketFlow,
     selectPlanApproved,
+    selectShowProcessingPlanSpinner,
     approvalRequestReceived,
     planCompletedFinal,
     planFailedFinal,
@@ -44,10 +45,10 @@ import {
     ProcessedPlanData,
 } from '@/models';
 import { APIService } from '@/api/apiService';
+import { ToastIntent } from '@/components/toast/InlineToaster';
+import { formatElapsedTime } from '@/utils';
 
 const apiService = new APIService();
-
-import { ToastIntent } from '@/components/toast/InlineToaster';
 
 interface UsePlanWebSocketProps {
     planId: string | undefined;
@@ -99,8 +100,20 @@ export function usePlanWebSocket({
     const dispatch = useAppDispatch();
     const planData = useAppSelector(selectPlanData);
     const planApproved = useAppSelector(selectPlanApproved);
+    const showProcessingPlanSpinner = useAppSelector(selectShowProcessingPlanSpinner);
     const continueWithWebsocketFlow = useAppSelector(selectContinueWithWebsocketFlow);
     const streamingMessageBuffer = useAppSelector(selectStreamingMessageBuffer);
+    const processingStartedAtRef = React.useRef<number | null>(null);
+
+    useEffect(() => {
+        if (showProcessingPlanSpinner) {
+            if (processingStartedAtRef.current === null) {
+                processingStartedAtRef.current = Date.now();
+            }
+        } else {
+            processingStartedAtRef.current = null;
+        }
+    }, [showProcessingPlanSpinner]);
 
     // ── PLAN_APPROVAL_REQUEST ─────────────────────────────────────
     useEffect(() => {
@@ -161,6 +174,7 @@ export function usePlanWebSocket({
                 dispatch(addAgentMessage(agentMessageData));
                 dispatch(setShowBufferingText(false));
                 dispatch(setShowProcessingPlanSpinner(false));
+                processingStartedAtRef.current = null;
                 dispatch(setSubmittingChatDisableInput(false));
                 scrollToBottom();
                 persistAgentMessage(agentMessageData, planData, dispatch);
@@ -181,6 +195,12 @@ export function usePlanWebSocket({
             WebsocketMessageType.FINAL_RESULT_MESSAGE,
             (finalMessage: any) => {
                 if (!finalMessage) return;
+                const completionElapsedSeconds = processingStartedAtRef.current
+                    ? Math.max(Math.round((Date.now() - processingStartedAtRef.current) / 1000), 0)
+                    : null;
+                const completionTimeLine = completionElapsedSeconds !== null
+                    ? `\n\n**Total completion time: ${formatElapsedTime(completionElapsedSeconds)}**`
+                    : '';
                 const messageStatus = finalMessage?.data?.status;
 
                 if (messageStatus === PlanStatus.COMPLETED) {
@@ -190,7 +210,7 @@ export function usePlanWebSocket({
                         timestamp: Date.now(),
                         steps: [],
                         next_steps: [],
-                        content: finalMessage.data?.content || '',
+                        content: (finalMessage.data?.content || '') + completionTimeLine,
                         raw_data: finalMessage,
                     };
                     dispatch(setShowBufferingText(true));
@@ -198,6 +218,7 @@ export function usePlanWebSocket({
                     dispatch(setSelectedTeam(planData?.team || null));
                     /* P0: single compound action replaces setShowProcessingPlanSpinner(false) + markPlanCompleted() */
                     dispatch(planCompletedFinal());
+                    processingStartedAtRef.current = null;
                     scrollToFinalResult();
                     webSocketService.disconnect();
                     persistAgentMessage(agentMessageData, planData, dispatch, true, streamingMessageBuffer);
@@ -256,6 +277,7 @@ export function usePlanWebSocket({
                 };
                 dispatch(addAgentMessage(errorAgent));
                 dispatch(planFailedFinal());
+                processingStartedAtRef.current = null;
                 dispatch(setShowBufferingText(false));
                 dispatch(setSubmittingChatDisableInput(true));
                 scrollToBottom();
