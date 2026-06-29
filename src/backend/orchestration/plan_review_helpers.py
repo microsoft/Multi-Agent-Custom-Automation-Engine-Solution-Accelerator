@@ -109,11 +109,14 @@ OUTPUT FORMAT (CRITICAL — use EXACTLY this JSON structure, nothing else):
 Use exact agent names from the team list above. Output ONLY the JSON array — no
 markdown fences, no commentary before or after.
 
-IMPORTANT: There is NO UserInteractionAgent. Do NOT include any user-interaction
+""" + ("""IMPORTANT: There is NO UserInteractionAgent. Do NOT include any user-interaction
 agent in the plan. Domain agents gather user info themselves via their
 request_user_clarification tool — the framework pauses automatically when they
 call it and resumes when the user answers.
-
+""" if has_user_responses else """IMPORTANT: There is NO UserInteractionAgent. Do NOT include any user-interaction
+agent in the plan. Agents apply sensible defaults for missing details and proceed
+without asking the user any questions.
+""") + """
 Example plan:
 [
   {{"agent": "HRHelperAgent", "action": "execute the onboarding process for the new employee"}},
