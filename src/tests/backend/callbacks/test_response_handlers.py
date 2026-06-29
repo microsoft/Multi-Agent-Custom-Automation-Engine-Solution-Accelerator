@@ -134,6 +134,7 @@ sys.modules['models.messages'] = Mock(
 from backend.callbacks.response_handlers import (
     _extract_tool_calls_from_contents, _is_function_call_item,
     agent_response_callback, clean_citations,
+    format_agent_display_name,
     streaming_agent_response_callback)
 
 # Access mocked modules that we'll use in tests
@@ -216,7 +217,45 @@ class TestCleanCitations:
         assert clean_citations(text) == expected
 
 
-class TestIsFunctionCallItem:
+class TestFormatAgentDisplayName:
+    """Tests for the format_agent_display_name function."""
+
+    def test_empty_string_returns_assistant(self):
+        assert format_agent_display_name("") == "Assistant"
+
+    def test_none_returns_assistant(self):
+        assert format_agent_display_name(None) == "Assistant"
+
+    def test_pascal_case(self):
+        assert format_agent_display_name("ContentAgent") == "Content Agent"
+
+    def test_snake_case(self):
+        assert format_agent_display_name("content_agent") == "Content Agent"
+
+    def test_acronym_prefix(self):
+        assert format_agent_display_name("HRHelperAgent") == "HR Helper Agent"
+
+    def test_acronym_word_boundary_no_false_positive(self):
+        """Ensure 'It' inside 'Habit' is NOT replaced with 'IT'."""
+        assert format_agent_display_name("HabitAgent") == "Habit Agent"
+
+    def test_multiple_acronyms(self):
+        assert format_agent_display_name("AIApiAgent") == "AI API Agent"
+
+    def test_already_spaced(self):
+        assert format_agent_display_name("Content Agent") == "Content Agent"
+
+    def test_single_word(self):
+        assert format_agent_display_name("Triage") == "Triage"
+
+    def test_mixed_case_id(self):
+        assert format_agent_display_name("agent_123") == "Agent 123"
+
+    def test_consecutive_uppercase(self):
+        assert format_agent_display_name("DBAdmin") == "DB Admin"
+
+
+
     """Tests for the _is_function_call_item function."""
 
     def test_is_function_call_item_none(self):
@@ -415,7 +454,7 @@ class TestAgentResponseCallback:
 
             # Verify AgentMessage was created with cleaned text
             mock_agent_message.assert_called_once_with(
-                agent_name="TestAgent",
+                agent_name="Test Agent",
                 timestamp=1234567890.0,
                 content="Test message with citations "
             )
@@ -445,7 +484,7 @@ class TestAgentResponseCallback:
 
             # Verify AgentMessage was created with agent_id as agent_name
             mock_agent_message.assert_called_once_with(
-                agent_name="agent_123",
+                agent_name="Agent 123",
                 timestamp=1234567890.0,
                 content="Fallback message text"
             )
@@ -469,7 +508,7 @@ class TestAgentResponseCallback:
 
             # Verify AgentMessage was created with empty content
             mock_agent_message.assert_called_once_with(
-                agent_name="TestAgent",
+                agent_name="Test Agent",
                 timestamp=1234567890.0,
                 content=""
             )
@@ -515,7 +554,7 @@ class TestAgentResponseCallback:
             call_args = mock_logger.info.call_args[0]
             assert call_args[0] == "%s message (agent=%s): %s"
             assert call_args[1] == "Assistant"
-            assert call_args[2] == "TestAgent"
+            assert call_args[2] == "Test Agent"
             assert len(call_args[3]) == 193  # Message should be the actual length (not truncated in this case)
 
 
@@ -547,7 +586,7 @@ class TestStreamingAgentResponseCallback:
 
             # Verify AgentMessageStreaming was created with cleaned text
             mock_streaming.assert_called_once_with(
-                agent_name="agent_123",
+                agent_name="Agent 123",
                 content="Test streaming text ",
                 is_final=True
             )
@@ -587,7 +626,7 @@ class TestStreamingAgentResponseCallback:
 
             # Verify AgentMessageStreaming was created with concatenated content text
             mock_streaming.assert_called_once_with(
-                agent_name="agent_123",
+                agent_name="Agent 123",
                 content="Content from content attribute",
                 is_final=False
             )
@@ -640,7 +679,7 @@ class TestStreamingAgentResponseCallback:
                     await streaming_agent_response_callback("agent_123", mock_update, False, user_id="user_456")
 
                     # Verify tool message was created and sent
-                    mock_tool_message.assert_called_once_with(agent_name="agent_123")
+                    mock_tool_message.assert_called_once_with(agent_name="Agent 123")
                     # Verify tool_calls.extend was called with our mock tool call
                     assert mock_tool_call in mock_tool_msg.tool_calls or mock_tool_msg.tool_calls.extend.called  # type: ignore[union-attr]  # noqa: E1101  # pylint: disable=no-member
 
@@ -666,7 +705,7 @@ class TestStreamingAgentResponseCallback:
 
                 # Should still process the text
                 mock_streaming.assert_called_once_with(
-                    agent_name="agent_123",
+                    agent_name="Agent 123",
                     content="Test text",
                     is_final=True
                 )
@@ -733,7 +772,7 @@ class TestStreamingAgentResponseCallback:
                 await streaming_agent_response_callback("agent_123", mock_update, False, user_id="user_456")
 
                 # Verify tool message was created and tool calls were processed
-                mock_tool_message.assert_called_once_with(agent_name="agent_123")
+                mock_tool_message.assert_called_once_with(agent_name="Agent 123")
                 assert connection_config.send_status_update_async.called
 
     @pytest.mark.asyncio
@@ -751,7 +790,7 @@ class TestStreamingAgentResponseCallback:
 
             # Verify streaming message was created with correct parameters
             mock_streaming.assert_called_once_with(
-                agent_name="agent_123",
+                agent_name="Agent 123",
                 content="Test streaming text for processing",
                 is_final=True
             )

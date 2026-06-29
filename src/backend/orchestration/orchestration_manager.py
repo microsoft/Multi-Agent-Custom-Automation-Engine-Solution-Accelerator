@@ -16,6 +16,7 @@ from agent_framework_orchestrations import (MagenticBuilder,
                                             MagenticPlanReviewRequest)
 from agents.agent_factory import AgentFactory
 from callbacks.response_handlers import (agent_response_callback,
+                                         format_agent_display_name,
                                          streaming_agent_response_callback)
 from common.config.app_config import config
 from common.database.database_base import DatabaseBase
@@ -782,12 +783,12 @@ class OrchestrationManager:
                             and executor != current_streaming_agent_ref[0]
                         ):
                             current_streaming_agent_ref[0] = executor
-                            display_name = executor.replace("_", " ")
+                            display_name = format_agent_display_name(executor)
                             header_text = f"\n\n---\n### {display_name}\n\n"
                             try:
                                 await connection_config.send_status_update_async(
                                     AgentMessageStreaming(
-                                        agent_name=executor,
+                                        agent_name=display_name,
                                         content=header_text,
                                         is_final=False,
                                     ),
