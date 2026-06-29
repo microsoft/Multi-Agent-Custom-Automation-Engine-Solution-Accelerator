@@ -13,6 +13,7 @@ from models.messages import (AgentMessage, AgentMessageStreaming,
                              AgentToolCall, AgentToolMessage,
                              WebsocketMessageType)
 from orchestration.connection_config import connection_config
+from common.utils.markdown_utils import normalize_markdown_tables
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +113,9 @@ def agent_response_callback(
     text = getattr(message, "text", "") if message is not None else ""
 
     text = clean_citations(text or "")
+
+    # Repair collapsed markdown tables before rendering (Bug 47810).
+    text = normalize_markdown_tables(text)
 
     if not user_id:
         logger.debug("No user_id provided; skipping websocket send for final message.")
