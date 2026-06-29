@@ -16,6 +16,7 @@ from agent_framework_orchestrations import (MagenticBuilder,
                                             MagenticPlanReviewRequest)
 from agents.agent_factory import AgentFactory
 from callbacks.response_handlers import (agent_response_callback,
+                                         format_agent_display_name,
                                          streaming_agent_response_callback)
 from common.config.app_config import config
 from common.database.database_base import DatabaseBase
@@ -142,8 +143,20 @@ class OrchestrationManager:
 
         manager_agent = Agent(manager_chat_client, name="MagenticManager")
 
+        # Collect participant agent names so the orchestrator plan prompt can
+        # enforce mandatory inclusion of every team agent (e.g. TriageAgent,
+        # ComplianceAgent) — otherwise the manager silently drops them.
+        participant_agent_names = []
+        for ag in agents:
+            nm = getattr(ag, "agent_name", None) or getattr(ag, "name", None)
+            if nm:
+                participant_agent_names.append(nm)
+
         # Get prompt customization kwargs
-        prompt_kwargs = get_magentic_prompt_kwargs(has_user_responses=has_user_responses)
+        prompt_kwargs = get_magentic_prompt_kwargs(
+            has_user_responses=has_user_responses,
+            participant_names=participant_agent_names,
+        )
 
         cls.logger.info(
             "Building MagenticBuilder for user '%s' with max_rounds=%d, "
@@ -782,12 +795,12 @@ class OrchestrationManager:
                             and executor != current_streaming_agent_ref[0]
                         ):
                             current_streaming_agent_ref[0] = executor
-                            display_name = executor.replace("_", " ")
+                            display_name = format_agent_display_name(executor)
                             header_text = f"\n\n---\n### {display_name}\n\n"
                             try:
                                 await connection_config.send_status_update_async(
                                     AgentMessageStreaming(
-                                        agent_name=executor,
+                                        agent_name=display_name,
                                         content=header_text,
                                         is_final=False,
                                     ),

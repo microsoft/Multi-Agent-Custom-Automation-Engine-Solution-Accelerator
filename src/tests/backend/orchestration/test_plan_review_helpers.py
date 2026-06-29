@@ -163,7 +163,9 @@ class TestGetMagenticPromptKwargs:
         assert "task_ledger_plan_update_prompt" in result
         assert "final_answer_prompt" in result
         assert "task_ledger_facts_prompt" not in result
-        assert "progress_ledger_prompt" not in result
+        # progress_ledger_prompt (completion enforcement) is now always present,
+        # so plan-step agents must run even for teams without user_responses.
+        assert "progress_ledger_prompt" in result
 
     def test_given_user_responses_when_called_then_returns_extended_keys(self):
         # Act
@@ -197,6 +199,36 @@ class TestGetMagenticPromptKwargs:
         # Assert
         assert "EXECUTION RULES" in result["progress_ledger_prompt"]
         assert "COMPLETION CHECK" in result["progress_ledger_prompt"]
+
+    def test_given_no_user_responses_when_called_then_progress_still_enforces_completion(self):
+        # Act
+        result = get_magentic_prompt_kwargs(has_user_responses=False)
+
+        # Assert — completion enforcement applies even without user_responses
+        assert "progress_ledger_prompt" in result
+        assert "COMPLETION CHECK" in result["progress_ledger_prompt"]
+        # User-clarification-only rules must NOT leak in for non-interactive teams
+        assert "request_user_clarification" not in result["progress_ledger_prompt"]
+
+    def test_given_participant_names_when_called_then_plan_lists_mandatory_agents(self):
+        # Act
+        result = get_magentic_prompt_kwargs(
+            has_user_responses=False,
+            participant_names=["TriageAgent", "ComplianceAgent"],
+        )
+
+        # Assert — every listed agent is required to appear in the plan
+        plan_prompt = result["task_ledger_plan_prompt"]
+        assert "MANDATORY AGENTS" in plan_prompt
+        assert "- TriageAgent" in plan_prompt
+        assert "- ComplianceAgent" in plan_prompt
+
+    def test_given_no_participant_names_when_called_then_no_mandatory_block(self):
+        # Act
+        result = get_magentic_prompt_kwargs(has_user_responses=False)
+
+        # Assert
+        assert "MANDATORY AGENTS" not in result["task_ledger_plan_prompt"]
 
     def test_given_no_user_responses_when_called_then_final_has_answer_rules(self):
         # Act
