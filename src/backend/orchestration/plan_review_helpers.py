@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 def get_magentic_prompt_kwargs(
     *,
     has_user_responses: bool = False,
-    participant_names: Optional[list] = None,
+    participant_names: Optional[list[str]] = None,
 ) -> dict:
     """Build the prompt-override kwargs dict for ``MagenticBuilder``.
 
@@ -182,12 +182,14 @@ EXECUTION RULES:
 COMPLETION CHECK (CRITICAL):
 Before setting is_request_satisfied to true, you MUST verify:
 1. Review the conversation history and list every agent that has actually produced
-   a substantive response (called tools and returned results).
+   a substantive response (meaningful output — calling tools and returning results
+   where the agent has tools, or producing a substantive text response otherwise).
 2. Compare that list against the plan steps. If ANY plan-step agent has NOT been
    invoked and produced a substantive response, set is_request_satisfied to false
    and select the next uninvoked agent as next_speaker.
 3. is_request_satisfied = true ONLY when ALL plan-step agents have completed
-   their work successfully (called their tools, returned results).
+   their work (produced a substantive response — tool results, or meaningful text
+   output for agents that have no tools).
 - Each agent handles a DISTINCT domain. One agent's output does NOT satisfy
   another agent's step.
 - Do NOT re-invoke an agent that already completed its step successfully.
