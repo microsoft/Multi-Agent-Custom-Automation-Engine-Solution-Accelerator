@@ -39,7 +39,7 @@ import styles from '../../styles/TeamSelector.module.css';
 
 interface TeamSelectorProps {
   onTeamSelect?: (team: TeamConfig | null) => void;
-  onTeamUpload?: () => Promise<void>;
+  onTeamUpload?: (team?: TeamConfig) => Promise<void>;
   selectedTeam?: TeamConfig | null;
   isHomePage: boolean;
 }
@@ -280,7 +280,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
         }
 
         if (onTeamUpload) {
-          await onTeamUpload();
+          await onTeamUpload(result.team);
         }
       } else if (result.raiError) {
         setError('❌ Content Safety Check Failed\n\nYour team configuration contains content that doesn\'t meet our safety guidelines.');
@@ -382,7 +382,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
         }
 
         if (onTeamUpload) {
-          await onTeamUpload();
+          await onTeamUpload(result.team);
         }
       } else if (result.raiError) {
         setError(' Content Safety Check Failed\n\nYour team configuration contains content that doesn\'t meet our safety guidelines.');
