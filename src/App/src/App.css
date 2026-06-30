@@ -1,0 +1,76 @@
+/* APP */
+
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--colorNeutralForeground2);
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.tab:hover {
+  background-color: var(--colorSubtleBackgroundHover);
+}
+
+.tab:active {
+  background-color: var(--colorSubtleBackgroundPressed);
+}
+
+
+/* TASKLIST */
+
+.task-tab {
+  display: flex;
+  align-items: center;
+  padding: 8px 8px 8px 0;
+  color: var(--colorNeutralForeground2);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+  font-size: var(--fontSizeBase00);
+  gap: 14px;
+
+}
+
+.task-tab:hover {
+  background-color: var(--colorSubtleBackgroundHover);
+}
+
+.task-tab.active {
+  background-color: var(--colorNeutralBackground1Pressed);
+  color: var(--colorNeutralForeground1);
+  font-weight: 500;
+  
+}
+
+.task-tab .sideNavTick {
+  width: 2px;
+  height: 100%;
+  min-height: 32px;
+  background-color: var(--colorCompoundBrandStroke);
+  opacity: 0;
+  flex-shrink: 0;
+  transition: opacity 0.2s ease-in-out;
+  margin-left: -8px;
+  
+}
+
+.task-tab.active .sideNavTick {
+  opacity: 1;
+}
+
+.task-tab .task-menu-button {
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.task-tab:hover .task-menu-button {
+  opacity: 1;
+}
+

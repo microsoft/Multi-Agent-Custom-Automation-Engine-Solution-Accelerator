@@ -1,0 +1,304 @@
+.chat-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+
+  margin: 0 auto; /* ✅ centers it */
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 16px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-left: 0;
+  margin-right: 0;
+
+  p {
+    margin: 8px 0;
+    white-space: pre-wrap;
+    line-height: 1.5rem;
+  }
+
+  li {
+    white-space: normal;
+    margin: 0;
+  }
+
+  ol,
+  ul {
+    display: block;
+    list-style-type: decimal;
+    margin-block-start: 0px;
+    margin-block-end: 0px;
+    margin-inline-start: 0px;
+    margin-inline-end: 0px;
+    padding-inline-start: 24px;
+    unicode-bidi: isolate;
+  }
+
+  a {
+    color: var(--colorBrandForeground1);
+  }
+}
+
+code.language-tsx,
+code.language-bash {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background-color: var(--colorNeutralBackground1);
+
+  border-radius: 4px;
+  /* border: 1px solid var(--colorNeutralStroke1); */
+}
+
+code.language-tsx {
+  display: flex;
+}
+
+pre {
+  display: inline-block;
+  /* Shrink-wrap to content */
+  max-width: 100%;
+  /* Do not exceed parent's width */
+  white-space: pre-wrap;
+  /* Allow wrapping of long lines */
+  word-break: break-word;
+  /* Break words if necessary */
+  overflow-wrap: break-word;
+  /* Provide fallback for older browsers */
+  background-color: var(--colorNeutralBackground1);
+  padding: 4px 8px;
+  border-radius: 4px;
+  overflow: scroll;
+}
+
+pre code.language-bash {
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
+
+  /* Optional: add padding, background, border-radius, etc. */
+  background-color: transparent;
+}
+
+.message {
+  /* Prevents messages from getting too wide */
+  display: inline-block;
+  /* Ensures width only expands as needed */
+  word-wrap: break-word;
+  /* Prevents overflow issues */
+  word-break: break-word;
+
+  box-sizing: border-box;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+.user {
+  background-color: var(--colorNeutralBackground2);
+  color: var(--colorNeutralForeground2);
+  align-self: flex-end;
+  padding: 2px 16px;
+  border-radius: 6px;
+}
+
+.assistant {
+  color: var(--colorNeutralForeground2);
+  align-self: flex-start;
+  margin: 16px 0 0 0;
+  width: 100%;
+}
+
+.input-container {
+  display: flex;
+  /* padding: 16px; */
+  /* border-top: 1px solid #ccc; */
+}
+
+input {
+  flex: 1;
+  padding: 5px;
+  border: 1px solid #ccc;
+}
+
+button {
+  margin-left: 5px;
+  padding: 5px 10px;
+  background-color: #0078d4;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.typing-indicator {
+  font-size: 14px;
+  color: #666;
+}
+
+.typing-indicator .dots {
+  animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+  0% {
+    opacity: 0.3;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.3;
+  }
+}
+
+/* Input Container */
+.input-wrapper {
+  /* margin: 0 16px 16px 16px; */
+  display: inline-flex;
+  /* Allows height to expand dynamically */
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+  width: 100%;
+  padding: 8px;
+  border-radius: var(--borderRadiusLarge);
+  background-color: var(--colorNeutralBackground1);
+  border: 1px solid var(--colorNeutralStroke1);
+  transition: border-color 0.2s ease-in-out;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* Hover and Active States */
+.input-wrapper:hover {
+  border-color: var(--colorNeutralStroke1Hover);
+}
+
+.input-wrapper:active {
+  border-color: var(--colorNeutralStroke1Pressed);
+}
+
+/* Focus State */
+.input-wrapper.focused {
+  border-color: var(--colorNeutralStroke1Pressed);
+}
+
+/* Input Field */
+.input-field {
+  resize: none;
+  overflow-y: scroll;
+  height: auto;
+  /* Ensures it expands dynamically */
+  min-height: 24px;
+  /* Keeps it stable initially and while typing */
+  max-height: 150px;
+  padding: 8px;
+  /* Add padding while maintaining the height */
+  background-color: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--fontFamilyBase);
+  font-size: var(--fontSizeBase300);
+  font-weight: var(--fontWeightRegular);
+  color: var(--colorNeutralForeground1);
+  line-height: 1.5;
+  box-sizing: border-box;
+  /* Ensures padding doesn’t increase total height */
+}
+
+/* Send Button */
+.send-button {
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  color: var(--colorBrandForeground1);
+  transition: color 0.2s ease-in-out;
+}
+
+.send-button:hover {
+  color: var(--colorBrandForegroundHover);
+}
+
+.send-button:active {
+  color: var(--colorBrandForegroundPressed);
+}
+
+/* Focus Indicator (Purple Line Animation, Bottom Only) */
+.focus-indicator {
+  position: absolute;
+  bottom: 0;
+  /* Ensures it's at the bottom */
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: var(--colorCompoundBrandStroke);
+  transform: scaleX(0);
+  transition: transform 0.2s ease-in-out;
+}
+
+.input-wrapper.focused .focus-indicator {
+  transform: scaleX(1);
+  /* Expands when input is focused */
+}
+
+/* AI Generated Tag Container */
+.ai-tag-container {
+  margin-bottom: 4px;
+  /* Adds a small gap between the tag and the message */
+  display: flex;
+  align-items: center;
+}
+
+.assistant-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  margin-left: -10px;
+}
+
+.assistant-actions {
+  display: flex;
+  /* gap: 8px; */
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+
+  align-items: center;
+  padding: 0 16px 16px 16px;
+}
+
+.message-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+  max-width: 768px;
+
+}
+
+.scroll-to-bottom {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  /* Optional styling */
+  border-radius: 50%;
+  padding: 8px;
+  cursor: pointer;
+  box-shadow: var(--shadow8);
+  margin-bottom: 16px;
+}

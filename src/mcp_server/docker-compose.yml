@@ -1,0 +1,27 @@
+version: "3.8"
+
+services:
+  mcp-server:
+    build: .
+    ports:
+      - "9000:9000"
+    environment:
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=9000
+      - MCP_DEBUG=true
+      - MCP_ENABLE_AUTH=false
+      - MCP_SERVER_NAME=MACAE MCP Server
+    volumes:
+      - .:/app
+    networks:
+      - mcp-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  mcp-network:
+    driver: bridge

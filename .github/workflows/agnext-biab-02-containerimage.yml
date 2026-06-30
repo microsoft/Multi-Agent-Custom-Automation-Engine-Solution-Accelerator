@@ -1,0 +1,44 @@
+name: Create and publish a Docker image
+on:
+  push:
+    branches: ['main', 'test', 'release']
+    paths:
+      - 'agnext-biab-02/**'
+      - '.github/workflows/agnext-biab-02-containerimage.yml'
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+jobs:
+  build-and-push-image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      # - name: Download deps
+      #   run: |
+      #     curl -fsSL ${{ vars.AUTOGEN_WHL_URL }} -o agnext-biab-02/autogen_core-0.3.dev0-py3-none-any.whl
+      - name: Log in to the Container registry
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v7
+        with:
+          context: agnext-biab-02/
+          file: agnext-biab-02/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

@@ -1,0 +1,155 @@
+/* HomeInput Component Styles */
+
+.home-input-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.home-input-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+  position: relative;
+}
+
+.home-input-center-content {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 728px;
+  gap: 32px;
+}
+
+.home-input-title-wrapper {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.home-input-input-section {
+  width: 100%;
+  margin-bottom: 32px;
+}
+
+.home-input-input-wrapper {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: var(--colorNeutralBackground1);
+  border: 1px solid var(--colorNeutralStroke1);
+  border-radius: var(--borderRadiusMedium);
+}
+
+.home-input-input-field {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 0;
+  border: none;
+  outline: none;
+  background-color: transparent;
+  font-size: var(--fontSizeBase300);
+  color: var(--colorNeutralForeground1);
+  resize: none;
+}
+
+.home-input-input-field::placeholder {
+  color: var(--colorNeutralForeground3);
+}
+
+.home-input-send-button {
+  min-width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--borderRadiusSmall);
+  background-color: var(--colorBrandBackground);
+  color: var(--colorNeutralForegroundInverted);
+  border: none;
+  cursor: pointer;
+}
+
+.home-input-quick-tasks-section {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.home-input-quick-tasks-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.home-input-quick-tasks {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr 1fr 1fr !important;
+  gap: 8px;
+}
+
+
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+  .home-input-quick-tasks {
+    flex-wrap: wrap !important;
+  }
+  
+  .home-input-quick-tasks .fui-Card {
+    flex: 1 1 calc(50% - 6px) !important; 
+  }
+}
+
+@media (max-width: 480px) {
+  .home-input-quick-tasks .fui-Card {
+    flex: 1 1 100% !important;
+  }
+}
+
+/* Focus visible for accessibility */
+.home-input-quick-tasks .fui-Card:focus-visible {
+  outline: 2px solid var(--colorStrokeFocus2) !important;
+  outline-offset: 2px !important;
+}
+
+.home-input-ai-footer {
+  padding-bottom: 8px;
+  margin-top: 8px;
+  text-align: center;
+  color: var(--colorNeutralForeground3);
+  font-size: var(--fontSizeBase200);
+  font-family: var(--fontFamilyBase);
+}
+
+.home-input-refresh-button {
+  font-size: var(--fontSizeBase200);
+  color: var(--colorBrandForeground1);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  border-radius: var(--borderRadiusSmall);
+  font-family: var(--fontFamilyBase);
+  transition: background-color 0.2s ease;
+}
+
+.home-input-refresh-button:hover {
+  background-color: var(--colorSubtleBackgroundHover);
+  color: var(--colorBrandForeground1Hover);
+}
+
+.home-input-refresh-button:active {
+  background-color: var(--colorSubtleBackgroundPressed);
+  color: var(--colorBrandForeground1Pressed);
+}
+
+.home-input-refresh-button:focus-visible {
+  outline: 2px solid var(--colorStrokeFocus2);
+  outline-offset: 2px;
+}

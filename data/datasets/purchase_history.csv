@@ -1,0 +1,8 @@
+OrderID,Date,ItemsPurchased,TotalAmount,DiscountApplied,DateDelivered,ReturnFlag
+O5678,2023-03-15,"Summer Floral Dress, Sun Hat",150,10,2023-03-19,No
+O5721,2023-04-10,"Leather Ankle Boots",120,15,2023-04-13,No
+O5789,2023-05-05,Silk Scarf,80,0,2023-05-25,Yes
+O5832,2023-06-18,Casual Sneakers,90,5,2023-06-21,No
+O5890,2023-07-22,"Evening Gown, Clutch Bag",300,20,2023-08-05,No
+O5935,2023-08-30,Denim Jacket,110,0,2023-09-03,Yes
+O5970,2023-09-12,"Fitness Leggings, Sports Bra",130,25,2023-09-18,No
