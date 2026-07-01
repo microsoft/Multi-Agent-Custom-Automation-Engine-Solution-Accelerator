@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.44.1.10279",
-      "templateHash": "4324294973711463501"
+      "templateHash": "8571895995648723801"
     },
     "name": "Multi-Agent Custom Automation Engine - Vanilla Bicep",
     "description": "Vanilla Bicep orchestrator for the Multi-Agent Custom Automation Engine accelerator. This deployment intentionally excludes WAF features such as private networking, scale-out, redundancy, bastion, and VM resources while keeping router-compatible outputs."
@@ -67,9 +67,9 @@
         "azd": {
           "type": "location",
           "usageName": [
-            "OpenAI.GlobalStandard.gpt4.1, 150",
+            "OpenAI.GlobalStandard.gpt-5.4, 150",
             "OpenAI.GlobalStandard.o4-mini, 50",
-            "OpenAI.GlobalStandard.gpt4.1-mini, 50",
+            "OpenAI.GlobalStandard.gpt-5.4-mini, 50",
             "OpenAI.GlobalStandard.gpt-image-1.5, 5"
           ]
         },
@@ -78,14 +78,14 @@
     },
     "gptModelName": {
       "type": "string",
-      "defaultValue": "gpt-4.1-mini",
+      "defaultValue": "gpt-5.4-mini",
       "metadata": {
         "description": "Optional. Name of the default GPT model deployment."
       }
     },
     "gptModelVersion": {
       "type": "string",
-      "defaultValue": "2025-04-14",
+      "defaultValue": "2026-03-17",
       "metadata": {
         "description": "Optional. Version of the default GPT model deployment."
       }
@@ -111,14 +111,14 @@
     },
     "gpt4_1ModelName": {
       "type": "string",
-      "defaultValue": "gpt-4.1",
+      "defaultValue": "gpt-5.4",
       "metadata": {
         "description": "Optional. Name of the RAI GPT model deployment."
       }
     },
     "gpt4_1ModelVersion": {
       "type": "string",
-      "defaultValue": "2025-04-14",
+      "defaultValue": "2026-03-05",
       "metadata": {
         "description": "Optional. Version of the RAI GPT model deployment."
       }
@@ -211,9 +211,9 @@
     },
     "azureOpenaiAPIVersion": {
       "type": "string",
-      "defaultValue": "2024-12-01-preview",
+      "defaultValue": "2025-04-01-preview",
       "metadata": {
-        "description": "Optional. Azure OpenAI API version."
+        "description": "Optional. Azure OpenAI API version. Defaults to 2025-04-01-preview (supports GPT-5.x reasoning parameters such as reasoning_effort and verbosity)."
       }
     },
     "backendContainerRegistryHostname": {

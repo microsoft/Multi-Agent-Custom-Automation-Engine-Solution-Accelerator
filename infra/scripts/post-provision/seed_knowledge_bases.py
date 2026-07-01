@@ -71,8 +71,8 @@ KNOWLEDGE_BASES: dict = {
             "kind": "azureOpenAI",
             "azureOpenAIParameters": {
                 "resourceUri": AI_SERVICES_ENDPOINT,
-                "deploymentId": "gpt-4.1-mini",
-                "modelName": "gpt-4.1-mini",
+                "deploymentId": "gpt-5.4-mini",
+                "modelName": "gpt-5.4-mini",
             },
         },
         "sources": [
@@ -90,8 +90,8 @@ KNOWLEDGE_BASES: dict = {
             "kind": "azureOpenAI",
             "azureOpenAIParameters": {
                 "resourceUri": AI_SERVICES_ENDPOINT,
-                "deploymentId": "gpt-4.1-mini",
-                "modelName": "gpt-4.1-mini",
+                "deploymentId": "gpt-5.4-mini",
+                "modelName": "gpt-5.4-mini",
             },
         },
         "sources": [
@@ -110,8 +110,8 @@ KNOWLEDGE_BASES: dict = {
             "kind": "azureOpenAI",
             "azureOpenAIParameters": {
                 "resourceUri": AI_SERVICES_ENDPOINT,
-                "deploymentId": "gpt-4.1-mini",
-                "modelName": "gpt-4.1-mini",
+                "deploymentId": "gpt-5.4-mini",
+                "modelName": "gpt-5.4-mini",
             },
         },
         "sources": [
@@ -145,8 +145,8 @@ KNOWLEDGE_BASES: dict = {
     #         "kind": "azureOpenAI",
     #         "azureOpenAIParameters": {
     #             "resourceUri": AI_SERVICES_ENDPOINT,
-    #             "deploymentId": "gpt-4.1-mini",        # ← CHANGE: model deployment name
-    #             "modelName": "gpt-4.1-mini",           # ← CHANGE: model name
+    #             "deploymentId": "gpt-5.4-mini",        # ← CHANGE: model deployment name
+    #             "modelName": "gpt-5.4-mini",           # ← CHANGE: model name
     #         },
     #     },
     #     "sources": [
@@ -165,8 +165,8 @@ KNOWLEDGE_BASES: dict = {
             "kind": "azureOpenAI",
             "azureOpenAIParameters": {
                 "resourceUri": AI_SERVICES_ENDPOINT,
-                "deploymentId": "gpt-4.1-mini",
-                "modelName": "gpt-4.1-mini",
+                "deploymentId": "gpt-5.4-mini",
+                "modelName": "gpt-5.4-mini",
             },
         },
         "sources": [
@@ -184,8 +184,8 @@ KNOWLEDGE_BASES: dict = {
             "kind": "azureOpenAI",
             "azureOpenAIParameters": {
                 "resourceUri": AI_SERVICES_ENDPOINT,
-                "deploymentId": "gpt-4.1-mini",
-                "modelName": "gpt-4.1-mini",
+                "deploymentId": "gpt-5.4-mini",
+                "modelName": "gpt-5.4-mini",
             },
         },
         "sources": [
@@ -203,8 +203,8 @@ KNOWLEDGE_BASES: dict = {
             "kind": "azureOpenAI",
             "azureOpenAIParameters": {
                 "resourceUri": AI_SERVICES_ENDPOINT,
-                "deploymentId": "gpt-4.1-mini",
-                "modelName": "gpt-4.1-mini",
+                "deploymentId": "gpt-5.4-mini",
+                "modelName": "gpt-5.4-mini",
             },
         },
         "sources": [
@@ -223,8 +223,8 @@ KNOWLEDGE_BASES: dict = {
             "kind": "azureOpenAI",
             "azureOpenAIParameters": {
                 "resourceUri": AI_SERVICES_ENDPOINT,
-                "deploymentId": "gpt-4.1-mini",
-                "modelName": "gpt-4.1-mini",
+                "deploymentId": "gpt-5.4-mini",
+                "modelName": "gpt-5.4-mini",
             },
         },
         "sources": [
@@ -242,8 +242,8 @@ KNOWLEDGE_BASES: dict = {
             "kind": "azureOpenAI",
             "azureOpenAIParameters": {
                 "resourceUri": AI_SERVICES_ENDPOINT,
-                "deploymentId": "gpt-4.1-mini",
-                "modelName": "gpt-4.1-mini",
+                "deploymentId": "gpt-5.4-mini",
+                "modelName": "gpt-5.4-mini",
             },
         },
         "sources": [
@@ -261,8 +261,8 @@ KNOWLEDGE_BASES: dict = {
             "kind": "azureOpenAI",
             "azureOpenAIParameters": {
                 "resourceUri": AI_SERVICES_ENDPOINT,
-                "deploymentId": "gpt-4.1-mini",
-                "modelName": "gpt-4.1-mini",
+                "deploymentId": "gpt-5.4-mini",
+                "modelName": "gpt-5.4-mini",
             },
         },
         "sources": [

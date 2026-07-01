@@ -117,8 +117,8 @@ Add an entry to `infra/scripts/post-provision/seed_knowledge_bases.py` in the `K
             "kind": "azureOpenAI",
             "azureOpenAIParameters": {
                 "resourceUri": AI_SERVICES_ENDPOINT,
-                "deploymentId": "gpt-4.1-mini",
-                "modelName": "gpt-4.1-mini",
+                "deploymentId": "gpt-5.4-mini",
+                "modelName": "gpt-5.4-mini",
             },
         },
         "sources": [
@@ -146,12 +146,12 @@ Create `agent_teams/your_pack.json`. Key fields:
   "id": "1",
   "team_id": "00000000-0000-0000-0000-00000000xxxx",  // Stable UUID for idempotent uploads
   "name": "Your Team Name",
-  "deployment_name": "gpt-4.1-mini",                   // Default model for the team
+  "deployment_name": "gpt-5.4-mini",                   // Default model for the team
   "agents": [
     {
       "input_key": "research_agent",                   // Used for inter-agent handoff routing
       "name": "ResearchAgent",
-      "deployment_name": "gpt-4.1-mini",
+      "deployment_name": "gpt-5.4-mini",
       "system_message": "Your agent instructions...",
       "description": "What this agent does",
 

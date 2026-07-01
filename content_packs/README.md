@@ -67,7 +67,7 @@ perform, not around a template. Ask yourself:
   "team_id": "00000000-0000-0000-0000-000000000008",
   "name": "Your Team Name",
   "status": "visible",           // REQUIRED — team won't appear in UI without this
-  "deployment_name": "gpt-4.1-mini",
+  "deployment_name": "gpt-5.4-mini",
   ...
 }
 ```
@@ -160,8 +160,8 @@ dict. Place it before the `# ── Example Pack ──` comment block:
             "kind": "azureOpenAI",
             "azureOpenAIParameters": {
                 "resourceUri": AI_SERVICES_ENDPOINT,
-                "deploymentId": "gpt-4.1-mini",
-                "modelName": "gpt-4.1-mini",
+                "deploymentId": "gpt-5.4-mini",
+                "modelName": "gpt-5.4-mini",
             },
         },
         "sources": [

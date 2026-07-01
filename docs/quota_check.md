@@ -1,7 +1,7 @@
 ## Check Quota Availability Before Deployment
 
 Before deploying the accelerator, **ensure sufficient quota availability** for the required model.
-> **For Global Standard | GPT-4.1 - the capacity to at least 50k tokens for optimal performance.**
+> **For Global Standard | gpt-5.4 - the capacity to at least 50k tokens for optimal performance.**
 
 ### Login if you have not done so already
 ```
@@ -16,7 +16,7 @@ az login --use-device-code
 
 ### 📌 Default Models & Capacities:
 ```
-gpt4.1:50,o4-mini:50,gpt4.1-mini:50
+gpt-5.4:50,o4-mini:50,gpt-5.4-mini:50
 ```
 ### 📌 Default Regions:
 ```
@@ -42,7 +42,7 @@ australiaeast, eastus2, francecentral, japaneast, norwayeast, swedencentral, uks
    ```
 ✔️ Check specific model(s) in default regions:
   ```
-  ./quota_check_params.sh --models gpt4.1:50
+  ./quota_check_params.sh --models gpt-5.4:50
   ```
 ✔️ Check default models in specific region(s):
   ```
@@ -50,15 +50,15 @@ australiaeast, eastus2, francecentral, japaneast, norwayeast, swedencentral, uks
   ```
 ✔️ Passing Both models and regions:  
   ```
-  ./quota_check_params.sh --models gpt4.1:50 --regions eastus2,westus
+  ./quota_check_params.sh --models gpt-5.4:50 --regions eastus2,westus
   ```
 ✔️ All parameters combined:
   ```
- ./quota_check_params.sh --models gpt4.1:50 --regions eastus2,westus --verbose
+ ./quota_check_params.sh --models gpt-5.4:50 --regions eastus2,westus --verbose
   ```
 ✔️ Multiple models with single region:
   ```
- ./quota_check_params.sh --models gpt4.1:50,gpt4.1-mini:50 --regions eastus2 --verbose
+ ./quota_check_params.sh --models gpt-5.4:50,gpt-5.4-mini:50 --regions eastus2 --verbose
   ```
 
 ### **Sample Output**

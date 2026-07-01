@@ -35,9 +35,9 @@ param location string
   azd: {
     type: 'location'
     usageName: [
-      'OpenAI.GlobalStandard.gpt4.1, 150'
+      'OpenAI.GlobalStandard.gpt-5.4, 150'
       'OpenAI.GlobalStandard.o4-mini, 50'
-      'OpenAI.GlobalStandard.gpt4.1-mini, 50'
+      'OpenAI.GlobalStandard.gpt-5.4-mini, 50'
       'OpenAI.GlobalStandard.gpt-image-1.5, 5'
     ]
   }
@@ -46,10 +46,10 @@ param location string
 param azureAiServiceLocation string
 
 @description('Optional. Name of the default GPT model deployment.')
-param gptModelName string = 'gpt-4.1-mini'
+param gptModelName string = 'gpt-5.4-mini'
 
 @description('Optional. Version of the default GPT model deployment.')
-param gptModelVersion string = '2025-04-14'
+param gptModelVersion string = '2026-03-17'
 
 @allowed([
   'Standard'
@@ -63,10 +63,10 @@ param deploymentType string = 'GlobalStandard'
 param gptDeploymentCapacity int = 50
 
 @description('Optional. Name of the RAI GPT model deployment.')
-param gpt4_1ModelName string = 'gpt-4.1'
+param gpt4_1ModelName string = 'gpt-5.4'
 
 @description('Optional. Version of the RAI GPT model deployment.')
-param gpt4_1ModelVersion string = '2025-04-14'
+param gpt4_1ModelVersion string = '2026-03-05'
 
 @allowed([
   'Standard'
@@ -114,8 +114,8 @@ param gptImageModelDeploymentType string = 'GlobalStandard'
 @description('Optional. gpt-image-1.5 deployment capacity (RPM). Defaults to 5 to support concurrent marketing-image generation across multiple sessions.')
 param gptImageModelCapacity int = 5
 
-@description('Optional. Azure OpenAI API version.')
-param azureOpenaiAPIVersion string = '2024-12-01-preview'
+@description('Optional. Azure OpenAI API version. Defaults to 2025-04-01-preview (supports GPT-5.x reasoning parameters such as reasoning_effort and verbosity).')
+param azureOpenaiAPIVersion string = '2025-04-01-preview'
 
 @description('Optional. The Container Registry hostname where the docker images for the backend are located.')
 param backendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'

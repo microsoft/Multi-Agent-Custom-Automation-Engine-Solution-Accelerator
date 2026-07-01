@@ -148,8 +148,8 @@ jobs:
               solutionName=${{ env.SOLUTION_PREFIX }} \
               location="${{ env.AZURE_LOCATION }}" \
               deploymentType="GlobalStandard" \
-              gptModelName="gpt-4.1-mini" \
-              gptModelVersion="2025-04-14" \
+              gptModelName="gpt-5.4-mini" \
+              gptModelVersion="2026-03-17" \
               backendContainerImageTag="${IMAGE_TAG}" \
               frontendContainerImageTag="${IMAGE_TAG}" \
               azureAiServiceLocation='${{ env.AZURE_LOCATION }}' \

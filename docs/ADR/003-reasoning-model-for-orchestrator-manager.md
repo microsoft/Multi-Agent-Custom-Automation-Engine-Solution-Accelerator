@@ -8,6 +8,15 @@ Accepted
 
 2026-05-19
 
+> **Note (2026-06):** The participant-agent baseline referenced throughout this
+> ADR (`gpt-4.1` / `gpt-4.1-mini`) has since been migrated to the GPT-5.4
+> family (`gpt-5.4` / `gpt-5.4-mini`). The decision below — that the orchestrator
+> manager uses a dedicated reasoning model (`o4-mini`) independent of the team
+> model — still applies. GPT-5.4 is itself a reasoning model, so the gap
+> between manager and participants is now smaller, but `o4-mini` is retained
+> for the manager because it is specifically tuned for low-latency routing
+> decisions and structured JSON output.
+
 ## Context
 
 The Magentic orchestrator uses a `StandardMagenticManager` agent to make routing decisions: creating a plan, selecting the next speaker via a JSON progress ledger, and determining workflow completion. These decisions require:

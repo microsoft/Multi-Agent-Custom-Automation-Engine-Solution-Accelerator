@@ -573,6 +573,30 @@ class AgentTemplate:
                         self.agent_name, _sync_exc,
                     )
 
+            # Reasoning models (GPT-5.x, o-series) do not accept `temperature`
+            # — the Foundry endpoint returns 400 if it's provided. Suppress
+            # `OpenAIChatOptions(temperature=...)` for those deployments so
+            # legacy team configs (e.g. retail with temperature=0.2) still work.
+            _model_lc = (self.model_deployment_name or "").lower()
+            _is_reasoning_model = (
+                _model_lc.startswith("gpt-5")
+                or _model_lc.startswith("o1")
+                or _model_lc.startswith("o3")
+                or _model_lc.startswith("o4")
+                or _model_lc.startswith("codex-")
+            )
+            _default_options = (
+                OpenAIChatOptions(temperature=self.temperature)
+                if self.temperature is not None and not _is_reasoning_model
+                else None
+            )
+            if self.temperature is not None and _is_reasoning_model:
+                self.logger.info(
+                    "Agent '%s' configured with temperature=%s but model '%s' is a reasoning model; "
+                    "ignoring temperature (reasoning models only accept temperature=1.0).",
+                    self.agent_name, self.temperature, self.model_deployment_name,
+                )
+
             agent = Agent(
                 client=chat_client,
                 name=self.agent_name,
@@ -580,7 +604,7 @@ class AgentTemplate:
                 description=self.agent_description,
                 tools=all_tools if all_tools else None,
 
-                default_options=OpenAIChatOptions(temperature=self.temperature) if self.temperature is not None else None,
+                default_options=_default_options,
             )
             self._agent = await self._stack.enter_async_context(agent)
 

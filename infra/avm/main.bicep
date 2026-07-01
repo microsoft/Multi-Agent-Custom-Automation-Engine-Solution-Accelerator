@@ -57,9 +57,9 @@ param createdBy string = contains(deployer(), 'userPrincipalName')
   azd: {
     type: 'location'
     usageName: [
-      'OpenAI.GlobalStandard.gpt4.1, 150'
+      'OpenAI.GlobalStandard.gpt-5.4, 150'
       'OpenAI.GlobalStandard.o4-mini, 50'
-      'OpenAI.GlobalStandard.gpt4.1-mini, 50'
+      'OpenAI.GlobalStandard.gpt-5.4-mini, 50'
       'OpenAI.GlobalStandard.gpt-image-1.5, 5'
     ]
   }
@@ -69,17 +69,17 @@ param azureAiServiceLocation string
 
 @minLength(1)
 @description('Optional. Name of the GPT model to deploy.')
-param gptModelName string = 'gpt-4.1-mini'
+param gptModelName string = 'gpt-5.4-mini'
 
-@description('Optional. Version of the GPT model to deploy. Defaults to 2025-04-14.')
-param gptModelVersion string = '2025-04-14'
+@description('Optional. Version of the GPT model to deploy. Defaults to 2026-03-17.')
+param gptModelVersion string = '2026-03-17'
 
 @minLength(1)
 @description('Optional. Name of the GPT RAI model to deploy.')
-param gpt4_1ModelName string = 'gpt-4.1'
+param gpt4_1ModelName string = 'gpt-5.4'
 
-@description('Optional. Version of the GPT RAI model to deploy. Defaults to 2025-04-14.')
-param gpt4_1ModelVersion string = '2025-04-14'
+@description('Optional. Version of the GPT RAI model to deploy. Defaults to 2026-03-05.')
+param gpt4_1ModelVersion string = '2026-03-05'
 
 @minLength(1)
 @description('Optional. Name of the GPT reasoning model to deploy.')
@@ -139,8 +139,8 @@ param gptReasoningModelCapacity int = 50
 @description('Optional. gpt-image-1.5 deployment capacity (RPM). Defaults to 5 to support concurrent marketing-image generation across multiple sessions.')
 param gptImageModelCapacity int = 5
 
-@description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2024-12-01-preview.')
-param azureOpenaiAPIVersion string = '2024-12-01-preview'
+@description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2025-04-01-preview (supports GPT-5.x reasoning parameters such as reasoning_effort and verbosity).')
+param azureOpenaiAPIVersion string = '2025-04-01-preview'
 
 // ============================================================================
 // Parameters — Compute
@@ -1438,7 +1438,7 @@ output AZURE_OPENAI_ENDPOINT string = aiFoundryOpenAIEndpoint
 @description('The default GPT chat-completion deployment name used by the backend.')
 output AZURE_OPENAI_DEPLOYMENT_NAME string = gptModelName
 
-@description('The deployment name of the GPT-4.1 model used for Responsible AI / higher-quality completions.')
+@description('The deployment name of the GPT-5.4 model used for Responsible AI / higher-quality completions.')
 output AZURE_OPENAI_RAI_DEPLOYMENT_NAME string = gpt4_1ModelName
 
 @description('The Azure OpenAI REST API version used by the backend SDK clients.')

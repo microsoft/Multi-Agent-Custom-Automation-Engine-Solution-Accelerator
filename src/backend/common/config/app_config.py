@@ -52,10 +52,10 @@ class AppConfig:
         )
 
         self.AZURE_OPENAI_RAI_DEPLOYMENT_NAME = self._get_required(
-            "AZURE_OPENAI_RAI_DEPLOYMENT_NAME", "gpt-4.1"
+            "AZURE_OPENAI_RAI_DEPLOYMENT_NAME", "gpt-5.4"
         )
         self.AZURE_OPENAI_API_VERSION = self._get_required(
-            "AZURE_OPENAI_API_VERSION", "2024-11-20"
+            "AZURE_OPENAI_API_VERSION", "2025-04-01-preview"
         )
         self.AZURE_OPENAI_ENDPOINT = self._get_required("AZURE_OPENAI_ENDPOINT")
         self.ORCHESTRATOR_MODEL_NAME = self._get_optional("ORCHESTRATOR_MODEL_NAME", "o4-mini")

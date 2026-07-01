@@ -327,10 +327,13 @@ class TeamService:
         models = set()
         text_lower = text.lower()
         model_patterns = [
+            r"gpt-5(?:\.\d+)?(?:-(?:mini|nano|chat|pro|codex|codex-max|codex-mini))?",
+            r"gpt-4\.1(?:-(?:mini|nano))?",
             r"gpt-4o(?:-\w+)?",
             r"gpt-4(?:-\w+)?",
             r"gpt-35-turbo(?:-\w+)?",
             r"gpt-3\.5-turbo(?:-\w+)?",
+            r"o[1-9](?:-\w+)?",
             r"claude-3(?:-\w+)?",
             r"claude-2(?:-\w+)?",
             r"gemini-pro(?:-\w+)?",
