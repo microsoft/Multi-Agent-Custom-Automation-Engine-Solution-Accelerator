@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.44.1.10279",
-      "templateHash": "13565483192814579761"
+      "templateHash": "10743773670737934540"
     },
     "name": "Multi-Agent Custom Automation Engine",
     "description": "This module contains the resources required to deploy the [Multi-Agent Custom Automation Engine solution accelerator](https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator) for both Sandbox environments and WAF aligned environments.\n\n> **Note:** This module is not intended for broad, generic use, as it was designed by the Commercial Solution Areas CTO team, as a Microsoft Solution Accelerator. Feature requests and bug fix requests are welcome if they support the needs of this organization but may not be incorporated if they aim to make this module more generic than what it needs to be for its primary use case. This module will likely be updated to leverage AVM resource modules in the future. This may result in breaking changes in upcoming versions when these features are implemented.\n"
@@ -64,8 +64,8 @@
         "azd": {
           "type": "location",
           "usageName": [
-            "OpenAI.GlobalStandard.gpt-5, 150",
-            "OpenAI.GlobalStandard.gpt-5-mini, 100"
+            "OpenAI.GlobalStandard.gpt-5.4, 150",
+            "OpenAI.GlobalStandard.gpt-5.4-mini, 100"
           ]
         },
         "description": "Required. Location for all AI service resources. This should be one of the supported Azure AI Service locations."
@@ -73,17 +73,17 @@
     },
     "gptModelName": {
       "type": "string",
-      "defaultValue": "gpt-5-mini",
+      "defaultValue": "gpt-5.4-mini",
       "minLength": 1,
       "metadata": {
-        "description": "Optional. Name of the underlying GPT model to deploy. Defaults to gpt-5-mini (2025-08-07 series)."
+        "description": "Optional. Name of the underlying GPT model to deploy. Defaults to gpt-5.4-mini (2026-03-17 series)."
       }
     },
     "gptModelVersion": {
       "type": "string",
-      "defaultValue": "2025-08-07",
+      "defaultValue": "2026-03-17",
       "metadata": {
-        "description": "Optional. Version of the GPT model to deploy. Defaults to 2025-08-07."
+        "description": "Optional. Version of the GPT model to deploy. Defaults to 2026-03-17 (gpt-5.4-mini release)."
       }
     },
     "gptDeploymentName": {
@@ -95,17 +95,17 @@
     },
     "gpt4_1ModelName": {
       "type": "string",
-      "defaultValue": "gpt-5",
+      "defaultValue": "gpt-5.4",
       "minLength": 1,
       "metadata": {
-        "description": "Optional. Name of the underlying larger GPT model to deploy. Defaults to gpt-5 (2025-08-07 series)."
+        "description": "Optional. Name of the underlying larger GPT model to deploy. Defaults to gpt-5.4 (2026-03-05 series)."
       }
     },
     "gpt4_1ModelVersion": {
       "type": "string",
-      "defaultValue": "2025-08-07",
+      "defaultValue": "2026-03-05",
       "metadata": {
-        "description": "Optional. Version of the larger GPT model to deploy. Defaults to 2025-08-07."
+        "description": "Optional. Version of the larger GPT model to deploy. Defaults to 2026-03-05 (gpt-5.4 release)."
       }
     },
     "gpt4_1DeploymentName": {
@@ -117,17 +117,17 @@
     },
     "gptReasoningModelName": {
       "type": "string",
-      "defaultValue": "gpt-5-mini",
+      "defaultValue": "gpt-5.4-mini",
       "minLength": 1,
       "metadata": {
-        "description": "Optional. Name of the underlying GPT Reasoning model to deploy. Defaults to gpt-5-mini (reasoning-capable)."
+        "description": "Optional. Name of the underlying GPT Reasoning model to deploy. Defaults to gpt-5.4-mini (reasoning-capable, 2026-03-17 series)."
       }
     },
     "gptReasoningModelVersion": {
       "type": "string",
-      "defaultValue": "2025-08-07",
+      "defaultValue": "2026-03-17",
       "metadata": {
-        "description": "Optional. Version of the GPT Reasoning model to deploy. Defaults to 2025-08-07."
+        "description": "Optional. Version of the GPT Reasoning model to deploy. Defaults to 2026-03-17 (gpt-5.4-mini release)."
       }
     },
     "gptReasoningDeploymentName": {

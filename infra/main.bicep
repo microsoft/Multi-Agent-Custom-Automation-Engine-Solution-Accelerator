@@ -31,14 +31,14 @@ param location string
 var deployerInfo = deployer()
 var deployingUserPrincipalId = deployerInfo.objectId
 
-// Restricting deployment to only supported Azure OpenAI regions validated with GPT-5 models
+// Restricting deployment to only supported Azure OpenAI regions validated with GPT-5.4 models
 @allowed(['australiaeast', 'eastus2', 'francecentral', 'japaneast', 'norwayeast', 'swedencentral', 'uksouth', 'westus'])
 @metadata({
   azd: {
     type: 'location'
     usageName: [
-      'OpenAI.GlobalStandard.gpt-5, 150'
-      'OpenAI.GlobalStandard.gpt-5-mini, 100'
+      'OpenAI.GlobalStandard.gpt-5.4, 150'
+      'OpenAI.GlobalStandard.gpt-5.4-mini, 100'
     ]
   }
 })
@@ -46,31 +46,31 @@ var deployingUserPrincipalId = deployerInfo.objectId
 param azureAiServiceLocation string
 
 @minLength(1)
-@description('Optional. Name of the underlying GPT model to deploy. Defaults to gpt-5-mini (2025-08-07 series).')
-param gptModelName string = 'gpt-5-mini'
+@description('Optional. Name of the underlying GPT model to deploy. Defaults to gpt-5.4-mini (2026-03-17 series).')
+param gptModelName string = 'gpt-5.4-mini'
 
-@description('Optional. Version of the GPT model to deploy. Defaults to 2025-08-07.')
-param gptModelVersion string = '2025-08-07'
+@description('Optional. Version of the GPT model to deploy. Defaults to 2026-03-17 (gpt-5.4-mini release).')
+param gptModelVersion string = '2026-03-17'
 
 @description('Optional. Deployment (alias) name used in Azure OpenAI for the main GPT model. This is the value the application uses as `deployment_name` (including in data/agent_teams/*.json). Defaults to gptModelName.')
 param gptDeploymentName string = gptModelName
 
 @minLength(1)
-@description('Optional. Name of the underlying larger GPT model to deploy. Defaults to gpt-5 (2025-08-07 series).')
-param gpt4_1ModelName string = 'gpt-5'
+@description('Optional. Name of the underlying larger GPT model to deploy. Defaults to gpt-5.4 (2026-03-05 series).')
+param gpt4_1ModelName string = 'gpt-5.4'
 
-@description('Optional. Version of the larger GPT model to deploy. Defaults to 2025-08-07.')
-param gpt4_1ModelVersion string = '2025-08-07'
+@description('Optional. Version of the larger GPT model to deploy. Defaults to 2026-03-05 (gpt-5.4 release).')
+param gpt4_1ModelVersion string = '2026-03-05'
 
 @description('Optional. Deployment (alias) name used in Azure OpenAI for the larger GPT model. Defaults to gpt4_1ModelName.')
 param gpt4_1DeploymentName string = gpt4_1ModelName
 
 @minLength(1)
-@description('Optional. Name of the underlying GPT Reasoning model to deploy. Defaults to gpt-5-mini (reasoning-capable).')
-param gptReasoningModelName string = 'gpt-5-mini'
+@description('Optional. Name of the underlying GPT Reasoning model to deploy. Defaults to gpt-5.4-mini (reasoning-capable, 2026-03-17 series).')
+param gptReasoningModelName string = 'gpt-5.4-mini'
 
-@description('Optional. Version of the GPT Reasoning model to deploy. Defaults to 2025-08-07.')
-param gptReasoningModelVersion string = '2025-08-07'
+@description('Optional. Version of the GPT Reasoning model to deploy. Defaults to 2026-03-17 (gpt-5.4-mini release).')
+param gptReasoningModelVersion string = '2026-03-17'
 
 @description('Optional. Deployment (alias) name used in Azure OpenAI for the reasoning model. Must be unique from gptDeploymentName. Defaults to "{gptReasoningModelName}-reasoning" when it would otherwise collide with gptDeploymentName, otherwise gptReasoningModelName.')
 param gptReasoningDeploymentName string = gptReasoningModelName == gptModelName

@@ -16,7 +16,7 @@ az login --use-device-code
 
 ### 📌 Default Models & Capacities:
 ```
-gpt-5:150,gpt-5-mini:100
+gpt-5.4:150,gpt-5.4-mini:100
 ```
 ### 📌 Default Regions:
 ```

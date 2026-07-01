@@ -68,10 +68,10 @@ Ensure you have access to an [Azure subscription](https://azure.microsoft.com/fr
 📖 **Follow:** [Quota Check Instructions](./quota_check.md) to ensure sufficient capacity.
 
 **Default Quota Configuration:**
-- **gpt-5 (150k tokens)** — backs the larger GPT model deployment (alias `gpt-5`).
-- **gpt-5-mini (100k tokens combined)** — 50k for the main GPT deployment (alias `gpt-5-mini`) plus 50k for the reasoning deployment (alias `gpt-5-mini-reasoning`).
+- **gpt-5.4 (150k tokens)** — backs the larger GPT model deployment (alias `gpt-5.4`).
+- **gpt-5.4-mini (100k tokens combined)** — 50k for the main GPT deployment (alias `gpt-5.4-mini`) plus 50k for the reasoning deployment (alias `gpt-5.4-mini-reasoning`).
 
-> **Note:** Both underlying models (`gpt-5` and `gpt-5-mini`) belong to the `2025-08-07` GA series. The reasoning deployment intentionally uses the same underlying model as the main deployment but under a distinct alias so applications can route separately to reasoning-heavy workloads.
+> **Note:** The underlying models are `gpt-5.4` (2026-03-05 series) and `gpt-5.4-mini` (2026-03-17 series). Both are reasoning-capable GPT-5.4 GA models. The reasoning deployment intentionally uses the same underlying model as the main deployment but under a distinct alias so applications can route separately to reasoning-heavy workloads.
 
 > **Note:** When you run `azd up`, the deployment will automatically show you regions with available quota, so this pre-check is optional but helpful for planning purposes. You can customize these settings later in [Step 3.3: Advanced Configuration](#33-advanced-configuration-optional).
 
