@@ -34,8 +34,9 @@ WORKDIR /app
 COPY pyproject.toml requirements.txt* uv.lock* ./
 
 # Install Python dependencies using UV
-RUN --mount=type=cache,target=/root/.cache/uv \
-    if [ -f "requirements.txt" ]; then \
+# NOTE: Plain RUN (no --mount=type=cache) is required so this builds on classic builders
+# such as `az acr build` (Azure Container Registry Tasks) which do not enable BuildKit.
+RUN if [ -f "requirements.txt" ]; then \
       uv pip install --system -r requirements.txt && uv pip install --system "uvicorn[standard]";  \
     else \
       uv pip install --system pyproject.toml && uv pip install --system "uvicorn[standard]"; \

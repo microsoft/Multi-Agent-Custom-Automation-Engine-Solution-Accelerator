@@ -20,6 +20,9 @@
     "gptModelVersion": {
       "value": "${AZURE_ENV_GPT_MODEL_VERSION}"
     },
+    "gptDeploymentName": {
+      "value": "${AZURE_ENV_GPT_DEPLOYMENT_NAME}"
+    },
     "gptDeploymentCapacity": {
       "value": "${AZURE_ENV_GPT_MODEL_CAPACITY}"
     },
@@ -32,6 +35,9 @@
     "gpt4_1ModelVersion": {
       "value": "${AZURE_ENV_MODEL_4_1_VERSION}"
     },
+    "gpt4_1DeploymentName": {
+      "value": "${AZURE_ENV_MODEL_4_1_DEPLOYMENT_NAME}"
+    },
     "gpt4_1ModelCapacity": {
       "value": "${AZURE_ENV_MODEL_4_1_CAPACITY}"
     },
@@ -43,6 +49,9 @@
     },
     "gptReasoningModelVersion": {
       "value": "${AZURE_ENV_REASONING_MODEL_VERSION}"
+    },
+    "gptReasoningDeploymentName": {
+      "value": "${AZURE_ENV_REASONING_DEPLOYMENT_NAME}"
     },
     "gptReasoningModelCapacity": {
       "value": "${AZURE_ENV_REASONING_MODEL_CAPACITY}"
