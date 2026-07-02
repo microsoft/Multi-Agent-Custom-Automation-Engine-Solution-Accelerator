@@ -29,7 +29,7 @@ AGENT_INSTRUCTIONS = (
     "- Provide comprehensive answers combining multiple sources when relevant\n"
     "- Ask for clarification only if the task is genuinely ambiguous"
 )
-MODEL_DEPLOYMENT_NAME = "gpt-4.1"
+MODEL_DEPLOYMENT_NAME = "gpt-5.4"
 async def test_agent():
     """Simple chat test harness for the agent."""
     print("🤖 Starting agent test harness...")

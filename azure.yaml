@@ -1,10 +1,37 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
 name: multi-agent-custom-automation-engine-solution-accelerator
-metadata:
-  template: multi-agent-custom-automation-engine-solution-accelerator@1.0
+# metadata:
+#   template: multi-agent-custom-automation-engine-solution-accelerator@1.0
 requiredVersions:
   azd: '>= 1.18.0 != 1.23.9'
 hooks:
+  postprovision:
+    windows:
+      run: |
+        # Build the backend, frontend and MCP images, push them to the ACR
+        # provisioned by this deployment and update the Container Apps /
+        # Web App to use the freshly built images.
+        #
+        # Set AZURE_ENV_SKIP_IMAGE_BUILD=true to skip this step.
+        # Set AZURE_ENV_BUILD_MODE=local to build with local Docker instead
+        # of the default remote 'az acr build'.
+        & "$PWD/infra/scripts/Build-And-Push-Images.ps1"
+      shell: pwsh
+      interactive: true
+      continueOnError: false
+    posix:
+      run: |
+        # Build the backend, frontend and MCP images, push them to the ACR
+        # provisioned by this deployment and update the Container Apps /
+        # Web App to use the freshly built images.
+        #
+        # Set AZURE_ENV_SKIP_IMAGE_BUILD=true to skip this step.
+        # Set AZURE_ENV_BUILD_MODE=local to build with local Docker instead
+        # of the default remote 'az acr build'.
+        bash "$PWD/infra/scripts/build_and_push_images.sh"
+      shell: sh
+      interactive: true
+      continueOnError: false
   postdeploy:
     windows:
       run: |

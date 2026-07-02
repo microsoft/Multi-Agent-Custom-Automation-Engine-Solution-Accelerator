@@ -31,15 +31,14 @@ param location string
 var deployerInfo = deployer()
 var deployingUserPrincipalId = deployerInfo.objectId
 
-// Restricting deployment to only supported Azure OpenAI regions validated with GPT-4o model
+// Restricting deployment to only supported Azure OpenAI regions validated with GPT-5.4 models
 @allowed(['australiaeast', 'eastus2', 'francecentral', 'japaneast', 'norwayeast', 'swedencentral', 'uksouth', 'westus'])
 @metadata({
   azd: {
     type: 'location'
     usageName: [
-      'OpenAI.GlobalStandard.gpt4.1, 150'
-      'OpenAI.GlobalStandard.o4-mini, 50'
-      'OpenAI.GlobalStandard.gpt4.1-mini, 50'
+      'OpenAI.GlobalStandard.gpt-5.4, 150'
+      'OpenAI.GlobalStandard.gpt-5.4-mini, 100'
     ]
   }
 })
@@ -47,25 +46,36 @@ var deployingUserPrincipalId = deployerInfo.objectId
 param azureAiServiceLocation string
 
 @minLength(1)
-@description('Optional. Name of the GPT model to deploy:')
-param gptModelName string = 'gpt-4.1-mini'
+@description('Optional. Name of the underlying GPT model to deploy. Defaults to gpt-5.4-mini (2026-03-17 series).')
+param gptModelName string = 'gpt-5.4-mini'
 
-@description('Optional. Version of the GPT model to deploy. Defaults to 2025-04-14.')
-param gptModelVersion string = '2025-04-14'
+@description('Optional. Version of the GPT model to deploy. Defaults to 2026-03-17 (gpt-5.4-mini release).')
+param gptModelVersion string = '2026-03-17'
 
-@minLength(1)
-@description('Optional. Name of the GPT model to deploy:')
-param gpt4_1ModelName string = 'gpt-4.1'
-
-@description('Optional. Version of the GPT model to deploy. Defaults to 2025-04-14.')
-param gpt4_1ModelVersion string = '2025-04-14'
+@description('Optional. Deployment (alias) name used in Azure OpenAI for the main GPT model. This is the value the application uses as `deployment_name` (including in data/agent_teams/*.json). Defaults to gptModelName.')
+param gptDeploymentName string = gptModelName
 
 @minLength(1)
-@description('Optional. Name of the GPT Reasoning model to deploy:')
-param gptReasoningModelName string = 'o4-mini'
+@description('Optional. Name of the underlying larger GPT model to deploy. Defaults to gpt-5.4 (2026-03-05 series).')
+param gpt4_1ModelName string = 'gpt-5.4'
 
-@description('Optional. Version of the GPT Reasoning model to deploy. Defaults to 2025-04-16.')
-param gptReasoningModelVersion string = '2025-04-16'
+@description('Optional. Version of the larger GPT model to deploy. Defaults to 2026-03-05 (gpt-5.4 release).')
+param gpt4_1ModelVersion string = '2026-03-05'
+
+@description('Optional. Deployment (alias) name used in Azure OpenAI for the larger GPT model. Defaults to gpt4_1ModelName.')
+param gpt4_1DeploymentName string = gpt4_1ModelName
+
+@minLength(1)
+@description('Optional. Name of the underlying GPT Reasoning model to deploy. Defaults to gpt-5.4-mini (reasoning-capable, 2026-03-17 series).')
+param gptReasoningModelName string = 'gpt-5.4-mini'
+
+@description('Optional. Version of the GPT Reasoning model to deploy. Defaults to 2026-03-17 (gpt-5.4-mini release).')
+param gptReasoningModelVersion string = '2026-03-17'
+
+@description('Optional. Deployment (alias) name used in Azure OpenAI for the reasoning model. Must be unique from gptDeploymentName. Defaults to "{gptReasoningModelName}-reasoning" when it would otherwise collide with gptDeploymentName, otherwise gptReasoningModelName.')
+param gptReasoningDeploymentName string = gptReasoningModelName == gptModelName
+  ? '${gptReasoningModelName}-reasoning'
+  : gptReasoningModelName
 
 @description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2024-12-01-preview.')
 param azureOpenaiAPIVersion string = '2024-12-01-preview'
@@ -769,6 +779,7 @@ var aiFoundryAiProjectResourceName = useExistingAiFoundryAiProject
   : 'proj-${solutionSuffix}' // AI Project resource id: /subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.CognitiveServices/accounts/<ai-services-name>/projects/<project-name>
 var aiFoundryAiServicesModelDeployment = {
   format: 'OpenAI'
+  deploymentName: gptDeploymentName
   name: gptModelName
   version: gptModelVersion
   sku: {
@@ -779,6 +790,7 @@ var aiFoundryAiServicesModelDeployment = {
 }
 var aiFoundryAiServices4_1ModelDeployment = {
   format: 'OpenAI'
+  deploymentName: gpt4_1DeploymentName
   name: gpt4_1ModelName
   version: gpt4_1ModelVersion
   sku: {
@@ -789,6 +801,7 @@ var aiFoundryAiServices4_1ModelDeployment = {
 }
 var aiFoundryAiServicesReasoningModelDeployment = {
   format: 'OpenAI'
+  deploymentName: gptReasoningDeploymentName
   name: gptReasoningModelName
   version: gptReasoningModelVersion
   sku: {
@@ -811,7 +824,7 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
     name: existingAiFoundryAiServices.name
     deployments: [
       {
-        name: aiFoundryAiServicesModelDeployment.name
+        name: aiFoundryAiServicesModelDeployment.deploymentName
         model: {
           format: aiFoundryAiServicesModelDeployment.format
           name: aiFoundryAiServicesModelDeployment.name
@@ -824,7 +837,7 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
         }
       }
       {
-        name: aiFoundryAiServices4_1ModelDeployment.name
+        name: aiFoundryAiServices4_1ModelDeployment.deploymentName
         model: {
           format: aiFoundryAiServices4_1ModelDeployment.format
           name: aiFoundryAiServices4_1ModelDeployment.name
@@ -837,7 +850,7 @@ module existingAiFoundryAiServicesDeployments 'modules/ai-services-deployments.b
         }
       }
       {
-        name: aiFoundryAiServicesReasoningModelDeployment.name
+        name: aiFoundryAiServicesReasoningModelDeployment.deploymentName
         model: {
           format: aiFoundryAiServicesReasoningModelDeployment.format
           name: aiFoundryAiServicesReasoningModelDeployment.name
@@ -886,7 +899,7 @@ module aiFoundryAiServices 'br:mcr.microsoft.com/bicep/avm/res/cognitive-service
     }
     deployments: [
       {
-        name: aiFoundryAiServicesModelDeployment.name
+        name: aiFoundryAiServicesModelDeployment.deploymentName
         model: {
           format: aiFoundryAiServicesModelDeployment.format
           name: aiFoundryAiServicesModelDeployment.name
@@ -899,7 +912,7 @@ module aiFoundryAiServices 'br:mcr.microsoft.com/bicep/avm/res/cognitive-service
         }
       }
       {
-        name: aiFoundryAiServices4_1ModelDeployment.name
+        name: aiFoundryAiServices4_1ModelDeployment.deploymentName
         model: {
           format: aiFoundryAiServices4_1ModelDeployment.format
           name: aiFoundryAiServices4_1ModelDeployment.name
@@ -912,7 +925,7 @@ module aiFoundryAiServices 'br:mcr.microsoft.com/bicep/avm/res/cognitive-service
         }
       }
       {
-        name: aiFoundryAiServicesReasoningModelDeployment.name
+        name: aiFoundryAiServicesReasoningModelDeployment.deploymentName
         model: {
           format: aiFoundryAiServicesReasoningModelDeployment.format
           name: aiFoundryAiServicesReasoningModelDeployment.name
@@ -1307,11 +1320,11 @@ module containerApp 'br/public:avm/res/app/container-app:0.22.0' = {
           }
           {
             name: 'AZURE_OPENAI_DEPLOYMENT_NAME'
-            value: aiFoundryAiServicesModelDeployment.name
+            value: aiFoundryAiServicesModelDeployment.deploymentName
           }
           {
             name: 'AZURE_OPENAI_RAI_DEPLOYMENT_NAME'
-            value: aiFoundryAiServices4_1ModelDeployment.name
+            value: aiFoundryAiServices4_1ModelDeployment.deploymentName
           }
           {
             name: 'AZURE_OPENAI_API_VERSION'
@@ -1347,7 +1360,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.22.0' = {
           // }
           {
             name: 'AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME'
-            value: aiFoundryAiServicesModelDeployment.name
+            value: aiFoundryAiServicesModelDeployment.deploymentName
           }
           {
             name: 'APP_ENV'
@@ -1375,7 +1388,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.22.0' = {
           }
           {
             name: 'REASONING_MODEL_NAME'
-            value: aiFoundryAiServicesReasoningModelDeployment.name
+            value: aiFoundryAiServicesReasoningModelDeployment.deploymentName
           }
           {
             name: 'MCP_SERVER_ENDPOINT'
@@ -1399,7 +1412,7 @@ module containerApp 'br/public:avm/res/app/container-app:0.22.0' = {
           }
           {
             name: 'SUPPORTED_MODELS'
-            value: '["o3","o4-mini","gpt-4.1","gpt-4.1-mini"]'
+            value: '["${aiFoundryAiServicesModelDeployment.deploymentName}","${aiFoundryAiServices4_1ModelDeployment.deploymentName}","${aiFoundryAiServicesReasoningModelDeployment.deploymentName}"]'
           }
           {
             name: 'AZURE_STORAGE_BLOB_URL'
@@ -1870,17 +1883,17 @@ output COSMOSDB_DATABASE string = cosmosDbDatabaseName
 output COSMOSDB_CONTAINER string = cosmosDbDatabaseMemoryContainerName
 output AZURE_OPENAI_ENDPOINT string = 'https://${aiFoundryAiServicesResourceName}.openai.azure.com/'
 output AZURE_OPENAI_MODEL_NAME string = aiFoundryAiServicesModelDeployment.name
-output AZURE_OPENAI_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDeployment.name
-output AZURE_OPENAI_RAI_DEPLOYMENT_NAME string = aiFoundryAiServices4_1ModelDeployment.name
+output AZURE_OPENAI_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDeployment.deploymentName
+output AZURE_OPENAI_RAI_DEPLOYMENT_NAME string = aiFoundryAiServices4_1ModelDeployment.deploymentName
 output AZURE_OPENAI_API_VERSION string = azureOpenaiAPIVersion
 // output APPLICATIONINSIGHTS_INSTRUMENTATION_KEY string = applicationInsights.outputs.instrumentationKey
 // output AZURE_AI_PROJECT_ENDPOINT string = aiFoundryAiServices.outputs.aiProjectInfo.apiEndpoint
 output AZURE_AI_SUBSCRIPTION_ID string = subscription().subscriptionId
 output AZURE_AI_RESOURCE_GROUP string = resourceGroup().name
 output AZURE_AI_PROJECT_NAME string = aiFoundryAiProjectName
-output AZURE_AI_MODEL_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDeployment.name
+output AZURE_AI_MODEL_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDeployment.deploymentName
 // output APPLICATIONINSIGHTS_CONNECTION_STRING string = applicationInsights.outputs.connectionString
-output AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDeployment.name
+output AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME string = aiFoundryAiServicesModelDeployment.deploymentName
 // output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiProjectEndpoint
 output APP_ENV string = 'Prod'
 output AI_FOUNDRY_RESOURCE_ID string = !useExistingAiFoundryAiProject
@@ -1892,10 +1905,10 @@ output AZURE_CLIENT_ID string = userAssignedIdentity!.outputs.clientId
 output AZURE_TENANT_ID string = tenant().tenantId
 output AZURE_AI_SEARCH_CONNECTION_NAME string = aiSearchConnectionName
 output AZURE_COGNITIVE_SERVICES string = 'https://cognitiveservices.azure.com/.default'
-output REASONING_MODEL_NAME string = aiFoundryAiServicesReasoningModelDeployment.name
+output REASONING_MODEL_NAME string = aiFoundryAiServicesReasoningModelDeployment.deploymentName
 output MCP_SERVER_NAME string = 'MacaeMcpServer'
 output MCP_SERVER_DESCRIPTION string = 'MCP server with greeting, HR, and planning tools'
-output SUPPORTED_MODELS string = '["o3","o4-mini","gpt-4.1","gpt-4.1-mini"]'
+output SUPPORTED_MODELS string = '["${aiFoundryAiServicesModelDeployment.deploymentName}","${aiFoundryAiServices4_1ModelDeployment.deploymentName}","${aiFoundryAiServicesReasoningModelDeployment.deploymentName}"]'
 output BACKEND_URL string = 'https://${containerApp.outputs.fqdn}'
 output AZURE_AI_PROJECT_ENDPOINT string = aiFoundryAiProjectEndpoint
 output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiProjectEndpoint

@@ -56,7 +56,7 @@ class TestFoundryAgentIntegration:
             "- Provide comprehensive answers combining multiple sources when relevant\n"
             "- Ask for clarification only if the task is genuinely ambiguous"
         )
-        model_deployment_name = "gpt-4.1"
+        model_deployment_name = "gpt-5.4"
 
         agent = FoundryAgentTemplate(
             agent_name=agent_name,
@@ -216,7 +216,7 @@ class TestFoundryAgentIntegration:
     @pytest.mark.asyncio
     async def test_agent_handles_missing_configs_gracefully(self):
         """Test that agent handles missing configurations without crashing."""
-        model_deployment_name = "gpt-4.1"
+        model_deployment_name = "gpt-5.4"
 
         agent = FoundryAgentTemplate(
             agent_name="TestAgent",
