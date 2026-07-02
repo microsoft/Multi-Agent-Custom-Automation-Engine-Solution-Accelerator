@@ -1,0 +1,10 @@
+[tool.pylint.main]
+init-hook = "import sys; sys.path.insert(0, '.')"
+
+[tool.pylint."messages control"]
+disable = [
+    "import-error",
+    "no-name-in-module",
+    "logging-fstring-interpolation",
+    "invalid-character-zero-width-space",
+]

@@ -16,7 +16,7 @@ A FastMCP-based Model Context Protocol (MCP) server for the Multi-Agent Custom A
 
 ## Architecture
 
-```
+```text
 src/backend/v4/mcp_server/
 ├── core/                   # Core factory and base classes
 │   ├── __init__.py
@@ -97,47 +97,45 @@ src/backend/v4/mcp_server/
    # Default STDIO transport (for local MCP clients)
    python mcp_server.py
 
-   # HTTP transport (for web-based clients)
-   python mcp_server.py --transport http --port 9000
+   # HTTP transport with per-domain routing (recommended for local development)
+   python mcp_server.py -t streamable-http --port 9000 --no-auth
 
-   # Using FastMCP CLI (recommended)
-   fastmcp run mcp_server.py -t streamable-http --port 9000 -l DEBUG
+   # HTTP transport bound to all interfaces (for Docker/remote access)
+   python mcp_server.py -t streamable-http --host 0.0.0.0 --port 9000 --no-auth
 
-   # Debug mode with authentication disabled
-   python mcp_server.py --transport http --debug --no-auth
+   # Debug mode
+   python mcp_server.py -t streamable-http --port 9000 --debug --no-auth
    ```
 
 ### Transport Options
 
-**1. STDIO Transport (default)**
+#### 1. STDIO Transport (default)
 
 - 🔧 Perfect for: Local tools, command-line integrations, Claude Desktop
 - 🚀 Usage: `python mcp_server.py` or `python mcp_server.py --transport stdio`
 
-**2. HTTP (Streamable) Transport**
+#### 2. HTTP (Streamable) Transport
 
 - 🌐 Perfect for: Web-based deployments, microservices, remote access
 - 🚀 Usage: `python mcp_server.py --transport http --port 9000`
 - 🌐 URL: `http://127.0.0.1:9000/mcp/`
 
-**3. SSE Transport (deprecated)**
+#### 3. SSE Transport (deprecated)
 
 - ⚠️ Legacy support only - use HTTP transport for new projects
 - 🚀 Usage: `python mcp_server.py --transport sse --port 9000`
 
-### FastMCP CLI Usage
+### FastMCP CLI Usage (Legacy — catch-all only)
+
+> **Note:** `fastmcp run` bypasses `create_app()` and only exposes the catch-all
+> `/mcp` endpoint with all tools. It does NOT enable per-domain routing.
+> Use `python mcp_server.py` for the full per-domain architecture.
 
 ```bash
-# Standard HTTP server
+# Legacy: all tools on /mcp (no domain routing)
 fastmcp run mcp_server.py -t streamable-http --port 9000 -l DEBUG
 
-# With custom host
-fastmcp run mcp_server.py -t streamable-http --host 0.0.0.0 --port 9000 -l DEBUG
-
-# STDIO transport (for local clients)
-fastmcp run mcp_server.py -t stdio
-
-# Development mode with MCP Inspector
+# Development mode with MCP Inspector (catch-all only)
 fastmcp dev mcp_server.py -t streamable-http --port 9000
 ```
 
@@ -150,7 +148,7 @@ fastmcp dev mcp_server.py -t streamable-http --port 9000
    ```
 
 2. **Access the Server**:
-   - MCP endpoint: http://localhost:9000/mcp/
+   - MCP endpoint: <http://localhost:9000/mcp/>
    - Health check available via custom routes
 
 ### VS Code Development
@@ -224,6 +222,7 @@ For development, set `MCP_ENABLE_AUTH=false` to disable authentication.
    ```
 
 3. **Add Domain** (if new):
+
    ```python
    # In core/factory.py
    class Domain(Enum):
@@ -306,13 +305,19 @@ asyncio.run(test())
 "
 ```
 
-**Test with FastMCP CLI:**
+**Start the server:**
 
 ```bash
-# Start with FastMCP CLI
-fastmcp run mcp_server.py -t streamable-http --port 9000 -l DEBUG
+# Start with per-domain routing
+python mcp_server.py -t streamable-http --port 9000 --no-auth
 
-# Server will be available at: http://127.0.0.1:9000/mcp/
+# Endpoints:
+#   http://127.0.0.1:9000/hr/mcp           -> HR tools only
+#   http://127.0.0.1:9000/tech_support/mcp  -> Tech Support tools only
+#   http://127.0.0.1:9000/marketing/mcp     -> Marketing tools only
+#   http://127.0.0.1:9000/product/mcp       -> Product tools only
+#   http://127.0.0.1:9000/image/mcp         -> Image tools only
+#   http://127.0.0.1:9000/mcp              -> All tools (catch-all)
 ```
 
 ## Troubleshooting

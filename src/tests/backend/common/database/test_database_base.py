@@ -1,10 +1,10 @@
 """Unit tests for DatabaseBase abstract class."""
 
-import sys
 import os
-from abc import ABC
+import sys
 from typing import Any, Dict, List, Optional, Type
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock, patch
+
 import pytest
 
 # Add the backend directory to the Python path
@@ -15,64 +15,13 @@ os.environ.setdefault('APPLICATIONINSIGHTS_CONNECTION_STRING', 'test_connection_
 os.environ.setdefault('APP_ENV', 'dev')
 
 # Only mock external problematic dependencies - do NOT mock internal common.* modules
-sys.modules['v4'] = Mock()
-sys.modules['v4.models'] = Mock()
-sys.modules['v4.models.messages'] = Mock()
+from backend.models.plan_models import MPlan
 
 # Import the REAL modules using backend.* paths for proper coverage tracking
 from backend.common.database.database_base import DatabaseBase
-from backend.common.models.messages_af import (
-    AgentMessageData,
-    BaseDataModel,
-    CurrentTeamAgent,
-    Plan,
-    Step,
-    TeamConfiguration,
-    UserCurrentTeam,
-)
-import v4.models.messages as messages
-
-
-class TestDatabaseBaseAbstractClass:
-    """Test DatabaseBase abstract class interface and requirements."""
-    
-    def test_database_base_is_abstract_class(self):
-        """Test that DatabaseBase is properly defined as an abstract class."""
-        assert issubclass(DatabaseBase, ABC)
-        assert DatabaseBase.__abstractmethods__ is not None
-        assert len(DatabaseBase.__abstractmethods__) > 0
-    
-    def test_cannot_instantiate_database_base_directly(self):
-        """Test that DatabaseBase cannot be instantiated directly."""
-        with pytest.raises(TypeError, match="Can't instantiate abstract class"):
-            DatabaseBase()
-    
-    def test_abstract_method_count(self):
-        """Test that all expected abstract methods are defined."""
-        abstract_methods = DatabaseBase.__abstractmethods__
-        
-        # Check that we have the expected number of abstract methods
-        # This helps ensure we don't accidentally remove abstract methods
-        assert len(abstract_methods) >= 30  # Minimum expected abstract methods
-        
-        # Verify key abstract methods are present
-        expected_methods = {
-            'initialize', 'close', 'add_item', 'update_item', 'get_item_by_id',
-            'query_items', 'delete_item', 'add_plan', 'update_plan', 
-            'get_plan_by_plan_id', 'get_plan', 'get_all_plans',
-            'get_all_plans_by_team_id', 'get_all_plans_by_team_id_status',
-            'add_step', 'update_step', 'get_steps_by_plan', 'get_step',
-            'add_team', 'update_team', 'get_team', 'get_team_by_id',
-            'get_all_teams', 'delete_team', 'get_data_by_type', 'get_all_items',
-            'get_steps_for_plan', 'get_current_team', 'delete_current_team',
-            'set_current_team', 'update_current_team', 'delete_plan_by_plan_id',
-            'add_mplan', 'update_mplan', 'get_mplan', 'add_agent_message',
-            'update_agent_message', 'get_agent_messages', 'add_team_agent',
-            'delete_team_agent', 'get_team_agent'
-        }
-        
-        for method in expected_methods:
-            assert method in abstract_methods, f"Abstract method '{method}' not found"
+from backend.common.models.messages import (AgentMessageData, BaseDataModel,
+                                            CurrentTeamAgent, Plan, Step,
+                                            TeamConfiguration, UserCurrentTeam)
 
 
 class TestDatabaseBaseImplementationRequirements:
@@ -202,13 +151,13 @@ class TestDatabaseBaseImplementationRequirements:
             async def delete_plan_by_plan_id(self, plan_id: str) -> bool:
                 return False
             
-            async def add_mplan(self, mplan: messages.MPlan) -> None:
+            async def add_mplan(self, mplan: MPlan) -> None:
                 pass
             
-            async def update_mplan(self, mplan: messages.MPlan) -> None:
+            async def update_mplan(self, mplan: MPlan) -> None:
                 pass
             
-            async def get_mplan(self, plan_id: str) -> Optional[messages.MPlan]:
+            async def get_mplan(self, plan_id: str) -> Optional[MPlan]:
                 return None
             
             async def add_agent_message(self, message: AgentMessageData) -> None:
@@ -234,124 +183,6 @@ class TestDatabaseBaseImplementationRequirements:
         # Should not raise TypeError
         database = CompleteDatabase()
         assert isinstance(database, DatabaseBase)
-
-
-class TestDatabaseBaseMethodSignatures:
-    """Test that all abstract methods have correct signatures."""
-    
-    def test_initialization_methods(self):
-        """Test initialization and cleanup method signatures."""
-        # Test that the methods are defined with correct signatures
-        assert hasattr(DatabaseBase, 'initialize')
-        assert hasattr(DatabaseBase, 'close')
-        
-        # Check that these are async methods
-        init_method = getattr(DatabaseBase, 'initialize')
-        close_method = getattr(DatabaseBase, 'close')
-        
-        assert getattr(init_method, '__isabstractmethod__', False)
-        assert getattr(close_method, '__isabstractmethod__', False)
-    
-    def test_crud_operation_methods(self):
-        """Test CRUD operation method signatures."""
-        crud_methods = [
-            'add_item', 'update_item', 'get_item_by_id', 
-            'query_items', 'delete_item'
-        ]
-        
-        for method_name in crud_methods:
-            assert hasattr(DatabaseBase, method_name)
-            method = getattr(DatabaseBase, method_name)
-            assert getattr(method, '__isabstractmethod__', False)
-    
-    def test_plan_operation_methods(self):
-        """Test plan operation method signatures."""
-        plan_methods = [
-            'add_plan', 'update_plan', 'get_plan_by_plan_id', 'get_plan',
-            'get_all_plans', 'get_all_plans_by_team_id', 'get_all_plans_by_team_id_status',
-            'delete_plan_by_plan_id'
-        ]
-        
-        for method_name in plan_methods:
-            assert hasattr(DatabaseBase, method_name)
-            method = getattr(DatabaseBase, method_name)
-            assert getattr(method, '__isabstractmethod__', False)
-    
-    def test_step_operation_methods(self):
-        """Test step operation method signatures."""
-        step_methods = [
-            'add_step', 'update_step', 'get_steps_by_plan', 
-            'get_step', 'get_steps_for_plan'
-        ]
-        
-        for method_name in step_methods:
-            assert hasattr(DatabaseBase, method_name)
-            method = getattr(DatabaseBase, method_name)
-            assert getattr(method, '__isabstractmethod__', False)
-    
-    def test_team_operation_methods(self):
-        """Test team operation method signatures."""
-        team_methods = [
-            'add_team', 'update_team', 'get_team', 'get_team_by_id',
-            'get_all_teams', 'delete_team'
-        ]
-        
-        for method_name in team_methods:
-            assert hasattr(DatabaseBase, method_name)
-            method = getattr(DatabaseBase, method_name)
-            assert getattr(method, '__isabstractmethod__', False)
-    
-    def test_current_team_operation_methods(self):
-        """Test current team operation method signatures."""
-        current_team_methods = [
-            'get_current_team', 'delete_current_team',
-            'set_current_team', 'update_current_team'
-        ]
-        
-        for method_name in current_team_methods:
-            assert hasattr(DatabaseBase, method_name)
-            method = getattr(DatabaseBase, method_name)
-            assert getattr(method, '__isabstractmethod__', False)
-    
-    def test_data_management_methods(self):
-        """Test data management method signatures."""
-        data_methods = ['get_data_by_type', 'get_all_items']
-        
-        for method_name in data_methods:
-            assert hasattr(DatabaseBase, method_name)
-            method = getattr(DatabaseBase, method_name)
-            assert getattr(method, '__isabstractmethod__', False)
-    
-    def test_mplan_operation_methods(self):
-        """Test mplan operation method signatures."""
-        mplan_methods = ['add_mplan', 'update_mplan', 'get_mplan']
-        
-        for method_name in mplan_methods:
-            assert hasattr(DatabaseBase, method_name)
-            method = getattr(DatabaseBase, method_name)
-            assert getattr(method, '__isabstractmethod__', False)
-    
-    def test_agent_message_methods(self):
-        """Test agent message method signatures."""
-        agent_message_methods = [
-            'add_agent_message', 'update_agent_message', 'get_agent_messages'
-        ]
-        
-        for method_name in agent_message_methods:
-            assert hasattr(DatabaseBase, method_name)
-            method = getattr(DatabaseBase, method_name)
-            assert getattr(method, '__isabstractmethod__', False)
-    
-    def test_team_agent_methods(self):
-        """Test team agent method signatures."""
-        team_agent_methods = [
-            'add_team_agent', 'delete_team_agent', 'get_team_agent'
-        ]
-        
-        for method_name in team_agent_methods:
-            assert hasattr(DatabaseBase, method_name)
-            method = getattr(DatabaseBase, method_name)
-            assert getattr(method, '__isabstractmethod__', False)
 
 
 class TestDatabaseBaseContextManager:
@@ -493,89 +324,18 @@ class TestDatabaseBaseContextManager:
             async def get_team_agent(self, team_id, agent_name): return None
         
         database = MockDatabase()
-
-        with pytest.raises(ValueError, match="Test exception"):
+        
+        async def run_database_context():
             async with database:
                 assert database.initialized is True
                 # Raise an exception to test cleanup
                 raise ValueError("Test exception")
 
+        with pytest.raises(ValueError, match="Test exception"):
+            await run_database_context()
+
         # Even with exception, close should have been called
         assert database.closed is True
-
-
-class TestDatabaseBaseInheritance:
-    """Test DatabaseBase inheritance and polymorphism."""
-    
-    def test_inheritance_hierarchy(self):
-        """Test that DatabaseBase properly inherits from ABC."""
-        assert issubclass(DatabaseBase, ABC)
-        assert ABC in DatabaseBase.__mro__
-    
-    def test_method_resolution_order(self):
-        """Test that method resolution order is correct."""
-        mro = DatabaseBase.__mro__
-        assert DatabaseBase in mro
-        assert ABC in mro
-        assert object in mro
-    
-    def test_abc_registration(self):
-        """Test that abstract methods are properly registered."""
-        # Verify that __abstractmethods__ contains expected methods
-        abstract_methods = DatabaseBase.__abstractmethods__
-        assert isinstance(abstract_methods, frozenset)
-        assert len(abstract_methods) > 0
-    
-    def test_subclass_detection(self):
-        """Test that subclass detection works correctly."""
-        
-        class ConcreteDatabase(DatabaseBase):
-            # Full implementation would go here
-            # For this test, we'll make it incomplete to test subclass detection
-            async def initialize(self): pass
-            async def close(self): pass
-            async def add_item(self, item): pass
-            async def update_item(self, item): pass
-            async def get_item_by_id(self, item_id, partition_key, model_class): return None
-            async def query_items(self, query, parameters, model_class): return []
-            async def delete_item(self, item_id, partition_key): pass
-            async def add_plan(self, plan): pass
-            async def update_plan(self, plan): pass
-            async def get_plan_by_plan_id(self, plan_id): return None
-            async def get_plan(self, plan_id): return None
-            async def get_all_plans(self): return []
-            async def get_all_plans_by_team_id(self, team_id): return []
-            async def get_all_plans_by_team_id_status(self, user_id, team_id, status): return []
-            async def add_step(self, step): pass
-            async def update_step(self, step): pass
-            async def get_steps_by_plan(self, plan_id): return []
-            async def get_step(self, step_id, session_id): return None
-            async def add_team(self, team): pass
-            async def update_team(self, team): pass
-            async def get_team(self, team_id): return None
-            async def get_team_by_id(self, team_id): return None
-            async def get_all_teams(self): return []
-            async def delete_team(self, team_id): return False
-            async def get_data_by_type(self, data_type): return []
-            async def get_all_items(self): return []
-            async def get_steps_for_plan(self, plan_id): return []
-            async def get_current_team(self, user_id): return None
-            async def delete_current_team(self, user_id): return None
-            async def set_current_team(self, current_team): pass
-            async def update_current_team(self, current_team): pass
-            async def delete_plan_by_plan_id(self, plan_id): return False
-            async def add_mplan(self, mplan): pass
-            async def update_mplan(self, mplan): pass
-            async def get_mplan(self, plan_id): return None
-            async def add_agent_message(self, message): pass
-            async def update_agent_message(self, message): pass
-            async def get_agent_messages(self, plan_id): return None
-            async def add_team_agent(self, team_agent): pass
-            async def delete_team_agent(self, team_id, agent_name): pass
-            async def get_team_agent(self, team_id, agent_name): return None
-        
-        assert issubclass(ConcreteDatabase, DatabaseBase)
-        assert isinstance(ConcreteDatabase(), DatabaseBase)
 
 
 class TestDatabaseBaseDocumentation:

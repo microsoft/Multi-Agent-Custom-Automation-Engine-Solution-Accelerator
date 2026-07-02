@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - dev-v4
+      - dev
       - demo-v4
       - hotfix
     paths:
@@ -27,7 +27,7 @@ on:
       - synchronize
     branches:
       - main
-      - dev-v4
+      - dev
       - demo-v4
       - hotfix
     paths:
@@ -62,7 +62,7 @@ jobs:
         uses: docker/setup-buildx-action@v4
 
       - name: Login to Azure
-        if: ${{ github.ref_name == 'main' || github.ref_name == 'dev-v4'|| github.ref_name == 'demo-v4' || github.ref_name == 'hotfix' }}
+        if: ${{ github.ref_name == 'main' || github.ref_name == 'dev'|| github.ref_name == 'demo-v4' || github.ref_name == 'hotfix' }}
         uses: azure/login@v3
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -70,7 +70,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Log in to Azure Container Registry
-        if: ${{ github.ref_name == 'main' || github.ref_name == 'dev-v4'|| github.ref_name == 'demo-v4' || github.ref_name == 'hotfix' }}
+        if: ${{ github.ref_name == 'main' || github.ref_name == 'dev'|| github.ref_name == 'demo-v4' || github.ref_name == 'hotfix' }}
         run: az acr login --name ${{ secrets.ACR_LOGIN_SERVER || 'acrlogin.azurecr.io' }}
 
       - name: Get current date
@@ -86,11 +86,11 @@ jobs:
         id: determine_tag
         run: |
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "TAG=latest_v4" >> $GITHUB_ENV
-          elif [[ "${{ github.ref }}" == "refs/heads/dev-v4" ]]; then
-            echo "TAG=dev_v4" >> $GITHUB_ENV
+            echo "TAG=latest_v5" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            echo "TAG=dev_v5" >> $GITHUB_ENV
           elif [[ "${{ github.ref }}" == "refs/heads/demo-v4" ]]; then
-            echo "TAG=demo_v4" >> $GITHUB_ENV
+            echo "TAG=demo_v5" >> $GITHUB_ENV
           elif [[ "${{ github.ref }}" == "refs/heads/hotfix" ]]; then
             echo "TAG=hotfix" >> $GITHUB_ENV
           else

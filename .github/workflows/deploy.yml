@@ -11,13 +11,13 @@ on:
       - completed
     branches:
       - main
-      - dev-v4
+      - dev
       - hotfix
   schedule:
     - cron: "0 11,23 * * *" # Runs at 11:00 AM and 11:00 PM GMT
   workflow_dispatch: #Allow manual triggering
 env:
-  GPT_MIN_CAPACITY: 150
+  GPT_MIN_CAPACITY: 50
   O4_MINI_MIN_CAPACITY: 50
   GPT41_MINI_MIN_CAPACITY: 50
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
@@ -52,10 +52,10 @@ jobs:
           GPT41_MINI_MIN_CAPACITY: ${{ env.GPT41_MINI_MIN_CAPACITY }}
           AZURE_REGIONS: ${{ vars.AZURE_REGIONS }}
         run: |
-          chmod +x infra/scripts/checkquota.sh
-          if ! infra/scripts/checkquota.sh; then
+          chmod +x infra/scripts/pre-provision/checkquota.sh
+          if ! infra/scripts/pre-provision/checkquota.sh; then
             # If quota check fails due to insufficient quota, set the flag
-            if grep -q "No region with sufficient quota found" infra/scripts/checkquota.sh; then
+            if grep -q "No region with sufficient quota found" infra/scripts/pre-provision/checkquota.sh; then
               echo "QUOTA_FAILED=true" >> $GITHUB_ENV
             fi
             exit 1  # Fail the pipeline if any other failure occurs
@@ -129,13 +129,13 @@ jobs:
         id: deploy
         run: |
           if [[ "${{ env.BRANCH_NAME }}" == "main" ]]; then
-            IMAGE_TAG="latest_v4"
-          elif [[ "${{ env.BRANCH_NAME }}" == "dev-v4" ]]; then
-            IMAGE_TAG="dev_v4"
+            IMAGE_TAG="latest_v5"
+          elif [[ "${{ env.BRANCH_NAME }}" == "dev" ]]; then
+            IMAGE_TAG="dev_v5"
           elif [[ "${{ env.BRANCH_NAME }}" == "hotfix" ]]; then
             IMAGE_TAG="hotfix"
           else
-            IMAGE_TAG="latest_v4"
+            IMAGE_TAG="latest_v5"
           fi
 
           # Generate current timestamp in desired format: YYYY-MM-DDTHH:MM:SS.SSSSSSSZ
@@ -194,7 +194,7 @@ jobs:
           
           # Run PowerShell script with 'All' use case automatically selected
           # Provide two inputs: '1' for keeping current subscription, '5' for All use cases
-          echo -e "1\n5" | pwsh -File infra/scripts/Selecting-Team-Config-And-Data.ps1 -ResourceGroup "${{ env.RESOURCE_GROUP_NAME }}"
+          echo -e "1\n5" | pwsh -File infra/scripts/post-provision/Selecting-Team-Config-And-Data.ps1 -ResourceGroup "${{ env.RESOURCE_GROUP_NAME }}"
 
           echo "=== Post-Deployment Script Completed Successfully ==="
 

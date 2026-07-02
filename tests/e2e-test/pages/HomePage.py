@@ -31,7 +31,6 @@ class BIABPage(BasePage):
     CUSTOMER_DATA_AGENT = "//span[normalize-space()='Customer Data Agent']"
     ORDER_DATA_AGENT = "//span[normalize-space()='Order Data Agent']"
     ANALYSIS_RECOMMENDATION_AGENT = "//span[normalize-space()='Analysis Recommendation Agent']"
-    PROXY_AGENT = "//span[normalize-space()='Proxy Agent']"
     APPROVE_TASK_PLAN = "//button[normalize-space()='Approve Task Plan']"
     PROCESSING_PLAN = "//span[contains(text(),'Processing your plan and coordinating with AI agen')]"
     AI_THINKING_PROCESS = "//span[normalize-space()='AI Thinking Process']"
@@ -249,10 +248,6 @@ class BIABPage(BasePage):
         expect(self.page.locator(self.ANALYSIS_RECOMMENDATION_AGENT)).to_be_visible(timeout=10000)
         logger.info("✓ Analysis Recommendation Agent is visible")
         
-        logger.info("Checking Proxy Agent visibility...")
-        expect(self.page.locator(self.PROXY_AGENT)).to_be_visible(timeout=10000)
-        logger.info("✓ Proxy Agent is visible")
-        
         logger.info("All agents validation completed successfully!")
 
     def validate_product_marketing_agents(self):
@@ -267,10 +262,6 @@ class BIABPage(BasePage):
         expect(self.page.locator(self.MARKETING_AGENT)).to_be_visible(timeout=10000)
         logger.info("✓ Marketing Agent is visible")
         
-        logger.info("Checking Proxy Agent visibility...")
-        expect(self.page.locator(self.PROXY_AGENT)).to_be_visible(timeout=10000)
-        logger.info("✓ Proxy Agent is visible")
-        
         logger.info("All product marketing agents validation completed successfully!")
 
     def validate_hr_agents(self):
@@ -284,10 +275,6 @@ class BIABPage(BasePage):
         logger.info("Checking Technical Support Agent visibility...")
         expect(self.page.locator(self.TECH_SUPPORT_AGENT)).to_be_visible(timeout=10000)
         logger.info("✓ Technical Support Agent is visible")
-        
-        logger.info("Checking Proxy Agent visibility...")
-        expect(self.page.locator(self.PROXY_AGENT)).to_be_visible(timeout=10000)
-        logger.info("✓ Proxy Agent is visible")
         
         logger.info("All HR agents validation completed successfully!")
 

@@ -1,0 +1,61 @@
+{
+  "id": "2",
+  "team_id": "team-2",
+  "name": "Product Marketing Team",
+  "status": "visible",
+  "created": "",
+  "created_by": "",
+  "deployment_name": "gpt-4.1-mini",
+  "agents": [
+    {
+      "input_key": "",
+      "type": "",
+      "name": "ProductAgent",
+      "deployment_name": "gpt-4.1-mini",
+      "system_message": "You are a Product agent. You have access to MCP tools which allow you to obtain knowledge about products, product management, development, and compliance guidelines. When asked to call one of these tools, you should summarize back what was done.",
+      "description": "This agent specializes in product management, development, and related tasks. It can provide information about products, manage inventory, handle product launches, analyze sales data, and coordinate with other teams like marketing and tech support.",
+      "use_file_search": false,
+      "vector_store_name": "",
+      "use_knowledge_base": false,
+      "knowledge_base_name": "",
+      "use_toolbox": true,
+      "toolbox_filter": "product",
+      "user_responses": false,
+      "coding_tools": false,
+      "temperature": null,
+      "icon": ""
+    },
+    {
+      "input_key": "",
+      "type": "",
+      "name": "MarketingAgent",
+      "deployment_name": "gpt-4.1-mini",
+      "system_message": "You are a Marketing agent. You have access to a number of HR related MCP tools for tasks like campaign development, content creation, and market analysis. You help create effective marketing campaigns, analyze market data, and develop promotional content for products and services.",
+      "description": "This agent specializes in marketing, campaign management, and analyzing market data.",
+      "use_file_search": false,
+      "vector_store_name": "",
+      "use_knowledge_base": false,
+      "knowledge_base_name": "",
+      "use_toolbox": true,
+      "toolbox_filter": "marketing",
+      "user_responses": false,
+      "coding_tools": false,
+      "temperature": null,
+      "icon": ""
+    }
+  ],
+  "protected": false,
+  "description": "Team focused on products and product marketing.",
+  "logo": "",
+  "plan": "",
+  "starting_tasks": [
+    {
+      "id": "task-1",
+      "name": "Draft a press release",
+      "prompt": "Write a press release about our current products​",
+      "created": "",
+      "creator": "",
+      "logo": ""
+    }
+  ]
+}

@@ -39,7 +39,7 @@ import styles from '../../styles/TeamSelector.module.css';
 
 interface TeamSelectorProps {
   onTeamSelect?: (team: TeamConfig | null) => void;
-  onTeamUpload?: () => Promise<void>;
+  onTeamUpload?: (team?: TeamConfig) => Promise<void>;
   selectedTeam?: TeamConfig | null;
   isHomePage: boolean;
 }
@@ -67,8 +67,8 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
   const [uploadSuccessMessage, setUploadSuccessMessage] = useState<string | null>(null);
   // Helper function to check if a team is a default team
   const isDefaultTeam = (team: TeamConfig): boolean => {
-    const defaultTeamIds = ['team-1', 'team-2', 'team-3','team-clm-1', 'team-compliance-1'];
-    const defaultTeamNames = ['Human Resources Team', 'Product Marketing Team', 'Retail Customer Success Team','RFP Team', 'Contract Compliance Review Team'];
+    const defaultTeamIds = ['team-1', 'team-2', 'team-3', 'team-clm-1', 'team-compliance-1', 'content-gen-team'];
+    const defaultTeamNames = ['Human Resources Team', 'Product Marketing Team', 'Retail Customer Success Team', 'RFP Team', 'Contract Compliance Review Team', 'Retail Marketing Content Generation Team'];
     
     return defaultTeamIds.includes(team.team_id) || 
            defaultTeamNames.includes(team.name);
@@ -280,7 +280,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
         }
 
         if (onTeamUpload) {
-          await onTeamUpload();
+          await onTeamUpload(result.team);
         }
       } else if (result.raiError) {
         setError('❌ Content Safety Check Failed\n\nYour team configuration contains content that doesn\'t meet our safety guidelines.');
@@ -382,7 +382,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
         }
 
         if (onTeamUpload) {
-          await onTeamUpload();
+          await onTeamUpload(result.team);
         }
       } else if (result.raiError) {
         setError(' Content Safety Check Failed\n\nYour team configuration contains content that doesn\'t meet our safety guidelines.');
@@ -721,7 +721,7 @@ const TeamSelector: React.FC<TeamSelectorProps> = ({
                 Are you sure you want to delete "{teamToDelete?.name}"?
               </DialogTitle>
               <Text className={styles.deleteConfirmText}>
-                This team configurations and its agents are shared across all users in the system. Deleting this team will permanently remove it for everyone, and this action cannot be undone.
+                This team configuration and its agents are shared across all users in the system. Deleting this team will permanently remove it for everyone, and this action cannot be undone.
               </Text>
             </DialogBody>
             <div className={styles.deleteDialogActions}>
