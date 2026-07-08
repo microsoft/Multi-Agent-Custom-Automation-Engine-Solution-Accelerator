@@ -234,7 +234,7 @@ STALL DETECTION OVERRIDE:
 
 
 # ---------------------------------------------------------------------------
-# JSON plan parsing (for reasoning models like o4-mini)
+# JSON plan parsing (for orchestrator models like gpt-5.4-mini)
 # ---------------------------------------------------------------------------
 
 _JSON_ARRAY_RE = re.compile(r"\[.*\]", re.DOTALL)

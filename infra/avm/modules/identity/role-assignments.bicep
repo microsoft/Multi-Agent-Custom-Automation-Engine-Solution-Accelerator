@@ -34,6 +34,10 @@ param workloadPrincipalIds array = []
 @description('Principal ID of the deploying user (for user access roles).')
 param deployerPrincipalId string = ''
 
+@allowed(['User', 'ServicePrincipal'])
+@description('Principal type of the deploying user.')
+param deployerPrincipalType string = 'User'
+
 // --- Resource References ---
 
 @description('Resource ID of the AI Foundry account (empty if not deployed — new project path).')
@@ -47,6 +51,9 @@ param storageAccountResourceId string = ''
 
 @description('Name of the Cosmos DB account (empty if not deployed).')
 param cosmosDbAccountName string = ''
+
+@description('Resource ID of the Container Registry (empty if not deployed).')
+param containerRegistryResourceId string = ''
 
 // ============================================================================
 // Derived Variables
@@ -76,6 +83,7 @@ var roleDefinitions = {
   searchServiceContributor: '7ca78c08-252a-4471-8644-bb5ff32d4ba0'
   storageBlobDataContributor: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
   storageBlobDataReader: '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1'
+  acrPull: '7f951dda-4ed3-4680-a7ca-43fe172d538d'
 }
 
 // ============================================================================
@@ -96,6 +104,10 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2025-08-01' existing 
 
 resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2025-10-15' existing = if (!empty(cosmosDbAccountName)) {
   name: cosmosDbAccountName
+}
+
+resource containerRegistry 'Microsoft.ContainerRegistry/registries@2025-04-01' existing = if (!empty(containerRegistryResourceId)) {
+  name: last(split(containerRegistryResourceId, '/'))
 }
 
 resource cosmosContributorRoleDefinition 'Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions@2025-10-15' existing = if (!empty(cosmosDbAccountName)) {
@@ -245,3 +257,29 @@ resource deployerAiServicesAccess 'Microsoft.Authorization/roleAssignments@2022-
 //     principalType: 'User'
 //   }
 // }
+// ============================================================================
+// 6. CONTAINER REGISTRY ROLE ASSIGNMENTS
+//    Workload identities (UAMI) and the deploying user → AcrPull on the ACR
+// ============================================================================
+ 
+// Workload identities (UAMI or SAMI) → AcrPull on Container Registry
+resource workloadAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for principalId in workloadPrincipals: if (!empty(containerRegistryResourceId) && !empty(principalId)) {
+  name: guid(solutionName, containerRegistry.id, principalId, roleDefinitions.acrPull)
+  scope: containerRegistry
+  properties: {
+    principalId: principalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.acrPull)
+    principalType: 'ServicePrincipal'
+  }
+}]
+ 
+// Deploying User → AcrPull on Container Registry
+resource deployerAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(deployerPrincipalId) && !empty(containerRegistryResourceId)) {
+  name: guid(solutionName, containerRegistry.id, deployerPrincipalId, roleDefinitions.acrPull)
+  scope: containerRegistry
+  properties: {
+    principalId: deployerPrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.acrPull)
+    principalType: deployerPrincipalType
+  }
+}

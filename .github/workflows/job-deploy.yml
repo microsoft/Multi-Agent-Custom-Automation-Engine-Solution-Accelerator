@@ -98,9 +98,8 @@ on:
         value: ${{ jobs.azure-setup.outputs.QUOTA_FAILED }}
 
 env:
-  GPT_MIN_CAPACITY: 50
-  O4_MINI_MIN_CAPACITY: 50
-  GPT41_MINI_MIN_CAPACITY: 50
+  GPT_5_4_MINI_MIN_CAPACITY: 100
+  GPT_5_4_MIN_CAPACITY: 150
   BRANCH_NAME: ${{ github.event.workflow_run.head_branch || github.head_ref || github.ref_name }}
   WAF_ENABLED: ${{ inputs.trigger_type == 'workflow_dispatch' && (inputs.waf_enabled || false) || false }}
   EXP: ${{ inputs.trigger_type == 'workflow_dispatch' && (inputs.EXP || false) || false }}
@@ -306,9 +305,8 @@ jobs:
         id: quota-check
         env:
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          GPT_MIN_CAPACITY: ${{ env.GPT_MIN_CAPACITY }}
-          O4_MINI_MIN_CAPACITY: ${{ env.O4_MINI_MIN_CAPACITY }}
-          GPT41_MINI_MIN_CAPACITY: ${{ env.GPT41_MINI_MIN_CAPACITY }}
+          GPT_5_4_MINI_MIN_CAPACITY: ${{ env.GPT_5_4_MINI_MIN_CAPACITY }}
+          GPT_5_4_MIN_CAPACITY: ${{ env.GPT_5_4_MIN_CAPACITY }}
           AZURE_REGIONS: ${{ vars.AZURE_REGIONS }}
         run: |
           chmod +x infra/scripts/pre-provision/checkquota.sh

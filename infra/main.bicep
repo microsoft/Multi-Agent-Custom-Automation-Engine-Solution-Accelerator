@@ -53,9 +53,8 @@ param location string
   azd: {
     type: 'location'
     usageName: [
-      'OpenAI.GlobalStandard.gpt4.1, 150'
-      'OpenAI.GlobalStandard.o4-mini, 50'
-      'OpenAI.GlobalStandard.gpt4.1-mini, 50'
+      'OpenAI.GlobalStandard.gpt-5.4, 150'
+      'OpenAI.GlobalStandard.gpt-5.4-mini, 100'
       'OpenAI.GlobalStandard.gpt-image-1.5, 5'
     ]
   }
@@ -68,10 +67,10 @@ param azureAiServiceLocation string
 // ============================================================================
 
 @description('Optional. Name of the default GPT model deployment.')
-param gptModelName string = 'gpt-4.1-mini'
+param gptModelName string = 'gpt-5.4-mini'
 
 @description('Optional. Version of the default GPT model deployment.')
-param gptModelVersion string = '2025-04-14'
+param gptModelVersion string = '2026-03-17'
 
 @allowed([
   'Standard'
@@ -82,43 +81,25 @@ param deploymentType string = 'GlobalStandard'
 
 @minValue(1)
 @description('Optional. Capacity of the default GPT model deployment.')
-param gptDeploymentCapacity int = 50
+param gptDeploymentCapacity int = 100
 
-@description('Optional. Name of the RAI GPT model deployment.')
-param gpt4_1ModelName string = 'gpt-4.1'
+@description('Optional. Name of the larger GPT model deployment.')
+param gpt5_4ModelName string = 'gpt-5.4'
 
-@description('Optional. Version of the RAI GPT model deployment.')
-param gpt4_1ModelVersion string = '2025-04-14'
+@description('Optional. Version of the larger GPT model deployment.')
+param gpt5_4ModelVersion string = '2026-03-05'
 
 @minLength(1)
 @allowed([
   'Standard'
   'GlobalStandard'
 ])
-@description('Optional. Deployment type for the RAI GPT model deployment.')
-param gpt4_1ModelDeploymentType string = 'GlobalStandard'
+@description('Optional. Deployment type for the larger GPT model deployment.')
+param gpt5_4ModelDeploymentType string = 'GlobalStandard'
 
 @minValue(1)
-@description('Optional. Capacity of the RAI GPT model deployment.')
-param gpt4_1ModelCapacity int = 150
-
-@minLength(1)
-@description('Optional. Name of the GPT Reasoning model to deploy:')
-param gptReasoningModelName string = 'o4-mini'
-
-@description('Optional. Version of the GPT Reasoning model to deploy. Defaults to 2025-04-16.')
-param gptReasoningModelVersion string = '2025-04-16'
-
-@allowed([
-  'Standard'
-  'GlobalStandard'
-])
-@description('Optional. Deployment type for the reasoning model deployment.')
-param gptReasoningModelDeploymentType string = 'GlobalStandard'
-
-@minValue(1)
-@description('Optional. Capacity of the reasoning model deployment.')
-param gptReasoningModelCapacity int = 50
+@description('Optional. Capacity of the larger GPT model deployment.')
+param gpt5_4ModelCapacity int = 150
 
 @minLength(1)
 @description('Optional. Name of the image-generation model to deploy. Defaults to gpt-image-1.5.')
@@ -146,31 +127,34 @@ param azureOpenaiAPIVersion string = '2024-12-01-preview'
 // ============================================================================
 
 @description('Optional. The Container Registry hostname where the docker images for the backend are located.')
-param backendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
+param backendContainerRegistryHostname string = 'mcr.microsoft.com'
 
 @description('Optional. The Container Image Name to deploy on the backend.')
-param backendContainerImageName string = 'macaebackend'
+param backendContainerImageName string = 'azuredocs/containerapps-helloworld'
 
 @description('Optional. The Container Image Tag to deploy on the backend.')
-param backendContainerImageTag string = 'latest_v5'
+param backendContainerImageTag string = 'latest'
 
 @description('Optional. The Container Registry hostname where the docker images for the frontend are located.')
-param frontendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
+param frontendContainerRegistryHostname string = 'mcr.microsoft.com'
 
 @description('Optional. The Container Image Name to deploy on the frontend.')
-param frontendContainerImageName string = 'macaefrontend'
+param frontendContainerImageName string = 'azuredocs/containerapps-helloworld'
 
 @description('Optional. The Container Image Tag to deploy on the frontend.')
-param frontendContainerImageTag string = 'latest_v5'
+param frontendContainerImageTag string = 'latest'
 
 @description('Optional. The Container Registry hostname where the docker images for the MCP are located.')
-param MCPContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
+param MCPContainerRegistryHostname string = 'mcr.microsoft.com'
 
 @description('Optional. The Container Image Name to deploy on the MCP.')
-param MCPContainerImageName string = 'macaemcp'
+param MCPContainerImageName string = 'azuredocs/containerapps-helloworld'
 
 @description('Optional. The Container Image Tag to deploy on the MCP.')
-param MCPContainerImageTag string = 'latest_v5'
+param MCPContainerImageTag string = 'latest'
+
+@description('Optional. Resource ID of an existing Azure Container Registry to reuse. If empty, a new container registry is created in the selected flavor.')
+param existingContainerRegistryResourceId string = ''
 
 // ============================================================================
 // Parameters — Existing Resources and Governance
@@ -266,17 +250,13 @@ module avmDeployment './avm/main.bicep' = if (isAvm) {
     azureAiServiceLocation: azureAiServiceLocation
     gptModelName: gptModelName
     gptModelVersion: gptModelVersion
-    gpt4_1ModelName: gpt4_1ModelName
-    gpt4_1ModelVersion: gpt4_1ModelVersion
-    gptReasoningModelName: gptReasoningModelName
-    gptReasoningModelVersion: gptReasoningModelVersion
+    gpt5_4ModelName: gpt5_4ModelName
+    gpt5_4ModelVersion: gpt5_4ModelVersion
     azureOpenaiAPIVersion: azureOpenaiAPIVersion
     deploymentType: deploymentType
-    gpt4_1ModelDeploymentType: gpt4_1ModelDeploymentType
-    gptReasoningModelDeploymentType: gptReasoningModelDeploymentType
+    gpt5_4ModelDeploymentType: gpt5_4ModelDeploymentType
     gptDeploymentCapacity: gptDeploymentCapacity
-    gpt4_1ModelCapacity: gpt4_1ModelCapacity
-    gptReasoningModelCapacity: gptReasoningModelCapacity
+    gpt5_4ModelCapacity: gpt5_4ModelCapacity
     gptImageModelName: gptImageModelName
     gptImageModelVersion: gptImageModelVersion
     gptImageModelDeploymentType: gptImageModelDeploymentType
@@ -290,6 +270,7 @@ module avmDeployment './avm/main.bicep' = if (isAvm) {
     MCPContainerRegistryHostname: MCPContainerRegistryHostname
     MCPContainerImageName: MCPContainerImageName
     MCPContainerImageTag: MCPContainerImageTag
+    existingContainerRegistryResourceId: existingContainerRegistryResourceId
     enableMonitoring: enableMonitoring
     enableScalability: enableScalability
     enableRedundancy: enableRedundancy
@@ -325,14 +306,10 @@ module bicepDeployment './bicep/main.bicep' = if (isBicep) {
     gptModelVersion: gptModelVersion
     deploymentType: deploymentType
     gptDeploymentCapacity: gptDeploymentCapacity
-    gpt4_1ModelName: gpt4_1ModelName
-    gpt4_1ModelVersion: gpt4_1ModelVersion
-    gpt4_1ModelDeploymentType: gpt4_1ModelDeploymentType
-    gpt4_1ModelCapacity: gpt4_1ModelCapacity
-    gptReasoningModelName: gptReasoningModelName
-    gptReasoningModelVersion: gptReasoningModelVersion
-    gptReasoningModelDeploymentType: gptReasoningModelDeploymentType
-    gptReasoningModelCapacity: gptReasoningModelCapacity
+    gpt5_4ModelName: gpt5_4ModelName
+    gpt5_4ModelVersion: gpt5_4ModelVersion
+    gpt5_4ModelDeploymentType: gpt5_4ModelDeploymentType
+    gpt5_4ModelCapacity: gpt5_4ModelCapacity
     gptImageModelName: gptImageModelName
     gptImageModelVersion: gptImageModelVersion
     gptImageModelDeploymentType: gptImageModelDeploymentType
@@ -347,6 +324,7 @@ module bicepDeployment './bicep/main.bicep' = if (isBicep) {
     MCPContainerRegistryHostname: MCPContainerRegistryHostname
     MCPContainerImageName: MCPContainerImageName
     MCPContainerImageTag: MCPContainerImageTag
+    existingContainerRegistryResourceId: existingContainerRegistryResourceId
     existingLogAnalyticsWorkspaceId: existingLogAnalyticsWorkspaceId
     existingFoundryProjectResourceId: existingFoundryProjectResourceId
     tags: tags
@@ -402,7 +380,7 @@ output AZURE_OPENAI_ENDPOINT string = isAvm ? avmDeployment!.outputs.AZURE_OPENA
 @description('The default GPT chat-completion deployment name used by the backend.')
 output AZURE_OPENAI_DEPLOYMENT_NAME string = isAvm ? avmDeployment!.outputs.AZURE_OPENAI_DEPLOYMENT_NAME : bicepDeployment!.outputs.AZURE_OPENAI_DEPLOYMENT_NAME
 
-@description('The deployment name of the GPT-4.1 model used for Responsible AI / higher-quality completions.')
+@description('The deployment name of the GPT-5.4 model used for Responsible AI / higher-quality completions.')
 output AZURE_OPENAI_RAI_DEPLOYMENT_NAME string = isAvm ? avmDeployment!.outputs.AZURE_OPENAI_RAI_DEPLOYMENT_NAME : bicepDeployment!.outputs.AZURE_OPENAI_RAI_DEPLOYMENT_NAME
 
 @description('The Azure OpenAI REST API version used by the backend SDK clients.')
@@ -438,7 +416,7 @@ output AZURE_TENANT_ID string = isAvm ? avmDeployment!.outputs.AZURE_TENANT_ID :
 @description('The default scope used when requesting tokens for Azure Cognitive Services / AI Services.')
 output AZURE_COGNITIVE_SERVICES string = isAvm ? avmDeployment!.outputs.AZURE_COGNITIVE_SERVICES : bicepDeployment!.outputs.AZURE_COGNITIVE_SERVICES
 
-@description('The deployment name of the reasoning model used by the orchestrator/manager agent.')
+@description('The deployment name of the model used by the orchestrator/manager agent.')
 output ORCHESTRATOR_MODEL_NAME string = isAvm ? avmDeployment!.outputs.ORCHESTRATOR_MODEL_NAME : bicepDeployment!.outputs.ORCHESTRATOR_MODEL_NAME
 
 // MCP server
@@ -517,3 +495,33 @@ output DEPLOYMENT_FLAVOR string = deploymentFlavor
 
 @description('The resource group name the resources were deployed into.')
 output RESOURCE_GROUP_NAME string = resourceGroup().name
+
+// Container Registry
+@description('The login server (endpoint) of the deployed or reused Azure Container Registry.')
+output AZURE_CONTAINER_REGISTRY_ENDPOINT string = isAvm ? avmDeployment!.outputs.AZURE_CONTAINER_REGISTRY_ENDPOINT : bicepDeployment!.outputs.AZURE_CONTAINER_REGISTRY_ENDPOINT
+ 
+@description('The name of the deployed or reused Azure Container Registry.')
+output AZURE_CONTAINER_REGISTRY_NAME string = isAvm ? avmDeployment!.outputs.AZURE_CONTAINER_REGISTRY_NAME : bicepDeployment!.outputs.AZURE_CONTAINER_REGISTRY_NAME
+
+// Image build & push outputs (consumed by build_and_push_images scripts)
+@description('Name of the backend Container App.')
+output BACKEND_CONTAINER_APP_NAME string = isAvm ? avmDeployment!.outputs.BACKEND_CONTAINER_APP_NAME : bicepDeployment!.outputs.BACKEND_CONTAINER_APP_NAME
+
+@description('Name of the MCP Container App.')
+output MCP_CONTAINER_APP_NAME string = isAvm ? avmDeployment!.outputs.MCP_CONTAINER_APP_NAME : bicepDeployment!.outputs.MCP_CONTAINER_APP_NAME
+
+@description('Name of the frontend Web App.')
+output FRONTEND_WEB_APP_NAME string = isAvm ? avmDeployment!.outputs.FRONTEND_WEB_APP_NAME : bicepDeployment!.outputs.FRONTEND_WEB_APP_NAME
+
+@description('Backend container image repository name.')
+output BACKEND_IMAGE_NAME string = isAvm ? avmDeployment!.outputs.BACKEND_IMAGE_NAME : bicepDeployment!.outputs.BACKEND_IMAGE_NAME
+
+@description('Frontend container image repository name.')
+output FRONTEND_IMAGE_NAME string = isAvm ? avmDeployment!.outputs.FRONTEND_IMAGE_NAME : bicepDeployment!.outputs.FRONTEND_IMAGE_NAME
+
+@description('MCP container image repository name.')
+output MCP_IMAGE_NAME string = isAvm ? avmDeployment!.outputs.MCP_IMAGE_NAME : bicepDeployment!.outputs.MCP_IMAGE_NAME
+
+@description('Port the frontend Web App container listens on.')
+output FRONTEND_WEBSITES_PORT string = isAvm ? avmDeployment!.outputs.FRONTEND_WEBSITES_PORT : bicepDeployment!.outputs.FRONTEND_WEBSITES_PORT
+
