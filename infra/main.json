@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.44.1.10279",
-      "templateHash": "8731584858452933515"
+      "templateHash": "2110057819441640559"
     },
     "name": "Multi-Agent Custom Automation Engine - Deployment Router",
     "description": "Deployment router for the Multi-Agent Custom Automation Engine accelerator. Routes to either the AVM or vanilla Bicep orchestrator and preserves a unified deployment contract."
@@ -561,7 +561,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "6065721312169729147"
+              "templateHash": "10080544909430391861"
             },
             "name": "Multi-Agent Custom Automation Engine - AVM",
             "description": "AVM orchestrator for the Multi-Agent Custom Automation Engine accelerator. Deploys the same logical resources and preserves the same outputs as infra\\main.bicep using local AVM wrapper modules."
@@ -60235,6 +60235,12 @@
                   "linuxFxVersion": {
                     "value": "[format('DOCKER|{0}/{1}:{2}', parameters('frontendContainerRegistryHostname'), parameters('frontendContainerImageName'), parameters('frontendContainerImageTag'))]"
                   },
+                  "containerRegistryUserAssignedIdentityResourceId": {
+                    "value": "[reference('managed_identity').outputs.resourceId.value]"
+                  },
+                  "acrUserManagedIdentityClientId": {
+                    "value": "[reference('managed_identity').outputs.clientId.value]"
+                  },
                   "appSettings": {
                     "value": {
                       "SCM_DO_BUILD_DURING_DEPLOYMENT": "true",
@@ -60261,7 +60267,7 @@
                     "_generator": {
                       "name": "bicep",
                       "version": "0.44.1.10279",
-                      "templateHash": "16516603898730674850"
+                      "templateHash": "9621160936099183182"
                     }
                   },
                   "definitions": {
@@ -60703,6 +60709,20 @@
                         "description": "Optional. Command line for the application."
                       }
                     },
+                    "containerRegistryUserAssignedIdentityResourceId": {
+                      "type": "string",
+                      "defaultValue": "",
+                      "metadata": {
+                        "description": "Optional. Resource ID of a user-assigned managed identity to attach to the app (used for ACR image pulls)."
+                      }
+                    },
+                    "acrUserManagedIdentityClientId": {
+                      "type": "string",
+                      "defaultValue": "",
+                      "metadata": {
+                        "description": "Optional. Client ID (GUID) of the user-assigned managed identity used for ACR managed-identity image pulls. App Service requires the client ID here, not the ARM resource ID."
+                      }
+                    },
                     "kind": {
                       "type": "string",
                       "defaultValue": "app,linux",
@@ -60815,7 +60835,8 @@
                           },
                           "managedIdentities": {
                             "value": {
-                              "systemAssigned": true
+                              "systemAssigned": true,
+                              "userAssignedResourceIds": "[if(not(empty(parameters('containerRegistryUserAssignedIdentityResourceId'))), createArray(parameters('containerRegistryUserAssignedIdentityResourceId')), createArray())]"
                             }
                           },
                           "siteConfig": {
@@ -60826,7 +60847,9 @@
                               "minTlsVersion": "1.2",
                               "healthCheckPath": "[if(not(empty(parameters('healthCheckPath'))), parameters('healthCheckPath'), null())]",
                               "webSocketsEnabled": "[parameters('webSocketsEnabled')]",
-                              "appCommandLine": "[parameters('appCommandLine')]"
+                              "appCommandLine": "[parameters('appCommandLine')]",
+                              "acrUseManagedIdentityCreds": "[not(empty(parameters('acrUserManagedIdentityClientId')))]",
+                              "acrUserManagedIdentityID": "[if(not(empty(parameters('acrUserManagedIdentityClientId'))), parameters('acrUserManagedIdentityClientId'), null())]"
                             }
                           },
                           "e2eEncryptionEnabled": {
@@ -75732,6 +75755,7 @@
                 "container_registry",
                 "containerApp",
                 "log_analytics",
+                "managed_identity",
                 "virtualNetwork",
                 "webServerFarm"
               ]
@@ -76861,7 +76885,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "10680289417318152176"
+              "templateHash": "11051305577029776274"
             },
             "name": "Multi-Agent Custom Automation Engine - Vanilla Bicep",
             "description": "Vanilla Bicep orchestrator for the Multi-Agent Custom Automation Engine accelerator. This deployment intentionally excludes WAF features such as private networking, scale-out, redundancy, bastion, and VM resources while keeping router-compatible outputs."
@@ -80462,6 +80486,12 @@
                   "linuxFxVersion": {
                     "value": "[format('DOCKER|{0}/{1}:{2}', parameters('frontendContainerRegistryHostname'), parameters('frontendContainerImageName'), parameters('frontendContainerImageTag'))]"
                   },
+                  "containerRegistryUserAssignedIdentityResourceId": {
+                    "value": "[reference(resourceId('Microsoft.Resources/deployments', take(format('module.user-assigned-identity.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.resourceId.value]"
+                  },
+                  "acrUserManagedIdentityClientId": {
+                    "value": "[reference(resourceId('Microsoft.Resources/deployments', take(format('module.user-assigned-identity.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.clientId.value]"
+                  },
                   "appCommandLine": {
                     "value": ""
                   },
@@ -80486,7 +80516,7 @@
                     "_generator": {
                       "name": "bicep",
                       "version": "0.44.1.10279",
-                      "templateHash": "12440474002685425911"
+                      "templateHash": "1320403547799686545"
                     }
                   },
                   "parameters": {
@@ -80563,6 +80593,20 @@
                         "description": "Optional. Command line for the application."
                       }
                     },
+                    "containerRegistryUserAssignedIdentityResourceId": {
+                      "type": "string",
+                      "defaultValue": "",
+                      "metadata": {
+                        "description": "Optional. Resource ID of a user-assigned managed identity to attach to the app (used for ACR image pulls)."
+                      }
+                    },
+                    "acrUserManagedIdentityClientId": {
+                      "type": "string",
+                      "defaultValue": "",
+                      "metadata": {
+                        "description": "Optional. Client ID (GUID) of the user-assigned managed identity used for ACR managed-identity image pulls. App Service requires the client ID here, not the ARM resource ID."
+                      }
+                    },
                     "kind": {
                       "type": "string",
                       "defaultValue": "app,linux",
@@ -80623,7 +80667,8 @@
                       "tags": "[parameters('tags')]",
                       "kind": "[parameters('kind')]",
                       "identity": {
-                        "type": "SystemAssigned"
+                        "type": "[if(not(empty(parameters('containerRegistryUserAssignedIdentityResourceId'))), 'SystemAssigned, UserAssigned', 'SystemAssigned')]",
+                        "userAssignedIdentities": "[if(not(empty(parameters('containerRegistryUserAssignedIdentityResourceId'))), createObject(format('{0}', parameters('containerRegistryUserAssignedIdentityResourceId')), createObject()), null())]"
                       },
                       "properties": {
                         "serverFarmId": "[parameters('serverFarmResourceId')]",
@@ -80635,7 +80680,9 @@
                           "minTlsVersion": "1.2",
                           "healthCheckPath": "[if(not(empty(parameters('healthCheckPath'))), parameters('healthCheckPath'), null())]",
                           "webSocketsEnabled": "[parameters('webSocketsEnabled')]",
-                          "appCommandLine": "[parameters('appCommandLine')]"
+                          "appCommandLine": "[parameters('appCommandLine')]",
+                          "acrUseManagedIdentityCreds": "[not(empty(parameters('acrUserManagedIdentityClientId')))]",
+                          "acrUserManagedIdentityID": "[if(not(empty(parameters('acrUserManagedIdentityClientId'))), parameters('acrUserManagedIdentityClientId'), null())]"
                         },
                         "endToEndEncryptionEnabled": true
                       }
@@ -80722,7 +80769,8 @@
                 "[resourceId('Microsoft.Resources/deployments', take(format('module.app-insights.{0}', variables('solutionSuffix')), 64))]",
                 "[resourceId('Microsoft.Resources/deployments', take(format('module.app-service-plan.{0}', variables('solutionSuffix')), 64))]",
                 "[resourceId('Microsoft.Resources/deployments', take(format('module.backend-container-app.{0}', variables('solutionSuffix')), 64))]",
-                "[resourceId('Microsoft.Resources/deployments', take(format('module.container-registry.{0}', variables('solutionSuffix')), 64))]"
+                "[resourceId('Microsoft.Resources/deployments', take(format('module.container-registry.{0}', variables('solutionSuffix')), 64))]",
+                "[resourceId('Microsoft.Resources/deployments', take(format('module.user-assigned-identity.{0}', variables('solutionSuffix')), 64))]"
               ]
             },
             {

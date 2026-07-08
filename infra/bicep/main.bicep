@@ -787,6 +787,8 @@ module frontend_app './modules/compute/app-service.bicep' = {
     tags: isCustom ? union(allTags, { 'azd-service-name': 'frontend' }) : allTags
     serverFarmResourceId: app_service_plan.outputs.resourceId
     linuxFxVersion: 'DOCKER|${frontendContainerRegistryHostname}/${frontendContainerImageName}:${frontendContainerImageTag}'
+    containerRegistryUserAssignedIdentityResourceId: userAssignedIdentity.outputs.resourceId
+    acrUserManagedIdentityClientId: userAssignedIdentity.outputs.clientId
     appCommandLine: ''
     appSettings: {
       SCM_DO_BUILD_DURING_DEPLOYMENT: 'true'

@@ -32,11 +32,11 @@
 
 .EXAMPLE
     # Remote build (no Docker needed on the client machine)
-    ./infra/scripts/Build-And-Push-Images.ps1
+    ./infra/scripts/post-provision/Build-And-Push-Images.ps1
 
 .EXAMPLE
     # Local build using Docker Desktop
-    ./infra/scripts/Build-And-Push-Images.ps1 -BuildMode local -ImageTag dev
+    ./infra/scripts/post-provision/Build-And-Push-Images.ps1 -BuildMode local -ImageTag dev
 #>
 [CmdletBinding()]
 param(
@@ -136,7 +136,7 @@ Write-Host "Frontend Web App:   $frontendApp -> $frontendImage`:$ImageTag"
 Write-Host "Build mode:         $BuildMode"
 
 # --- Resolve source paths ---------------------------------------------------
-$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
 $srcRoot  = Join-Path $repoRoot 'src'
 
 $images = @(
@@ -254,7 +254,7 @@ Write-Section 'Next step: Upload Team Configurations and index sample data'
 Write-Host "Run the following command from the project root to upload the team" -ForegroundColor White
 Write-Host "configurations and index the sample data:" -ForegroundColor White
 Write-Host ""
-Write-Host "   infra\scripts\Selecting-Team-Config-And-Data.ps1" -ForegroundColor Cyan
+Write-Host "   .\infra\scripts\post-provision\Selecting-Team-Config-And-Data.ps1" -ForegroundColor Cyan
 Write-Host ""
 }
 finally {

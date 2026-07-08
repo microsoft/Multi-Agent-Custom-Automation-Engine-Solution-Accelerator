@@ -1370,6 +1370,8 @@ module webSite './modules/compute/app-service.bicep' = {
     enableTelemetry: enableTelemetry
     serverFarmResourceId: webServerFarm.outputs.resourceId
     linuxFxVersion: 'DOCKER|${frontendContainerRegistryHostname}/${frontendContainerImageName}:${frontendContainerImageTag}'
+    containerRegistryUserAssignedIdentityResourceId: managed_identity.outputs.resourceId
+    acrUserManagedIdentityClientId: managed_identity.outputs.clientId
     appSettings: {
       SCM_DO_BUILD_DURING_DEPLOYMENT: 'true'
       DOCKER_REGISTRY_SERVER_URL: 'https://${acrLoginServer}'

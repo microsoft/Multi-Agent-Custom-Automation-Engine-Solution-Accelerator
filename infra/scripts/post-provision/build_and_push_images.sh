@@ -86,7 +86,7 @@ echo "MCP CA:             ${MCP_CA}       -> ${MCP_IMAGE}:${IMAGE_TAG}"
 echo "Frontend Web App:   ${FRONTEND_APP} -> ${FRONTEND_IMAGE}:${IMAGE_TAG}"
 echo "Build mode:         ${BUILD_MODE}"
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 SRC_ROOT="${REPO_ROOT}/src"
 
 declare -a IMAGE_NAMES=("${BACKEND_IMAGE}" "${FRONTEND_IMAGE}" "${MCP_IMAGE}")
@@ -194,5 +194,5 @@ section "Next step: Upload Team Configurations and index sample data"
 echo "Run the following command from the project root to upload the team"
 echo "configurations and index the sample data:"
 echo ""
-echo "   bash infra/scripts/selecting_team_config_and_data.sh"
+echo "   bash infra/scripts/post-provision/selecting_team_config_and_data.sh"
 echo ""
