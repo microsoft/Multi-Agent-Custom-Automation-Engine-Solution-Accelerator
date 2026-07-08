@@ -105,6 +105,6 @@ manager_agent = Agent(manager_chat_client, name="MagenticManager")
 
 ## References
 
-- [Bug B1: UserInteractionAgent Routing Failure](../../localspec/bugs/user-interaction-routing.md)
+- Bug B1: UserInteractionAgent Routing Failure (internal specification)
 - [ADR-001: Retain Custom JSON Configuration](./001-retain-custom-json-declarative-config.md)
 - [Azure AI Foundry Model Catalog](https://ai.azure.com/explore/models)
