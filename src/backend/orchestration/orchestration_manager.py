@@ -115,8 +115,8 @@ class OrchestrationManager:
             raise
 
         # Create a separate client for the orchestrator manager using a
-        # reasoning model (o4-mini) — much more reliable at structured JSON
-        # output and multi-step routing decisions than standard GPT models.
+        # dedicated orchestrator model (gpt-5.4-mini) — much more reliable at
+        # structured JSON output and multi-step routing decisions.
         orchestrator_model = config.ORCHESTRATOR_MODEL_NAME
         try:
             manager_chat_client = FoundryChatClient(
