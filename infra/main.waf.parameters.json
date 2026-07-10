@@ -62,6 +62,9 @@
     "gptImageModelCapacity": {
       "value": "${AZURE_ENV_IMAGE_MODEL_CAPACITY}"
     },
+    "gptImageQuality": {
+      "value": "${AZURE_ENV_IMAGE_QUALITY=high}"
+    },
     "enableTelemetry": {
       "value": "${AZURE_ENV_ENABLE_TELEMETRY}"
     },

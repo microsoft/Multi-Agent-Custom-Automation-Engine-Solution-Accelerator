@@ -108,3 +108,7 @@ manager_agent = Agent(manager_chat_client, name="MagenticManager")
 - [Bug B1: UserInteractionAgent Routing Failure](../../localspec/bugs/user-interaction-routing.md)
 - [ADR-001: Retain Custom JSON Configuration](./001-retain-custom-json-declarative-config.md)
 - [Azure AI Foundry Model Catalog](https://ai.azure.com/explore/models)
+
+## Superseded (2026-07-09)
+
+The reasoning/orchestrator model migrated from `o4-mini` to `gpt-5-mini` because `o4-mini` is deprecated (retires 2026-10-16). Because `gpt-5-mini` reasons by default, it preserves the structured-routing reliability that motivated this decision while consolidating the accelerator onto a single generally available model. The `ORCHESTRATOR_MODEL_NAME` config and the separate manager `FoundryChatClient` described above remain unchanged; only the default model value moved to `gpt-5-mini`. The historical decision text above is retained for context.

@@ -12,17 +12,18 @@ By default this template will use the environment name as the prefix to prevent 
 | `AZURE_LOCATION`                | string | `<User selects during deployment>`   | Location of the Azure resources. Controls where the infrastructure will be deployed.                |
 | `AZURE_ENV_AI_SERVICE_LOCATION`     | string | `<User selects during deployment>`   | Specifies the region for OpenAI resource deployment.                                                |
 | `AZURE_ENV_MODEL_DEPLOYMENT_TYPE` | string | `GlobalStandard` | Defines the deployment type for the AI model (e.g., Standard, GlobalStandard).                     |
-| `AZURE_ENV_GPT_MODEL_NAME`          | string | `gpt-4.1-mini`          | Specifies the name of the GPT model to be deployed.                                                |
-| `AZURE_ENV_GPT_MODEL_VERSION`       | string | `2025-04-14`      | Version of the GPT model to be used for deployment.                                                |
+| `AZURE_ENV_GPT_MODEL_NAME`          | string | `gpt-5-mini`          | Specifies the name of the GPT model to be deployed.                                                |
+| `AZURE_ENV_GPT_MODEL_VERSION`       | string | `2025-08-07`      | Version of the GPT model to be used for deployment.                                                |
 | `AZURE_ENV_GPT_MODEL_CAPACITY`       | int | `50`      | Sets the GPT model capacity.                                                |
 | `AZURE_ENV_MODEL_4_1_DEPLOYMENT_TYPE` | string | `GlobalStandard` | Defines the deployment type for the AI model (e.g., Standard, GlobalStandard).                     |
-| `AZURE_ENV_MODEL_4_1_NAME`          | string | `gpt-4.1`          | Specifies the name of the GPT model to be deployed.                                                |
-| `AZURE_ENV_MODEL_4_1_VERSION`       | string | `2025-04-14`      | Version of the GPT model to be used for deployment.                                                |
+| `AZURE_ENV_MODEL_4_1_NAME`          | string | `gpt-5-mini`          | Specifies the name of the GPT model to be deployed.                                                |
+| `AZURE_ENV_MODEL_4_1_VERSION`       | string | `2025-08-07`      | Version of the GPT model to be used for deployment.                                                |
 | `AZURE_ENV_MODEL_4_1_CAPACITY`       | int | `50`      | Sets the GPT model capacity.                                                |
 | `AZURE_ENV_REASONING_MODEL_DEPLOYMENT_TYPE` | string | `GlobalStandard` | Defines the deployment type for the AI model (e.g., Standard, GlobalStandard).                     |
-| `AZURE_ENV_REASONING_MODEL_NAME`          | string | `o4-mini`          | Specifies the name of the reasoning GPT model to be deployed.                                                |
-| `AZURE_ENV_REASONING_MODEL_VERSION`       | string | `2025-04-16`      | Version of the reasoning GPT model to be used for deployment.                                                |
+| `AZURE_ENV_REASONING_MODEL_NAME`          | string | `gpt-5-mini`          | Specifies the name of the reasoning GPT model to be deployed.                                                |
+| `AZURE_ENV_REASONING_MODEL_VERSION`       | string | `2025-08-07`      | Version of the reasoning GPT model to be used for deployment.                                                |
 | `AZURE_ENV_REASONING_MODEL_CAPACITY`       | int | `50`      | Sets the reasoning GPT model capacity.                                                |
+| `AZURE_ENV_IMAGE_QUALITY`       | string | `high`      | Image generation quality (low/medium/high/auto) for the marketing-image MCP tool.                  |
 | `AZURE_ENV_IMAGE_TAG`            | string | `latest_v5`          | Docker image tag used for container deployments.                                                   |
 | `AZURE_ENV_ENABLE_TELEMETRY`    | bool   | `true`            | Enables telemetry for monitoring and diagnostics.                                                  |
 | `AZURE_EXISTING_AIPROJECT_RESOURCE_ID`          | string | `<Existing Workspace Id>`          | Set this if you want to reuse an AI Foundry Project instead of creating a new one.                                                |       

@@ -4,15 +4,13 @@
 IFS=', ' read -ra REGIONS <<< "$AZURE_REGIONS"
 
 SUBSCRIPTION_ID="${AZURE_SUBSCRIPTION_ID}"
-GPT_MIN_CAPACITY="${GPT_MIN_CAPACITY}"
-O4_MINI_MIN_CAPACITY="${O4_MINI_MIN_CAPACITY}"
-GPT41_MINI_MIN_CAPACITY="${GPT41_MINI_MIN_CAPACITY}"
+GPT_MIN_CAPACITY="${GPT_MIN_CAPACITY:-250}"
 
 echo "🔄 Validating required environment variables..."
 if [[ -z "$SUBSCRIPTION_ID" || -z "$REGIONS" ]]; then
     echo "❌ ERROR: Missing required environment variables."
     echo "Required: AZURE_SUBSCRIPTION_ID, AZURE_REGIONS"
-    echo "Optional: O4_MINI_MIN_CAPACITY (default: 50), GPT41_MINI_MIN_CAPACITY (default: 50)"
+    echo "Optional: GPT_MIN_CAPACITY (default: 250)"
     exit 1
 fi
 
@@ -25,9 +23,7 @@ echo "✅ Azure subscription set successfully."
 
 # Define models and their minimum required capacities
 declare -A MIN_CAPACITY=(
-    ["OpenAI.GlobalStandard.o4-mini"]="${O4_MINI_MIN_CAPACITY}"
-    ["OpenAI.GlobalStandard.gpt4.1"]="${GPT_MIN_CAPACITY}"
-    ["OpenAI.GlobalStandard.gpt4.1-mini"]="${GPT41_MINI_MIN_CAPACITY}"
+    ["OpenAI.GlobalStandard.gpt-5-mini"]="${GPT_MIN_CAPACITY}"
 )
 
 VALID_REGION=""

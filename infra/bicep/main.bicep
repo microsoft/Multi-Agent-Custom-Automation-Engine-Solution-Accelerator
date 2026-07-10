@@ -35,9 +35,9 @@ param location string
   azd: {
     type: 'location'
     usageName: [
-      'OpenAI.GlobalStandard.gpt4.1, 150'
-      'OpenAI.GlobalStandard.o4-mini, 50'
-      'OpenAI.GlobalStandard.gpt4.1-mini, 50'
+      'OpenAI.GlobalStandard.gpt-5-mini, 150'
+      'OpenAI.GlobalStandard.gpt-5-mini, 50'
+      'OpenAI.GlobalStandard.gpt-5-mini, 50'
       'OpenAI.GlobalStandard.gpt-image-1.5, 5'
     ]
   }
@@ -46,10 +46,10 @@ param location string
 param azureAiServiceLocation string
 
 @description('Optional. Name of the default GPT model deployment.')
-param gptModelName string = 'gpt-4.1-mini'
+param gptModelName string = 'gpt-5-mini'
 
 @description('Optional. Version of the default GPT model deployment.')
-param gptModelVersion string = '2025-04-14'
+param gptModelVersion string = '2025-08-07'
 
 @allowed([
   'Standard'
@@ -63,10 +63,10 @@ param deploymentType string = 'GlobalStandard'
 param gptDeploymentCapacity int = 50
 
 @description('Optional. Name of the RAI GPT model deployment.')
-param gpt4_1ModelName string = 'gpt-4.1'
+param gpt4_1ModelName string = 'gpt-5-mini'
 
 @description('Optional. Version of the RAI GPT model deployment.')
-param gpt4_1ModelVersion string = '2025-04-14'
+param gpt4_1ModelVersion string = '2025-08-07'
 
 @allowed([
   'Standard'
@@ -80,10 +80,10 @@ param gpt4_1ModelDeploymentType string = 'GlobalStandard'
 param gpt4_1ModelCapacity int = 150
 
 @description('Optional. Name of the reasoning model deployment.')
-param gptReasoningModelName string = 'o4-mini'
+param gptReasoningModelName string = 'gpt-5-mini'
 
 @description('Optional. Version of the reasoning model deployment.')
-param gptReasoningModelVersion string = '2025-04-16'
+param gptReasoningModelVersion string = '2025-08-07'
 
 @allowed([
   'Standard'
@@ -114,8 +114,17 @@ param gptImageModelDeploymentType string = 'GlobalStandard'
 @description('Optional. gpt-image-1.5 deployment capacity (RPM). Defaults to 5 to support concurrent marketing-image generation across multiple sessions.')
 param gptImageModelCapacity int = 5
 
+@allowed([
+  'low'
+  'medium'
+  'high'
+  'auto'
+])
+@description('Optional. Image generation quality for gpt-image models (low/medium/high/auto). Defaults to high.')
+param gptImageQuality string = 'high'
+
 @description('Optional. Azure OpenAI API version.')
-param azureOpenaiAPIVersion string = '2024-12-01-preview'
+param azureOpenaiAPIVersion string = '2025-04-01-preview'
 
 @description('Optional. The Container Registry hostname where the docker images for the backend are located.')
 param backendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
@@ -769,6 +778,10 @@ module mcp_container_app './modules/compute/container-app.bicep' = {
           {
             name: 'AZURE_OPENAI_IMAGE_DEPLOYMENT'
             value: gptImageModelName
+          }
+          {
+            name: 'AZURE_OPENAI_IMAGE_QUALITY'
+            value: gptImageQuality
           }
           {
             name: 'AZURE_STORAGE_BLOB_URL'

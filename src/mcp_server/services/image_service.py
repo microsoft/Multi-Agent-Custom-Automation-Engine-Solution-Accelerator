@@ -1,7 +1,7 @@
 """
 Image generation MCP tools service.
 
-Generates images via Azure OpenAI's images/generations endpoint (gpt-5-mini),
+Generates images via Azure OpenAI's images/generations endpoint (gpt-image-1.5),
 uploads the resulting PNG to Azure Blob Storage, and returns a public URL that
 Foundry-hosted agents can embed in their markdown responses.
 """
@@ -102,7 +102,7 @@ def _upload_png_and_get_url(png_bytes: bytes) -> str:
 
 
 class ImageService(MCPToolBase):
-    """Image-generation tools backed by Azure OpenAI gpt-5-mini."""
+    """Image-generation tools backed by Azure OpenAI gpt-image-1.5."""
 
     def __init__(self):
         super().__init__(Domain.IMAGE)
@@ -121,7 +121,7 @@ class ImageService(MCPToolBase):
 
             Args:
                 prompt: A detailed description of the image to generate.
-                size: One of "1024x1024", "1024x1792", or "1792x1024". Defaults to square.
+                size: One of "1024x1024", "1536x1024", or "1024x1536". Defaults to square.
 
             Returns:
                 A markdown image tag pointing to the generated PNG.
@@ -143,9 +143,15 @@ class ImageService(MCPToolBase):
                 "Authorization": f"Bearer {token_provider()}",
                 "Content-Type": "application/json",
             }
-            body = {"prompt": prompt, "n": 1, "size": size}
+            body = {"prompt": prompt, "n": 1, "size": size, "quality": config.azure_openai_image_quality}
 
-            logger.info("Generating image (deployment=%s, size=%s, prompt_len=%d)", deployment, size, len(prompt))
+            logger.info(
+                "Generating image (deployment=%s, size=%s, quality=%s, prompt_len=%d)",
+                deployment,
+                size,
+                config.azure_openai_image_quality,
+                len(prompt),
+            )
             async with httpx.AsyncClient(timeout=120.0) as client:
                 resp = await client.post(url, json=body, headers=headers)
                 if resp.status_code >= 400:

@@ -1,24 +1,8 @@
+"""Repo-root pytest configuration (intentionally minimal).
+
+The previous content inserted a broken sys.path entry (undefined Path/sys, a
+path resolving outside the repo to the deprecated v4/magentic_agents layout)
+and defined an unused agent_env_vars fixture. Removed as dead code — real
+per-suite configuration lives in src/tests/backend/conftest.py,
+src/tests/backend/auth/conftest.py, and src/tests/mcp_server/conftest.py.
 """
-Test configuration for agent tests.
-"""
-
-import pytest
-
-# Add the agents path
-agents_path = Path(__file__).parent.parent.parent / "backend" / "v4" / "magentic_agents"
-sys.path.insert(0, str(agents_path))
-
-@pytest.fixture
-def agent_env_vars():
-    """Common environment variables for agent testing."""
-    return {
-        "BING_CONNECTION_NAME": "test_bing_connection",
-        "MCP_SERVER_ENDPOINT": "http://test-mcp-server",
-        "MCP_SERVER_NAME": "test_mcp_server", 
-        "MCP_SERVER_DESCRIPTION": "Test MCP server",
-        "TENANT_ID": "test_tenant_id",
-        "CLIENT_ID": "test_client_id",
-        "AZURE_OPENAI_ENDPOINT": "https://test.openai.azure.com/",
-        "AZURE_OPENAI_API_KEY": "test_key",
-        "AZURE_OPENAI_DEPLOYMENT_NAME": "test_deployment"
-    }
