@@ -94,10 +94,28 @@ def _setup_agent_framework_mock():
         mock_af_workflows._magentic = mock_af_magentic
         mock_af._workflows = mock_af_workflows
 
+        # Sub-module: agent_framework._tools (provides the @tool decorator used
+        # by tools/clarification_tool.py as @tool(approval_mode="always_require")).
+        mock_af_tools = ModuleType('agent_framework._tools')
+
+        def _mock_tool(*args, **kwargs):
+            # Support both bare @tool and parametrized @tool(...) usage.
+            if len(args) == 1 and callable(args[0]) and not kwargs:
+                return args[0]
+
+            def _decorator(func):
+                return func
+
+            return _decorator
+
+        mock_af_tools.tool = _mock_tool
+        mock_af._tools = mock_af_tools
+
         sys.modules['agent_framework'] = mock_af
         sys.modules['agent_framework.azure'] = mock_af_azure
         sys.modules['agent_framework._workflows'] = mock_af_workflows
         sys.modules['agent_framework._workflows._magentic'] = mock_af_magentic
+        sys.modules['agent_framework._tools'] = mock_af_tools
 
     if 'agent_framework_orchestrations' not in sys.modules:
         mock_af_orch = ModuleType('agent_framework_orchestrations')

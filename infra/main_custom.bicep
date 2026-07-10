@@ -104,7 +104,7 @@ param gpt4_1ModelCapacity int = 150
 @description('Optional. Name of the GPT Reasoning model to deploy:')
 param gptReasoningModelName string = 'gpt-5-mini'
 
-@description('Optional. Version of the GPT Reasoning model to deploy. Defaults to 2025-04-16.')
+@description('Optional. Version of the GPT Reasoning model to deploy. Defaults to 2025-08-07.')
 param gptReasoningModelVersion string = '2025-08-07'
 
 @allowed([
@@ -145,7 +145,7 @@ param gptImageModelCapacity int = 5
 @description('Optional. Image generation quality for gpt-image models (low/medium/high/auto). Defaults to high.')
 param gptImageQuality string = 'high'
 
-@description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2024-12-01-preview.')
+@description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2025-04-01-preview.')
 param azureOpenaiAPIVersion string = '2025-04-01-preview'
 
 // ============================================================================

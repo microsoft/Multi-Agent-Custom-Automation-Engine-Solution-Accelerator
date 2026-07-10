@@ -71,21 +71,21 @@ param azureAiServiceLocation string
 @description('Optional. Name of the GPT model to deploy.')
 param gptModelName string = 'gpt-5-mini'
 
-@description('Optional. Version of the GPT model to deploy. Defaults to 2025-04-14.')
+@description('Optional. Version of the GPT model to deploy. Defaults to 2025-08-07.')
 param gptModelVersion string = '2025-08-07'
 
 @minLength(1)
 @description('Optional. Name of the GPT RAI model to deploy.')
 param gpt4_1ModelName string = 'gpt-5-mini'
 
-@description('Optional. Version of the GPT RAI model to deploy. Defaults to 2025-04-14.')
+@description('Optional. Version of the GPT RAI model to deploy. Defaults to 2025-08-07.')
 param gpt4_1ModelVersion string = '2025-08-07'
 
 @minLength(1)
 @description('Optional. Name of the GPT reasoning model to deploy.')
 param gptReasoningModelName string = 'gpt-5-mini'
 
-@description('Optional. Version of the GPT reasoning model to deploy. Defaults to 2025-04-16.')
+@description('Optional. Version of the GPT reasoning model to deploy. Defaults to 2025-08-07.')
 param gptReasoningModelVersion string = '2025-08-07'
 
 @minLength(1)
@@ -108,7 +108,7 @@ param deploymentType string = 'GlobalStandard'
   'Standard'
   'GlobalStandard'
 ])
-@description('Optional. GPT 4.1 model deployment type. Defaults to GlobalStandard.')
+@description('Optional. RAI GPT model deployment type. Defaults to GlobalStandard.')
 param gpt4_1ModelDeploymentType string = 'GlobalStandard'
 
 @minLength(1)
@@ -148,7 +148,7 @@ param gptImageModelCapacity int = 5
 @description('Optional. Image generation quality for gpt-image models (low/medium/high/auto). Defaults to high.')
 param gptImageQuality string = 'high'
 
-@description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2024-12-01-preview.')
+@description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2025-04-01-preview.')
 param azureOpenaiAPIVersion string = '2025-04-01-preview'
 
 // ============================================================================
