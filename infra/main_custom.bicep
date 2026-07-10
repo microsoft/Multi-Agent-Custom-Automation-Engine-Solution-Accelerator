@@ -51,9 +51,9 @@ param location string
   azd: {
     type: 'location'
     usageName: [
-      'OpenAI.GlobalStandard.gpt-5-mini, 150'
-      'OpenAI.GlobalStandard.gpt-5-mini, 50'
-      'OpenAI.GlobalStandard.gpt-5-mini, 50'
+      'OpenAI.GlobalStandard.gpt-5.4-mini, 150'
+      'OpenAI.GlobalStandard.gpt-5.4-mini, 50'
+      'OpenAI.GlobalStandard.gpt-5.4-mini, 50'
       'OpenAI.GlobalStandard.gpt-image-1.5, 5'
     ]
   }
@@ -66,10 +66,10 @@ param azureAiServiceLocation string
 // ============================================================================
 
 @description('Optional. Name of the default GPT model deployment.')
-param gptModelName string = 'gpt-5-mini'
+param gptModelName string = 'gpt-5.4-mini'
 
 @description('Optional. Version of the default GPT model deployment.')
-param gptModelVersion string = '2025-08-07'
+param gptModelVersion string = '2026-03-17'
 
 @allowed([
   'Standard'
@@ -83,10 +83,10 @@ param deploymentType string = 'GlobalStandard'
 param gptDeploymentCapacity int = 50
 
 @description('Optional. Name of the RAI GPT model deployment.')
-param gpt4_1ModelName string = 'gpt-5-mini'
+param gpt4_1ModelName string = 'gpt-5.4-mini'
 
 @description('Optional. Version of the RAI GPT model deployment.')
-param gpt4_1ModelVersion string = '2025-08-07'
+param gpt4_1ModelVersion string = '2026-03-17'
 
 @minLength(1)
 @allowed([
@@ -102,10 +102,10 @@ param gpt4_1ModelCapacity int = 150
 
 @minLength(1)
 @description('Optional. Name of the GPT Reasoning model to deploy:')
-param gptReasoningModelName string = 'gpt-5-mini'
+param gptReasoningModelName string = 'gpt-5.4-mini'
 
-@description('Optional. Version of the GPT Reasoning model to deploy. Defaults to 2025-08-07.')
-param gptReasoningModelVersion string = '2025-08-07'
+@description('Optional. Version of the GPT Reasoning model to deploy. Defaults to 2026-03-17.')
+param gptReasoningModelVersion string = '2026-03-17'
 
 @allowed([
   'Standard'

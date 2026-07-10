@@ -14,7 +14,7 @@ param deploymentName string
 @description('Optional. Model format (e.g., OpenAI).')
 param modelFormat string = 'OpenAI'
 
-@description('Required. Model name (e.g., gpt-5-mini, text-embedding-ada-002).')
+@description('Required. Model name (e.g., gpt-5.4-mini, text-embedding-ada-002).')
 param modelName string
 
 @description('Optional. Model version. Empty string means latest.')
