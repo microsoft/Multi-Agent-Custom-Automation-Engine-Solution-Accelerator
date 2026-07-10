@@ -110,13 +110,14 @@ class TestAppConfigInitialization:
     @patch.dict(os.environ, {}, clear=True)
     def test_missing_required_variable_raises_error(self):
         """Test that missing required environment variables raise ValueError."""
-        # Missing APPLICATIONINSIGHTS_CONNECTION_STRING
+        # Missing AZURE_OPENAI_ENDPOINT (a required variable with no default).
+        # NOTE: APPLICATIONINSIGHTS_CONNECTION_STRING is optional, so its absence
+        # does not raise; AZURE_OPENAI_ENDPOINT is the first required no-default var.
         incomplete_env = {
             "APP_ENV": "test",
             "AZURE_OPENAI_DEPLOYMENT_NAME": "test-gpt-4o",
             "AZURE_OPENAI_RAI_DEPLOYMENT_NAME": "test-gpt-4.1",
             "AZURE_OPENAI_API_VERSION": "2024-11-20",
-            "AZURE_OPENAI_ENDPOINT": "https://test.openai.azure.com",
             "AZURE_AI_SUBSCRIPTION_ID": "test-subscription-id",
             "AZURE_AI_RESOURCE_GROUP": "test-resource-group",
             "AZURE_AI_PROJECT_NAME": "test-project",
@@ -124,7 +125,7 @@ class TestAppConfigInitialization:
         }
         
         with patch.dict(os.environ, incomplete_env):
-            with pytest.raises(ValueError, match="Environment variable APPLICATIONINSIGHTS_CONNECTION_STRING not found"):
+            with pytest.raises(ValueError, match="Environment variable AZURE_OPENAI_ENDPOINT not found"):
                 AppConfig()
 
     def test_logger_initialization(self):
