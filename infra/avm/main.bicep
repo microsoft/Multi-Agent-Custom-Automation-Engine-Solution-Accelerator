@@ -1342,6 +1342,10 @@ module containerAppMcp './modules/compute/container-app.bicep' = {
             value: storage_account.outputs.blobEndpoint
           }
           {
+            name: 'AZURE_STORAGE_IMAGES_CONTAINER'
+            value: 'generated-images'
+          }
+          {
             name: 'BACKEND_URL'
             value: 'https://${containerAppName}.${containerAppEnvironment.outputs.defaultDomain}'
           }
