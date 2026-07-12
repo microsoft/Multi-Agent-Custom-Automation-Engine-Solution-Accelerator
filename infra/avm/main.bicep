@@ -57,9 +57,8 @@ param createdBy string = contains(deployer(), 'userPrincipalName')
   azd: {
     type: 'location'
     usageName: [
-      'OpenAI.GlobalStandard.gpt-5.4-mini, 150'
-      'OpenAI.GlobalStandard.gpt-5.4-mini, 50'
-      'OpenAI.GlobalStandard.gpt-5.4-mini, 50'
+      'OpenAI.GlobalStandard.gpt-5.4, 150'
+      'OpenAI.GlobalStandard.gpt-5.4-mini, 100'
       'OpenAI.GlobalStandard.gpt-image-1.5, 5'
     ]
   }
@@ -68,25 +67,18 @@ param createdBy string = contains(deployer(), 'userPrincipalName')
 param azureAiServiceLocation string
 
 @minLength(1)
-@description('Optional. Name of the GPT model to deploy.')
+@description('Optional. Name of the GPT model to deploy. Defaults to gpt-5.4-mini.')
 param gptModelName string = 'gpt-5.4-mini'
 
 @description('Optional. Version of the GPT model to deploy. Defaults to 2026-03-17.')
 param gptModelVersion string = '2026-03-17'
 
 @minLength(1)
-@description('Optional. Name of the GPT RAI model to deploy.')
-param gpt4_1ModelName string = 'gpt-5.4-mini'
+@description('Optional. Name of the larger GPT model to deploy. Defaults to gpt-5.4.')
+param gpt5_4ModelName string = 'gpt-5.4'
 
-@description('Optional. Version of the GPT RAI model to deploy. Defaults to 2026-03-17.')
-param gpt4_1ModelVersion string = '2026-03-17'
-
-@minLength(1)
-@description('Optional. Name of the GPT reasoning model to deploy.')
-param gptReasoningModelName string = 'gpt-5.4-mini'
-
-@description('Optional. Version of the GPT reasoning model to deploy. Defaults to 2026-03-17.')
-param gptReasoningModelVersion string = '2026-03-17'
+@description('Optional. Version of the larger GPT model to deploy. Defaults to 2026-03-05.')
+param gpt5_4ModelVersion string = '2026-03-05'
 
 @minLength(1)
 @description('Optional. Name of the image-generation model to deploy. Defaults to gpt-image-1.5.')
@@ -108,16 +100,8 @@ param deploymentType string = 'GlobalStandard'
   'Standard'
   'GlobalStandard'
 ])
-@description('Optional. RAI GPT model deployment type. Defaults to GlobalStandard.')
-param gpt4_1ModelDeploymentType string = 'GlobalStandard'
-
-@minLength(1)
-@allowed([
-  'Standard'
-  'GlobalStandard'
-])
-@description('Optional. GPT reasoning model deployment type. Defaults to GlobalStandard.')
-param gptReasoningModelDeploymentType string = 'GlobalStandard'
+@description('Optional. GPT-5.4 model deployment type. Defaults to GlobalStandard.')
+param gpt5_4ModelDeploymentType string = 'GlobalStandard'
 
 @minLength(1)
 @allowed([
@@ -127,60 +111,48 @@ param gptReasoningModelDeploymentType string = 'GlobalStandard'
 @description('Optional. GPT image model deployment type. Defaults to GlobalStandard.')
 param gptImageModelDeploymentType string = 'GlobalStandard'
 
-@description('Optional. AI model deployment token capacity. Defaults to 50 for optimal performance.')
-param gptDeploymentCapacity int = 50
+@description('Optional. AI model deployment token capacity. Defaults to 100 for optimal performance.')
+param gptDeploymentCapacity int = 100
 
 @description('Optional. AI model deployment token capacity. Defaults to 150 for optimal performance.')
-param gpt4_1ModelCapacity int = 150
-
-@description('Optional. AI model deployment token capacity. Defaults to 50 for optimal performance.')
-param gptReasoningModelCapacity int = 50
+param gpt5_4ModelCapacity int = 150
 
 @description('Optional. gpt-image-1.5 deployment capacity (RPM). Defaults to 5 to support concurrent marketing-image generation across multiple sessions.')
 param gptImageModelCapacity int = 5
 
-@allowed([
-  'low'
-  'medium'
-  'high'
-  'auto'
-])
-@description('Optional. Image generation quality for gpt-image models (low/medium/high/auto). Defaults to high.')
-param gptImageQuality string = 'high'
-
-@description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2025-04-01-preview.')
-param azureOpenaiAPIVersion string = '2025-04-01-preview'
+@description('Optional. Version of the Azure OpenAI service to deploy. Defaults to 2024-12-01-preview.')
+param azureOpenaiAPIVersion string = '2024-12-01-preview'
 
 // ============================================================================
 // Parameters — Compute
 // ============================================================================
 
 @description('Optional. The Container Registry hostname where the docker images for the backend are located.')
-param backendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
+param backendContainerRegistryHostname string = 'mcr.microsoft.com'
 
 @description('Optional. The Container Image Name to deploy on the backend.')
-param backendContainerImageName string = 'macaebackend'
+param backendContainerImageName string = 'azuredocs/containerapps-helloworld'
 
 @description('Optional. The Container Image Tag to deploy on the backend.')
-param backendContainerImageTag string = 'latest_v5'
+param backendContainerImageTag string = 'latest'
 
 @description('Optional. The Container Registry hostname where the docker images for the frontend are located.')
-param frontendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
+param frontendContainerRegistryHostname string = 'mcr.microsoft.com'
 
 @description('Optional. The Container Image Name to deploy on the frontend.')
-param frontendContainerImageName string = 'macaefrontend'
+param frontendContainerImageName string = 'azuredocs/containerapps-helloworld'
 
 @description('Optional. The Container Image Tag to deploy on the frontend.')
-param frontendContainerImageTag string = 'latest_v5'
+param frontendContainerImageTag string = 'latest'
 
 @description('Optional. The Container Registry hostname where the docker images for the MCP are located.')
-param MCPContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
+param MCPContainerRegistryHostname string = 'mcr.microsoft.com'
 
 @description('Optional. The Container Image Name to deploy on the MCP.')
-param MCPContainerImageName string = 'macaemcp'
+param MCPContainerImageName string = 'azuredocs/containerapps-helloworld'
 
 @description('Optional. The Container Image Tag to deploy on the MCP.')
-param MCPContainerImageTag string = 'latest_v5'
+param MCPContainerImageTag string = 'latest'
 
 // ============================================================================
 // Parameters — Feature Flags / WAF
@@ -218,6 +190,9 @@ param existingLogAnalyticsWorkspaceId string = ''
 
 @description('Optional. Resource ID of an existing Ai Foundry AI Services resource.')
 param existingFoundryProjectResourceId string = ''
+
+@description('Optional. Resource ID of an existing Azure Container Registry to reuse. If empty, a new container registry is created.')
+param existingContainerRegistryResourceId string = ''
 
 // ============================================================================
 // Parameters — Data
@@ -327,18 +302,11 @@ var aiModelDeployments = [
     skuCapacity: gptDeploymentCapacity
   }
   {
-    deploymentName: gpt4_1ModelName
-    modelName: gpt4_1ModelName
-    modelVersion: gpt4_1ModelVersion
-    skuName: gpt4_1ModelDeploymentType
-    skuCapacity: gpt4_1ModelCapacity
-  }
-  {
-    deploymentName: gptReasoningModelName
-    modelName: gptReasoningModelName
-    modelVersion: gptReasoningModelVersion
-    skuName: gptReasoningModelDeploymentType
-    skuCapacity: gptReasoningModelCapacity
+    deploymentName: gpt5_4ModelName
+    modelName: gpt5_4ModelName
+    modelVersion: gpt5_4ModelVersion
+    skuName: gpt5_4ModelDeploymentType
+    skuCapacity: gpt5_4ModelCapacity
   }
   {
     deploymentName: gptImageModelName
@@ -350,8 +318,7 @@ var aiModelDeployments = [
 ]
 var supportedModels = [
   gptModelName
-  gpt4_1ModelName
-  gptReasoningModelName
+  gpt5_4ModelName
   gptImageModelName
 ]
 
@@ -364,6 +331,7 @@ var privateDnsZones = [
   'privatelink.documents.azure.com'
   'privatelink.blob.core.windows.net'
   'privatelink.search.windows.net'
+  'privatelink.azurecr.io'
 ]
 var dnsZoneIndex = {
   cognitiveServices: 0
@@ -372,12 +340,20 @@ var dnsZoneIndex = {
   cosmosDb: 3
   blob: 4
   search: 5
+  containerRegistry: 6
 }
 var aiRelatedDnsZoneIndices = [
   dnsZoneIndex.cognitiveServices
   dnsZoneIndex.openAI
   dnsZoneIndex.aiServices
 ]
+
+// Container Registry reuse (create unless an existing registry is supplied)
+var useExistingContainerRegistry = !empty(existingContainerRegistryResourceId)
+var existingContainerRegistryName = useExistingContainerRegistry ? last(split(existingContainerRegistryResourceId, '/')) : ''
+var resolvedContainerRegistryName = useExistingContainerRegistry ? existingContainerRegistryName : container_registry!.outputs.name
+var containerRegistryResourceId = useExistingContainerRegistry ? existingContainerRegistryResourceId : container_registry!.outputs.resourceId
+var acrLoginServer = useExistingContainerRegistry ? '${existingContainerRegistryName}.azurecr.io' : container_registry!.outputs.loginServer
 
 var virtualNetworkSubnets = [
   {
@@ -1071,7 +1047,20 @@ module containerAppEnvDNSZone './modules/networking/private-dns-zone.bicep' = if
     ]
   }
 }
-
+module container_registry './modules/compute/container-registry.bicep' = if (!useExistingContainerRegistry) {
+  name: take('module.container-registry.${solutionName}', 64)
+  params: {
+    solutionName: solutionSuffix
+    location: location
+    tags: tags
+    enableTelemetry: enableTelemetry
+    enablePrivateNetworking: enablePrivateNetworking
+    privateEndpointSubnetId: enablePrivateNetworking ? virtualNetwork!.outputs.backendSubnetResourceId : ''
+    privateDnsZoneResourceIds: enablePrivateNetworking ? [
+      privateDnsZoneDeployments[dnsZoneIndex.containerRegistry]!.outputs.resourceId
+    ] : []
+  }
+}
 module containerApp './modules/compute/container-app.bicep' = {
   name: take('module.container-app.${solutionName}', 64)
   params: {
@@ -1086,6 +1075,12 @@ module containerApp './modules/compute/container-app.bicep' = {
     managedIdentities: {
       userAssignedResourceIds: [managed_identity.outputs.resourceId]
     }
+    registries: [
+      {
+        server: acrLoginServer
+        identity: managed_identity.outputs.resourceId
+      }
+    ]
     corsPolicy: {
       allowedOrigins: [
         'https://app-${solutionSuffix}.azurewebsites.net'
@@ -1134,7 +1129,7 @@ module containerApp './modules/compute/container-app.bicep' = {
           }
           {
             name: 'AZURE_OPENAI_RAI_DEPLOYMENT_NAME'
-            value: gpt4_1ModelName
+            value: gpt5_4ModelName
           }
           {
             name: 'AZURE_OPENAI_API_VERSION'
@@ -1182,7 +1177,7 @@ module containerApp './modules/compute/container-app.bicep' = {
           }
           {
             name: 'ORCHESTRATOR_MODEL_NAME'
-            value: gptReasoningModelName
+            value: gptModelName
           }
           {
             name: 'AZURE_OPENAI_IMAGE_DEPLOYMENT'
@@ -1245,6 +1240,7 @@ module containerApp './modules/compute/container-app.bicep' = {
 module containerAppMcp './modules/compute/container-app.bicep' = {
   name: take('module.container-app-mcp.${solutionName}', 64)
   params: {
+    stickySessionsAffinity : enableScalability? 'sticky': 'none'
     name: 'ca-mcp-${solutionSuffix}'
     location: location
     tags: tags
@@ -1256,6 +1252,12 @@ module containerAppMcp './modules/compute/container-app.bicep' = {
     managedIdentities: {
       userAssignedResourceIds: [managed_identity.outputs.resourceId]
     }
+    registries: [
+      {
+        server: acrLoginServer
+        identity: managed_identity.outputs.resourceId
+      }
+    ]
     corsPolicy: {
       allowedOrigins: [
         'https://app-${solutionSuffix}.azurewebsites.net'
@@ -1332,10 +1334,6 @@ module containerAppMcp './modules/compute/container-app.bicep' = {
             value: gptImageModelName
           }
           {
-            name: 'AZURE_OPENAI_IMAGE_QUALITY'
-            value: gptImageQuality
-          }
-          {
             name: 'AZURE_STORAGE_BLOB_URL'
             value: storage_account.outputs.blobEndpoint
           }
@@ -1372,9 +1370,11 @@ module webSite './modules/compute/app-service.bicep' = {
     enableTelemetry: enableTelemetry
     serverFarmResourceId: webServerFarm.outputs.resourceId
     linuxFxVersion: 'DOCKER|${frontendContainerRegistryHostname}/${frontendContainerImageName}:${frontendContainerImageTag}'
+    containerRegistryUserAssignedIdentityResourceId: managed_identity.outputs.resourceId
+    acrUserManagedIdentityClientId: managed_identity.outputs.clientId
     appSettings: {
       SCM_DO_BUILD_DURING_DEPLOYMENT: 'true'
-      DOCKER_REGISTRY_SERVER_URL: 'https://${frontendContainerRegistryHostname}'
+      DOCKER_REGISTRY_SERVER_URL: 'https://${acrLoginServer}'
       WEBSITES_PORT: '3000'
       WEBSITES_CONTAINER_START_TIME_LIMIT: '1800'
       BACKEND_API_URL: 'https://${containerApp.outputs.fqdn}'
@@ -1405,7 +1405,10 @@ module role_assignments_identity './modules/identity/role-assignments.bicep' = {
     aiSearchResourceId: ai_search.outputs.resourceId
     storageAccountResourceId: storage_account.outputs.resourceId
     cosmosDbAccountName: cosmosDBModule.outputs.name
+    containerRegistryResourceId: containerRegistryResourceId
     deployerPrincipalId: deployingUserPrincipalId
+    deployerPrincipalType: deployerPrincipalType
+    
   }
 }
 
@@ -1450,8 +1453,8 @@ output AZURE_OPENAI_ENDPOINT string = aiFoundryOpenAIEndpoint
 @description('The default GPT chat-completion deployment name used by the backend.')
 output AZURE_OPENAI_DEPLOYMENT_NAME string = gptModelName
 
-@description('The deployment name of the RAI (Responsible AI) / higher-quality completions model.')
-output AZURE_OPENAI_RAI_DEPLOYMENT_NAME string = gpt4_1ModelName
+@description('The deployment name of the GPT-5.4 model used for Responsible AI / higher-quality completions.')
+output AZURE_OPENAI_RAI_DEPLOYMENT_NAME string = gpt5_4ModelName
 
 @description('The Azure OpenAI REST API version used by the backend SDK clients.')
 output AZURE_OPENAI_API_VERSION string = azureOpenaiAPIVersion
@@ -1488,8 +1491,8 @@ output AZURE_TENANT_ID string = tenant().tenantId
 @description('The default scope used when requesting tokens for Azure Cognitive Services / AI Services.')
 output AZURE_COGNITIVE_SERVICES string = 'https://cognitiveservices.azure.com/.default'
 
-@description('The deployment name of the reasoning model used by the orchestrator/manager agent.')
-output ORCHESTRATOR_MODEL_NAME string = gptReasoningModelName
+@description('The deployment name of the model used by the orchestrator/manager agent.')
+output ORCHESTRATOR_MODEL_NAME string = gptModelName
 
 // MCP server
 @description('The configured name of the MCP server exposed by the deployment.')
@@ -1561,3 +1564,32 @@ output AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_RISK string = aiSearchIndexNameForCon
 
 @description('AI Search index name used by the contract compliance knowledge base.')
 output AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_COMPLIANCE string = aiSearchIndexNameForContractCompliance
+
+// Container Registry Outputs
+@description('Login server (endpoint) of the Azure Container Registry.')
+output AZURE_CONTAINER_REGISTRY_ENDPOINT string = acrLoginServer
+ 
+@description('Name of the Azure Container Registry.')
+output AZURE_CONTAINER_REGISTRY_NAME string = resolvedContainerRegistryName
+
+// Image build & push outputs (consumed by build_and_push_images scripts)
+@description('Name of the backend Container App.')
+output BACKEND_CONTAINER_APP_NAME string = containerApp.outputs.name
+
+@description('Name of the MCP Container App.')
+output MCP_CONTAINER_APP_NAME string = containerAppMcp.outputs.name
+
+@description('Name of the frontend Web App.')
+output FRONTEND_WEB_APP_NAME string = webSite.outputs.name
+
+@description('Backend container image repository name.')
+output BACKEND_IMAGE_NAME string = 'macaebackend'
+
+@description('Frontend container image repository name.')
+output FRONTEND_IMAGE_NAME string = 'macaefrontend'
+
+@description('MCP container image repository name.')
+output MCP_IMAGE_NAME string = 'macaemcp'
+
+@description('Port the frontend Web App container listens on.')
+output FRONTEND_WEBSITES_PORT string = '3000'

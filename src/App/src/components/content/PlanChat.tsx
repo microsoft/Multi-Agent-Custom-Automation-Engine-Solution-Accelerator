@@ -21,6 +21,8 @@ interface SimplifiedPlanChatProps extends PlanChatProps {
   showBufferingText: boolean;
   agentMessages: AgentMessageData[];
   showProcessingPlanSpinner: boolean;
+  processingElapsedSeconds: number;
+  processingStatusMessage: string;
   showApprovalButtons: boolean;
   handleApprovePlan: () => Promise<void>;
   handleRejectPlan: () => Promise<void>;
@@ -45,13 +47,13 @@ const PlanChat: React.FC<SimplifiedPlanChatProps> = ({
   showBufferingText,
   agentMessages,
   showProcessingPlanSpinner,
+  processingElapsedSeconds,
+  processingStatusMessage,
   showApprovalButtons,
   handleApprovePlan,
   handleRejectPlan,
   processingApproval
 }) => {
-  // States
-
   if (!planData)
     return (
       <ContentNotFound subtitle="The requested page could not be found." />
@@ -86,7 +88,7 @@ const PlanChat: React.FC<SimplifiedPlanChatProps> = ({
         {renderPlanResponse(planApprovalRequest, handleApprovePlan, handleRejectPlan, processingApproval, showApprovalButtons)}
         {renderAgentMessages(agentMessages, undefined, undefined, finalResultRef)}
 
-        {showProcessingPlanSpinner && renderPlanExecutionMessage()}
+        {showProcessingPlanSpinner && renderPlanExecutionMessage(processingElapsedSeconds, processingStatusMessage)}
         {/* Streaming plan updates — hidden while an approval prompt is pending so
             the approval action is presented at the appropriate step instead of
             after the thinking process visibly completes. */}

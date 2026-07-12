@@ -1,4 +1,5 @@
 import { Spinner } from "@fluentui/react-components";
+import ProcessingStatusIndicator from "../../common/ProcessingStatusIndicator.tsx";
 
 // Simple thinking message to show while creating plan
 const renderThinkingState = (waitingForPlan: boolean) => {
@@ -54,32 +55,15 @@ const renderThinkingState = (waitingForPlan: boolean) => {
 };
 
 // Simple message to show while executing the plan
-const renderPlanExecutionMessage = () => {
+const renderPlanExecutionMessage = (
+    processingElapsedSeconds?: number,
+    processingStatusMessage = 'Processing your plan and coordinating with AI agents...',
+) => {
     return (
-        <div style={{
-            maxWidth: '800px',
-            margin: '0 auto 32px auto',
-            padding: '0 24px'
-        }}>
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '16px',
-                backgroundColor: 'var(--colorNeutralBackground2)',
-                borderRadius: '8px',
-                border: '1px solid var(--colorNeutralStroke1)',
-                padding: '16px'
-            }}>
-                <Spinner size="small" />
-                <span style={{
-                    fontSize: '14px',
-                    color: 'var(--colorNeutralForeground1)',
-                    fontWeight: '500'
-                }}>
-                    Processing your plan and coordinating with AI agents...
-                </span>
-            </div>
-        </div>
+        <ProcessingStatusIndicator
+            message={processingStatusMessage}
+            elapsedSeconds={processingElapsedSeconds}
+        />
     );
 };
 

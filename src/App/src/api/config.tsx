@@ -85,6 +85,28 @@ export function getApiUrl() {
 
     return API_URL;
 }
+
+export function resolveApiAssetUrl(url: string): string {
+   if (!url) {
+       return url;
+   }
+   const marker = "/api/v4/images/";
+   const idx = url.indexOf(marker);
+   if (idx === -1) {
+       return url;
+   }
+   const path = url.slice(idx); // drop any scheme+host before the image path
+   const apiUrl = getApiUrl();
+   if (apiUrl && /^https?:\/\//i.test(apiUrl)) {
+       try {
+           return new URL(apiUrl).origin + path;
+       } catch {
+           return path;
+       }
+   }
+   return path;
+}
+
 export function getUserInfoGlobal() {
     if (!USER_INFO) {
         // Check if window.userInfo exists

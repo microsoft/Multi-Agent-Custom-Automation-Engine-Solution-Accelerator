@@ -177,6 +177,19 @@ sys.modules['common.config'] = Mock()
 sys.modules['common.config.app_config'] = Mock(config=mock_config)
 sys.modules['common.models'] = Mock()
 
+# Register the real markdown_utils so the orchestrator uses genuine table logic, not a Mock (Bug 47810).
+import importlib.util as _ilu  # noqa: E402
+
+_md_path = os.path.join(
+    os.path.dirname(__file__), "..", "..", "..", "backend",
+    "common", "utils", "markdown_utils.py",
+)
+_md_spec = _ilu.spec_from_file_location("common.utils.markdown_utils", _md_path)
+_markdown_utils = _ilu.module_from_spec(_md_spec)
+_md_spec.loader.exec_module(_markdown_utils)
+sys.modules['common.utils'] = Mock()
+sys.modules['common.utils.markdown_utils'] = _markdown_utils
+
 
 class MockTeamConfiguration:
     def __init__(self, name="TestTeam", deployment_name="test_deployment"):
@@ -991,3 +1004,69 @@ class TestOrchestrationManagerInit:
         manager = OrchestrationManager()
 
         assert isinstance(manager.logger, logging.Logger)
+
+
+# _normalize_markdown_tables (Bug 47810)
+from backend.orchestration.orchestration_manager import (  # noqa: E402
+    _normalize_markdown_tables,
+)
+from common.utils.markdown_utils import (  # noqa: E402
+    reflow_collapsed_table_line as _reflow_collapsed_table_line,
+)
+
+
+class TestNormalizeMarkdownTables:
+    """Test markdown table re-flow for collapsed orchestrator output (Bug 47810)."""
+
+    def test_given_collapsed_table_when_normalized_then_rows_split_to_lines(self):
+        collapsed = (
+            "| Risk Type | Description | Rating | "
+            "|-------|-------|-------| "
+            "| Delivery | Undefined timeline | Medium | "
+            "| Financial | Fixed budget | High |"
+        )
+
+        result = _normalize_markdown_tables(collapsed)
+
+        lines = [ln for ln in result.split("\n") if ln.strip()]
+        assert lines == [
+            "| Risk Type | Description | Rating |",
+            "| ------- | ------- | ------- |",
+            "| Delivery | Undefined timeline | Medium |",
+            "| Financial | Fixed budget | High |",
+        ]
+
+    def test_given_collapsed_table_with_prefix_then_prefix_kept_on_own_line(self):
+        collapsed = (
+            "Risk Analysis | A | B | |---|---| | 1 | 2 |"
+        )
+
+        result = _normalize_markdown_tables(collapsed)
+
+        # Prefix prose separated from the table by a blank line for GFM.
+        assert result.startswith("Risk Analysis\n\n| A | B |")
+
+    def test_given_wellformed_table_when_normalized_then_unchanged(self):
+        good = "| A | B |\n| --- | --- |\n| 1 | 2 |\n| 3 | 4 |"
+
+        assert _normalize_markdown_tables(good) == good
+
+    def test_given_plain_text_when_normalized_then_unchanged(self):
+        text = "Just some text with a - dash and | a pipe."
+
+        assert _normalize_markdown_tables(text) == text
+
+    def test_given_colon_aligned_delimiter_when_normalized_then_alignment_kept(self):
+        collapsed = "| A | B | C | |:--|:-:|--:| | 1 | 2 | 3 |"
+
+        result = _normalize_markdown_tables(collapsed)
+
+        assert "| :-- | :-: | --: |" in result
+
+    def test_given_empty_or_none_when_normalized_then_returns_input(self):
+        assert _normalize_markdown_tables("") == ""
+        assert _normalize_markdown_tables(None) is None
+
+    def test_given_non_table_pipe_line_when_reflowed_then_returns_none(self):
+        assert _reflow_collapsed_table_line("a | b | c") is None
+

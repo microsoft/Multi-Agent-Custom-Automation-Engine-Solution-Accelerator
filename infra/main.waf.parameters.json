@@ -2,6 +2,9 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
+    "deploymentFlavor": {
+      "value": "avm-waf"
+    },
     "solutionName": {
       "value": "${AZURE_ENV_NAME}"
     },
@@ -11,17 +14,41 @@
     "azureAiServiceLocation": {
       "value": "${AZURE_ENV_AI_SERVICE_LOCATION}"
     },
-    "gptModelName": {
-      "value": "${AZURE_ENV_GPT_MODEL_NAME=gpt-5.4-mini}"
-    },
-    "gptModelVersion": {
-      "value": "${AZURE_ENV_GPT_MODEL_VERSION=2026-03-17}"
-    },
-    "gptModelDeploymentType": {
+    "deploymentType": {
       "value": "${AZURE_ENV_MODEL_DEPLOYMENT_TYPE}"
     },
-    "gptModelCapacity": {
+    "gptModelName": {
+      "value": "${AZURE_ENV_GPT_MODEL_NAME}"
+    },
+    "gptModelVersion": {
+      "value": "${AZURE_ENV_GPT_MODEL_VERSION}"
+    },
+    "gptDeploymentCapacity": {
       "value": "${AZURE_ENV_GPT_MODEL_CAPACITY}"
+    },
+    "gpt5_4ModelDeploymentType": {
+      "value": "${AZURE_ENV_MODEL_5_4_DEPLOYMENT_TYPE}"
+    },
+    "gpt5_4ModelName": {
+      "value": "${AZURE_ENV_MODEL_5_4_NAME}"
+    },
+    "gpt5_4ModelVersion": {
+      "value": "${AZURE_ENV_MODEL_5_4_VERSION}"
+    },
+    "gpt5_4ModelCapacity": {
+      "value": "${AZURE_ENV_MODEL_5_4_CAPACITY}"
+    },
+    "gptImageModelName": {
+      "value": "${AZURE_ENV_IMAGE_MODEL_NAME}"
+    },
+    "gptImageModelVersion": {
+      "value": "${AZURE_ENV_IMAGE_MODEL_VERSION}"
+    },
+    "gptImageModelDeploymentType": {
+      "value": "${AZURE_ENV_IMAGE_MODEL_DEPLOYMENT_TYPE}"
+    },
+    "gptImageModelCapacity": {
+      "value": "${AZURE_ENV_IMAGE_MODEL_CAPACITY}"
     },
     "enableTelemetry": {
       "value": "${AZURE_ENV_ENABLE_TELEMETRY}"
@@ -38,10 +65,19 @@
     "enableRedundancy": {
       "value": false
     },
+    "vmAdminUsername": {
+      "value": "${AZURE_ENV_VM_ADMIN_USERNAME}"
+    },
+    "vmAdminPassword": {
+      "value": "${AZURE_ENV_VM_ADMIN_PASSWORD}"
+    },
+    "vmSize": {
+      "value": "${AZURE_ENV_VM_SIZE}"
+    },
     "existingLogAnalyticsWorkspaceId": {
       "value": "${AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID}"
     },
-    "existingAiFoundryAiProjectResourceId": {
+    "existingFoundryProjectResourceId": {
       "value": "${AZURE_EXISTING_AIPROJECT_RESOURCE_ID}"
     },
     "backendContainerRegistryHostname": {
@@ -50,10 +86,16 @@
     "frontendContainerRegistryHostname": {
       "value": "${AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT}"
     },
+    "MCPContainerRegistryHostname": {
+      "value": "${AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT}"
+    },
     "backendContainerImageTag": {
       "value": "${AZURE_ENV_IMAGE_TAG=latest_v5}"
     },
     "frontendContainerImageTag": {
+      "value": "${AZURE_ENV_IMAGE_TAG=latest_v5}"
+    },
+    "MCPContainerImageTag": {
       "value": "${AZURE_ENV_IMAGE_TAG=latest_v5}"
     }
   }

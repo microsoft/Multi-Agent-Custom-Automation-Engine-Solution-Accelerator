@@ -393,3 +393,13 @@ resource workloadAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = 
   }
 }]
 
+// Deploying User → AcrPull on Container Registry (mirrors the reference accelerator)
+resource deployerAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(deployerPrincipalId) && !empty(containerRegistryResourceId)) {
+  name: guid(solutionName, containerRegistry.id, deployerPrincipalId, roleDefinitions.acrPull)
+  scope: containerRegistry
+  properties: {
+    principalId: deployerPrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitions.acrPull)
+    principalType: deployerPrincipalType
+  }
+}

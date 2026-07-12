@@ -13,8 +13,48 @@ from models.messages import (AgentMessage, AgentMessageStreaming,
                              AgentToolCall, AgentToolMessage,
                              WebsocketMessageType)
 from orchestration.connection_config import connection_config
+from common.utils.markdown_utils import normalize_markdown_tables
 
 logger = logging.getLogger(__name__)
+
+
+def format_agent_display_name(raw_name: str) -> str:
+    """Convert raw agent IDs (e.g. 'HRHelperAgent', 'hr_helper_agent') to
+    human-readable display names (e.g. 'HR Helper Agent').
+
+    Applies similar splitting/casing logic as the frontend's
+    ``cleanTextToSpaces`` + ``getAgentDisplayName`` pipeline, but does NOT
+    strip the "Agent" suffix (the frontend handles that separately).
+    """
+    if not raw_name:
+        return "Assistant"
+
+    name = raw_name
+
+    # Replace underscores with spaces
+    name = name.replace("_", " ")
+
+    # Insert space before each uppercase letter preceded by a lowercase letter
+    # e.g. "HelperAgent" → "Helper Agent"
+    name = re.sub(r'([a-z])([A-Z])', r'\1 \2', name)
+
+    # Insert space between consecutive uppercase and an uppercase+lowercase pair
+    # e.g. "HRHelper" → "HR Helper"
+    name = re.sub(r'([A-Z]+)([A-Z][a-z])', r'\1 \2', name)
+
+    # Collapse multiple spaces
+    name = re.sub(r'\s+', ' ', name).strip()
+
+    # Title-case each word
+    name = name.title()
+
+    # Fix common acronyms back to uppercase (word-boundary safe)
+    _ACRONYMS = {'Hr': 'HR', 'It': 'IT', 'Ai': 'AI', 'Api': 'API',
+                 'Ui': 'UI', 'Db': 'DB', 'Kb': 'KB'}
+    for title_form, upper_form in _ACRONYMS.items():
+        name = re.sub(rf'\b{title_form}\b', upper_form, name)
+
+    return name
 
 
 def clean_citations(text: str) -> str:
@@ -66,12 +106,16 @@ def agent_response_callback(
     Final (non-streaming) agent response callback using agent_framework Message.
     """
     agent_name = getattr(message, "author_name", None) or agent_id or "Unknown Agent"
+    agent_name = format_agent_display_name(agent_name)
     role = getattr(message, "role", "assistant")
 
     # Message has a .text property that concatenates all TextContent items
     text = getattr(message, "text", "") if message is not None else ""
 
     text = clean_citations(text or "")
+
+    # Repair collapsed markdown tables before rendering (Bug 47810).
+    text = normalize_markdown_tables(text)
 
     if not user_id:
         logger.debug("No user_id provided; skipping websocket send for final message.")
@@ -107,6 +151,8 @@ async def streaming_agent_response_callback(
     if not user_id:
         return
 
+    display_name = format_agent_display_name(agent_id)
+
     try:
         chunk_text = getattr(update, "text", None)
         if not chunk_text:
@@ -123,7 +169,7 @@ async def streaming_agent_response_callback(
         contents = getattr(update, "contents", []) or []
         tool_calls = _extract_tool_calls_from_contents(contents)
         if tool_calls:
-            tool_message = AgentToolMessage(agent_name=agent_id)
+            tool_message = AgentToolMessage(agent_name=display_name)
             tool_message.tool_calls.extend(tool_calls)
             await connection_config.send_status_update_async(
                 tool_message,
@@ -134,7 +180,7 @@ async def streaming_agent_response_callback(
 
         if cleaned:
             streaming_payload = AgentMessageStreaming(
-                agent_name=agent_id,
+                agent_name=display_name,
                 content=cleaned,
                 is_final=is_final,
             )

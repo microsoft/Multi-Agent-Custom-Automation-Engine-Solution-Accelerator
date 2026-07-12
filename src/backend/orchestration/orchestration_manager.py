@@ -16,10 +16,13 @@ from agent_framework_orchestrations import (MagenticBuilder,
                                             MagenticPlanReviewRequest)
 from agents.agent_factory import AgentFactory
 from callbacks.response_handlers import (agent_response_callback,
+                                         format_agent_display_name,
                                          streaming_agent_response_callback)
 from common.config.app_config import config
 from common.database.database_base import DatabaseBase
 from common.models.messages import TeamConfiguration
+from common.utils.markdown_utils import \
+    normalize_markdown_tables as _normalize_markdown_tables
 from models.messages import AgentMessageStreaming, WebsocketMessageType
 from orchestration.connection_config import (connection_config,
                                              orchestration_config)
@@ -37,8 +40,14 @@ apply_tool_history_leak_patch()
 _BARE_IMAGE_URL_RE = re.compile(
     r"(?<![\(\]])"
     r"(?<!\]\()"
-    r"(https?://[^\s)]+?"
-    r"(?:/api/v4/images/[^\s)]+?|[^\s)]+?\.(?:png|jpe?g|gif|webp)))"
+    r"("
+    # Absolute image URL (any host, or a backend /api/v4/images path)
+    r"https?://[^\s)]+?(?:/api/v4/images/[^\s)]+?|[^\s)]+?\.(?:png|jpe?g|gif|webp))"
+    # Bare relative backend image path (emitted by the MCP/backend image tools).
+    # The (?<![^\s]) guard requires the path to start at whitespace/string-start so
+    # it never matches the same substring inside an absolute URL.
+    r"|(?<![^\s])/api/v4/images/[^\s)]+?\.(?:png|jpe?g|gif|webp)"
+    r")"
     r"(?=[\s)\]]|$)",
     re.IGNORECASE,
 )
@@ -106,8 +115,8 @@ class OrchestrationManager:
             raise
 
         # Create a separate client for the orchestrator manager using a
-        # reasoning model (o4-mini) — much more reliable at structured JSON
-        # output and multi-step routing decisions than standard GPT models.
+        # dedicated orchestrator model (gpt-5.4-mini) — much more reliable at
+        # structured JSON output and multi-step routing decisions.
         orchestrator_model = config.ORCHESTRATOR_MODEL_NAME
         try:
             manager_chat_client = FoundryChatClient(
@@ -136,8 +145,20 @@ class OrchestrationManager:
 
         manager_agent = Agent(manager_chat_client, name="MagenticManager")
 
+        # Collect participant agent names so the orchestrator plan prompt can
+        # enforce mandatory inclusion of every team agent (e.g. TriageAgent,
+        # ComplianceAgent) — otherwise the manager silently drops them.
+        participant_agent_names = []
+        for ag in agents:
+            nm = getattr(ag, "agent_name", None) or getattr(ag, "name", None)
+            if nm:
+                participant_agent_names.append(nm)
+
         # Get prompt customization kwargs
-        prompt_kwargs = get_magentic_prompt_kwargs(has_user_responses=has_user_responses)
+        prompt_kwargs = get_magentic_prompt_kwargs(
+            has_user_responses=has_user_responses,
+            participant_names=participant_agent_names,
+        )
 
         cls.logger.info(
             "Building MagenticBuilder for user '%s' with max_rounds=%d, "
@@ -212,7 +233,6 @@ class OrchestrationManager:
             current is not None and current_team_id != team_config.team_id
         )
 
-
         cls.logger.info(
             "get_current_or_new_orchestration: user='%s' selected_team='%s' "
             "cached_team='%s' team_switched=%s team_changed=%s current_is_none=%s",
@@ -220,17 +240,13 @@ class OrchestrationManager:
             team_switched, team_changed, current is None,
         )
 
-
         # Full rebuild: no workflow exists, team explicitly switched, or the
         # cached workflow belongs to a different team than the selected one.
         needs_full_rebuild = current is None or team_switched or team_changed
 
-
         # Lightweight reset: workflow finished but agents are still valid for the
         # same team (a team change always routes to full rebuild above so we
         # never reuse the previous team's agents here).
-
-
         needs_workflow_reset = not needs_full_rebuild and workflow_terminated
 
         if needs_full_rebuild:
@@ -361,6 +377,7 @@ class OrchestrationManager:
             self.logger.info("Participant names: %s", participant_names)
 
             self.logger.info("Starting workflow execution...")
+            plan_already_approved = False
 
             # Initial run — stream events, collect any pending requests
             pending = await self._process_event_stream(
@@ -380,18 +397,30 @@ class OrchestrationManager:
 
                 # Handle plan reviews (present to user, wait for approval)
                 if plan_requests:
-                    self.logger.info(
-                        "Workflow paused with %d plan review request(s)",
-                        len(plan_requests),
-                    )
-                    plan_responses = await self._handle_plan_reviews(
-                        plan_requests,
-                        participant_names=participant_names,
-                        task_text=task_text,
-                        user_id=user_id,
-                    )
-                    if plan_responses is None:
-                        raise RuntimeError("Plan execution cancelled by user")
+                    if plan_already_approved:
+                        self.logger.info(
+                            "Auto-approving replanned workflow"
+                        )
+                        plan_responses = {
+                            request_id: plan_review.approve()
+                            for request_id, plan_review in plan_requests.items()
+                        }
+                    else:
+                        self.logger.info(
+                            "Workflow paused with %d plan review request(s)",
+                            len(plan_requests),
+                        )
+                        plan_responses = await self._handle_plan_reviews(
+                            plan_requests,
+                            participant_names=participant_names,
+                            task_text=task_text,
+                            user_id=user_id,
+                        )
+                        if plan_responses is None:
+                            raise RuntimeError("Plan execution cancelled by user")
+
+                        plan_already_approved = True
+
                     responses.update(plan_responses)
 
                 # Handle tool approval requests (clarification from user)
@@ -422,6 +451,9 @@ class OrchestrationManager:
             # Use executor_completed Message if available; otherwise fall back to
             # accumulated orchestrator streaming chunks.
             final_text = final_output_ref[0] or "".join(orchestrator_chunks)
+
+            # Repair collapsed markdown tables before rendering (Bug 47810).
+            final_text = _normalize_markdown_tables(final_text)
 
             final_text = _embed_bare_image_urls(final_text)
 
@@ -763,12 +795,12 @@ class OrchestrationManager:
                             and executor != current_streaming_agent_ref[0]
                         ):
                             current_streaming_agent_ref[0] = executor
-                            display_name = executor.replace("_", " ")
+                            display_name = format_agent_display_name(executor)
                             header_text = f"\n\n---\n### {display_name}\n\n"
                             try:
                                 await connection_config.send_status_update_async(
                                     AgentMessageStreaming(
-                                        agent_name=executor,
+                                        agent_name=display_name,
                                         content=header_text,
                                         is_final=False,
                                     ),

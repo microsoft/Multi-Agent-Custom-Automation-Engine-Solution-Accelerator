@@ -35,9 +35,8 @@ param location string
   azd: {
     type: 'location'
     usageName: [
-      'OpenAI.GlobalStandard.gpt-5.4-mini, 150'
-      'OpenAI.GlobalStandard.gpt-5.4-mini, 50'
-      'OpenAI.GlobalStandard.gpt-5.4-mini, 50'
+      'OpenAI.GlobalStandard.gpt-5.4, 150'
+      'OpenAI.GlobalStandard.gpt-5.4-mini, 100'
       'OpenAI.GlobalStandard.gpt-image-1.5, 5'
     ]
   }
@@ -60,41 +59,24 @@ param deploymentType string = 'GlobalStandard'
 
 @minValue(1)
 @description('Optional. Capacity of the default GPT model deployment.')
-param gptDeploymentCapacity int = 50
+param gptDeploymentCapacity int = 100
 
-@description('Optional. Name of the RAI GPT model deployment.')
-param gpt4_1ModelName string = 'gpt-5.4-mini'
+@description('Optional. Name of the larger GPT model deployment.')
+param gpt5_4ModelName string = 'gpt-5.4'
 
-@description('Optional. Version of the RAI GPT model deployment.')
-param gpt4_1ModelVersion string = '2026-03-17'
-
-@allowed([
-  'Standard'
-  'GlobalStandard'
-])
-@description('Optional. Deployment type for the RAI GPT model deployment.')
-param gpt4_1ModelDeploymentType string = 'GlobalStandard'
-
-@minValue(1)
-@description('Optional. Capacity of the RAI GPT model deployment.')
-param gpt4_1ModelCapacity int = 150
-
-@description('Optional. Name of the reasoning model deployment.')
-param gptReasoningModelName string = 'gpt-5.4-mini'
-
-@description('Optional. Version of the reasoning model deployment.')
-param gptReasoningModelVersion string = '2026-03-17'
+@description('Optional. Version of the larger GPT model deployment.')
+param gpt5_4ModelVersion string = '2026-03-05'
 
 @allowed([
   'Standard'
   'GlobalStandard'
 ])
-@description('Optional. Deployment type for the reasoning model deployment.')
-param gptReasoningModelDeploymentType string = 'GlobalStandard'
+@description('Optional. Deployment type for the larger GPT model deployment.')
+param gpt5_4ModelDeploymentType string = 'GlobalStandard'
 
 @minValue(1)
-@description('Optional. Capacity of the reasoning model deployment.')
-param gptReasoningModelCapacity int = 50
+@description('Optional. Capacity of the larger GPT model deployment.')
+param gpt5_4ModelCapacity int = 150
 
 @minLength(1)
 @description('Optional. Name of the image-generation model to deploy. Defaults to gpt-image-1.5.')
@@ -114,44 +96,35 @@ param gptImageModelDeploymentType string = 'GlobalStandard'
 @description('Optional. gpt-image-1.5 deployment capacity (RPM). Defaults to 5 to support concurrent marketing-image generation across multiple sessions.')
 param gptImageModelCapacity int = 5
 
-@allowed([
-  'low'
-  'medium'
-  'high'
-  'auto'
-])
-@description('Optional. Image generation quality for gpt-image models (low/medium/high/auto). Defaults to high.')
-param gptImageQuality string = 'high'
-
 @description('Optional. Azure OpenAI API version.')
-param azureOpenaiAPIVersion string = '2025-04-01-preview'
+param azureOpenaiAPIVersion string = '2024-12-01-preview'
 
 @description('Optional. The Container Registry hostname where the docker images for the backend are located.')
-param backendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
+param backendContainerRegistryHostname string = 'mcr.microsoft.com'
 
 @description('Optional. The Container Image Name to deploy on the backend.')
-param backendContainerImageName string = 'macaebackend'
+param backendContainerImageName string = 'azuredocs/containerapps-helloworld'
 
 @description('Optional. The Container Image Tag to deploy on the backend.')
-param backendContainerImageTag string = 'latest_v5'
+param backendContainerImageTag string = 'latest'
 
 @description('Optional. The Container Registry hostname where the docker images for the frontend are located.')
-param frontendContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
+param frontendContainerRegistryHostname string = 'mcr.microsoft.com'
 
 @description('Optional. The Container Image Name to deploy on the frontend.')
-param frontendContainerImageName string = 'macaefrontend'
+param frontendContainerImageName string = 'azuredocs/containerapps-helloworld'
 
 @description('Optional. The Container Image Tag to deploy on the frontend.')
-param frontendContainerImageTag string = 'latest_v5'
+param frontendContainerImageTag string = 'latest'
 
 @description('Optional. The Container Registry hostname where the docker images for the MCP are located.')
-param MCPContainerRegistryHostname string = 'biabcontainerreg.azurecr.io'
+param MCPContainerRegistryHostname string = 'mcr.microsoft.com'
 
 @description('Optional. The Container Image Name to deploy on the MCP.')
-param MCPContainerImageName string = 'macaemcp'
+param MCPContainerImageName string = 'azuredocs/containerapps-helloworld'
 
 @description('Optional. The Container Image Tag to deploy on the MCP.')
-param MCPContainerImageTag string = 'latest_v5'
+param MCPContainerImageTag string = 'latest'
 
 @description('Optional. Resource ID of an existing Log Analytics Workspace.')
 param existingLogAnalyticsWorkspaceId string = ''
@@ -197,6 +170,9 @@ param createdBy string = contains(deployer(), 'userPrincipalName')
 @description('Optional. Flag to indicate if this is a custom code deployment. If true, some resources may be skipped or configured differently.')
 param isCustom bool = false
 
+@description('Optional. Resource ID of an existing Azure Container Registry to reuse. If empty, a new container registry is created.')
+param existingContainerRegistryResourceId string = ''
+
 var deployerInfo = deployer()
 var deployingUserPrincipalId = deployerInfo.objectId
 var deployerPrincipalType = contains(deployerInfo, 'userPrincipalName') ? 'User' : 'ServicePrincipal'
@@ -211,6 +187,12 @@ var solutionSuffix = toLower(trim(replace(
   ''
 )))
 var existingTags = resourceGroup().tags ?? {}
+// Container Registry reuse (mirrors the reference accelerator: create unless an existing registry is supplied)
+var useExistingContainerRegistry = !empty(existingContainerRegistryResourceId)
+var existingContainerRegistryName = useExistingContainerRegistry ? last(split(existingContainerRegistryResourceId, '/')) : ''
+var resolvedContainerRegistryName = useExistingContainerRegistry ? existingContainerRegistryName : container_registry!.outputs.name
+var containerRegistryResourceId = useExistingContainerRegistry ? existingContainerRegistryResourceId : container_registry!.outputs.resourceId
+var acrLoginServer = useExistingContainerRegistry ? '${existingContainerRegistryName}.azurecr.io' : container_registry!.outputs.loginServer
 var allTags = union({
   'azd-env-name': solutionName
 }, tags)
@@ -233,16 +215,10 @@ var modelDeployments = [
     capacity: gptDeploymentCapacity
   }
   {
-    name: gpt4_1ModelName
-    version: gpt4_1ModelVersion
-    skuName: gpt4_1ModelDeploymentType
-    capacity: gpt4_1ModelCapacity
-  }
-  {
-    name: gptReasoningModelName
-    version: gptReasoningModelVersion
-    skuName: gptReasoningModelDeploymentType
-    capacity: gptReasoningModelCapacity
+    name: gpt5_4ModelName
+    version: gpt5_4ModelVersion
+    skuName: gpt5_4ModelDeploymentType
+    capacity: gpt5_4ModelCapacity
   }
   {
     name: gptImageModelName
@@ -253,8 +229,7 @@ var modelDeployments = [
 ]
 var supportedModels = [
   gptModelName
-  gpt4_1ModelName
-  gptReasoningModelName
+  gpt5_4ModelName
   gptImageModelName
 ]
 
@@ -497,7 +472,7 @@ module foundry_search_connection './modules/ai/ai-foundry-connection.bicep' = {
   }
 }
 
-module container_registry './modules/compute/container-registry.bicep' = if(isCustom) {
+module container_registry './modules/compute/container-registry.bicep' = if (!useExistingContainerRegistry) {
   name: take('module.container-registry.${solutionSuffix}', 64)
   params: {
     solutionName: solutionSuffix
@@ -541,12 +516,12 @@ module backend_container_app './modules/compute/container-app.bicep' = {
       minReplicas: 1
       maxReplicas: 1
     }
-    registries: isCustom ? [
+    registries: [
       {
-        server: container_registry!.outputs.loginServer
+        server: acrLoginServer
         identity: userAssignedIdentity.outputs.resourceId
       }
-    ] : []
+    ]
     containers: [
       {
         name: 'backend'
@@ -578,7 +553,7 @@ module backend_container_app './modules/compute/container-app.bicep' = {
           }
           {
             name: 'AZURE_OPENAI_RAI_DEPLOYMENT_NAME'
-            value: gpt4_1ModelName
+            value: gpt5_4ModelName
           }
           {
             name: 'AZURE_OPENAI_API_VERSION'
@@ -626,7 +601,7 @@ module backend_container_app './modules/compute/container-app.bicep' = {
           }
           {
             name: 'ORCHESTRATOR_MODEL_NAME'
-            value: gptReasoningModelName
+            value: gptModelName
           }
           {
             name: 'AZURE_OPENAI_IMAGE_DEPLOYMENT'
@@ -708,12 +683,12 @@ module mcp_container_app './modules/compute/container-app.bicep' = {
       minReplicas: 1
       maxReplicas: 1
     }
-    registries: isCustom ? [
+    registries: [
       {
-        server: container_registry!.outputs.loginServer
+        server: acrLoginServer
         identity: userAssignedIdentity.outputs.resourceId
       }
-    ] : []
+    ]
     containers: [
       {
         name: 'mcp'
@@ -780,10 +755,6 @@ module mcp_container_app './modules/compute/container-app.bicep' = {
             value: gptImageModelName
           }
           {
-            name: 'AZURE_OPENAI_IMAGE_QUALITY'
-            value: gptImageQuality
-          }
-          {
             name: 'AZURE_STORAGE_BLOB_URL'
             value: storage_account.outputs.blobEndpoint
           }
@@ -815,21 +786,13 @@ module frontend_app './modules/compute/app-service.bicep' = {
     location: solutionLocation
     tags: isCustom ? union(allTags, { 'azd-service-name': 'frontend' }) : allTags
     serverFarmResourceId: app_service_plan.outputs.resourceId
-    linuxFxVersion: isCustom ? 'python|3.11' : 'DOCKER|${frontendContainerRegistryHostname}/${frontendContainerImageName}:${frontendContainerImageTag}'
-    appCommandLine: isCustom ? 'python3 -m uvicorn frontend_server:app --host 0.0.0.0 --port 8000' : ''
-    appSettings: isCustom ? {
-      SCM_DO_BUILD_DURING_DEPLOYMENT: 'True'
-      WEBSITES_PORT: '8000'
-      BACKEND_API_URL: 'https://${backend_container_app.outputs.fqdn}'
-      AUTH_ENABLED: 'false'
-      PROXY_API_REQUESTS: 'false'
-      ENABLE_ORYX_BUILD: 'True'
-      APPLICATIONINSIGHTS_CONNECTION_STRING: app_insights.outputs.connectionString
-      APPINSIGHTS_INSTRUMENTATIONKEY: app_insights.outputs.instrumentationKey
-    }
-    : {
+    linuxFxVersion: 'DOCKER|${frontendContainerRegistryHostname}/${frontendContainerImageName}:${frontendContainerImageTag}'
+    containerRegistryUserAssignedIdentityResourceId: userAssignedIdentity.outputs.resourceId
+    acrUserManagedIdentityClientId: userAssignedIdentity.outputs.clientId
+    appCommandLine: ''
+    appSettings: {
       SCM_DO_BUILD_DURING_DEPLOYMENT: 'true'
-      DOCKER_REGISTRY_SERVER_URL: 'https://${frontendContainerRegistryHostname}'
+      DOCKER_REGISTRY_SERVER_URL: 'https://${acrLoginServer}'
       WEBSITES_PORT: '3000'
       WEBSITES_CONTAINER_START_TIME_LIMIT: '1800'
       BACKEND_API_URL: 'https://${backend_container_app.outputs.fqdn}'
@@ -856,7 +819,7 @@ module role_assignments './modules/identity/role-assignments.bicep' = {
     deployerPrincipalType: deployerPrincipalType
     userAssignedManagedIdentityPrincipalId: userAssignedIdentity.outputs.principalId
     cosmosDbAccountName: cosmosDBModule.outputs.name
-    containerRegistryResourceId: isCustom ? container_registry!.outputs.resourceId : ''
+    containerRegistryResourceId: containerRegistryResourceId
   }
 }
 
@@ -895,7 +858,7 @@ output AZURE_OPENAI_ENDPOINT string = aiFoundryOpenAIEndpoint
 output AZURE_OPENAI_DEPLOYMENT_NAME string = gptModelName
 
 @description('The RAI (Responsible AI) GPT model deployment name.')
-output AZURE_OPENAI_RAI_DEPLOYMENT_NAME string = gpt4_1ModelName
+output AZURE_OPENAI_RAI_DEPLOYMENT_NAME string = gpt5_4ModelName
 
 @description('The Azure OpenAI API version used by the application.')
 output AZURE_OPENAI_API_VERSION string = azureOpenaiAPIVersion
@@ -930,8 +893,8 @@ output AZURE_TENANT_ID string = tenant().tenantId
 @description('The default Cognitive Services resource scope used to acquire AAD tokens.')
 output AZURE_COGNITIVE_SERVICES string = 'https://cognitiveservices.azure.com/.default'
 
-@description('The model deployment name used by the orchestrator/manager (reasoning model).')
-output ORCHESTRATOR_MODEL_NAME string = gptReasoningModelName
+@description('The model deployment name used by the orchestrator/manager.')
+output ORCHESTRATOR_MODEL_NAME string = gptModelName
 
 @description('The display name of the MCP server.')
 output MCP_SERVER_NAME string = mcpServerName
@@ -1003,8 +966,31 @@ output AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_RISK string = aiSearchIndexNameForCon
 output AZURE_AI_SEARCH_INDEX_NAME_CONTRACT_COMPLIANCE string = aiSearchIndexNameForContractCompliance
 
 // Container Registry Outputs
-@description('Login server (endpoint) of the Azure Container Registry. Only populated when isCustom is true.')
-output AZURE_CONTAINER_REGISTRY_ENDPOINT string? = isCustom ? container_registry!.outputs.loginServer : null
+@description('Login server (endpoint) of the Azure Container Registry.')
+output AZURE_CONTAINER_REGISTRY_ENDPOINT string = acrLoginServer
 
-@description('Name of the Azure Container Registry. Only populated when isCustom is true.')
-output AZURE_CONTAINER_REGISTRY_NAME string? = isCustom ? container_registry!.outputs.name : null
+@description('Name of the Azure Container Registry.')
+output AZURE_CONTAINER_REGISTRY_NAME string = resolvedContainerRegistryName
+
+// Image build & push outputs (consumed by build_and_push_images scripts)
+@description('Name of the backend Container App.')
+output BACKEND_CONTAINER_APP_NAME string = backend_container_app.outputs.name
+
+@description('Name of the MCP Container App.')
+output MCP_CONTAINER_APP_NAME string = mcp_container_app.outputs.name
+
+@description('Name of the frontend Web App.')
+output FRONTEND_WEB_APP_NAME string = frontend_app.outputs.name
+
+@description('Backend container image repository name.')
+output BACKEND_IMAGE_NAME string = 'macaebackend'
+
+@description('Frontend container image repository name.')
+output FRONTEND_IMAGE_NAME string = 'macaefrontend'
+
+@description('MCP container image repository name.')
+output MCP_IMAGE_NAME string = 'macaemcp'
+
+@description('Port the frontend Web App container listens on.')
+output FRONTEND_WEBSITES_PORT string = '3000'
+ 
