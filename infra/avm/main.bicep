@@ -1334,6 +1334,10 @@ module containerAppMcp './modules/compute/container-app.bicep' = {
             value: gptImageModelName
           }
           {
+            name: 'AZURE_OPENAI_IMAGE_QUALITY'
+            value: 'high'
+          }
+          {
             name: 'AZURE_STORAGE_BLOB_URL'
             value: storage_account.outputs.blobEndpoint
           }
