@@ -22,7 +22,7 @@
       "toolbox_filter": "",
       "user_responses": false,
       "coding_tools": false,
-      "temperature": 0.2,
+      "temperature": null,
       "icon": ""
     },
     {
@@ -40,7 +40,7 @@
       "toolbox_filter": "",
       "user_responses": false,
       "coding_tools": false,
-      "temperature": 0.2,
+      "temperature": null,
       "icon": ""
     },
     {

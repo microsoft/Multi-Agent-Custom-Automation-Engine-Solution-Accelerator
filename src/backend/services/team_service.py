@@ -327,6 +327,8 @@ class TeamService:
         models = set()
         text_lower = text.lower()
         model_patterns = [
+            r"gpt-5\.\d+(?:-\w+)?",
+            r"gpt-5(?:-\w+)?",
             r"gpt-4o(?:-\w+)?",
             r"gpt-4(?:-\w+)?",
             r"gpt-35-turbo(?:-\w+)?",
@@ -379,7 +381,7 @@ class TeamService:
             missing_models: List[str] = []
             for model in required_models:
                 # Temporary bypass for known deployed models
-                if model.lower() in ["gpt-4o", "o3", "gpt-4", "gpt-35-turbo"]:
+                if model.lower() in ["gpt-5.4-mini", "gpt-5.4", "gpt-5", "o3"]:
                     continue
                 if model not in available_models:
                     missing_models.append(model)

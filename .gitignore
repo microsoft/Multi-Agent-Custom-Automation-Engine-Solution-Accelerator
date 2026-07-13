@@ -479,3 +479,4 @@ data/sample_code/
 infra/main.json
 # Preflight check artifacts
 infra/preflight-*.bicepparam
+/.copilot-tracking
