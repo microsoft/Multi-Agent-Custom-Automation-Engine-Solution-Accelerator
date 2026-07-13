@@ -1383,13 +1383,14 @@ module webSite './modules/compute/app-service.bicep' = {
     appSettings: {
       SCM_DO_BUILD_DURING_DEPLOYMENT: 'true'
       DOCKER_REGISTRY_SERVER_URL: 'https://${acrLoginServer}'
-      WEBSITES_PORT: '3000'
       WEBSITES_CONTAINER_START_TIME_LIMIT: '1800'
       BACKEND_API_URL: 'https://${containerApp.outputs.fqdn}'
       AUTH_ENABLED: 'false'
       PROXY_API_REQUESTS: enablePrivateNetworking ? 'true' : 'false'
     }
     virtualNetworkSubnetId: enablePrivateNetworking ? virtualNetwork!.outputs.webserverfarmSubnetResourceId : ''
+    vnetRouteAllEnabled: enablePrivateNetworking
+    imagePullTraffic: enablePrivateNetworking
     publicNetworkAccess: 'Enabled'
     diagnosticSettings: monitoringDiagnosticSettings
     applicationInsightResourceId: enableMonitoring ? app_insights!.outputs.resourceId : ''
