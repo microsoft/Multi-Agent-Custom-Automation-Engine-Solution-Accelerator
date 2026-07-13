@@ -800,8 +800,7 @@ module frontend_app './modules/compute/app-service.bicep' = {
     appCommandLine: ''
     appSettings: {
       SCM_DO_BUILD_DURING_DEPLOYMENT: 'true'
-      DOCKER_REGISTRY_SERVER_URL: 'https://${acrLoginServer}'
-      WEBSITES_PORT: '3000'
+      DOCKER_REGISTRY_SERVER_URL: 'https://${acrLoginServer}'      
       WEBSITES_CONTAINER_START_TIME_LIMIT: '1800'
       BACKEND_API_URL: 'https://${backend_container_app.outputs.fqdn}'
       AUTH_ENABLED: 'false'

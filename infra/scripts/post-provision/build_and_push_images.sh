@@ -184,9 +184,6 @@ az webapp config appsettings set \
     --settings "WEBSITES_PORT=${FRONTEND_PORT}" "DOCKER_REGISTRY_SERVER_URL=https://${ACR_ENDPOINT}" \
     --output none
 
-echo "Restarting Web App '${FRONTEND_APP}'"
-az webapp restart --name "${FRONTEND_APP}" --resource-group "${RESOURCE_GROUP}" --output none
-
 section "Image build & push complete"
 echo "All images built, pushed to '${ACR_ENDPOINT}' with tag '${IMAGE_TAG}', and services updated."
 
@@ -194,5 +191,5 @@ section "Next step: Upload Team Configurations and index sample data"
 echo "Run the following command from the project root to upload the team"
 echo "configurations and index the sample data:"
 echo ""
-echo "   bash infra/scripts/post-provision/selecting_team_config_and_data.sh"
+echo "   bash infra/scripts/post-provision/post_deploy.sh"
 echo ""

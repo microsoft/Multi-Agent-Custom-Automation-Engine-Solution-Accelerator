@@ -90,13 +90,13 @@
       "value": "${AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT}"
     },
     "backendContainerImageTag": {
-      "value": "${AZURE_ENV_IMAGE_TAG=latest_v5}"
+      "value": "${AZURE_ENV_IMAGE_TAG}"
     },
     "frontendContainerImageTag": {
-      "value": "${AZURE_ENV_IMAGE_TAG=latest_v5}"
+      "value": "${AZURE_ENV_IMAGE_TAG}"
     },
     "MCPContainerImageTag": {
-      "value": "${AZURE_ENV_IMAGE_TAG=latest_v5}"
+      "value": "${AZURE_ENV_IMAGE_TAG}"
     }
   }
 }
