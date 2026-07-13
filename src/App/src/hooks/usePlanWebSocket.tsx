@@ -105,6 +105,11 @@ export function usePlanWebSocket({
     const streamingMessageBuffer = useAppSelector(selectStreamingMessageBuffer);
     const processingStartedAtRef = React.useRef<number | null>(null);
 
+    // Coalesce high-frequency streaming tokens into one flush per animation frame
+    // to avoid a synchronous re-render per token freezing the UI on fast streams.
+    const streamingChunkQueueRef = React.useRef<string[]>([]);
+    const streamingFlushHandleRef = React.useRef<number | null>(null);
+
     useEffect(() => {
         if (showProcessingPlanSpinner) {
             if (processingStartedAtRef.current === null) {
@@ -144,15 +149,38 @@ export function usePlanWebSocket({
 
     // ── AGENT_MESSAGE_STREAMING ───────────────────────────────────
     useEffect(() => {
+        const flushStreamingChunks = () => {
+            streamingFlushHandleRef.current = null;
+            const chunks = streamingChunkQueueRef.current;
+            if (chunks.length === 0) return;
+            streamingChunkQueueRef.current = [];
+            dispatch(setShowBufferingText(true));
+            dispatch(appendToStreamingBuffer(chunks.join('')));
+        };
+
         const unsub = webSocketService.on(
             WebsocketMessageType.AGENT_MESSAGE_STREAMING,
             (msg: any) => {
                 const line = PlanDataService.simplifyHumanClarification(msg.data?.content || msg.content || '');
-                dispatch(setShowBufferingText(true));
-                dispatch(appendToStreamingBuffer(line));
+                streamingChunkQueueRef.current.push(line);
+                if (streamingFlushHandleRef.current === null) {
+                    streamingFlushHandleRef.current = requestAnimationFrame(flushStreamingChunks);
+                }
             },
         );
-        return unsub;
+        return () => {
+            unsub();
+            // Cancel pending frame and flush leftovers so no streamed text is lost
+            if (streamingFlushHandleRef.current !== null) {
+                cancelAnimationFrame(streamingFlushHandleRef.current);
+                streamingFlushHandleRef.current = null;
+            }
+            if (streamingChunkQueueRef.current.length > 0) {
+                const remaining = streamingChunkQueueRef.current.join('');
+                streamingChunkQueueRef.current = [];
+                dispatch(appendToStreamingBuffer(remaining));
+            }
+        };
     }, [dispatch]);
 
     // ── USER_CLARIFICATION_REQUEST ────────────────────────────────
@@ -240,6 +268,27 @@ export function usePlanWebSocket({
                     dispatch(setSubmittingChatDisableInput(true));
                     scrollToBottom();
                     showToast(errorContent, 'error');
+                    webSocketService.disconnect();
+                } else {
+                    // Any other terminal status (e.g. "terminated"): clear the spinner
+                    // so the UI doesn't hang after the answer has already arrived.
+                    const content = finalMessage.data?.content;
+                    if (content) {
+                        const terminalMessage: AgentMessageData = {
+                            agent: AgentType.GROUP_CHAT_MANAGER,
+                            agent_type: AgentMessageType.AI_AGENT,
+                            timestamp: Date.now(),
+                            steps: [],
+                            next_steps: [],
+                            content,
+                            raw_data: finalMessage,
+                        };
+                        dispatch(addAgentMessage(terminalMessage));
+                    }
+                    dispatch(setShowBufferingText(false));
+                    dispatch(setShowProcessingPlanSpinner(false));
+                    processingStartedAtRef.current = null;
+                    scrollToBottom();
                     webSocketService.disconnect();
                 }
             },
