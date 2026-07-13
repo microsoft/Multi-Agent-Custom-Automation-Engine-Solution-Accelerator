@@ -5,7 +5,7 @@ Tests for HR service.
 import pytest
 
 pytest.importorskip("fastmcp", reason="fastmcp not installed in backend venv; run with mcp_server venv")
-from src.mcp_server.core.factory import Domain
+from core.factory import Domain
 
 
 class TestHRService:
@@ -14,7 +14,7 @@ class TestHRService:
     def test_service_initialization(self, hr_service):
         """Test HR service initialization."""
         assert hr_service.domain == Domain.HR
-        assert hr_service.tool_count == 7
+        assert hr_service.tool_count == 8
 
     def test_register_tools(self, hr_service, mock_mcp_server):
         """Test tool registration."""

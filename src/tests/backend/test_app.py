@@ -13,7 +13,7 @@ this file is imported, the tests will be skipped.
 import pytest
 import sys
 import os
-from unittest.mock import Mock, AsyncMock, patch, NonCallableMock
+from unittest.mock import Mock, AsyncMock, MagicMock, patch, NonCallableMock
 
 # Environment variables are set by conftest.py, but ensure they're available
 os.environ.setdefault("APPLICATIONINSIGHTS_CONNECTION_STRING", "InstrumentationKey=test-key-12345")
@@ -37,13 +37,13 @@ os.environ.setdefault("AZURE_OPENAI_RAI_DEPLOYMENT_NAME", "test-rai-deployment")
 
 # Clear any module-level Mock pollution from earlier tests in the suite.
 # common.models.* gets mocked by test_agent_utils.py, test_response_handlers.py, etc.
-from types import ModuleType as _ModuleType
+from types import ModuleType
 for _ma_key in [
     'common', 'common.models', 'common.models.messages',
     'backend.common.models.messages',
     'common.config', 'common.config.app_config',
 ]:
-    if _ma_key in sys.modules and not isinstance(sys.modules[_ma_key], _ModuleType):
+    if _ma_key in sys.modules and not isinstance(sys.modules[_ma_key], ModuleType):
         del sys.modules[_ma_key]
 
 # Mock external dependencies that may not be installed in test environment

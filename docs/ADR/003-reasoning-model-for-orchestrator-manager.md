@@ -40,11 +40,11 @@ Reasoning models (o-series) are explicitly designed for multi-step logical reaso
 
 ## Decision
 
-We will **use a separate reasoning model (`o4-mini` by default) for the MagenticManager** agent, independent of the model used by participant agents.
+We will **use a separate reasoning model (`gpt-5.4-mini` by default) for the MagenticManager** agent, independent of the model used by participant agents.
 
-- A new config `ORCHESTRATOR_MODEL_NAME` (default: `o4-mini`) controls the manager's model.
+- A new config `ORCHESTRATOR_MODEL_NAME` (default: `gpt-5.4-mini`) controls the manager's model.
 - A separate `FoundryChatClient` is created for the manager at workflow initialization.
-- Participant agents continue using the team's `deployment_name` (e.g., `gpt-4.1`).
+- Participant agents continue using the team's `deployment_name` (e.g., `gpt-5.4`).
 - If the orchestrator model deployment fails to initialize, it falls back to the team model with a warning.
 
 ## Implementation
@@ -54,7 +54,7 @@ We will **use a separate reasoning model (`o4-mini` by default) for the Magentic
 `common/config/app_config.py`:
 
 ```python
-self.ORCHESTRATOR_MODEL_NAME = self._get_optional("ORCHESTRATOR_MODEL_NAME", "o4-mini")
+self.ORCHESTRATOR_MODEL_NAME = self._get_optional("ORCHESTRATOR_MODEL_NAME", "gpt-5.4-mini")
 ```
 
 ### Orchestration change
@@ -105,6 +105,10 @@ manager_agent = Agent(manager_chat_client, name="MagenticManager")
 
 ## References
 
-- [Bug B1: UserInteractionAgent Routing Failure](../../localspec/bugs/user-interaction-routing.md)
+- Bug B1: UserInteractionAgent Routing Failure (internal specification)
 - [ADR-001: Retain Custom JSON Configuration](./001-retain-custom-json-declarative-config.md)
 - [Azure AI Foundry Model Catalog](https://ai.azure.com/explore/models)
+
+## Superseded (2026-07-09)
+
+The reasoning/orchestrator model migrated from `o4-mini` to `gpt-5-mini` because `o4-mini` is deprecated (retires 2026-10-16). Because `gpt-5-mini` reasons by default, it preserves the structured-routing reliability that motivated this decision while consolidating the accelerator onto a single generally available model. The `ORCHESTRATOR_MODEL_NAME` config and the separate manager `FoundryChatClient` described above remain unchanged; only the default model value moved to `gpt-5-mini`. The historical decision text above is retained for context.

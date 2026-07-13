@@ -26,29 +26,17 @@
     "gptDeploymentCapacity": {
       "value": "${AZURE_ENV_GPT_MODEL_CAPACITY}"
     },
-    "gpt4_1ModelDeploymentType": {
-      "value": "${AZURE_ENV_MODEL_4_1_DEPLOYMENT_TYPE}"
+    "gpt5_4ModelDeploymentType": {
+      "value": "${AZURE_ENV_MODEL_5_4_DEPLOYMENT_TYPE}"
     },
-    "gpt4_1ModelName": {
-      "value": "${AZURE_ENV_MODEL_4_1_NAME}"
+    "gpt5_4ModelName": {
+      "value": "${AZURE_ENV_MODEL_5_4_NAME}"
     },
-    "gpt4_1ModelVersion": {
-      "value": "${AZURE_ENV_MODEL_4_1_VERSION}"
+    "gpt5_4ModelVersion": {
+      "value": "${AZURE_ENV_MODEL_5_4_VERSION}"
     },
-    "gpt4_1ModelCapacity": {
-      "value": "${AZURE_ENV_MODEL_4_1_CAPACITY}"
-    },
-    "gptReasoningModelDeploymentType": {
-      "value": "${AZURE_ENV_REASONING_MODEL_DEPLOYMENT_TYPE}"
-    },
-    "gptReasoningModelName": {
-      "value": "${AZURE_ENV_REASONING_MODEL_NAME}"
-    },
-    "gptReasoningModelVersion": {
-      "value": "${AZURE_ENV_REASONING_MODEL_VERSION}"
-    },
-    "gptReasoningModelCapacity": {
-      "value": "${AZURE_ENV_REASONING_MODEL_CAPACITY}"
+    "gpt5_4ModelCapacity": {
+      "value": "${AZURE_ENV_MODEL_5_4_CAPACITY}"
     },
     "gptImageModelName": {
       "value": "${AZURE_ENV_IMAGE_MODEL_NAME}"

@@ -17,6 +17,11 @@ hooks:
           Write-Host "===============================================================" -ForegroundColor Yellow
           Write-Host ""
 
+          Write-Host " Build and push the backend/frontend/mcp_server container images to ACR, then point the container app and webapp at them:" -ForegroundColor White
+          Write-Host "  👉 Run the following command in Bash:" -ForegroundColor White
+          Write-Host "   bash infra/scripts/post-provision/build_and_push_images.sh" -ForegroundColor Cyan
+          Write-Host ""
+
           Write-Host " Upload Team Configurations, index sample data and create the Knowledge base from content Packs" -ForegroundColor White
           Write-Host "  👉 Run the following command in Bash:" -ForegroundColor White
           Write-Host "   bash infra/scripts/post-provision/post_deploy.sh" -ForegroundColor Cyan
@@ -33,9 +38,14 @@ hooks:
           Write-Host "===============================================================" -ForegroundColor Yellow
           Write-Host ""
 
+          Write-Host " Build and push the backend/frontend/mcp_server container images to ACR, then point the container app and webapp at them:" -ForegroundColor White
+          Write-Host "  👉 Run the following command in PowerShell:" -ForegroundColor White
+          Write-Host "   .\infra\scripts\post-provision\Build-And-Push-Images.ps1" -ForegroundColor Cyan
+          Write-Host ""
+
           Write-Host " Upload Team Configurations, index sample data and create the Knowledge base from content Packs" -ForegroundColor White
           Write-Host "  👉 Run the following command in PowerShell:" -ForegroundColor White
-          Write-Host "   infra\scripts\post-provision\post_deploy.ps1" -ForegroundColor Cyan
+          Write-Host "   .\infra\scripts\post-provision\post_deploy.ps1" -ForegroundColor Cyan
           Write-Host ""
 
           Write-Host "🌐 Access your deployed Frontend application at:" -ForegroundColor Green
@@ -57,6 +67,10 @@ hooks:
         printf "${Yellow}===============================================================\n"
         printf "${Green} POST-DEPLOYMENT STEPS (Bash)\n"
         printf "${Yellow}===============================================================${NC}\n\n"
+
+        printf  "Build and push the backend/frontend/mcp_server container images to ACR, then point the container app and webapp at them:\n"
+        printf  "  👉 Run the following command in Bash:\n"
+        printf  "   ${Blue}bash infra/scripts/post-provision/build_and_push_images.sh${NC}\n\n"
 
         printf  "Upload Team Configurations, index sample data and create the Knowledge base from content Packs:\n"
         printf  "  👉 Run the following command in Bash:\n"

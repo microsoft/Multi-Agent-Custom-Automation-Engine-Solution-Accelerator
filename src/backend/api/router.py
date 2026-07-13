@@ -72,6 +72,33 @@ async def start_comms(
             ws_props["session_id"] = session_id
         track_event_if_configured("WebSocket_Connected", ws_props)
 
+        # Keepalive: reasoning models (gpt-5.4/-mini) stream nothing during long
+        # thinking gaps; a periodic frame stops the ingress proxy idle-timing-out
+        # and dropping the socket (which would lose the final-result message).
+        HEARTBEAT_INTERVAL_SECONDS = 20
+
+        async def _heartbeat() -> None:
+            while True:
+                await asyncio.sleep(HEARTBEAT_INTERVAL_SECONDS)
+                try:
+                    await websocket.send_text(
+                        json.dumps(
+                            {
+                                "type": WebsocketMessageType.PING,
+                                "data": {"ts": asyncio.get_event_loop().time()},
+                            },
+                            default=str,
+                        )
+                    )
+                except Exception as hb_exc:
+                    logging.debug(
+                        "Heartbeat stopped for user %s, process %s: %s",
+                        user_id, process_id, hb_exc,
+                    )
+                    break
+
+        heartbeat_task = asyncio.create_task(_heartbeat())
+
         # Keep the connection open - FastAPI will close the connection if this returns
         try:
             # Keep the connection open - FastAPI will close the connection if this returns
@@ -95,10 +122,13 @@ async def start_comms(
                     logging.info(f"Client disconnected from batch {process_id}")
                     break
         except Exception as e:
-            # Fixed logging syntax - removed the error= parameter
             logging.error(f"Error in WebSocket connection: {str(e)}")
         finally:
-            # Always clean up the connection
+            heartbeat_task.cancel()
+            try:
+                await heartbeat_task
+            except (asyncio.CancelledError, Exception):
+                pass
             await connection_config.close_connection(process_id=process_id)
 
 

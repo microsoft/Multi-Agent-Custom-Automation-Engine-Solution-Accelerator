@@ -40,6 +40,12 @@ param webSocketsEnabled bool = false
 @description('Optional. Command line for the application.')
 param appCommandLine string = ''
 
+@description('Optional. Resource ID of a user-assigned managed identity to attach to the app (used for ACR image pulls).')
+param containerRegistryUserAssignedIdentityResourceId string = ''
+
+@description('Optional. Client ID (GUID) of the user-assigned managed identity used for ACR managed-identity image pulls. App Service requires the client ID here, not the ARM resource ID.')
+param acrUserManagedIdentityClientId string = ''
+
 @description('Required. Type of site to deploy.')
 @allowed([
   'functionapp' // function app windows os
@@ -96,6 +102,7 @@ module appService 'br/public:avm/res/web/site:0.23.1' = {
     serverFarmResourceId: serverFarmResourceId
     managedIdentities: {
       systemAssigned: true
+      userAssignedResourceIds: !empty(containerRegistryUserAssignedIdentityResourceId) ? [containerRegistryUserAssignedIdentityResourceId] : []
     }
     siteConfig: {
       alwaysOn: alwaysOn
@@ -106,6 +113,8 @@ module appService 'br/public:avm/res/web/site:0.23.1' = {
       webSocketsEnabled: webSocketsEnabled
       appCommandLine: appCommandLine
       vnetRouteAllEnabled: vnetRouteAllEnabled
+      acrUseManagedIdentityCreds: !empty(acrUserManagedIdentityClientId)
+      acrUserManagedIdentityID: !empty(acrUserManagedIdentityClientId) ? acrUserManagedIdentityClientId : null
     }
     e2eEncryptionEnabled: true
     configs: [
