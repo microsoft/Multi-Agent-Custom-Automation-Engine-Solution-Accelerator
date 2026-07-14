@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
 name: multi-agent-custom-automation-engine-solution-accelerator
-metadata:
-  template: multi-agent-custom-automation-engine-solution-accelerator@1.0
+# metadata:
+#   template: multi-agent-custom-automation-engine-solution-accelerator@1.0
 requiredVersions:
   azd: '>= 1.18.0 != 1.23.9'
 hooks:
@@ -18,12 +18,12 @@ hooks:
           Write-Host ""
 
           Write-Host " Build and push the backend/frontend/mcp_server container images to ACR, then point the container app and webapp at them:" -ForegroundColor White
-          Write-Host "  👉 Run the following command in Bash:" -ForegroundColor White
+          Write-Host "  👉 STEP 1: Run the following command in Bash:" -ForegroundColor White
           Write-Host "   bash infra/scripts/post-provision/build_and_push_images.sh" -ForegroundColor Cyan
           Write-Host ""
 
           Write-Host " Upload Team Configurations, index sample data and create the Knowledge base from content Packs" -ForegroundColor White
-          Write-Host "  👉 Run the following command in Bash:" -ForegroundColor White
+          Write-Host "  👉 STEP 2: Run the following command in Bash:" -ForegroundColor White
           Write-Host "   bash infra/scripts/post-provision/post_deploy.sh" -ForegroundColor Cyan
           Write-Host ""
 
@@ -39,12 +39,12 @@ hooks:
           Write-Host ""
 
           Write-Host " Build and push the backend/frontend/mcp_server container images to ACR, then point the container app and webapp at them:" -ForegroundColor White
-          Write-Host "  👉 Run the following command in PowerShell:" -ForegroundColor White
+          Write-Host "  👉 STEP 1: Run the following command in PowerShell:" -ForegroundColor White
           Write-Host "   .\infra\scripts\post-provision\Build-And-Push-Images.ps1" -ForegroundColor Cyan
           Write-Host ""
 
           Write-Host " Upload Team Configurations, index sample data and create the Knowledge base from content Packs" -ForegroundColor White
-          Write-Host "  👉 Run the following command in PowerShell:" -ForegroundColor White
+          Write-Host "  👉 STEP 2: Run the following command in PowerShell:" -ForegroundColor White
           Write-Host "   .\infra\scripts\post-provision\post_deploy.ps1" -ForegroundColor Cyan
           Write-Host ""
 
@@ -69,11 +69,11 @@ hooks:
         printf "${Yellow}===============================================================${NC}\n\n"
 
         printf  "Build and push the backend/frontend/mcp_server container images to ACR, then point the container app and webapp at them:\n"
-        printf  "  👉 Run the following command in Bash:\n"
+        printf  "  👉 STEP 1: Run the following command in Bash:\n"
         printf  "   ${Blue}bash infra/scripts/post-provision/build_and_push_images.sh${NC}\n\n"
 
         printf  "Upload Team Configurations, index sample data and create the Knowledge base from content Packs:\n"
-        printf  "  👉 Run the following command in Bash:\n"
+        printf  "  👉 STEP 2: Run the following command in Bash:\n"
         printf  "   ${Blue}bash infra/scripts/post-provision/post_deploy.sh${NC}\n\n"
 
         printf "🌐 Access your deployed Frontend application at:\n"
