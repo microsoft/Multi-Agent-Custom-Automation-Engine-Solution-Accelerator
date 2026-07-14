@@ -16,6 +16,16 @@ hooks:
         Write-Host ""
       shell: pwsh
       interactive: true
+    posix:
+      run: |
+         echo ""
+         echo "  ---------------------------------------------------------------------------------------------------"
+         echo "  Note: If deployment fails or you encounter an issue, please open an issue with the deployment logs."
+         echo "  https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/issues""
+         echo "  ---------------------------------------------------------------------------------------------------"
+         echo ""
+      shell: sh
+      interactive: true
   postdeploy:
     windows:
       run: |
