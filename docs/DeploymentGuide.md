@@ -6,7 +6,7 @@ This guide walks you through deploying the Multi Agent Custom Automation Engine 
 
 🆘 **Need Help?** If you encounter any issues during deployment, check our [Troubleshooting Guide](./TroubleShootingSteps.md) for solutions to common problems.
 
-> **Note**: Some tenants may have additional security restrictions that run periodically and could impact the application (e.g., blocking public network access). If you experience issues or the application stops working, check if these restrictions are the cause. In such cases, consider deploying the WAF-supported version to ensure compliance. To configure, [Click here](#31-choose-deployment-type-optional).
+> **Note**: Some tenants may have additional security restrictions that run periodically and could impact the application (e.g., blocking public network access). If you experience issues or the application stops working, check if these restrictions are the cause. In such cases, consider deploying the WAF-supported version (deployment flavor `avm-waf`) to ensure compliance. To configure, [Click here](#31-choose-deployment-type-optional).
 
 ## Step 1: Prerequisites & Setup
 
@@ -184,12 +184,15 @@ Review the configuration options below. You can customize any settings that meet
 
 | **Aspect** | **Development/Testing (Default)** | **Production** |
 |------------|-----------------------------------|----------------|
+| **Deployment Flavor** | `bicep` (Vanilla Bicep) | `avm-waf` (AVM WAF-aligned) |
 | **Configuration File** | `main.parameters.json` (sandbox) | Copy `main.waf.parameters.json` to `main.parameters.json` |
 | **Security Controls** | Minimal (for rapid iteration) | Enhanced (production best practices) |
 | **Cost** | Lower costs | Cost optimized |
 | **Use Case** | POCs, development, testing | Production workloads |
 | **Framework** | Basic configuration | [Well-Architected Framework](https://learn.microsoft.com/en-us/azure/well-architected/) |
 | **Features** | Core functionality | Reliability, security, operational excellence |
+
+> **Note:** An intermediate option (`avm`) is also available — it uses AVM modules without WAF networking features. Set `DEPLOYMENT_FLAVOR` to `avm` for enterprise-grade modules without private endpoints.
 
 **To use production configuration:**
 
@@ -320,7 +323,7 @@ azd up
 
 **Expected Duration:** 9-10 minutes for default configuration
 
-- **Upon successful completion**, you will see a success message indicating that all resources have been deployed, along with the application URL and next steps for uploading team configurations and sample data.
+- **Upon successful completion**, you will see a success message indicating that all resources have been deployed, along with the application URL and next steps for building and pushing the application container images and uploading team configurations and sample data.
 
 ![Deployment Success message](./images/Deployment_success_message.png)
 
@@ -338,18 +341,49 @@ After successful deployment:
 
 ## Step 5: Post-Deployment Configuration
 
-### 5.1 Run Post Deployment Script
+### 5.1 Build and Push Container Images
+
+This solution provisions a dedicated **Azure Container Registry (ACR)** in your resource group. During provisioning, the backend and frontend App Services start with a temporary *hello-world* placeholder image. Run the following script to build the backend (`macaebackend`), MCP Server(`macaemcp`) and frontend (`macaefrontend`) images, push them to your ACR, and update the App Services to run them.
+
+**Run the build and push script:**
+
+The `azd up` deployment output includes a ready-to-use bash script command. Look for the script in the deployment output and run it:
+
+- **For Bash (Linux/macOS/WSL):**
+   ```bash
+   bash ./infra/scripts/build_and_push_images.sh
+   ```
+- **For PowerShell (Windows):**
+   ```powershell
+   infra\scripts\post-provision\Build-And-Push-Images.ps1
+    ```
+
+
+The images are **built remotely in ACR** using `az acr build`, so no local Docker installation is required.
+
+**What the script does:**
+- Builds the Frontend image from [src/App/Dockerfile](../src/App/Dockerfile)
+- Builds the Backend image from [src/backend/Dockerfile](../src/backend/Dockerfile)
+- Builds the MCP Server image from [src/mcp_server/Dockerfile](../src/mcp_server/Dockerfile)
+- Pushes both images to the provisioned Azure Container Registry
+- Updates the backend, MCP Server and frontend App Services to run the new images (pulled via managed identity) and restarts them
+
+> **Note:** For Production (WAF) deployments, ACR public network access is disabled. The script temporarily enables it to build/push the images and restores the original setting when it finishes.
+
+**Expected Processing Time:** 5-10 minutes depending on network speed.
+
+### 5.2 Run Post Deployment Script
 
 1. You can upload Team Configurations using command printed in the terminal. The command will look like one of the following. Run the appropriate command for your shell from the project root:
 
   - **For Bash (Linux/macOS/WSL):**
     ```bash
-    bash infra/scripts/post-provision/selecting_team_config_and_data.sh
+    bash infra/scripts/post-provision/post_deploy.sh
     ```
 
   - **For PowerShell (Windows):**
     ```powershell
-    infra\scripts\post-provision\Selecting-Team-Config-And-Data.ps1
+    infra\scripts\post-provision\post_deploy.ps1
     ```
 
 
@@ -358,18 +392,18 @@ After successful deployment:
 ![Usecase selection](./images/Usecase_selection.png)
 
 
-### 5.2 Configure Authentication (Optional)
+### 5.3 Configure Authentication (Optional)
 
 1. Follow [App Authentication Configuration](./azure_app_service_auth_setup.md)
 2. Wait up to 10 minutes for authentication changes to take effect
 
-### 5.3 Verify Deployment
+### 5.4 Verify Deployment
 
 1. Access your application using the URL from Step 4.3
 2. Confirm the application loads successfully
 <!-- 3. Verify you can sign in with your authenticated account -->
 
-### 5.4 Test the Application
+### 5.5 Test the Application
 
 **Quick Test Steps:**
 
