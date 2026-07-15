@@ -11,11 +11,14 @@ import { PlanDataService } from '@/store/PlanDataService';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
     setShowProcessingPlanSpinner,
+    setShowApprovalButtons,
     setReloadLeftList,
     selectPlanData,
     selectContinueWithWebsocketFlow,
     selectPlanApproved,
     selectShowProcessingPlanSpinner,
+    setShowTimeoutDialog,
+    setTimeoutMessage,
     approvalRequestReceived,
     planCompletedFinal,
     planFailedFinal,
@@ -336,6 +339,23 @@ export function usePlanWebSocket({
         );
         return unsub;
     }, [dispatch, scrollToBottom, showToast, formatErrorMessage]);
+
+    // ── TIMEOUT_NOTIFICATION ──────────────────────────────────────
+    useEffect(() => {
+        const unsub = webSocketService.on(
+            WebsocketMessageType.TIMEOUT_NOTIFICATION,
+            (msg: any) => {
+                const message = msg?.data?.message || msg?.message ||
+                    'Session timed out. Please go back to home and try again.';
+                dispatch(setTimeoutMessage(message));
+                dispatch(setShowTimeoutDialog(true));
+                dispatch(setShowProcessingPlanSpinner(false));
+                dispatch(setShowApprovalButtons(false));
+                webSocketService.disconnect();
+            },
+        );
+        return unsub;
+    }, [dispatch]);
 
     // ── AGENT_MESSAGE ─────────────────────────────────────────────
     useEffect(() => {

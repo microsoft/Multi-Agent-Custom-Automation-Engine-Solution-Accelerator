@@ -28,6 +28,8 @@ import {
     selectLoadingMessage,
     selectReloadLeftList,
     selectWaitingForPlan,
+    selectShowTimeoutDialog,
+    selectTimeoutMessage,
     setReloadLeftList,
     setProcessingApproval,
     setShowProcessingPlanSpinner,
@@ -73,6 +75,7 @@ import { useInlineToaster } from '../components/toast/InlineToaster';
 import Octo from '../commonComponents/imports/Octopus.png';
 import LoadingMessage, { loadingMessages } from '../commonComponents/components/LoadingMessage';
 import PlanCancellationDialog from '../components/common/PlanCancellationDialog';
+import TimeoutDialog from '../components/common/TimeoutDialog';
 import '../styles/PlanPage.css';
 
 // Singleton API service
@@ -135,6 +138,8 @@ const PlanPage: React.FC = () => {
     const showBufferingText = useAppSelector(selectShowBufferingText);
     const wsConnected = useAppSelector(selectWsConnected);
     const selectedTeam = useAppSelector(selectSelectedTeam);
+    const showTimeoutDialog = useAppSelector(selectShowTimeoutDialog);
+    const timeoutMessage = useAppSelector(selectTimeoutMessage);
 
     /* ── Cancellation alert hook ────────────────────────────── */
     const [pendingNavigation, setPendingNavigation] = React.useState<(() => void) | null>(null);
@@ -202,6 +207,10 @@ const PlanPage: React.FC = () => {
         dispatch(setShowCancellationDialog(false));
         setPendingNavigation(null);
     }, [dispatch]);
+
+    const handleTimeoutGoHome = useCallback(() => {
+        navigate('/');
+    }, [navigate]);
 
     /* ── Plan Approval / Rejection ──────────────────────────── */
     const handleApprovePlan = useCallback(async () => {
@@ -431,6 +440,12 @@ const PlanPage: React.FC = () => {
                 onConfirm={handleConfirmCancellation}
                 onCancel={handleCancelDialog}
                 loading={cancellingPlan}
+            />
+
+            <TimeoutDialog
+                isOpen={showTimeoutDialog}
+                message={timeoutMessage}
+                onGoHome={handleTimeoutGoHome}
             />
         </CoralShellColumn>
     );
