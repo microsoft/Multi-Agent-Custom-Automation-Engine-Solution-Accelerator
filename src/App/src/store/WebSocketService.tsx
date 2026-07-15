@@ -284,6 +284,10 @@ class WebSocketService {
                 // Server keepalive heartbeat — ignore.
                 break;
             }
+            case WebsocketMessageType.TIMEOUT_NOTIFICATION: {
+                this.emit(WebsocketMessageType.TIMEOUT_NOTIFICATION, message);
+                break;
+            }
             case WebsocketMessageType.ERROR_MESSAGE: {
             this.emit(WebsocketMessageType.ERROR_MESSAGE, message.data); // Emit the data
             break;

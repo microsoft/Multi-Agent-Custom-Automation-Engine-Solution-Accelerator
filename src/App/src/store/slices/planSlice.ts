@@ -58,6 +58,10 @@ export interface PlanState {
     cancellingPlan: boolean;
     /** Loading message for spinners */
     loadingMessage: string;
+    /** Show timeout dialog when backend sends timeout notification */
+    showTimeoutDialog: boolean;
+    /** Timeout message from backend */
+    timeoutMessage: string;
 }
 
 const initialState: PlanState = {
@@ -75,6 +79,8 @@ const initialState: PlanState = {
     showCancellationDialog: false,
     cancellingPlan: false,
     loadingMessage: '',
+    showTimeoutDialog: false,
+    timeoutMessage: '',
 };
 
 const planSlice = createSlice({
@@ -122,6 +128,12 @@ const planSlice = createSlice({
         },
         setLoadingMessage(state, action: PayloadAction<string>) {
             state.loadingMessage = action.payload;
+        },
+        setShowTimeoutDialog(state, action: PayloadAction<boolean>) {
+            state.showTimeoutDialog = action.payload;
+        },
+        setTimeoutMessage(state, action: PayloadAction<string>) {
+            state.timeoutMessage = action.payload;
         },
         /** Mark plan completed and update local state in one dispatch */
         markPlanCompleted(state) {
@@ -232,6 +244,8 @@ export const {
     setShowCancellationDialog,
     setCancellingPlan,
     setLoadingMessage,
+    setShowTimeoutDialog,
+    setTimeoutMessage,
     markPlanCompleted,
     planApprovalAccepted,
     planApprovalRejected,
@@ -255,6 +269,8 @@ export const selectReloadLeftList = (s: RootState) => s.plan.reloadLeftList;
 export const selectShowCancellationDialog = (s: RootState) => s.plan.showCancellationDialog;
 export const selectCancellingPlan = (s: RootState) => s.plan.cancellingPlan;
 export const selectLoadingMessage = (s: RootState) => s.plan.loadingMessage;
+export const selectShowTimeoutDialog = (s: RootState) => s.plan.showTimeoutDialog;
+export const selectTimeoutMessage = (s: RootState) => s.plan.timeoutMessage;
 export const selectPlanStatus = (s: RootState) => s.plan.planData?.plan?.overall_status ?? null;
 export const selectPlanApproved = (s: RootState) => s.plan.planApproved;
 
