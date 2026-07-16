@@ -26,7 +26,7 @@ dependencies = [
     "uvicorn==0.46.0",
     "pylint-pydantic==0.4.1",
     "pexpect==4.9.0",
-    "mcp==1.27.0",
+    "mcp==1.28.1",
     "werkzeug==3.1.8",
     "azure-core==1.40.0",
     "agent-framework-azure-ai==1.0.0rc4",
