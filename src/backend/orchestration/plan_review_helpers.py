@@ -84,7 +84,9 @@ CLARIFYING QUESTIONS POLICY (CRITICAL — ZERO QUESTIONS):
         agent_lines = "\n".join(f"- {name}" for name in participant_names)
         mandatory_block = (
             "\n\nMANDATORY AGENTS (CRITICAL — NON-NEGOTIABLE):\n"
-            "Every plan you generate MUST include EVERY ONE of the following agents,\n"
+            "UNLESS the request is out of scope (see TEAM SCOPE POLICY above — in\n"
+            "which case the single MagenticManager step is the entire plan),\n"
+            "every plan you generate MUST include EVERY ONE of the following agents,\n"
             "each as its own distinct step, each invoked at least once:\n"
             + agent_lines
             + "\nDo NOT omit any of these agents, even if a step seems optional,\n"
@@ -93,7 +95,28 @@ CLARIFYING QUESTIONS POLICY (CRITICAL — ZERO QUESTIONS):
             "is INVALID — regenerate it\nuntil every listed agent appears as a step.\n"
         )
 
-    plan_append = """
+
+    scope_policy = """
+
+TEAM SCOPE POLICY (CRITICAL — EVALUATE THIS FIRST, BEFORE ANY OTHER RULE):
+This team can ONLY handle requests that fall within the collective expertise of
+its listed agents. Each agent's description above tells you its domain and the
+data/knowledge it works on — that, and nothing else, defines the team's scope.
+
+Judge whether the user's request is covered by at least one listed agent's domain:
+- IN SCOPE: at least one agent's expertise/data is clearly relevant → plan normally.
+- OUT OF SCOPE: NO listed agent's domain covers the request (e.g. a contract /
+  compliance request given to a marketing or RFP team, or an HR / onboarding
+  request given to a product-marketing team). In this case you MUST NOT invoke any
+  domain agent. Output a plan with EXACTLY ONE step and nothing else:
+  [{{"agent": "MagenticManager", "action": "Inform the user that this request is out of scope for this team and that they should switch to the appropriate team and try again, without naming any specific team."}}]
+
+When out of scope, the mandatory-inclusion rule below does NOT apply — the lone
+MagenticManager step IS the complete, valid plan. Only take this path when the
+request is genuinely outside every agent's domain; when in doubt, plan normally.
+"""
+
+    plan_append = scope_policy + """
 
 PLAN RULES:
 - Steps are HIGH-LEVEL task assignments — one step per agent. Do NOT prescribe
@@ -137,6 +160,11 @@ INVOCATION RULES:
     final_append = """
 
 FINAL ANSWER RULES:
+- If the approved plan was a single out-of-scope MagenticManager step (no domain
+  agents ran), your final answer is a brief, polite message that states the
+  request is out of scope for this team and that the user should switch to the
+  appropriate team and try again. Do NOT name, recommend, or guess any specific
+  team, and do NOT attempt to answer the out-of-scope request itself.
 - Compile ONLY from messages agents actually produced. Quote verbatim where appropriate.
 - Do NOT fabricate URLs, results, or content that no agent produced.
 - If a required agent step did not run, state it plainly — do not pretend it did.
@@ -183,6 +211,10 @@ EXECUTION RULES:
   work agents. It only routes tasks and compiles the final output.
 
 COMPLETION CHECK (CRITICAL):
+- OUT-OF-SCOPE PLAN: If the approved plan is a single MagenticManager out-of-scope
+  step (no domain agents), there is nothing to route. Set is_request_satisfied to
+  true immediately and produce the out-of-scope final answer — do NOT select any
+  next_speaker and do NOT invoke domain agents.
 Before setting is_request_satisfied to true, you MUST verify:
 1. Review the conversation history and list every agent that has actually produced
    a substantive response (meaningful output — calling tools and returning results
