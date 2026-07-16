@@ -29,7 +29,7 @@ import {
     addAgentMessage,
 } from '@/store/slices/chatSlice';
 import {
-    appendToStreamingBuffer,
+    setStreamingMessageBuffer,
     setShowBufferingText,
     addStreamingMessage,
     selectStreamingMessageBuffer,
@@ -158,7 +158,8 @@ export function usePlanWebSocket({
             if (chunks.length === 0) return;
             streamingChunkQueueRef.current = [];
             dispatch(setShowBufferingText(true));
-            dispatch(appendToStreamingBuffer(chunks.join('')));
+            // Backend sends full grouped snapshots (each agent once, latest round); replace with the newest.
+            dispatch(setStreamingMessageBuffer(chunks[chunks.length - 1]));
         };
 
         const unsub = webSocketService.on(
@@ -179,9 +180,10 @@ export function usePlanWebSocket({
                 streamingFlushHandleRef.current = null;
             }
             if (streamingChunkQueueRef.current.length > 0) {
-                const remaining = streamingChunkQueueRef.current.join('');
+                const remaining = streamingChunkQueueRef.current;
                 streamingChunkQueueRef.current = [];
-                dispatch(appendToStreamingBuffer(remaining));
+                // Snapshots are full buffers — keep only the latest, don't concatenate.
+                dispatch(setStreamingMessageBuffer(remaining[remaining.length - 1]));
             }
         };
     }, [dispatch]);

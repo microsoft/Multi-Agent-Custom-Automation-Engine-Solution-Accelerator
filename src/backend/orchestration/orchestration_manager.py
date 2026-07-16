@@ -16,14 +16,16 @@ from agent_framework_orchestrations import (MagenticBuilder,
                                             MagenticPlanReviewRequest)
 from agents.agent_factory import AgentFactory
 from callbacks.response_handlers import (agent_response_callback,
-                                         format_agent_display_name,
+                                         clean_citations,
+                                         mark_streaming_turn_complete,
+                                         reset_thinking_state,
                                          streaming_agent_response_callback)
 from common.config.app_config import config
 from common.database.database_base import DatabaseBase
 from common.models.messages import TeamConfiguration
 from common.utils.markdown_utils import \
     normalize_markdown_tables as _normalize_markdown_tables
-from models.messages import AgentMessageStreaming, WebsocketMessageType
+from models.messages import WebsocketMessageType
 from orchestration.connection_config import (connection_config,
                                              orchestration_config)
 from orchestration.plan_review_helpers import (convert_plan_review_to_mplan,
@@ -369,6 +371,9 @@ class OrchestrationManager:
             orchestrator_chunks: list[str] = []
             current_streaming_agent_ref: list = [None]
 
+            # Reset grouped thinking-process snapshot state for this user before a fresh run.
+            reset_thinking_state(user_id)
+
             # Collect participant names for plan conversion
             participant_names = [
                 executor.id
@@ -451,6 +456,11 @@ class OrchestrationManager:
             # Use executor_completed Message if available; otherwise fall back to
             # accumulated orchestrator streaming chunks.
             final_text = final_output_ref[0] or "".join(orchestrator_chunks)
+
+            # Strip citation markers (e.g. 【5:0†source】) leaked by the manager.
+            # The streaming agent callback cleans work-agent output, but the
+            # Group Chat Manager's own final text bypasses that path.
+            final_text = clean_citations(final_text)
 
             # Repair collapsed markdown tables before rendering (Bug 47810).
             final_text = _normalize_markdown_tables(final_text)
@@ -720,6 +730,7 @@ class OrchestrationManager:
         """
         plan_requests: dict[str, MagenticPlanReviewRequest] = {}
         tool_approvals: dict[str, object] = {}  # request_id -> event.data (Content)
+        round_no = 0  # incremented each progress-ledger round (agent-selection turn)
 
         async for event in stream:
             try:
@@ -777,9 +788,27 @@ class OrchestrationManager:
                 # Magentic orchestrator events (plan created, replanned, progress ledger)
                 elif event.type == "magentic_orchestrator":
                     orch_event: MagenticOrchestratorEvent = event.data
-                    self.logger.info(
-                        "[ORCHESTRATOR:%s]", orch_event.event_type.value
-                    )
+                    ledger = getattr(orch_event, "content", None)
+                    next_speaker = getattr(ledger, "next_speaker", None)
+                    if next_speaker is not None:
+                        # One line per round: which agent the manager selected + why
+                        # it hasn't stopped yet (satisfied/loop/progress decision flags).
+                        round_no += 1
+                        satisfied = getattr(ledger.is_request_satisfied, "answer", "?")
+                        in_loop = getattr(ledger.is_in_loop, "answer", "?")
+                        progress = getattr(ledger.is_progress_being_made, "answer", "?")
+                        self.logger.info(
+                            "[ROUND %d] next_speaker=%s satisfied=%s in_loop=%s "
+                            "progress=%s | reason=%s",
+                            round_no,
+                            getattr(next_speaker, "answer", "?"),
+                            satisfied, in_loop, progress,
+                            getattr(next_speaker, "reason", ""),
+                        )
+                    else:
+                        self.logger.info(
+                            "[ORCHESTRATOR:%s]", orch_event.event_type.value
+                        )
 
                 # Streaming output
                 elif event.type == "output":
@@ -790,30 +819,10 @@ class OrchestrationManager:
                         if executor == "magentic_orchestrator" and output_data.text:
                             orchestrator_chunks.append(output_data.text)
 
-                        if (
-                            executor != "magentic_orchestrator"
-                            and executor != current_streaming_agent_ref[0]
-                        ):
-                            current_streaming_agent_ref[0] = executor
-                            display_name = format_agent_display_name(executor)
-                            header_text = f"\n\n---\n### {display_name}\n\n"
-                            try:
-                                await connection_config.send_status_update_async(
-                                    AgentMessageStreaming(
-                                        agent_name=display_name,
-                                        content=header_text,
-                                        is_final=False,
-                                    ),
-                                    user_id,
-                                    message_type=WebsocketMessageType.AGENT_MESSAGE_STREAMING,
-                                )
-                            except Exception as cb_err:
-                                self.logger.error(
-                                    "Error sending agent header for %s: %s",
-                                    executor, cb_err,
-                                )
-
                         if executor != "magentic_orchestrator":
+                            # The streaming callback groups by agent and emits the full snapshot;
+                            # headers are rendered inside the snapshot (no separate header send).
+                            current_streaming_agent_ref[0] = executor
                             try:
                                 await streaming_agent_response_callback(
                                     executor, output_data, False, user_id,
@@ -836,6 +845,8 @@ class OrchestrationManager:
                             if isinstance(msg, Message) and msg.text:
                                 final_output_ref[0] = msg.text
                     else:
+                        # Turn boundary: next streamed delta (even same agent, new round) starts fresh.
+                        mark_streaming_turn_complete(user_id)
                         for msg in event.data:
                             if isinstance(msg, Message) and msg.text:
                                 try:
