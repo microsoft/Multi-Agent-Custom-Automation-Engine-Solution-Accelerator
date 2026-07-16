@@ -37,6 +37,11 @@ def reset_thinking_state(user_id: str) -> None:
 def mark_streaming_turn_complete(user_id: str) -> None:
     """Mark an agent turn boundary so the next streamed delta starts a fresh section (keeps only the latest turn, even for consecutive same-agent rounds)."""
     _thinking_current[user_id] = None
+    # Drop any trailing partial-citation buffer so an unclosed "【" can't leak
+    # into the next turn (the callback is always called with is_final=False, so
+    # the final-chunk flush path never runs at a turn boundary).
+    for key in [k for k in _stream_citation_buffers if k[0] == user_id]:
+        _stream_citation_buffers.pop(key, None)
 
 
 def _build_thinking_snapshot(user_id: str) -> str:

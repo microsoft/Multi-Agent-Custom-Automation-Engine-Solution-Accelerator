@@ -369,7 +369,6 @@ class OrchestrationManager:
         try:
             final_output_ref: list = [None]
             orchestrator_chunks: list[str] = []
-            current_streaming_agent_ref: list = [None]
 
             # Reset grouped thinking-process snapshot state for this user before a fresh run.
             reset_thinking_state(user_id)
@@ -390,7 +389,6 @@ class OrchestrationManager:
                 user_id=user_id,
                 final_output_ref=final_output_ref,
                 orchestrator_chunks=orchestrator_chunks,
-                current_streaming_agent_ref=current_streaming_agent_ref,
             )
 
             # Resume loop — handle plan reviews and tool approvals until workflow completes
@@ -450,7 +448,6 @@ class OrchestrationManager:
                     user_id=user_id,
                     final_output_ref=final_output_ref,
                     orchestrator_chunks=orchestrator_chunks,
-                    current_streaming_agent_ref=current_streaming_agent_ref,
                 )
 
             # Use executor_completed Message if available; otherwise fall back to
@@ -531,6 +528,10 @@ class OrchestrationManager:
             raise
 
         finally:
+            # Free this user's grouped-thinking + citation buffer state so it
+            # doesn't linger in module-level dicts after the run (incl. aborted
+            # / single-run users).
+            reset_thinking_state(user_id)
             # Clean up MCP connections to avoid noisy cross-task
             # RuntimeError from anyio when async generators are GC'd.
             await self._cleanup_workflow_mcp(user_id)
@@ -714,7 +715,6 @@ class OrchestrationManager:
         user_id: str,
         final_output_ref: list,
         orchestrator_chunks: list[str],
-        current_streaming_agent_ref: list,
     ) -> dict | None:
         """Process a workflow event stream, collecting pending requests.
 
@@ -794,9 +794,9 @@ class OrchestrationManager:
                         # One line per round: which agent the manager selected + why
                         # it hasn't stopped yet (satisfied/loop/progress decision flags).
                         round_no += 1
-                        satisfied = getattr(ledger.is_request_satisfied, "answer", "?")
-                        in_loop = getattr(ledger.is_in_loop, "answer", "?")
-                        progress = getattr(ledger.is_progress_being_made, "answer", "?")
+                        satisfied = getattr(getattr(ledger, "is_request_satisfied", None), "answer", "?")
+                        in_loop = getattr(getattr(ledger, "is_in_loop", None), "answer", "?")
+                        progress = getattr(getattr(ledger, "is_progress_being_made", None), "answer", "?")
                         self.logger.info(
                             "[ROUND %d] next_speaker=%s satisfied=%s in_loop=%s "
                             "progress=%s | reason=%s",
@@ -822,7 +822,6 @@ class OrchestrationManager:
                         if executor != "magentic_orchestrator":
                             # The streaming callback groups by agent and emits the full snapshot;
                             # headers are rendered inside the snapshot (no separate header send).
-                            current_streaming_agent_ref[0] = executor
                             try:
                                 await streaming_agent_response_callback(
                                     executor, output_data, False, user_id,
