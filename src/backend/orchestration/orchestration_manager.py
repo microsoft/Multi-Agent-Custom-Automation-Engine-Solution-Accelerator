@@ -1,6 +1,7 @@
 """Orchestration manager (agent_framework version) handling multi-agent Magentic workflow creation and execution."""
 
 import asyncio
+import json
 import logging
 import uuid
 import re
@@ -198,6 +199,13 @@ class OrchestrationManager:
             len(participant_list),
         )
 
+        # Attach context needed for the pre-planning team-scope gate
+        # (see run_orchestration → _evaluate_team_scope). Stored on the workflow
+        # so the gate can classify a request against this team's agents/data
+        # without rebuilding a chat client.
+        workflow._team_config = team_config
+        workflow._manager_chat_client = manager_chat_client
+
         return workflow
 
     # ---------------------------
@@ -363,6 +371,25 @@ class OrchestrationManager:
         # Build task from input
         task_text = getattr(input_task, "description", str(input_task))
         self.logger.debug("Task: %s", task_text)
+
+        # ---- Team-scope gate (generic, team-agnostic) -------------------
+
+        scope = await self._evaluate_team_scope(workflow, task_text)
+        if scope is not None and not scope.get("in_scope", True):
+            self.logger.info(
+                "Request judged OUT OF SCOPE for team; presenting single "
+                "MagenticManager out-of-scope step (job='%s')", job_id,
+            )
+
+            team_agent_names = self._get_team_agent_names(workflow)
+            await self._handle_out_of_scope(
+                user_id=user_id,
+                task_text=task_text,
+                out_of_scope_message=scope.get("message", ""),
+                team_agent_names=team_agent_names,
+            )
+            await self._cleanup_workflow_mcp(user_id)
+            return
 
         try:
             final_output_ref: list = [None]
@@ -533,6 +560,244 @@ class OrchestrationManager:
 
         # Mark workflow as terminated so next request creates a fresh one
         workflow._terminated = True
+
+    # ---------------------------
+    # Team-scope gate
+    # ---------------------------
+    async def _evaluate_team_scope(self, workflow, task_text: str) -> Optional[dict]:
+        """Classify whether ``task_text`` is within the current team's scope.
+
+        The decision is made by a focused single-purpose classifier call using
+        the manager chat client, given the team's purpose, its agents (and the
+        data/knowledge each works on), and representative example tasks. This is
+        deliberately separate from the planning prompt so the strict scope
+        decision is not diluted by the "include every agent" planning rules.
+
+        Returns:
+            ``{"in_scope": bool, "message": str}`` when the classification
+            succeeds, or ``None`` when it cannot be evaluated (missing context or
+            an error) — in which case the caller proceeds normally (fail-open).
+        """
+        team_config = getattr(workflow, "_team_config", None)
+        chat_client = getattr(workflow, "_manager_chat_client", None)
+        if team_config is None or chat_client is None or not task_text:
+            return None
+
+        try:
+            agent_lines = []
+            for ag in getattr(team_config, "agents", []) or []:
+                name = getattr(ag, "name", "") or ""
+                desc = getattr(ag, "description", "") or ""
+                data = getattr(ag, "knowledge_base_name", "") or ""
+                line = f"- {name}: {desc}"
+                if data:
+                    line += f" (works on data: {data})"
+                agent_lines.append(line)
+            agents_block = "\n".join(agent_lines) or "- (no agents listed)"
+
+            example_lines = []
+            for t in getattr(team_config, "starting_tasks", []) or []:
+                tname = getattr(t, "name", "") or ""
+                tprompt = getattr(t, "prompt", "") or ""
+                example_lines.append(f"- {tname}: {tprompt}".strip())
+            examples_block = "\n".join(example_lines) or "- (none provided)"
+
+            system_prompt = (
+                "You are a strict scope classifier for a specialized multi-agent "
+                "team. Decide whether a user's request falls within THIS team's "
+                "specialization.\n\n"
+                "A team is defined ENTIRELY by its stated purpose, the specific "
+                "agents it has and what each does, the data/knowledge those agents "
+                "work with, and its representative example tasks.\n\n"
+                "Rules:\n"
+                "- IN SCOPE only if the request clearly matches this team's "
+                "specialization and could be fulfilled by these agents using their "
+                "data.\n"
+                "- OUT OF SCOPE if the request belongs to a DIFFERENT "
+                "specialization, even when superficially related or in a broadly "
+                "similar field (e.g. drafting a product press release is NOT the "
+                "same specialization as generating retail social-media content; HR "
+                "onboarding is NOT product marketing; contract/NDA compliance is "
+                "NOT RFP evaluation).\n"
+                "- If the request is genuinely ambiguous or a reasonable subset of "
+                "the example tasks, treat it as IN SCOPE.\n\n"
+                "Respond with ONLY a compact JSON object and nothing else:\n"
+                '{"in_scope": true|false, "reason": "<one sentence>", '
+                '"message": "<empty string if in scope; otherwise a short, polite '
+                "message telling the user this request is outside this team's scope "
+                "and that they should switch to the appropriate team and try again. "
+                "Do NOT name, recommend, or guess any specific team; do NOT list "
+                'what this team specializes in>"}'
+            )
+            user_prompt = (
+                f"TEAM NAME: {getattr(team_config, 'name', '')}\n"
+                f"TEAM PURPOSE: {getattr(team_config, 'description', '')}\n\n"
+                f"AGENTS:\n{agents_block}\n\n"
+                f"EXAMPLE IN-SCOPE TASKS:\n{examples_block}\n\n"
+                f"USER REQUEST:\n{task_text}"
+            )
+
+            response = await chat_client.get_response(
+                [Message("system", [system_prompt]),
+                 Message("user", [user_prompt])]
+            )
+            raw = (getattr(response, "text", "") or "").strip()
+            self.logger.info("[SCOPE-GATE] classifier raw response: %s", raw[:500])
+
+            parsed = self._parse_scope_json(raw)
+            if parsed is None:
+                self.logger.warning(
+                    "[SCOPE-GATE] Could not parse classifier output — proceeding "
+                    "normally (fail-open)."
+                )
+                return None
+
+            in_scope = bool(parsed.get("in_scope", True))
+            message = str(parsed.get("message", "") or "").strip()
+            if not in_scope and not message:
+                message = (
+                    "This request appears to be outside the scope of the selected "
+                    "team, so it cannot be handled reliably here. Please switch to "
+                    "the appropriate team and try again."
+                )
+            self.logger.info(
+                "[SCOPE-GATE] in_scope=%s reason=%s",
+                in_scope, parsed.get("reason", ""),
+            )
+            return {"in_scope": in_scope, "message": message}
+        except Exception as e:  # fail-open: never block a task on classifier error
+            self.logger.warning(
+                "[SCOPE-GATE] Scope evaluation failed (%s) — proceeding normally.", e
+            )
+            return None
+
+    @staticmethod
+    def _parse_scope_json(text: str) -> Optional[dict]:
+        """Extract the first JSON object from a classifier response."""
+        if not text:
+            return None
+        cleaned = text.strip()
+        if cleaned.startswith("```"):
+            cleaned = "\n".join(
+                ln for ln in cleaned.splitlines() if not ln.strip().startswith("```")
+            ).strip()
+        try:
+            return json.loads(cleaned)
+        except (json.JSONDecodeError, ValueError):
+            pass
+        m = re.search(r"\{.*\}", cleaned, re.DOTALL)
+        if m:
+            try:
+                return json.loads(m.group(0))
+            except (json.JSONDecodeError, ValueError):
+                return None
+        return None
+
+    @staticmethod
+    def _get_team_agent_names(workflow) -> list[str]:
+        """Return the plan ``team`` roster for the frontend "Agent Team" panel.
+
+        Mirrors the normal plan exactly: ``run_orchestration`` builds its
+        ``participant_names`` from ``workflow.get_executors_list()`` executor ids
+        (which include the ``magentic_orchestrator`` shown as "Magentic
+        Orchestrator"). Using the same source keeps the out-of-scope Agent Team
+        identical to a normal plan's. Falls back to the stored team config's
+        agent names when executors are unavailable.
+        """
+        try:
+            names = [
+                executor.id
+                for executor in workflow.get_executors_list()
+                if getattr(executor, "id", "")
+            ]
+            if names:
+                return names
+        except Exception:
+            pass
+
+        team_config = getattr(workflow, "_team_config", None)
+        return [
+            getattr(ag, "name", "")
+            for ag in getattr(team_config, "agents", []) or []
+            if getattr(ag, "name", "")
+        ]
+
+    async def _handle_out_of_scope(
+        self,
+        *,
+        user_id: str,
+        task_text: str,
+        out_of_scope_message: str,
+        team_agent_names: Optional[list[str]] = None,
+    ) -> None:
+        """Present a single MagenticManager out-of-scope step for approval, then
+        deliver the out-of-scope notice as the final answer (no agents run)."""
+        from models.plan_models import MPlan, MStep
+
+        message = out_of_scope_message or (
+            "This request appears to be outside the scope of the selected team. "
+            "Please switch to the appropriate team and try again."
+        )
+
+        team = list(team_agent_names) if team_agent_names else ["MagenticManager"]
+
+        mplan = MPlan()
+        mplan.user_id = user_id
+        mplan.user_request = task_text
+        mplan.team = team
+        mplan.steps = [
+            MStep(
+                agent="MagenticManager",
+                action=(
+                    "Inform the user that this request is out of scope for the "
+                    "selected team and suggest a suitable team."
+                ),
+            )
+        ]
+
+        try:
+            orchestration_config.plans[mplan.id] = mplan
+        except Exception as e:
+            self.logger.error("Error storing out-of-scope plan: %s", e)
+
+        approval_message = messages.PlanApprovalRequest(
+            plan=mplan,
+            status="PENDING_APPROVAL",  # type: ignore[arg-type]
+            context={"task": task_text, "out_of_scope": True},
+        )
+        await connection_config.send_status_update_async(
+            message=approval_message,
+            user_id=user_id,
+            message_type=WebsocketMessageType.PLAN_APPROVAL_REQUEST,
+        )
+
+        approval_response = await wait_for_plan_approval(mplan.id, user_id)
+
+        if approval_response and approval_response.approved:
+            self.logger.info("Out-of-scope plan approved — sending final notice.")
+            await asyncio.sleep(1.5)
+            await connection_config.send_status_update_async(
+                {
+                    "type": WebsocketMessageType.FINAL_RESULT_MESSAGE,
+                    "data": {
+                        "content": message,
+                        "status": "completed",
+                        "timestamp": asyncio.get_event_loop().time(),
+                    },
+                },
+                user_id,
+                message_type=WebsocketMessageType.FINAL_RESULT_MESSAGE,
+            )
+        else:
+            self.logger.info("Out-of-scope plan rejected by user.")
+            await connection_config.send_status_update_async(
+                {
+                    "type": WebsocketMessageType.PLAN_APPROVAL_RESPONSE,
+                    "data": approval_response,
+                },
+                user_id=user_id,
+                message_type=WebsocketMessageType.PLAN_APPROVAL_RESPONSE,
+            )
 
     # ---------------------------
     # Plan review handling
