@@ -603,31 +603,46 @@ class OrchestrationManager:
             examples_block = "\n".join(example_lines) or "- (none provided)"
 
             system_prompt = (
-                "You are a strict scope classifier for a specialized multi-agent "
-                "team. Decide whether a user's request falls within THIS team's "
-                "specialization.\n\n"
+                "You are a strict feasibility classifier for a specialized "
+                "multi-agent team. Decide whether a user's request can actually be "
+                "fulfilled by THIS team — considering BOTH (A) its specialization "
+                "and (B) what its agents are actually able to DO.\n\n"
                 "A team is defined ENTIRELY by its stated purpose, the specific "
                 "agents it has and what each does, the data/knowledge those agents "
                 "work with, and its representative example tasks.\n\n"
                 "Rules:\n"
                 "- IN SCOPE only if the request clearly matches this team's "
-                "specialization and could be fulfilled by these agents using their "
-                "data.\n"
-                "- OUT OF SCOPE if the request belongs to a DIFFERENT "
-                "specialization, even when superficially related or in a broadly "
-                "similar field (e.g. drafting a product press release is NOT the "
-                "same specialization as generating retail social-media content; HR "
-                "onboarding is NOT product marketing; contract/NDA compliance is "
+                "specialization AND the requested action is something these agents "
+                "can actually perform with their described capabilities and data.\n"
+                "- OUT OF SCOPE (kind=\"domain\") if the request belongs to a "
+                "DIFFERENT specialization, even when superficially related or in a "
+                "broadly similar field (e.g. drafting a product press release is NOT "
+                "the same specialization as generating retail social-media content; "
+                "HR onboarding is NOT product marketing; contract/NDA compliance is "
                 "NOT RFP evaluation).\n"
+                "- OUT OF SCOPE (kind=\"capability\") if the request asks the team to "
+                "perform an ACTION its agents cannot actually do. Agents generally "
+                "only retrieve, look up, analyze, summarize, or generate content "
+                "using their data. Unless an agent's description EXPLICITLY says it "
+                "can do so, the team CANNOT delete, erase, purge, remove, modify, "
+                "update, overwrite, or otherwise change stored data, and cannot "
+                "execute real-world side effects (place/cancel orders, send emails, "
+                "make payments, provision/deactivate accounts). Treat such requests "
+                "as OUT OF SCOPE — never let the team pretend it performed a "
+                "destructive or state-changing action it cannot actually perform.\n"
                 "- If the request is genuinely ambiguous or a reasonable subset of "
                 "the example tasks, treat it as IN SCOPE.\n\n"
                 "Respond with ONLY a compact JSON object and nothing else:\n"
-                '{"in_scope": true|false, "reason": "<one sentence>", '
+                '{"in_scope": true|false, "kind": "domain"|"capability"|"", '
+                '"reason": "<one sentence>", '
                 '"message": "<empty string if in scope; otherwise a short, polite '
-                "message telling the user this request is outside this team's scope "
-                "and that they should switch to the appropriate team and try again. "
-                "Do NOT name, recommend, or guess any specific team; do NOT list "
-                'what this team specializes in>"}'
+                "message. If kind=domain, say the request is outside this team's "
+                "scope and the user should switch to the appropriate team and try "
+                "again. If kind=capability, say this team cannot perform the "
+                "requested action (e.g. deleting or modifying stored data) and can "
+                "only help with the kinds of tasks its agents support; make clear "
+                "that NO data was changed. In both cases: do NOT name, recommend, or "
+                'guess any specific team; do NOT list what this team specializes in>"}'
             )
             user_prompt = (
                 f"TEAM NAME: {getattr(team_config, 'name', '')}\n"
@@ -653,16 +668,25 @@ class OrchestrationManager:
                 return None
 
             in_scope = bool(parsed.get("in_scope", True))
+            kind = str(parsed.get("kind", "") or "").strip().lower()
             message = str(parsed.get("message", "") or "").strip()
             if not in_scope and not message:
-                message = (
-                    "This request appears to be outside the scope of the selected "
-                    "team, so it cannot be handled reliably here. Please switch to "
-                    "the appropriate team and try again."
-                )
+                if kind == "capability":
+                    message = (
+                        "This team is not able to perform the requested action "
+                        "(such as deleting or modifying stored data). No data has "
+                        "been changed. It can only help with the kinds of tasks its "
+                        "agents support. Please try a supported request instead."
+                    )
+                else:
+                    message = (
+                        "This request appears to be outside the scope of the "
+                        "selected team, so it cannot be handled reliably here. "
+                        "Please switch to the appropriate team and try again."
+                    )
             self.logger.info(
-                "[SCOPE-GATE] in_scope=%s reason=%s",
-                in_scope, parsed.get("reason", ""),
+                "[SCOPE-GATE] in_scope=%s kind=%s reason=%s",
+                in_scope, kind, parsed.get("reason", ""),
             )
             return {"in_scope": in_scope, "message": message}
         except Exception as e:  # fail-open: never block a task on classifier error
@@ -749,8 +773,11 @@ class OrchestrationManager:
             MStep(
                 agent="MagenticManager",
                 action=(
-                    "Inform the user that this request is out of scope for the "
-                    "selected team and suggest a suitable team."
+                    "Inform the user that this request cannot be handled by the "
+                    "selected team — either because it falls outside the team's "
+                    "scope or because the team's agents cannot perform the "
+                    "requested action (such as deleting or modifying data) — and "
+                    "that no data was changed."
                 ),
             )
         ]
