@@ -16,6 +16,16 @@ hooks:
         Write-Host ""
       shell: pwsh
       interactive: true
+    posix:
+      run: |
+        echo ""
+        echo "\033[33m  ---------------------------------------------------------------------------------------------------\033[0m"
+        echo "\033[33m  Note: If deployment fails or you encounter an issue, please open an issue with the deployment logs.\033[0m"
+        echo "\033[36m  https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/issues\033[0m"
+        echo "\033[33m  ---------------------------------------------------------------------------------------------------\033[0m"
+        echo ""
+      shell: sh
+      interactive: true
   postdeploy:
     windows:
       run: |
