@@ -36,6 +36,7 @@ az acr login --name $ACR_NAME
  ```bash 
 az acr login --name <containerregname>
 docker build --no-cache -f src/backend/Dockerfile -t <acrloginserver>/<repo>:<tagname> ./src/backend
+docker build --no-cache -f src/backend/Dockerfile -t <acrloginserver>/<repo>:<tagname> ./src/backend
 docker push <acrloginserver>/<repo>:<tagname>
  ```
 
@@ -58,6 +59,7 @@ docker push <acrloginserver>/<repo>:<tagname>
 
 ```bash
 az acr login --name <containerregname>
+docker build --no-cache -f src/App/Dockerfile -t <acrloginserver>/<repo>:<tagname> ./src/App
 docker build --no-cache -f src/App/Dockerfile -t <acrloginserver>/<repo>:<tagname> ./src/App
 docker push <acrloginserver>/<repo>:<tagname>
 ```

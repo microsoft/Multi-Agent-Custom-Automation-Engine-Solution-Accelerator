@@ -273,10 +273,11 @@ class CosmosDBClient(DatabaseBase):
         Returns:
             TeamConfiguration object or None if not found
         """
-        query = "SELECT * FROM c WHERE c.team_id=@team_id AND c.data_type=@data_type"
+        query = "SELECT * FROM c WHERE c.team_id=@team_id AND c.data_type=@data_type AND (c.user_id=@user_id OR c.is_default=true)"
         parameters = [
             {"name": "@team_id", "value": team_id},
             {"name": "@data_type", "value": DataType.team_config},
+            {"name": "@user_id", "value": self.user_id},
         ]
         teams = await self.query_items(query, parameters, TeamConfiguration)
         return teams[0] if teams else None
@@ -290,32 +291,33 @@ class CosmosDBClient(DatabaseBase):
         Returns:
             TeamConfiguration object or None if not found
         """
-        query = "SELECT * FROM c WHERE c.team_id=@team_id AND c.data_type=@data_type"
+        query = "SELECT * FROM c WHERE c.team_id=@team_id AND c.data_type=@data_type AND (c.user_id=@user_id OR c.is_default=true)"
         parameters = [
             {"name": "@team_id", "value": team_id},
             {"name": "@data_type", "value": DataType.team_config},
+            {"name": "@user_id", "value": self.user_id},
         ]
         teams = await self.query_items(query, parameters, TeamConfiguration)
         return teams[0] if teams else None
 
     async def get_all_teams(self) -> List[TeamConfiguration]:
-        """Retrieve all team configurations for a specific user.
-
-        Args:
-            user_id: The user_id to get team configurations for
+        """Retrieve all team configurations visible to the current user.
 
         Returns:
-            List of TeamConfiguration objects
+            List of TeamConfiguration objects: default teams plus user-specific teams
         """
-        query = "SELECT * FROM c WHERE c.data_type=@data_type ORDER BY c.created DESC"
+        query = "SELECT * FROM c WHERE c.data_type=@data_type AND (c.user_id=@user_id OR c.is_default=true) ORDER BY c.created DESC"
         parameters = [
             {"name": "@data_type", "value": DataType.team_config},
+            {"name": "@user_id", "value": self.user_id},
         ]
         teams = await self.query_items(query, parameters, TeamConfiguration)
         return teams
 
     async def delete_team(self, team_id: str) -> bool:
         """Delete a team configuration by team_id.
+
+        Only user-owned teams can be deleted; default teams cannot be deleted.
 
         Args:
             team_id: The team_id of the team configuration to delete
@@ -328,9 +330,12 @@ class CosmosDBClient(DatabaseBase):
         try:
             # First find the team to get its document id and partition key
             team = await self.get_team(team_id)
-            self.logger.debug("delete_team: resolved team document id=%s", team.id if team else None)
-            if team:
-                await self.delete_item(item_id=team.id, partition_key=team.session_id)
+            if not team:
+                return False
+            # Prevent deletion of default teams
+            if team.is_default:
+                return False
+            await self.delete_item(item_id=team.id, partition_key=team.session_id)
             return True
         except Exception as e:
             logging.exception(f"Failed to delete team from Cosmos DB: {e}")

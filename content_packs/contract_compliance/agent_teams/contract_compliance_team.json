@@ -6,6 +6,7 @@
   "created": "",
   "created_by": "",
   "deployment_name": "gpt-5.4-mini",
+  "is_default": true,
   "description": "A multi-agent compliance review team that summarizes NDAs, identifies risks, checks compliance, and recommends improvements using advanced legal reasoning and retrieval-augmented analysis.",
   "logo": "",
   "plan": "",

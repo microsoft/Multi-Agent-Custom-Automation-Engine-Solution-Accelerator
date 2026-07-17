@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.44.1.10279",
-      "templateHash": "2110057819441640559"
+      "templateHash": "17775288733861273358"
     },
     "name": "Multi-Agent Custom Automation Engine - Deployment Router",
     "description": "Deployment router for the Multi-Agent Custom Automation Engine accelerator. Routes to either the AVM or vanilla Bicep orchestrator and preserves a unified deployment contract."
@@ -561,7 +561,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "10080544909430391861"
+              "templateHash": "6216243501205527784"
             },
             "name": "Multi-Agent Custom Automation Engine - AVM",
             "description": "AVM orchestrator for the Multi-Agent Custom Automation Engine accelerator. Deploys the same logical resources and preserves the same outputs as infra\\main.bicep using local AVM wrapper modules."
@@ -1242,7 +1242,7 @@
             "aiSearchIndexNameForRFPSummary": "macae-rfp-summary-index",
             "aiSearchIndexNameForRFPRisk": "macae-rfp-risk-index",
             "aiSearchIndexNameForRFPCompliance": "macae-rfp-compliance-index",
-            "virtualMachineAvailabilityZone": 1,
+            "virtualMachineAvailabilityZone": -1,
             "aiFoundryOpenAIEndpoint": "[format('https://{0}.openai.azure.com/', variables('aiFoundryAiServicesResourceName'))]"
           },
           "resources": {
@@ -29138,7 +29138,7 @@
                     "_generator": {
                       "name": "bicep",
                       "version": "0.44.1.10279",
-                      "templateHash": "10180502016624897684"
+                      "templateHash": "13733831222630151234"
                     }
                   },
                   "parameters": {
@@ -29164,7 +29164,7 @@
                     "modelName": {
                       "type": "string",
                       "metadata": {
-                        "description": "Required. Model name (e.g., gpt-4o, text-embedding-ada-002)."
+                        "description": "Required. Model name (e.g., gpt-5.4-mini, text-embedding-ada-002)."
                       }
                     },
                     "modelVersion": {
@@ -57522,8 +57522,16 @@
                             "value": "[parameters('gptImageModelName')]"
                           },
                           {
+                            "name": "AZURE_OPENAI_IMAGE_QUALITY",
+                            "value": "high"
+                          },
+                          {
                             "name": "AZURE_STORAGE_BLOB_URL",
                             "value": "[reference('storage_account').outputs.blobEndpoint.value]"
+                          },
+                          {
+                            "name": "AZURE_STORAGE_IMAGES_CONTAINER",
+                            "value": "generated-images"
                           },
                           {
                             "name": "BACKEND_URL",
@@ -60245,7 +60253,6 @@
                     "value": {
                       "SCM_DO_BUILD_DURING_DEPLOYMENT": "true",
                       "DOCKER_REGISTRY_SERVER_URL": "[format('https://{0}', if(variables('useExistingContainerRegistry'), format('{0}.azurecr.io', variables('existingContainerRegistryName')), reference('container_registry').outputs.loginServer.value))]",
-                      "WEBSITES_PORT": "3000",
                       "WEBSITES_CONTAINER_START_TIME_LIMIT": "1800",
                       "BACKEND_API_URL": "[format('https://{0}', reference('containerApp').outputs.fqdn.value)]",
                       "AUTH_ENABLED": "false",
@@ -60253,6 +60260,12 @@
                     }
                   },
                   "virtualNetworkSubnetId": "[if(parameters('enablePrivateNetworking'), createObject('value', reference('virtualNetwork').outputs.webserverfarmSubnetResourceId.value), createObject('value', ''))]",
+                  "vnetRouteAllEnabled": {
+                    "value": "[parameters('enablePrivateNetworking')]"
+                  },
+                  "imagePullTraffic": {
+                    "value": "[parameters('enablePrivateNetworking')]"
+                  },
                   "publicNetworkAccess": {
                     "value": "Enabled"
                   },
@@ -60267,7 +60280,7 @@
                     "_generator": {
                       "name": "bicep",
                       "version": "0.44.1.10279",
-                      "templateHash": "9621160936099183182"
+                      "templateHash": "9504607717010385151"
                     }
                   },
                   "definitions": {
@@ -60805,6 +60818,40 @@
                     }
                   },
                   "resources": {
+                    "site": {
+                      "existing": true,
+                      "type": "Microsoft.Web/sites",
+                      "apiVersion": "2025-03-01",
+                      "name": "[parameters('name')]"
+                    },
+                    "logsConfig": {
+                      "type": "Microsoft.Web/sites/config",
+                      "apiVersion": "2025-03-01",
+                      "name": "[format('{0}/{1}', parameters('name'), 'logs')]",
+                      "properties": {
+                        "applicationLogs": {
+                          "fileSystem": {
+                            "level": "Verbose"
+                          }
+                        },
+                        "detailedErrorMessages": {
+                          "enabled": true
+                        },
+                        "failedRequestsTracing": {
+                          "enabled": true
+                        },
+                        "httpLogs": {
+                          "fileSystem": {
+                            "enabled": true,
+                            "retentionInDays": 1,
+                            "retentionInMb": 35
+                          }
+                        }
+                      },
+                      "dependsOn": [
+                        "appService"
+                      ]
+                    },
                     "appService": {
                       "type": "Microsoft.Resources/deployments",
                       "apiVersion": "2025-04-01",
@@ -60848,6 +60895,7 @@
                               "healthCheckPath": "[if(not(empty(parameters('healthCheckPath'))), parameters('healthCheckPath'), null())]",
                               "webSocketsEnabled": "[parameters('webSocketsEnabled')]",
                               "appCommandLine": "[parameters('appCommandLine')]",
+                              "vnetRouteAllEnabled": "[parameters('vnetRouteAllEnabled')]",
                               "acrUseManagedIdentityCreds": "[not(empty(parameters('acrUserManagedIdentityClientId')))]",
                               "acrUserManagedIdentityID": "[if(not(empty(parameters('acrUserManagedIdentityClientId'))), parameters('acrUserManagedIdentityClientId'), null())]"
                             }
@@ -60861,35 +60909,6 @@
                                 "name": "appsettings",
                                 "properties": "[parameters('appSettings')]",
                                 "applicationInsightResourceId": "[if(not(empty(parameters('applicationInsightResourceId'))), parameters('applicationInsightResourceId'), null())]"
-                              },
-                              {
-                                "name": "logs",
-                                "properties": {
-                                  "applicationLogs": {
-                                    "fileSystem": {
-                                      "level": "Verbose"
-                                    }
-                                  },
-                                  "detailedErrorMessages": {
-                                    "enabled": true
-                                  },
-                                  "failedRequestsTracing": {
-                                    "enabled": true
-                                  },
-                                  "httpLogs": {
-                                    "fileSystem": {
-                                      "enabled": true,
-                                      "retentionInDays": 1,
-                                      "retentionInMb": 35
-                                    }
-                                  }
-                                }
-                              },
-                              {
-                                "name": "web",
-                                "properties": {
-                                  "vnetRouteAllEnabled": "[parameters('vnetRouteAllEnabled')]"
-                                }
                               }
                             ]
                           },
@@ -76885,7 +76904,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "11051305577029776274"
+              "templateHash": "1904819476144963209"
             },
             "name": "Multi-Agent Custom Automation Engine - Vanilla Bicep",
             "description": "Vanilla Bicep orchestrator for the Multi-Agent Custom Automation Engine accelerator. This deployment intentionally excludes WAF features such as private networking, scale-out, redundancy, bastion, and VM resources while keeping router-compatible outputs."
@@ -78097,7 +78116,7 @@
                     "_generator": {
                       "name": "bicep",
                       "version": "0.44.1.10279",
-                      "templateHash": "10180502016624897684"
+                      "templateHash": "13733831222630151234"
                     }
                   },
                   "parameters": {
@@ -78123,7 +78142,7 @@
                     "modelName": {
                       "type": "string",
                       "metadata": {
-                        "description": "Required. Model name (e.g., gpt-4o, text-embedding-ada-002)."
+                        "description": "Required. Model name (e.g., gpt-5.4-mini, text-embedding-ada-002)."
                       }
                     },
                     "modelVersion": {
@@ -80083,8 +80102,16 @@
                             "value": "[parameters('gptImageModelName')]"
                           },
                           {
+                            "name": "AZURE_OPENAI_IMAGE_QUALITY",
+                            "value": "high"
+                          },
+                          {
                             "name": "AZURE_STORAGE_BLOB_URL",
                             "value": "[reference(resourceId('Microsoft.Resources/deployments', take(format('module.storage-account.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.blobEndpoint.value]"
+                          },
+                          {
+                            "name": "AZURE_STORAGE_IMAGES_CONTAINER",
+                            "value": "[parameters('storageContainerNameGeneratedImages')]"
                           },
                           {
                             "name": "BACKEND_URL",
@@ -80499,7 +80526,6 @@
                     "value": {
                       "SCM_DO_BUILD_DURING_DEPLOYMENT": "true",
                       "DOCKER_REGISTRY_SERVER_URL": "[format('https://{0}', if(variables('useExistingContainerRegistry'), format('{0}.azurecr.io', variables('existingContainerRegistryName')), reference(resourceId('Microsoft.Resources/deployments', take(format('module.container-registry.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.loginServer.value))]",
-                      "WEBSITES_PORT": "3000",
                       "WEBSITES_CONTAINER_START_TIME_LIMIT": "1800",
                       "BACKEND_API_URL": "[format('https://{0}', reference(resourceId('Microsoft.Resources/deployments', take(format('module.backend-container-app.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.fqdn.value)]",
                       "AUTH_ENABLED": "false",
