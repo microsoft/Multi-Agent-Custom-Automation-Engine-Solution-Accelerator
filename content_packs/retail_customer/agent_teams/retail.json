@@ -6,6 +6,7 @@
   "created": "",
   "created_by": "",
   "deployment_name": "gpt-5.4-mini",
+  "is_default": true,
   "agents": [
     {
       "input_key": "",

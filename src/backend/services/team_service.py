@@ -105,6 +105,7 @@ class TeamService:
                 plan=json_data.get("plan", ""),
                 starting_tasks=starting_tasks,
                 user_id=user_id,
+                is_default=json_data.get("is_default", False),
             )
 
             self.logger.info(

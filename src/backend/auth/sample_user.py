@@ -5,7 +5,6 @@ sample_user = {
     "Client-Ip": "22.222.222.2222:64379",
     "Content-Length": "192",
     "Content-Type": "application/json",
-    "Cookie": "AppServiceAuthSession=/AuR5ENU+pmpoN3jnymP8fzpmVBgphx9uPQrYLEWGcxjIITIeh8NZW7r3ePkG8yBcMaItlh1pX4nzg5TFD9o2mxC/5BNDRe/uuu0iDlLEdKecROZcVRY7QsFdHLjn9KB90Z3d9ZeLwfVIf0sZowWJt03BO5zKGB7vZgL+ofv3QY3AaYn1k1GtxSE9HQWJpWar7mOA64b7Lsy62eY3nxwg3AWDsP3/rAta+MnDCzpdlZMFXcJLj+rsCppW+w9OqGhKQ7uCs03BPeon3qZOdmE8cOJW3+i96iYlhneNQDItHyQqEi1CHbBTSkqwpeOwWP4vcwGM22ynxPp7YFyiRw/X361DGYy+YkgYBkXq1AEIDZ44BCBz9EEaEi0NU+m6yUOpNjEaUtrJKhQywcM2odojdT4XAY+HfTEfSqp0WiAkgAuE/ueCu2JDOfvxGjCgJ4DGWCoYdOdXAN1c+MenT4OSvkMO41YuPeah9qk9ixkJI5s80lv8rUu1J26QF6pstdDkYkAJAEra3RQiiO1eAH7UEb3xHXn0HW5lX8ZDX3LWiAFGOt5DIKxBKFymBKJGzbPFPYjfczegu0FD8/NQPLl2exAX3mI9oy/tFnATSyLO2E8DxwP5wnYVminZOQMjB/I4g3Go14betm0MlNXlUbU1fyS6Q6JxoCNLDZywCoU9Y65UzimWZbseKsXlOwYukCEpuQ5QPT55LuEAWhtYier8LSh+fvVUsrkqKS+bg0hzuoX53X6aqUr7YB31t0Z2zt5TT/V3qXpdyD8Xyd884PqysSkJYa553sYx93ETDKSsfDguanVfn2si9nvDpvUWf6/R02FmQgXiaaaykMgYyIuEmE77ptsivjH3hj/MN4VlePFWokcchF4ciqqzonmICmjEHEx5zpjU2Kwa+0y7J5ROzVVygcnO1jH6ZKDy9bGGYL547bXx/iiYBYqSIQzleOAkCeULrGN2KEHwckX5MpuRaqTpoxdZH9RJv0mIWxbDA0kwGsbMICQd0ZODBkPUnE84qhzvXInC+TL7MbutPEnGbzgxBAS1c2Ct4vxkkjykOeOxTPxqAhxoefwUfIwZZax6A9LbeYX2bsBpay0lScHcA==",
     "Disguised-Host": "your_app_service.azurewebsites.net",
     "Host": "your_app_service.azurewebsites.net",
     "Max-Forwards": "10",

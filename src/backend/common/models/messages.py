@@ -206,6 +206,7 @@ class TeamConfiguration(BaseDataModel):
     plan: str = ""
     starting_tasks: List[StartingTask] = Field(default_factory=list)
     user_id: str  # who uploaded this configuration
+    is_default: bool = False  # default teams are visible to all users
 
 
 class PlanWithSteps(Plan):

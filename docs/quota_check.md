@@ -1,7 +1,7 @@
 ## Check Quota Availability Before Deployment
 
 Before deploying the accelerator, **ensure sufficient quota availability** for the required model.
-> **For Global Standard | GPT-5.4 - the capacity to at least 150k tokens for optimal performance.**
+> **For Global Standard | gpt-5.4 - set the capacity to at least 150k tokens for optimal performance.**
 
 ### Login if you have not done so already
 ```
@@ -16,7 +16,7 @@ az login --use-device-code
 
 ### 📌 Default Models & Capacities:
 ```
-gpt-5.4-mini:100,gpt-5.4:150
+gpt-5.4:150,gpt-5.4-mini:100
 ```
 ### 📌 Default Regions:
 ```
@@ -42,6 +42,7 @@ australiaeast, eastus2, francecentral, japaneast, norwayeast, swedencentral, uks
    ```
 ✔️ Check specific model(s) in default regions:
   ```
+  ./quota_check_params.sh --models gpt-5.4:150
   ./quota_check_params.sh --models gpt-5.4:150
   ```
 ✔️ Check default models in specific region(s):

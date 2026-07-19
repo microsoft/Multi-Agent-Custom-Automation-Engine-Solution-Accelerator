@@ -701,10 +701,11 @@ class TestCosmosDBTeamOperations:
         result = await client.get_team("test_team_id")
         
         assert result == mock_team
-        expected_query = "SELECT * FROM c WHERE c.team_id=@team_id AND c.data_type=@data_type"
+        expected_query = "SELECT * FROM c WHERE c.team_id=@team_id AND c.data_type=@data_type AND (c.user_id=@user_id OR c.is_default=true)"
         expected_params = [
             {"name": "@team_id", "value": "test_team_id"},
             {"name": "@data_type", "value": DataType.team_config},
+            {"name": "@user_id", "value": "test_user"},
         ]
         client.query_items.assert_called_once_with(expected_query, expected_params, TeamConfiguration)
     
@@ -736,9 +737,10 @@ class TestCosmosDBTeamOperations:
         result = await client.get_all_teams()
         
         assert result == mock_teams
-        expected_query = "SELECT * FROM c WHERE c.data_type=@data_type ORDER BY c.created DESC"
+        expected_query = "SELECT * FROM c WHERE c.data_type=@data_type AND (c.user_id=@user_id OR c.is_default=true) ORDER BY c.created DESC"
         expected_params = [
             {"name": "@data_type", "value": DataType.team_config},
+            {"name": "@user_id", "value": "test_user"},
         ]
         client.query_items.assert_called_once_with(expected_query, expected_params, TeamConfiguration)
     
@@ -748,6 +750,7 @@ class TestCosmosDBTeamOperations:
         mock_team = Mock(spec=TeamConfiguration)
         mock_team.id = "test_id"
         mock_team.session_id = "test_session"
+        mock_team.is_default = False
         
         # Mock get_team to return the team
         with patch.object(client, 'get_team', return_value=mock_team):
@@ -763,7 +766,7 @@ class TestCosmosDBTeamOperations:
         with patch.object(client, 'get_team', return_value=None):
             result = await client.delete_team("test_team_id")
         
-        assert result is True
+        assert result is False
         client.delete_item.assert_not_called()
 
 

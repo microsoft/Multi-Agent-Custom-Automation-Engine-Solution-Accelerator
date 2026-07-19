@@ -6,6 +6,7 @@
   "created": "",
   "created_by": "",
   "deployment_name": "gpt-5.4-mini",
+  "is_default": true,
   "description": "A specialized multi-agent team that analyzes RFP and contract documents to summarize content, identify potential risks, check compliance gaps, and provide action plans for contract improvement.",
   "logo": "",
   "plan": "",

@@ -524,4 +524,3 @@ output MCP_IMAGE_NAME string = isAvm ? avmDeployment!.outputs.MCP_IMAGE_NAME : b
 
 @description('Port the frontend Web App container listens on.')
 output FRONTEND_WEBSITES_PORT string = isAvm ? avmDeployment!.outputs.FRONTEND_WEBSITES_PORT : bicepDeployment!.outputs.FRONTEND_WEBSITES_PORT
-

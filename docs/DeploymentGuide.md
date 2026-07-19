@@ -68,8 +68,10 @@ Ensure you have access to an [Azure subscription](https://azure.microsoft.com/fr
 📖 **Follow:** [Quota Check Instructions](./quota_check.md) to ensure sufficient capacity.
 
 **Default Quota Configuration:**
-- **GPT-5.4-mini:** 100k tokens
-- **GPT-5.4:** 150k tokens
+- **gpt-5.4 (150k tokens)** — backs the larger GPT model deployment (alias `gpt-5.4`).
+- **gpt-5.4-mini (100k tokens)** — backs the smaller GPT model deployment (alias `gpt-5.4-mini`), also used for reasoning workloads.
+
+> **Note:** The underlying models are `gpt-5.4` (2026-03-05 series) and `gpt-5.4-mini` (2026-03-17 series). Both are reasoning-capable GPT-5.4 GA models.
 
 > **Note:** When you run `azd up`, the deployment will automatically show you regions with available quota, so this pre-check is optional but helpful for planning purposes. You can customize these settings later in [Step 3.3: Advanced Configuration](#33-advanced-configuration-optional).
 
@@ -323,7 +325,8 @@ azd up
 
 **Expected Duration:** 9-10 minutes for default configuration
 
-- **Upon successful completion**, you will see a success message indicating that all resources have been deployed, along with the application URL and next steps for building and pushing the application container images and uploading team configurations and sample data.
+
+- **Upon successful completion**, you will see a success message indicating that all resources have been deployed, along with the application URL. The next steps are to build and push the backend, frontend, and mcp_server container images to ACR, point the container app and web app at them, and upload the team configurations and sample data.
 
 ![Deployment Success message](./images/Deployment_success_message.png)
 
@@ -391,6 +394,10 @@ The images are **built remotely in ACR** using `az acr build`, so no local Docke
 
 ![Usecase selection](./images/Usecase_selection.png)
 
+### 5.3 Access the Application
+
+Once both scripts complete, access your deployed frontend application at the URL printed by the `postdeploy` hook (`https://<webSiteDefaultHostname>`), or retrieve it from the Azure Portal as described in [Step 4.3](#43-get-application-url).
+
 
 ### 5.3 Configure Authentication (Optional)
 
@@ -409,7 +416,7 @@ The images are **built remotely in ACR** using `az acr build`, so no local Docke
 
 1. **Access the application** using the URL from Step 4.3
 2. **Sign in** with your authenticated account
-3. **Select a use case** from the available scenarios you uploaded in Step 5.1
+3. **Select a use case** from the available scenarios you uploaded in Step 5.2
 4. **Ask a sample question** relevant to the selected use case
 5. **Verify the response** includes appropriate multi-agent collaboration
 6. **Check the logs** in Azure Portal to confirm backend processing

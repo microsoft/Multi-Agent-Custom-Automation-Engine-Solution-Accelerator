@@ -54,9 +54,9 @@ class TestDatabaseFactoryInitialization:
     
     def test_database_factory_class_attributes(self):
         """Test that DatabaseFactory has correct class attributes."""
-        assert hasattr(DatabaseFactory, '_instance')
+        assert hasattr(DatabaseFactory, '_shared_instance')
         assert hasattr(DatabaseFactory, '_logger')
-        assert DatabaseFactory._instance is None  # Should start as None
+        assert DatabaseFactory._shared_instance is None  # Should start as None
         assert isinstance(DatabaseFactory._logger, logging.Logger)
     
     def test_database_factory_is_static(self):
@@ -74,19 +74,19 @@ class TestDatabaseFactoryInitialization:
         assert get_database_method is not None
         assert close_all_method is not None
     
-    def test_singleton_instance_management(self):
-        """Test that singleton instance is properly managed."""
+    def test_shared_instance_management(self):
+        """Test that shared instance is properly managed."""
         # Reset instance to ensure clean state
-        DatabaseFactory._instance = None
-        assert DatabaseFactory._instance is None
+        DatabaseFactory._shared_instance = None
+        assert DatabaseFactory._shared_instance is None
         
         # Set a mock instance
         mock_instance = Mock(spec=DatabaseBase)
-        DatabaseFactory._instance = mock_instance
-        assert DatabaseFactory._instance is mock_instance
+        DatabaseFactory._shared_instance = mock_instance
+        assert DatabaseFactory._shared_instance is mock_instance
         
         # Reset for other tests
-        DatabaseFactory._instance = None
+        DatabaseFactory._shared_instance = None
 
 
 class TestDatabaseFactoryGetDatabase:
@@ -94,19 +94,22 @@ class TestDatabaseFactoryGetDatabase:
     
     def setup_method(self):
         """Setup for each test method."""
-        # Reset singleton instance before each test
-        DatabaseFactory._instance = None
+        DatabaseFactory._shared_instance = None
     
     def teardown_method(self):
         """Cleanup after each test method."""
-        # Reset singleton instance after each test
-        DatabaseFactory._instance = None
+        DatabaseFactory._shared_instance = None
     
     @pytest.mark.asyncio
-    async def test_get_database_creates_new_instance_when_none_exists(self):
-        """Test that get_database creates new instance when singleton is None."""
+    async def test_get_database_creates_shared_instance_when_none_exists(self):
+        """Test that get_database initializes the shared connection when none exists."""
         mock_cosmos_client = Mock(spec=CosmosDBClient)
         mock_cosmos_client.initialize = AsyncMock()
+        mock_cosmos_client.client = Mock()
+        mock_cosmos_client.database = Mock()
+        mock_cosmos_client.container = Mock()
+        mock_cosmos_client._initialized = True
+        mock_cosmos_client.user_id = "test_user"
         
         mock_config = Mock()
         mock_config.COSMOSDB_ENDPOINT = "https://test.documents.azure.com:443/"
@@ -118,49 +121,24 @@ class TestDatabaseFactoryGetDatabase:
             with patch('backend.common.database.database_factory.config', mock_config):
                 result = await DatabaseFactory.get_database(user_id="test_user")
                 
-                # Verify CosmosDBClient was created with correct parameters
-                mock_cosmos_class.assert_called_once_with(
-                    endpoint="https://test.documents.azure.com:443/",
-                    credential="mock_credentials",
-                    database_name="test_db",
-                    container_name="test_container",
-                    session_id="",
-                    user_id="test_user"
-                )
-                
-                # Verify initialize was called
+                # Verify initialize was called on the shared instance
                 mock_cosmos_client.initialize.assert_called_once()
                 
-                # Verify instance is returned and stored as singleton
-                assert result is mock_cosmos_client
-                assert DatabaseFactory._instance is mock_cosmos_client
+                # Shared instance should be cached
+                assert DatabaseFactory._shared_instance is mock_cosmos_client
+                
+                # Result should have the correct user_id
+                assert result.user_id == "test_user"
     
     @pytest.mark.asyncio
-    async def test_get_database_returns_existing_singleton_instance(self):
-        """Test that get_database returns existing singleton instance."""
-        # Set up existing singleton
-        existing_instance = Mock(spec=DatabaseBase)
-        DatabaseFactory._instance = existing_instance
-        
-        with patch('backend.common.database.database_factory.CosmosDBClient') as mock_cosmos_class:
-            result = await DatabaseFactory.get_database(user_id="test_user")
-            
-            # Should not create new instance
-            mock_cosmos_class.assert_not_called()
-            
-            # Should return existing instance
-            assert result is existing_instance
-            assert DatabaseFactory._instance is existing_instance
-    
-    @pytest.mark.asyncio
-    async def test_get_database_force_new_creates_new_instance(self):
-        """Test that get_database with force_new=True creates new instance."""
-        # Set up existing singleton
-        existing_instance = Mock(spec=DatabaseBase)
-        DatabaseFactory._instance = existing_instance
-        
-        mock_cosmos_client = Mock(spec=CosmosDBClient)
-        mock_cosmos_client.initialize = AsyncMock()
+    async def test_get_database_returns_per_request_instance_with_correct_user_id(self):
+        """Test that each get_database call returns an instance scoped to the caller's user_id."""
+        mock_shared = Mock(spec=CosmosDBClient)
+        mock_shared.initialize = AsyncMock()
+        mock_shared.client = Mock()
+        mock_shared.database = Mock()
+        mock_shared.container = Mock()
+        mock_shared._initialized = True
         
         mock_config = Mock()
         mock_config.COSMOSDB_ENDPOINT = "https://test.documents.azure.com:443/"
@@ -168,32 +146,103 @@ class TestDatabaseFactoryGetDatabase:
         mock_config.COSMOSDB_CONTAINER = "test_container"
         mock_config.get_azure_credentials.return_value = "mock_credentials"
         
-        with patch('backend.common.database.database_factory.CosmosDBClient', return_value=mock_cosmos_client) as mock_cosmos_class:
+        # Pre-set shared instance to simulate already-initialized state
+        DatabaseFactory._shared_instance = mock_shared
+        
+        with patch('backend.common.database.database_factory.CosmosDBClient') as mock_cosmos_class:
+            # Make constructor return a real-enough mock with settable attributes
+            mock_per_request = Mock(spec=CosmosDBClient)
+            mock_per_request.user_id = "user_a"
+            mock_cosmos_class.return_value = mock_per_request
+            
+            with patch('backend.common.database.database_factory.config', mock_config):
+                result = await DatabaseFactory.get_database(user_id="user_a")
+                
+                # Per-request instance should share the connection from the shared instance
+                assert result.client is mock_shared.client
+                assert result.database is mock_shared.database
+                assert result.container is mock_shared.container
+    
+    @pytest.mark.asyncio
+    async def test_get_database_different_users_get_different_instances(self):
+        """Test that different user_ids produce distinct instances."""
+        mock_shared = Mock(spec=CosmosDBClient)
+        mock_shared.client = Mock()
+        mock_shared.database = Mock()
+        mock_shared.container = Mock()
+        mock_shared._initialized = True
+        DatabaseFactory._shared_instance = mock_shared
+        
+        mock_config = Mock()
+        mock_config.COSMOSDB_ENDPOINT = "https://test.documents.azure.com:443/"
+        mock_config.COSMOSDB_DATABASE = "test_db"
+        mock_config.COSMOSDB_CONTAINER = "test_container"
+        mock_config.get_azure_credentials.return_value = "mock_credentials"
+        
+        with patch('backend.common.database.database_factory.CosmosDBClient') as mock_cosmos_class:
+            def make_instance(**kwargs):
+                inst = Mock(spec=CosmosDBClient)
+                inst.user_id = kwargs.get('user_id', '')
+                return inst
+            mock_cosmos_class.side_effect = make_instance
+            
+            with patch('backend.common.database.database_factory.config', mock_config):
+                result1 = await DatabaseFactory.get_database(user_id="user_a")
+                result2 = await DatabaseFactory.get_database(user_id="user_b")
+                
+                # Should be different instances
+                assert result1 is not result2
+                assert result1.user_id == "user_a"
+                assert result2.user_id == "user_b"
+    
+    @pytest.mark.asyncio
+    async def test_get_database_force_new_reinitializes_shared_connection(self):
+        """Test that force_new=True re-creates the shared connection."""
+        old_shared = Mock(spec=CosmosDBClient)
+        old_shared.client = Mock()
+        old_shared.database = Mock()
+        old_shared.container = Mock()
+        DatabaseFactory._shared_instance = old_shared
+        
+        new_shared = Mock(spec=CosmosDBClient)
+        new_shared.initialize = AsyncMock()
+        new_shared.client = Mock()
+        new_shared.database = Mock()
+        new_shared.container = Mock()
+        new_shared._initialized = True
+        
+        mock_config = Mock()
+        mock_config.COSMOSDB_ENDPOINT = "https://test.documents.azure.com:443/"
+        mock_config.COSMOSDB_DATABASE = "test_db"
+        mock_config.COSMOSDB_CONTAINER = "test_container"
+        mock_config.get_azure_credentials.return_value = "mock_credentials"
+        
+        call_count = [0]
+        def make_instance(**kwargs):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                return new_shared
+            inst = Mock(spec=CosmosDBClient)
+            inst.user_id = kwargs.get('user_id', '')
+            return inst
+        
+        with patch('backend.common.database.database_factory.CosmosDBClient', side_effect=make_instance):
             with patch('backend.common.database.database_factory.config', mock_config):
                 result = await DatabaseFactory.get_database(user_id="test_user", force_new=True)
                 
-                # Verify new CosmosDBClient was created
-                mock_cosmos_class.assert_called_once_with(
-                    endpoint="https://test.documents.azure.com:443/",
-                    credential="mock_credentials",
-                    database_name="test_db",
-                    container_name="test_container",
-                    session_id="",
-                    user_id="test_user"
-                )
-                
-                # Verify initialize was called
-                mock_cosmos_client.initialize.assert_called_once()
-                
-                # Verify new instance is returned but singleton is not updated
-                assert result is mock_cosmos_client
-                assert DatabaseFactory._instance is existing_instance  # Should remain unchanged
+                # Shared instance should be replaced
+                assert DatabaseFactory._shared_instance is new_shared
+                new_shared.initialize.assert_called_once()
     
     @pytest.mark.asyncio
     async def test_get_database_with_empty_user_id(self):
         """Test that get_database works with empty user_id."""
         mock_cosmos_client = Mock(spec=CosmosDBClient)
         mock_cosmos_client.initialize = AsyncMock()
+        mock_cosmos_client.client = Mock()
+        mock_cosmos_client.database = Mock()
+        mock_cosmos_client.container = Mock()
+        mock_cosmos_client._initialized = True
         
         mock_config = Mock()
         mock_config.COSMOSDB_ENDPOINT = "https://test.documents.azure.com:443/"
@@ -205,17 +254,8 @@ class TestDatabaseFactoryGetDatabase:
             with patch('backend.common.database.database_factory.config', mock_config):
                 result = await DatabaseFactory.get_database()  # No user_id provided
                 
-                # Verify CosmosDBClient was created with empty user_id
-                mock_cosmos_class.assert_called_once_with(
-                    endpoint="https://test.documents.azure.com:443/",
-                    credential="mock_credentials",
-                    database_name="test_db",
-                    container_name="test_container",
-                    session_id="",
-                    user_id=""
-                )
-                
-                assert result is mock_cosmos_client
+                # Should still work; per-request instance created with empty user_id
+                assert result is not None
     
     @pytest.mark.asyncio
     async def test_get_database_initialization_error(self):
@@ -234,8 +274,8 @@ class TestDatabaseFactoryGetDatabase:
                 with pytest.raises(Exception, match="Initialization failed"):
                     await DatabaseFactory.get_database(user_id="test_user")
                 
-                # Singleton should remain None after failure
-                assert DatabaseFactory._instance is None
+                # Shared instance should remain None after failure
+                assert DatabaseFactory._shared_instance is None
 
 
 class TestDatabaseFactoryCloseAll:
@@ -243,58 +283,53 @@ class TestDatabaseFactoryCloseAll:
     
     def setup_method(self):
         """Setup for each test method."""
-        # Reset singleton instance before each test
-        DatabaseFactory._instance = None
+        DatabaseFactory._shared_instance = None
     
     def teardown_method(self):
         """Cleanup after each test method."""
-        # Reset singleton instance after each test
-        DatabaseFactory._instance = None
+        DatabaseFactory._shared_instance = None
     
     @pytest.mark.asyncio
     async def test_close_all_with_existing_instance(self):
-        """Test that close_all properly closes existing instance."""
-        # Set up mock instance
+        """Test that close_all properly closes existing shared instance."""
         mock_instance = Mock(spec=DatabaseBase)
         mock_instance.close = AsyncMock()
-        DatabaseFactory._instance = mock_instance
+        DatabaseFactory._shared_instance = mock_instance
         
         await DatabaseFactory.close_all()
         
         # Verify close was called
         mock_instance.close.assert_called_once()
         
-        # Verify singleton is reset to None
-        assert DatabaseFactory._instance is None
+        # Verify shared instance is reset to None
+        assert DatabaseFactory._shared_instance is None
     
     @pytest.mark.asyncio
     async def test_close_all_with_no_instance(self):
         """Test that close_all handles case when no instance exists."""
-        # Ensure no instance exists
-        DatabaseFactory._instance = None
+        DatabaseFactory._shared_instance = None
         
         # Should not raise exception
         await DatabaseFactory.close_all()
         
         # Should remain None
-        assert DatabaseFactory._instance is None
+        assert DatabaseFactory._shared_instance is None
     
     @pytest.mark.asyncio
     async def test_close_all_handles_close_exception(self):
         """Test that close_all handles exceptions during close."""
-        # Set up mock instance that raises exception on close
         mock_instance = Mock(spec=DatabaseBase)
         mock_instance.close = AsyncMock(side_effect=Exception("Close failed"))
-        DatabaseFactory._instance = mock_instance
+        DatabaseFactory._shared_instance = mock_instance
         
         # Should propagate the exception
         with pytest.raises(Exception, match="Close failed"):
             await DatabaseFactory.close_all()
         
-        # With exception, singleton may not be reset (depends on implementation)
+        # With exception, shared instance may not be reset (depends on implementation)
         # The current implementation doesn't use try-except, so the exception
-        # would prevent the _instance = None assignment
-        assert DatabaseFactory._instance is mock_instance
+        # would prevent the _shared_instance = None assignment
+        assert DatabaseFactory._shared_instance is mock_instance
 
 
 class TestDatabaseFactoryIntegration:
@@ -302,19 +337,21 @@ class TestDatabaseFactoryIntegration:
     
     def setup_method(self):
         """Setup for each test method."""
-        # Reset singleton instance before each test
-        DatabaseFactory._instance = None
+        DatabaseFactory._shared_instance = None
     
     def teardown_method(self):
         """Cleanup after each test method."""
-        # Reset singleton instance after each test
-        DatabaseFactory._instance = None
+        DatabaseFactory._shared_instance = None
     
     @pytest.mark.asyncio
-    async def test_multiple_get_database_calls_return_same_instance(self):
-        """Test that multiple calls to get_database return the same instance."""
-        mock_cosmos_client = Mock(spec=CosmosDBClient)
-        mock_cosmos_client.initialize = AsyncMock()
+    async def test_multiple_get_database_calls_return_different_user_scoped_instances(self):
+        """Test that multiple calls with different user_ids return separate instances."""
+        mock_shared = Mock(spec=CosmosDBClient)
+        mock_shared.initialize = AsyncMock()
+        mock_shared.client = Mock()
+        mock_shared.database = Mock()
+        mock_shared.container = Mock()
+        mock_shared._initialized = True
         
         mock_config = Mock()
         mock_config.COSMOSDB_ENDPOINT = "https://test.documents.azure.com:443/"
@@ -322,28 +359,37 @@ class TestDatabaseFactoryIntegration:
         mock_config.COSMOSDB_CONTAINER = "test_container"
         mock_config.get_azure_credentials.return_value = "mock_credentials"
         
-        with patch('backend.common.database.database_factory.CosmosDBClient', return_value=mock_cosmos_client) as mock_cosmos_class:
+        call_count = [0]
+        def make_instance(**kwargs):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                # First call creates the shared instance
+                return mock_shared
+            inst = Mock(spec=CosmosDBClient)
+            inst.user_id = kwargs.get('user_id', '')
+            return inst
+        
+        with patch('backend.common.database.database_factory.CosmosDBClient', side_effect=make_instance):
             with patch('backend.common.database.database_factory.config', mock_config):
-                # First call
                 result1 = await DatabaseFactory.get_database(user_id="user1")
-                
-                # Second call
                 result2 = await DatabaseFactory.get_database(user_id="user2")
                 
-                # Should only create one instance
-                mock_cosmos_class.assert_called_once()
-                
-                # Both calls should return the same instance
-                assert result1 is result2
-                assert result1 is mock_cosmos_client
+                # Different user_ids should yield different instances
+                assert result1 is not result2
+                # Both share the same underlying connection
+                assert result1.client is mock_shared.client
+                assert result2.client is mock_shared.client
     
     @pytest.mark.asyncio
     async def test_get_database_after_close_all(self):
         """Test that get_database works properly after close_all."""
-        # First, create an instance
         mock_cosmos_client1 = Mock(spec=CosmosDBClient)
         mock_cosmos_client1.initialize = AsyncMock()
         mock_cosmos_client1.close = AsyncMock()
+        mock_cosmos_client1.client = Mock()
+        mock_cosmos_client1.database = Mock()
+        mock_cosmos_client1.container = Mock()
+        mock_cosmos_client1._initialized = True
         
         mock_config = Mock()
         mock_config.COSMOSDB_ENDPOINT = "https://test.documents.azure.com:443/"
@@ -354,34 +400,43 @@ class TestDatabaseFactoryIntegration:
         with patch('backend.common.database.database_factory.config', mock_config):
             with patch('backend.common.database.database_factory.CosmosDBClient', return_value=mock_cosmos_client1):
                 result1 = await DatabaseFactory.get_database(user_id="test_user")
-                assert result1 is mock_cosmos_client1
-                assert DatabaseFactory._instance is mock_cosmos_client1
+                assert DatabaseFactory._shared_instance is mock_cosmos_client1
         
         # Close all connections
         await DatabaseFactory.close_all()
-        assert DatabaseFactory._instance is None
+        assert DatabaseFactory._shared_instance is None
         
         # Create a new instance
         mock_cosmos_client2 = Mock(spec=CosmosDBClient)
         mock_cosmos_client2.initialize = AsyncMock()
+        mock_cosmos_client2.client = Mock()
+        mock_cosmos_client2.database = Mock()
+        mock_cosmos_client2.container = Mock()
+        mock_cosmos_client2._initialized = True
         
         with patch('backend.common.database.database_factory.config', mock_config):
             with patch('backend.common.database.database_factory.CosmosDBClient', return_value=mock_cosmos_client2):
                 result2 = await DatabaseFactory.get_database(user_id="test_user")
                 
-                # Should create new instance
-                assert result2 is mock_cosmos_client2
-                assert DatabaseFactory._instance is mock_cosmos_client2
-                assert result2 is not result1
+                # Should create new shared instance
+                assert DatabaseFactory._shared_instance is mock_cosmos_client2
     
     @pytest.mark.asyncio
-    async def test_force_new_does_not_affect_singleton(self):
-        """Test that force_new instances don't interfere with singleton."""
+    async def test_force_new_replaces_shared_instance(self):
+        """Test that force_new replaces the shared connection instance."""
         mock_cosmos_client1 = Mock(spec=CosmosDBClient)
         mock_cosmos_client1.initialize = AsyncMock()
+        mock_cosmos_client1.client = Mock()
+        mock_cosmos_client1.database = Mock()
+        mock_cosmos_client1.container = Mock()
+        mock_cosmos_client1._initialized = True
         
-        mock_cosmos_client2 = Mock(spec=CosmosDBClient) 
+        mock_cosmos_client2 = Mock(spec=CosmosDBClient)
         mock_cosmos_client2.initialize = AsyncMock()
+        mock_cosmos_client2.client = Mock()
+        mock_cosmos_client2.database = Mock()
+        mock_cosmos_client2.container = Mock()
+        mock_cosmos_client2._initialized = True
         
         mock_config = Mock()
         mock_config.COSMOSDB_ENDPOINT = "https://test.documents.azure.com:443/"
@@ -390,25 +445,15 @@ class TestDatabaseFactoryIntegration:
         mock_config.get_azure_credentials.return_value = "mock_credentials"
         
         with patch('backend.common.database.database_factory.config', mock_config):
-            # Create singleton instance
+            # Create initial shared instance
             with patch('backend.common.database.database_factory.CosmosDBClient', return_value=mock_cosmos_client1):
-                singleton = await DatabaseFactory.get_database(user_id="user1")
-                assert DatabaseFactory._instance is mock_cosmos_client1
+                await DatabaseFactory.get_database(user_id="user1")
+                assert DatabaseFactory._shared_instance is mock_cosmos_client1
             
-            # Create force_new instance
+            # force_new should replace the shared instance
             with patch('backend.common.database.database_factory.CosmosDBClient', return_value=mock_cosmos_client2):
-                force_new = await DatabaseFactory.get_database(user_id="user2", force_new=True)
-                
-                # force_new should return new instance
-                assert force_new is mock_cosmos_client2
-                
-                # But singleton should remain unchanged
-                assert DatabaseFactory._instance is mock_cosmos_client1
-                assert singleton is not force_new
-            
-            # Subsequent call should still return singleton
-            result = await DatabaseFactory.get_database(user_id="user3")
-            assert result is mock_cosmos_client1
+                await DatabaseFactory.get_database(user_id="user2", force_new=True)
+                assert DatabaseFactory._shared_instance is mock_cosmos_client2
 
 
 class TestDatabaseFactoryConfigurationHandling:
@@ -416,19 +461,20 @@ class TestDatabaseFactoryConfigurationHandling:
     
     def setup_method(self):
         """Setup for each test method."""
-        # Reset singleton instance before each test
-        DatabaseFactory._instance = None
+        DatabaseFactory._shared_instance = None
     
     def teardown_method(self):
         """Cleanup after each test method."""
-        # Reset singleton instance after each test
-        DatabaseFactory._instance = None
+        DatabaseFactory._shared_instance = None
     
     @pytest.mark.asyncio
     async def test_config_values_passed_correctly(self):
         """Test that configuration values are passed correctly to CosmosDBClient."""
         mock_cosmos_client = Mock(spec=CosmosDBClient)
         mock_cosmos_client.initialize = AsyncMock()
+        mock_cosmos_client.client = Mock()
+        mock_cosmos_client.database = Mock()
+        mock_cosmos_client.container = Mock()
         
         mock_credentials = Mock()
         mock_config = Mock()
@@ -441,8 +487,11 @@ class TestDatabaseFactoryConfigurationHandling:
             with patch('backend.common.database.database_factory.config', mock_config):
                 await DatabaseFactory.get_database(user_id="custom_user")
                 
-                # Verify all config values were passed correctly
-                mock_cosmos_class.assert_called_once_with(
+                # get_database builds a shared instance and a per-request
+                # instance, so the client is constructed twice with the same
+                # config-derived arguments.
+                assert mock_cosmos_class.call_count == 2
+                mock_cosmos_class.assert_called_with(
                     endpoint="https://custom.documents.azure.com:443/",
                     credential=mock_credentials,
                     database_name="custom_database",
@@ -451,8 +500,8 @@ class TestDatabaseFactoryConfigurationHandling:
                     user_id="custom_user"
                 )
                 
-                # Verify get_azure_credentials was called
-                mock_config.get_azure_credentials.assert_called_once()
+                # Verify get_azure_credentials was invoked for each construction
+                assert mock_config.get_azure_credentials.call_count == 2
     
     @pytest.mark.asyncio
     async def test_config_credential_error(self):
@@ -467,8 +516,8 @@ class TestDatabaseFactoryConfigurationHandling:
             with pytest.raises(Exception, match="Credential error"):
                 await DatabaseFactory.get_database(user_id="test_user")
             
-            # Singleton should remain None after credential error
-            assert DatabaseFactory._instance is None
+            # Shared instance should remain None after credential error
+            assert DatabaseFactory._shared_instance is None
 
 
 class TestDatabaseFactoryLogging:
@@ -493,11 +542,11 @@ class TestDatabaseFactoryErrorHandling:
     
     def setup_method(self):
         """Setup for each test method."""
-        DatabaseFactory._instance = None
+        DatabaseFactory._shared_instance = None
     
     def teardown_method(self):
         """Cleanup after each test method."""
-        DatabaseFactory._instance = None
+        DatabaseFactory._shared_instance = None
     
     @pytest.mark.asyncio
     async def test_cosmos_client_creation_failure(self):
@@ -513,14 +562,14 @@ class TestDatabaseFactoryErrorHandling:
                 with pytest.raises(Exception, match="Client creation failed"):
                     await DatabaseFactory.get_database(user_id="test_user")
                 
-                # Singleton should remain None
-                assert DatabaseFactory._instance is None
+                # Shared instance should remain None
+                assert DatabaseFactory._shared_instance is None
     
     @pytest.mark.asyncio
     async def test_state_consistency_after_errors(self):
         """Test that factory state remains consistent after various errors."""
         # Start with clean state
-        assert DatabaseFactory._instance is None
+        assert DatabaseFactory._shared_instance is None
         
         # Simulate creation failure
         mock_config = Mock()
@@ -531,11 +580,15 @@ class TestDatabaseFactoryErrorHandling:
                 await DatabaseFactory.get_database()
         
         # State should remain clean
-        assert DatabaseFactory._instance is None
+        assert DatabaseFactory._shared_instance is None
         
         # Now create successful instance
         mock_cosmos_client = Mock(spec=CosmosDBClient)
         mock_cosmos_client.initialize = AsyncMock()
+        mock_cosmos_client.client = Mock()
+        mock_cosmos_client.database = Mock()
+        mock_cosmos_client.container = Mock()
+        mock_cosmos_client._initialized = True
         
         good_config = Mock()
         good_config.COSMOSDB_ENDPOINT = "https://test.documents.azure.com:443/"
@@ -546,8 +599,7 @@ class TestDatabaseFactoryErrorHandling:
         with patch('backend.common.database.database_factory.CosmosDBClient', return_value=mock_cosmos_client):
             with patch('backend.common.database.database_factory.config', good_config):
                 result = await DatabaseFactory.get_database()
-                assert result is mock_cosmos_client
-                assert DatabaseFactory._instance is mock_cosmos_client
+                assert DatabaseFactory._shared_instance is mock_cosmos_client
 
 
 if __name__ == "__main__":
