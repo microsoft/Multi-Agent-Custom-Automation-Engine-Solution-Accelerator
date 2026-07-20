@@ -354,7 +354,7 @@ The `azd up` deployment output includes a ready-to-use bash script command. Look
 
 - **For Bash (Linux/macOS/WSL):**
    ```bash
-   bash ./infra/scripts/build_and_push_images.sh
+   bash ./infra/scripts/post-provision/build_and_push_images.sh
    ```
 - **For PowerShell (Windows):**
    ```powershell
@@ -399,18 +399,18 @@ The images are **built remotely in ACR** using `az acr build`, so no local Docke
 Once both scripts complete, access your deployed frontend application at the URL printed by the `postdeploy` hook (`https://<webSiteDefaultHostname>`), or retrieve it from the Azure Portal as described in [Step 4.3](#43-get-application-url).
 
 
-### 5.3 Configure Authentication (Optional)
+### 5.4 Configure Authentication (Optional)
 
 1. Follow [App Authentication Configuration](./azure_app_service_auth_setup.md)
 2. Wait up to 10 minutes for authentication changes to take effect
 
-### 5.4 Verify Deployment
+### 5.5 Verify Deployment
 
 1. Access your application using the URL from Step 4.3
 2. Confirm the application loads successfully
 <!-- 3. Verify you can sign in with your authenticated account -->
 
-### 5.5 Test the Application
+### 5.6 Test the Application
 
 **Quick Test Steps:**
 
@@ -551,30 +551,3 @@ Now that your deployment is complete and tested, explore these resources to enha
 - 🐛 **Issues:** Check [Troubleshooting Guide](./TroubleShootingSteps.md)
 - 💬 **Support:** Review [Support Guidelines](../SUPPORT.md)
 - 🔧 **Development:** See [Contributing Guide](../CONTRIBUTING.md)
-
-## Advanced: Deploy Local Changes
-
-If you've made local modifications to the code and want to deploy them to Azure, follow these steps to swap the configuration files:
-
-> **Note:** To set up and run the application locally for development, see the [Local Development Setup Guide](./LocalDevelopmentSetup.md).
-
-### Step 1: Rename Azure Configuration Files
-
-**In the root directory:**
-1. Rename `azure.yaml` to `azure_custom2.yaml`
-2. Rename `azure_custom.yaml` to `azure.yaml`
-
-### Step 2: Rename Infrastructure Files
-
-**In the `infra` directory:**
-1. Rename `main.bicep` to `main_custom2.bicep`
-2. Rename `main_custom.bicep` to `main.bicep`
-
-### Step 3: Deploy Changes
-
-Run the deployment command:
-```shell
-azd up
-```
-
-> **Note:** These custom files are configured to deploy your local code changes instead of pulling from the GitHub repository.

@@ -112,6 +112,7 @@ class MockTeamConfiguration:
     plan: str = ""
     starting_tasks: List[Any] = field(default_factory=list)
     user_id: str = ""
+    is_default: bool = False
 
 @dataclass
 class MockUserCurrentTeam:
@@ -494,3 +495,333 @@ class TestExtractModelsFromAgent:
         agent = {"name": "TestAgent"}
         models = service.extract_models_from_agent(agent)
         assert isinstance(models, set)
+
+    def test_extract_from_agent_instructions(self):
+        service = TeamService()
+        agent = {"name": "A", "instructions": "Use gpt-5.1 for this"}
+        models = service.extract_models_from_agent(agent)
+        assert any("gpt-5" in m for m in models)
+
+    def test_extract_from_agent_system_message_fallback(self):
+        service = TeamService()
+        agent = {"name": "A", "system_message": "Prefer claude-3-opus"}
+        models = service.extract_models_from_agent(agent)
+        assert any("claude-3" in m for m in models)
+
+
+class TestExtractModelsFromText:
+    def test_matches_gpt5_variants(self):
+        service = TeamService()
+        models = service.extract_models_from_text("gpt-5.4-mini and gpt-5")
+        assert any("gpt-5" in m for m in models)
+
+    def test_matches_other_families(self):
+        service = TeamService()
+        models = service.extract_models_from_text(
+            "claude-2 mistral-large gemini-pro text-embedding-ada davinci-3"
+        )
+        assert len(models) >= 3
+
+    def test_no_matches_returns_empty(self):
+        service = TeamService()
+        assert service.extract_models_from_text("no model here") == set()
+
+
+class TestExtractTeamLevelModels:
+    def test_top_level_fields(self):
+        service = TeamService()
+        models = service.extract_team_level_models(
+            {"default_model": "GPT-4", "model": "gpt-35", "llm_model": "o3"}
+        )
+        assert "gpt-4" in models
+        assert "o3" in models
+
+    def test_nested_settings_and_environment(self):
+        service = TeamService()
+        cfg = {
+            "settings": {"model": "gpt-4", "deployment_name": "dep1"},
+            "environment": {"model": "gpt-5", "openai_deployment": "dep2"},
+        }
+        models = service.extract_team_level_models(cfg)
+        assert "dep1" in models
+        assert "dep2" in models
+
+    def test_empty_config(self):
+        service = TeamService()
+        assert service.extract_team_level_models({}) == set()
+
+
+class TestValidateTeamModels:
+    @pytest.mark.asyncio
+    async def test_all_models_available(self):
+        service = TeamService()
+        foundry = MagicMock()
+        foundry.list_model_deployments = AsyncMock(
+            return_value=[{"name": "custom-model", "status": "Succeeded"}]
+        )
+        with patch.object(team_service_module, "FoundryService", return_value=foundry):
+            cfg = {"agents": [{"deployment_name": "custom-model"}]}
+            is_valid, missing = await service.validate_team_models(cfg)
+        assert is_valid is True
+        assert missing == []
+
+    @pytest.mark.asyncio
+    async def test_missing_model_reported(self):
+        service = TeamService()
+        foundry = MagicMock()
+        foundry.list_model_deployments = AsyncMock(return_value=[])
+        with patch.object(team_service_module, "FoundryService", return_value=foundry):
+            cfg = {"agents": [{"deployment_name": "not-deployed"}]}
+            is_valid, missing = await service.validate_team_models(cfg)
+        assert is_valid is False
+        assert "not-deployed" in missing
+
+    @pytest.mark.asyncio
+    async def test_bypassed_models_skipped(self):
+        service = TeamService()
+        foundry = MagicMock()
+        foundry.list_model_deployments = AsyncMock(return_value=[])
+        with patch.object(team_service_module, "FoundryService", return_value=foundry):
+            cfg = {"agents": [{"deployment_name": "gpt-5.4-mini"}]}
+            is_valid, missing = await service.validate_team_models(cfg)
+        assert is_valid is True
+
+    @pytest.mark.asyncio
+    async def test_default_model_when_no_agents(self):
+        service = TeamService()
+        mock_config.AZURE_OPENAI_DEPLOYMENT_NAME = "gpt-5"
+        foundry = MagicMock()
+        foundry.list_model_deployments = AsyncMock(return_value=[])
+        with patch.object(team_service_module, "FoundryService", return_value=foundry):
+            is_valid, missing = await service.validate_team_models({"agents": []})
+        assert is_valid is True
+
+    @pytest.mark.asyncio
+    async def test_exception_returns_valid(self):
+        service = TeamService()
+        with patch.object(
+            team_service_module, "FoundryService", side_effect=Exception("boom")
+        ):
+            is_valid, missing = await service.validate_team_models({"agents": []})
+        assert is_valid is True
+        assert missing == []
+
+
+class TestDeploymentStatusSummary:
+    @pytest.mark.asyncio
+    async def test_summary_categorizes_deployments(self):
+        service = TeamService()
+        foundry = MagicMock()
+        foundry.list_model_deployments = AsyncMock(
+            return_value=[
+                {"name": "ok", "status": "Succeeded"},
+                {"name": "bad", "status": "Failed"},
+                {"name": "wait", "status": "Running"},
+            ]
+        )
+        with patch.object(team_service_module, "FoundryService", return_value=foundry):
+            summary = await service.get_deployment_status_summary()
+        assert summary["total_deployments"] == 3
+        assert "ok" in summary["successful_deployments"]
+        assert "bad" in summary["failed_deployments"]
+        assert "wait" in summary["pending_deployments"]
+
+    @pytest.mark.asyncio
+    async def test_summary_error(self):
+        service = TeamService()
+        with patch.object(
+            team_service_module, "FoundryService", side_effect=Exception("boom")
+        ):
+            summary = await service.get_deployment_status_summary()
+        assert "error" in summary
+
+
+class TestSearchIndexExtraction:
+    def test_extract_index_names_from_rag_agents(self):
+        service = TeamService()
+        cfg = {
+            "agents": [
+                {"type": "RAG", "index_name": "idx-1"},
+                {"type": "ai", "index_name": "ignored"},
+                {"type": "rag", "index_name": "idx-1"},
+            ]
+        }
+        names = service.extract_index_names(cfg)
+        assert names == ["idx-1"]
+
+    def test_extract_index_names_empty(self):
+        service = TeamService()
+        assert service.extract_index_names({"agents": []}) == []
+
+    def test_has_rag_or_search_agents_true(self):
+        service = TeamService()
+        assert service.has_rag_or_search_agents({"agents": [{"type": "rag"}]}) is True
+
+    def test_has_rag_or_search_agents_false(self):
+        service = TeamService()
+        assert service.has_rag_or_search_agents({"agents": [{"type": "ai"}]}) is False
+
+
+class TestValidateTeamSearchIndexes:
+    @pytest.mark.asyncio
+    async def test_no_indexes_no_rag_skips(self):
+        service = TeamService()
+        is_valid, errors = await service.validate_team_search_indexes(
+            {"agents": [{"type": "ai"}]}
+        )
+        assert is_valid is True
+        assert errors == []
+
+    @pytest.mark.asyncio
+    async def test_rag_but_no_endpoint(self):
+        service = TeamService()
+        service.search_endpoint = ""
+        cfg = {"agents": [{"type": "rag", "index_name": "idx-1"}]}
+        is_valid, errors = await service.validate_team_search_indexes(cfg)
+        assert is_valid is False
+        assert errors
+
+    @pytest.mark.asyncio
+    async def test_rag_without_specific_index(self):
+        service = TeamService()
+        service.search_endpoint = "https://s.search.windows.net"
+        cfg = {"agents": [{"type": "rag"}]}
+        is_valid, errors = await service.validate_team_search_indexes(cfg)
+        assert is_valid is True
+        assert errors == []
+
+    @pytest.mark.asyncio
+    async def test_valid_indexes(self):
+        service = TeamService()
+        service.search_endpoint = "https://s.search.windows.net"
+        cfg = {"agents": [{"type": "rag", "index_name": "idx-1"}]}
+        client = MagicMock()
+        client.get_index = MagicMock(return_value=MagicMock())
+        with patch.object(team_service_module, "SearchIndexClient", return_value=client):
+            is_valid, errors = await service.validate_team_search_indexes(cfg)
+        assert is_valid is True
+
+    @pytest.mark.asyncio
+    async def test_invalid_index(self):
+        service = TeamService()
+        service.search_endpoint = "https://s.search.windows.net"
+        cfg = {"agents": [{"type": "rag", "index_name": "missing"}]}
+        client = MagicMock()
+        client.get_index = MagicMock(
+            side_effect=team_service_module.ResourceNotFoundError("nope")
+        )
+        with patch.object(team_service_module, "SearchIndexClient", return_value=client):
+            is_valid, errors = await service.validate_team_search_indexes(cfg)
+        assert is_valid is False
+        assert errors
+
+    @pytest.mark.asyncio
+    async def test_validation_exception(self):
+        service = TeamService()
+        service.search_endpoint = "https://s.search.windows.net"
+        cfg = {"agents": [{"type": "rag", "index_name": "idx"}]}
+        with patch.object(
+            team_service_module,
+            "SearchIndexClient",
+            side_effect=Exception("boom"),
+        ):
+            is_valid, errors = await service.validate_team_search_indexes(cfg)
+        assert is_valid is False
+
+
+class TestValidateSingleIndex:
+    @pytest.mark.asyncio
+    async def test_found(self):
+        service = TeamService()
+        client = MagicMock()
+        client.get_index = MagicMock(return_value=MagicMock())
+        with patch.object(team_service_module, "SearchIndexClient", return_value=client):
+            is_valid, err = await service.validate_single_index("idx")
+        assert is_valid is True
+        assert err == ""
+
+    @pytest.mark.asyncio
+    async def test_index_none(self):
+        service = TeamService()
+        client = MagicMock()
+        client.get_index = MagicMock(return_value=None)
+        with patch.object(team_service_module, "SearchIndexClient", return_value=client):
+            is_valid, err = await service.validate_single_index("idx")
+        assert is_valid is False
+
+    @pytest.mark.asyncio
+    async def test_not_found(self):
+        service = TeamService()
+        client = MagicMock()
+        client.get_index = MagicMock(
+            side_effect=team_service_module.ResourceNotFoundError("x")
+        )
+        with patch.object(team_service_module, "SearchIndexClient", return_value=client):
+            is_valid, err = await service.validate_single_index("idx")
+        assert is_valid is False
+        assert "does not exist" in err
+
+    @pytest.mark.asyncio
+    async def test_auth_error(self):
+        service = TeamService()
+        client = MagicMock()
+        client.get_index = MagicMock(
+            side_effect=team_service_module.ClientAuthenticationError("x")
+        )
+        with patch.object(team_service_module, "SearchIndexClient", return_value=client):
+            is_valid, err = await service.validate_single_index("idx")
+        assert is_valid is False
+        assert "Authentication failed" in err
+
+    @pytest.mark.asyncio
+    async def test_http_error(self):
+        service = TeamService()
+        client = MagicMock()
+        client.get_index = MagicMock(
+            side_effect=team_service_module.HttpResponseError("x")
+        )
+        with patch.object(team_service_module, "SearchIndexClient", return_value=client):
+            is_valid, err = await service.validate_single_index("idx")
+        assert is_valid is False
+
+    @pytest.mark.asyncio
+    async def test_generic_error(self):
+        service = TeamService()
+        client = MagicMock()
+        client.get_index = MagicMock(side_effect=Exception("weird"))
+        with patch.object(team_service_module, "SearchIndexClient", return_value=client):
+            is_valid, err = await service.validate_single_index("idx")
+        assert is_valid is False
+
+
+class TestSearchIndexSummary:
+    @pytest.mark.asyncio
+    async def test_no_endpoint(self):
+        service = TeamService()
+        service.search_endpoint = ""
+        summary = await service.get_search_index_summary()
+        assert "error" in summary
+
+    @pytest.mark.asyncio
+    async def test_success(self):
+        service = TeamService()
+        service.search_endpoint = "https://s.search.windows.net"
+        idx = MagicMock()
+        idx.name = "idx-1"
+        client = MagicMock()
+        client.list_indexes = MagicMock(return_value=[idx])
+        with patch.object(team_service_module, "SearchIndexClient", return_value=client):
+            summary = await service.get_search_index_summary()
+        assert summary["total_indexes"] == 1
+        assert "idx-1" in summary["available_indexes"]
+
+    @pytest.mark.asyncio
+    async def test_error(self):
+        service = TeamService()
+        service.search_endpoint = "https://s.search.windows.net"
+        with patch.object(
+            team_service_module, "SearchIndexClient", side_effect=Exception("boom")
+        ):
+            summary = await service.get_search_index_summary()
+        assert "error" in summary
+

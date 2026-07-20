@@ -5,8 +5,9 @@ This module tests the utility functions for agent ID generation.
 """
 
 import string
+import sys
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 # Mock external dependencies at module level 
 sys.modules['azure'] = Mock()

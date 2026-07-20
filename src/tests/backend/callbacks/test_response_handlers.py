@@ -95,6 +95,7 @@ sys.modules['common.database'] = Mock()
 sys.modules['common.database.cosmosdb'] = Mock()
 sys.modules['common.database.database_factory'] = Mock()
 sys.modules['common.utils'] = Mock()
+sys.modules['common.utils.markdown_utils'] = Mock(normalize_markdown_tables=Mock(side_effect=lambda text: text))
 sys.modules['common.utils.team_utils'] = Mock()
 sys.modules['common.utils.event_utils'] = Mock()
 sys.modules['common.utils.otlp_tracing'] = Mock()
@@ -601,10 +602,9 @@ class TestStreamingAgentResponseCallback:
     @pytest.mark.asyncio
     async def test_streaming_callback_no_text_with_contents(self):
         """Test streaming callback when update has no text but has contents with text.
-        
-        Note: The current implementation uses update.content (singular) when text is None,
-        not iterating through update.contents to concatenate text. This test verifies
-        the actual implementation behavior.
+
+        When update.text is falsy, the implementation iterates update.contents and
+        concatenates the text of each content item that has one.
         """
         mock_update = Mock()
         mock_update.text = None
@@ -627,7 +627,7 @@ class TestStreamingAgentResponseCallback:
             # Verify AgentMessageStreaming was created with concatenated content text
             mock_streaming.assert_called_once_with(
                 agent_name="Agent 123",
-                content="Content from content attribute",
+                content="Content text 1Content text 2",
                 is_final=False
             )
 
