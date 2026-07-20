@@ -27,7 +27,6 @@ import sys
 from pathlib import Path
 
 import pytest
-import pytest_asyncio
 
 # ---------------------------------------------------------------------------
 # Make sure 'src/backend' is on the path (covers running from repo root and

@@ -21,7 +21,6 @@ Prerequisites:
   - The caller needs "Search Service Contributor" role on the search service.
 """
 
-import json
 import os
 import sys
 from pathlib import Path
@@ -37,9 +36,12 @@ load_dotenv(str(_backend_env), override=False)
 SEARCH_ENDPOINT = os.environ.get("AZURE_AI_SEARCH_ENDPOINT", "").rstrip("/")
 AI_SERVICES_ENDPOINT = os.environ.get("AZURE_OPENAI_ENDPOINT", "").rstrip("/")
 
-if not SEARCH_ENDPOINT:
-    print("ERROR: AZURE_AI_SEARCH_ENDPOINT must be set.")
-    sys.exit(1)
+
+def _validate_required_env() -> None:
+    """Validate required environment variables; exit(1) if missing."""
+    if not SEARCH_ENDPOINT:
+        print("ERROR: AZURE_AI_SEARCH_ENDPOINT must be set.")
+        sys.exit(1)
 
 _SEARCH_SCOPE = "https://search.azure.com/.default"
 
@@ -384,6 +386,7 @@ def _parse_only_filter() -> set[str] | None:
 
 def main() -> None:
     """Provision all knowledge bases."""
+    _validate_required_env()
     print(f"Search endpoint: {SEARCH_ENDPOINT}")
     print(f"AI services endpoint: {AI_SERVICES_ENDPOINT or '(not set — KB will have no model)'}")
 
