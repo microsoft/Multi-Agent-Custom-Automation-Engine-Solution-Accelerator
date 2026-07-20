@@ -101,18 +101,17 @@ def _setup_agent_framework_mock():
     Uses ModuleType with real stub classes for names used in type annotations
     or as base classes, and MagicMock for everything else.
 
-    When the real ``agent_framework`` distribution is installed (the CI/dev
-    path that installs backend deps from ``src/backend/pyproject.toml``), the
-    real packages are used and no top-level mocking is applied — installing
-    mocks on top of the real packages would shadow internals they depend on
-    (e.g. ``agent_framework._clients``) and break imports.
+    Each ``agent_framework*`` distribution is stubbed independently and ONLY
+    when it is not actually installed (``find_spec(...) is None``). This keeps
+    real installs from being shadowed — installing mocks on top of a real
+    package would shadow internals they depend on (e.g.
+    ``agent_framework._clients``) and break imports — while still allowing
+    mixed environments where only some companion distributions are present.
     """
-    if importlib.util.find_spec('agent_framework') is not None:
-        # Real agent_framework (and its companion distributions) are installed;
-        # use them directly instead of substituting stubs.
-        return
-
-    if 'agent_framework' not in sys.modules:
+    if (
+        importlib.util.find_spec('agent_framework') is None
+        and 'agent_framework' not in sys.modules
+    ):
         # Top-level: agent_framework
         mock_af = ModuleType('agent_framework')
 
@@ -186,7 +185,10 @@ def _setup_agent_framework_mock():
         sys.modules['agent_framework._workflows._magentic'] = mock_af_magentic
         sys.modules['agent_framework._tools'] = mock_af_tools
 
-    if 'agent_framework_orchestrations' not in sys.modules:
+    if (
+        importlib.util.find_spec('agent_framework_orchestrations') is None
+        and 'agent_framework_orchestrations' not in sys.modules
+    ):
         mock_af_orch = ModuleType('agent_framework_orchestrations')
         mock_af_orch.MagenticBuilder = _stub_class(
             'MagenticBuilder', build=lambda self: Mock())
@@ -215,23 +217,30 @@ def _setup_agent_framework_mock():
         _install_lazy_attrs(mock_af_orch_mag)
         sys.modules['agent_framework_orchestrations._magentic'] = mock_af_orch_mag
 
-    if 'agent_framework_azure_ai' not in sys.modules:
+    if (
+        importlib.util.find_spec('agent_framework_azure_ai') is None
+        and 'agent_framework_azure_ai' not in sys.modules
+    ):
         mock_af_ai = ModuleType('agent_framework_azure_ai')
         mock_af_ai.AzureAIClient = _stub_class('AzureAIClient')
         sys.modules['agent_framework_azure_ai'] = mock_af_ai
 
-    if 'agent_framework_foundry' not in sys.modules:
+    if (
+        importlib.util.find_spec('agent_framework_foundry') is None
+        and 'agent_framework_foundry' not in sys.modules
+    ):
         # agent_framework_foundry provides FoundryChatClient, imported by
         # agents/agent_template.py and orchestration/orchestration_manager.py.
-        # It is not pip-installable in CI, so provide a stub. Even when the real
-        # package is installed locally, its import chain depends on
-        # agent_framework internals that are themselves mocked, so we always
-        # substitute a lightweight stub for deterministic test collection.
+        # It is not pip-installable in CI, so provide a stub only when the real
+        # distribution is genuinely absent (gated on find_spec above).
         mock_af_foundry = ModuleType('agent_framework_foundry')
         mock_af_foundry.FoundryChatClient = _stub_class('FoundryChatClient')
         sys.modules['agent_framework_foundry'] = mock_af_foundry
 
-    if 'agent_framework_openai' not in sys.modules:
+    if (
+        importlib.util.find_spec('agent_framework_openai') is None
+        and 'agent_framework_openai' not in sys.modules
+    ):
         # agent_framework_openai provides OpenAIChatOptions, imported by
         # agents/agent_template.py.
         mock_af_openai = ModuleType('agent_framework_openai')

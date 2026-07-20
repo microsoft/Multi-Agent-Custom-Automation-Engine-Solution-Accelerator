@@ -36,7 +36,7 @@ def _import_connection_config():
     finally:
         cc_mod = sys.modules.get("backend.orchestration.connection_config")
         for key in list(sys.modules):
-            if key not in snapshot and not key.startswith("backend."):
+            if key not in snapshot and not key.startswith("backend"):
                 sys.modules.pop(key, None)
         sys.modules.update(snapshot)
         if cc_mod is not None:
