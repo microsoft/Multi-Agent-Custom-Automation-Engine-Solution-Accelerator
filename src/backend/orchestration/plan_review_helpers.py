@@ -95,7 +95,6 @@ CLARIFYING QUESTIONS POLICY (CRITICAL — ZERO QUESTIONS):
             "is INVALID — regenerate it\nuntil every listed agent appears as a step.\n"
         )
 
-
     scope_policy = """
 
 TEAM SCOPE POLICY (CRITICAL — EVALUATE THIS FIRST, BEFORE ANY OTHER RULE):
