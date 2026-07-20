@@ -102,7 +102,6 @@ Replace `use_rag` + `index_name` with `use_file_search` + `vector_store_name`:
 
 ## References
 
-- [Foundry IQ Validation Tests](../../localspec/validation-tests/)
 - [ADR-001: Retain Custom JSON Configuration](./001-retain-custom-json-declarative-config.md)
 - [Azure AI Projects SDK 2.1.0](https://pypi.org/project/azure-ai-projects/)
 - [Agent Framework Foundry 1.2.2](https://pypi.org/project/agent-framework-foundry/)
