@@ -5,8 +5,6 @@ import dataclasses
 import os
 import sys
 
-import pytest
-
 # backend/models/messages.py has internal imports from common.models.messages
 # and models.plan_models using paths relative to src/backend/.  Add src/backend/
 # to sys.path so those internal imports resolve when we load backend.models.messages.
@@ -24,7 +22,7 @@ from backend.models.messages import (AgentMessage, AgentMessageStreaming,
                                      ReplanApprovalResponse,
                                      UserClarificationRequest,
                                      UserClarificationResponse)
-from backend.models.plan_models import MPlan, MStep, PlanStatus
+from backend.models.plan_models import MPlan, PlanStatus
 
 
 class TestAgentMessage:

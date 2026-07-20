@@ -7,11 +7,10 @@ Tests OrchestrationManager:
 - _process_event_stream() — event dispatch
 """
 
-import asyncio
 import logging
 import os
 import sys
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
