@@ -100,20 +100,32 @@ CLARIFYING QUESTIONS POLICY (CRITICAL — ZERO QUESTIONS):
 
 TEAM SCOPE POLICY (CRITICAL — EVALUATE THIS FIRST, BEFORE ANY OTHER RULE):
 This team can ONLY handle requests that fall within the collective expertise of
-its listed agents. Each agent's description above tells you its domain and the
-data/knowledge it works on — that, and nothing else, defines the team's scope.
+its listed agents AND that ask for actions its agents can actually perform. Each
+agent's description above tells you its domain and the data/knowledge it works on —
+that, and nothing else, defines the team's scope and capabilities.
 
-Judge whether the user's request is covered by at least one listed agent's domain:
-- IN SCOPE: at least one agent's expertise/data is clearly relevant → plan normally.
-- OUT OF SCOPE: NO listed agent's domain covers the request (e.g. a contract /
-  compliance request given to a marketing or RFP team, or an HR / onboarding
-  request given to a product-marketing team). In this case you MUST NOT invoke any
-  domain agent. Output a plan with EXACTLY ONE step and nothing else:
-  [{{"agent": "MagenticManager", "action": "Inform the user that this request is out of scope for this team and that they should switch to the appropriate team and try again, without naming any specific team."}}]
+Judge whether the user's request is (a) covered by at least one listed agent's
+domain AND (b) an action the agents can actually perform:
+- IN SCOPE: at least one agent's expertise/data is relevant AND the requested
+  action is something the agents can do → plan normally.
+- OUT OF SCOPE — WRONG DOMAIN: NO listed agent's domain covers the request (e.g. a
+  contract / compliance request given to a marketing or RFP team, or an HR /
+  onboarding request given to a product-marketing team).
+- OUT OF SCOPE — UNSUPPORTED ACTION: the domain may match, but the request asks for
+  an action the agents CANNOT perform. Agents generally only retrieve, analyze,
+  summarize, or generate content from their data. Unless an agent's description
+  explicitly says otherwise, the team CANNOT delete, erase, remove, modify, update,
+  or overwrite stored data, nor execute real-world side effects (placing/cancelling
+  orders, sending emails, making payments). NEVER pretend such an action was done
+  (e.g. "Delete all data and order history for customer X").
+In EITHER out-of-scope case you MUST NOT invoke any domain agent. Output a plan with
+EXACTLY ONE step and nothing else:
+  [{{"agent": "MagenticManager", "action": "Inform the user that this request cannot be handled by this team — because it is outside the team's scope, or because the team cannot perform the requested action such as deleting or modifying data — and that no data was changed, without naming any specific team."}}]
 
 When out of scope, the mandatory-inclusion rule below does NOT apply — the lone
 MagenticManager step IS the complete, valid plan. Only take this path when the
-request is genuinely outside every agent's domain; when in doubt, plan normally.
+request is genuinely outside every agent's domain or asks for an action no agent can
+perform; when in doubt, plan normally.
 """
 
     plan_append = scope_policy + """
@@ -161,10 +173,13 @@ INVOCATION RULES:
 
 FINAL ANSWER RULES:
 - If the approved plan was a single out-of-scope MagenticManager step (no domain
-  agents ran), your final answer is a brief, polite message that states the
-  request is out of scope for this team and that the user should switch to the
-  appropriate team and try again. Do NOT name, recommend, or guess any specific
-  team, and do NOT attempt to answer the out-of-scope request itself.
+  agents ran), your final answer is a brief, polite message. If the request was
+  outside the team's domain, state that it is out of scope and that the user should
+  switch to the appropriate team and try again. If the request asked for an action
+  the team cannot perform (such as deleting or modifying stored data), state that
+  the team cannot perform that action and that NO data was changed. Do NOT name,
+  recommend, or guess any specific team, do NOT claim any action was performed, and
+  do NOT attempt to answer the out-of-scope request itself.
 - Compile ONLY from messages agents actually produced. Quote verbatim where appropriate.
 - Do NOT fabricate URLs, results, or content that no agent produced.
 - If a required agent step did not run, state it plainly — do not pretend it did.
