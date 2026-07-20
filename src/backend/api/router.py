@@ -127,8 +127,13 @@ async def start_comms(
             heartbeat_task.cancel()
             try:
                 await heartbeat_task
-            except (asyncio.CancelledError, Exception):
+            except asyncio.CancelledError:
+                # Expected: we just cancelled the heartbeat task above.
                 pass
+            except Exception as e:
+                logging.debug(
+                    f"Unexpected error awaiting cancelled heartbeat task for user {user_id}: {e}"
+                )
             await connection_config.close_connection(process_id=process_id)
 
 
@@ -428,7 +433,9 @@ async def process_request(
                 # Give the cancelled task a chance to clean up
                 await asyncio.sleep(0)
             except Exception:
-                pass
+                logger.exception(
+                    "Failed to cancel prior orchestration task for user '%s'", user_id
+                )
             orchestration_config.active_tasks.pop(user_id, None)
 
         # Schedule new task and register it so subsequent requests can cancel it

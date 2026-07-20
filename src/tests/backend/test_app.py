@@ -13,7 +13,7 @@ this file is imported, the tests will be skipped.
 import pytest
 import sys
 import os
-from unittest.mock import Mock, AsyncMock, MagicMock, patch, NonCallableMock
+from unittest.mock import Mock, AsyncMock, MagicMock, patch
 
 # Environment variables are set by conftest.py, but ensure they're available
 os.environ.setdefault("APPLICATIONINSIGHTS_CONNECTION_STRING", "InstrumentationKey=test-key-12345")
@@ -47,7 +47,6 @@ for _ma_key in [
         del sys.modules[_ma_key]
 
 # Mock external dependencies that may not be installed in test environment
-from fastapi import APIRouter
 
 # Mock azure.monitor.opentelemetry module
 mock_azure_monitor_module = ModuleType('configure_azure_monitor')

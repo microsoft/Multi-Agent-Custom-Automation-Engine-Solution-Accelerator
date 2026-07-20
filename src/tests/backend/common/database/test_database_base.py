@@ -3,7 +3,7 @@
 import os
 import sys
 from typing import Any, Dict, List, Optional, Type
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock
 
 import pytest
 

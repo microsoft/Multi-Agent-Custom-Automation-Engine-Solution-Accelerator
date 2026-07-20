@@ -736,8 +736,12 @@ class OrchestrationManager:
             ]
             if names:
                 return names
-        except Exception:
-            pass
+        except Exception as exc:
+            OrchestrationManager.logger.debug(
+                "Failed to read executor names from workflow; falling back to team config: %s",
+                exc,
+                exc_info=True,
+            )
 
         team_config = getattr(workflow, "_team_config", None)
         return [
@@ -914,7 +918,6 @@ class OrchestrationManager:
         Returns:
             A ``{request_id: approval_response}`` dict.
         """
-        import json
         import threading
 
         from tools.clarification_tool import store_answer

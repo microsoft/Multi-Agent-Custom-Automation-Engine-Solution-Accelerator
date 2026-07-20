@@ -29,10 +29,8 @@ sys.modules['common.database.database_base'] = Mock()
 sys.modules['common.models'] = Mock()
 sys.modules['common.models.messages'] = Mock()
 
-import pytest
-
 from backend.common.database.database_base import DatabaseBase
-from backend.common.models.messages import (CurrentTeamAgent, DataType,
+from backend.common.models.messages import (CurrentTeamAgent,
                                             TeamConfiguration)
 from backend.common.utils.agent_utils import (generate_assistant_id,
                                               get_database_team_agent_id)

@@ -1,5 +1,6 @@
 """Quick test to list MCP tools on /hr/mcp."""
 import json
+import sys
 
 import httpx
 
@@ -31,7 +32,7 @@ print("Session ID:", sid[:40] if sid else "NONE")
 
 if not sid:
     print("No session ID, aborting")
-    exit(1)
+    sys.exit(1)
 
 # 2. List tools
 HEADERS["mcp-session-id"] = sid
