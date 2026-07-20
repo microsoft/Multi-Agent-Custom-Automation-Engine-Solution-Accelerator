@@ -18,7 +18,6 @@ on:
       - 'infra/scripts/**'
       - '.github/workflows/deploy.yml'
       - 'azure.yaml'
-      - 'azure_custom.yaml'
   pull_request:
     types:
       - opened
@@ -41,7 +40,6 @@ on:
       - 'infra/scripts/**'
       - '.github/workflows/deploy.yml'
       - 'azure.yaml'
-      - 'azure_custom.yaml'
   workflow_dispatch:
 
 permissions:

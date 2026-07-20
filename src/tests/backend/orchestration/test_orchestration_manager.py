@@ -192,9 +192,11 @@ sys.modules['common.utils.markdown_utils'] = _markdown_utils
 
 
 class MockTeamConfiguration:
-    def __init__(self, name="TestTeam", deployment_name="test_deployment"):
+    def __init__(self, name="TestTeam", deployment_name="test_deployment", team_id="test-team-id"):
         self.name = name
         self.deployment_name = deployment_name
+        self.team_id = team_id
+        self.id = team_id
 
 
 class MockDatabaseBase:
@@ -347,7 +349,7 @@ class TestInitOrchestration:
         mock_magentic_builder.assert_called_once()
         call_kwargs = mock_magentic_builder.call_args.kwargs
         assert call_kwargs["enable_plan_review"] is True
-        assert call_kwargs["intermediate_outputs"] is True
+        assert call_kwargs["output_from"] == "all"
 
     @pytest.mark.asyncio
     async def test_given_no_user_id_when_init_then_raises_value_error(self):
@@ -437,6 +439,7 @@ class TestGetCurrentOrNewOrchestration:
         # Arrange
         mock_workflow = Mock()
         mock_workflow._terminated = False
+        mock_workflow._team_id = "test-team-id"
         orchestration_config.get_current_orchestration.return_value = mock_workflow
 
         # Act
