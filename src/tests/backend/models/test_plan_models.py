@@ -4,8 +4,6 @@ PlannerResponseStep, PlannerResponsePlan."""
 
 import uuid
 
-import pytest
-
 from backend.models.plan_models import (AgentDefinition, MPlan, MStep,
                                         PlannerResponsePlan,
                                         PlannerResponseStep, PlanStatus)

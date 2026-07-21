@@ -10,7 +10,6 @@ the full test suite due to test collection order.
 """
 
 import os
-import re
 import sys
 import unittest
 
