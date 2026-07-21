@@ -1,11 +1,8 @@
 """Unit tests for response_handlers module."""
 
-import asyncio
-import logging
 import os
 import sys
-import time
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 

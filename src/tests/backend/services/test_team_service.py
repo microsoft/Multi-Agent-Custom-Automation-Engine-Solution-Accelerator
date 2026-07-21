@@ -66,7 +66,7 @@ sys.modules['common.database.database_base'] = mock_database_base_module
 
 # Mock common.models.messages with real dataclasses
 from dataclasses import dataclass, field
-from typing import Any, List, Optional
+from typing import Any, List
 
 
 @dataclass
