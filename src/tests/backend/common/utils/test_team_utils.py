@@ -1,10 +1,8 @@
 """Unit tests for team_utils module."""
 
-import logging
 import os
 import sys
-import uuid
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
