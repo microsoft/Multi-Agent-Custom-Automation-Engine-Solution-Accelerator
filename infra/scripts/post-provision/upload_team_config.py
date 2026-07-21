@@ -2,7 +2,6 @@ import sys
 import os
 import time
 import requests
-import json
 
 HTTP_TIMEOUT = 120  # seconds per request
 MAX_RETRIES = 5
