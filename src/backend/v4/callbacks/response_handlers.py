@@ -91,7 +91,7 @@ def agent_response_callback(
     try:
         final_message = AgentMessage(
             agent_name=agent_name,
-            timestamp=time.time(),
+            timestamp=str(time.time()),
             content=text,
         )
         asyncio.create_task(

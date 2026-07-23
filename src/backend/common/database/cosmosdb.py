@@ -84,7 +84,7 @@ class CosmosDBClient(DatabaseBase):
             return database.get_container_client(container_name)
 
         except Exception as e:
-            self.logger.error("Failed to Get cosmosdb container", error=str(e))
+            self.logger.error("Failed to Get cosmosdb container: %s", str(e))
             raise
 
     async def close(self) -> None:
@@ -192,7 +192,6 @@ class CosmosDBClient(DatabaseBase):
         parameters = [
             {"name": "@plan_id", "value": plan_id},
             {"name": "@data_type", "value": DataType.plan},
-            {"name": "@user_id", "value": self.user_id},
         ]
         results = await self.query_items(query, parameters, Plan)
         return results[0] if results else None
