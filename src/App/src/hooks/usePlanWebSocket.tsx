@@ -5,16 +5,20 @@
  * Dispatches Redux actions for each event type so PlanPage no longer
  * needs 7+ useEffect blocks for WebSocket handling.
  */
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import webSocketService from '@/store/WebSocketService';
 import { PlanDataService } from '@/store/PlanDataService';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
     setShowProcessingPlanSpinner,
+    setShowApprovalButtons,
     setReloadLeftList,
     selectPlanData,
     selectContinueWithWebsocketFlow,
     selectPlanApproved,
+    selectShowProcessingPlanSpinner,
+    setShowTimeoutDialog,
+    setTimeoutMessage,
     approvalRequestReceived,
     planCompletedFinal,
     planFailedFinal,
@@ -44,14 +48,15 @@ import {
     ProcessedPlanData,
 } from '@/models';
 import { APIService } from '@/api/apiService';
+import { ToastIntent } from '@/components/toast/InlineToaster';
+import { formatElapsedTime } from '@/utils';
 
 const apiService = new APIService();
-
-import { ToastIntent } from '@/components/toast/InlineToaster';
 
 interface UsePlanWebSocketProps {
     planId: string | undefined;
     scrollToBottom: () => void;
+    scrollToFinalResult: () => void;
     formatErrorMessage: (content: string) => string;
     showToast: (content: React.ReactNode, intent?: ToastIntent, options?: { dismissible?: boolean; timeoutMs?: number | null }) => number;
 }
@@ -91,19 +96,32 @@ function persistAgentMessage(
 export function usePlanWebSocket({
     planId,
     scrollToBottom,
+    scrollToFinalResult,
     formatErrorMessage,
     showToast,
 }: UsePlanWebSocketProps) {
     const dispatch = useAppDispatch();
     const planData = useAppSelector(selectPlanData);
     const planApproved = useAppSelector(selectPlanApproved);
+    const showProcessingPlanSpinner = useAppSelector(selectShowProcessingPlanSpinner);
     const continueWithWebsocketFlow = useAppSelector(selectContinueWithWebsocketFlow);
     const streamingMessageBuffer = useAppSelector(selectStreamingMessageBuffer);
+    const processingStartedAtRef = React.useRef<number | null>(null);
 
     // Coalesce high-frequency streaming tokens into one flush per animation frame
     // to avoid a synchronous re-render per token freezing the UI on fast streams.
-    const streamingChunkQueueRef = useRef<string[]>([]);
-    const streamingFlushHandleRef = useRef<number | null>(null);
+    const streamingChunkQueueRef = React.useRef<string[]>([]);
+    const streamingFlushHandleRef = React.useRef<number | null>(null);
+
+    useEffect(() => {
+        if (showProcessingPlanSpinner) {
+            if (processingStartedAtRef.current === null) {
+                processingStartedAtRef.current = Date.now();
+            }
+        } else {
+            processingStartedAtRef.current = null;
+        }
+    }, [showProcessingPlanSpinner]);
 
     // ── PLAN_APPROVAL_REQUEST ─────────────────────────────────────
     useEffect(() => {
@@ -146,7 +164,7 @@ export function usePlanWebSocket({
         const unsub = webSocketService.on(
             WebsocketMessageType.AGENT_MESSAGE_STREAMING,
             (msg: any) => {
-                const line = PlanDataService.simplifyHumanClarification(msg.data.content);
+                const line = PlanDataService.simplifyHumanClarification(msg.data?.content || msg.content || '');
                 streamingChunkQueueRef.current.push(line);
                 if (streamingFlushHandleRef.current === null) {
                     streamingFlushHandleRef.current = requestAnimationFrame(flushStreamingChunks);
@@ -187,6 +205,7 @@ export function usePlanWebSocket({
                 dispatch(addAgentMessage(agentMessageData));
                 dispatch(setShowBufferingText(false));
                 dispatch(setShowProcessingPlanSpinner(false));
+                processingStartedAtRef.current = null;
                 dispatch(setSubmittingChatDisableInput(false));
                 scrollToBottom();
                 persistAgentMessage(agentMessageData, planData, dispatch);
@@ -207,6 +226,12 @@ export function usePlanWebSocket({
             WebsocketMessageType.FINAL_RESULT_MESSAGE,
             (finalMessage: any) => {
                 if (!finalMessage) return;
+                const completionElapsedSeconds = processingStartedAtRef.current
+                    ? Math.max(Math.round((Date.now() - processingStartedAtRef.current) / 1000), 0)
+                    : null;
+                const completionTimeLine = completionElapsedSeconds !== null
+                    ? `\n\n**Total completion time: ${formatElapsedTime(completionElapsedSeconds)}**`
+                    : '';
                 const messageStatus = finalMessage?.data?.status;
 
                 if (messageStatus === PlanStatus.COMPLETED) {
@@ -216,7 +241,7 @@ export function usePlanWebSocket({
                         timestamp: Date.now(),
                         steps: [],
                         next_steps: [],
-                        content: '\u{1F389}\u{1F389} ' + (finalMessage.data?.content || ''),
+                        content: (finalMessage.data?.content || '') + completionTimeLine,
                         raw_data: finalMessage,
                     };
                     dispatch(setShowBufferingText(true));
@@ -224,7 +249,8 @@ export function usePlanWebSocket({
                     dispatch(setSelectedTeam(planData?.team || null));
                     /* P0: single compound action replaces setShowProcessingPlanSpinner(false) + markPlanCompleted() */
                     dispatch(planCompletedFinal());
-                    scrollToBottom();
+                    processingStartedAtRef.current = null;
+                    scrollToFinalResult();
                     webSocketService.disconnect();
                     persistAgentMessage(agentMessageData, planData, dispatch, true, streamingMessageBuffer);
                 } else if (messageStatus === 'error') {
@@ -247,10 +273,11 @@ export function usePlanWebSocket({
                     showToast(errorContent, 'error');
                     webSocketService.disconnect();
                 } else {
-                    // Any other terminal status (e.g. "terminated"): clear the spinner so the UI doesn't hang after the answer arrived
+                    // Any other terminal status (e.g. "terminated"): clear the spinner
+                    // so the UI doesn't hang after the answer has already arrived.
                     const content = finalMessage.data?.content;
                     if (content) {
-                        dispatch(addAgentMessage({
+                        const terminalMessage: AgentMessageData = {
                             agent: AgentType.GROUP_CHAT_MANAGER,
                             agent_type: AgentMessageType.AI_AGENT,
                             timestamp: Date.now(),
@@ -258,17 +285,19 @@ export function usePlanWebSocket({
                             next_steps: [],
                             content,
                             raw_data: finalMessage,
-                        }));
+                        };
+                        dispatch(addAgentMessage(terminalMessage));
                     }
                     dispatch(setShowBufferingText(false));
                     dispatch(setShowProcessingPlanSpinner(false));
+                    processingStartedAtRef.current = null;
                     scrollToBottom();
                     webSocketService.disconnect();
                 }
             },
         );
         return unsub;
-    }, [dispatch, scrollToBottom, planData, streamingMessageBuffer, formatErrorMessage, showToast]);
+    }, [dispatch, scrollToBottom, scrollToFinalResult, planData, streamingMessageBuffer, formatErrorMessage, showToast]);
 
     // ── ERROR_MESSAGE ─────────────────────────────────────────────
     useEffect(() => {
@@ -300,6 +329,7 @@ export function usePlanWebSocket({
                 };
                 dispatch(addAgentMessage(errorAgent));
                 dispatch(planFailedFinal());
+                processingStartedAtRef.current = null;
                 dispatch(setShowBufferingText(false));
                 dispatch(setSubmittingChatDisableInput(true));
                 scrollToBottom();
@@ -309,6 +339,23 @@ export function usePlanWebSocket({
         );
         return unsub;
     }, [dispatch, scrollToBottom, showToast, formatErrorMessage]);
+
+    // ── TIMEOUT_NOTIFICATION ──────────────────────────────────────
+    useEffect(() => {
+        const unsub = webSocketService.on(
+            WebsocketMessageType.TIMEOUT_NOTIFICATION,
+            (msg: any) => {
+                const message = msg?.data?.message || msg?.message ||
+                    'Session timed out. Please go back to home and try again.';
+                dispatch(setTimeoutMessage(message));
+                dispatch(setShowTimeoutDialog(true));
+                dispatch(setShowProcessingPlanSpinner(false));
+                dispatch(setShowApprovalButtons(false));
+                webSocketService.disconnect();
+            },
+        );
+        return unsub;
+    }, [dispatch]);
 
     // ── AGENT_MESSAGE ─────────────────────────────────────────────
     useEffect(() => {

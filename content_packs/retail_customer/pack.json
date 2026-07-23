@@ -1,0 +1,18 @@
+{
+  "name": "retail_customer",
+  "description": "Retail Customer Satisfaction pack: customer 360 + order analytics over CSV/JSON datasets.",
+  "blob_indexes": [
+    {
+      "index_name": "macae-retail-customer-index",
+      "container": "retail-dataset-customer",
+      "source": "datasets/customer",
+      "pattern": "*"
+    },
+    {
+      "index_name": "macae-retail-order-index",
+      "container": "retail-dataset-order",
+      "source": "datasets/order",
+      "pattern": "*"
+    }
+  ]
+}

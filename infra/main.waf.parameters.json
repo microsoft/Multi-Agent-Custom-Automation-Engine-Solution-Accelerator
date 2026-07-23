@@ -2,6 +2,9 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
+    "deploymentFlavor": {
+      "value": "avm-waf"
+    },
     "solutionName": {
       "value": "${AZURE_ENV_NAME}"
     },
@@ -20,9 +23,6 @@
     "gptModelVersion": {
       "value": "${AZURE_ENV_GPT_MODEL_VERSION}"
     },
-    "gptDeploymentName": {
-      "value": "${AZURE_ENV_GPT_DEPLOYMENT_NAME}"
-    },
     "gptDeploymentCapacity": {
       "value": "${AZURE_ENV_GPT_MODEL_CAPACITY}"
     },
@@ -35,20 +35,20 @@
     "gpt5_4ModelVersion": {
       "value": "${AZURE_ENV_MODEL_5_4_VERSION}"
     },
-    "gpt5_4DeploymentName": {
-      "value": "${AZURE_ENV_MODEL_5_4_DEPLOYMENT_NAME}"
-    },
     "gpt5_4ModelCapacity": {
       "value": "${AZURE_ENV_MODEL_5_4_CAPACITY}"
     },
-    "backendContainerImageTag": {
-      "value": "${AZURE_ENV_IMAGE_TAG=latest_v4}"
+    "gptImageModelName": {
+      "value": "${AZURE_ENV_IMAGE_MODEL_NAME}"
     },
-    "frontendContainerImageTag": {
-      "value": "${AZURE_ENV_IMAGE_TAG=latest_v4}"
+    "gptImageModelVersion": {
+      "value": "${AZURE_ENV_IMAGE_MODEL_VERSION}"
     },
-    "MCPContainerImageTag": {
-      "value": "${AZURE_ENV_IMAGE_TAG=latest_v4}"
+    "gptImageModelDeploymentType": {
+      "value": "${AZURE_ENV_IMAGE_MODEL_DEPLOYMENT_TYPE}"
+    },
+    "gptImageModelCapacity": {
+      "value": "${AZURE_ENV_IMAGE_MODEL_CAPACITY}"
     },
     "enableTelemetry": {
       "value": "${AZURE_ENV_ENABLE_TELEMETRY}"
@@ -61,6 +61,9 @@
     },
     "enableScalability": {
       "value": true
+    },
+    "enableRedundancy": {
+      "value": false
     },
     "vmAdminUsername": {
       "value": "${AZURE_ENV_VM_ADMIN_USERNAME}"
@@ -85,6 +88,15 @@
     },
     "MCPContainerRegistryHostname": {
       "value": "${AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT}"
+    },
+    "backendContainerImageTag": {
+      "value": "${AZURE_ENV_IMAGE_TAG}"
+    },
+    "frontendContainerImageTag": {
+      "value": "${AZURE_ENV_IMAGE_TAG}"
+    },
+    "MCPContainerImageTag": {
+      "value": "${AZURE_ENV_IMAGE_TAG}"
     }
   }
 }

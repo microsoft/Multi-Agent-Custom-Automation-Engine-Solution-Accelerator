@@ -4,6 +4,12 @@
 # For more help, visit the .dockerignore file reference guide at
 # https://docs.docker.com/engine/reference/builder/#dockerignore-file
 
+# Top-level excludes for az acr build tar packing
+node_modules
+build
+dist
+.venv
+
 **/.DS_Store
 **/__pycache__
 **/.venv

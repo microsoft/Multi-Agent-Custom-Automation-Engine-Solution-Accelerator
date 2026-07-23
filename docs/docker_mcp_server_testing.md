@@ -13,7 +13,7 @@ This document provides comprehensive steps to test the MACAE MCP Server deployed
 
 ```bash
 # Navigate to MCP server directory
-cd src/backend/v4/mcp_server
+cd src/mcp_server
 
 # Build and run in one command
 docker build -t macae-mcp-server . && docker run -d --name macae-mcp-server -p 9000:9000 macae-mcp-server python mcp_server.py --transport http --host 0.0.0.0 --port 9000
@@ -24,8 +24,8 @@ docker build -t macae-mcp-server . && docker run -d --name macae-mcp-server -p 9
 ### 1. Build the Docker Image
 
 ```bash
-# Navigate to the MCP server directory
-cd c:\workstation\Microsoft\github\MACAE_ME\src\backend\v4\mcp_server
+# Navigate to the MCP server directory (from repo root)
+cd src/mcp_server
 
 # Build the Docker image
 docker build -t macae-mcp-server:latest .
@@ -78,7 +78,7 @@ docker logs macae-mcp-server
    📁 tech_support: [count] tools (TechSupportService)
    📁 general: [count] tools (GeneralService)
 🤖 Starting FastMCP server with http transport
-🌐 Server will be available at: http://0.0.0.0:9000/mcp/
+🌐 Server will be available at: http://0.0.0.0:9000/mcp
 ```
 
 ## Testing Methods
@@ -99,10 +99,10 @@ Content-Type: application/json
 
 ```bash
 # Test MCP endpoint availability
-curl -i http://localhost:9000/mcp/
+curl -i http://localhost:9000/mcp
 
 # Check MCP capabilities
-curl -X POST http://localhost:9000/mcp/ \
+curl -X POST http://localhost:9000/mcp \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "test-client", "version": "1.0.0"}}}'
 ```
@@ -111,7 +111,7 @@ curl -X POST http://localhost:9000/mcp/ \
 
 ```bash
 # List available tools
-curl -X POST http://localhost:9000/mcp/ \
+curl -X POST http://localhost:9000/mcp \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}'
 ```
@@ -139,7 +139,7 @@ curl -X POST http://localhost:9000/mcp/ \
 
 ```bash
 # Test a specific tool (example: HR service)
-curl -X POST http://localhost:9000/mcp/ \
+curl -X POST http://localhost:9000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
@@ -251,7 +251,7 @@ async def test_mcp_client():
         }
 
         response = await client.post(
-            "http://localhost:9000/mcp/",
+            "http://localhost:9000/mcp",
             json=init_request
         )
         print("Initialize response:", response.json())
@@ -265,7 +265,7 @@ async def test_mcp_client():
         }
 
         response = await client.post(
-            "http://localhost:9000/mcp/",
+            "http://localhost:9000/mcp",
             json=tools_request
         )
         print("Tools response:", response.json())
@@ -350,7 +350,7 @@ services:
         echo 'Testing MCP Server...'
         curl -f http://mcp-server:9000/health || exit 1
         echo 'Health check passed!'
-        curl -X POST http://mcp-server:9000/mcp/ -H 'Content-Type: application/json' -d '{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"tools/list\", \"params\": {}}' || exit 1
+        curl -X POST http://mcp-server:9000/mcp -H 'Content-Type: application/json' -d '{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"tools/list\", \"params\": {}}' || exit 1
         echo 'Tools list test passed!'
         echo 'All tests completed successfully!'
       "

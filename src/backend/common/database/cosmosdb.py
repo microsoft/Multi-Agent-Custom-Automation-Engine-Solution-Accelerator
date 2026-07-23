@@ -4,11 +4,11 @@ import datetime
 import logging
 from typing import Any, Dict, List, Optional, Type
 
-import v4.models.messages as messages
+from models.plan_models import MPlan
 from azure.cosmos.aio import CosmosClient
 from azure.cosmos.aio._database import DatabaseProxy
 
-from ..models.messages_af import (
+from ..models.messages import (
     AgentMessage,
     AgentMessageData,
     BaseDataModel,
@@ -416,7 +416,7 @@ class CosmosDBClient(DatabaseBase):
             {"name": "@data_type", "value": DataType.user_current_team},
         ]
         items = self.container.query_items(query=query, parameters=params)
-        print("Items to delete:", items)
+        self.logger.debug("delete_current_team: querying items for user_id=%s", user_id)
         if items:
             async for doc in items:
                 try:
@@ -448,7 +448,7 @@ class CosmosDBClient(DatabaseBase):
             {"name": "@plan_id", "value": plan_id},
         ]
         items = self.container.query_items(query=query, parameters=params)
-        print("Items to delete planid:", items)
+        self.logger.debug("delete_plan_by_plan_id: querying items for plan_id=%s", plan_id)
         if items:
             async for doc in items:
                 try:
@@ -462,22 +462,22 @@ class CosmosDBClient(DatabaseBase):
 
         return True
 
-    async def add_mplan(self, mplan: messages.MPlan) -> None:
+    async def add_mplan(self, mplan: MPlan) -> None:
         """Add a team configuration to the database."""
         await self.add_item(mplan)
 
-    async def update_mplan(self, mplan: messages.MPlan) -> None:
+    async def update_mplan(self, mplan: MPlan) -> None:
         """Update a team configuration in the database."""
         await self.update_item(mplan)
 
-    async def get_mplan(self, plan_id: str) -> Optional[messages.MPlan]:
+    async def get_mplan(self, plan_id: str) -> Optional[MPlan]:
         """Retrieve a mplan configuration by mplan_id."""
         query = "SELECT * FROM c WHERE c.plan_id=@plan_id AND c.data_type=@data_type"
         parameters = [
             {"name": "@plan_id", "value": plan_id},
             {"name": "@data_type", "value": DataType.m_plan},
         ]
-        results = await self.query_items(query, parameters, messages.MPlan)
+        results = await self.query_items(query, parameters, MPlan)
         return results[0] if results else None
 
     async def add_agent_message(self, message: AgentMessageData) -> None:
@@ -513,7 +513,7 @@ class CosmosDBClient(DatabaseBase):
             {"name": "@data_type", "value": DataType.current_team_agent},
         ]
         items = self.container.query_items(query=query, parameters=params)
-        print("Items to delete:", items)
+        self.logger.debug("delete_team_agent: querying items for team_id=%s agent_name=%s", team_id, agent_name)
         if items:
             async for doc in items:
                 try:

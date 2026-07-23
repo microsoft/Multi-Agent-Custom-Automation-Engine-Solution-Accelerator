@@ -16,6 +16,7 @@ dynamic = ["version"]
 # Core runtime dependencies managed in this pyproject.toml
 dependencies = [
   "fastmcp==3.2.0",
+  "fastapi==0.115.0",
   "uvicorn[standard]==0.38.0",
   "python-dotenv==1.2.2",
   "azure-identity==1.19.0",
@@ -28,6 +29,8 @@ dependencies = [
   "azure-core==1.38.0",
   "cryptography==46.0.7",
   "authlib==1.6.12",
+  "azure-storage-blob==12.25.1",
+
 ]
 
 [project.optional-dependencies]
@@ -52,3 +55,9 @@ include = ["**/*", "README.md"]
 
 [project.scripts]
 mcp-server = "mcp_server:main"
+
+[tool.pylint.main]
+init-hook = "import sys; sys.path.insert(0, '.')"
+
+[tool.pylint."messages control"]
+disable = ["broad-exception-caught", "redefined-outer-name", "protected-access", "import-error", "no-name-in-module", "unused-import", "unused-variable"]

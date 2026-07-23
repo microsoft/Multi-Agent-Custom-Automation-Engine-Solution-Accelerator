@@ -8,20 +8,18 @@ By default this template will use the environment name as the prefix to prevent 
 
 | Name                            | Type   | Default Value     | Purpose                                                                                             |
 | ------------------------------- | ------ | ----------------- | --------------------------------------------------------------------------------------------------- |
+| `AZURE_ENV_DEPLOYMENT_FLAVOR`                | string | `bicep`           | Used for different deployment flavor, accepted values `bicep`, `avm`, `avm-waf`                   |
 | `AZURE_ENV_NAME`                | string | `macae`           | Used as a prefix for all resource names to ensure uniqueness across environments.                   |
 | `AZURE_LOCATION`                | string | `<User selects during deployment>`   | Location of the Azure resources. Controls where the infrastructure will be deployed.                |
 | `AZURE_ENV_AI_SERVICE_LOCATION`     | string | `<User selects during deployment>`   | Specifies the region for OpenAI resource deployment.                                                |
 | `AZURE_ENV_MODEL_DEPLOYMENT_TYPE` | string | `GlobalStandard` | Defines the deployment type for the AI model (e.g., Standard, GlobalStandard).                     |
-| `AZURE_ENV_GPT_MODEL_NAME`          | string | `gpt-5.4-mini`          | Specifies the underlying GPT model to be deployed (e.g., `gpt-5.4-mini`, `gpt-5.4`).                  |
+| `AZURE_ENV_GPT_MODEL_NAME`          | string | `gpt-5.4-mini`          | Specifies the name of the GPT model to be deployed.                                                |
 | `AZURE_ENV_GPT_MODEL_VERSION`       | string | `2026-03-17`      | Version of the GPT model to be used for deployment.                                                |
-| `AZURE_ENV_GPT_DEPLOYMENT_NAME`     | string | (defaults to `AZURE_ENV_GPT_MODEL_NAME`) | Optional. Deployment (alias) name used in Azure OpenAI for the main GPT model. This is the value referenced as `deployment_name` in `data/agent_teams/*.json`. Override this if you want the deployment alias to differ from the underlying model name. |
 | `AZURE_ENV_GPT_MODEL_CAPACITY`       | int | `100`      | Sets the GPT model capacity.                                                |
 | `AZURE_ENV_MODEL_5_4_DEPLOYMENT_TYPE` | string | `GlobalStandard` | Defines the deployment type for the AI model (e.g., Standard, GlobalStandard).                     |
-| `AZURE_ENV_MODEL_5_4_NAME`          | string | `gpt-5.4`          | Specifies the underlying larger GPT model to be deployed.                                          |
-| `AZURE_ENV_MODEL_5_4_VERSION`       | string | `2026-03-05`      | Version of the larger GPT model to be used for deployment.                                         |
-| `AZURE_ENV_MODEL_5_4_DEPLOYMENT_NAME` | string | (defaults to `AZURE_ENV_MODEL_5_4_NAME`) | Optional. Deployment (alias) name used in Azure OpenAI for the larger GPT model. Override if the alias should differ from the underlying model name. |
-| `AZURE_ENV_MODEL_5_4_CAPACITY`       | int | `150`      | Sets the GPT model capacity.                                                |
-| `AZURE_ENV_IMAGE_TAG`            | string | `latest_v4`          | Docker image tag used for container deployments.                                                   |
+| `AZURE_ENV_MODEL_5_4_NAME`          | string | `gpt-5.4`          | Specifies the name of the GPT model to be deployed.                                                |
+| `AZURE_ENV_MODEL_5_4_VERSION`       | string | `2026-03-05`      | Version of the GPT model to be used for deployment.                                                |
+| `AZURE_ENV_MODEL_5_4_CAPACITY`       | int | `150`      | Sets the GPT model capacity.                                                |                                            |
 | `AZURE_ENV_ENABLE_TELEMETRY`    | bool   | `true`            | Enables telemetry for monitoring and diagnostics.                                                  |
 | `AZURE_EXISTING_AIPROJECT_RESOURCE_ID`          | string | `<Existing Workspace Id>`          | Set this if you want to reuse an AI Foundry Project instead of creating a new one.                                                |       
 | `AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID` | string  | Guide to get your [Existing Workspace ID](re-use-log-analytics.md) | Set this if you want to reuse an existing Log Analytics Workspace instead of creating a new one.     |

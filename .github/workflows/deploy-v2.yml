@@ -11,7 +11,7 @@ on:
       - completed
     branches:
       - main
-      - dev-v4
+      - dev
       - hotfix
   workflow_dispatch:
     inputs:

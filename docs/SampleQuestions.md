@@ -6,12 +6,13 @@ To help you get started, here are some **Sample Prompts** you can ask in the app
 ## **Teams** 
 Select the Team option from the top-left section, then click Continue after choosing the desired team.
 
-> _Note: Five teams are available only if all teams are selected during post-deployment; otherwise, only selected teams are visible._
+> _Note: Six teams are available only if all teams are selected during post-deployment; otherwise, only selected teams are visible._
 - Retail
 - HR
 - Marketing
 - RFP
 - Contract Compliance
+- Retail Marketing Content Generation
   
 ![Application](images/samplequestion_1.png)
 
@@ -68,7 +69,6 @@ _Sample operation:_
   department: hr, role: manager, start date: 11/23/2025, orientation date: 11/25/2025, location: onsite, email: js@contoso.com, mentor: Jim Shorts, benefits package:   standard, ID Card: yes, salary: 70000, Laptop : Dell 14 Plus
   ```
   > _Observe: It will trigger "Generating Plan Action" and "Proposed Plan" with 4 or more Steps_
-</br>
 
 - Task: Click on **"Approve Task Plan"** Button.
   > _Note: Average response time is around 01 minute 15 seconds._ <br>
@@ -89,7 +89,6 @@ _Sample operation:_
   
   > _Note: Average response time is 10–15 minutes._ <br>
   > _Observe: It will trigger the "Generating Plan Action" and give the Proposed Plan with 5 or more Steps_
-</br>
 
 - Task: Click on **"Approve Task Plan"** Button.
   > _Note: Average response time is around 01 minute._ <br>
@@ -110,11 +109,30 @@ _Sample operation:_
   
   > _Note: Average response time is 10–15 minutes._ <br>
   > _Observe: It will trigger the "Generating Plan Action" and give the Proposed Plan with 4 or more Steps_
-</br>
 
 - Task: Click on **"Approve Task Plan"** Button.
   > _Note: Average response time is around 01 minute._ <br>
   > _Observe: It goes into "Thinking Process", "Processing your plan" and "coordinating with AI Agents"._ <br>
+  > _Review the output._
+
+### **Retail Marketing Content Generation Scenario**
+If you select the Retail Marketing Content Generation team, follow the prompts below.
+
+>**Agents Used:** Triage, Planning, Research, Text Content, Image Content, Compliance
+
+The Retail Marketing Content Generation Scenario allows users to generate end-to-end marketing assets (copy + image) for retail campaigns, grounded in the Contoso Paint product catalog. Key tasks include:
+
+_Sample operation:_
+
+- Task: Switch to the **"Retail Marketing Content Generation Team"** from the top left section and click **"Continue"** button.
+- Task: From the Quick Tasks, select **"Generate a social media post"** and submit it.
+
+  > _Note: Average response time is 30–60 seconds for plan generation._ <br>
+  > _Observe: It will trigger the "Generating Plan Action" and give the Proposed Plan with 5 or more Steps (Planning → Research → Text Content → Image Content → Compliance)._
+
+- Task: Click on **"Approve Task Plan"** Button.
+  > _Note: Average response time is around 02–03 minutes (image generation included)._ <br>
+  > _Observe: It goes into "Thinking Process", "Processing your plan" and "coordinating with AI Agents". The final output includes marketing copy (headline, body, CTA, hashtags), a rendered campaign image, and a compliance review._ <br>
   > _Review the output._
 
   

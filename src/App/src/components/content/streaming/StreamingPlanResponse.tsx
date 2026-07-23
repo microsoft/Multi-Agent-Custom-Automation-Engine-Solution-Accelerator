@@ -11,7 +11,7 @@ import {
     CheckmarkCircle20Regular 
 } from "@fluentui/react-icons";
 import React, { useState } from 'react';
-import { getAgentIcon, getAgentDisplayName } from '@/utils/agentIconUtils';
+import { getAgentIcon, getAgentDisplayNameWithSuffix } from '@/utils/agentIconUtils';
 
 // Updated styles to match consistent spacing and remove brand colors from bot elements
 const useStyles = makeStyles({
@@ -61,7 +61,9 @@ const useStyles = makeStyles({
         borderRadius: '8px',
         fontSize: '14px',
         lineHeight: '1.5',
-        wordWrap: 'break-word'
+        wordWrap: 'break-word',
+        marginLeft: '48px',
+        boxSizing: 'border-box'
     },
     factsSection: {
         backgroundColor: 'var(--colorNeutralBackground2)',
@@ -174,21 +176,21 @@ const getAgentDisplayNameFromPlan = (planApprovalRequest: MPlanData | null): str
     if (planApprovalRequest?.steps?.length) {
         const firstAgent = planApprovalRequest.steps.find(step => step.agent)?.agent;
         if (firstAgent) {
-            return getAgentDisplayName(firstAgent);
+            return getAgentDisplayNameWithSuffix(firstAgent);
         }
     }
-    return getAgentDisplayName('Planning Agent');
+    return getAgentDisplayNameWithSuffix('Planning Agent');
 };
 
 // Dynamically extract content from whatever fields contain data
 const extractDynamicContent = (planApprovalRequest: MPlanData): { 
     factsContent: string; 
-    planSteps: Array<{ type: 'heading' | 'substep'; text: string }> 
+    planSteps: Array<{ type: 'heading' | 'substep'; text: string; agentName?: string }> 
 } => {
     if (!planApprovalRequest) return { factsContent: '', planSteps: [] };
 
     let factsContent = '';
-    let planSteps: Array<{ type: 'heading' | 'substep'; text: string }> = [];
+    let planSteps: Array<{ type: 'heading' | 'substep'; text: string; agentName?: string }> = [];
 
     // Build facts content from available sources
     const factsSources: string[] = [];
@@ -217,11 +219,16 @@ const extractDynamicContent = (planApprovalRequest: MPlanData): {
             // Use whichever action field has content
             const action = step.action || step.cleanAction || '';
             if (action.trim()) {
+                // Show agent display name unless it's the converter fallback
+                const rawAgent = step.agent || '';
+                const isFallback = !rawAgent || rawAgent.toLowerCase() === 'magenticagent';
+                const agentName = isFallback ? '' : getAgentDisplayNameWithSuffix(rawAgent);
+                const fullText = agentName ? `${agentName} ${action.trim()}` : action.trim();
                 // Check if it ends with colon (heading) or is a regular step
                 if (action.trim().endsWith(':')) {
-                    planSteps.push({ type: 'heading', text: action.trim() });
+                    planSteps.push({ type: 'heading', text: fullText, agentName });
                 } else {
-                    planSteps.push({ type: 'substep', text: action.trim() });
+                    planSteps.push({ type: 'substep', text: fullText, agentName });
                 }
             }
         });
@@ -380,7 +387,11 @@ const renderPlanResponse = (
                             if (step.type === 'heading') {
                                 return (
                                     <div key={index} className={styles.stepHeading}>
-                                        {step.text}
+                                        {step.agentName ? (
+                                            <><strong>{step.agentName}</strong> {step.text.slice(step.agentName.length + 1)}</>
+                                        ) : (
+                                            step.text
+                                        )}
                                     </div>
                                 );
                             } else {
@@ -391,7 +402,11 @@ const renderPlanResponse = (
                                             {stepCounter}
                                         </div>
                                         <div className={styles.stepText}>
-                                            {step.text}
+                                            {step.agentName ? (
+                                                <><strong>{step.agentName}</strong> {step.text.slice(step.agentName.length + 1)}</>
+                                            ) : (
+                                                step.text
+                                            )}
                                         </div>
                                     </div>
                                 );

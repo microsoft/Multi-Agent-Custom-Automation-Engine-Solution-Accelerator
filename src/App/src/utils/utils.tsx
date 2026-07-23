@@ -68,3 +68,26 @@ export const formatDate = (
 
     return formatted;
 }
+
+/**
+ * Formats an elapsed-time duration in seconds for display in processing
+ * indicators and completion messages.
+ *
+ * Examples:
+ *  - 5  → "5s"
+ *  - 59 → "59s"
+ *  - 60 → "1min 0sec"
+ *  - 75 → "1min 15sec"
+ *
+ * @param elapsedSeconds Non-negative integer seconds elapsed.
+ * @returns Human-readable elapsed-time string.
+ */
+export const formatElapsedTime = (elapsedSeconds: number): string => {
+    if (elapsedSeconds < 60) {
+        return `${elapsedSeconds}s`;
+    }
+
+    const minutes = Math.floor(elapsedSeconds / 60);
+    const seconds = elapsedSeconds % 60;
+    return `${minutes}min ${seconds}sec`;
+};

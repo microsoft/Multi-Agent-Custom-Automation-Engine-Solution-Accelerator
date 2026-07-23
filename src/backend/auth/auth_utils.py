@@ -40,7 +40,7 @@ def get_tenantid(client_principal_b64):
             # Decode the base64 header to get the JSON string
             decoded_bytes = base64.b64decode(client_principal_b64)
             decoded_string = decoded_bytes.decode("utf-8")
-            # Convert the JSON string1into a Python dictionary
+            # Convert the JSON string into a Python dictionary
             user_info = json.loads(decoded_string)
             # Extract the tenant ID
             tenant_id = user_info.get("tid")  # 'tid' typically holds the tenant ID

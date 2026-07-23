@@ -48,9 +48,9 @@ export default defineConfig({
     // Environment variables configuration
     envPrefix: 'REACT_APP_',
 
-    // Define global constants
+    // Define global constants — only expose specific vars, not the full process.env
     define: {
-        'process.env': process.env,
+        'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV ?? 'production'),
     },
 
     // Optimization

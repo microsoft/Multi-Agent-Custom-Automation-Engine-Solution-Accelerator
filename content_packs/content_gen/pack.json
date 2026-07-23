@@ -1,0 +1,19 @@
+{
+  "name": "content_gen",
+  "description": "Retail Marketing Content Generation pack",
+  "search_indexes": [
+    {
+      "index_name": "macae-content-gen-products-index",
+      "csv_path": "datasets/data/products.csv",
+      "key_field": "id",
+      "title_field": "product_name"
+    }
+  ],
+  "blob_uploads": [
+    {
+      "container": "content-gen-dataset",
+      "source": "datasets/data",
+      "pattern": "*.csv"
+    }
+  ]
+}

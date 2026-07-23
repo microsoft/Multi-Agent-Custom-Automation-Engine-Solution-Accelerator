@@ -26,7 +26,7 @@ Before starting the post-deployment process, ensure you have the following:
 
 2. **[Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli)** <small>(v2.50+)</small> - Command-line tool for managing Azure resources
 
-3. **[Python](https://www.python.org/downloads/)** <small>(v4.9+ recommended)</small> - Required for data processing scripts
+3. **[Python](https://www.python.org/downloads/)** <small>(v3.9+ recommended)</small> - Required for data processing scripts
 
 4. **[Git](https://git-scm.com/downloads/)** - Version control system for cloning the repository
 5. **[Bicep CLI](https://learn.microsoft.com/azure/azure-resource-manager/bicep/install)** <small>(v0.33.0+)</small> - Required for compiling infrastructure templates
@@ -82,12 +82,12 @@ The post-deployment process is automated through a single PowerShell or Bash scr
    - **For PowerShell (Windows/Linux/macOS):**
 
      ```powershell
-     infra\scripts\Selecting-Team-Config-And-Data.ps1 -ResourceGroup "<your-resource-group-name>"
+     infra\scripts\post-provision\Selecting-Team-Config-And-Data.ps1 -ResourceGroup "<your-resource-group-name>"
      ```
 
    - **For Bash (Linux/macOS/WSL):**
      ```bash
-     bash infra/scripts/selecting_team_config_and_data.sh --resource-group "<your-resource-group-name>"
+     bash infra/scripts/post-provision/selecting_team_config_and_data.sh --resource-group "<your-resource-group-name>"
      ```
 
    > **Note**: Replace `<your-resource-group-name>` with the actual name of the resource group containing your deployed Azure resources.

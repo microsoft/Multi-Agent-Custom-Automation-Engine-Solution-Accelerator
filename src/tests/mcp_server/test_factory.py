@@ -3,7 +3,9 @@ Tests for the MCP tool factory.
 """
 
 import pytest
-from src.mcp_server.core.factory import MCPToolFactory, Domain, MCPToolBase
+
+pytest.importorskip("fastmcp", reason="fastmcp not installed in backend venv; run with mcp_server venv")
+from core.factory import MCPToolFactory, Domain, MCPToolBase
 
 
 class TestMCPToolFactory:

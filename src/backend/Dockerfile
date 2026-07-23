@@ -1,5 +1,5 @@
 # Base Python image
-FROM python:3.11-slim-bullseye AS base
+FROM python:3.11-slim-bookworm AS base
 WORKDIR /app
 
 FROM base AS builder
@@ -12,12 +12,10 @@ WORKDIR /app
 COPY uv.lock pyproject.toml /app/
 
 # Install the project's dependencies using the lockfile and settings
-# NOTE: Plain RUN (no --mount=...) is required so this builds on classic builders
-# such as `az acr build` (Azure Container Registry Tasks) which do not enable BuildKit.
 RUN uv sync --frozen --no-install-project --no-dev
 
 # Backend app setup
-COPY . /app
+COPY . /app  
 RUN uv sync --frozen --no-dev
 
 

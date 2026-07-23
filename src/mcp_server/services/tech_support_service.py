@@ -2,8 +2,60 @@
 Tech Support MCP tools service.
 """
 
-from core.factory import MCPToolBase, Domain
-from utils.formatters import format_success_response, format_error_response
+from core.factory import Domain, MCPToolBase
+from utils.formatters import format_error_response, format_success_response
+
+# ---------------------------------------------------------------------------
+# Workflow blueprints — lightweight markdown descriptions
+# The agent should use the tool descriptions/signatures to determine exact
+# parameters. This just tells it what steps exist and what order to follow.
+# ---------------------------------------------------------------------------
+
+_TECH_SUPPORT_BLUEPRINTS = {
+    "it_provisioning": """\
+## IT Provisioning Workflow
+
+### Required Steps (in order)
+1. Create system accounts (AD, business systems)
+2. Set up Office 365 account (after system accounts created)
+3. Configure laptop
+4. Send welcome email with credentials (after accounts + O365 done)
+
+### Optional Steps (ask the user if they want these)
+- Set up VPN access
+
+### Information you need from the user before starting
+- Employee full name
+- Email address (or confirm naming convention)
+- Department
+- Laptop model (or 'standard issue')
+- Operating system preference (or 'standard' = Windows 11)
+
+### Optional info (only if VPN step is chosen)
+- VPN access level: Standard, Elevated, or Admin
+
+### Important
+- Look at each tool's required parameters to know exactly what to pass.
+- Do NOT fabricate any information — use exactly what the user provides.
+- If the user has already provided answers, proceed directly to execution with those answers.
+""",
+}
+
+
+# --- Commented out: original JSON blueprint structure ---
+# _TECH_SUPPORT_BLUEPRINTS_JSON = {
+#     "it_provisioning": {
+#         "version": "2.0",
+#         "workflow": "it_provisioning",
+#         "steps": [
+#             {"id": "system_accounts", "tool": "create_system_accounts", "required": True, ...},
+#             {"id": "office_365", "tool": "set_up_office_365_account", "required": True, "depends_on": ["system_accounts"], ...},
+#             {"id": "laptop", "tool": "configure_laptop", "required": True, ...},
+#             {"id": "vpn", "tool": "setup_vpn_access", "required": False, ...},
+#             {"id": "welcome_email", "tool": "send_welcome_email", "required": True, "depends_on": ["system_accounts", "office_365"], ...},
+#         ],
+#     },
+# }
 
 
 class TechSupportService(MCPToolBase):
@@ -16,8 +68,33 @@ class TechSupportService(MCPToolBase):
         """Register tech support tools with the MCP server."""
 
         @mcp.tool(tags={self.domain.value})
+        async def get_workflow_blueprint(workflow: str) -> str:
+            """Get the workflow blueprint for a Tech Support process.
+
+            Returns a description of steps to follow, information needed from the
+            user, and optional steps. Use this when you need to understand what an
+            IT workflow involves before executing it.
+
+            Args:
+                workflow: The workflow identifier. Supported: "it_provisioning"
+
+            Returns:
+                A markdown description of the workflow, or an error message.
+            """
+            blueprint = _TECH_SUPPORT_BLUEPRINTS.get(workflow)
+            if blueprint:
+                return blueprint
+            available = ", ".join(_TECH_SUPPORT_BLUEPRINTS.keys())
+            return f"Unknown workflow: '{workflow}'. Available workflows: {available}"
+
+        @mcp.tool(tags={self.domain.value})
         async def send_welcome_email(employee_name: str, email_address: str) -> str:
-            """Send a welcome email to a new employee as part of onboarding."""
+            """Send a welcome email to a new employee as part of onboarding.
+
+            Args:
+                employee_name: Full name of the employee (required).
+                email_address: The employee's email address (required — ask the user).
+            """
             try:
                 details = {
                     "employee_name": employee_name,
@@ -37,9 +114,15 @@ class TechSupportService(MCPToolBase):
 
         @mcp.tool(tags={self.domain.value})
         async def set_up_office_365_account(
-            employee_name: str, email_address: str, department: str = "General"
+            employee_name: str, email_address: str, department: str
         ) -> str:
-            """Set up an Office 365 account for an employee."""
+            """Set up an Office 365 account for an employee.
+
+            Args:
+                employee_name: Full name of the employee (required).
+                email_address: The employee's email address (required).
+                department: Employee's department (required).
+            """
             try:
                 details = {
                     "employee_name": employee_name,
@@ -60,9 +143,15 @@ class TechSupportService(MCPToolBase):
 
         @mcp.tool(tags={self.domain.value})
         async def configure_laptop(
-            employee_name: str, laptop_model: str, operating_system: str = "Windows 11"
+            employee_name: str, laptop_model: str, operating_system: str
         ) -> str:
-            """Configure a laptop for a new employee."""
+            """Configure a laptop for a new employee.
+
+            Args:
+                employee_name: Full name of the employee (required).
+                laptop_model: Laptop make/model or 'standard issue' (required — ask the user).
+                operating_system: OS choice or 'standard' for Windows 11 (required — ask the user).
+            """
             try:
                 details = {
                     "employee_name": employee_name,
@@ -84,9 +173,14 @@ class TechSupportService(MCPToolBase):
 
         @mcp.tool(tags={self.domain.value})
         async def setup_vpn_access(
-            employee_name: str, access_level: str = "Standard"
+            employee_name: str, access_level: str
         ) -> str:
-            """Set up VPN access for an employee."""
+            """Set up VPN access for an employee.
+
+            Args:
+                employee_name: Full name of the employee (required).
+                access_level: Access level — Standard | Elevated | Admin (required — ask the user).
+            """
             try:
                 details = {
                     "employee_name": employee_name,
@@ -107,18 +201,25 @@ class TechSupportService(MCPToolBase):
 
         @mcp.tool(tags={self.domain.value})
         async def create_system_accounts(
-            employee_name: str, systems: str = "Standard business systems"
+            employee_name: str, email_address: str, systems: str = "Standard business systems"
         ) -> str:
-            """Create system accounts for a new employee."""
+            """Create system accounts for a new employee.
+
+            Args:
+                employee_name: Full name of the employee (required).
+                email_address: Employee email for account creation (required).
+                systems: Which systems to provision (policy default: Standard business systems).
+            """
             try:
                 details = {
                     "employee_name": employee_name,
+                    "email_address": email_address,
                     "systems": systems,
                     "active_directory": "Account created",
                     "access_permissions": "Role-based access",
                     "status": "Accounts Created",
                 }
-                summary = f"System accounts have been created for {employee_name} across {systems}."
+                summary = f"System accounts have been created for {employee_name} ({email_address}) across {systems}."
 
                 return format_success_response(
                     action="System Accounts Created", details=details, summary=summary
@@ -131,4 +232,4 @@ class TechSupportService(MCPToolBase):
     @property
     def tool_count(self) -> int:
         """Return the number of tools provided by this service."""
-        return 5
+        return 6

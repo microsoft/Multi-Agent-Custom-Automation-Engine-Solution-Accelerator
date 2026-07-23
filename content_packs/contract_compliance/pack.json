@@ -1,0 +1,24 @@
+{
+  "name": "contract_compliance",
+  "description": "Contract Compliance Review pack: NDA summary, risk, and compliance document indexes.",
+  "blob_indexes": [
+    {
+      "index_name": "contract-summary-doc-index",
+      "container": "contract-summary-dataset",
+      "source": "datasets/summary",
+      "pattern": "*"
+    },
+    {
+      "index_name": "contract-risk-doc-index",
+      "container": "contract-risk-dataset",
+      "source": "datasets/risk",
+      "pattern": "*"
+    },
+    {
+      "index_name": "contract-compliance-doc-index",
+      "container": "contract-compliance-dataset",
+      "source": "datasets/compliance",
+      "pattern": "*"
+    }
+  ]
+}

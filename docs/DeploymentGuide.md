@@ -6,7 +6,7 @@ This guide walks you through deploying the Multi Agent Custom Automation Engine 
 
 🆘 **Need Help?** If you encounter any issues during deployment, check our [Troubleshooting Guide](./TroubleShootingSteps.md) for solutions to common problems.
 
-> **Note**: Some tenants may have additional security restrictions that run periodically and could impact the application (e.g., blocking public network access). If you experience issues or the application stops working, check if these restrictions are the cause. In such cases, consider deploying the WAF-supported version to ensure compliance. To configure, [Click here](#31-choose-deployment-type-optional).
+> **Note**: Some tenants may have additional security restrictions that run periodically and could impact the application (e.g., blocking public network access). If you experience issues or the application stops working, check if these restrictions are the cause. In such cases, consider deploying the WAF-supported version (deployment flavor `avm-waf`) to ensure compliance. To configure, [Click here](#31-choose-deployment-type-optional).
 
 ## Step 1: Prerequisites & Setup
 
@@ -186,12 +186,15 @@ Review the configuration options below. You can customize any settings that meet
 
 | **Aspect** | **Development/Testing (Default)** | **Production** |
 |------------|-----------------------------------|----------------|
+| **Deployment Flavor** | `bicep` (Vanilla Bicep) | `avm-waf` (AVM WAF-aligned) |
 | **Configuration File** | `main.parameters.json` (sandbox) | Copy `main.waf.parameters.json` to `main.parameters.json` |
 | **Security Controls** | Minimal (for rapid iteration) | Enhanced (production best practices) |
 | **Cost** | Lower costs | Cost optimized |
 | **Use Case** | POCs, development, testing | Production workloads |
 | **Framework** | Basic configuration | [Well-Architected Framework](https://learn.microsoft.com/en-us/azure/well-architected/) |
 | **Features** | Core functionality | Reliability, security, operational excellence |
+
+> **Note:** An intermediate option (`avm`) is also available — it uses AVM modules without WAF networking features. Set `DEPLOYMENT_FLAVOR` to `avm` for enterprise-grade modules without private endpoints.
 
 **To use production configuration:**
 
@@ -247,7 +250,7 @@ You can customize various deployment settings before running `azd up`, including
 <details>
   <summary><b>[Optional] Quota Recommendations</b></summary>
 
-By default, the **GPT model capacity** in deployment is set to **150k tokens**.
+By default, the **GPT model capacity** in deployment is set to **50k tokens**.
 
 To adjust quota settings, follow these [steps](./AzureGPTQuotaSettings.md).
 
@@ -341,38 +344,49 @@ After successful deployment:
 
 ## Step 5: Post-Deployment Configuration
 
-When `azd up` finishes, the `postdeploy` hook (defined in `azure.yaml`) prints the exact commands to run next. Complete the following steps, in order, from the project root before accessing the application.
-
 ### 5.1 Build and Push Container Images
 
-> **⚠️ Required step:** `azd up` provisions the infrastructure but deploys a temporary `hello-world` placeholder image to the backend and mcp_server Container Apps. Until you complete this step, those services are non-functional and the application will not work. The `postdeploy` hook only prints these commands — you must run them yourself.
+This solution provisions a dedicated **Azure Container Registry (ACR)** in your resource group. During provisioning, the backend and frontend App Services start with a temporary *hello-world* placeholder image. Run the following script to build the backend (`macaebackend`), MCP Server(`macaemcp`) and frontend (`macaefrontend`) images, push them to your ACR, and update the App Services to run them.
 
-Build and push the backend, frontend, and mcp_server container images to ACR, then point the Container App and Web App at them. Run the command for your shell:
+**Run the build and push script:**
+
+The `azd up` deployment output includes a ready-to-use bash script command. Look for the script in the deployment output and run it:
+
+- **For Bash (Linux/macOS/WSL):**
+   ```bash
+   bash ./infra/scripts/post-provision/build_and_push_images.sh
+   ```
+- **For PowerShell (Windows):**
+   ```powershell
+   infra\scripts\post-provision\Build-And-Push-Images.ps1
+    ```
+
+
+The images are **built remotely in ACR** using `az acr build`, so no local Docker installation is required.
+
+**What the script does:**
+- Builds the Frontend image from [src/App/Dockerfile](../src/App/Dockerfile)
+- Builds the Backend image from [src/backend/Dockerfile](../src/backend/Dockerfile)
+- Builds the MCP Server image from [src/mcp_server/Dockerfile](../src/mcp_server/Dockerfile)
+- Pushes both images to the provisioned Azure Container Registry
+- Updates the backend, MCP Server and frontend App Services to run the new images (pulled via managed identity) and restarts them
+
+> **Note:** For Production (WAF) deployments, ACR public network access is disabled. The script temporarily enables it to build/push the images and restores the original setting when it finishes.
+
+**Expected Processing Time:** 5-10 minutes depending on network speed.
+
+### 5.2 Run Post Deployment Script
+
+1. You can upload Team Configurations using command printed in the terminal. The command will look like one of the following. Run the appropriate command for your shell from the project root:
 
   - **For Bash (Linux/macOS/WSL):**
     ```bash
-    bash infra/scripts/build_and_push_images.sh
+    bash infra/scripts/post-provision/post_deploy.sh
     ```
 
   - **For PowerShell (Windows):**
     ```powershell
-    infra\scripts\Build-And-Push-Images.ps1
-    ```
-
-The script reads the ACR name, resource group and target Container App / Web App names from the current `azd` environment, so it must be run from the project root after a successful `azd up`. See [Step 4.2](#step-4-deploy-application) for build options (`remote` vs `local` mode and custom image tags).
-
-### 5.2 Upload Team Configurations and Index Sample Data
-
-1. Upload Team Configurations and index the sample data using the command printed in the terminal. Run the appropriate command for your shell from the project root:
-
-  - **For Bash (Linux/macOS/WSL):**
-    ```bash
-    bash infra/scripts/selecting_team_config_and_data.sh
-    ```
-
-  - **For PowerShell (Windows):**
-    ```powershell
-    infra\scripts\Selecting-Team-Config-And-Data.ps1
+    infra\scripts\post-provision\post_deploy.ps1
     ```
 
 
