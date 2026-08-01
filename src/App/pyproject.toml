@@ -10,6 +10,6 @@ dependencies = [
     "jinja2",
     "azure-identity",
     "python-dotenv==1.2.2",
-    "python-multipart==0.0.30",
+    "python-multipart==0.0.32",
     "urllib3==2.7.0",
 ]
