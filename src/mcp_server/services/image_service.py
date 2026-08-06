@@ -8,6 +8,7 @@ Foundry-hosted agents can embed in their markdown responses.
 
 import base64
 import logging
+import os
 import uuid
 
 
@@ -28,10 +29,11 @@ _IMAGE_API_VERSION = "2025-04-01-preview"
 
 
 def _get_credential():
-    """Return a credential, preferring user-assigned MI when a client id is set."""
-    if config.azure_client_id:
-        return ManagedIdentityCredential(client_id=config.azure_client_id)
-    return DefaultAzureCredential()
+    """Return a credential based on environment (dev vs deployed)."""
+    app_env = os.environ.get("APP_ENV", "prod").lower()
+    if app_env == "dev":
+        return DefaultAzureCredential(require_envvar=True)
+    return ManagedIdentityCredential(client_id=config.azure_client_id)
 
 
 def _ensure_container(blob_service: BlobServiceClient, container_name: str) -> None:
