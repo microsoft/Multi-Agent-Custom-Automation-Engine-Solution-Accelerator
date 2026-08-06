@@ -243,6 +243,8 @@ var frontendAppUrl = 'https://${frontendAppName}.azurewebsites.net'
 var appServicePlanName = 'asp-${solutionSuffix}'
 var backendContainerAppName = 'ca-${solutionSuffix}'
 var mcpContainerAppName = 'ca-mcp-${solutionSuffix}'
+var backendUsesBootstrapImage = toLower(backendContainerRegistryHostname) == 'mcr.microsoft.com' && toLower(backendContainerImageName) == 'azuredocs/containerapps-helloworld'
+var mcpUsesBootstrapImage = toLower(MCPContainerRegistryHostname) == 'mcr.microsoft.com' && toLower(MCPContainerImageName) == 'azuredocs/containerapps-helloworld'
 var storageAccountName = take('st${toLower(replace(solutionSuffix, '-', ''))}', 24)
 var aiSearchServiceName = 'srch-${solutionSuffix}'
 
@@ -495,7 +497,7 @@ module backend_container_app './modules/compute/container-app.bicep' = {
     tags: isCustom ? union(allTags, { 'azd-service-name': 'backend' }) : allTags
     environmentResourceId: container_app_environment.outputs.resourceId
     ingressExternal: true
-    ingressTargetPort: 8000
+    ingressTargetPort: backendUsesBootstrapImage ? 80 : 8000
     managedIdentities: {
       userAssignedResourceIds: [userAssignedIdentity.outputs.resourceId]
     }
@@ -516,12 +518,14 @@ module backend_container_app './modules/compute/container-app.bicep' = {
       minReplicas: 1
       maxReplicas: 1
     }
-    registries: [
-      {
-        server: acrLoginServer
-        identity: userAssignedIdentity.outputs.resourceId
-      }
-    ]
+    registries: backendUsesBootstrapImage
+      ? null
+      : [
+          {
+            server: acrLoginServer
+            identity: userAssignedIdentity.outputs.resourceId
+          }
+        ]
     containers: [
       {
         name: 'backend'
@@ -669,7 +673,7 @@ module mcp_container_app './modules/compute/container-app.bicep' = {
     tags: isCustom ? union(allTags, { 'azd-service-name': 'mcp' }) : allTags
     environmentResourceId: container_app_environment.outputs.resourceId
     ingressExternal: true
-    ingressTargetPort: 9000
+    ingressTargetPort: mcpUsesBootstrapImage ? 80 : 9000
     managedIdentities: {
       userAssignedResourceIds: [userAssignedIdentity.outputs.resourceId]
     }
@@ -683,12 +687,14 @@ module mcp_container_app './modules/compute/container-app.bicep' = {
       minReplicas: 1
       maxReplicas: 1
     }
-    registries: [
-      {
-        server: acrLoginServer
-        identity: userAssignedIdentity.outputs.resourceId
-      }
-    ]
+    registries: mcpUsesBootstrapImage
+      ? null
+      : [
+          {
+            server: acrLoginServer
+            identity: userAssignedIdentity.outputs.resourceId
+          }
+        ]
     containers: [
       {
         name: 'mcp'
