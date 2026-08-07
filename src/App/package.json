@@ -79,7 +79,6 @@
     "js-yaml": "5.2.2",
     "brace-expansion": "1.1.16",
     "ws": "8.21.0",
-    "postcss": "8.5.18",
-    "react-router": "8.3.0"
+    "postcss": "8.5.18"
   }
 }
