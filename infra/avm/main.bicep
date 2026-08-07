@@ -323,6 +323,8 @@ var supportedModels = [
 ]
 
 var containerAppName = 'ca-${solutionSuffix}'
+var backendUsesBootstrapImage = toLower(backendContainerRegistryHostname) == 'mcr.microsoft.com' && toLower(backendContainerImageName) == 'azuredocs/containerapps-helloworld'
+var mcpUsesBootstrapImage = toLower(MCPContainerRegistryHostname) == 'mcr.microsoft.com' && toLower(MCPContainerImageName) == 'azuredocs/containerapps-helloworld'
 
 var privateDnsZones = [
   'privatelink.cognitiveservices.azure.com'
@@ -1069,18 +1071,20 @@ module containerApp './modules/compute/container-app.bicep' = {
     tags: tags
     environmentResourceId: containerAppEnvironment.outputs.resourceId
     ingressExternal: true
-    ingressTargetPort: 8000
+    ingressTargetPort: backendUsesBootstrapImage ? 80 : 8000
     ingressAllowInsecure: false
     enableTelemetry: enableTelemetry
     managedIdentities: {
       userAssignedResourceIds: [managed_identity.outputs.resourceId]
     }
-    registries: [
-      {
-        server: acrLoginServer
-        identity: managed_identity.outputs.resourceId
-      }
-    ]
+    registries: backendUsesBootstrapImage
+      ? null
+      : [
+          {
+            server: acrLoginServer
+            identity: managed_identity.outputs.resourceId
+          }
+        ]
     corsPolicy: {
       allowedOrigins: [
         'https://app-${solutionSuffix}.azurewebsites.net'
@@ -1246,18 +1250,20 @@ module containerAppMcp './modules/compute/container-app.bicep' = {
     tags: tags
     environmentResourceId: containerAppEnvironment.outputs.resourceId
     ingressExternal: true
-    ingressTargetPort: 9000
+    ingressTargetPort: mcpUsesBootstrapImage ? 80 : 9000
     ingressAllowInsecure: false
     enableTelemetry: enableTelemetry
     managedIdentities: {
       userAssignedResourceIds: [managed_identity.outputs.resourceId]
     }
-    registries: [
-      {
-        server: acrLoginServer
-        identity: managed_identity.outputs.resourceId
-      }
-    ]
+    registries: mcpUsesBootstrapImage
+      ? null
+      : [
+          {
+            server: acrLoginServer
+            identity: managed_identity.outputs.resourceId
+          }
+        ]
     corsPolicy: {
       allowedOrigins: [
         'https://app-${solutionSuffix}.azurewebsites.net'

@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.44.1.10279",
-      "templateHash": "10080544909430391861"
+      "templateHash": "15518088603134439540"
     },
     "name": "Multi-Agent Custom Automation Engine - AVM",
     "description": "AVM orchestrator for the Multi-Agent Custom Automation Engine accelerator. Deploys the same logical resources and preserves the same outputs as infra\\main.bicep using local AVM wrapper modules."
@@ -467,6 +467,8 @@
       "[parameters('gptImageModelName')]"
     ],
     "containerAppName": "[format('ca-{0}', variables('solutionSuffix'))]",
+    "backendUsesBootstrapImage": "[and(equals(toLower(parameters('backendContainerRegistryHostname')), 'mcr.microsoft.com'), equals(toLower(parameters('backendContainerImageName')), 'azuredocs/containerapps-helloworld'))]",
+    "mcpUsesBootstrapImage": "[and(equals(toLower(parameters('MCPContainerRegistryHostname')), 'mcr.microsoft.com'), equals(toLower(parameters('MCPContainerImageName')), 'azuredocs/containerapps-helloworld'))]",
     "privateDnsZones": [
       "privatelink.cognitiveservices.azure.com",
       "privatelink.openai.azure.com",
@@ -687,7 +689,7 @@
     "aiSearchIndexNameForRFPSummary": "macae-rfp-summary-index",
     "aiSearchIndexNameForRFPRisk": "macae-rfp-risk-index",
     "aiSearchIndexNameForRFPCompliance": "macae-rfp-compliance-index",
-    "virtualMachineAvailabilityZone": 1,
+    "virtualMachineAvailabilityZone": -1,
     "aiFoundryOpenAIEndpoint": "[format('https://{0}.openai.azure.com/', variables('aiFoundryAiServicesResourceName'))]"
   },
   "resources": {
@@ -28583,7 +28585,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "10180502016624897684"
+              "templateHash": "13733831222630151234"
             }
           },
           "parameters": {
@@ -28609,7 +28611,7 @@
             "modelName": {
               "type": "string",
               "metadata": {
-                "description": "Required. Model name (e.g., gpt-4o, text-embedding-ada-002)."
+                "description": "Required. Model name (e.g., gpt-5.4-mini, text-embedding-ada-002)."
               }
             },
             "modelVersion": {
@@ -54859,9 +54861,7 @@
           "ingressExternal": {
             "value": true
           },
-          "ingressTargetPort": {
-            "value": 8000
-          },
+          "ingressTargetPort": "[if(variables('backendUsesBootstrapImage'), createObject('value', 80), createObject('value', 8000))]",
           "ingressAllowInsecure": {
             "value": false
           },
@@ -54875,14 +54875,7 @@
               ]
             }
           },
-          "registries": {
-            "value": [
-              {
-                "server": "[if(variables('useExistingContainerRegistry'), format('{0}.azurecr.io', variables('existingContainerRegistryName')), reference('container_registry').outputs.loginServer.value)]",
-                "identity": "[reference('managed_identity').outputs.resourceId.value]"
-              }
-            ]
-          },
+          "registries": "[if(variables('backendUsesBootstrapImage'), createObject('value', null()), createObject('value', createArray(createObject('server', if(variables('useExistingContainerRegistry'), format('{0}.azurecr.io', variables('existingContainerRegistryName')), reference('container_registry').outputs.loginServer.value), 'identity', reference('managed_identity').outputs.resourceId.value))))]",
           "corsPolicy": {
             "value": {
               "allowedOrigins": [
@@ -56862,9 +56855,7 @@
           "ingressExternal": {
             "value": true
           },
-          "ingressTargetPort": {
-            "value": 9000
-          },
+          "ingressTargetPort": "[if(variables('mcpUsesBootstrapImage'), createObject('value', 80), createObject('value', 9000))]",
           "ingressAllowInsecure": {
             "value": false
           },
@@ -56878,14 +56869,7 @@
               ]
             }
           },
-          "registries": {
-            "value": [
-              {
-                "server": "[if(variables('useExistingContainerRegistry'), format('{0}.azurecr.io', variables('existingContainerRegistryName')), reference('container_registry').outputs.loginServer.value)]",
-                "identity": "[reference('managed_identity').outputs.resourceId.value]"
-              }
-            ]
-          },
+          "registries": "[if(variables('mcpUsesBootstrapImage'), createObject('value', null()), createObject('value', createArray(createObject('server', if(variables('useExistingContainerRegistry'), format('{0}.azurecr.io', variables('existingContainerRegistryName')), reference('container_registry').outputs.loginServer.value), 'identity', reference('managed_identity').outputs.resourceId.value))))]",
           "corsPolicy": {
             "value": {
               "allowedOrigins": [
@@ -56967,8 +56951,16 @@
                     "value": "[parameters('gptImageModelName')]"
                   },
                   {
+                    "name": "AZURE_OPENAI_IMAGE_QUALITY",
+                    "value": "high"
+                  },
+                  {
                     "name": "AZURE_STORAGE_BLOB_URL",
                     "value": "[reference('storage_account').outputs.blobEndpoint.value]"
+                  },
+                  {
+                    "name": "AZURE_STORAGE_IMAGES_CONTAINER",
+                    "value": "generated-images"
                   },
                   {
                     "name": "BACKEND_URL",
@@ -59690,7 +59682,6 @@
             "value": {
               "SCM_DO_BUILD_DURING_DEPLOYMENT": "true",
               "DOCKER_REGISTRY_SERVER_URL": "[format('https://{0}', if(variables('useExistingContainerRegistry'), format('{0}.azurecr.io', variables('existingContainerRegistryName')), reference('container_registry').outputs.loginServer.value))]",
-              "WEBSITES_PORT": "3000",
               "WEBSITES_CONTAINER_START_TIME_LIMIT": "1800",
               "BACKEND_API_URL": "[format('https://{0}', reference('containerApp').outputs.fqdn.value)]",
               "AUTH_ENABLED": "false",
@@ -59698,6 +59689,12 @@
             }
           },
           "virtualNetworkSubnetId": "[if(parameters('enablePrivateNetworking'), createObject('value', reference('virtualNetwork').outputs.webserverfarmSubnetResourceId.value), createObject('value', ''))]",
+          "vnetRouteAllEnabled": {
+            "value": "[parameters('enablePrivateNetworking')]"
+          },
+          "imagePullTraffic": {
+            "value": "[parameters('enablePrivateNetworking')]"
+          },
           "publicNetworkAccess": {
             "value": "Enabled"
           },
@@ -59712,7 +59709,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "9621160936099183182"
+              "templateHash": "9504607717010385151"
             }
           },
           "definitions": {
@@ -60250,6 +60247,40 @@
             }
           },
           "resources": {
+            "site": {
+              "existing": true,
+              "type": "Microsoft.Web/sites",
+              "apiVersion": "2025-03-01",
+              "name": "[parameters('name')]"
+            },
+            "logsConfig": {
+              "type": "Microsoft.Web/sites/config",
+              "apiVersion": "2025-03-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'logs')]",
+              "properties": {
+                "applicationLogs": {
+                  "fileSystem": {
+                    "level": "Verbose"
+                  }
+                },
+                "detailedErrorMessages": {
+                  "enabled": true
+                },
+                "failedRequestsTracing": {
+                  "enabled": true
+                },
+                "httpLogs": {
+                  "fileSystem": {
+                    "enabled": true,
+                    "retentionInDays": 1,
+                    "retentionInMb": 35
+                  }
+                }
+              },
+              "dependsOn": [
+                "appService"
+              ]
+            },
             "appService": {
               "type": "Microsoft.Resources/deployments",
               "apiVersion": "2025-04-01",
@@ -60293,6 +60324,7 @@
                       "healthCheckPath": "[if(not(empty(parameters('healthCheckPath'))), parameters('healthCheckPath'), null())]",
                       "webSocketsEnabled": "[parameters('webSocketsEnabled')]",
                       "appCommandLine": "[parameters('appCommandLine')]",
+                      "vnetRouteAllEnabled": "[parameters('vnetRouteAllEnabled')]",
                       "acrUseManagedIdentityCreds": "[not(empty(parameters('acrUserManagedIdentityClientId')))]",
                       "acrUserManagedIdentityID": "[if(not(empty(parameters('acrUserManagedIdentityClientId'))), parameters('acrUserManagedIdentityClientId'), null())]"
                     }
@@ -60306,35 +60338,6 @@
                         "name": "appsettings",
                         "properties": "[parameters('appSettings')]",
                         "applicationInsightResourceId": "[if(not(empty(parameters('applicationInsightResourceId'))), parameters('applicationInsightResourceId'), null())]"
-                      },
-                      {
-                        "name": "logs",
-                        "properties": {
-                          "applicationLogs": {
-                            "fileSystem": {
-                              "level": "Verbose"
-                            }
-                          },
-                          "detailedErrorMessages": {
-                            "enabled": true
-                          },
-                          "failedRequestsTracing": {
-                            "enabled": true
-                          },
-                          "httpLogs": {
-                            "fileSystem": {
-                              "enabled": true,
-                              "retentionInDays": 1,
-                              "retentionInMb": 35
-                            }
-                          }
-                        }
-                      },
-                      {
-                        "name": "web",
-                        "properties": {
-                          "vnetRouteAllEnabled": "[parameters('vnetRouteAllEnabled')]"
-                        }
                       }
                     ]
                   },

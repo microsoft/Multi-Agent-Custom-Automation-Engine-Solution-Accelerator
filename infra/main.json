@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.44.1.10279",
-      "templateHash": "17775288733861273358"
+      "templateHash": "15739232766064275104"
     },
     "name": "Multi-Agent Custom Automation Engine - Deployment Router",
     "description": "Deployment router for the Multi-Agent Custom Automation Engine accelerator. Routes to either the AVM or vanilla Bicep orchestrator and preserves a unified deployment contract."
@@ -561,7 +561,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "6216243501205527784"
+              "templateHash": "6625237371109264103"
             },
             "name": "Multi-Agent Custom Automation Engine - AVM",
             "description": "AVM orchestrator for the Multi-Agent Custom Automation Engine accelerator. Deploys the same logical resources and preserves the same outputs as infra\\main.bicep using local AVM wrapper modules."
@@ -957,7 +957,7 @@
             "solutionSuffix": "[toLower(trim(replace(replace(replace(replace(replace(replace(format('{0}{1}', parameters('solutionName'), parameters('solutionUniqueText')), '-', ''), '_', ''), '.', ''), '/', ''), ' ', ''), '*', '')))]",
             "allTags": "[union(createObject('azd-env-name', parameters('solutionName')), parameters('tags'))]",
             "existingTags": "[coalesce(resourceGroup().tags, createObject())]",
-            "resourceTags": "[union(variables('existingTags'), variables('allTags'), createObject('TemplateName', 'MACAE', 'Type', if(parameters('enablePrivateNetworking'), 'WAF', 'Non-WAF'), 'CreatedBy', parameters('createdBy'), 'DeploymentName', deployment().name, 'SolutionSuffix', variables('solutionSuffix')))]",
+            "resourceTags": "[union(variables('existingTags'), variables('allTags'), createObject('TemplateName', 'MACAE', 'Type', if(parameters('enablePrivateNetworking'), 'WAF', 'Non-WAF'), 'CreatedBy', parameters('createdBy'), 'DeploymentName', deployment().name, 'SolutionSuffix', variables('solutionSuffix'), 'SecurityControl', 'Ignore'))]",
             "useExistingLogAnalytics": "[not(empty(parameters('existingLogAnalyticsWorkspaceId')))]",
             "existingLawSubscription": "[if(variables('useExistingLogAnalytics'), split(parameters('existingLogAnalyticsWorkspaceId'), '/')[2], '')]",
             "existingLawResourceGroup": "[if(variables('useExistingLogAnalytics'), split(parameters('existingLogAnalyticsWorkspaceId'), '/')[4], '')]",
@@ -1022,6 +1022,8 @@
               "[parameters('gptImageModelName')]"
             ],
             "containerAppName": "[format('ca-{0}', variables('solutionSuffix'))]",
+            "backendUsesBootstrapImage": "[and(equals(toLower(parameters('backendContainerRegistryHostname')), 'mcr.microsoft.com'), equals(toLower(parameters('backendContainerImageName')), 'azuredocs/containerapps-helloworld'))]",
+            "mcpUsesBootstrapImage": "[and(equals(toLower(parameters('MCPContainerRegistryHostname')), 'mcr.microsoft.com'), equals(toLower(parameters('MCPContainerImageName')), 'azuredocs/containerapps-helloworld'))]",
             "privateDnsZones": [
               "privatelink.cognitiveservices.azure.com",
               "privatelink.openai.azure.com",
@@ -55414,9 +55416,7 @@
                   "ingressExternal": {
                     "value": true
                   },
-                  "ingressTargetPort": {
-                    "value": 8000
-                  },
+                  "ingressTargetPort": "[if(variables('backendUsesBootstrapImage'), createObject('value', 80), createObject('value', 8000))]",
                   "ingressAllowInsecure": {
                     "value": false
                   },
@@ -55430,14 +55430,7 @@
                       ]
                     }
                   },
-                  "registries": {
-                    "value": [
-                      {
-                        "server": "[if(variables('useExistingContainerRegistry'), format('{0}.azurecr.io', variables('existingContainerRegistryName')), reference('container_registry').outputs.loginServer.value)]",
-                        "identity": "[reference('managed_identity').outputs.resourceId.value]"
-                      }
-                    ]
-                  },
+                  "registries": "[if(variables('backendUsesBootstrapImage'), createObject('value', null()), createObject('value', createArray(createObject('server', if(variables('useExistingContainerRegistry'), format('{0}.azurecr.io', variables('existingContainerRegistryName')), reference('container_registry').outputs.loginServer.value), 'identity', reference('managed_identity').outputs.resourceId.value))))]",
                   "corsPolicy": {
                     "value": {
                       "allowedOrigins": [
@@ -57417,9 +57410,7 @@
                   "ingressExternal": {
                     "value": true
                   },
-                  "ingressTargetPort": {
-                    "value": 9000
-                  },
+                  "ingressTargetPort": "[if(variables('mcpUsesBootstrapImage'), createObject('value', 80), createObject('value', 9000))]",
                   "ingressAllowInsecure": {
                     "value": false
                   },
@@ -57433,14 +57424,7 @@
                       ]
                     }
                   },
-                  "registries": {
-                    "value": [
-                      {
-                        "server": "[if(variables('useExistingContainerRegistry'), format('{0}.azurecr.io', variables('existingContainerRegistryName')), reference('container_registry').outputs.loginServer.value)]",
-                        "identity": "[reference('managed_identity').outputs.resourceId.value]"
-                      }
-                    ]
-                  },
+                  "registries": "[if(variables('mcpUsesBootstrapImage'), createObject('value', null()), createObject('value', createArray(createObject('server', if(variables('useExistingContainerRegistry'), format('{0}.azurecr.io', variables('existingContainerRegistryName')), reference('container_registry').outputs.loginServer.value), 'identity', reference('managed_identity').outputs.resourceId.value))))]",
                   "corsPolicy": {
                     "value": {
                       "allowedOrigins": [
@@ -76904,7 +76888,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "1904819476144963209"
+              "templateHash": "12836920652912180859"
             },
             "name": "Multi-Agent Custom Automation Engine - Vanilla Bicep",
             "description": "Vanilla Bicep orchestrator for the Multi-Agent Custom Automation Engine accelerator. This deployment intentionally excludes WAF features such as private networking, scale-out, redundancy, bastion, and VM resources while keeping router-compatible outputs."
@@ -77301,6 +77285,8 @@
             "appServicePlanName": "[format('asp-{0}', variables('solutionSuffix'))]",
             "backendContainerAppName": "[format('ca-{0}', variables('solutionSuffix'))]",
             "mcpContainerAppName": "[format('ca-mcp-{0}', variables('solutionSuffix'))]",
+            "backendUsesBootstrapImage": "[and(equals(toLower(parameters('backendContainerRegistryHostname')), 'mcr.microsoft.com'), equals(toLower(parameters('backendContainerImageName')), 'azuredocs/containerapps-helloworld'))]",
+            "mcpUsesBootstrapImage": "[and(equals(toLower(parameters('MCPContainerRegistryHostname')), 'mcr.microsoft.com'), equals(toLower(parameters('MCPContainerImageName')), 'azuredocs/containerapps-helloworld'))]",
             "storageAccountName": "[take(format('st{0}', toLower(replace(variables('solutionSuffix'), '-', ''))), 24)]",
             "aiSearchServiceName": "[format('srch-{0}', variables('solutionSuffix'))]",
             "aiSearchIndexNameForContractSummary": "contract-summary-doc-index",
@@ -79590,9 +79576,7 @@
                   "ingressExternal": {
                     "value": true
                   },
-                  "ingressTargetPort": {
-                    "value": 8000
-                  },
+                  "ingressTargetPort": "[if(variables('backendUsesBootstrapImage'), createObject('value', 80), createObject('value', 8000))]",
                   "managedIdentities": {
                     "value": {
                       "userAssignedResourceIds": [
@@ -79621,14 +79605,7 @@
                       "maxReplicas": 1
                     }
                   },
-                  "registries": {
-                    "value": [
-                      {
-                        "server": "[if(variables('useExistingContainerRegistry'), format('{0}.azurecr.io', variables('existingContainerRegistryName')), reference(resourceId('Microsoft.Resources/deployments', take(format('module.container-registry.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.loginServer.value)]",
-                        "identity": "[reference(resourceId('Microsoft.Resources/deployments', take(format('module.user-assigned-identity.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.resourceId.value]"
-                      }
-                    ]
-                  },
+                  "registries": "[if(variables('backendUsesBootstrapImage'), createObject('value', null()), createObject('value', createArray(createObject('server', if(variables('useExistingContainerRegistry'), format('{0}.azurecr.io', variables('existingContainerRegistryName')), reference(resourceId('Microsoft.Resources/deployments', take(format('module.container-registry.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.loginServer.value), 'identity', reference(resourceId('Microsoft.Resources/deployments', take(format('module.user-assigned-identity.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.resourceId.value))))]",
                   "containers": {
                     "value": [
                       {
@@ -80003,9 +79980,7 @@
                   "ingressExternal": {
                     "value": true
                   },
-                  "ingressTargetPort": {
-                    "value": 9000
-                  },
+                  "ingressTargetPort": "[if(variables('mcpUsesBootstrapImage'), createObject('value', 80), createObject('value', 9000))]",
                   "managedIdentities": {
                     "value": {
                       "userAssignedResourceIds": [
@@ -80027,14 +80002,7 @@
                       "maxReplicas": 1
                     }
                   },
-                  "registries": {
-                    "value": [
-                      {
-                        "server": "[if(variables('useExistingContainerRegistry'), format('{0}.azurecr.io', variables('existingContainerRegistryName')), reference(resourceId('Microsoft.Resources/deployments', take(format('module.container-registry.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.loginServer.value)]",
-                        "identity": "[reference(resourceId('Microsoft.Resources/deployments', take(format('module.user-assigned-identity.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.resourceId.value]"
-                      }
-                    ]
-                  },
+                  "registries": "[if(variables('mcpUsesBootstrapImage'), createObject('value', null()), createObject('value', createArray(createObject('server', if(variables('useExistingContainerRegistry'), format('{0}.azurecr.io', variables('existingContainerRegistryName')), reference(resourceId('Microsoft.Resources/deployments', take(format('module.container-registry.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.loginServer.value), 'identity', reference(resourceId('Microsoft.Resources/deployments', take(format('module.user-assigned-identity.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.resourceId.value))))]",
                   "containers": {
                     "value": [
                       {
