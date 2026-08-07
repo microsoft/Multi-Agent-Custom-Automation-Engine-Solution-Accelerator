@@ -47,11 +47,17 @@ update_container_app_image_and_port() {
         --resource-group "${RESOURCE_GROUP}" \
         --output json |
         jq \
+            --arg app_name "${app_name}" \
             --arg container_name "${container_name}" \
             --arg image "${image}" \
             --arg registry_server "${registry_server}" \
             --argjson target_port "${target_port}" \
-            '(.identity.userAssignedIdentities | keys[0]) as $identity_resource_id
+            'if any(.properties.template.containers[]?; .name == $container_name) then
+                 .
+             else
+                 error("Container \($container_name) was not found in Container App \($app_name)")
+             end
+             | (.identity.userAssignedIdentities | keys[0]) as $identity_resource_id
              | if $identity_resource_id == null then error("Container App does not have a user-assigned identity for ACR image pulls") else . end
              | (.properties.template.containers[] | select(.name == $container_name).image) = $image
              | .properties.configuration.ingress.targetPort = $target_port
