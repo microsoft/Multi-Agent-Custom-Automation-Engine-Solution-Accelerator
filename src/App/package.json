@@ -76,8 +76,10 @@
     "vite": "7.3.5",
     "mdast-util-to-hast": "13.2.1",
     "picomatch": "4.0.4",
-    "js-yaml": "4.3.0",
+    "js-yaml": "5.2.2",
     "brace-expansion": "1.1.16",
-    "ws": "8.21.0"
+    "ws": "8.21.0",
+    "postcss": "8.5.18",
+    "react-router": "8.3.0"
   }
 }
