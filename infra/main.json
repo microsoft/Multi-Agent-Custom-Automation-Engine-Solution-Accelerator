@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.44.1.10279",
-      "templateHash": "15739232766064275104"
+      "templateHash": "13731968440732364764"
     },
     "name": "Multi-Agent Custom Automation Engine - Deployment Router",
     "description": "Deployment router for the Multi-Agent Custom Automation Engine accelerator. Routes to either the AVM or vanilla Bicep orchestrator and preserves a unified deployment contract."
@@ -561,7 +561,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "6625237371109264103"
+              "templateHash": "15518088603134439540"
             },
             "name": "Multi-Agent Custom Automation Engine - AVM",
             "description": "AVM orchestrator for the Multi-Agent Custom Automation Engine accelerator. Deploys the same logical resources and preserves the same outputs as infra\\main.bicep using local AVM wrapper modules."
@@ -957,7 +957,7 @@
             "solutionSuffix": "[toLower(trim(replace(replace(replace(replace(replace(replace(format('{0}{1}', parameters('solutionName'), parameters('solutionUniqueText')), '-', ''), '_', ''), '.', ''), '/', ''), ' ', ''), '*', '')))]",
             "allTags": "[union(createObject('azd-env-name', parameters('solutionName')), parameters('tags'))]",
             "existingTags": "[coalesce(resourceGroup().tags, createObject())]",
-            "resourceTags": "[union(variables('existingTags'), variables('allTags'), createObject('TemplateName', 'MACAE', 'Type', if(parameters('enablePrivateNetworking'), 'WAF', 'Non-WAF'), 'CreatedBy', parameters('createdBy'), 'DeploymentName', deployment().name, 'SolutionSuffix', variables('solutionSuffix'), 'SecurityControl', 'Ignore'))]",
+            "resourceTags": "[union(variables('existingTags'), variables('allTags'), createObject('TemplateName', 'MACAE', 'Type', if(parameters('enablePrivateNetworking'), 'WAF', 'Non-WAF'), 'CreatedBy', parameters('createdBy'), 'DeploymentName', deployment().name, 'SolutionSuffix', variables('solutionSuffix')))]",
             "useExistingLogAnalytics": "[not(empty(parameters('existingLogAnalyticsWorkspaceId')))]",
             "existingLawSubscription": "[if(variables('useExistingLogAnalytics'), split(parameters('existingLogAnalyticsWorkspaceId'), '/')[2], '')]",
             "existingLawResourceGroup": "[if(variables('useExistingLogAnalytics'), split(parameters('existingLogAnalyticsWorkspaceId'), '/')[4], '')]",
