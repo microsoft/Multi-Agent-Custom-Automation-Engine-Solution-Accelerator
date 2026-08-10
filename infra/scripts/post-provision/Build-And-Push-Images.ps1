@@ -87,6 +87,54 @@ function Get-EnvOrAzd {
     return $Default
 }
 
+function Update-ContainerAppImageAndPort {
+    param(
+        [Parameter(Mandatory)][string]$Name,
+        [Parameter(Mandatory)][string]$ResourceGroup,
+        [Parameter(Mandatory)][string]$ContainerName,
+        [Parameter(Mandatory)][string]$Image,
+        [Parameter(Mandatory)][int]$TargetPort,
+        [Parameter(Mandatory)][string]$RegistryServer
+    )
+
+    $configPath = Join-Path ([System.IO.Path]::GetTempPath()) "$Name-$([guid]::NewGuid().ToString('N')).json"
+    try {
+        $appJson = & az containerapp show --name $Name --resource-group $ResourceGroup --output json
+        if ($LASTEXITCODE -ne 0 -or -not $appJson) {
+            throw "Failed to read Container App '$Name'."
+        }
+        $app = ($appJson -join [Environment]::NewLine) | ConvertFrom-Json
+
+        $container = $app.properties.template.containers | Where-Object { $_.name -eq $ContainerName } | Select-Object -First 1
+        if (-not $container) {
+            throw "Container '$ContainerName' was not found in Container App '$Name'."
+        }
+
+        $identityResourceId = $app.identity.userAssignedIdentities.PSObject.Properties.Name | Select-Object -First 1
+        if (-not $identityResourceId) {
+            throw "Container App '$Name' does not have a user-assigned identity for ACR image pulls."
+        }
+
+        $container.image = $Image
+        $app.properties.configuration.ingress.targetPort = $TargetPort
+        $app.properties.configuration.registries = @(
+            @{
+                server = $RegistryServer
+                identity = $identityResourceId
+            }
+        )
+        $app | ConvertTo-Json -Depth 100 | Set-Content -Path $configPath -Encoding utf8
+
+        & az containerapp update --name $Name --resource-group $ResourceGroup --yaml $configPath --output none
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to update Container App '$Name' to image '$Image' on port $TargetPort."
+        }
+    }
+    finally {
+        Remove-Item -Path $configPath -Force -ErrorAction SilentlyContinue
+    }
+}
+
 # --- Skip switch handling ---------------------------------------------------
 if ($Skip -or ([Environment]::GetEnvironmentVariable('AZURE_ENV_SKIP_IMAGE_BUILD') -eq 'true')) {
     Write-Host 'AZURE_ENV_SKIP_IMAGE_BUILD=true or -Skip specified. Skipping container image build & push.' -ForegroundColor Yellow
@@ -219,12 +267,22 @@ $mcpRef      = "$acrEndpoint/$mcpImage`:$ImageTag"
 $frontendRef = "$acrEndpoint/$frontendImage`:$ImageTag"
 
 Write-Host "Updating backend Container App -> $backendRef"
-& az containerapp update --name $backendCa --resource-group $resourceGroup --image $backendRef --output none
-if ($LASTEXITCODE -ne 0) { throw "Failed to update backend Container App '$backendCa'." }
+Update-ContainerAppImageAndPort `
+    -Name $backendCa `
+    -ResourceGroup $resourceGroup `
+    -ContainerName 'backend' `
+    -Image $backendRef `
+    -TargetPort 8000 `
+    -RegistryServer $acrEndpoint
 
 Write-Host "Updating MCP Container App -> $mcpRef"
-& az containerapp update --name $mcpCa --resource-group $resourceGroup --image $mcpRef --output none
-if ($LASTEXITCODE -ne 0) { throw "Failed to update MCP Container App '$mcpCa'." }
+Update-ContainerAppImageAndPort `
+    -Name $mcpCa `
+    -ResourceGroup $resourceGroup `
+    -ContainerName 'mcp' `
+    -Image $mcpRef `
+    -TargetPort 9000 `
+    -RegistryServer $acrEndpoint
 
 Write-Host "Updating Frontend Web App -> $frontendRef"
 & az webapp config container set `

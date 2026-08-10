@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.44.1.10279",
-      "templateHash": "11051305577029776274"
+      "templateHash": "12836920652912180859"
     },
     "name": "Multi-Agent Custom Automation Engine - Vanilla Bicep",
     "description": "Vanilla Bicep orchestrator for the Multi-Agent Custom Automation Engine accelerator. This deployment intentionally excludes WAF features such as private networking, scale-out, redundancy, bastion, and VM resources while keeping router-compatible outputs."
@@ -402,6 +402,8 @@
     "appServicePlanName": "[format('asp-{0}', variables('solutionSuffix'))]",
     "backendContainerAppName": "[format('ca-{0}', variables('solutionSuffix'))]",
     "mcpContainerAppName": "[format('ca-mcp-{0}', variables('solutionSuffix'))]",
+    "backendUsesBootstrapImage": "[and(equals(toLower(parameters('backendContainerRegistryHostname')), 'mcr.microsoft.com'), equals(toLower(parameters('backendContainerImageName')), 'azuredocs/containerapps-helloworld'))]",
+    "mcpUsesBootstrapImage": "[and(equals(toLower(parameters('MCPContainerRegistryHostname')), 'mcr.microsoft.com'), equals(toLower(parameters('MCPContainerImageName')), 'azuredocs/containerapps-helloworld'))]",
     "storageAccountName": "[take(format('st{0}', toLower(replace(variables('solutionSuffix'), '-', ''))), 24)]",
     "aiSearchServiceName": "[format('srch-{0}', variables('solutionSuffix'))]",
     "aiSearchIndexNameForContractSummary": "contract-summary-doc-index",
@@ -1217,7 +1219,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "10180502016624897684"
+              "templateHash": "13733831222630151234"
             }
           },
           "parameters": {
@@ -1243,7 +1245,7 @@
             "modelName": {
               "type": "string",
               "metadata": {
-                "description": "Required. Model name (e.g., gpt-4o, text-embedding-ada-002)."
+                "description": "Required. Model name (e.g., gpt-5.4-mini, text-embedding-ada-002)."
               }
             },
             "modelVersion": {
@@ -2691,9 +2693,7 @@
           "ingressExternal": {
             "value": true
           },
-          "ingressTargetPort": {
-            "value": 8000
-          },
+          "ingressTargetPort": "[if(variables('backendUsesBootstrapImage'), createObject('value', 80), createObject('value', 8000))]",
           "managedIdentities": {
             "value": {
               "userAssignedResourceIds": [
@@ -2722,14 +2722,7 @@
               "maxReplicas": 1
             }
           },
-          "registries": {
-            "value": [
-              {
-                "server": "[if(variables('useExistingContainerRegistry'), format('{0}.azurecr.io', variables('existingContainerRegistryName')), reference(resourceId('Microsoft.Resources/deployments', take(format('module.container-registry.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.loginServer.value)]",
-                "identity": "[reference(resourceId('Microsoft.Resources/deployments', take(format('module.user-assigned-identity.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.resourceId.value]"
-              }
-            ]
-          },
+          "registries": "[if(variables('backendUsesBootstrapImage'), createObject('value', null()), createObject('value', createArray(createObject('server', if(variables('useExistingContainerRegistry'), format('{0}.azurecr.io', variables('existingContainerRegistryName')), reference(resourceId('Microsoft.Resources/deployments', take(format('module.container-registry.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.loginServer.value), 'identity', reference(resourceId('Microsoft.Resources/deployments', take(format('module.user-assigned-identity.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.resourceId.value))))]",
           "containers": {
             "value": [
               {
@@ -3104,9 +3097,7 @@
           "ingressExternal": {
             "value": true
           },
-          "ingressTargetPort": {
-            "value": 9000
-          },
+          "ingressTargetPort": "[if(variables('mcpUsesBootstrapImage'), createObject('value', 80), createObject('value', 9000))]",
           "managedIdentities": {
             "value": {
               "userAssignedResourceIds": [
@@ -3128,14 +3119,7 @@
               "maxReplicas": 1
             }
           },
-          "registries": {
-            "value": [
-              {
-                "server": "[if(variables('useExistingContainerRegistry'), format('{0}.azurecr.io', variables('existingContainerRegistryName')), reference(resourceId('Microsoft.Resources/deployments', take(format('module.container-registry.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.loginServer.value)]",
-                "identity": "[reference(resourceId('Microsoft.Resources/deployments', take(format('module.user-assigned-identity.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.resourceId.value]"
-              }
-            ]
-          },
+          "registries": "[if(variables('mcpUsesBootstrapImage'), createObject('value', null()), createObject('value', createArray(createObject('server', if(variables('useExistingContainerRegistry'), format('{0}.azurecr.io', variables('existingContainerRegistryName')), reference(resourceId('Microsoft.Resources/deployments', take(format('module.container-registry.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.loginServer.value), 'identity', reference(resourceId('Microsoft.Resources/deployments', take(format('module.user-assigned-identity.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.resourceId.value))))]",
           "containers": {
             "value": [
               {
@@ -3203,8 +3187,16 @@
                     "value": "[parameters('gptImageModelName')]"
                   },
                   {
+                    "name": "AZURE_OPENAI_IMAGE_QUALITY",
+                    "value": "high"
+                  },
+                  {
                     "name": "AZURE_STORAGE_BLOB_URL",
                     "value": "[reference(resourceId('Microsoft.Resources/deployments', take(format('module.storage-account.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.blobEndpoint.value]"
+                  },
+                  {
+                    "name": "AZURE_STORAGE_IMAGES_CONTAINER",
+                    "value": "[parameters('storageContainerNameGeneratedImages')]"
                   },
                   {
                     "name": "BACKEND_URL",
@@ -3619,7 +3611,6 @@
             "value": {
               "SCM_DO_BUILD_DURING_DEPLOYMENT": "true",
               "DOCKER_REGISTRY_SERVER_URL": "[format('https://{0}', if(variables('useExistingContainerRegistry'), format('{0}.azurecr.io', variables('existingContainerRegistryName')), reference(resourceId('Microsoft.Resources/deployments', take(format('module.container-registry.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.loginServer.value))]",
-              "WEBSITES_PORT": "3000",
               "WEBSITES_CONTAINER_START_TIME_LIMIT": "1800",
               "BACKEND_API_URL": "[format('https://{0}', reference(resourceId('Microsoft.Resources/deployments', take(format('module.backend-container-app.{0}', variables('solutionSuffix')), 64)), '2025-04-01').outputs.fqdn.value)]",
               "AUTH_ENABLED": "false",
