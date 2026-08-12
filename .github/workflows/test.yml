@@ -102,7 +102,7 @@ jobs:
           github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.fork == false &&
           env.skip_tests == 'false'
-        uses: MishaKav/pytest-coverage-comment@26f986d2599c288bb62f623d29c2da98609e9cd4  # v1.6.0
+        uses: MishaKav/pytest-coverage-comment@e48ae95fa406cefacc7fbdd79949122795569961 # v1.8.0
         with:
           pytest-xml-coverage-path: coverage.xml
           junitxml-path: pytest.xml
