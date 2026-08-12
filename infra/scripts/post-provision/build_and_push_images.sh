@@ -39,6 +39,56 @@ require() {
     fi
 }
 
+update_container_app_image_and_port() {
+    local app_name="$1"
+    local container_name="$2"
+    local image="$3"
+    local target_port="$4"
+    local registry_server="$5"
+    local config_file
+
+    config_file="$(mktemp)"
+
+    if ! az containerapp show \
+        --name "${app_name}" \
+        --resource-group "${RESOURCE_GROUP}" \
+        --output json |
+        jq \
+            --arg app_name "${app_name}" \
+            --arg container_name "${container_name}" \
+            --arg image "${image}" \
+            --arg registry_server "${registry_server}" \
+            --argjson target_port "${target_port}" \
+            'if any(.properties.template.containers[]?; .name == $container_name) then
+                 .
+             else
+                 error("Container \($container_name) was not found in Container App \($app_name)")
+             end
+             | (.identity.userAssignedIdentities | keys[0]) as $identity_resource_id
+             | if $identity_resource_id == null then error("Container App does not have a user-assigned identity for ACR image pulls") else . end
+             | (.properties.template.containers[] | select(.name == $container_name).image) = $image
+             | .properties.configuration.ingress.targetPort = $target_port
+             | .properties.configuration.registries = [{
+                 server: $registry_server,
+                 identity: $identity_resource_id
+               }]' \
+            > "${config_file}"; then
+        rm -f "${config_file}"
+        return 1
+    fi
+
+    if ! az containerapp update \
+        --name "${app_name}" \
+        --resource-group "${RESOURCE_GROUP}" \
+        --yaml "${config_file}" \
+        --output none; then
+        rm -f "${config_file}"
+        return 1
+    fi
+
+    rm -f "${config_file}"
+}
+
 if [ "${AZURE_ENV_SKIP_IMAGE_BUILD:-}" = "true" ]; then
     echo "AZURE_ENV_SKIP_IMAGE_BUILD=true. Skipping container image build & push."
     exit 0
@@ -212,18 +262,10 @@ MCP_REF="${ACR_ENDPOINT}/${MCP_IMAGE}:${IMAGE_TAG}"
 FRONTEND_REF="${ACR_ENDPOINT}/${FRONTEND_IMAGE}:${IMAGE_TAG}"
 
 echo "Updating backend Container App -> ${BACKEND_REF}"
-az containerapp update \
-    --name "${BACKEND_CA}" \
-    --resource-group "${RESOURCE_GROUP}" \
-    --image "${BACKEND_REF}" \
-    --output none
+update_container_app_image_and_port "${BACKEND_CA}" "backend" "${BACKEND_REF}" 8000 "${ACR_ENDPOINT}"
 
 echo "Updating MCP Container App -> ${MCP_REF}"
-az containerapp update \
-    --name "${MCP_CA}" \
-    --resource-group "${RESOURCE_GROUP}" \
-    --image "${MCP_REF}" \
-    --output none
+update_container_app_image_and_port "${MCP_CA}" "mcp" "${MCP_REF}" 9000 "${ACR_ENDPOINT}"
 
 echo "Updating Frontend Web App -> ${FRONTEND_REF}"
 az webapp config container set \
