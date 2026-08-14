@@ -34,36 +34,6 @@ def request_with_retry(method, url, **kwargs):
     return response
 
 
-def check_team_exists(backend_url, team_id, user_principal_id):
-    """
-    Check if a team already exists in the database.
-    
-    Args:
-        backend_url: The backend endpoint URL
-        team_id: The team ID to check
-        user_principal_id: User principal ID for authentication
-        
-    Returns:
-        exists: bool
-    """
-    check_endpoint = backend_url.rstrip('/') + f'/api/v4/team_configs/{team_id}'
-    headers = {
-        'x-ms-client-principal-id': user_principal_id
-    }
-    
-    try:
-        response = request_with_retry("GET", check_endpoint, headers=headers)
-        if response.status_code == 200:
-            return True
-        elif response.status_code == 404:
-            return False
-        else:
-            print(f"Error checking team {team_id}: Status {response.status_code}, Response: {response.text}")
-            return False
-    except Exception as e:
-        print(f"Exception checking team {team_id}: {str(e)}")
-        return False
-
 if len(sys.argv) < 3:
     print("Usage: python upload_team_config.py <backend_endpoint> <directory_path> [<user_principal_id>] [<team_id_from_arg>]")
     sys.exit(1)
