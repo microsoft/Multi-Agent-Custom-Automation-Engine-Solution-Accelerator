@@ -17,6 +17,8 @@ from agent_framework_orchestrations import (MagenticBuilder,
                                             MagenticPlanReviewRequest)
 from agents.agent_factory import AgentFactory
 from callbacks.response_handlers import (agent_response_callback,
+                                         clean_citations,
+                                         clear_streaming_citation_buffers,
                                          format_agent_display_name,
                                          streaming_agent_response_callback)
 from common.config.app_config import config
@@ -395,6 +397,7 @@ class OrchestrationManager:
             final_output_ref: list = [None]
             orchestrator_chunks: list[str] = []
             current_streaming_agent_ref: list = [None]
+            clear_streaming_citation_buffers(user_id)
 
             # Collect participant names for plan conversion
             participant_names = [
@@ -479,6 +482,9 @@ class OrchestrationManager:
             # accumulated orchestrator streaming chunks.
             final_text = final_output_ref[0] or "".join(orchestrator_chunks)
 
+            # The manager's final answer bypasses the participant callbacks.
+            final_text = clean_citations(final_text)
+
             # Repair collapsed markdown tables before rendering (Bug 47810).
             final_text = _normalize_markdown_tables(final_text)
 
@@ -548,6 +554,7 @@ class OrchestrationManager:
             raise
 
         finally:
+            clear_streaming_citation_buffers(user_id)
             # Clean up MCP connections to avoid noisy cross-task
             # RuntimeError from anyio when async generators are GC'd.
             await self._cleanup_workflow_mcp(user_id)
@@ -1131,6 +1138,7 @@ class OrchestrationManager:
                             if isinstance(msg, Message) and msg.text:
                                 final_output_ref[0] = msg.text
                     else:
+                        clear_streaming_citation_buffers(user_id, agent_id)
                         for msg in event.data:
                             if isinstance(msg, Message) and msg.text:
                                 try:

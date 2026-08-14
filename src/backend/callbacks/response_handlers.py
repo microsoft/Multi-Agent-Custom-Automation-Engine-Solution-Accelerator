@@ -17,6 +17,38 @@ from common.utils.markdown_utils import normalize_markdown_tables
 
 logger = logging.getLogger(__name__)
 
+_stream_citation_buffers: dict[tuple[str, str], str] = {}
+
+
+def clear_streaming_citation_buffers(
+    user_id: str,
+    agent_id: str | None = None,
+) -> None:
+    """Discard partial citation markers retained between streaming chunks."""
+    for key in [
+        key
+        for key in _stream_citation_buffers
+        if key[0] == user_id and (agent_id is None or key[1] == agent_id)
+    ]:
+        _stream_citation_buffers.pop(key, None)
+
+
+def _split_trailing_partial_citation(text: str) -> tuple[str, str]:
+    """Hold a trailing citation prefix until a later chunk completes it."""
+    for opener, closer in (("[", "]"), ("【", "】")):
+        open_index = text.rfind(opener)
+        if open_index == -1 or text.find(closer, open_index) != -1:
+            continue
+
+        candidate = text[open_index + 1:]
+        if not candidate.strip() or re.fullmatch(
+            r"\s*\d+(?:\s*:\s*\d*)?(?:\s*[|†]?\s*[a-zA-Z]*)?",
+            candidate,
+        ):
+            return text[:open_index], text[open_index:]
+
+    return text, ""
+
 
 def format_agent_display_name(raw_name: str) -> str:
     """Convert raw agent IDs (e.g. 'HRHelperAgent', 'hr_helper_agent') to
@@ -61,7 +93,12 @@ def clean_citations(text: str) -> str:
     """Remove citation markers from agent responses while preserving formatting."""
     if not text:
         return text
-    text = re.sub(r'\[\d+:\d+\|source\]', '', text)
+    text = re.sub(
+        r'\[\s*\d+\s*:\s*\d+\s*[|†]\s*source\s*\]',
+        '',
+        text,
+        flags=re.IGNORECASE,
+    )
     text = re.sub(r'\[\s*source\s*\]', '', text, flags=re.IGNORECASE)
     text = re.sub(r'\[\d+\]', '', text)
     text = re.sub(r'【[^】]*】', '', text)
@@ -164,7 +201,17 @@ async def streaming_agent_response_callback(
                     collected.append(str(txt))
             chunk_text = "".join(collected) if collected else ""
 
-        cleaned = clean_citations(chunk_text or "")
+        buffer_key = (user_id, agent_id)
+        combined = _stream_citation_buffers.pop(buffer_key, "") + (chunk_text or "")
+
+        if is_final:
+            emittable, _ = _split_trailing_partial_citation(combined)
+        else:
+            emittable, held_back = _split_trailing_partial_citation(combined)
+            if held_back:
+                _stream_citation_buffers[buffer_key] = held_back
+
+        cleaned = clean_citations(emittable)
 
         contents = getattr(update, "contents", []) or []
         tool_calls = _extract_tool_calls_from_contents(contents)

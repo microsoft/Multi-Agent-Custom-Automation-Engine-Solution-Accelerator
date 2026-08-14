@@ -217,6 +217,10 @@ sys.modules['services.team_service'] = Mock(TeamService=MockTeamService)
 
 sys.modules['callbacks.response_handlers'] = Mock(
     agent_response_callback=Mock(),
+    clean_citations=Mock(
+        side_effect=lambda text: text.replace("[5:0†source]", "")
+    ),
+    clear_streaming_citation_buffers=Mock(),
     streaming_agent_response_callback=AsyncMock(),
 )
 
@@ -316,6 +320,7 @@ connection_config = sys.modules['orchestration.connection_config'].connection_co
 orchestration_config = sys.modules['orchestration.connection_config'].orchestration_config
 agent_response_callback = sys.modules['callbacks.response_handlers'].agent_response_callback
 streaming_agent_response_callback = sys.modules['callbacks.response_handlers'].streaming_agent_response_callback
+clear_streaming_citation_buffers = sys.modules['callbacks.response_handlers'].clear_streaming_citation_buffers
 
 
 # =========================================================================
@@ -606,6 +611,7 @@ class TestRunOrchestration:
         agent_response_callback.reset_mock()
         streaming_agent_response_callback.reset_mock()
         streaming_agent_response_callback.side_effect = None
+        clear_streaming_citation_buffers.reset_mock()
         mock_wait_approval.reset_mock()
         mock_wait_approval.return_value = MockPlanApprovalResponse(approved=True, m_plan_id="test-plan-id")
         mock_convert.reset_mock()
@@ -660,6 +666,31 @@ class TestRunOrchestration:
         call_args = connection_config.send_status_update_async.call_args_list[-1]
         sent_message = call_args[0][0]
         assert sent_message["data"]["content"] == "Final answer text"
+
+    @pytest.mark.asyncio
+    async def test_given_manager_citation_when_run_then_final_text_is_cleaned(self):
+        final_msg = MockMessage(text="Final answer [5:0†source]")
+        events = [
+            _make_event(
+                "executor_completed",
+                data=[final_msg],
+                executor_id="magentic_orchestrator",
+            ),
+        ]
+        mock_workflow = Mock()
+        mock_workflow.run = Mock(return_value=_async_iter(events))
+        mock_workflow._executors = {}
+        mock_workflow.executors = {}
+        mock_workflow.get_executors_list.return_value = []
+        orchestration_config.get_current_orchestration.return_value = mock_workflow
+
+        await OrchestrationManager().run_orchestration(
+            user_id="user-1",
+            input_task="do stuff",
+        )
+
+        sent_message = connection_config.send_status_update_async.call_args_list[-1][0][0]
+        assert sent_message["data"]["content"] == "Final answer "
 
     @pytest.mark.asyncio
     async def test_given_agent_completed_event_when_run_then_calls_agent_callback(self):
@@ -1071,4 +1102,3 @@ class TestNormalizeMarkdownTables:
 
     def test_given_non_table_pipe_line_when_reflowed_then_returns_none(self):
         assert _reflow_collapsed_table_line("a | b | c") is None
-
