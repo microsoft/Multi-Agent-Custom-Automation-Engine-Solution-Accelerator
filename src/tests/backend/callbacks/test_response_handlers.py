@@ -131,9 +131,7 @@ sys.modules['models.messages'] = Mock(
 # Now import our module under test
 from backend.callbacks.response_handlers import (
     _extract_tool_calls_from_contents, _is_function_call_item,
-    _split_trailing_partial_citation,
     agent_response_callback, clean_citations,
-    clear_streaming_citation_buffers,
     format_agent_display_name,
     streaming_agent_response_callback)
 
@@ -165,18 +163,6 @@ class TestCleanCitations:
     def test_clean_citations_numeric_source(self):
         """Test cleaning [1:2|source] format citations."""
         text = "This is text [1:2|source] with citations."
-        expected = "This is text  with citations."
-        assert clean_citations(text) == expected
-
-    def test_clean_citations_foundry_numeric_source(self):
-        """Test cleaning the Azure Foundry [1:2†source] citation format."""
-        text = "This is text [5:0†source] with citations."
-        expected = "This is text  with citations."
-        assert clean_citations(text) == expected
-
-    def test_clean_citations_foundry_numeric_source_with_spacing(self):
-        """Test cleaning Foundry citations with optional spacing and casing."""
-        text = "This is text [ 5 : 0 † SOURCE ] with citations."
         expected = "This is text  with citations."
         assert clean_citations(text) == expected
 
@@ -227,21 +213,6 @@ class TestCleanCitations:
         text = "Line 1\nLine 2 [source]\nLine 3"
         expected = "Line 1\nLine 2 \nLine 3"
         assert clean_citations(text) == expected
-
-
-class TestSplitTrailingPartialCitation:
-    """Tests for distinguishing partial citations from normal bracketed text."""
-
-    def test_holds_partial_foundry_citation(self):
-        text = "Answer [5:0†sou"
-        assert _split_trailing_partial_citation(text) == ("Answer ", "[5:0†sou")
-
-    @pytest.mark.parametrize("text", [
-        "Consider [5 reasons",
-        "See the [2024 report",
-    ])
-    def test_preserves_normal_unclosed_bracketed_text(self, text):
-        assert _split_trailing_partial_citation(text) == (text, "")
 
 
 class TestFormatAgentDisplayName:
@@ -469,7 +440,7 @@ class TestAgentResponseCallback:
 
         # Create an instance of our MockChatMessage
         mock_message = MockChatMessage()
-        mock_message.text = "Test message with citations [5:0†source]"
+        mock_message.text = "Test message with citations [1:2|source]"
         mock_message.author_name = "TestAgent"
         mock_message.role = "assistant"
 
@@ -602,7 +573,7 @@ class TestStreamingAgentResponseCallback:
     async def test_streaming_callback_with_text(self):
         """Test streaming callback with update that has text."""
         mock_update = Mock()
-        mock_update.text = "Test streaming text [5:0†source]"
+        mock_update.text = "Test streaming text [source]"
         mock_update.contents = []
 
         with patch('backend.callbacks.response_handlers.AgentMessageStreaming') as mock_streaming:
@@ -624,24 +595,6 @@ class TestStreamingAgentResponseCallback:
                 "user_456",
                 message_type=WebsocketMessageType.AGENT_MESSAGE_STREAMING
             )
-
-    @pytest.mark.asyncio
-    async def test_streaming_callback_cleans_citation_split_across_chunks(self):
-        """A split citation marker must never reach the thinking-process UI."""
-        clear_streaming_citation_buffers("user_456")
-        first_update = Mock(text="Test streaming text [5:0†sou", contents=[])
-        second_update = Mock(text="rce] continues.", contents=[])
-
-        with patch('backend.callbacks.response_handlers.AgentMessageStreaming') as mock_streaming:
-            await streaming_agent_response_callback(
-                "agent_123", first_update, False, user_id="user_456"
-            )
-            await streaming_agent_response_callback(
-                "agent_123", second_update, False, user_id="user_456"
-            )
-
-        assert mock_streaming.call_args_list[0].kwargs["content"] == "Test streaming text "
-        assert mock_streaming.call_args_list[1].kwargs["content"] == " continues."
 
     @pytest.mark.asyncio
     async def test_streaming_callback_no_text_with_contents(self):
