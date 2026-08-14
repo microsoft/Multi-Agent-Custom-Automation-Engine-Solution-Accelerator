@@ -40,11 +40,19 @@ def _split_trailing_partial_citation(text: str) -> tuple[str, str]:
         if open_index == -1 or text.find(closer, open_index) != -1:
             continue
 
-        candidate = text[open_index + 1:]
-        if not candidate.strip() or re.fullmatch(
-            r"\s*\d+(?:\s*:\s*\d*)?(?:\s*[|†]?\s*[a-zA-Z]*)?",
+        candidate = text[open_index + 1:].strip()
+        source_prefix = r"(?:s|so|sou|sour|sourc|source)"
+        is_numeric_citation = re.fullmatch(
+            rf"\d+\s*:\s*\d*(?:\s*[|†]\s*{source_prefix}?)?",
             candidate,
-        ):
+            flags=re.IGNORECASE,
+        )
+        is_source_citation = re.fullmatch(
+            rf"{source_prefix}(?::[^\]]*)?",
+            candidate,
+            flags=re.IGNORECASE,
+        )
+        if is_numeric_citation or is_source_citation:
             return text[:open_index], text[open_index:]
 
     return text, ""

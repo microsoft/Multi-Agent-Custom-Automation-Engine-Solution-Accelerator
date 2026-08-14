@@ -131,6 +131,7 @@ sys.modules['models.messages'] = Mock(
 # Now import our module under test
 from backend.callbacks.response_handlers import (
     _extract_tool_calls_from_contents, _is_function_call_item,
+    _split_trailing_partial_citation,
     agent_response_callback, clean_citations,
     clear_streaming_citation_buffers,
     format_agent_display_name,
@@ -226,6 +227,21 @@ class TestCleanCitations:
         text = "Line 1\nLine 2 [source]\nLine 3"
         expected = "Line 1\nLine 2 \nLine 3"
         assert clean_citations(text) == expected
+
+
+class TestSplitTrailingPartialCitation:
+    """Tests for distinguishing partial citations from normal bracketed text."""
+
+    def test_holds_partial_foundry_citation(self):
+        text = "Answer [5:0†sou"
+        assert _split_trailing_partial_citation(text) == ("Answer ", "[5:0†sou")
+
+    @pytest.mark.parametrize("text", [
+        "Consider [5 reasons",
+        "See the [2024 report",
+    ])
+    def test_preserves_normal_unclosed_bracketed_text(self, text):
+        assert _split_trailing_partial_citation(text) == (text, "")
 
 
 class TestFormatAgentDisplayName:
