@@ -329,6 +329,7 @@ class TestTeamCrudOperations:
     @pytest.mark.asyncio
     async def test_save_team_configuration_success(self):
         mock_context = MagicMock()
+        mock_context.get_team = AsyncMock(return_value=None)
         mock_context.add_team = AsyncMock()
         service = TeamService(memory_context=mock_context)
 
@@ -338,8 +339,43 @@ class TestTeamCrudOperations:
         mock_context.add_team.assert_called_once_with(team_config)
 
     @pytest.mark.asyncio
+    async def test_save_team_configuration_upserts_when_team_exists(self):
+        existing = MockTeamConfiguration(
+            id="existing-doc-id",
+            session_id="existing-session",
+            team_id="team-1",
+            created="2024-01-01T00:00:00Z",
+            created_by="original-user",
+        )
+        mock_context = MagicMock()
+        mock_context.get_team = AsyncMock(return_value=existing)
+        mock_context.update_team = AsyncMock()
+        mock_context.add_team = AsyncMock()
+        service = TeamService(memory_context=mock_context)
+
+        team_config = MockTeamConfiguration(
+            id="new-doc-id",
+            session_id="new-session",
+            team_id="team-1",
+            name="Updated Team",
+            created="2025-01-01T00:00:00Z",
+            created_by="seed-user",
+        )
+        result = await service.save_team_configuration(team_config)
+
+        assert result == "existing-doc-id"
+        mock_context.update_team.assert_called_once_with(team_config)
+        mock_context.add_team.assert_not_called()
+        # Immutable identity fields must be preserved from the existing document.
+        assert team_config.id == "existing-doc-id"
+        assert team_config.session_id == "existing-session"
+        assert team_config.created == "2024-01-01T00:00:00Z"
+        assert team_config.created_by == "original-user"
+
+    @pytest.mark.asyncio
     async def test_save_team_configuration_raises_on_db_error(self):
         mock_context = MagicMock()
+        mock_context.get_team = AsyncMock(return_value=None)
         mock_context.add_team = AsyncMock(side_effect=Exception("DB error"))
         service = TeamService(memory_context=mock_context)
 
