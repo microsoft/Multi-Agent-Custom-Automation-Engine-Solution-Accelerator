@@ -368,6 +368,21 @@ get_values_using_solution_suffix() {
   backend_url="https://$backend_fqdn"
   ai_search_endpoint="https://$ai_search.search.windows.net"
 
+  # AI Foundry account + project (naming convention: aif-<suffix>, proj-<suffix>)
+  local ai_foundry_name="aif-$solution_suffix"
+  local foundry_id
+  foundry_id="$(az cognitiveservices account show --name "$ai_foundry_name" --resource-group "$resource_group" --query "id" -o tsv 2>/dev/null || true)"
+  if [ -n "$foundry_id" ]; then
+    ai_foundry_resource_id="$foundry_id"
+    if [ -z "$openai_endpoint" ]; then
+      openai_endpoint="$(az cognitiveservices account show --name "$ai_foundry_name" --resource-group "$resource_group" --query "properties.endpoint" -o tsv 2>/dev/null || true)"
+    fi
+    if [ -z "$project_endpoint" ]; then
+      # Project is a sub-resource (accounts/projects), construct endpoint from account's AI Foundry API base
+      project_endpoint="https://${ai_foundry_name}.services.ai.azure.com/api/projects/proj-${solution_suffix}"
+    fi
+  fi
+
   if [ -z "$storage_account" ] || [ -z "$ai_search" ] || [ -z "$backend_url" ]; then
     error "Failed to reconstruct all required resource names."
     return 1
@@ -676,6 +691,9 @@ main() {
         if ! get_values_using_solution_suffix; then
           fatal "Both fallback methods failed."
         fi
+      elif [ -z "$project_endpoint" ] || [ -z "$ai_foundry_resource_id" ]; then
+        # Deployment outputs succeeded but missing optional values — supplement via naming convention
+        get_values_using_solution_suffix || true
       fi
     fi
   fi
