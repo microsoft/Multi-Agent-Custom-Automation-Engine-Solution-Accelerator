@@ -237,6 +237,12 @@ class TestGetMagenticPromptKwargs:
         # Assert
         assert "FINAL ANSWER RULES" in result["final_answer_prompt"]
 
+    def test_given_any_team_when_called_then_final_suppresses_citations(self):
+        result = get_magentic_prompt_kwargs(has_user_responses=False)
+
+        final_prompt = result["final_answer_prompt"]
+        assert "Do not include any citation markers" in final_prompt
+
     def test_given_default_when_called_then_user_responses_is_false(self):
         # Act
         result = get_magentic_prompt_kwargs()
