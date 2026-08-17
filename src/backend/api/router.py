@@ -1008,7 +1008,7 @@ async def upload_team_config(
                     {
                         "status": "failed",
                         "user_id": user_id,
-                        "filename": file.filename,
+                        "file_name": file.filename,
                         "reason": rai_error,
                     },
                 )
@@ -1016,7 +1016,7 @@ async def upload_team_config(
 
         track_event_if_configured(
             "Config_RAI_Validation_Passed",
-            {"status": "passed", "user_id": user_id, "filename": file.filename},
+            {"status": "passed", "user_id": user_id, "file_name": file.filename},
         )
         team_service = TeamService(memory_store)
 
@@ -1034,7 +1034,7 @@ async def upload_team_config(
                 {
                     "status": "failed",
                     "user_id": user_id,
-                    "filename": file.filename,
+                    "file_name": file.filename,
                     "missing_models": missing_models,
                 },
             )
@@ -1042,7 +1042,7 @@ async def upload_team_config(
 
         track_event_if_configured(
             "Config_Model_Validation_Passed",
-            {"status": "passed", "user_id": user_id, "filename": file.filename},
+            {"status": "passed", "user_id": user_id, "file_name": file.filename},
         )
 
         # Validate search indexes
@@ -1061,7 +1061,7 @@ async def upload_team_config(
                 {
                     "status": "failed",
                     "user_id": user_id,
-                    "filename": file.filename,
+                    "file_name": file.filename,
                     "search_errors": search_errors,
                 },
             )
@@ -1070,7 +1070,7 @@ async def upload_team_config(
         logger.info(f"Search validation passed for user: {user_id}")
         track_event_if_configured(
             "Config_Search_Validation_Passed",
-            {"status": "passed", "user_id": user_id, "filename": file.filename},
+            {"status": "passed", "user_id": user_id, "file_name": file.filename},
         )
 
         # Validate and parse the team configuration

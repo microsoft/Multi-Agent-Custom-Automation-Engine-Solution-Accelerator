@@ -164,6 +164,11 @@ class TeamService:
         """
         Save team configuration to the database.
 
+        Idempotent by team_id: if a team with the same team_id already exists
+        (including shared default teams), reuse its document id and partition
+        key (session_id) and upsert; otherwise create a new document. This
+        prevents duplicate rows accumulating on re-runs of the seed script.
+
         Args:
             team_config: TeamConfiguration object to save
 
@@ -171,12 +176,25 @@ class TeamService:
             The unique ID of the saved configuration
         """
         try:
-            # Use the specific add_team method from cosmos memory context
-            await self.memory_context.add_team(team_config)
-
-            self.logger.info(
-                "Successfully saved team configuration with ID: %s", team_config.id
-            )
+            existing = await self.memory_context.get_team(team_config.team_id)
+            if existing is not None:
+                # Preserve immutable identity fields; partition key (session_id)
+                # cannot change on an upsert.
+                team_config.id = existing.id
+                team_config.session_id = existing.session_id
+                team_config.created = existing.created
+                team_config.created_by = existing.created_by
+                await self.memory_context.update_team(team_config)
+                self.logger.info(
+                    "Successfully updated team configuration with ID: %s",
+                    team_config.id,
+                )
+            else:
+                await self.memory_context.add_team(team_config)
+                self.logger.info(
+                    "Successfully saved team configuration with ID: %s",
+                    team_config.id,
+                )
             return team_config.id
 
         except Exception as e:

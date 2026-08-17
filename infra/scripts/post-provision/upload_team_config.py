@@ -34,36 +34,6 @@ def request_with_retry(method, url, **kwargs):
     return response
 
 
-def check_team_exists(backend_url, team_id, user_principal_id):
-    """
-    Check if a team already exists in the database.
-    
-    Args:
-        backend_url: The backend endpoint URL
-        team_id: The team ID to check
-        user_principal_id: User principal ID for authentication
-        
-    Returns:
-        exists: bool
-    """
-    check_endpoint = backend_url.rstrip('/') + f'/api/v4/team_configs/{team_id}'
-    headers = {
-        'x-ms-client-principal-id': user_principal_id
-    }
-    
-    try:
-        response = request_with_retry("GET", check_endpoint, headers=headers)
-        if response.status_code == 200:
-            return True
-        elif response.status_code == 404:
-            return False
-        else:
-            print(f"Error checking team {team_id}: Status {response.status_code}, Response: {response.text}")
-            return False
-    except Exception as e:
-        print(f"Exception checking team {team_id}: {str(e)}")
-        return False
-
 if len(sys.argv) < 3:
     print("Usage: python upload_team_config.py <backend_endpoint> <directory_path> [<user_principal_id>] [<team_id_from_arg>]")
     sys.exit(1)
@@ -115,22 +85,6 @@ uploaded_count = 0
 for filename, team_id in candidate_files:
     file_path = os.path.join(directory_path, filename)
     print(f"Uploading file:  {filename}")
-    team_exists = check_team_exists(backend_url, team_id, user_principal_id)
-    if team_exists:
-        # Delete existing team to allow re-upload with updated config
-        print(f"Team (ID: {team_id}) already exists. Deleting to re-upload with latest config...")
-        delete_endpoint = backend_url.rstrip('/') + f'/api/v4/team_configs/{team_id}'
-        headers = {
-            'x-ms-client-principal-id': user_principal_id
-        }
-        try:
-            delete_response = request_with_retry("DELETE", delete_endpoint, headers=headers)
-            if delete_response.status_code == 200:
-                print(f"Successfully deleted existing team (ID: {team_id}).")
-            else:
-                print(f"Warning: Could not delete existing team (ID: {team_id}). Status: {delete_response.status_code}. Will attempt upload anyway.")
-        except Exception as e:
-            print(f"Warning: Exception deleting team (ID: {team_id}): {str(e)}. Will attempt upload anyway.")
 
     try:
         with open(file_path, 'rb') as file_data:
