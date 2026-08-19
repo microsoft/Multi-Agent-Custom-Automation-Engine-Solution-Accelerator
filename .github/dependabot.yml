@@ -18,6 +18,8 @@ updates:
           - "*"
 
   # Python pip dependencies (grouped)
+    cooldown:
+      default-days: 7
   - package-ecosystem: "pip"
     directory: "/src/backend"
     schedule:
