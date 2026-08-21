@@ -7,6 +7,10 @@ FROM base AS builder
 COPY --from=ghcr.io/astral-sh/uv:0.6.3 /uv /uvx /bin/
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 
+# Route uv/pip package resolution through the Microsoft Package Feed Proxy
+ENV UV_INDEX_URL=https://packagefeedproxy.microsoft.io/pypi/simple/ \
+    PIP_INDEX_URL=https://packagefeedproxy.microsoft.io/pypi/simple/
+
 # Copy lock and project files first for caching
 COPY uv.lock pyproject.toml /app/
 

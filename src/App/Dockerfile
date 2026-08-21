@@ -5,10 +5,10 @@ FROM node:20-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 
-# Copy package files first for better caching
-COPY package*.json ./
+# Copy package files and npm registry config (packagefeedproxy) first for better caching
+COPY package*.json .npmrc* ./
 
-# Install dependencies
+# Install dependencies (registry is routed through the Microsoft Package Feed Proxy via .npmrc)
 RUN npm ci --silent
 
 # Copy source files
@@ -27,6 +27,10 @@ COPY --from=ghcr.io/astral-sh/uv:0.6.3 /uv /uvx /bin/
 
 # Setup UV environment variables
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
+
+# Route pip/uv package resolution through the Microsoft Package Feed Proxy
+ENV UV_INDEX_URL=https://packagefeedproxy.microsoft.io/pypi/simple/ \
+    PIP_INDEX_URL=https://packagefeedproxy.microsoft.io/pypi/simple/
 
 WORKDIR /app
 
