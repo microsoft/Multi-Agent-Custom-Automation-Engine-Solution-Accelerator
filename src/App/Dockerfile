@@ -9,12 +9,12 @@ WORKDIR /app/frontend
 COPY package*.json .npmrc* ./
 
 # Install dependencies (registry is routed through the Microsoft Package Feed Proxy via .npmrc)
-RUN start=$(date +%s); npm ci --silent; end=$(date +%s); echo "npm ci duration: $((end-start))s"
+RUN npm ci --silent
 
 # Copy source files
 COPY . ./
 
-RUN start=$(date +%s); rm -rf node_modules && npm ci && npm rebuild esbuild --force; end=$(date +%s); echo "npm ci (rebuild) duration: $((end-start))s"
+RUN rm -rf node_modules && npm ci && npm rebuild esbuild --force
 
 # Build the React app
 RUN npm run build
