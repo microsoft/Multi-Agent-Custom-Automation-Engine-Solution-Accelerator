@@ -63,6 +63,16 @@ This project uses Backend `.env` file in Backend directory with different config
 <!-- - **Frontend**: `src/App.env` 
 - **MCP Server**: `src/mcp_sevrer/.env`  -->
 
+### Package Feed Proxy (Microsoft-managed devices)
+
+On Microsoft-managed devices, direct access to public package registries (`npmjs.org`, `pypi.org`, `files.pythonhosted.org`) may be blocked. All `npm`, `pip`, and `uv` installs in this repository are pre-configured to route through the Central Feed Services (CFS)–protected Microsoft Package Feed Proxy:
+
+- npm: `https://packagefeedproxy.microsoft.io/npm/` (configured in `src/App/.npmrc`)
+- pip: `https://packagefeedproxy.microsoft.io/pypi/simple/` (configured as the first line of each `requirements.txt`)
+- uv: `https://packagefeedproxy.microsoft.io/pypi/simple/` (configured in each project's `pyproject.toml` under `[tool.uv]`)
+
+No additional setup should be required on a Microsoft-managed device. If you need to point at a different index temporarily, override it with the `PIP_INDEX_URL` / `UV_INDEX_URL` environment variables or the npm `--registry` flag.
+
 
 ## Step 1: Prerequisites - Install Required Tools
 

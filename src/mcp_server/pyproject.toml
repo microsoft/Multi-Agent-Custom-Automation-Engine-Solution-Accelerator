@@ -39,6 +39,9 @@ dev = [
   "pytest-asyncio==1.3.0",
 ]
 
+[tool.uv]
+index-url = "https://packagefeedproxy.microsoft.io/pypi/simple/"
+
 [project.urls]
 Homepage = "https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator"
 Repository = "https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator"

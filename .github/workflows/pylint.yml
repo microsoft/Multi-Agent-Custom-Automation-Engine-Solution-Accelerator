@@ -26,9 +26,9 @@ jobs:
       
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
+          python -m pip install --upgrade pip --index-url https://packagefeedproxy.microsoft.io/pypi/simple/
           pip install -r .github/requirements.txt
-          pip install flake8  # Ensure flake8 is installed explicitly
+          pip install --index-url https://packagefeedproxy.microsoft.io/pypi/simple/ flake8  # Ensure flake8 is installed explicitly
       
       - name: Run flake8 and pylint
         run: |
