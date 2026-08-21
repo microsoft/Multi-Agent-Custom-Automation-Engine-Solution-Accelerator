@@ -63,6 +63,7 @@ This project uses Backend `.env` file in Backend directory with different config
 <!-- - **Frontend**: `src/App.env` 
 - **MCP Server**: `src/mcp_sevrer/.env`  -->
 
+
 ## Step 1: Prerequisites - Install Required Tools
 
 ### Windows Development
