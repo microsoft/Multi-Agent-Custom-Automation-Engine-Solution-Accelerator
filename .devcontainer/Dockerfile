@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/devcontainers/python:3.11-bookworm
+FROM mcr.microsoft.com/devcontainers/python:3.11-bullseye
 
 # Route npm/corepack traffic (used during devcontainer feature installation,
 # e.g. ghcr.io/devcontainers/features/node) through the internal package feed

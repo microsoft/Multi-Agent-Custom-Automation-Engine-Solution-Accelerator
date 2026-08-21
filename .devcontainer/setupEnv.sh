@@ -13,10 +13,7 @@ cd ../../
 
 echo "Setting up Frontend..."
 cd ./src/App
-npm_install_start=$(date +%s)
 npm install
-npm_install_end=$(date +%s)
-echo "npm install duration: $((npm_install_end-npm_install_start))s"
 pip install -r requirements.txt
 cd ../../
 
