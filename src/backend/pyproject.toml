@@ -70,8 +70,10 @@ dependencies = [
     "nltk==3.10.0",
 ]
 
-[tool.uv]
-index-url = "https://packagefeedproxy.microsoft.io/pypi/simple/"
+[[tool.uv.index]]
+name = "microsoft-package-feed-proxy"
+url = "https://packagefeedproxy.microsoft.io/pypi/simple/"
+default = true
 
 [tool.pylint."messages control"]
 disable = [
