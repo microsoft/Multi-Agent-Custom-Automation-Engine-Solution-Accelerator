@@ -180,6 +180,8 @@ FINAL ANSWER RULES:
   recommend, or guess any specific team, do NOT claim any action was performed, and
   do NOT attempt to answer the out-of-scope request itself.
 - Compile ONLY from messages agents actually produced. Quote verbatim where appropriate.
+- Do not include any citation markers, source-reference tokens, attribution
+  markers, or footnotes in your response.
 - Do NOT fabricate URLs, results, or content that no agent produced.
 - If a required agent step did not run, state it plainly — do not pretend it did.
 - If an agent produced an image (a markdown image ![alt](url) or an image URL such as one
