@@ -1,3 +1,4 @@
+--index-url https://packagefeedproxy.microsoft.io/pypi/simple/
 pytest-playwright
 pytest-reporter-html1
 python-dotenv
