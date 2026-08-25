@@ -16,7 +16,12 @@ resource_group=""
 user_principal_id=""
 ai_foundry_resource_id=""
 python_cmd=""
-venv_path="$SCRIPT_DIR/scriptenv"
+# Dev container bind-mounts cause OSError on large packages; use $HOME Path instead.
+if [ -n "${REMOTE_CONTAINERS:-}" ] || [ -n "${CODESPACES:-}" ] || [ -f "/run/.containerenv" ] || grep -qF "microsoft.com/devcontainers" /etc/os-release 2>/dev/null; then
+  venv_path="$HOME/.macae-post-provision-env"
+else
+  venv_path="$SCRIPT_DIR/scriptenv"
+fi
 
 st_is_public_access_disabled=false
 srch_is_public_access_disabled=false
