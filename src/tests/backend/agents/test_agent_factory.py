@@ -46,6 +46,7 @@ _mock_messages_mod.TeamConfiguration = Mock()
 # --- agents sub-modules (short absolute imports in factory code)
 mock_agent_template_cls = Mock()
 mock_mcp_config_cls = Mock()
+mock_knowledge_base_config_cls = Mock()
 
 sys.modules.setdefault("agents", Mock())  # parent package stub
 _mock_agent_template_mod = Mock()
@@ -57,6 +58,7 @@ mock_vector_store_config_cls = Mock()
 _mock_mcp_config_mod = Mock()
 _mock_mcp_config_mod.MCPConfig = mock_mcp_config_cls
 _mock_mcp_config_mod.VectorStoreConfig = mock_vector_store_config_cls
+_mock_mcp_config_mod.KnowledgeBaseConfig = mock_knowledge_base_config_cls
 sys.modules["config.mcp_config"] = _mock_mcp_config_mod
 
 # Now import the module under test (full backend.* path as per project convention)
@@ -76,6 +78,8 @@ def _agent_obj(**overrides) -> SimpleNamespace:
         coding_tools=False,
         use_toolbox=False,
         use_file_search=False,
+        use_knowledge_base=False,
+        knowledge_base_name=None,
         user_responses=False,
         vector_store_name=None,
     )
@@ -113,6 +117,7 @@ class TestCreateAgentFromConfig:
         self.memory_store = Mock()
         mock_agent_template_cls.reset_mock()
         mock_mcp_config_cls.reset_mock()
+        mock_knowledge_base_config_cls.reset_mock()
         mock_vector_store_config_cls.reset_mock()
 
     @pytest.mark.asyncio
@@ -163,6 +168,31 @@ class TestCreateAgentFromConfig:
         )
 
         mock_mcp_config_cls.from_env.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_knowledge_base_agent_appends_no_citations_prompt(self):
+        """KB-backed agents receive citation cleanup instructions."""
+        kb_instance = Mock()
+        mock_knowledge_base_config_cls.from_env.return_value = kb_instance
+        agent_instance = Mock()
+        agent_instance.open = AsyncMock()
+        mock_agent_template_cls.return_value = agent_instance
+
+        await self.factory.create_agent_from_config(
+            "user123",
+            _agent_obj(
+                use_knowledge_base=True,
+                knowledge_base_name="test-kb",
+                system_message="Use retrieved facts.",
+            ),
+            self.team_config,
+            self.memory_store,
+        )
+
+        mock_knowledge_base_config_cls.from_env.assert_called_once_with("test-kb")
+        instructions = mock_agent_template_cls.call_args[1]["agent_instructions"]
+        assert "RESPONSE CITATION POLICY" in instructions
+        assert "Do not include any citation markers" in instructions
 
     @pytest.mark.asyncio
     async def test_use_toolbox_takes_priority_over_user_responses(self):

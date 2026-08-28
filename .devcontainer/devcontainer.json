@@ -6,7 +6,7 @@
     "features": {
         "ghcr.io/devcontainers/features/docker-in-docker:2": {"version": "latest"},
         "ghcr.io/azure/azure-dev/azd:latest": {},
-        "ghcr.io/devcontainers/features/node:1": {},
+        "ghcr.io/devcontainers/features/node:1": {"pnpmVersion": "none"},
         "ghcr.io/devcontainers/features/azure-cli:1": {
             "installBicep": true,
 			"version": "latest",
@@ -46,7 +46,10 @@
         "DISPLAY": "dummy",
         "PYTHONUNBUFFERED": "True",
         "UV_LINK_MODE": "copy",
-        "UV_PROJECT_ENVIRONMENT": "/home/vscode/.venv"
+        "UV_PROJECT_ENVIRONMENT": "/home/vscode/.venv",
+        "PIP_INDEX_URL": "https://packagefeedproxy.microsoft.io/pypi/simple/",
+        "UV_INDEX_URL": "https://packagefeedproxy.microsoft.io/pypi/simple/",
+        "NPM_CONFIG_REGISTRY": "https://packagefeedproxy.microsoft.io/npm/"
     },
     "remoteUser": "vscode",
     "hostRequirements": {

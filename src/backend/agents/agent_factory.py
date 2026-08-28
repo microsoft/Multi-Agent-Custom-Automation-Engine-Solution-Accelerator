@@ -55,6 +55,13 @@ CRITICAL RULES — READ BEFORE ACTING:
 6. Do NOT re-ask anything already answered in the conversation history.
 """
 
+_KNOWLEDGE_BASE_NO_CITATIONS_PROMPT = """
+
+RESPONSE CITATION POLICY (CRITICAL):
+- Do not include any citation markers, source-reference tokens, attribution
+  markers, or footnotes in your response.
+"""
+
 
 class AgentFactory:
     """Create and manage teams of agents from JSON configuration.
@@ -157,6 +164,9 @@ class AgentFactory:
 
         # Build agent instructions from system_message + optional interaction rules
         instructions = getattr(agent_obj, "system_message", "")
+
+        if kb_config:
+            instructions += _KNOWLEDGE_BASE_NO_CITATIONS_PROMPT
 
         # Universal user-interaction rules for agents that have
         # user_responses=true — tells them to call request_user_clarification.
