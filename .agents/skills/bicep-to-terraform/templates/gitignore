@@ -1,0 +1,29 @@
+# Terraform — local/generated artifacts that must never be committed.
+# Copied verbatim into infra_tf/.gitignore by the conversion skill.
+
+# Provider plugins & module cache downloaded by `terraform init`
+# (these include multi-hundred-MB provider binaries that exceed GitHub's 100 MB limit).
+.terraform/
+.terraform.tfstate.lock.info
+
+# State files — may contain secrets; belong in the remote backend, not git.
+*.tfstate
+*.tfstate.*
+
+# Saved plans
+tfplan
+*.tfplan
+
+# CI-generated backend config (written at runtime by the pipeline, never committed)
+backend.tf
+backend.*.hcl
+
+# Crash logs & local overrides
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Keep .terraform.lock.hcl tracked (it pins provider versions) — do NOT ignore it.
