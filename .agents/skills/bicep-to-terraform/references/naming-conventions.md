@@ -13,10 +13,12 @@ infra_tf/
   outputs.tf                # every Bicep output, value-equivalent (contract-preserving)
   <env>.tfvars              # per-stage values, translated from params/<env>.bicepparam
   modules/
-    <module-name>/          # one child module per Bicep module
-      main.tf
-      variables.tf
-      outputs.tf
+    <source-area>/          # preserve the Bicep path below modules/
+      <module-name>/        # one directory per reachable local *.bicep module
+        main.tf
+        variables.tf
+        outputs.tf
+        versions.tf
 ```
 
 Runtime-only, **git-ignored**, never authored by this skill (the CI/CD skill writes them at run
@@ -25,16 +27,34 @@ time): `backend.tf` overrides, `backend.ci.hcl`, `state-scope.auto.tfvars`, `.te
 
 ## Naming
 
-- **Files/dirs**: lowercase, mirror the Bicep module path (`modules/monitoring/log-analytics.bicep`
-  → `modules/monitoring-log-analytics/` or a nested `modules/monitoring/log_analytics/`; pick one
-  and stay consistent — flat `modules/<area>-<name>/` is simplest).
-- **Resource/variable/output identifiers**: `snake_case`. Bicep camelCase → snake_case
-  (`appServicePlanSku` → `app_service_plan_sku`).
+- **Files/dirs**: lowercase and mirror the source hierarchy exactly below `modules/`. For example,
+  `<implementation-root>/modules/monitoring/log-analytics.bicep` maps to
+  `infra_tf/modules/monitoring/log-analytics/`. Remove only the `.bicep` extension; do not flatten,
+  combine, or rename source modules.
+- **Resource/variable/child-output identifiers**: `snake_case`. Bicep camelCase → snake_case
+  (`appServicePlanSku` → `app_service_plan_sku`). Root contract outputs are different: ASCII-
+  lowercase the exact public Bicep output key so the post-deploy bridge's uppercase operation
+  preserves canonical and legacy aliases.
 - **Azure resource *names*** (the `name = ...` value): reproduce the source's naming expression
   verbatim so deployed resource names are unchanged from the Bicep output.
 - **Unique suffix**: where Bicep used `uniqueString(...)`, use a single `random_string.suffix`
-  (6 lowercase alphanumerics) in the root and thread `local.suffix` through modules — matches the
-  reference accelerator.
+  only when the user accepts a provider-forced behavioral deviation. Preserve the source length,
+  expose an override for migration/adoption, and thread the resolved value through modules.
+
+## Child-module file contract
+
+Every generated child module always contains these four files:
+
+| File | Mandatory contents |
+|---|---|
+| `main.tf` | Resources, locals, data sources, and nested module calls translated from the source file |
+| `variables.tf` | One variable for every Bicep module parameter |
+| `outputs.tf` | One output for every Bicep module output |
+| `versions.tf` | Terraform version and every provider used by that module |
+
+Create the file even when the source has no corresponding blocks. A source file reused by multiple
+module calls still maps to one Terraform module directory. Provider requirements belong in each
+child's `versions.tf`; provider authentication and subscription configuration belong only at root.
 
 ## Per-environment values
 

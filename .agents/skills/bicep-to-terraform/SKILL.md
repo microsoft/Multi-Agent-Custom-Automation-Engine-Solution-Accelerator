@@ -14,26 +14,33 @@ generate CI/CD (that is `cicd-terraform-workflows`).
 - **`references/`** — `bicep-to-terraform-mapping.md` (resource/param/output mapping rules) and
   `naming-conventions.md` (the `infra_tf/` layout, `<env>.tfvars`, provider/backend conventions).
 - **`scripts/`** — `inspect-bicep.sh` (read-only discovery of the Bicep entrypoint, its parameters,
-  outputs, referenced modules, and resource types → `bicep-facts.json`).
-- **`templates/`** — skeleton `providers.tf` / `variables.tf` / `outputs.tf`, a module skeleton,
-  and `gitignore` (copied verbatim to `infra_tf/.gitignore`), to seed the generated `infra_tf/`
-  root and modules.
+  outputs, recursive local-module graph, and resource types → `bicep-facts.json`) and
+  `validate-module-layout.sh` (checks source-module parity and the required generated files).
+- **`templates/`** — root `providers.tf`, a mandatory four-file child-module scaffold
+  (`main.tf`, `variables.tf`, `outputs.tf`, `versions.tf`), and `gitignore` (copied verbatim to
+  `infra_tf/.gitignore`).
 
 ## Hard constraints
 - **Faithful 1:1 port.** Reproduce the source's resources, properties, and dependencies — do not
   redesign, "improve", add, or drop resources. Deviate only where a Terraform provider genuinely
   requires it (document each such deviation).
 - **Preserve the output contract.** Every output the source `main.bicep` emits **must** exist in
-  `infra_tf/outputs.tf` with an equivalent value. The post-provision scripts read these as
-  `UPPER_SNAKE` environment variables; Terraform output names are conventional lowercase and the
-  post-deploy bridge upcases them, so `resource_group_name` → `RESOURCE_GROUP_NAME`. Names must
-  round-trip exactly (ascii-uppercased TF name == the Bicep output name). When a Bicep output name
-  is already `UPPER_SNAKE`, emit the TF output as its lowercase form. **Never rename or drop an
-  output.**
+  `infra_tf/outputs.tf` with an equivalent value. Emit root output names by ASCII-lowercasing the
+  exact contract key without inserting/removing separators: `RESOURCE_GROUP_NAME` becomes
+  `resource_group_name`, while legacy `resourceGroupName` becomes `resourcegroupname`. The
+  post-deploy bridge uppercases both back to their canonical environment-key forms. **Never rename,
+  combine, or drop an output or compatibility alias.**
 - **Never touch the source.** Do not edit the repo's Bicep files, application code, or
   post-provision scripts. Only author files under `infra_tf/`.
 - **Coexist, never replace.** `infra/` (Bicep) stays intact. Everything you write goes under a new
   `infra_tf/` sibling directory.
+- **One source module, one generated module.** Every reachable local Bicep module file maps to
+  exactly one Terraform module directory. Repeated calls to the same Bicep file reuse that one
+  generated module. Mirror the source path under `modules/`; never flatten or combine modules.
+- **Four files in every child module.** Every generated module contains `main.tf`, `variables.tf`,
+  `outputs.tf`, and `versions.tf`, even when one of those files has no blocks. Every Bicep module
+  parameter and output must be represented in the corresponding file. `versions.tf` declares
+  every provider used by that module, while provider authentication remains root-only.
 - **Ask before any mutation.** Confirm with the user (via an interactive input tool when available)
   before writing any file under `infra_tf/`. Read-only discovery needs no approval.
 - **Use the bundled script.** Run `scripts/inspect-bicep.sh` in place by absolute path; never copy
@@ -49,15 +56,21 @@ generate CI/CD (that is `cicd-terraform-workflows`).
   or `init` against a real remote backend.
 
 ## Process
-1. **Pick the source entrypoint & flavor.** Default to `infra/main.bicep`. If it is a router with a
-   `deploymentFlavor`-style switch (e.g. `bicep` / `avm` / `avm-waf`), **ask the user which single
-   flavor to port first** and follow only that branch's module tree. Port one flavor per run.
-2. **Inspect.** Run `scripts/inspect-bicep.sh <entrypoint> > .agent/tmp/bicep-facts.json`. It reports
-   the target scope, parameters (with defaults/allowed/types), outputs (names + expressions),
-   referenced modules for the chosen flavor, and the distinct Azure resource types used.
+1. **Pick the contract entrypoint, implementation entrypoint & flavor.** Default the contract
+   entrypoint to `infra/main.bicep`. If it is a router with a `deploymentFlavor`-style switch
+   (e.g. `standard` / `modular` / `waf`), **ask the user which single flavor to port first**. Preserve
+   the router's public parameter/output contract, but follow only the selected implementation
+   branch's resource/module tree. Port one flavor per run.
+2. **Inspect recursively.** Run `bash <absolute-skill-path>/scripts/inspect-bicep.sh
+   <implementation-entrypoint> > .agent/tmp/bicep-facts.json`. It compiles every reachable local Bicep module and reports the
+   target scope; per-file parameters, source variables, resources, child-module edges, outputs,
+   provider hints; and the complete local-module graph. When the contract entrypoint differs, run
+   `bash <absolute-skill-path>/scripts/inspect-bicep.sh --no-recursive <contract-entrypoint> >
+   .agent/tmp/bicep-contract-facts.json`. The script's source-variable extraction is an aid, not a
+   parser: read every discovered source file before translating expressions.
 3. **Confirm scope with the user.** Present the resource inventory, the parameter list, and the full
-   output list that must be preserved. Confirm the `infra_tf/` layout (mirror the source's module
-   structure: a root module plus one child module per Bicep module) and the per-env `.tfvars`
+   output list that must be preserved. Confirm the exact source-file → Terraform-module mapping,
+   the root plus one child module per reachable local Bicep module, and the per-env `.tfvars`
    mapping (`infra/params/<env>.bicepparam` → `infra_tf/<env>.tfvars`). **Get explicit approval
    before writing files.**
 4. **Author `infra_tf/` — root.** Seed from `templates/`:
@@ -77,29 +90,39 @@ generate CI/CD (that is `cicd-terraform-workflows`).
      `.terraform/`, which exceed GitHub's 100 MB file limit and break `git push` if committed. The
      ignore also covers `*.tfstate`, saved `tfplan`s, and the CI-generated `backend.tf` /
      `backend.*.hcl`, while **keeping `.terraform.lock.hcl` tracked** (it pins provider versions).
-5. **Author `infra_tf/modules/<name>/`** — one child module per source Bicep module, each with its
-   own `main.tf` / `variables.tf` / `outputs.tf`, wired from the root exactly as the Bicep root
-   wired its modules. **Any module that uses `azapi_*` (or `random_*`) MUST also ship a
-   `versions.tf` declaring that provider source** (`azapi = { source = "Azure/azapi" }`) — the
-   root's `required_providers` does not propagate to child modules, and `terraform init` fails
-   otherwise (`hashicorp/azapi` does not exist). See `references/bicep-to-terraform-mapping.md`.
+5. **Author the complete mirrored module tree.** For every non-entrypoint file in
+   `bicep-facts.json`, create its `terraform_module_path` and seed all four files from
+   `templates/module/`:
+   - `main.tf` — resources, locals, data sources, and nested module calls from that Bicep file.
+   - `variables.tf` — every Bicep `param`, with equivalent type/default/validation semantics.
+   - `outputs.tf` — every Bicep `output`, with a value-equivalent expression.
+   - `versions.tf` — `required_version` plus every provider referenced in that module.
+
+   A Bicep file called multiple times still has one generated directory and multiple Terraform
+   module calls. Preserve nested calls as nested Terraform module calls. Child modules declare
+   provider sources but never configure credentials/subscriptions; configuration belongs at root.
 6. **Author per-env `.tfvars`.** For every discovered stage, translate `params/<env>.bicepparam`
    values into `infra_tf/<env>.tfvars` (values only). Keep CI-identity values (e.g.
    `deploying_user_principal_type = "ServicePrincipal"`) faithful to the source.
 7. **Flag provider-forced deviations.** List any place where Terraform required a different shape
    than Bicep (e.g. `azapi_resource` for a preview type, `ignore_changes` for a known drift quirk,
    a `random_string` suffix where Bicep used `uniqueString()`), with a one-line reason each.
-8. **Validate — mandatory gate; iterate until clean.** Run this sequence and **do not consider the
-   port complete until `terraform validate` succeeds**:
+8. **Validate — mandatory dual gate; iterate until clean.** Run this sequence and **do not consider
+   the port complete until both structure validation and `terraform validate` succeed**:
    ```bash
+   bash <absolute-skill-path>/scripts/validate-module-layout.sh \
+     .agent/tmp/bicep-facts.json infra_tf .agent/tmp/bicep-contract-facts.json
    cd infra_tf
    terraform fmt -recursive
    terraform init -backend=false   # installs providers without touching remote state
    terraform validate
    ```
-   `-backend=false` lets `init` run without the (not-yet-provisioned) azurerm state backend. If
-   `validate` (or `init`) reports errors, **fix the generated HCL and re-run the full sequence** —
-   repeat until it passes. Common first-pass failures and their fixes are documented in
+   Pass the third contract-facts argument only when the contract and implementation entrypoints
+   differ; otherwise the implementation facts are also the contract facts.
+   The layout validator fails on missing module directories/files, missing parameter/output blocks,
+   or undeclared providers. `-backend=false` lets `init` run without the (not-yet-provisioned)
+   azurerm state backend. If any command reports errors, **fix the generated HCL and re-run the
+   full sequence** — repeat until it passes. Common first-pass failures and their fixes are documented in
    `references/bicep-to-terraform-mapping.md` (azapi `identity` is a nested block not an argument;
    set `schema_validation_enabled = false` on preview `@api-version` azapi resources; every child
    module using `azapi_*`/`random_*` needs its own `versions.tf`). When you hit a NEW class of
@@ -107,19 +130,21 @@ generate CI/CD (that is `cicd-terraform-workflows`).
    so future conversions avoid it. Only if `terraform` is genuinely unavailable on the machine may
    you skip — say so explicitly; never report a port as done on an unvalidated tree when terraform
    is present.
-9. **Clean up** all files created under `.agent/tmp/` (remove the directory if empty), even if an
-   earlier step failed.
+9. **Clean up** `bicep-facts.json`, `bicep-contract-facts.json`, and any other files this run
+   created under `.agent/tmp/` (remove the directory only if this run created it and it is empty),
+   even if an earlier step failed.
 
 ## Output
 Report, in order:
 1. **Source** — entrypoint, chosen flavor, target scope, stage(s) discovered.
-2. **Inventory** — resource types ported, module count, parameter count.
+2. **Inventory** — resource types ported, module count, parameter count, and the complete
+   source-file → Terraform-module mapping.
 3. **Output contract** — the full list of preserved outputs (source name → TF output name),
    confirming none were dropped or renamed.
 4. **Generated files** — the `infra_tf/` tree written and each file's purpose.
 5. **Deviations** — every provider-forced difference from the source, with its reason.
-6. **Validation** — the `fmt` / `init -backend=false` / `validate` gate result (must be a clean
-   `validate`), or an explicit note that `terraform` was unavailable on the machine.
+6. **Validation** — the module-layout / `fmt` / `init -backend=false` / `validate` gate results
+   (layout and validate must both be clean), or an explicit note that `terraform` was unavailable.
 7. **Cleanup** — confirm `.agent/tmp/` files were removed.
 8. **Next step** — point to `cicd-terraform-workflows` to generate the pipeline, and note the
    state-backend bootstrap is a prerequisite there.

@@ -37,7 +37,8 @@ On every invocation:
    confirm scope with the user, then author `infra_tf/` (root + modules + per-env tfvars) using the
    mapping rules. **Then run the mandatory validation gate and iterate until it passes** (see below).
 
-   **Validation gate (required before reporting done):** from the repo root run
+   **Validation gate (required before reporting done):** from the repo root run the skill's module
+   layout validator using the implementation and contract manifests, then:
    ```bash
    cd infra_tf
    terraform fmt -recursive
@@ -54,15 +55,22 @@ On every invocation:
    - **Faithful 1:1 port** — reproduce the source's resources, properties, and dependencies. Never
      redesign, add, or drop resources. Document every provider-forced deviation.
    - **Preserve the output contract** — every Bicep output must appear in `infra_tf/outputs.tf`,
-     value-equivalent. The post-provision scripts read these as `UPPER_SNAKE` env vars and the
-     post-deploy bridge upcases the (lowercase) Terraform output names, so names must round-trip
-     exactly. Never rename or drop an output.
+     value-equivalent. ASCII-lowercase the exact contract key without adding/removing separators;
+     the post-deploy bridge uppercases it into the environment key. Never rename, combine, or drop
+     an output or compatibility alias.
    - **Never touch the source** — do not edit the repo's Bicep, application code, or post-provision
      scripts. Only author files under a new `infra_tf/` sibling directory.
    - **Coexist, never replace** — `infra/` (Bicep) stays intact.
    - **Pick one flavor per run** — if the entrypoint is a router (e.g. `deploymentFlavor` =
-     `bicep` / `avm` / `avm-waf`), ask the user which single flavor to port and follow only that
-     branch's module tree.
+     `standard` / `modular` / `waf`), ask the user which single flavor to port and follow only that
+     branch's module tree while preserving the router's public contract. Inspect the selected
+     implementation recursively and the router separately with `--no-recursive`.
+   - **Mirror every local module** — every reachable local Bicep module file maps to exactly one
+     Terraform module directory at the corresponding nested path. Repeated calls reuse the same
+     generated module.
+   - **Always emit four child-module files** — every module has `main.tf`, `variables.tf`,
+     `outputs.tf`, and `versions.tf`. Parameters and outputs are complete, and `versions.tf`
+     declares every provider the module uses.
    - **Emit `infra_tf/.gitignore`** — copy the skill's `templates/gitignore` verbatim. Required so
      the `.terraform/` provider binaries (hundreds of MB, over GitHub's 100 MB limit), `*.tfstate`,
      `tfplan`, and the CI-generated `backend.tf`/`backend.*.hcl` are never committed; keep

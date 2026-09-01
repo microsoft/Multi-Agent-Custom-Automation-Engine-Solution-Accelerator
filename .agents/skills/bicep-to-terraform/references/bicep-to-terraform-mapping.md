@@ -18,13 +18,14 @@ recorded in the skill's "Deviations" report.**
 | `resource r 'type@api' = {...}` | `resource "azurerm_<type>" "r" {...}` (or `azapi_resource` for preview) |
 | `module m 'path' = { params }` | `module "m" { source = "./modules/<name>"; <inputs> }` |
 | `output name = expr` | `output "name" { value = expr }` (see output contract) |
-| `uniqueString(...)` | `random_string.suffix` (6 lower-alnum) → `local.suffix` |
+| `uniqueString(...)` | No exact native equivalent. Prefer an explicit migration-safe input; if randomness is approved, preserve source length and report the deviation |
 | `resourceGroup().location` | `azurerm_resource_group.main.location` (RG is a resource in TF) |
 | `subscription().id` | `data.azurerm_client_config.current.subscription_id` |
 | `resourceGroup().id` | `azurerm_resource_group.main.id` |
 | `<resource>.id` / `.properties.x` | `<tf_resource>.id` / `<tf_resource>.<attr>` |
 | `existing` resource | `data "azurerm_<type>" "..."` data source |
-| `if (cond)` on a resource | `count = cond ? 1 : 0` (reference as `[0]`) |
+| `if (cond)` on a resource/module | `count = cond ? 1 : 0` for a singleton; reference as `[0]` |
+| `[for x in xs: ...]` resource/module loop | Prefer `for_each` with a stable semantic key; use `count` only when identity is truly positional |
 | ternary `cond ? a : b` | `cond ? a : b` |
 | `union()/concat()/contains()` | `merge()/concat()/contains()` |
 | string interpolation `'${x}'` | `"${x}"` |
@@ -33,19 +34,20 @@ recorded in the skill's "Deviations" report.**
 
 ## Scope & resource group
 
-- Bicep `targetScope = 'resourceGroup'` with an assumed-existing RG → in Terraform the RG is a
-  **managed resource**: `resource "azurerm_resource_group" "main" { name = ...; location = ... }`.
-  All resources set `resource_group_name = azurerm_resource_group.main.name`. This is why the
-  Terraform CI/CD skill drops the "ensure RG exists" step — Terraform creates it.
-- Preserve the source's RG naming expression (e.g. `rg-${solutionName}-${suffix}`). If the source
-  received the RG name as a param (`resourceGroupName`), keep a `resource_group_name` variable but
-  still create the RG resource with that name so the port is self-contained.
+- Bicep `targetScope = 'resourceGroup'` deploys into an existing resource group; it does not own
+  that group. Map it to `data "azurerm_resource_group"` by default and keep creation as an external
+  prerequisite, matching the source deployment boundary.
+- Create `azurerm_resource_group` only when the source is subscription-scoped and explicitly
+  creates the group, or when the user explicitly approves a self-contained Terraform deviation.
+  For an existing deployment, include the required import/adoption procedure before managing it.
+- Preserve the source resource-group name input/expression. Never silently change an externally
+  owned resource group into a Terraform-owned resource.
 
 ## Provider skeleton (`providers.tf`)
 
 ```hcl
 terraform {
-  required_version = ">= 1.5.0"
+  required_version = ">= 1.6.0"
   required_providers {
     azurerm = { source = "hashicorp/azurerm", version = "~> 4.0" }
     # add only if used by the source:
@@ -68,35 +70,38 @@ provider "azurerm" {
 }
 ```
 
-## Child-module provider declarations (REQUIRED — common failure)
+## Child-module contract and provider declarations (REQUIRED)
 
-Terraform only auto-resolves the `hashicorp/*` namespace. Any **child module** that references a
-non-hashicorp provider (notably `azapi`, whose real source is `Azure/azapi`) **must declare that
-source itself** in its own `required_providers`, or `terraform init` fails with:
+Every reachable local Bicep module maps to one mirrored Terraform directory containing
+`main.tf`, `variables.tf`, `outputs.tf`, and `versions.tf`. Reused source modules are generated once
+and called multiple times. Every child module declares every provider it uses. Terraform only
+auto-resolves the `hashicorp/*` namespace, so omitting AzAPI's source causes `terraform init` to fail:
 
 > provider registry ... does not have a provider named registry.terraform.io/hashicorp/azapi
 
-So **every `infra_tf/modules/<name>/` that uses `azapi_*` (or `random_*`) must ship a `versions.tf`**
-declaring those sources. `azurerm` also defaults correctly to `hashicorp/azurerm`, but declare it
-too for any module that uses it (best practice, and harmless):
+Every child ships `versions.tf`, including AzureRM-only modules:
 
 ```hcl
 # infra_tf/modules/<name>/versions.tf
 terraform {
+  required_version = ">= 1.6.0"
+
   required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 4.0"
+    }
     azapi = {
       source  = "Azure/azapi"
       version = "~> 2.0"
     }
-    # add azurerm here too when the module uses azurerm_* resources/data sources:
-    # azurerm = { source = "hashicorp/azurerm", version = "~> 4.0" }
   }
 }
 ```
 
-Rule of thumb while authoring modules: if a module's `.tf` files contain `azapi_`, that module needs
-`azapi` in its own `required_providers`. Declaring it only in the root `providers.tf` is **not**
-enough — the requirement does not propagate down to child modules.
+Remove providers the module does not use and add `random` when it uses `random_*`. Declaring a
+provider only in the root is not enough to establish a non-HashiCorp provider's source address.
+Child modules declare requirements only; they never configure Azure credentials or subscription.
 
 ## Common resource-type map (azurerm)
 
@@ -146,7 +151,8 @@ Some ARM enum values are spelled differently (or don't exist) in azurerm and wil
 ## AI Foundry & preview types (`azapi`)
 
 AI Foundry projects/connections and other preview `Microsoft.CognitiveServices/accounts/...`
-resources have no stable `azurerm` resource. Use `azapi` exactly as the reference accelerator does:
+resources have no stable `azurerm` resource. Use `azapi` when the selected AzureRM version lacks a
+faithful resource:
 
 ```hcl
 # enable project management on the AI Services account
@@ -162,27 +168,63 @@ resource "azapi_resource" "ai_foundry_project" {
   parent_id                 = azurerm_cognitive_account.ai.id
   location                  = azurerm_resource_group.main.location
   schema_validation_enabled = false
-  body     = { kind = "AIServices", properties = {}, identity = { type = "SystemAssigned" } }
+
+  identity {
+    type = "SystemAssigned"
+  }
+
+  body = {
+    kind       = "AIServices"
+    properties = {}
+  }
   depends_on = [azapi_update_resource.ai_services_allow_projects]
 }
 ```
 
 Match the **exact `@api-version`** the source Bicep declared. For connection resources whose secret
 `credentials.key` is write-only (GET returns null), add `lifecycle { ignore_changes = [body] }` to
-prevent perpetual drift (a known quirk documented in the reference accelerator).
+prevent perpetual drift only when the provider/API demonstrably returns that write-only value as
+null.
 
 **`azapi_resource` gotchas (v2):**
-- **`identity` is a nested block, not an argument.** Write `identity { type = "SystemAssigned" }`,
-  never `identity = { type = "SystemAssigned" }` (the latter fails validate with
+- **`identity` is a top-level nested block, not an argument or a member of `body`.** Write
+  `identity { type = "SystemAssigned" }`, never `identity = { type = "SystemAssigned" }` (the latter fails validate with
   *"An argument named identity is not expected here"*). The same applies to `timeouts`.
 - **Set `schema_validation_enabled = false`** on any `azapi_resource` using a recent or preview
   `@api-version` (e.g. `2025-*`, `*-preview`). The provider's *embedded* schema lags behind ARM,
   so otherwise validate fails with *"api-version is invalid"* or *"<prop> is not expected here"*
   even though the real ARM API accepts it. This does not weaken real deployment validation. The
-  reference accelerator applies this flag to every preview-version azapi resource.
+  Verify this requirement against the selected AzAPI version rather than assuming its embedded
+  schema supports a newly released API version.
 - **Do not set `schema_validation_enabled` on `azapi_update_resource`.** The update resource does
   not accept that argument in AzAPI 2.x, even when it targets a recent API version.
 - Everything else (kind, properties, sku, …) goes inside the `body = { ... }` object.
+
+## Dependencies
+
+Preserve dependency edges, not only explicit `dependsOn` syntax. Prefer Terraform references that
+create implicit dependencies. Add `depends_on` when translation turns a Bicep symbolic reference
+into a plain string, constructed resource ID, or other expression from which Terraform cannot infer
+the original edge. Record such explicit dependencies in the source-to-Terraform inventory.
+
+## Derived defaults and nullable inputs
+
+Terraform variable defaults cannot reference other variables, resources, or data sources. Translate
+a Bicep parameter default such as `'aif-${solutionName}'` into a nullable override plus a local:
+
+```hcl
+variable "name" {
+  type    = string
+  default = null
+}
+
+locals {
+  name = coalesce(var.name, "aif-${var.solution_name}")
+}
+```
+
+Preserve Bicep nullable inputs with Terraform nullable types/defaults rather than empty-string
+sentinels. Do not use `try()` or `coalesce()` to hide a missing required value.
 
 ## Fabric capacity
 
@@ -205,14 +247,17 @@ top-level `sku_name` argument; the latter fails `terraform validate`.
 
 ## Output contract (do not break)
 
-`main.bicep` emits `UPPER_SNAKE` outputs the post-provision scripts read as env vars. The post-deploy
-bridge runs `terraform output -json`, then **ascii-uppercases** each key. So:
+The contract entrypoint may emit both canonical `UPPER_SNAKE` outputs and legacy camelCase aliases.
+The post-deploy bridge runs `terraform output -json`, then **ascii-uppercases** each key. Therefore:
 
-- Emit each TF output using the **lowercase form** of the Bicep output name:
+- Emit each root TF output using the **ASCII-lowercase form of the exact Bicep output name**:
   `output "RESOURCE_GROUP_NAME"` in Bicep → `output "resource_group_name"` in TF (upcases back to
-  `RESOURCE_GROUP_NAME`). Names are pure `[A-Z0-9_]`, so lower→upper round-trips exactly.
+  `RESOURCE_GROUP_NAME`), while legacy `resourceGroupName` → `resourcegroupname` (upcases back to
+  `RESOURCEGROUPNAME`, matching bridge behavior for that alias). Do not insert or remove separators
+  in root contract output names.
 - Reproduce the **value expression** faithfully (same resource attribute / same computed string).
 - Mark secret-bearing outputs `sensitive = true` (connection strings, keys) — matches how the
   reference marks `*_connection_string` / `instrumentation_key`.
-- **Every** source output must appear. Cross-check the generated `outputs.tf` against the inspected
-  output list before finishing; a missing or renamed output silently breaks post-deploy.
+- **Every contract-entrypoint output** must appear. Cross-check generated root `outputs.tf` against
+  the separately inspected contract output list; a missing alias silently breaks post-deploy.
+- Child-module outputs are internal Terraform identifiers and use `snake_case`.
