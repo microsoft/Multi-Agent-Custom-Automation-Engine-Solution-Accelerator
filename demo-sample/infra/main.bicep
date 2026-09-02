@@ -49,16 +49,11 @@ module appServicePlan './modules/compute/app-service-plan.bicep' = {
 
 module appService './modules/compute/app-service.bicep' = {
   params: {
-    solutionName: nameSuffix
     name: 'app-${nameSuffix}'
     location: location
     tags: tags
     serverFarmResourceId: appServicePlan.outputs.resourceId
     linuxFxVersion: 'DOCKER|${containerImage}'
-    kind: 'app,linux,container'
-    appSettings: {
-      DOCKER_REGISTRY_SERVER_URL: 'https://${containerRegistry.outputs.loginServer}'
-    }
   }
 }
 
