@@ -63,12 +63,41 @@ generate CI/CD (that is `cicd-terraform-workflows`).
    branch's resource/module tree. Port one flavor per run.
 2. **Inspect recursively.** Run `bash <absolute-skill-path>/scripts/inspect-bicep.sh
    <implementation-entrypoint> > .agent/tmp/bicep-facts.json`. It compiles every reachable local Bicep module and reports the
-   target scope; per-file parameters, source variables, resources, child-module edges, outputs,
-   provider hints; and the complete local-module graph. When the contract entrypoint differs, run
+   target scope; per-file parameters, ARM-resolved variables, resources, `existing` resources,
+   child-module edges, outputs, provider hints; and the complete local-module graph. When the
+   contract entrypoint differs, run
    `bash <absolute-skill-path>/scripts/inspect-bicep.sh --no-recursive <contract-entrypoint> >
-   .agent/tmp/bicep-contract-facts.json`. The script's source-variable extraction is an aid, not a
-   parser: read every discovered source file before translating expressions.
-3. **Confirm scope with the user.** Present the resource inventory, the parameter list, and the full
+   .agent/tmp/bicep-contract-facts.json`.
+
+   Read the manifest (`schemaVersion: 3`) with these fields in mind:
+   - **`resources[]`** excludes `Microsoft.Resources/deployments` packaging, so counts reflect real
+     Azure resources. Resources pulled out of an inlined **registry** module (AVM `br:`/`ts:`) carry
+     `nested: true` and a `viaModules` trail naming the wrapper they came from — a local wrapper
+     around an AVM module reports the resources that module actually creates. Local modules are
+     visited in their own right, so their resources are never double-counted here.
+   - **`existingResources[]`** lists `resource ... existing = {}` declarations recovered from the
+     Bicep source. Bicep resolves these at compile time and emits nothing into ARM, so they appear
+     in no other field. A module with `resources: []` but a non-empty `existingResources[]` is a
+     lookup-only module — it must still be ported, never skipped as empty. Each declaration is
+     either a genuinely external resource (→ a `data` source) or a resource this deployment creates
+     elsewhere and re-declares only to satisfy Bicep's `scope:`/`parent:` (→ pass the id through as
+     a variable, no data source). Decide per declaration using the rule in
+     `references/bicep-to-terraform-mapping.md`; comparing `existingResourceTypes` with
+     `resourceTypes` is a useful first hint but is not decisive.
+   - **`providerHints[]`** is one verdict per resource type: `azapi_required` (no stable azurerm
+     resource — use `azapi`), `azapi_candidate_preview` (preview api-version; confirm azurerm
+     coverage), or `azurerm_expected`. The manifest root repeats every non-`azurerm_expected`
+     verdict under `azapiRequiredTypes` so the azapi work is visible up front. Treat these as
+     starting points and confirm against the installed provider, not as the final word.
+   - **`variables[]`** carries the ARM-resolved value. Entries with `inlinedByArm: true` were
+     declared in the source but optimised away by the compiler (value unavailable — read the
+     source); entries with `generated: true` are compiler-synthesised (`$fxv...`, e.g. from
+     `loadTextContent()`).
+
+   The script reports declarations, not semantics: read every discovered source file before
+   translating expressions.
+3. **Confirm scope with the user.** Present the resource inventory, the `existing` resources and how
+   each will be handled, any `azapiRequiredTypes`, the parameter list, and the full
    output list that must be preserved. Confirm the exact source-file → Terraform-module mapping,
    the root plus one child module per reachable local Bicep module, and the per-env `.tfvars`
    mapping (`infra/params/<env>.bicepparam` → `infra_tf/<env>.tfvars`). **Get explicit approval

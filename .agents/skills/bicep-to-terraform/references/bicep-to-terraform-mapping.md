@@ -32,6 +32,67 @@ recorded in the skill's "Deviations" report.**
 | `loadTextContent()` | `file("...")` |
 | `dependsOn: [a, b]` (explicit only) | `depends_on = [a, b]` — otherwise rely on implicit refs |
 
+### `existing` resources
+
+`resource ... existing = {}` is a compile-time lookup: it emits **nothing** into the compiled ARM
+template, so it is invisible in `resources[]` and appears only in the manifest's
+`existingResources[]`. Never treat a module as trivial because its resource list is empty — a module
+with `resources: []` and a populated `existingResources[]` is a lookup-only module and must still be
+ported.
+
+`existing` has **two distinct meanings**, and they map to opposite Terraform constructs. **Do not
+decide based on whether a parameter supplies the name or id** — it does in both cases. The question
+that separates them is: *does this deployment create that resource itself?*
+
+**1. Genuinely external** — the resource exists before the deployment runs (a shared vault, a
+built-in role definition, a pre-provisioned VNet). Port it as a **`data` source**, keyed by the same
+name/resource-group expression the Bicep used:
+
+```hcl
+data "azurerm_key_vault" "shared" {
+  name                = var.existing_key_vault_name
+  resource_group_name = var.platform_resource_group_name
+}
+```
+
+**2. Created elsewhere in this same deployment** — another module already creates it, and this module
+re-declares it only because Bicep's `scope:` and `parent:` require a *resource handle* rather than an
+id string. That is a Bicep language workaround, not a real lookup. Terraform accepts the id directly,
+so **thread the id through as a variable and write no data source at all**:
+
+```bicep
+// Bicep must re-declare the account purely to satisfy `scope:`
+resource storageAccount 'Microsoft.Storage/storageAccounts@2025-08-01' existing = {
+  name: last(split(storageAccountResourceId, '/'))
+}
+resource ra 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: storageAccount
+  ...
+}
+```
+
+```hcl
+variable "storage_account_resource_id" { type = string }
+
+resource "azurerm_role_assignment" "storage_blob" {
+  scope                = var.storage_account_resource_id
+  principal_id         = var.principal_id
+  role_definition_name = "Storage Blob Data Contributor"
+}
+```
+
+A data source in case 2 is actively harmful: a pointless API call that also **races the module still
+creating the resource**, since Terraform cannot infer ordering from a lookup-by-name and may read
+before the resource exists.
+
+Comparing the manifest's `existingResourceTypes` against its global `resourceTypes` is a useful first
+pass — a type in both lists suggests case 2, a type in only the former suggests case 1 — but it is a
+**type-level hint, not a verdict**: a deployment can create one resource of a type and reference a
+different, external one of the same type. Confirm against the source before choosing.
+
+In neither case may an `existing` declaration become a managed `resource` block, which would make
+Terraform own — and on `destroy` delete — something the Bicep only read.
+
 ## Scope & resource group
 
 - Bicep `targetScope = 'resourceGroup'` deploys into an existing resource group; it does not own
@@ -152,7 +213,13 @@ Some ARM enum values are spelled differently (or don't exist) in azurerm and wil
 
 AI Foundry projects/connections and other preview `Microsoft.CognitiveServices/accounts/...`
 resources have no stable `azurerm` resource. Use `azapi` when the selected AzureRM version lacks a
-faithful resource:
+faithful resource.
+
+`bicep-facts.json` flags these for you: every type in `azapiRequiredTypes` (and every
+`providerHints[]` entry whose `hint` is not `azurerm_expected`) is a candidate. Note that a GA
+api-version does **not** imply azurerm coverage — AI Foundry projects ship GA-dated api-versions and
+still need `azapi` — so confirm each candidate against the installed provider rather than judging by
+the api-version alone.
 
 ```hcl
 # enable project management on the AI Services account
@@ -193,9 +260,10 @@ null.
 - **Set `schema_validation_enabled = false`** on any `azapi_resource` using a recent or preview
   `@api-version` (e.g. `2025-*`, `*-preview`). The provider's *embedded* schema lags behind ARM,
   so otherwise validate fails with *"api-version is invalid"* or *"<prop> is not expected here"*
-  even though the real ARM API accepts it. This does not weaken real deployment validation. The
-  Verify this requirement against the selected AzAPI version rather than assuming its embedded
-  schema supports a newly released API version.
+  even though the real ARM API accepts it. This does not weaken real deployment validation — ARM
+  still validates the payload at apply time; it only stops the provider from rejecting a body it
+  cannot yet describe. Verify this requirement against the selected AzAPI version rather than
+  assuming its embedded schema supports a newly released API version.
 - **Do not set `schema_validation_enabled` on `azapi_update_resource`.** The update resource does
   not accept that argument in AzAPI 2.x, even when it targets a recent API version.
 - Everything else (kind, properties, sku, …) goes inside the `body = { ... }` object.

@@ -17,12 +17,12 @@ command -v jq >/dev/null 2>&1 || { echo "ERROR: jq required" >&2; exit 1; }
 [ -d "$TF_ROOT" ] || { echo "ERROR: Terraform root '$TF_ROOT' not found" >&2; exit 1; }
 
 SCHEMA_VERSION="$(jq -r '.schemaVersion // 0' "$FACTS")"
-[ "$SCHEMA_VERSION" = "2" ] || {
+[ "$SCHEMA_VERSION" = "3" ] || {
   echo "ERROR: '$FACTS' uses schemaVersion $SCHEMA_VERSION; rerun the current inspect-bicep.sh" >&2
   exit 1
 }
 CONTRACT_SCHEMA_VERSION="$(jq -r '.schemaVersion // 0' "$CONTRACT_FACTS")"
-[ "$CONTRACT_SCHEMA_VERSION" = "2" ] || {
+[ "$CONTRACT_SCHEMA_VERSION" = "3" ] || {
   echo "ERROR: '$CONTRACT_FACTS' uses schemaVersion $CONTRACT_SCHEMA_VERSION; rerun the current inspect-bicep.sh" >&2
   exit 1
 }

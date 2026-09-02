@@ -82,7 +82,8 @@ On every invocation:
 
 3. **Ask before any mutation.** Read-only discovery (compiling Bicep, inspecting the repo) needs no
    approval. Before writing any file under `infra_tf/`, confirm the plan — the chosen flavor, the
-   resource inventory, the full preserved-output list, and the `infra_tf/` layout — with the user.
+   resource inventory, the `existing` resources that become `data` sources, any azapi-required
+   types, the full preserved-output list, and the `infra_tf/` layout — with the user.
 
 4. **Run the bundled script in place by absolute path.** Never copy `inspect-bicep.sh` into the
    target repo. Write scratch only under `.agent/tmp/` and clean it up before finishing, even on
