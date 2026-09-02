@@ -95,6 +95,8 @@ detect unknown cardinality; the failure normally appears during `terraform plan`
   serializing an empty object; the Search API requires that property to be null.
 - Do not place `DOCKER_REGISTRY_SERVER_URL` in `azurerm_linux_web_app.app_settings`; configure the
   registry through `site_config.application_stack` because AzureRM reserves that setting.
+- Do not configure `site_config.linux_fx_version` on `azurerm_linux_web_app`; AzureRM 4.x computes
+  it from `site_config.application_stack.docker_image_name` and `docker_registry_url`.
 - Use subscription-scoped `role_definition_id` values for role assignments instead of display-name
   lookup, and pass the deployer's actual `User` or `ServicePrincipal` type explicitly.
 
