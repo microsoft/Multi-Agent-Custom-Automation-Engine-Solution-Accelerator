@@ -18,30 +18,85 @@ recorded in the skill's "Deviations" report.**
 | `resource r 'type@api' = {...}` | `resource "azurerm_<type>" "r" {...}` (or `azapi_resource` for preview) |
 | `module m 'path' = { params }` | `module "m" { source = "./modules/<name>"; <inputs> }` |
 | `output name = expr` | `output "name" { value = expr }` (see output contract) |
-| `uniqueString(...)` | No exact native equivalent. Prefer an explicit migration-safe input; if randomness is approved, preserve source length and report the deviation |
+| `uniqueString(...)` | Nullable override plus deterministic hash local with the same length; report that Terraform cannot reproduce ARM's exact hash |
 | `resourceGroup().location` | `azurerm_resource_group.main.location` (RG is a resource in TF) |
 | `subscription().id` | `data.azurerm_client_config.current.subscription_id` |
 | `resourceGroup().id` | `azurerm_resource_group.main.id` |
+| `deployer().objectId` | `data.azurerm_client_config.current.object_id` |
+| `deployer().tenantId` | `data.azurerm_client_config.current.tenant_id` |
 | `<resource>.id` / `.properties.x` | `<tf_resource>.id` / `<tf_resource>.<attr>` |
 | `existing` resource | `data "azurerm_<type>" "..."` data source |
-| `if (cond)` on a resource/module | `count = cond ? 1 : 0` for a singleton; reference as `[0]` |
-| `[for x in xs: ...]` resource/module loop | Prefer `for_each` with a stable semantic key; use `count` only when identity is truly positional |
+| `if (cond)` on a resource/module | `count = cond ? 1 : 0` only when the complete condition is known during planning; reference as `[0]` |
+| `[for x in xs: ...]` resource/module loop | Use `for_each` with configuration-known map keys; values may contain apply-time results |
 | ternary `cond ? a : b` | `cond ? a : b` |
-| `union()/concat()/contains()` | `merge()/concat()/contains()` |
+| `union()/concat()` | `merge()/concat()` |
+| `contains(array, value)` | `contains(collection, value)` |
+| `contains(string, substring)` | `strcontains(string, substring)` |
 | string interpolation `'${x}'` | `"${x}"` |
 | `loadTextContent()` | `file("...")` |
 | `dependsOn: [a, b]` (explicit only) | `depends_on = [a, b]` — otherwise rely on implicit refs |
 
 ## Scope & resource group
 
-- Bicep `targetScope = 'resourceGroup'` deploys into an existing resource group; it does not own
-  that group. Map it to `data "azurerm_resource_group"` by default and keep creation as an external
-  prerequisite, matching the source deployment boundary.
-- Create `azurerm_resource_group` only when the source is subscription-scoped and explicitly
-  creates the group, or when the user explicitly approves a self-contained Terraform deviation.
-  For an existing deployment, include the required import/adoption procedure before managing it.
-- Preserve the source resource-group name input/expression. Never silently change an externally
-  owned resource group into a Terraform-owned resource.
+- Bicep `targetScope = 'resourceGroup'` with an assumed-existing RG maps to a managed Terraform
+  resource: `resource "azurerm_resource_group" "main" { name = ...; location = ... }`.
+  All resources reference `azurerm_resource_group.main`, so the Terraform port creates the group.
+- Preserve the source RG naming expression. If the deployment receives the RG name externally,
+  add a `resource_group_name` variable and create the managed group with that name.
+
+## Plan-time-known cardinality
+
+Terraform must know every resource and module instance address while creating the plan. Bicep can
+condition resources on values produced during deployment, but Terraform cannot use an apply-time
+resource attribute to decide `count` or the keys of `for_each`.
+
+- Base `count` only on explicit configuration booleans, enum selections, or locals derived
+  exclusively from configuration-known values.
+- Never test a generated resource ID, principal ID, endpoint, or module output in `count`, even when
+  it appears as `var.*` inside a child module. Trace every child variable to the root module
+  argument that supplies it.
+- Pass explicit booleans such as `use_existing_ai_project` and `assign_deployer_roles` separately
+  from the resource IDs used by the created role assignments.
+- Use maps with static semantic keys for generated identities:
+
+  ```hcl
+  workload_principals = {
+    backend  = module.backend.principal_id
+    frontend = module.frontend.principal_id
+    mcp      = module.mcp.principal_id
+  }
+  ```
+
+  `for_each = local.workload_principals` is valid because the keys are known even though the
+  principal-ID values are not. Do not use `toset()` on generated IDs because set elements become
+  instance keys and remain unknown until apply.
+- Apply-time values may populate resource arguments after an instance is selected; they must not
+  decide whether the instance exists.
+
+Perform this provenance audit across root-to-child module boundaries. `terraform validate` does not
+detect unknown cardinality; the failure normally appears during `terraform plan`.
+
+## Type-aware functions and provider deprecations
+
+- Terraform `contains()` accepts collections, not strings. Translate Bicep substring checks to
+  `strcontains()`, including identity checks such as
+  `strcontains(local.identity_type, "SystemAssigned")`.
+- Inspect the selected provider schema for deprecated arguments before completing a mapping. Treat
+  provider deprecation warnings as conversion defects.
+- AzureRM Application Insights maps Bicep/ARM `disableIpMasking` to
+  `ip_masking_enabled = !var.disable_ip_masking`. Do not emit deprecated
+  `disable_ip_masking`, which is removed in AzureRM v5.
+- AzureRM 4.81+ replaces `local_authentication_disabled` with the positive-form
+  `local_authentication_enabled` argument for Cosmos DB and Application Insights resources.
+- AzureRM Container App CORS uses `exposed_headers`, not the ARM-style `exposeHeaders` spelling.
+- Omit `zone_redundancy_enabled` from a non-WAF Container Apps environment. AzureRM requires
+  `infrastructure_subnet_id` whenever that argument is present, including when its value is null.
+- When Search `disableLocalAuth` is true, omit `authOptions` from an AzAPI request instead of
+  serializing an empty object; the Search API requires that property to be null.
+- Do not place `DOCKER_REGISTRY_SERVER_URL` in `azurerm_linux_web_app.app_settings`; configure the
+  registry through `site_config.application_stack` because AzureRM reserves that setting.
+- Use subscription-scoped `role_definition_id` values for role assignments instead of display-name
+  lookup, and pass the deployer's actual `User` or `ServicePrincipal` type explicitly.
 
 ## Provider skeleton (`providers.tf`)
 
@@ -225,6 +280,37 @@ locals {
 
 Preserve Bicep nullable inputs with Terraform nullable types/defaults rather than empty-string
 sentinels. Do not use `try()` or `coalesce()` to hide a missing required value.
+When an empty string is the intended null fallback, use an explicit null conditional because Terraform `coalesce()` rejects both null and empty-string arguments.
+
+For `uniqueString()` defaults, preserve non-interactive behavior with a deterministic fallback:
+
+```hcl
+variable "solution_unique_text" {
+  type     = string
+  default  = null
+  nullable = true
+}
+
+locals {
+  solution_unique_text = coalesce(
+    var.solution_unique_text,
+    substr(md5(join("-", [
+      var.subscription_id,
+      var.resource_group_name,
+      var.solution_name,
+    ])), 0, 5)
+  )
+}
+```
+
+Use the source's exact inputs and output length. Terraform cannot reproduce ARM `uniqueString()`
+exactly, so existing deployments must set the override to their current suffix; fresh deployments
+use the deterministic fallback without prompting. Do not make the override required and do not use
+an unseeded random resource by default.
+
+Values provided by Bicep deployment context are not user parameters. In particular, map
+`deployer().objectId` directly to `data.azurerm_client_config.current.object_id`; do not introduce a
+required `deployer_principal_id` variable unless the Bicep contract explicitly declares one.
 
 ## Fabric capacity
 
@@ -242,6 +328,13 @@ top-level `sku_name` argument; the latter fails `terraform validate`.
   (`solutionName` → `solution_name`), the same default, and encode decorators as `validation`.
 - Add a `variable "subscription_id"` (the provider needs it; sourced from `TF_VAR_subscription_id`
   in CI) even if Bicep used `subscription().id` implicitly.
+- Always create `infra_tf/terraform.tfvars` for the selected flavor. Translate literal values from
+  the selected sibling ARM `*.parameters.json` file. For this repository,
+  `main.parameters.json` is the standard `bicep`/`avm` bridge and `main.waf.parameters.json`
+  supplies `avm-waf` literals and feature flags.
+- Do not copy azd placeholders such as `${AZURE_ENV_NAME}` into tfvars: Terraform does not expand
+  them. Map non-secret values to `TF_VAR_<snake_case_name>` and source sensitive values from the
+  deployment environment or secret store.
 - Translate `infra/params/<env>.bicepparam` assignments into `infra_tf/<env>.tfvars` (values only,
   `snake_case` keys). A Bicep `param foo = 'bar'` in the `.bicepparam` → `foo = "bar"` in `.tfvars`.
 
