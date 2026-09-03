@@ -152,12 +152,19 @@ detect unknown cardinality; the failure normally appears during `terraform plan`
 - AzureRM Container App CORS uses `exposed_headers`, not the ARM-style `exposeHeaders` spelling.
 - Omit `zone_redundancy_enabled` from a non-WAF Container Apps environment. AzureRM requires
   `infrastructure_subnet_id` whenever that argument is present, including when its value is null.
-- When Search `disableLocalAuth` is true, omit `authOptions` from an AzAPI request instead of
-  serializing an empty object; the Search API requires that property to be null.
+- When Search `disableLocalAuth` is true, send `authOptions = null` explicitly in an AzAPI PUT
+  request. Omitting the property or serializing an empty object can both fail because the Search
+  API requires the property itself to be null.
 - Do not place `DOCKER_REGISTRY_SERVER_URL` in `azurerm_linux_web_app.app_settings`; configure the
   registry through `site_config.application_stack` because AzureRM reserves that setting.
 - Use subscription-scoped `role_definition_id` values for role assignments instead of display-name
-  lookup, and pass the deployer's actual `User` or `ServicePrincipal` type explicitly.
+  lookup. Build the canonical ID as
+  `/subscriptions/<subscription-id>/providers/Microsoft.Authorization/roleDefinitions/<role-guid>`;
+  a bare subscription GUID or a path without the leading `/subscriptions/` produces a malformed
+  request. Pass the deployer's actual `User` or `ServicePrincipal` type explicitly.
+- Preserve model deployment capacity from the selected Bicep parameter source. When Azure reports
+  `InsufficientQuota`, change only the environment's tfvars value, with user approval, to an
+  available capacity. Do not silently lower the module default or change the source contract.
 
 ## Provider skeleton (`providers.tf`)
 
@@ -348,7 +355,8 @@ locals {
 
 Preserve Bicep nullable inputs with Terraform nullable types/defaults rather than empty-string
 sentinels. Do not use `try()` or `coalesce()` to hide a missing required value.
-When an empty string is the intended null fallback, use an explicit null conditional because Terraform `coalesce()` rejects both null and empty-string arguments.
+When an empty string is the intended null fallback, use an explicit null conditional because
+Terraform `coalesce()` rejects both null and empty-string arguments.
 
 For `uniqueString()` defaults, preserve non-interactive behavior with a deterministic fallback:
 
@@ -379,6 +387,29 @@ an unseeded random resource by default.
 Values provided by Bicep deployment context are not user parameters. In particular, map
 `deployer().objectId` directly to `data.azurerm_client_config.current.object_id`; do not introduce a
 required `deployer_principal_id` variable unless the Bicep contract explicitly declares one.
+
+## Apply-time failure triage
+
+Treat a reported plan or apply failure according to its owner before changing generated HCL:
+
+- A provider or API payload rejection is a mapping defect. Fix the smallest generated expression or
+  resource shape, validate it, and record the reusable rule in this reference.
+- An environment limit such as model quota is not a mapping defect. Keep module defaults faithful
+  and place the approved environment-specific override in the selected tfvars file.
+- A remote object that is absent while its exact address remains in Terraform state is stale state,
+  not a missing-resource HCL defect. Some AzAPI-backed services return custom 404 envelopes such as
+  `UserError` with an inner `NotFoundError`, which the provider may not interpret as deletion.
+  Confirm the mismatch with read-only state and Azure queries. Do not redesign the resource. Under
+  this skill's no-state rule, report the exact scoped recovery command for the user to run, for
+  example:
+
+  ```powershell
+  terraform state rm 'module.example.azapi_resource.resource'
+  ```
+
+- Any saved plan created before an HCL, tfvars, or state change is stale. Never advise applying it.
+  Generate and review a fresh plan so Terraform selects create, update, or replacement from the
+  current configuration and state.
 
 ## Fabric capacity
 

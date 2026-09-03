@@ -180,6 +180,10 @@ generate CI/CD (that is `cicd-terraform-workflows`).
    so future conversions avoid it. Only if `terraform` is genuinely unavailable on the machine may
    you skip — say so explicitly; never report a port as done on an unvalidated tree when terraform
    is present. Static validation does not replace the cardinality provenance audit.
+  When the user later supplies a plan or apply failure, follow the mapping reference's apply-time
+  failure triage before editing generated HCL. Distinguish mapping defects from environment limits
+  and stale state. Keep quota changes in environment tfvars, never mutate state under this skill,
+  and require a fresh saved plan after any HCL, tfvars, or state change.
 9. **Clean up** `bicep-facts.json`, `bicep-contract-facts.json`, and any other files this run
    created under `.agent/tmp/` (remove the directory only if this run created it and it is empty),
    even if an earlier step failed.
