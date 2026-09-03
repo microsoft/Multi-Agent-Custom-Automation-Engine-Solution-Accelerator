@@ -76,6 +76,22 @@ require_sensitive_block() {
   ' "$file" || fail "$context must set sensitive = true in $(basename "$file")"
 }
 
+require_default_block() {
+  local file="$1"
+  local block_name="$2"
+  local context="$3"
+  awk -v name="$block_name" '
+    $0 ~ "^[[:space:]]*variable[[:space:]]+\"" name "\"[[:space:]]*\\{" {
+      in_block=1
+      if ($0 ~ "default[[:space:]]*=") found=1
+      next
+    }
+    in_block && $0 ~ "^[[:space:]]*(variable|output)[[:space:]]+\"" { exit }
+    in_block && $0 ~ "^[[:space:]]*default[[:space:]]*=" { found=1; exit }
+    END { exit(found ? 0 : 1) }
+  ' "$file" || fail "$context must preserve its Bicep default in $(basename "$file")"
+}
+
 PATH_COLLISIONS="$(jq '
   [
     [.files[] | select(.entrypoint | not)]
@@ -125,6 +141,16 @@ while IFS=$'\t' read -r SOURCE MANIFEST_PATH; do
     done < <(jq -r --arg source "$SOURCE" '
       .files[] | select(.source == $source) | .parameters[] | select(.secure) | .name
     ' "$FACTS")
+
+    while IFS= read -r BICEP_NAME; do
+      BICEP_NAME="${BICEP_NAME%$'\r'}"
+      [ -n "$BICEP_NAME" ] || continue
+      TF_NAME="$(to_snake_case "$BICEP_NAME")"
+      require_default_block "$MODULE_DIR/variables.tf" "$TF_NAME" \
+        "$SOURCE parameter '$BICEP_NAME'"
+    done < <(jq -r --arg source "$SOURCE" '
+      .files[] | select(.source == $source) | .parameters[] | select(.hasDefault) | .name
+    ' "$FACTS")
   fi
 
   if [ -f "$MODULE_DIR/outputs.tf" ]; then
@@ -168,7 +194,7 @@ if [ "$MODULE_COUNT" -ne "$EXPECTED_COUNT" ]; then
   fail "validated $MODULE_COUNT modules but the manifest contains $EXPECTED_COUNT"
 fi
 
-for root_file in main.tf variables.tf outputs.tf providers.tf; do
+for root_file in main.tf variables.tf outputs.tf providers.tf terraform.tfvars; do
   [ -f "$TF_ROOT/$root_file" ] || fail "Terraform root is missing '$TF_ROOT/$root_file'"
 done
 
@@ -187,6 +213,27 @@ if [ -f "$TF_ROOT/variables.tf" ]; then
     require_sensitive_block "$TF_ROOT/variables.tf" variable "$TF_NAME" \
       "secure contract parameter '$BICEP_NAME'"
   done < <(jq -r '.files[] | select(.entrypoint) | .parameters[] | select(.secure) | .name' "$CONTRACT_FACTS")
+
+  while IFS= read -r BICEP_NAME; do
+  BICEP_NAME="${BICEP_NAME%$'\r'}"
+  [ -n "$BICEP_NAME" ] || continue
+  TF_NAME="$(to_snake_case "$BICEP_NAME")"
+  require_default_block "$TF_ROOT/variables.tf" "$TF_NAME" \
+    "contract parameter '$BICEP_NAME'"
+  done < <(jq -r '
+  .files[] | select(.entrypoint) | .parameters[] | select(.hasDefault) | .name
+  ' "$CONTRACT_FACTS")
+
+  if grep -Eq '^[[:space:]]*variable[[:space:]]+"deployer_principal_id"[[:space:]]*\{' \
+  "$TF_ROOT/variables.tf"; then
+  if ! jq -e '
+    any(.files[] | select(.entrypoint) | .parameters[];
+      (.name | ascii_downcase) == "deployerprincipalid")
+  ' "$CONTRACT_FACTS" >/dev/null; then
+    require_default_block "$TF_ROOT/variables.tf" "deployer_principal_id" \
+      "derived deployment-context variable 'deployer_principal_id'"
+  fi
+  fi
 fi
 
 if [ -f "$TF_ROOT/outputs.tf" ]; then
@@ -214,6 +261,43 @@ if [ -f "$TF_ROOT/providers.tf" ]; then
     fi
   done
 fi
+
+while IFS=: read -r FILE LINE _; do
+  [ -n "${FILE:-}" ] || continue
+  fail "$FILE:$LINE uses deprecated disable_ip_masking; use polarity-correct ip_masking_enabled"
+done < <(grep -RInE --include='*.tf' '^[[:space:]]*disable_ip_masking[[:space:]]*=' "$TF_ROOT" || true)
+
+while IFS=: read -r FILE LINE _; do
+  [ -n "${FILE:-}" ] || continue
+  fail "$FILE:$LINE uses collection contains() for a SystemAssigned string check; use strcontains()"
+done < <(grep -RInE --include='*.tf' 'contains\([^,]+,[[:space:]]*"SystemAssigned"\)' "$TF_ROOT" || true)
+
+while IFS=: read -r FILE LINE _; do
+  [ -n "${FILE:-}" ] || continue
+  fail "$FILE:$LINE derives count from an ID that may be unknown until apply; pass a configuration-known boolean"
+done < <(
+  grep -RInE --include='*.tf' \
+    '^[[:space:]]*count[[:space:]]*=.*var\.[A-Za-z0-9_]*(resource_id|principal_id|account_id|_id)[[:space:]]*!=[[:space:]]*""' \
+    "$TF_ROOT" || true
+)
+
+while IFS=: read -r FILE LINE _; do
+  [ -n "${FILE:-}" ] || continue
+  fail "$FILE:$LINE derives for_each from an ID that may be unknown until apply; use configuration-known map keys"
+done < <(
+  grep -RInE --include='*.tf' \
+    '^[[:space:]]*for_each[[:space:]]*=.*var\.[A-Za-z0-9_]*(resource_id|principal_id|account_id|_id)[[:space:]]*!=[[:space:]]*""' \
+    "$TF_ROOT" || true
+)
+
+while IFS=: read -r FILE LINE _; do
+  [ -n "${FILE:-}" ] || continue
+  fail "$FILE:$LINE uses generated principal IDs as set keys; use a map with static semantic keys"
+done < <(
+  grep -RInE --include='*.tf' \
+    '^[[:space:]]*for_each[[:space:]]*=.*toset\([^)]*[Pp]rincipal' \
+    "$TF_ROOT" || true
+)
 
 if [ "$ERRORS" -ne 0 ]; then
   echo "Module layout validation failed with $ERRORS error(s)." >&2

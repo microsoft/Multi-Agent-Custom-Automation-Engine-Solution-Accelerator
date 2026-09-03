@@ -11,6 +11,7 @@ infra_tf/
   variables.tf              # one variable per Bicep param (+ subscription_id)
   main.tf                   # root: resources + module calls mirroring main.bicep
   outputs.tf                # every Bicep output, value-equivalent (contract-preserving)
+  terraform.tfvars          # non-secret values for the selected deployment flavor
   <env>.tfvars              # per-stage values, translated from params/<env>.bicepparam
   modules/
     <source-area>/          # preserve the Bicep path below modules/
@@ -37,9 +38,10 @@ time): `backend.tf` overrides, `backend.ci.hcl`, `state-scope.auto.tfvars`, `.te
   preserves canonical and legacy aliases.
 - **Azure resource *names*** (the `name = ...` value): reproduce the source's naming expression
   verbatim so deployed resource names are unchanged from the Bicep output.
-- **Unique suffix**: where Bicep used `uniqueString(...)`, use a single `random_string.suffix`
-  only when the user accepts a provider-forced behavioral deviation. Preserve the source length,
-  expose an override for migration/adoption, and thread the resolved value through modules.
+- **Unique suffix**: where Bicep used `uniqueString(...)`, expose a nullable override and use a
+  deterministic hash of the same source inputs as the non-interactive fallback. Preserve the
+  source length and thread the resolved value through modules. Existing deployments set the
+  override to their current suffix because Terraform cannot reproduce ARM's exact hash.
 
 ## Child-module file contract
 
@@ -58,6 +60,14 @@ child's `versions.tf`; provider authentication and subscription configuration be
 
 ## Per-environment values
 
+- Always emit `terraform.tfvars` for the selected flavor. Translate literal values from the
+  selected sibling ARM `*.parameters.json` file or `.bicepparam` source.
+- `infra/main.parameters.json` is the standard parameter bridge for `bicep` and `avm`;
+  `infra/main.waf.parameters.json` supplies the fixed `avm-waf` settings. Override the standard
+  file's environment-driven flavor default with the flavor selected for the conversion.
+- ARM parameter expressions such as `${AZURE_ENV_NAME}` are azd substitutions, not Terraform
+  syntax. Do not copy them literally. Supply non-secret runtime values through `TF_VAR_*`; never
+  commit resolved secrets.
 - One `infra_tf/<env>.tfvars` per stage discovered under `infra/params/` (e.g. `dev.bicepparam`
   → `dev.tfvars`). Same stage names as the Bicep pipeline so promotion order carries over.
 - Keys are `snake_case`, values only. CI-identity values stay faithful

@@ -58,13 +58,15 @@ generate CI/CD (that is `cicd-terraform-workflows`).
 ## Process
 1. **Pick the contract entrypoint, implementation entrypoint & flavor.** Default the contract
    entrypoint to `infra/main.bicep`. If it is a router with a `deploymentFlavor`-style switch
-   (e.g. `standard` / `modular` / `waf`), **ask the user which single flavor to port first**. Preserve
-   the router's public parameter/output contract, but follow only the selected implementation
-   branch's resource/module tree. Port one flavor per run.
+   (in this repository, `bicep` / `avm` / `avm-waf`), inspect its actual allowed values and **ask
+   the user which single flavor to port first**. Preserve the router's public parameter/output
+   contract, but follow only the selected implementation branch's resource/module tree. Port one
+   flavor per run.
 2. **Inspect recursively.** Run `bash <absolute-skill-path>/scripts/inspect-bicep.sh
    <implementation-entrypoint> > .agent/tmp/bicep-facts.json`. It compiles every reachable local Bicep module and reports the
    target scope; per-file parameters, ARM-resolved variables, resources, `existing` resources,
-   child-module edges, outputs, provider hints; and the complete local-module graph. When the
+   child-module edges, outputs, provider hints; sibling ARM `*.parameters.json` files and `params/*.bicepparam` files; and the
+   complete local-module graph. When the
    contract entrypoint differs, run
    `bash <absolute-skill-path>/scripts/inspect-bicep.sh --no-recursive <contract-entrypoint> >
    .agent/tmp/bicep-contract-facts.json`.
@@ -99,9 +101,12 @@ generate CI/CD (that is `cicd-terraform-workflows`).
 3. **Confirm scope with the user.** Present the resource inventory, the `existing` resources and how
    each will be handled, any `azapiRequiredTypes`, the parameter list, and the full
    output list that must be preserved. Confirm the exact source-file → Terraform-module mapping,
-   the root plus one child module per reachable local Bicep module, and the per-env `.tfvars`
-   mapping (`infra/params/<env>.bicepparam` → `infra_tf/<env>.tfvars`). **Get explicit approval
-   before writing files.**
+   the root plus one child module per reachable local Bicep module, the selected source parameter
+   file, and its `terraform.tfvars` mapping. If `infra_tf/` already exists, explicitly classify the
+   run as an in-place regeneration or a fresh conversion. For in-place regeneration, treat Bicep
+   and the current mapping reference as authoritative, replace stale generated source rather than
+   preserving old mistakes, remove only specifically identified stale generated files, and never
+   delete `.terraform/`, state, or the lock file. **Get explicit approval before writing files.**
 4. **Author `infra_tf/` — root.** Seed from `templates/`:
    - `providers.tf` — `terraform{}` `required_version` + `required_providers` (`azurerm`, and
      `azapi` when the source uses preview resource types via `Microsoft.*@<api-version>`, plus
@@ -130,14 +135,30 @@ generate CI/CD (that is `cicd-terraform-workflows`).
    A Bicep file called multiple times still has one generated directory and multiple Terraform
    module calls. Preserve nested calls as nested Terraform module calls. Child modules declare
    provider sources but never configure credentials/subscriptions; configuration belongs at root.
-6. **Author per-env `.tfvars`.** For every discovered stage, translate `params/<env>.bicepparam`
-   values into `infra_tf/<env>.tfvars` (values only). Keep CI-identity values (e.g.
-   `deploying_user_principal_type = "ServicePrincipal"`) faithful to the source.
+6. **Author `terraform.tfvars` and per-env `.tfvars`.** Always emit
+   `infra_tf/terraform.tfvars` for the single flavor selected in step 1:
+   - Use `infra/main.parameters.json` for `bicep` or `avm`, overriding its
+     `deploymentFlavor` environment default with the selected flavor.
+   - Use `infra/main.waf.parameters.json` for `avm-waf`, preserving its fixed WAF feature values.
+   - Translate literal ARM parameter values and `.bicepparam` assignments to snake_case tfvars
+     keys. Never copy `${AZURE_ENV_*}` expressions as literal Terraform values because tfvars does
+     not expand them. Map non-secret runtime values to corresponding `TF_VAR_*` inputs, and leave
+     required dynamic values out of the committed tfvars file.
+   - Never write secure parameter values to a committed tfvars file. Supply them through the
+     deployment environment or secret store.
+   - Add `subscription_id` and `resource_group_name` to the runtime-input mapping because Bicep
+     receives them from deployment context rather than ARM parameter files.
+
+   When actual stage files exist under `infra/params/`, also translate each
+   `<env>.bicepparam` into `infra_tf/<env>.tfvars`. Keep CI-identity values faithful to the source.
 7. **Flag provider-forced deviations.** List any place where Terraform required a different shape
    than Bicep (e.g. `azapi_resource` for a preview type, `ignore_changes` for a known drift quirk,
    a `random_string` suffix where Bicep used `uniqueString()`), with a one-line reason each.
-8. **Validate — mandatory dual gate; iterate until clean.** Run this sequence and **do not consider
-   the port complete until both structure validation and `terraform validate` succeed**:
+8. **Validate — mandatory semantic and static gates; iterate until clean.** Trace every `count` and
+   `for_each` expression through root and child module arguments using the plan-time-known
+   cardinality rules in `references/bicep-to-terraform-mapping.md`. Review type-overloaded function
+   translations and provider deprecations. Then run this sequence and **do not consider the port
+   complete until the semantic audit, structure validation, and `terraform validate` succeed**:
    ```bash
    bash <absolute-skill-path>/scripts/validate-module-layout.sh \
      .agent/tmp/bicep-facts.json infra_tf .agent/tmp/bicep-contract-facts.json
@@ -158,7 +179,7 @@ generate CI/CD (that is `cicd-terraform-workflows`).
    error not already covered there, fix the port **and** add a short note to that mapping reference
    so future conversions avoid it. Only if `terraform` is genuinely unavailable on the machine may
    you skip — say so explicitly; never report a port as done on an unvalidated tree when terraform
-   is present.
+   is present. Static validation does not replace the cardinality provenance audit.
 9. **Clean up** `bicep-facts.json`, `bicep-contract-facts.json`, and any other files this run
    created under `.agent/tmp/` (remove the directory only if this run created it and it is empty),
    even if an earlier step failed.

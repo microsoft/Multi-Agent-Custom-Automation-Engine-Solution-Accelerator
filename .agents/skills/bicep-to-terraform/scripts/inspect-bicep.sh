@@ -25,8 +25,10 @@ TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 FILES_NDJSON="$TMP_DIR/files.ndjson"
 EDGES_NDJSON="$TMP_DIR/edges.ndjson"
+PARAMETER_FILES_NDJSON="$TMP_DIR/parameter-files.ndjson"
 : > "$FILES_NDJSON"
 : > "$EDGES_NDJSON"
+: > "$PARAMETER_FILES_NDJSON"
 
 absolute_path() {
   local path="$1"
@@ -417,9 +419,49 @@ if [ "$(printf '%s' "$PATH_COLLISIONS" | jq 'length')" -ne 0 ]; then
   exit 1
 fi
 
+ENTRY_DIR="$(dirname "$ENTRY_ABS")"
+for PARAMETER_FILE in "$ENTRY_DIR"/*.parameters.json "$ENTRY_DIR"/params/*.bicepparam; do
+  [ -f "$PARAMETER_FILE" ] || continue
+  PARAMETER_SOURCE="$(display_path "$PARAMETER_FILE")"
+
+  case "$PARAMETER_FILE" in
+    *.parameters.json)
+      if ! jq -e '.parameters | type == "object"' "$PARAMETER_FILE" >/dev/null 2>&1; then
+        echo "ERROR: ARM parameter file '$PARAMETER_SOURCE' has no parameters object" >&2
+        exit 1
+      fi
+      jq -c \
+        --arg source "$PARAMETER_SOURCE" \
+        '{
+          source: $source,
+          format: "arm-parameters-json",
+          parameters: [
+            .parameters
+            | to_entries[]
+            | {
+                name: .key,
+                value: (if .value | has("value") then .value.value else null end),
+                isEnvironmentExpression: (
+                  (.value.value | type) == "string"
+                  and (.value.value | test("^\\$\\{[A-Za-z_][A-Za-z0-9_]*(=[^}]*)?\\}$"))
+                )
+              }
+          ]
+        }' "$PARAMETER_FILE" >> "$PARAMETER_FILES_NDJSON"
+      ;;
+    *.bicepparam)
+      jq -nc \
+        --arg source "$PARAMETER_SOURCE" \
+        '{source: $source, format: "bicepparam", parameters: []}' \
+        >> "$PARAMETER_FILES_NDJSON"
+      ;;
+  esac
+done
+
 jq -s \
   --arg entrypoint "$(display_path "$ENTRY_ABS")" \
   --slurpfile edges "$EDGES_NDJSON" \
+  --slurpfile parameter_files "$PARAMETER_FILES_NDJSON" \
   '{
     schemaVersion: 3,
     implementationEntrypoint: $entrypoint,
@@ -439,5 +481,6 @@ jq -s \
       [.[].providerHints[] | select(.hint != "azurerm_expected")] | unique
     ),
     moduleEdges: $edges,
+    parameterFiles: $parameter_files,
     files: .
   }' "$FILES_NDJSON"
