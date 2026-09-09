@@ -18,7 +18,6 @@ azure-ai-projects==2.1.0
 openai==2.34.0
 azure-ai-inference==1.0.0b9
 azure-search-documents==11.7.0b2
-azure-ai-evaluation==1.16.6
  
 # Testing tools
 pytest==8.4.1  # Compatible version for pytest-asyncio
