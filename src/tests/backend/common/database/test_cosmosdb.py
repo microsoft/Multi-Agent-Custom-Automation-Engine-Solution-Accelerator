@@ -481,7 +481,7 @@ class TestCosmosDBPlanOperations:
         result = await client.get_plan_by_plan_id("test_plan_id")
         
         assert result == mock_plan
-        expected_query = "SELECT * FROM c WHERE c.id=@plan_id AND c.data_type=@data_type"
+        expected_query = "SELECT * FROM c WHERE c.id=@plan_id AND c.data_type=@data_type AND c.user_id=@user_id"
         expected_params = [
             {"name": "@plan_id", "value": "test_plan_id"},
             {"name": "@data_type", "value": DataType.plan},
@@ -608,10 +608,11 @@ class TestCosmosDBStepOperations:
         result = await client.get_steps_by_plan("test_plan_id")
         
         assert result == mock_steps
-        expected_query = "SELECT * FROM c WHERE c.plan_id=@plan_id AND c.data_type=@data_type ORDER BY c.timestamp"
+        expected_query = "SELECT * FROM c WHERE c.plan_id=@plan_id AND c.data_type=@data_type AND c.user_id=@user_id ORDER BY c.timestamp"
         expected_params = [
             {"name": "@plan_id", "value": "test_plan_id"},
             {"name": "@data_type", "value": DataType.step},
+            {"name": "@user_id", "value": "test_user"},
         ]
         client.query_items.assert_called_once_with(expected_query, expected_params, Step)
     
@@ -963,10 +964,11 @@ class TestCosmosDBAgentMessageOperations:
         result = await client.get_agent_messages("test_plan_id")
         
         assert result == mock_messages
-        expected_query = "SELECT * FROM c WHERE c.plan_id=@plan_id AND c.data_type=@data_type ORDER BY c._ts ASC"
+        expected_query = "SELECT * FROM c WHERE c.plan_id=@plan_id AND c.data_type=@data_type AND c.user_id=@user_id ORDER BY c._ts ASC"
         expected_params = [
             {"name": "@plan_id", "value": "test_plan_id"},
             {"name": "@data_type", "value": DataType.m_plan_message},
+            {"name": "@user_id", "value": "test_user"},
         ]
         client.query_items.assert_called_once_with(expected_query, expected_params, AgentMessageData)
 
@@ -1038,10 +1040,11 @@ class TestCosmosDBMiscellaneousOperations:
         result = await client.get_mplan("test_plan_id")
         
         assert result == mock_mplan
-        expected_query = "SELECT * FROM c WHERE c.plan_id=@plan_id AND c.data_type=@data_type"
+        expected_query = "SELECT * FROM c WHERE c.plan_id=@plan_id AND c.data_type=@data_type AND c.user_id=@user_id"
         expected_params = [
             {"name": "@plan_id", "value": "test_plan_id"},
             {"name": "@data_type", "value": DataType.m_plan},
+            {"name": "@user_id", "value": "test_user"},
         ]
         client.query_items.assert_called_once_with(expected_query, expected_params, MPlan)
     
