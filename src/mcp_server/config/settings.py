@@ -47,6 +47,8 @@ class MCPServerConfig(BaseSettings):
     # Backend URL for image proxy (browser loads images via backend instead of direct blob)
     backend_url: Optional[str] = Field(default=None)
 
+    app_env: str = Field(default="prod")
+
 
 # Global configuration instance
 config = MCPServerConfig()

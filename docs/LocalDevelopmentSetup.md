@@ -408,22 +408,44 @@ The Backend API will start at:
 cd src/mcp_server
 ```
 
-<!-- ### 5.2. Configure Backend API Environment Variables
+### 5.2. Configure MCP Server Environment Variables
 
-Create a `.env` file in the `src/backend-api/src/app` directory:
+**Step 1: Create the `.env` file**
 
 ```bash
-cd src/app
-
-# Copy the example file
-cp .env.example .env  # Linux
+# Create .env file
+touch .env  # Linux
 # or
-Copy-Item .env.example .env  # Windows PowerShell
+New-Item .env  # Windows PowerShell
 ```
 
-Edit the `.env` file with your Azure configuration values. -->
+**Step 2: Copy the template**
 
-### 5.2. Install MCP Server Dependencies
+1. Open the `.env.example` file
+2. Select all content (CTRL + A)
+3. Copy (CTRL + C)
+4. Open the new `.env` file
+5. Paste (CTRL + V)
+
+**Step 3: Get Azure values and update `.env`**
+
+1. Open [Azure Portal](https://portal.azure.com)
+2. Navigate to your **Resource Group**
+3. Open the **MCP Server Container App**
+4. Click **Environment variables** in the left menu
+5. Copy each value from Azure and update the corresponding variable in your `.env` file
+
+**Step 4: Update local development settings**
+
+In your `.env` file, make these changes:
+
+- Set `APP_ENV=dev`
+- Set `ENABLE_AUTH=false`
+- Keep the local host/port defaults:
+  - `HOST=0.0.0.0`
+  - `PORT=9000`
+
+### 5.3. Install MCP Server Dependencies
 
 ```bash
 # Create and activate virtual environment
@@ -438,7 +460,7 @@ source .venv/bin/activate  # Linux/WSL2
 uv sync --python 3.12
 ```
 
-### 5.3. Run the MCP Server
+### 5.4. Run the MCP Server
 
 ```bash
 # Run with per-domain routing (recommended)
