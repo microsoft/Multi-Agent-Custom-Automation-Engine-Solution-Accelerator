@@ -451,9 +451,28 @@ class TestAgentMessage:
         assert resp.json()["status"] == "message recorded"
 
     def test_plan_service_error(self, rt):
+        plan = MagicMock()
+        plan.session_id = "sess-1"
+        rt.store.get_plan_by_plan_id.return_value = plan
         rt.plan_service.handle_agent_messages = AsyncMock(side_effect=Exception("boom"))
         resp = rt.client.post("/api/v4/agent_message", json=self._payload())
         assert resp.status_code == 200
+
+    def test_plan_not_owned_returns_404(self, rt):
+        # store.get_plan_by_plan_id is user-scoped in the data layer, so a
+        # plan owned by a different user returns None. The endpoint must
+        # refuse the write with 404 and must not call handle_agent_messages.
+        rt.store.get_plan_by_plan_id.return_value = None
+        resp = rt.client.post("/api/v4/agent_message", json=self._payload())
+        assert resp.status_code == 404
+        rt.plan_service.handle_agent_messages.assert_not_called()
+
+    def test_missing_plan_id_returns_400(self, rt):
+        payload = self._payload()
+        payload["plan_id"] = ""
+        resp = rt.client.post("/api/v4/agent_message", json=payload)
+        assert resp.status_code == 400
+        rt.plan_service.handle_agent_messages.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

@@ -893,21 +893,28 @@ async def agent_message_user(
             status_code=401, detail="Missing or invalid user information"
         )
 
-    # Attach session_id to span if plan_id is available and capture for events
-    session_id = None
-    if agent_message.plan_id:
+    # Authorization: require plan_id and verify the plan belongs to the
+    # authenticated user before persisting any agent message for it. This
+    # prevents cross-user message injection through /api/v4/agent_message.
+    if not agent_message.plan_id:
+        raise HTTPException(status_code=400, detail="plan_id is required")
+
+    memory_store = await DatabaseFactory.get_database(user_id=user_id)
+    plan = await memory_store.get_plan_by_plan_id(plan_id=agent_message.plan_id)
+    if plan is None:
+        # Return 404 (not 403) to avoid disclosing whether the plan exists
+        # under a different user.
+        raise HTTPException(status_code=404, detail="Plan not found")
+
+    # Attach session_id to span for telemetry (best-effort, non-fatal).
+    session_id = plan.session_id
+    if session_id:
         try:
-            memory_store = await DatabaseFactory.get_database(user_id=user_id)
-            plan = await memory_store.get_plan_by_plan_id(plan_id=agent_message.plan_id)
-            if plan and plan.session_id:
-                session_id = plan.session_id
-                span = trace.get_current_span()
-                if span:
-                    span.set_attribute("session_id", session_id)
+            span = trace.get_current_span()
+            if span:
+                span.set_attribute("session_id", session_id)
         except Exception:
             pass  # Don't fail request if span attribute fails
-
-    # Set the approval in the orchestration config
 
     try:
 

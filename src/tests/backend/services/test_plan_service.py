@@ -171,11 +171,25 @@ class TestUtilityFunctions:
         )
         result = build_agent_message_from_agent_message_response(response, "fallback-user")
         assert result.plan_id == "test-plan-123"
-        assert result.user_id == "response-user"
+        # Security: the authenticated user_id must always win, regardless of
+        # any user_id present on the payload. This prevents cross-user
+        # message injection via /api/v4/agent_message.
+        assert result.user_id == "fallback-user"
         assert result.agent == "TestAgent"
         assert result.content == "Agent response content"
         assert result.steps == ["step1", "step2"]
         assert result.next_steps == ["next1"]
+
+    def test_build_agent_message_from_agent_message_response_ignores_payload_user_id(self):
+        """Regression: payload-supplied user_id must never override the authenticated caller."""
+        response = MockAgentMessageResponse(
+            plan_id="p-1",
+            user_id="attacker-supplied-victim-id",
+            agent="TestAgent",
+            content="malicious",
+        )
+        result = build_agent_message_from_agent_message_response(response, "authenticated-user")
+        assert result.user_id == "authenticated-user"
 
     def test_build_agent_message_from_agent_message_response_fallbacks(self):
         response = MockAgentMessageResponse(

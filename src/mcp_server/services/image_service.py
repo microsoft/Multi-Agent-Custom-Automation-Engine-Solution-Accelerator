@@ -30,9 +30,9 @@ _IMAGE_API_VERSION = "2025-04-01-preview"
 
 def _get_credential():
     """Return a credential based on environment (dev vs deployed)."""
-    app_env = os.environ.get("APP_ENV", "prod").lower()
+    app_env = (config.app_env or os.environ.get("APP_ENV") or "prod").lower()
     if app_env == "dev":
-        return DefaultAzureCredential(require_envvar=True)
+        return DefaultAzureCredential()
     return ManagedIdentityCredential(client_id=config.azure_client_id)
 
 

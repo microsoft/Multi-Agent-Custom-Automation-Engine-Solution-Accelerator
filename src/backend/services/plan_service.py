@@ -95,9 +95,11 @@ def build_agent_message_from_agent_message_response(
         or ""
     )
 
-    # plan_id / user_id fallback
+    # plan_id fallback. user_id is ALWAYS taken from the authenticated caller
+    # to prevent a client from persisting an AgentMessageData row under a
+    # different user_id via the payload.
     plan_id_val = getattr(agent_response, "plan_id", "") or ""
-    user_id_val = getattr(agent_response, "user_id", "") or user_id
+    user_id_val = user_id
 
     return AgentMessageData(
         plan_id=plan_id_val,
