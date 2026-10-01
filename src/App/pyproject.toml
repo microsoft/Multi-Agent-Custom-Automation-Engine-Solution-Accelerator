@@ -12,7 +12,7 @@ dependencies = [
     "python-dotenv==1.1.1",
     "python-multipart==0.0.30",
     "httpx==0.28.1",
-    "urllib3==2.7.0",
+    "urllib3==2.8.0",
     "cryptography==50.0.0",
 ]
 
