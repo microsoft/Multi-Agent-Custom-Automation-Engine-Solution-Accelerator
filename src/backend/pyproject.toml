@@ -61,7 +61,7 @@ dependencies = [
     # NOTE: agent-framework-azure-ai==1.0.0rc6 requires azure-ai-agents>=1.2.0b5,<1.2.0b6
     #       which conflicts with the GA azure-ai-agents==1.1.0. Kept as comment for rollback only.
     # "agent-framework-azure-ai==1.0.0rc6",  # Legacy bridge — required by v4/ code only
-    "urllib3==2.7.0",
+    "urllib3==2.8.0",
     "protobuf==6.33.6",
     "cryptography==50.0.0",
     "aiohttp==3.14.3",
