@@ -18,6 +18,11 @@
            - the MCP Container App image
            - the frontend Web App container image and DOCKER_REGISTRY_SERVER_URL
 
+.PARAMETER ResourceGroup
+    Optional. When provided, the script queries Azure directly to discover
+    resources (ACR, Container Apps, Web App) in the specified resource group
+    instead of reading from azd environment / .azure files.
+
 .PARAMETER BuildMode
     Optional. `remote` (default) or `local`. Overrides the AZURE_ENV_BUILD_MODE
     environment variable when provided.
@@ -35,11 +40,17 @@
     ./infra/scripts/post-provision/Build-And-Push-Images.ps1
 
 .EXAMPLE
+    # Build using a specific resource group (no .azure file needed)
+    ./infra/scripts/post-provision/Build-And-Push-Images.ps1 -ResourceGroup "my-rg-name"
+
+.EXAMPLE
     # Local build using Docker Desktop
     ./infra/scripts/post-provision/Build-And-Push-Images.ps1 -BuildMode local -ImageTag dev
 #>
 [CmdletBinding()]
 param(
+    [string]$ResourceGroup,
+
     [ValidateSet('local', 'remote')]
     [string]$BuildMode,
 
@@ -142,25 +153,80 @@ if ($Skip -or ([Environment]::GetEnvironmentVariable('AZURE_ENV_SKIP_IMAGE_BUILD
 }
 
 # --- Read configuration -----------------------------------------------------
-Write-Section 'Reading azd environment values'
-$azdEnv = Get-AzdEnvValues
+if (-not [string]::IsNullOrWhiteSpace($ResourceGroup)) {
+    Write-Section "Discovering resources from resource group: $ResourceGroup"
 
-$acrName        = Get-EnvOrAzd -Name 'AZURE_CONTAINER_REGISTRY_NAME'     -AzdEnv $azdEnv
-$acrEndpoint    = Get-EnvOrAzd -Name 'AZURE_CONTAINER_REGISTRY_ENDPOINT' -AzdEnv $azdEnv
-$resourceGroup  = Get-EnvOrAzd -Name 'AZURE_RESOURCE_GROUP'              -AzdEnv $azdEnv
-$backendCa      = Get-EnvOrAzd -Name 'BACKEND_CONTAINER_APP_NAME'        -AzdEnv $azdEnv
-$mcpCa          = Get-EnvOrAzd -Name 'MCP_CONTAINER_APP_NAME'            -AzdEnv $azdEnv
-$frontendApp    = Get-EnvOrAzd -Name 'FRONTEND_WEB_APP_NAME'             -AzdEnv $azdEnv
-$backendImage   = Get-EnvOrAzd -Name 'BACKEND_IMAGE_NAME'                -AzdEnv $azdEnv -Default 'macaebackend'
-$frontendImage  = Get-EnvOrAzd -Name 'FRONTEND_IMAGE_NAME'               -AzdEnv $azdEnv -Default 'macaefrontend'
-$mcpImage       = Get-EnvOrAzd -Name 'MCP_IMAGE_NAME'                    -AzdEnv $azdEnv -Default 'macaemcp'
-$frontendPort   = Get-EnvOrAzd -Name 'FRONTEND_WEBSITES_PORT'            -AzdEnv $azdEnv -Default '3000'
+    if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
+        throw "'az' CLI is required when specifying the -ResourceGroup parameter."
+    }
 
-if (-not $BuildMode) {
-    $BuildMode = Get-EnvOrAzd -Name 'AZURE_ENV_BUILD_MODE' -AzdEnv $azdEnv -Default 'remote'
+    $resourceGroup = $ResourceGroup
+
+    # Discover ACR
+    $acrName     = (az acr list --resource-group $resourceGroup --query "[0].name" -o tsv 2>$null)
+    $acrEndpoint = (az acr list --resource-group $resourceGroup --query "[0].loginServer" -o tsv 2>$null)
+
+    # Discover Container Apps
+    $caList = (az containerapp list --resource-group $resourceGroup --query "[].name" -o tsv 2>$null)
+    $backendCa = $null
+    $mcpCa = $null
+    if ($caList) {
+        foreach ($caName in ($caList -split "`n")) {
+            $caName = $caName.Trim()
+            if ([string]::IsNullOrWhiteSpace($caName)) { continue }
+            $caLower = $caName.ToLower()
+            if ($caLower -like '*mcp*') {
+                $mcpCa = $caName
+            }
+            else {
+                $backendCa = $caName
+            }
+        }
+    }
+
+    # Discover Frontend Web App
+    $frontendApp = (az webapp list --resource-group $resourceGroup --query "[0].name" -o tsv 2>$null)
+
+    # Use defaults or env overrides for image names
+    $backendImage  = if ([Environment]::GetEnvironmentVariable('BACKEND_IMAGE_NAME'))  { [Environment]::GetEnvironmentVariable('BACKEND_IMAGE_NAME') }  else { 'macaebackend' }
+    $frontendImage = if ([Environment]::GetEnvironmentVariable('FRONTEND_IMAGE_NAME')) { [Environment]::GetEnvironmentVariable('FRONTEND_IMAGE_NAME') } else { 'macaefrontend' }
+    $mcpImage      = if ([Environment]::GetEnvironmentVariable('MCP_IMAGE_NAME'))      { [Environment]::GetEnvironmentVariable('MCP_IMAGE_NAME') }      else { 'macaemcp' }
+    $frontendPort  = if ([Environment]::GetEnvironmentVariable('FRONTEND_WEBSITES_PORT')) { [Environment]::GetEnvironmentVariable('FRONTEND_WEBSITES_PORT') } else { '3000' }
+
+    if (-not $BuildMode) {
+        $BuildMode = if ([Environment]::GetEnvironmentVariable('AZURE_ENV_BUILD_MODE')) { [Environment]::GetEnvironmentVariable('AZURE_ENV_BUILD_MODE') } else { 'remote' }
+    }
+    if (-not $ImageTag) {
+        $ImageTag = if ([Environment]::GetEnvironmentVariable('AZURE_ENV_IMAGE_TAG')) { [Environment]::GetEnvironmentVariable('AZURE_ENV_IMAGE_TAG') } else { 'latest' }
+    }
+
+    Write-Host "Discovered resources:"
+    Write-Host "  ACR:            $acrName ($acrEndpoint)"
+    Write-Host "  Backend CA:     $backendCa"
+    Write-Host "  MCP CA:         $mcpCa"
+    Write-Host "  Frontend App:   $frontendApp"
 }
-if (-not $ImageTag) {
-    $ImageTag = Get-EnvOrAzd -Name 'AZURE_ENV_IMAGE_TAG' -AzdEnv $azdEnv -Default 'latest'
+else {
+    Write-Section 'Reading azd environment values'
+    $azdEnv = Get-AzdEnvValues
+
+    $acrName        = Get-EnvOrAzd -Name 'AZURE_CONTAINER_REGISTRY_NAME'     -AzdEnv $azdEnv
+    $acrEndpoint    = Get-EnvOrAzd -Name 'AZURE_CONTAINER_REGISTRY_ENDPOINT' -AzdEnv $azdEnv
+    $resourceGroup  = Get-EnvOrAzd -Name 'AZURE_RESOURCE_GROUP'              -AzdEnv $azdEnv
+    $backendCa      = Get-EnvOrAzd -Name 'BACKEND_CONTAINER_APP_NAME'        -AzdEnv $azdEnv
+    $mcpCa          = Get-EnvOrAzd -Name 'MCP_CONTAINER_APP_NAME'            -AzdEnv $azdEnv
+    $frontendApp    = Get-EnvOrAzd -Name 'FRONTEND_WEB_APP_NAME'             -AzdEnv $azdEnv
+    $backendImage   = Get-EnvOrAzd -Name 'BACKEND_IMAGE_NAME'                -AzdEnv $azdEnv -Default 'macaebackend'
+    $frontendImage  = Get-EnvOrAzd -Name 'FRONTEND_IMAGE_NAME'               -AzdEnv $azdEnv -Default 'macaefrontend'
+    $mcpImage       = Get-EnvOrAzd -Name 'MCP_IMAGE_NAME'                    -AzdEnv $azdEnv -Default 'macaemcp'
+    $frontendPort   = Get-EnvOrAzd -Name 'FRONTEND_WEBSITES_PORT'            -AzdEnv $azdEnv -Default '3000'
+
+    if (-not $BuildMode) {
+        $BuildMode = Get-EnvOrAzd -Name 'AZURE_ENV_BUILD_MODE' -AzdEnv $azdEnv -Default 'remote'
+    }
+    if (-not $ImageTag) {
+        $ImageTag = Get-EnvOrAzd -Name 'AZURE_ENV_IMAGE_TAG' -AzdEnv $azdEnv -Default 'latest'
+    }
 }
 
 foreach ($pair in @(
