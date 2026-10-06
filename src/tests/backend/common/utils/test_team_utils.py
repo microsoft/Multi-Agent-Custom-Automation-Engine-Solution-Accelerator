@@ -211,13 +211,17 @@ class TestCreateRAIAgent:
         assert call_args[1]['enable_code_interpreter'] is False
         assert call_args[1]['project_endpoint'] == "https://test.project.azure.com/"
         assert call_args[1]['mcp_config'] is None
-        assert call_args[1]['team_config'] is self.mock_team
+        assert call_args[1]['team_config'] is self.mock_rai_team
         assert call_args[1]['memory_store'] is self.mock_memory_store
         
-        # Verify the team configuration was updated in place (source mutates team directly)
-        assert self.mock_team.team_id == "rai_team"
-        assert self.mock_team.name == "RAI Team"
-        assert self.mock_team.description == "Team responsible for Responsible AI checks"
+        # Verify a copy is used so the caller's team is not mutated
+        self.mock_team.model_copy.assert_called_once_with(
+            update={
+                "team_id": "rai_team",
+                "name": "RAI Team",
+                "description": "Team responsible for Responsible AI checks",
+            }
+        )
         
         # Verify agent initialization
         mock_agent.open.assert_called_once()
@@ -254,6 +258,41 @@ class TestCreateRAIAgent:
         
         # Should still return agent even if registry fails
         assert result is mock_agent
+
+    @pytest.mark.asyncio
+    @patch('backend.common.utils.team_utils.config')
+    @patch('backend.common.utils.team_utils.AgentTemplate')
+    @patch('backend.common.utils.team_utils.agent_registry')
+    async def test_create_rai_agent_does_not_mutate_caller_team(self, mock_registry, mock_agent_class, mock_config):
+        """Regression: the selected team must keep its identity for the scope gate."""
+        mock_agent = Mock()
+        mock_agent.open = AsyncMock()
+        mock_agent_class.return_value = mock_agent
+        team = TeamConfiguration(
+            id="id-1",
+            session_id="s-1",
+            team_id="00000000-0000-0000-0000-000000000001",
+            name="Human Resources Team",
+            status="visible",
+            created="",
+            created_by="",
+            deployment_name="",
+            agents=[],
+            description="HR onboarding team",
+            logo="",
+            plan="",
+            starting_tasks=[],
+            user_id="u-1",
+        )
+
+        await create_RAI_agent(team, self.mock_memory_store)
+
+        assert team.team_id == "00000000-0000-0000-0000-000000000001"
+        assert team.name == "Human Resources Team"
+        assert team.description == "HR onboarding team"
+        passed_team = mock_agent_class.call_args[1]['team_config']
+        assert passed_team.team_id == "rai_team"
+        assert passed_team.description == "Team responsible for Responsible AI checks"
 
 
 class TestGetAgentResponse:
