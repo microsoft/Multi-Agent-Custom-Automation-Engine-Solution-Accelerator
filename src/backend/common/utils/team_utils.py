@@ -87,9 +87,14 @@ async def create_RAI_agent(
     )
 
     model_deployment_name = config.AZURE_OPENAI_RAI_DEPLOYMENT_NAME
-    team.team_id = "rai_team"  # Use a fixed team ID for RAI agent
-    team.name = "RAI Team"
-    team.description = "Team responsible for Responsible AI checks"
+    # Copy so the caller's team (later used for orchestration/scope-gate) is not mutated.
+    rai_team = team.model_copy(
+        update={
+            "team_id": "rai_team",
+            "name": "RAI Team",
+            "description": "Team responsible for Responsible AI checks",
+        }
+    )
     agent = AgentTemplate(
         agent_name=agent_name,
         agent_description=agent_description,
@@ -98,7 +103,7 @@ async def create_RAI_agent(
         enable_code_interpreter=False,
         project_endpoint=config.AZURE_AI_PROJECT_ENDPOINT,
         mcp_config=None,
-        team_config=team,
+        team_config=rai_team,
         memory_store=memory_store,
     )
 
