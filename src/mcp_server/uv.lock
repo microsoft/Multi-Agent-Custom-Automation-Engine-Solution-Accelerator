@@ -62,16 +62,16 @@ wheels = [
 
 [[package]]
 name = "anyio"
-version = "4.13.0"
+version = "4.14.2"
 source = { registry = "https://packagefeedproxy.microsoft.io/pypi/simple/" }
 dependencies = [
     { name = "exceptiongroup", marker = "python_full_version < '3.11'" },
     { name = "idna" },
     { name = "typing-extensions", marker = "python_full_version < '3.13'" },
 ]
-sdist = { url = "https://ms-feed-2.pkgs.visualstudio.com/f5581750-f66a-4ee8-b9cc-8269930bd7c4/_packaging/637e612b-d5d4-45c1-8a31-e0deb2a5a828/pypi/download/anyio/4.13/anyio-4.13.0.tar.gz", hash = "sha256:334b70e641fd2221c1505b3890c69882fe4a2df910cba14d97019b90b24439dc" }
+sdist = { url = "https://ms-feed-25.pkgs.visualstudio.com/6f084628-a36d-42cb-934d-057357e379dc/_packaging/49d7402f-07bb-4b18-a9ce-086e6e98a554/pypi/download/anyio/4.14.2/anyio-4.14.2.tar.gz", hash = "sha256:cfa139f3ed1a23ee8f88a145ddb5ac7605b8bbfd8592baacd7ce3d8bb4313c7f" }
 wheels = [
-    { url = "https://ms-feed-2.pkgs.visualstudio.com/f5581750-f66a-4ee8-b9cc-8269930bd7c4/_packaging/637e612b-d5d4-45c1-8a31-e0deb2a5a828/pypi/download/anyio/4.13/anyio-4.13.0-py3-none-any.whl", hash = "sha256:08b310f9e24a9594186fd75b4f73f4a4152069e3853f1ed8bfbf58369f4ad708" },
+    { url = "https://ms-feed-25.pkgs.visualstudio.com/6f084628-a36d-42cb-934d-057357e379dc/_packaging/49d7402f-07bb-4b18-a9ce-086e6e98a554/pypi/download/anyio/4.14.2/anyio-4.14.2-py3-none-any.whl", hash = "sha256:9f505dda5ac9f0c8309b5e8bd445a8c2bf7246f3ce950121e45ea15bc41d1494" },
 ]
 
 [[package]]
@@ -879,7 +879,7 @@ requires-dist = [
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = "==1.3.0" },
     { name = "python-dotenv", specifier = "==1.1.1" },
     { name = "python-multipart", specifier = "==0.0.30" },
-    { name = "urllib3", specifier = "==2.7.0" },
+    { name = "urllib3", specifier = "==2.8.0" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.35.0" },
     { name = "werkzeug", specifier = "==3.1.6" },
 ]
@@ -1306,14 +1306,14 @@ wheels = [
 
 [[package]]
 name = "pyjwt"
-version = "2.13.0"
+version = "2.14.0"
 source = { registry = "https://packagefeedproxy.microsoft.io/pypi/simple/" }
 dependencies = [
     { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
-sdist = { url = "https://ms-feed-2.pkgs.visualstudio.com/f5581750-f66a-4ee8-b9cc-8269930bd7c4/_packaging/637e612b-d5d4-45c1-8a31-e0deb2a5a828/pypi/download/pyjwt/2.13/pyjwt-2.13.0.tar.gz", hash = "sha256:41571c89ca91598c79e8ef18a2d07367d4810fbbd6f637794879baf1b7703423" }
+sdist = { url = "https://ms-feed-25.pkgs.visualstudio.com/6f084628-a36d-42cb-934d-057357e379dc/_packaging/49d7402f-07bb-4b18-a9ce-086e6e98a554/pypi/download/pyjwt/2.14/pyjwt-2.14.0.tar.gz", hash = "sha256:77283c83fb56ecf566a886c757a714bc83668e38156de2cce8263302f42e0b86" }
 wheels = [
-    { url = "https://ms-feed-2.pkgs.visualstudio.com/f5581750-f66a-4ee8-b9cc-8269930bd7c4/_packaging/637e612b-d5d4-45c1-8a31-e0deb2a5a828/pypi/download/pyjwt/2.13/pyjwt-2.13.0-py3-none-any.whl", hash = "sha256:66adcc2aff09b3f1bbd95fc1e1577df8ac8723c978552fd43304c8a290ac5728" },
+    { url = "https://ms-feed-25.pkgs.visualstudio.com/6f084628-a36d-42cb-934d-057357e379dc/_packaging/49d7402f-07bb-4b18-a9ce-086e6e98a554/pypi/download/pyjwt/2.14/pyjwt-2.14.0-py3-none-any.whl", hash = "sha256:ad0cef71c756a56e74863c2919cf0985f72decbcfcb550ee2f422e7c62b5eedc" },
 ]
 
 [package.optional-dependencies]
@@ -1926,11 +1926,11 @@ wheels = [
 
 [[package]]
 name = "urllib3"
-version = "2.7.0"
+version = "2.8.0"
 source = { registry = "https://packagefeedproxy.microsoft.io/pypi/simple/" }
-sdist = { url = "https://ms-feed-12.pkgs.visualstudio.com/80ca31fc-64d9-45fa-acb1-85ac9c6202b2/_packaging/00cb4235-4c66-4418-be20-d052995979fb/pypi/download/urllib3/2.7/urllib3-2.7.0.tar.gz", hash = "sha256:231e0ec3b63ceb14667c67be60f2f2c40a518cb38b03af60abc813da26505f4c" }
+sdist = { url = "https://ms-feed-25.pkgs.visualstudio.com/6f084628-a36d-42cb-934d-057357e379dc/_packaging/49d7402f-07bb-4b18-a9ce-086e6e98a554/pypi/download/urllib3/2.8/urllib3-2.8.0.tar.gz", hash = "sha256:63bf2ead4c879426ebf22ef2a781eeb4aa3b4ae798a0435506f8687fd5bb9b63" }
 wheels = [
-    { url = "https://ms-feed-12.pkgs.visualstudio.com/80ca31fc-64d9-45fa-acb1-85ac9c6202b2/_packaging/00cb4235-4c66-4418-be20-d052995979fb/pypi/download/urllib3/2.7/urllib3-2.7.0-py3-none-any.whl", hash = "sha256:9fb4c81ebbb1ce9531cce37674bbc6f1360472bc18ca9a553ede278ef7276897" },
+    { url = "https://ms-feed-25.pkgs.visualstudio.com/6f084628-a36d-42cb-934d-057357e379dc/_packaging/49d7402f-07bb-4b18-a9ce-086e6e98a554/pypi/download/urllib3/2.8/urllib3-2.8.0-py3-none-any.whl", hash = "sha256:0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3" },
 ]
 
 [[package]]
