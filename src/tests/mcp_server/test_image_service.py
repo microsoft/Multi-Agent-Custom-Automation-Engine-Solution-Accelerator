@@ -8,6 +8,7 @@ blob access occurs.
 """
 
 from typing import Self
+from unittest.mock import Mock
 
 import pytest
 
@@ -21,6 +22,34 @@ from services.image_service import ImageService
 _TINY_PNG_B64 = (
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNgYAAAAAMAAWgmWQ0AAAAASUVORK5CYII="
 )
+
+
+@pytest.mark.parametrize("app_env", ["dev", "DEV"])
+def test_get_credential_uses_cli_locally(monkeypatch, app_env) -> None:
+    cli = Mock()
+    managed_identity = Mock()
+    monkeypatch.setattr(image_service_mod.config, "app_env", app_env)
+    monkeypatch.setattr(image_service_mod, "AzureCliCredential", cli)
+    monkeypatch.setattr(image_service_mod, "ManagedIdentityCredential", managed_identity)
+
+    assert image_service_mod._get_credential() is cli.return_value
+    cli.assert_called_once_with()
+    managed_identity.assert_not_called()
+
+
+@pytest.mark.parametrize("app_env", ["prod", "Prod", "staging", ""])
+def test_get_credential_uses_managed_identity_when_not_dev(monkeypatch, app_env) -> None:
+    cli = Mock()
+    managed_identity = Mock()
+    monkeypatch.delenv("APP_ENV", raising=False)
+    monkeypatch.setattr(image_service_mod.config, "app_env", app_env)
+    monkeypatch.setattr(image_service_mod.config, "azure_client_id", "managed-client-id")
+    monkeypatch.setattr(image_service_mod, "AzureCliCredential", cli)
+    monkeypatch.setattr(image_service_mod, "ManagedIdentityCredential", managed_identity)
+
+    assert image_service_mod._get_credential() is managed_identity.return_value
+    managed_identity.assert_called_once_with(client_id="managed-client-id")
+    cli.assert_not_called()
 
 
 class _FakeResponse:

@@ -328,7 +328,7 @@ class TestAgentTemplateOpen:
         chat_client_mock.get_toolbox = AsyncMock(return_value=Mock())
 
         with (
-            patch("backend.agents.agent_template.DefaultAzureCredential", return_value=cred),
+            patch("backend.agents.agent_template.AzureCliCredential", return_value=cred),
             patch("backend.agents.agent_template.AIProjectClient", return_value=project_client),
             patch("backend.agents.agent_template.FoundryChatClient", return_value=chat_client_mock),
             patch("backend.agents.agent_template.Agent", return_value=agent_cm),
@@ -358,7 +358,7 @@ class TestAgentTemplateOpen:
         chat_client_mock.get_toolbox = AsyncMock(return_value=Mock())
 
         with (
-            patch("backend.agents.agent_template.DefaultAzureCredential", return_value=cred),
+            patch("backend.agents.agent_template.AzureCliCredential", return_value=cred),
             patch("backend.agents.agent_template.AIProjectClient", return_value=project_client),
             patch("backend.agents.agent_template.FoundryChatClient", return_value=chat_client_mock),
             patch("backend.agents.agent_template.Agent", return_value=agent_cm) as mock_agent_cls,
@@ -381,7 +381,7 @@ class TestAgentTemplateOpen:
         chat_client_mock = Mock()
 
         with (
-            patch("backend.agents.agent_template.DefaultAzureCredential", return_value=cred),
+            patch("backend.agents.agent_template.AzureCliCredential", return_value=cred),
             patch("backend.agents.agent_template.AIProjectClient", return_value=project_client),
             patch("backend.agents.agent_template.FoundryChatClient", return_value=chat_client_mock),
             patch("backend.agents.agent_template.Agent", return_value=agent_cm) as mock_agent_cls,
@@ -409,7 +409,7 @@ class TestAgentTemplateOpen:
         mcp_tool_cm.__aexit__ = AsyncMock(return_value=False)
 
         with (
-            patch("backend.agents.agent_template.DefaultAzureCredential", return_value=cred),
+            patch("backend.agents.agent_template.AzureCliCredential", return_value=cred),
             patch("backend.agents.agent_template.AIProjectClient", return_value=project_client),
             patch("backend.agents.agent_template.FoundryChatClient", return_value=chat_client_mock),
             patch("backend.agents.agent_template.Agent", return_value=agent_cm) as mock_agent_cls,
@@ -431,7 +431,7 @@ class TestAgentTemplateOpen:
         agent_cm = _make_agent_cm_mock()
 
         with (
-            patch("backend.agents.agent_template.DefaultAzureCredential", return_value=cred),
+            patch("backend.agents.agent_template.AzureCliCredential", return_value=cred),
             patch("backend.agents.agent_template.AIProjectClient", return_value=project_client),
             patch("backend.agents.agent_template.FoundryChatClient", return_value=Mock()),
             patch("backend.agents.agent_template.Agent", return_value=agent_cm),
@@ -449,7 +449,7 @@ class TestAgentTemplateOpen:
         agent_cm = _make_agent_cm_mock()
 
         with (
-            patch("backend.agents.agent_template.DefaultAzureCredential", return_value=cred),
+            patch("backend.agents.agent_template.AzureCliCredential", return_value=cred),
             patch("backend.agents.agent_template.AIProjectClient", return_value=project_client),
             patch("backend.agents.agent_template.FoundryChatClient", return_value=Mock()),
             patch("backend.agents.agent_template.Agent", return_value=agent_cm),
@@ -470,7 +470,7 @@ class TestAgentTemplateOpen:
         project_client.agents.get = AsyncMock(side_effect=RuntimeError("boom"))
 
         with (
-            patch("backend.agents.agent_template.DefaultAzureCredential", return_value=cred),
+            patch("backend.agents.agent_template.AzureCliCredential", return_value=cred),
             patch("backend.agents.agent_template.AIProjectClient", return_value=project_client),
             patch("backend.agents.agent_template.agent_registry"),
         ):
@@ -495,7 +495,7 @@ class TestAgentTemplateClose:
         agent_cm = _make_agent_cm_mock()
 
         with (
-            patch("backend.agents.agent_template.DefaultAzureCredential", return_value=cred),
+            patch("backend.agents.agent_template.AzureCliCredential", return_value=cred),
             patch("backend.agents.agent_template.AIProjectClient", return_value=project_client),
             patch("backend.agents.agent_template.FoundryChatClient", return_value=Mock()),
             patch("backend.agents.agent_template.Agent", return_value=agent_cm),
@@ -522,7 +522,7 @@ class TestAgentTemplateClose:
         agent_cm = _make_agent_cm_mock()
 
         with (
-            patch("backend.agents.agent_template.DefaultAzureCredential", return_value=cred),
+            patch("backend.agents.agent_template.AzureCliCredential", return_value=cred),
             patch("backend.agents.agent_template.AIProjectClient", return_value=project_client),
             patch("backend.agents.agent_template.FoundryChatClient", return_value=Mock()),
             patch("backend.agents.agent_template.Agent", return_value=agent_cm),
@@ -561,7 +561,7 @@ class TestAgentTemplateInvoke:
         agent_cm = _make_agent_cm_mock(inner=mock_inner)
 
         with (
-            patch("backend.agents.agent_template.DefaultAzureCredential", return_value=cred),
+            patch("backend.agents.agent_template.AzureCliCredential", return_value=cred),
             patch("backend.agents.agent_template.AIProjectClient", return_value=project_client),
             patch("backend.agents.agent_template.FoundryChatClient", return_value=Mock()),
             patch("backend.agents.agent_template.Agent", return_value=agent_cm),

@@ -1352,6 +1352,10 @@ module containerAppMcp './modules/compute/container-app.bicep' = {
             value: 'generated-images'
           }
           {
+            name: 'APP_ENV'
+            value: 'prod'
+          }
+          {
             name: 'BACKEND_URL'
             value: 'https://${containerAppName}.${containerAppEnvironment.outputs.defaultDomain}'
           }

@@ -773,6 +773,10 @@ module mcp_container_app './modules/compute/container-app.bicep' = {
             value: storageContainerNameGeneratedImages
           }
           {
+            name: 'APP_ENV'
+            value: 'prod'
+          }
+          {
             name: 'BACKEND_URL'
             value: 'https://${backendContainerAppName}.${container_app_environment.outputs.defaultDomain}'
           }
