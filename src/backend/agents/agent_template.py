@@ -24,7 +24,7 @@ from azure.ai.projects.aio import AIProjectClient
 from azure.ai.projects.models import (CodeInterpreterTool, FileSearchTool,
                                       MCPTool, PromptAgentDefinition)
 from azure.core.exceptions import HttpResponseError, ResourceNotFoundError
-from azure.identity.aio import (DefaultAzureCredential,
+from azure.identity.aio import (AzureCliCredential,
                                 ManagedIdentityCredential)
 from common.database.database_base import DatabaseBase
 from common.models.messages import CurrentTeamAgent, TeamConfiguration
@@ -73,7 +73,7 @@ class AgentTemplate:
 
         self.logger = logging.getLogger(__name__)
 
-        self._credential: Optional[DefaultAzureCredential] = None
+        self._credential: AzureCliCredential | ManagedIdentityCredential | None = None
         self._stack: Optional[AsyncExitStack] = None
         self._agent: Optional[Agent] = None
         self._resolved_vector_store_id: str | None = None
@@ -89,14 +89,12 @@ class AgentTemplate:
 
         self._stack = AsyncExitStack()
 
-        # Use ManagedIdentityCredential with explicit client_id when deployed
-        # (APP_ENV != 'dev') to avoid DefaultAzureCredential chain issues with
-        # user-assigned MI.  Locally, DefaultAzureCredential uses CLI login.
+        # Use Azure CLI login locally and user-assigned managed identity when deployed.
         import os
         app_env = os.environ.get("APP_ENV", "prod").lower()
         client_id = os.environ.get("AZURE_CLIENT_ID")
         if app_env == "dev":
-            self._credential = DefaultAzureCredential()
+            self._credential = AzureCliCredential()
         else:
             self._credential = ManagedIdentityCredential(client_id=client_id)
         await self._stack.enter_async_context(self._credential)

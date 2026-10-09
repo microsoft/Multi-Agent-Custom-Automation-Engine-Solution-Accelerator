@@ -250,18 +250,18 @@ class TestAppConfigCredentials:
             "AZURE_AI_AGENT_ENDPOINT": "https://test.ai.azure.com"
         }
 
-    @patch('backend.common.config.app_config.DefaultAzureCredential')
-    def test_get_azure_credential_dev_environment(self, mock_default_credential):
-        """Test get_azure_credential method in dev environment with exclude_environment_credential."""
+    @patch('backend.common.config.app_config.AzureCliCredential')
+    def test_get_azure_credential_dev_environment(self, mock_cli_credential):
+        """Test get_azure_credential method in dev environment uses Azure CLI credential."""
         mock_credential = MagicMock()
-        mock_default_credential.return_value = mock_credential
+        mock_cli_credential.return_value = mock_credential
         
         with patch.dict(os.environ, self._get_minimal_env()):
             config = AppConfig()
             result = config.get_azure_credential()
             
-            # Verify it's called with exclude_environment_credential=True in dev
-            mock_default_credential.assert_called_once_with(exclude_environment_credential=True)
+            # Verify Azure CLI credential is used in dev
+            mock_cli_credential.assert_called_once_with()
             assert result == mock_credential
 
     @patch('backend.common.config.app_config.ManagedIdentityCredential')
@@ -281,11 +281,11 @@ class TestAppConfigCredentials:
             mock_managed_credential.assert_called_once_with(client_id="test-client-id")
             assert result == mock_credential
 
-    @patch('backend.common.config.app_config.DefaultAzureCredential')
-    def test_get_azure_credentials_caching(self, mock_default_credential):
+    @patch('backend.common.config.app_config.AzureCliCredential')
+    def test_get_azure_credentials_caching(self, mock_cli_credential):
         """Test that get_azure_credentials caches the credential."""
         mock_credential = MagicMock()
-        mock_default_credential.return_value = mock_credential
+        mock_cli_credential.return_value = mock_credential
         
         with patch.dict(os.environ, self._get_minimal_env()):
             config = AppConfig()
@@ -296,18 +296,18 @@ class TestAppConfigCredentials:
             # Second call should return cached credential
             result2 = config.get_azure_credentials()
             
-            mock_default_credential.assert_called_once()
+            mock_cli_credential.assert_called_once()
             assert result1 == result2 == mock_credential
 
-    @patch('backend.common.config.app_config.DefaultAzureCredential')
-    def test_get_access_token_success(self, mock_default_credential):
+    @patch('backend.common.config.app_config.AzureCliCredential')
+    def test_get_access_token_success(self, mock_cli_credential):
         """Test successful access token retrieval."""
         mock_token = MagicMock()
         mock_token.token = "test-access-token"
         
         mock_credential = MagicMock()
         mock_credential.get_token.return_value = mock_token
-        mock_default_credential.return_value = mock_credential
+        mock_cli_credential.return_value = mock_credential
         
         with patch.dict(os.environ, self._get_minimal_env()):
             config = AppConfig()
@@ -319,12 +319,12 @@ class TestAppConfigCredentials:
             assert token.token == "test-access-token"
             mock_credential.get_token.assert_called_once_with(config.AZURE_COGNITIVE_SERVICES)
 
-    @patch('backend.common.config.app_config.DefaultAzureCredential')
-    def test_get_access_token_failure(self, mock_default_credential):
+    @patch('backend.common.config.app_config.AzureCliCredential')
+    def test_get_access_token_failure(self, mock_cli_credential):
         """Test access token retrieval failure."""
         mock_credential = MagicMock()
         mock_credential.get_token.side_effect = Exception("Token retrieval failed")
-        mock_default_credential.return_value = mock_credential
+        mock_cli_credential.return_value = mock_credential
         
         with patch.dict(os.environ, self._get_minimal_env()):
             config = AppConfig()
@@ -335,18 +335,18 @@ class TestAppConfigCredentials:
             with pytest.raises(Exception, match="Token retrieval failed"):
                 credential.get_token(config.AZURE_COGNITIVE_SERVICES)
 
-    @patch('backend.common.config.app_config.DefaultAzureCredentialAsync')
-    def test_get_azure_credential_async_dev_environment(self, mock_default_credential_async):
-        """Test get_azure_credential_async method in dev environment with exclude_environment_credential."""
+    @patch('backend.common.config.app_config.AzureCliCredentialAsync')
+    def test_get_azure_credential_async_dev_environment(self, mock_cli_credential_async):
+        """Test get_azure_credential_async method in dev environment uses Azure CLI credential."""
         mock_credential = MagicMock()
-        mock_default_credential_async.return_value = mock_credential
+        mock_cli_credential_async.return_value = mock_credential
         
         with patch.dict(os.environ, self._get_minimal_env()):
             config = AppConfig()
             result = config.get_azure_credential_async()
             
-            # Verify it's called with exclude_environment_credential=True in dev
-            mock_default_credential_async.assert_called_once_with(exclude_environment_credential=True)
+            # Verify Azure CLI credential is used in dev
+            mock_cli_credential_async.assert_called_once_with()
             assert result == mock_credential
 
     @patch('backend.common.config.app_config.ManagedIdentityCredentialAsync')
@@ -406,11 +406,11 @@ class TestAppConfigClientMethods:
         }
 
     @patch('backend.common.config.app_config.CosmosClient')
-    @patch('backend.common.config.app_config.DefaultAzureCredential')
-    def test_get_cosmos_database_client_success(self, mock_default_credential, mock_cosmos_client):
+    @patch('backend.common.config.app_config.AzureCliCredential')
+    def test_get_cosmos_database_client_success(self, mock_cli_credential, mock_cosmos_client):
         """Test successful Cosmos DB client creation."""
         mock_credential = MagicMock()
-        mock_default_credential.return_value = mock_credential
+        mock_cli_credential.return_value = mock_credential
         
         mock_cosmos_instance = MagicMock()
         mock_database_client = MagicMock()
@@ -430,11 +430,11 @@ class TestAppConfigClientMethods:
             assert result == mock_database_client
 
     @patch('backend.common.config.app_config.CosmosClient')
-    @patch('backend.common.config.app_config.DefaultAzureCredential')
-    def test_get_cosmos_database_client_caching(self, mock_default_credential, mock_cosmos_client):
+    @patch('backend.common.config.app_config.AzureCliCredential')
+    def test_get_cosmos_database_client_caching(self, mock_cli_credential, mock_cosmos_client):
         """Test that Cosmos DB client is cached."""
         mock_credential = MagicMock()
-        mock_default_credential.return_value = mock_credential
+        mock_cli_credential.return_value = mock_credential
         
         mock_cosmos_instance = MagicMock()
         mock_database_client = MagicMock()
@@ -456,11 +456,11 @@ class TestAppConfigClientMethods:
             assert result1 == result2 == mock_database_client
 
     @patch('backend.common.config.app_config.CosmosClient')
-    @patch('backend.common.config.app_config.DefaultAzureCredential')
-    def test_get_cosmos_database_client_failure(self, mock_default_credential, mock_cosmos_client):
+    @patch('backend.common.config.app_config.AzureCliCredential')
+    def test_get_cosmos_database_client_failure(self, mock_cli_credential, mock_cosmos_client):
         """Test Cosmos DB client creation failure."""
         mock_credential = MagicMock()
-        mock_default_credential.return_value = mock_credential
+        mock_cli_credential.return_value = mock_credential
         
         mock_cosmos_client.side_effect = Exception("Cosmos connection failed")
         
@@ -474,11 +474,11 @@ class TestAppConfigClientMethods:
                 mock_logger.assert_called_once()
 
     @patch('backend.common.config.app_config.AIProjectClient')
-    @patch('backend.common.config.app_config.DefaultAzureCredential')
-    def test_get_ai_project_client_success(self, mock_default_credential, mock_ai_client):
+    @patch('backend.common.config.app_config.AzureCliCredential')
+    def test_get_ai_project_client_success(self, mock_cli_credential, mock_ai_client):
         """Test successful AI Project client creation."""
         mock_credential = MagicMock()
-        mock_default_credential.return_value = mock_credential
+        mock_cli_credential.return_value = mock_credential
         
         mock_ai_instance = MagicMock()
         mock_ai_client.return_value = mock_ai_instance
@@ -498,11 +498,11 @@ class TestAppConfigClientMethods:
             assert result == mock_ai_instance
 
     @patch('backend.common.config.app_config.AIProjectClient')
-    @patch('backend.common.config.app_config.DefaultAzureCredential')
-    def test_get_ai_project_client_caching(self, mock_default_credential, mock_ai_client):
+    @patch('backend.common.config.app_config.AzureCliCredential')
+    def test_get_ai_project_client_caching(self, mock_cli_credential, mock_ai_client):
         """Test that AI Project client is cached."""
         mock_credential = MagicMock()
-        mock_default_credential.return_value = mock_credential
+        mock_cli_credential.return_value = mock_credential
         
         mock_ai_instance = MagicMock()
         mock_ai_client.return_value = mock_ai_instance
@@ -532,11 +532,11 @@ class TestAppConfigClientMethods:
                     config.get_ai_project_client()
 
     @patch('backend.common.config.app_config.AIProjectClient')
-    @patch('backend.common.config.app_config.DefaultAzureCredential')
-    def test_get_ai_project_client_creation_failure(self, mock_default_credential, mock_ai_client):
+    @patch('backend.common.config.app_config.AzureCliCredential')
+    def test_get_ai_project_client_creation_failure(self, mock_cli_credential, mock_ai_client):
         """Test AI Project client creation failure."""
         mock_credential = MagicMock()
-        mock_default_credential.return_value = mock_credential
+        mock_cli_credential.return_value = mock_credential
         
         mock_ai_client.side_effect = Exception("AI client creation failed")
         
