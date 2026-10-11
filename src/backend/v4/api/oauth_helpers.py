@@ -182,6 +182,41 @@ def _origin(url: str) -> str:
     return f"{p.scheme}://{p.netloc}"
 
 
+def _validated_resource_metadata_url(
+    mcp_endpoint: str, resource_metadata_url: str | None
+) -> str | None:
+    """Return a safe resource_metadata URL or None.
+
+    Safety policy:
+    - must be absolute HTTPS URL
+    - must not include userinfo
+    - must be same-origin as the MCP endpoint
+    """
+    if not resource_metadata_url:
+        return None
+
+    try:
+        candidate = urlparse(resource_metadata_url)
+        mcp = urlparse(mcp_endpoint)
+
+        if candidate.scheme != "https":
+            return None
+        if not candidate.netloc:
+            return None
+        if candidate.username or candidate.password:
+            return None
+        if candidate.hostname != mcp.hostname:
+            return None
+        if (candidate.port or 443) != (
+            mcp.port or (443 if mcp.scheme == "https" else None)
+        ):
+            return None
+    except (ValueError, UnicodeError):
+        return None
+
+    return resource_metadata_url
+
+
 def parse_resource_metadata_hint(www_authenticate: str | None) -> str | None:
     """Extract ``resource_metadata="..."`` from a 401 ``WWW-Authenticate``."""
     if not www_authenticate:
@@ -220,9 +255,12 @@ async def discover_oauth_metadata(
     """
     origin = _origin(mcp_endpoint)
     path = urlparse(mcp_endpoint).path.rstrip("/")
-    async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+    safe_resource_metadata_url = _validated_resource_metadata_url(
+        mcp_endpoint, resource_metadata_url
+    )
+    async with httpx.AsyncClient(timeout=15.0, follow_redirects=False) as client:
         prm: dict | None = None
-        prm_candidates = [u for u in [resource_metadata_url] if u]
+        prm_candidates = [u for u in [safe_resource_metadata_url] if u]
         if path:
             prm_candidates.append(
                 f"{origin}/.well-known/oauth-protected-resource{path}"
