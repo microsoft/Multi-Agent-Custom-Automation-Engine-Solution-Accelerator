@@ -323,7 +323,7 @@ def _sandbox(user_id: str, workspace_id: str) -> Path:
                     )
                 # El repositorio se termina de configurar ANTES de ocupar el
                 # nombre del sandbox: lo que se promueve ya está completo.
-                setup_commands = [
+                setup_commands: list[tuple[str, ...]] = [
                     ("config", "user.name", _GIT_IDENTITY[0]),
                     ("config", "user.email", _GIT_IDENTITY[1]),
                 ]
