@@ -15,6 +15,7 @@ Endpoints (all authenticated; user_id comes from EasyAuth headers)
 ------------------------------------------------------------------
 GET  /workspace/{ws}/files            → flat list (dropdown feed; capped)
 GET  /workspace/{ws}/entries?path=    → ONE directory level (lazy explorer)
+GET  /workspace/{ws}/stat/{path}      → exact existence/type of ONE path
 GET  /workspace/{ws}/files/{path}     → { path, content, size, mtime }
 PUT  /workspace/{ws}/files/{path}     → write (creates parent dirs inside ws)
 GET  /workspace/{ws}/diff/{path}      → git HEAD vs disk for Monaco DiffEditor
@@ -128,6 +129,13 @@ class EntriesResponse(BaseModel):
     path: str  # workspace-relative dir ("" = root)
     entries: list[DirEntry]
     truncated: bool
+
+
+class StatResponse(BaseModel):
+    workspace_id: str
+    path: str  # workspace-relative path of the stat'd entry
+    type: str  # "directory" | "file"
+    size: int | None = None  # files only
 
 
 class FileResponse(BaseModel):
@@ -280,6 +288,27 @@ def list_entries(
     entries = dirs + files_e  # directories first, like any real explorer
     return EntriesResponse(
         workspace_id=workspace_id, path=rel, entries=entries, truncated=truncated
+    )
+
+
+@workspace_router.get("/stat/{path:path}", response_model=StatResponse)
+def stat_entry(request: Request, workspace_id: str, path: str) -> StatResponse:
+    """Exact existence/type lookup for ONE path — a single stat, never a
+    directory walk. Resolution asks this per candidate so it never depends on
+    how many files a directory holds: `/entries` caps a directory at
+    MAX_LIST_ENTRIES and an omitted name would otherwise read as absent. 404
+    means the path genuinely does not exist."""
+    ws = _workspace_for(request, workspace_id)
+    resolved = _resolve(ws, path)
+    if not resolved.exists():
+        raise HTTPException(status_code=404, detail=f"Not found: {path}")
+    if resolved.is_dir():
+        return StatResponse(workspace_id=workspace_id, path=path, type="directory")
+    return StatResponse(
+        workspace_id=workspace_id,
+        path=path,
+        type="file",
+        size=resolved.stat().st_size,
     )
 
 

@@ -24,6 +24,8 @@ import jsonWorker from 'monaco-editor/languages/features/json/json.worker?worker
 import cssWorker from 'monaco-editor/languages/features/css/css.worker?worker';
 import htmlWorker from 'monaco-editor/languages/features/html/html.worker?worker';
 import tsWorker from 'monaco-editor/languages/features/typescript/ts.worker?worker';
+import * as tsDefinition from 'monaco-editor/languages/definitions/typescript/typescript';
+import * as jsDefinition from 'monaco-editor/languages/definitions/javascript/javascript';
 
 declare global {
   interface Window {
@@ -108,10 +110,42 @@ export function setupMonaco(): void {
   // stub `{ deprecated: true }`; la API real es el namespace de primer nivel
   // `monaco.typescript` (tipado, síncrono: la contribución TS se registra al
   // importar el entry principal, no hace falta esperar a loader.init()).
+  // compilerOptions / eagerModelSync / extraLibs viven en modelRegistry: son
+  // UNA sola pieza con el grafo de modelos y se aplican por workspace.
   const opts = { noSemanticValidation: false, noSyntaxValidation: false };
   monaco.typescript.typescriptDefaults.setDiagnosticsOptions(opts);
   monaco.typescript.javascriptDefaults.setDiagnosticsOptions(opts);
   // Python/otros: ver diagnostics vía backend (WorkspaceEditor).
+}
+
+/** Lenguaje "instantánea" para contenido TS/JS que NO debe entrar al
+ *  compilador: mismo tokenizer y configuración (colores, brackets), ningún
+ *  worker. El worker TS sincroniza y valida TODO modelo cuyo languageId sea
+ *  `typescript`/`javascript` (workerManager.js:58, con eagerModelSync); el lado
+ *  original del Diff (`git:HEAD/…`) con ese id resolvería sus imports contra
+ *  `git:HEAD/…`, donde no existe ningún modelo, y pintaría squiggles falsos.
+ *  Para los demás lenguajes no hay compilador detrás: se devuelve el mismo id. */
+const SNAPSHOT_DEFINITIONS: Record<
+  string,
+  {
+    conf: monaco.languages.LanguageConfiguration;
+    language: monaco.languages.IMonarchLanguage;
+  }
+> = {
+  typescript: tsDefinition,
+  javascript: jsDefinition,
+};
+
+export function snapshotLanguage(language: string): string {
+  const def = SNAPSHOT_DEFINITIONS[language];
+  if (!def) return language;
+  const id = `${language}-snapshot`;
+  if (!isMonacoLanguage(id)) {
+    monaco.languages.register({ id });
+    monaco.languages.setMonarchTokensProvider(id, def.language);
+    monaco.languages.setLanguageConfiguration(id, def.conf);
+  }
+  return id;
 }
 
 /** Tema Monaco según el esquema del SO (mismo criterio que index.tsx). */
