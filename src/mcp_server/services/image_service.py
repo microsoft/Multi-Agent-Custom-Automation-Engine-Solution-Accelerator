@@ -13,7 +13,7 @@ import uuid
 
 
 import httpx
-from azure.identity import DefaultAzureCredential, ManagedIdentityCredential, get_bearer_token_provider
+from azure.identity import AzureCliCredential, ManagedIdentityCredential, get_bearer_token_provider
 from azure.storage.blob import (
    BlobServiceClient,
    ContentSettings,
@@ -28,11 +28,11 @@ _IMAGE_API_VERSION = "2025-04-01-preview"
 
 
 
-def _get_credential():
-    """Return a credential based on environment (dev vs deployed)."""
+def _get_credential() -> AzureCliCredential | ManagedIdentityCredential:
+    """Use Azure CLI locally and managed identity when deployed."""
     app_env = (config.app_env or os.environ.get("APP_ENV") or "prod").lower()
     if app_env == "dev":
-        return DefaultAzureCredential()
+        return AzureCliCredential()
     return ManagedIdentityCredential(client_id=config.azure_client_id)
 
 

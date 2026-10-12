@@ -237,7 +237,7 @@ async def test_get_or_create_creates_when_absent(monkeypatch):
     mock_credential.__aexit__ = AsyncMock(return_value=False)
 
     with (
-        patch("agents.agent_template.DefaultAzureCredential", return_value=mock_credential),
+        patch("agents.agent_template.AzureCliCredential", return_value=mock_credential),
         patch("agents.agent_template.AIProjectClient", return_value=mock_project_client),
         patch("agents.agent_template.FoundryChatClient", return_value=mock_chat_client),
         patch("agents.agent_template.Agent", return_value=mock_agent),
@@ -306,7 +306,7 @@ async def test_get_or_create_skips_create_when_present():
     mock_credential.__aexit__ = AsyncMock(return_value=False)
 
     with (
-        patch("agents.agent_template.DefaultAzureCredential", return_value=mock_credential),
+        patch("agents.agent_template.AzureCliCredential", return_value=mock_credential),
         patch("agents.agent_template.AIProjectClient", return_value=mock_project_client),
         patch("agents.agent_template.FoundryChatClient", return_value=mock_chat_client),
         patch("agents.agent_template.Agent", return_value=mock_agent),
@@ -383,7 +383,7 @@ async def test_toolbox_created_when_mcp_config_present():
     mock_credential.__aexit__ = AsyncMock(return_value=False)
 
     with (
-        patch("agents.agent_template.DefaultAzureCredential", return_value=mock_credential),
+        patch("agents.agent_template.AzureCliCredential", return_value=mock_credential),
         patch("agents.agent_template.AIProjectClient", return_value=mock_project_client),
         patch("agents.agent_template.FoundryChatClient", return_value=mock_chat_client),
         patch("agents.agent_template.Agent", return_value=mock_agent),
@@ -456,7 +456,7 @@ async def test_no_toolbox_created_when_no_tools():
     mock_credential.__aexit__ = AsyncMock(return_value=False)
 
     with (
-        patch("agents.agent_template.DefaultAzureCredential", return_value=mock_credential),
+        patch("agents.agent_template.AzureCliCredential", return_value=mock_credential),
         patch("agents.agent_template.AIProjectClient", return_value=mock_project_client),
         patch("agents.agent_template.FoundryChatClient", return_value=mock_chat_client),
         patch("agents.agent_template.Agent", return_value=mock_agent),

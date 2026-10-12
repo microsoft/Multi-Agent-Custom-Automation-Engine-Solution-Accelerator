@@ -5,9 +5,9 @@ from typing import Optional
 
 from azure.ai.projects.aio import AIProjectClient
 from azure.cosmos import CosmosClient
-from azure.identity import DefaultAzureCredential, ManagedIdentityCredential
+from azure.identity import AzureCliCredential, ManagedIdentityCredential
 from azure.identity.aio import (
-    DefaultAzureCredential as DefaultAzureCredentialAsync,
+    AzureCliCredential as AzureCliCredentialAsync,
     ManagedIdentityCredential as ManagedIdentityCredentialAsync,
 )
 from dotenv import load_dotenv
@@ -121,18 +121,17 @@ class AppConfig:
         """
         Returns an Azure credential based on the application environment.
 
-        If the environment is 'dev', it uses DefaultAzureCredential with exclude_environment_credential=True
-        to avoid EnvironmentCredential exceptions in Application Insights traces.
+        If the environment is 'dev', it uses the local Azure CLI login.
         Otherwise, it uses ManagedIdentityCredential.
 
         Args:
             client_id (str, optional): The client ID for the Managed Identity Credential.
 
         Returns:
-            Credential object: Either DefaultAzureCredential or ManagedIdentityCredential.
+            Credential object: Either AzureCliCredential or ManagedIdentityCredential.
         """
         if self.APP_ENV == "dev":
-            return DefaultAzureCredential(exclude_environment_credential=True)  # CodeQL [SM05139]: DefaultAzureCredential is safe here
+            return AzureCliCredential()
         else:
             return ManagedIdentityCredential(client_id=client_id)
 
@@ -140,18 +139,17 @@ class AppConfig:
         """
         Returns an async Azure credential based on the application environment.
 
-        If the environment is 'dev', it uses DefaultAzureCredential (async) with exclude_environment_credential=True
-        to avoid EnvironmentCredential exceptions in Application Insights traces.
+        If the environment is 'dev', it uses the local Azure CLI login.
         Otherwise, it uses ManagedIdentityCredential (async).
 
         Args:
             client_id (str, optional): The client ID for the Managed Identity Credential.
 
         Returns:
-            Async Credential object: Either DefaultAzureCredentialAsync or ManagedIdentityCredentialAsync.
+            Async Credential object: Either AzureCliCredentialAsync or ManagedIdentityCredentialAsync.
         """
         if self.APP_ENV == "dev":
-            return DefaultAzureCredentialAsync(exclude_environment_credential=True)
+            return AzureCliCredentialAsync()
         else:
             return ManagedIdentityCredentialAsync(client_id=client_id)
 
