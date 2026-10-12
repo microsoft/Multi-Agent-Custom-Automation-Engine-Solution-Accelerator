@@ -166,14 +166,16 @@ export const WorkspaceTree: React.FC<WorkspaceTreeProps> = ({
   // Empty workspace: yield the slot (same behavior as the old flat panel).
   if (Array.isArray(root) && root.length === 0) return null;
 
+  // Ancho/alto los impone el contenedor redimensionable del slot derecho
+  // (PreviewRightSlot): así el explorador y el editor miden lo mismo.
   return (
     <div
       style={{
-        width: '280px',
-        height: '100vh',
+        flex: 1,
+        minHeight: 0,
+        minWidth: 0,
         display: 'flex',
         flexDirection: 'column',
-        borderLeft: '1px solid var(--colorNeutralStroke1)',
       }}
     >
       <div

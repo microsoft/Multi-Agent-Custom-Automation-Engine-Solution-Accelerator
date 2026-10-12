@@ -406,6 +406,111 @@ export const HtmlPreviewProvider: React.FC<{
 
 const IMAGE_EXT = /\.(png|jpe?g|webp|gif|svg)$/i;
 
+// Ancho del panel derecho (explorador y editor comparten el MISMO contenedor,
+// así abrir/cerrar un archivo no hace saltar el layout). Mismo mecanismo de
+// arrastre que PanelLeft; el handle va en el borde IZQUIERDO porque el panel
+// vive a la derecha: arrastrar hacia la izquierda lo ensancha.
+const PANEL_DEFAULT_WIDTH = 520;
+const PANEL_MIN_WIDTH = 280;
+const PANEL_MAX_WIDTH = 1200;
+// El contenedor `Content` (el workspace principal) no puede bajar de 320px y
+// `CoralShellRow` oculta el overflow, así que el panel no debe ensancharse más
+// allá del espacio realmente disponible o recortaría el workspace.
+const CONTENT_MIN_WIDTH = 320;
+
+/** Right-slot shell: resizable width, fills the parent's height (never
+ *  `100vh`, which ignores the shell header and overflows below the fold). */
+const ResizableRightPanel: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [width, setWidth] = useState(PANEL_DEFAULT_WIDTH);
+  const [hovered, setHovered] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Ancho máximo real: lo que ocupan el panel y el contenido hermano, menos el
+  // mínimo que `Content` necesita. Se mide en vivo, así que respeta el panel
+  // izquierdo y se recalcula cuando cambia el tamaño de la ventana.
+  const computeMaxWidth = useCallback(() => {
+    const panelEl = panelRef.current;
+    const contentEl = panelEl?.previousElementSibling as HTMLElement | null;
+    if (!panelEl || !contentEl) return PANEL_MAX_WIDTH;
+    const available =
+      panelEl.offsetWidth + contentEl.offsetWidth - CONTENT_MIN_WIDTH;
+    return Math.max(
+      PANEL_MIN_WIDTH,
+      Math.min(PANEL_MAX_WIDTH, available)
+    );
+  }, []);
+
+  // Al encoger la ventana el panel podría dejar de caber: reajústalo al máximo
+  // disponible para no recortar el workspace.
+  useEffect(() => {
+    const onResize = () =>
+      setWidth((w) => Math.min(w, computeMaxWidth()));
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [computeMaxWidth]);
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = width;
+    const onMouseMove = (ev: MouseEvent) => {
+      // Panel a la derecha: mover el ratón a la izquierda (dx<0) ensancha.
+      const next = startWidth - (ev.clientX - startX);
+      setWidth(Math.min(computeMaxWidth(), Math.max(PANEL_MIN_WIDTH, next)));
+    };
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    };
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+  };
+
+  return (
+    <div
+      ref={panelRef}
+      style={{
+        width: `${width}px`,
+        flexShrink: 0,
+        height: '100%',
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        position: 'relative',
+        boxSizing: 'border-box',
+        borderLeft: hovered
+          ? '2px solid var(--colorNeutralStroke2)'
+          : '1px solid var(--colorNeutralStroke1)',
+      }}
+    >
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Redimensionar panel"
+        onMouseDown={handleMouseDown}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{
+          position: 'absolute',
+          top: 0,
+          bottom: 0,
+          left: -3,
+          width: 6,
+          cursor: 'col-resize',
+          zIndex: 1,
+        }}
+      />
+      {children}
+    </div>
+  );
+};
+
 /** The right-slot artifact panel. Renders `fallback` (e.g. PlanPanelRight)
  *  when nothing is open, so the slot keeps its normal occupant. */
 export const PreviewRightSlot: React.FC<{ fallback?: React.ReactNode }> = ({
@@ -527,7 +632,11 @@ export const PreviewRightSlot: React.FC<{ fallback?: React.ReactNode }> = ({
     // hunting for chips in the chat scrollback.
     if (fallback) return <>{fallback}</>;
     if (!wsId) return null;
-    return <WorkspaceTree workspaceId={wsId} onOpenFile={openWsFile} />;
+    return (
+      <ResizableRightPanel>
+        <WorkspaceTree workspaceId={wsId} onOpenFile={openWsFile} />
+      </ResizableRightPanel>
+    );
   }
 
   const isHtml = active.lang === 'html' || /\.html?$/i.test(active.title);
@@ -557,15 +666,7 @@ export const PreviewRightSlot: React.FC<{ fallback?: React.ReactNode }> = ({
   };
 
   return (
-    <div
-      style={{
-        width: '520px',
-        height: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        borderLeft: '1px solid var(--colorNeutralStroke1)',
-      }}
-    >
+    <ResizableRightPanel>
       <div
         style={{
           display: 'flex',
@@ -709,7 +810,7 @@ export const PreviewRightSlot: React.FC<{ fallback?: React.ReactNode }> = ({
           />
         </div>
       )}
-    </div>
+    </ResizableRightPanel>
   );
 };
 
