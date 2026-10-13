@@ -43,7 +43,6 @@ WORKSPACE_ROOT = Path(
     os.getenv("MACAE_WORKSPACE_ROOT") or str(Path.home() / ".macae" / "workspaces")
 ).resolve()
 MAX_FILE_BYTES = 1 * 1024 * 1024  # 1 MB
-MAX_LIST_ENTRIES = 1000
 _META_FILE = ".macae_workspace_meta.json"
 #: Workspace propio del reconciliador (registro de incidentes). Configurable
 #: vía INCIDENT_REGISTRY_WORKSPACE_ID (p.ej. en prod apunta al workspace del
@@ -221,14 +220,23 @@ def _write_meta(ws: Path, meta: dict) -> None:
     )
 
 
+def git_files(ws: Path) -> list[str]:
+    """The workspace's files as the project itself defines them: what git
+    sees (tracked + untracked not ignored), sorted, workspace-relative. ONE
+    definition for the flat list, the name search and the file count. Never
+    an ``os.walk``: the tree can hold ``node_modules`` and no constant may cut
+    a listing (a silent cap read a present file as absent, measured)."""
+    names: set[str] = set()
+    for extra in (("-z",), ("--others", "--exclude-standard", "-z")):
+        result = _git(ws, "ls-files", *extra)
+        if result.returncode == 0:
+            names.update(os.fsdecode(n) for n in result.stdout.split(b"\0") if n)
+    names.discard(_META_FILE)
+    return sorted(n for n in names if n)
+
+
 def _count_files(ws: Path) -> int:
-    count = 0
-    for _root, dirs, files in os.walk(ws):
-        dirs[:] = [d for d in dirs if d != ".git"]
-        count += sum(1 for f in files if f != _META_FILE)
-        if count >= MAX_LIST_ENTRIES:  # linked projects can be huge — cap the walk
-            return MAX_LIST_ENTRIES
-    return count
+    return len(git_files(ws))
 
 
 def _exclude_meta(ws: Path) -> None:

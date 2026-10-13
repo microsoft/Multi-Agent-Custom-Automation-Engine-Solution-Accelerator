@@ -313,7 +313,7 @@ def test_one_registry_reachable_under_several_identities_is_not_ambiguous(
     """
     monkeypatch.delenv("INCIDENT_REGISTRY_USER_ID", raising=False)
     root = clone.parent.parent
-    for alias in ("00000000-0000-0000-0000-000000000000", "zzz-last-user"):
+    for alias in ("d1f2b268-d4a3-4db9-972b-bb7445ba2508", "zzz-last-user"):
         (root / alias).mkdir(parents=True, exist_ok=True)
         (root / alias / clone.name).symlink_to(clone, target_is_directory=True)
 
@@ -322,7 +322,7 @@ def test_one_registry_reachable_under_several_identities_is_not_ambiguous(
     assert cap is not None, "un registro con alias no puede ser ambiguo"
     assert cap.workspace_id == clone.name
     # Sin identidad declarada, la primera en orden: estable entre arranques.
-    assert cap.user_id == "00000000-0000-0000-0000-000000000000"
+    assert cap.user_id == "d1f2b268-d4a3-4db9-972b-bb7445ba2508"
     assert "ambiguo" not in caplog.text
 
 
@@ -330,7 +330,7 @@ def test_the_declared_identity_decides_which_alias_works(clone, monkeypatch):
     """``INCIDENT_REGISTRY_USER_ID`` desempata entre alias del mismo registro:
     el reconciliador no tiene identidad propia y llama a ca-mcp con esta."""
     root = clone.parent.parent
-    alias = root / "00000000-0000-0000-0000-000000000000"
+    alias = root / "d1f2b268-d4a3-4db9-972b-bb7445ba2508"
     alias.mkdir(parents=True, exist_ok=True)
     (alias / clone.name).symlink_to(clone, target_is_directory=True)
     monkeypatch.setenv("INCIDENT_REGISTRY_USER_ID", "reg-user")

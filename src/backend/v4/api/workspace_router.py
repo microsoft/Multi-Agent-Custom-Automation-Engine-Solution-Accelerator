@@ -27,7 +27,6 @@ GET/POST/DELETE /workspaces           → named-workspace management
 from __future__ import annotations
 
 import logging
-import os
 import re
 import shutil
 from datetime import UTC, datetime
@@ -44,7 +43,6 @@ from v4.common.services.workspace_service import (
     _SAFE_ID,
     _SAFE_REF,
     MAX_FILE_BYTES,
-    MAX_LIST_ENTRIES,
     WORKSPACE_ROOT,
     _clone_into,
     _contained,
@@ -56,6 +54,7 @@ from v4.common.services.workspace_service import (
     _read_text_guarded,
     _resolve,
     _write_meta,
+    git_files,
     user_root_for,
     workspace_for,
 )
@@ -112,8 +111,7 @@ class FileInfo(BaseModel):
 
 class FileListResponse(BaseModel):
     workspace_id: str
-    files: list[FileInfo]
-    truncated: bool
+    files: list[FileInfo]  # every file git sees; no cap
 
 
 class DirEntry(BaseModel):
@@ -126,8 +124,7 @@ class DirEntry(BaseModel):
 class EntriesResponse(BaseModel):
     workspace_id: str
     path: str  # workspace-relative dir ("" = root)
-    entries: list[DirEntry]
-    truncated: bool
+    entries: list[DirEntry]  # the WHOLE level: a listing is proof of absence
 
 
 class FileResponse(BaseModel):
@@ -184,31 +181,17 @@ class RestoreRequest(BaseModel):
 
 @workspace_router.get("/files", response_model=FileListResponse)
 def list_files(request: Request, workspace_id: str) -> FileListResponse:
-    """List every file in the workspace (excluding .git)."""
+    """Every file the project defines (git: tracked + untracked not ignored),
+    whole and in path order. Git is the index, never an ``os.walk``."""
     ws = _workspace_for(request, workspace_id)
     files: list[FileInfo] = []
-    truncated = False
-    for root, dirs, names in os.walk(ws):
-        dirs[:] = [d for d in dirs if d != ".git"]
-        for name in sorted(names):
-            if name == _META_FILE:
-                continue
-            full = Path(root) / name
-            stat = full.stat()
-            files.append(
-                FileInfo(
-                    path=str(full.relative_to(ws)),
-                    size=stat.st_size,
-                    mtime=stat.st_mtime,
-                )
-            )
-            if len(files) >= MAX_LIST_ENTRIES:
-                truncated = True
-                break
-        if truncated:
-            break
-    files.sort(key=lambda f: f.path)
-    return FileListResponse(workspace_id=workspace_id, files=files, truncated=truncated)
+    for rel in git_files(ws):
+        try:
+            stat = (ws / rel).stat()
+        except OSError:
+            continue  # tracked but deleted from disk: not a file to open
+        files.append(FileInfo(path=rel, size=stat.st_size, mtime=stat.st_mtime))
+    return FileListResponse(workspace_id=workspace_id, files=files)
 
 
 @workspace_router.get("/entries", response_model=EntriesResponse)
@@ -216,9 +199,12 @@ def list_entries(
     request: Request, workspace_id: str, path: str = ""
 ) -> EntriesResponse:
     """ONE directory level, on demand — the lazy project-explorer contract.
-    The limit is per directory, never "the first N files of the whole repo".
-    Git markers: files carry their own state; a directory carries "M"/"?" when
-    anything beneath it changed (VS Code-style aggregate)."""
+    The level is returned WHOLE: a directory bounds it, no constant does. A
+    silent cut (the old MAX_LIST_ENTRIES + ``truncated``, which no screen
+    showed) made the explorer hide entries and made module resolution read a
+    present file as absent. Git markers: files carry their own state; a
+    directory carries "M"/"?" when anything beneath it changed (VS Code-style
+    aggregate)."""
     ws = _workspace_for(request, workspace_id)
     raw_rel = path.strip().strip("/")
     base = _resolve(ws, raw_rel) if raw_rel else ws
@@ -251,15 +237,11 @@ def list_entries(
             if child_status.get(child) != "M":
                 child_status[child] = mark
     entries: list[DirEntry] = []
-    truncated = False
     dirs: list[DirEntry] = []
     files_e: list[DirEntry] = []
     for entry in sorted(base.iterdir(), key=lambda e: e.name.lower()):
         if entry.name == ".git" or entry.name == _META_FILE:
             continue
-        if len(dirs) + len(files_e) >= MAX_LIST_ENTRIES:
-            truncated = True
-            break
         if entry.is_dir():
             dirs.append(
                 DirEntry(
@@ -278,42 +260,26 @@ def list_entries(
                 )
             )
     entries = dirs + files_e  # directories first, like any real explorer
-    return EntriesResponse(
-        workspace_id=workspace_id, path=rel, entries=entries, truncated=truncated
-    )
+    return EntriesResponse(workspace_id=workspace_id, path=rel, entries=entries)
 
 
 class SearchResponse(BaseModel):
     workspace_id: str
     query: str
-    matches: list[str]  # workspace-relative paths
-    truncated: bool
+    matches: list[str]  # workspace-relative paths, all of them
 
 
 @workspace_router.get("/search", response_model=SearchResponse)
 def search_files(request: Request, workspace_id: str, q: str = "") -> SearchResponse:
     """Find files by name across the WHOLE workspace — git as the index
     (`ls-files` tracked + others), never an os.walk. Case-insensitive
-    substring on the relative path; capped at 200 matches."""
+    substring on the relative path; every match, no cap."""
     ws = _workspace_for(request, workspace_id)
     query = q.strip().lower()
     if not query:
-        return SearchResponse(
-            workspace_id=workspace_id, query=q, matches=[], truncated=False
-        )
-    names: set[str] = set()
-    for extra in ((), ("--others", "--exclude-standard")):
-        result = _git(ws, "ls-files", *extra)
-        if result.returncode == 0:
-            names.update(result.stdout.decode("utf-8", errors="replace").splitlines())
-    names.discard(_META_FILE)
-    matches = sorted(p for p in names if query in p.lower())
-    return SearchResponse(
-        workspace_id=workspace_id,
-        query=q,
-        matches=matches[:200],
-        truncated=len(matches) > 200,
-    )
+        return SearchResponse(workspace_id=workspace_id, query=q, matches=[])
+    matches = [p for p in git_files(ws) if query in p.lower()]
+    return SearchResponse(workspace_id=workspace_id, query=q, matches=matches)
 
 
 @workspace_router.get("/files/{path:path}", response_model=FileResponse)

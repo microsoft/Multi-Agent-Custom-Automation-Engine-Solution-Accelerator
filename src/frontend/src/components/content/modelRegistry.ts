@@ -115,8 +115,8 @@ interface Registry {
   packageEntries: Map<string, Promise<string | null>>;
   /** Paquete → raíz (`node_modules/x` o `node_modules/@types/x`). */
   packageRoots: Map<string, string>;
-  /** dir → listado (nombre → tipo y tamaño). Una lectura por directorio. */
-  dirListings: Map<string, Promise<Map<string, DirEntryInfo>>>;
+  /** dir → listado. Una lectura por directorio. */
+  dirListings: Map<string, Promise<DirListing>>;
   tsconfigApplied: boolean;
   tsconfigPaths: Record<string, string[]> | null;
   tsconfigBaseDir: string;
@@ -131,6 +131,29 @@ type DirKind = 'file' | 'directory';
 interface DirEntryInfo {
   type: DirKind;
   size: number | null;
+}
+/** `/entries` devuelve el nivel COMPLETO (lo acota el directorio, no una
+ *  constante): un listado es prueba de ausencia. `exists` es falso cuando el
+ *  directorio no existe (400) o no está autorizado. */
+interface DirListing {
+  entries: Map<string, DirEntryInfo>;
+  exists: boolean;
+}
+
+async function listedKind(
+  reg: Registry,
+  path: string
+): Promise<DirKind | null> {
+  const listing = await listDir(reg, dirname(path));
+  return listing.entries.get(basename(path))?.type ?? null;
+}
+
+async function isFile(reg: Registry, path: string): Promise<boolean> {
+  return (await listedKind(reg, path)) === 'file';
+}
+
+async function isDirectory(reg: Registry, path: string): Promise<boolean> {
+  return (await listedKind(reg, path)) === 'directory';
 }
 
 /** Requests del grafo en vuelo a la vez. El grafo es trabajo de fondo: no
@@ -282,15 +305,13 @@ async function readFile(
 }
 
 /** Listado de UN directorio (nombre → tipo y tamaño), una lectura por
- *  directorio. Un directorio inexistente (400) se recuerda como vacío. */
-function listDir(
-  reg: Registry,
-  dir: string
-): Promise<Map<string, DirEntryInfo>> {
+ *  directorio. Un directorio inexistente (400) se recuerda como `exists:
+ *  false`. */
+function listDir(reg: Registry, dir: string): Promise<DirListing> {
   const cached = reg.dirListings.get(dir);
   if (cached) return cached;
-  const p = (async () => {
-    const out = new Map<string, DirEntryInfo>();
+  const p = (async (): Promise<DirListing> => {
+    const entries = new Map<string, DirEntryInfo>();
     try {
       const r: {
         entries?: Array<{ name: string; type: DirKind; size?: number | null }>;
@@ -301,12 +322,12 @@ function listDir(
         )
       );
       for (const e of r.entries ?? []) {
-        out.set(e.name, { type: e.type, size: e.size ?? null });
+        entries.set(e.name, { type: e.type, size: e.size ?? null });
       }
+      return { entries, exists: true };
     } catch {
-      /* no existe o no autorizado: vacío */
+      return { entries, exists: false };
     }
-    return out;
   })();
   reg.dirListings.set(dir, p);
   return p;
@@ -326,19 +347,15 @@ async function resolveBase(
   // un `./x.js` (ESM) nombra al `.d.ts`/`.ts` de `x`, nunca al JS en sí
   // (medido: se leían los .js de monaco-editor como si fueran tipos).
   if (/\.(d\.[mc]?ts|[mc]ts|tsx?|json)$/i.test(base)) {
-    const names = await listDir(reg, dirname(base));
-    return names.get(basename(base))?.type === 'file' ? base : null;
+    return (await isFile(reg, base)) ? base : null;
   }
   const stripped = base.replace(/\.(m|c)?jsx?$/i, '');
-  const name = basename(stripped);
-  const siblings = await listDir(reg, dirname(stripped));
   for (const e of exts) {
-    if (siblings.get(`${name}${e}`)?.type === 'file') return `${stripped}${e}`;
+    if (await isFile(reg, `${stripped}${e}`)) return `${stripped}${e}`;
   }
-  if (siblings.get(name)?.type === 'directory') {
-    const inside = await listDir(reg, stripped);
+  if (await isDirectory(reg, stripped)) {
     for (const e of exts) {
-      if (inside.get(`index${e}`)?.type === 'file') {
+      if (await isFile(reg, `${stripped}/index${e}`)) {
         return `${stripped}/index${e}`;
       }
     }
@@ -570,7 +587,7 @@ async function materialize(
     // Presupuesto ANTES de descargar: el listado del directorio (cacheado)
     // trae el tamaño; lo que no cabe no se pide (medido: cada chunk-N.d.ts de
     // react-icons se bajaba entero para rechazarse después).
-    const info = (await listDir(reg, dirname(path))).get(basename(path));
+    const info = (await listDir(reg, dirname(path))).entries.get(basename(path));
     if (info?.type !== 'file') {
       reg.models.set(path, null);
       return null;
