@@ -3062,6 +3062,13 @@ class _RouterChatClient:
             parked_by_decision = await self._resume_parked_composition(
                 str(approval.get("request_id") or ""), with_decision=True
             )
+        # La autorización que ESTE turno trae ya concedida. Medido en prod
+        # 2026-10-12 (rev 175): autorización → "Aprobado" → el dueño volvía a
+        # pedir autorización por la misma acción, cuatro turnos seguidos, con
+        # la nota de aprobación a la vista. Un turno que trae la decisión es el
+        # turno de ejecutarla: una nueva solicitud en él se responde por el
+        # protocolo con la autorización vigente, nunca se aparca.
+        granted_approval: dict[str, str] | None = None
         if approval and approval.get("request_id") and parked_by_decision is None:
             # La decisión humana es un hecho del turno y entra a la
             # conversación como nota del sistema, no como voz del usuario.
@@ -3101,6 +3108,11 @@ class _RouterChatClient:
                         else "No ejecutes la acción; informá el estado y qué queda pendiente."
                     )
                 )
+                if decision == "approved":
+                    granted_approval = {
+                        "request_id": request_id,
+                        "action": str(original.get("action") or ""),
+                    }
             conversation = [
                 *conversation[:-1],
                 {"role": "developer", "content": note},
@@ -3284,6 +3296,55 @@ class _RouterChatClient:
                                 generated = True
                                 yield _img
                             produced_artifact = generated
+                        elif (
+                            itype == "function_call"
+                            and getattr(item, "name", "") == "request_human_approval"
+                            and granted_approval is not None
+                        ):
+                            # El humano ya autorizó en este mismo turno: la
+                            # solicitud se contesta por el protocolo con esa
+                            # autorización y el turno sigue hacia la ejecución.
+                            _cid = (
+                                getattr(item, "call_id", "")
+                                or getattr(item, "id", "")
+                                or uuid.uuid4().hex
+                            )
+                            executed.append(
+                                (
+                                    {
+                                        "type": "function_call",
+                                        "call_id": _cid,
+                                        "name": "request_human_approval",
+                                        "arguments": getattr(item, "arguments", None)
+                                        or "{}",
+                                    },
+                                    {
+                                        "type": "function_call_output",
+                                        "call_id": _cid,
+                                        "output": json.dumps(
+                                            {
+                                                "status": "already_authorized",
+                                                "request_id": granted_approval[
+                                                    "request_id"
+                                                ],
+                                                "action": granted_approval["action"],
+                                                "instruction": (
+                                                    "The human already authorized "
+                                                    "this action in this turn. "
+                                                    "Execute exactly the authorized "
+                                                    "action now and report its "
+                                                    "evidence; do not request "
+                                                    "authorization again."
+                                                ),
+                                            }
+                                        ),
+                                    },
+                                )
+                            )
+                            logger.info(
+                                "Solicitud de autorización respondida con la vigente (%s)",
+                                granted_approval["request_id"][:16],
+                            )
                         elif (
                             itype == "function_call"
                             and getattr(item, "name", "") == "request_human_approval"

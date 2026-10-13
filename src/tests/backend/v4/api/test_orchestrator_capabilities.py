@@ -523,6 +523,70 @@ async def test_a_replayed_decision_does_not_authorize_twice(_ledger_store):
     assert "no es válida" in notes[1]
 
 
+@pytest.mark.asyncio
+async def test_an_approved_turn_answers_a_repeated_request_instead_of_parking(
+    _ledger_store,
+):
+    """Medido en prod 2026-10-12 (rev 175): autorización → "Aprobado" → el
+    dueño volvía a pedir autorización por la misma acción, cuatro turnos
+    seguidos, con la nota de aprobación a la vista. El turno que trae la
+    decisión es el turno de ejecutarla: una nueva solicitud se contesta por el
+    protocolo con la autorización vigente y el turno sigue; no se aparca."""
+    await _pending_approval(_ledger_store)
+    again = SimpleNamespace(
+        type="function_call",
+        call_id="c1",
+        name="request_human_approval",
+        arguments=json.dumps(
+            {
+                "action": "git push origin HEAD:main",
+                "action_class": "write-shared",
+                "reason": "r",
+            }
+        ),
+    )
+    fake = _fake_openai(
+        _Stream([_done(again)]),
+        _Stream([_text("Ejecutado.")]),
+        _verdict(True),
+    )
+    client = _client()
+    with patch("openai.AsyncOpenAI", fake):
+        updates = await _collect_with(
+            client,
+            prompt="Aprobado: push",
+            approval={"request_id": "r1", "decision": "approved"},
+        )
+
+    assert client.approval_request is None
+    second_input = fake.instances[-1].calls[1]["input"]
+    answered = next(
+        i
+        for i in second_input
+        if isinstance(i, dict) and i.get("type") == "function_call_output"
+    )
+    assert answered["call_id"] == "c1"
+    assert json.loads(answered["output"]) == {
+        "status": "already_authorized",
+        "request_id": "r1",
+        "action": "git push origin HEAD:main",
+        "instruction": (
+            "The human already authorized this action in this turn. Execute "
+            "exactly the authorized action now and report its evidence; do not "
+            "request authorization again."
+        ),
+    }
+    assert "".join(c.text for u in updates for c in u.contents) == "Ejecutado."
+    events = await _ledger_store.history("t1")
+    assert not any(
+        e["identity"].startswith("t1:approval:")
+        and e["payload"].get("status") == "waiting_for"
+        for e in events
+    )
+    closed = next(e for e in events if e["identity"] == "t1:closed")
+    assert closed["payload"]["status"] == "done"
+
+
 async def _collect_with(client, prompt, **kw):
     return [u async for u in client.invoke(prompt, history=[], **kw)]
 
