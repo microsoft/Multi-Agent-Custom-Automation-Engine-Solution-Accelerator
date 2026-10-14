@@ -68,12 +68,12 @@
     "jsdom": "^26.1.0",
     "rollup": "^4.59.0",
     "typescript": "^5.8.3",
-    "vite": "7.3.5",
+    "vite": "7.3.7",
     "vitest": "^4.1.11"
   },
   "overrides": {
     "minimatch": "3.1.5",
-    "vite": "7.3.5",
+    "vite": "7.3.7",
     "mdast-util-to-hast": "13.2.1",
     "picomatch": "4.0.4",
     "js-yaml": "5.4.1",
