@@ -1,7 +1,7 @@
 Capturing the notes from auth install before deleting for docs...
 
 ### Auth section:
-Requires and app registration as in azure_app_service_auth_setup.md so not deployed by default.
+Requires an app registration as in azure_app_service_auth_setup.md so not deployed by default.
 
 To setup basic auth with FastMCP - bearer token - you can integrate with Azure by using it as your token provider.
 
@@ -9,12 +9,12 @@ To setup basic auth with FastMCP - bearer token - you can integrate with Azure b
 
 ```
 auth = JWTVerifier(
-    jwks_uri="https://login.microsoftonline.com/52b39610-0746-4c25-a83d-d4f89fadedfe/discovery/v2.0/keys",
-    #issuer="https://login.microsoftonline.com/52b39610-0746-4c25-a83d-d4f89fadedfe/v2.0",
+    jwks_uri="https://login.microsoftonline.com/<your-tenant-id>/discovery/v2.0/keys",
+    #issuer="https://login.microsoftonline.com/<your-tenant-id>/v2.0",
     # This issuer is not correct in the docs. Found by decoding the token.
-    issuer="https://sts.windows.net/52b39610-0746-4c25-a83d-d4f89fadedfe/",
+    issuer="https://sts.windows.net/<your-tenant-id>/",
     algorithm="RS256",
-    audience="api://7a95e70b-062e-4cd3-a88c-603fc70e1c73"
+    audience="api://<your-app-client-id>"
 )
 ```
 

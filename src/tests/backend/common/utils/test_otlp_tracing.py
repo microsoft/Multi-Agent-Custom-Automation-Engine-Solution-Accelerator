@@ -79,7 +79,7 @@ class TestConfigureOltpTracing:
         result = configure_oltp_tracing()
         
         # Verify Resource creation
-        mock_resource.assert_called_once_with({"service.name": "macwe"})
+        mock_resource.assert_called_once_with({"service.name": "macae"})
         
         # Verify TracerProvider creation
         mock_tracer_provider_class.assert_called_once_with(resource=mock_resource_instance)
@@ -126,7 +126,7 @@ class TestConfigureOltpTracing:
         result = configure_oltp_tracing(endpoint=endpoint)
         
         # Verify the same behavior as default case (endpoint parameter is currently unused)
-        mock_resource.assert_called_once_with({"service.name": "macwe"})
+        mock_resource.assert_called_once_with({"service.name": "macae"})
         mock_tracer_provider_class.assert_called_once_with(resource=mock_resource_instance)
         mock_exporter.assert_called_once_with()
         mock_processor.assert_called_once_with(mock_exporter_instance)
@@ -162,7 +162,7 @@ class TestConfigureOltpTracing:
         result = configure_oltp_tracing(endpoint=None)
         
         # Verify the same behavior as default case
-        mock_resource.assert_called_once_with({"service.name": "macwe"})
+        mock_resource.assert_called_once_with({"service.name": "macae"})
         mock_tracer_provider_class.assert_called_once_with(resource=mock_resource_instance)
         mock_exporter.assert_called_once_with()
         mock_processor.assert_called_once_with(mock_exporter_instance)
@@ -269,7 +269,7 @@ class TestConfigureOltpTracingErrorHandling:
             configure_oltp_tracing()
         
         # Verify Resource was created but subsequent operations were not called
-        mock_resource.assert_called_once_with({"service.name": "macwe"})
+        mock_resource.assert_called_once_with({"service.name": "macae"})
         mock_exporter.assert_not_called()
         mock_processor.assert_not_called()
         mock_trace.set_tracer_provider.assert_not_called()
@@ -297,7 +297,7 @@ class TestConfigureOltpTracingErrorHandling:
             configure_oltp_tracing()
         
         # Verify creation up to exporter was called
-        mock_resource.assert_called_once_with({"service.name": "macwe"})
+        mock_resource.assert_called_once_with({"service.name": "macae"})
         mock_tracer_provider_class.assert_called_once_with(resource=mock_resource_instance)
         mock_exporter.assert_called_once_with()
         
@@ -332,7 +332,7 @@ class TestConfigureOltpTracingErrorHandling:
             configure_oltp_tracing()
         
         # Verify creation up to processor was called
-        mock_resource.assert_called_once_with({"service.name": "macwe"})
+        mock_resource.assert_called_once_with({"service.name": "macae"})
         mock_tracer_provider_class.assert_called_once_with(resource=mock_resource_instance)
         mock_exporter.assert_called_once_with()
         mock_processor.assert_called_once_with(mock_exporter_instance)
@@ -369,7 +369,7 @@ class TestConfigureOltpTracingErrorHandling:
             configure_oltp_tracing()
         
         # Verify all creation steps were called
-        mock_resource.assert_called_once_with({"service.name": "macwe"})
+        mock_resource.assert_called_once_with({"service.name": "macae"})
         mock_tracer_provider_class.assert_called_once_with(resource=mock_resource_instance)
         mock_exporter.assert_called_once_with()
         mock_processor.assert_called_once_with(mock_exporter_instance)
@@ -407,7 +407,7 @@ class TestConfigureOltpTracingErrorHandling:
             configure_oltp_tracing()
         
         # Verify all steps up to set_tracer_provider were called
-        mock_resource.assert_called_once_with({"service.name": "macwe"})
+        mock_resource.assert_called_once_with({"service.name": "macae"})
         mock_tracer_provider_class.assert_called_once_with(resource=mock_resource_instance)
         mock_exporter.assert_called_once_with()
         mock_processor.assert_called_once_with(mock_exporter_instance)
@@ -452,7 +452,7 @@ class TestConfigureOltpTracingIntegration:
         result = configure_oltp_tracing()
         
         # Verify service name is set correctly
-        mock_resource.assert_called_once_with({"service.name": "macwe"})
+        mock_resource.assert_called_once_with({"service.name": "macae"})
         
         # Verify the resource is used in TracerProvider
         mock_tracer_provider_class.assert_called_once_with(resource=mock_resource_instance)
@@ -487,7 +487,7 @@ class TestConfigureOltpTracingIntegration:
         
         # Verify call sequence using call order
         expected_calls = [
-            call({"service.name": "macwe"}),  # Resource creation
+            call({"service.name": "macae"}),  # Resource creation
         ]
         mock_resource.assert_has_calls(expected_calls)
         
@@ -542,7 +542,7 @@ class TestConfigureOltpTracingParameterHandling:
         result = configure_oltp_tracing(endpoint="")
         
         # Verify same behavior as default (endpoint parameter is unused in current implementation)
-        mock_resource.assert_called_once_with({"service.name": "macwe"})
+        mock_resource.assert_called_once_with({"service.name": "macae"})
         mock_tracer_provider_class.assert_called_once_with(resource=mock_resource_instance)
         mock_exporter.assert_called_once_with()
         mock_processor.assert_called_once_with(mock_exporter_instance)

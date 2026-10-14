@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/devcontainers/python:3.11-bullseye AS base
+FROM python:3.11-slim-bookworm AS base
 WORKDIR /app
 
 FROM base AS builder
@@ -6,6 +6,10 @@ FROM base AS builder
 # Copy uv binaries from astral-sh image
 COPY --from=ghcr.io/astral-sh/uv:0.6.3 /uv /uvx /bin/
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
+
+# Route uv/pip package resolution through the Microsoft Package Feed Proxy
+ENV UV_INDEX_URL=https://packagefeedproxy.microsoft.io/pypi/simple/ \
+    PIP_INDEX_URL=https://packagefeedproxy.microsoft.io/pypi/simple/
 
 # Copy lock and project files first for caching
 COPY uv.lock pyproject.toml /app/
@@ -22,6 +26,9 @@ RUN uv sync --frozen --no-dev
 
 # Final stage
 FROM base
+
+# Install curl for healthcheck
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY --from=builder /app /app

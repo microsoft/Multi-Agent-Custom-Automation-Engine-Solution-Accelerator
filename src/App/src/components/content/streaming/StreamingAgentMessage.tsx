@@ -3,10 +3,12 @@ import { AgentMessageData, AgentMessageType } from "@/models";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypePrism from "rehype-prism";
-import { Body1, Tag, makeStyles, tokens } from "@fluentui/react-components";
+import { Body1, Tag, makeStyles, tokens, Button } from "@fluentui/react-components";
 import { TaskService } from "@/store";
-import { PersonRegular } from "@fluentui/react-icons";
+import { PersonRegular, ArrowDownloadRegular } from "@fluentui/react-icons";
 import { getAgentIcon, getAgentDisplayName } from '@/utils/agentIconUtils';
+import { formatJsonInText } from '@/utils/jsonFormatter';
+import { resolveApiAssetUrl } from "@/api/config";
 
 interface StreamingAgentMessageProps {
   agentMessages: AgentMessageData[];
@@ -82,6 +84,9 @@ const useStyles = makeStyles({
     backgroundColor: 'var(--colorNeutralBackground2)',
     color: 'var(--colorNeutralForeground1)',
     maxWidth: '100%',
+    width: '100%',
+    boxSizing: 'border-box',
+    overflowX: 'hidden',
     alignSelf: 'flex-start',
 
   },
@@ -135,7 +140,8 @@ const isClarificationMessage = (content: string): boolean => {
 const renderAgentMessages = (
   agentMessages: AgentMessageData[], 
   planData?: any, 
-  planApprovalRequest?: any
+  planApprovalRequest?: any,
+  finalResultRef?: React.RefObject<HTMLDivElement>
 ) => {
   const styles = useStyles();
   
@@ -150,15 +156,18 @@ const renderAgentMessages = (
       {validMessages.map((msg, index) => {
         const isHuman = msg.agent_type === AgentMessageType.HUMAN_AGENT;
         const isClarification = !isHuman && isClarificationMessage(msg.content || '');
+        const isLastMessage = index === validMessages.length - 1;
 
         return (
-          <div
-            key={index}
-            className={styles.container}
-            style={{
-              flexDirection: isHuman ? 'row-reverse' : 'row'
-            }}
-          >
+          <React.Fragment key={index}>
+            {/* Scroll anchor placed just before the final message */}
+            {isLastMessage && finalResultRef && <div ref={finalResultRef} />}
+            <div
+              className={styles.container}
+              style={{
+                flexDirection: isHuman ? 'row-reverse' : 'row'
+              }}
+            >
             {/* Avatar */}
             <div className={`${styles.avatar} ${isHuman ? styles.humanAvatar : styles.botAvatar}`}>
               {isHuman ? (
@@ -197,8 +206,9 @@ const renderAgentMessages = (
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypePrism]}
+                  urlTransform={resolveApiAssetUrl}
                   components={{
-                      a: ({ node, ...props }) => (
+                      a: ({ node: _node, ...props }) => (
                         <a
                           {...props}
                           style={{
@@ -212,14 +222,98 @@ const renderAgentMessages = (
                             e.currentTarget.style.textDecoration = 'none';
                           }}
                         />
+                      ),
+                      img: ({ node: _imgNode, ...props }) => (
+                        <div style={{ position: 'relative', display: 'block', width: '100%', maxWidth: '100%', marginTop: '8px', overflow: 'hidden' }}>
+                          <img
+                            {...props}
+                            style={{ display: 'block', width: '100%', maxWidth: '100%', height: 'auto', borderRadius: '8px' }}
+                          />
+                          <Button
+                            appearance="subtle"
+                            icon={<ArrowDownloadRegular />}
+                            style={{
+                              position: 'absolute',
+                              top: '8px',
+                              right: '8px',
+                              minWidth: '32px',
+                              width: '32px',
+                              height: '32px',
+                              padding: '4px',
+                              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                              color: 'white',
+                              borderRadius: '4px',
+                            }}
+                            onClick={async () => {
+                              const url = props.src;
+                              if (!url) return;
+                              const filename = `ad-image-${Date.now()}.png`;
+                              try {
+                                const response = await fetch(url, { mode: 'cors' });
+                                if (!response.ok) throw new Error(`Failed to fetch image (${response.status})`);
+                                const blob = await response.blob();
+                                const blobUrl = URL.createObjectURL(blob);
+                                const link = document.createElement('a');
+                                link.href = blobUrl;
+                                link.download = filename;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                URL.revokeObjectURL(blobUrl);
+                              } catch (err) {
+                                // Fallback: trigger direct download (works for same-origin or CORS-enabled URLs)
+                                const link = document.createElement('a');
+                                link.href = url;
+                                link.download = filename;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                              }
+                            }}
+                            title="Download image"
+                          />
+                        </div>
+                      ),
+                      p: ({ node: _pNode, ...props }) => (
+                        <p {...props} style={{ margin: '0 0 8px 0' }} />
+                      ),
+                      h1: ({ node: _hNode, ...props }) => (
+                        <h1 {...props} style={{ fontSize: '20px', fontWeight: 600, margin: '16px 0 8px 0', lineHeight: '1.3' }} />
+                      ),
+                      h2: ({ node: _hNode, ...props }) => (
+                        <h2 {...props} style={{ fontSize: '17px', fontWeight: 600, margin: '14px 0 8px 0', lineHeight: '1.3' }} />
+                      ),
+                      h3: ({ node: _hNode, ...props }) => (
+                        <h3 {...props} style={{ fontSize: '15px', fontWeight: 600, margin: '12px 0 6px 0', lineHeight: '1.3' }} />
+                      ),
+                      ul: ({ node: _ulNode, ...props }) => (
+                        <ul {...props} style={{ margin: '8px 0', paddingLeft: '24px' }} />
+                      ),
+                      ol: ({ node: _olNode, ...props }) => (
+                        <ol {...props} style={{ margin: '8px 0', paddingLeft: '24px' }} />
+                      ),
+                      li: ({ node: _liNode, ...props }) => (
+                        <li {...props} style={{ margin: '4px 0', lineHeight: '1.5' }} />
+                      ),
+                      blockquote: ({ node: _bqNode, ...props }) => (
+                        <blockquote
+                          {...props}
+                          style={{
+                            margin: '8px 0',
+                            padding: '8px 12px',
+                            borderLeft: '3px solid var(--colorNeutralStroke1)',
+                            color: 'var(--colorNeutralForeground2)'
+                          }}
+                        />
                       )
                     }}
                 >
-                  {TaskService.cleanHRAgent(msg.content) || ""}
+                  {formatJsonInText(TaskService.cleanHRAgent(msg.content) || "")}
                 </ReactMarkdown>
               </div>
             </div>
           </div>
+          </React.Fragment>
         );
       })}
     </>

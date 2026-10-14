@@ -35,10 +35,30 @@ const HomePage: React.FC = () => {
         const initTeam = async () => {
             dispatch(setIsLoadingTeam(true));
             try {
+                // Get available teams first
+                const teams = await TeamService.getUserTeams();
+                
+                // Check if we have a stored team and if it still exists in the backend
+                const storedTeam = TeamService.getStoredTeam();
+                if (storedTeam) {
+                    const backendTeam = teams.find(t => t.team_id === storedTeam.team_id);
+                    if (backendTeam) {
+                        // Stored team still exists, use backend-fresh object
+                        dispatch(setSelectedTeam(backendTeam));
+                        showToast(`${backendTeam.name} team restored from storage`, 'success');
+                        dispatch(setIsLoadingTeam(false));
+                        return;
+                    } else {
+                        // Stored team was deleted, clear localStorage
+                        console.warn(`Stored team ${storedTeam.team_id} no longer exists, clearing storage`);
+                        TeamService.clearStoredTeam();
+                    }
+                }
+
+                // Now initialize team from backend
                 const initResponse = await TeamService.initializeTeam();
 
                 if (initResponse.data?.status === 'Request started successfully' && initResponse.data?.team_id) {
-                    const teams = await TeamService.getUserTeams();
                     const initializedTeam = teams.find(team => team.team_id === initResponse.data?.team_id);
 
                     if (initializedTeam) {
@@ -58,7 +78,6 @@ const HomePage: React.FC = () => {
                     dispatch(setSelectedTeam(null));
                     showToast('Welcome! Please upload a team configuration file to get started.', 'info');
                 } else if (!initResponse.success) {
-                    // API call failed — surface the error
                     console.error('Team init failed:', initResponse.error);
                     showToast(initResponse.error || 'Team initialization failed. Please try again.', 'warning');
                 }
@@ -82,6 +101,12 @@ const HomePage: React.FC = () => {
         async (team: TeamConfig | null) => {
             dispatch(setSelectedTeam(team));
             dispatch(setReloadLeftList(true));
+            
+            // Immediately save selected team to localStorage so it persists on reload
+            if (team) {
+                TeamService.storageTeam(team);
+            }
+            
             if (team) {
                 try {
                     dispatch(setIsLoadingTeam(true));
@@ -118,17 +143,31 @@ const HomePage: React.FC = () => {
         [dispatch, showToast],
     );
 
-    const handleTeamUpload = useCallback(async () => {
+    const handleTeamUpload = useCallback(async (uploadedTeam?: TeamConfig) => {
         try {
-            const teams = await TeamService.getUserTeams();
-            if (teams.length > 0) {
-                const hrTeam = teams.find(team => team.name === 'Human Resources Team');
-                const defaultTeam = hrTeam || teams[0];
-                dispatch(setSelectedTeam(defaultTeam));
-                showToast(`Team uploaded successfully! ${defaultTeam.name} remains your default team.`, 'success');
+            console.log('handleTeamUpload called with:', uploadedTeam);
+            if (uploadedTeam) {
+                const teamName = uploadedTeam.name || 'Uploaded Team';
+                dispatch(setSelectedTeam(uploadedTeam));
+                TeamService.storageTeam(uploadedTeam);
+                showToast(`Default team set to ${teamName}`, 'success');
+
+                // Also inform backend to use this team for the session
+                if (uploadedTeam.team_id) {
+                    try {
+                        await TeamService.selectTeam(uploadedTeam.team_id);
+                        console.log('Team selected in backend:', uploadedTeam.team_id);
+                    } catch (selectError) {
+                        console.warn('Failed to select team in backend:', selectError);
+                        // Don't fail the upload if backend selection fails
+                    }
+                }
+            } else {
+                console.warn('No uploaded team provided to handleTeamUpload');
             }
-        } catch {
-            console.error('Team upload failed');
+        } catch (error) {
+            console.error('Team upload failed:', error);
+            showToast('Team upload failed. Please try again.', 'warning');
         }
     }, [dispatch, showToast]);
 

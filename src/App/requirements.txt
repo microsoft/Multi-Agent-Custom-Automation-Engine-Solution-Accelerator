@@ -1,3 +1,4 @@
+--index-url https://packagefeedproxy.microsoft.io/pypi/simple/
 fastapi
 uvicorn[standard]
 # uvicorn removed and added above to allow websocket support

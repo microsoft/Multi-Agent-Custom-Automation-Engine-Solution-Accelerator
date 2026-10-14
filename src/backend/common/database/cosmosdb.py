@@ -4,11 +4,11 @@ import datetime
 import logging
 from typing import Any, Dict, List, Optional, Type
 
-import v4.models.messages as messages
+from models.plan_models import MPlan
 from azure.cosmos.aio import CosmosClient
 from azure.cosmos.aio._database import DatabaseProxy
 
-from ..models.messages_af import (
+from ..models.messages import (
     AgentMessage,
     AgentMessageData,
     BaseDataModel,
@@ -187,8 +187,8 @@ class CosmosDBClient(DatabaseBase):
         await self.update_item(plan)
 
     async def get_plan_by_plan_id(self, plan_id: str) -> Optional[Plan]:
-        """Retrieve a plan by plan_id."""
-        query = "SELECT * FROM c WHERE c.id=@plan_id AND c.data_type=@data_type"
+        """Retrieve a plan by plan_id, scoped to the current user."""
+        query = "SELECT * FROM c WHERE c.id=@plan_id AND c.data_type=@data_type AND c.user_id=@user_id"
         parameters = [
             {"name": "@plan_id", "value": plan_id},
             {"name": "@data_type", "value": DataType.plan},
@@ -243,11 +243,12 @@ class CosmosDBClient(DatabaseBase):
         await self.update_item(step)
 
     async def get_steps_by_plan(self, plan_id: str) -> List[Step]:
-        """Retrieve all steps for a plan."""
-        query = "SELECT * FROM c WHERE c.plan_id=@plan_id AND c.data_type=@data_type ORDER BY c.timestamp"
+        """Retrieve all steps for a plan, scoped to the current user."""
+        query = "SELECT * FROM c WHERE c.plan_id=@plan_id AND c.data_type=@data_type AND c.user_id=@user_id ORDER BY c.timestamp"
         parameters = [
             {"name": "@plan_id", "value": plan_id},
             {"name": "@data_type", "value": DataType.step},
+            {"name": "@user_id", "value": self.user_id},
         ]
         return await self.query_items(query, parameters, Step)
 
@@ -273,10 +274,11 @@ class CosmosDBClient(DatabaseBase):
         Returns:
             TeamConfiguration object or None if not found
         """
-        query = "SELECT * FROM c WHERE c.team_id=@team_id AND c.data_type=@data_type"
+        query = "SELECT * FROM c WHERE c.team_id=@team_id AND c.data_type=@data_type AND (c.user_id=@user_id OR c.is_default=true)"
         parameters = [
             {"name": "@team_id", "value": team_id},
             {"name": "@data_type", "value": DataType.team_config},
+            {"name": "@user_id", "value": self.user_id},
         ]
         teams = await self.query_items(query, parameters, TeamConfiguration)
         return teams[0] if teams else None
@@ -290,32 +292,33 @@ class CosmosDBClient(DatabaseBase):
         Returns:
             TeamConfiguration object or None if not found
         """
-        query = "SELECT * FROM c WHERE c.team_id=@team_id AND c.data_type=@data_type"
+        query = "SELECT * FROM c WHERE c.team_id=@team_id AND c.data_type=@data_type AND (c.user_id=@user_id OR c.is_default=true)"
         parameters = [
             {"name": "@team_id", "value": team_id},
             {"name": "@data_type", "value": DataType.team_config},
+            {"name": "@user_id", "value": self.user_id},
         ]
         teams = await self.query_items(query, parameters, TeamConfiguration)
         return teams[0] if teams else None
 
     async def get_all_teams(self) -> List[TeamConfiguration]:
-        """Retrieve all team configurations for a specific user.
-
-        Args:
-            user_id: The user_id to get team configurations for
+        """Retrieve all team configurations visible to the current user.
 
         Returns:
-            List of TeamConfiguration objects
+            List of TeamConfiguration objects: default teams plus user-specific teams
         """
-        query = "SELECT * FROM c WHERE c.data_type=@data_type ORDER BY c.created DESC"
+        query = "SELECT * FROM c WHERE c.data_type=@data_type AND (c.user_id=@user_id OR c.is_default=true) ORDER BY c.created DESC"
         parameters = [
             {"name": "@data_type", "value": DataType.team_config},
+            {"name": "@user_id", "value": self.user_id},
         ]
         teams = await self.query_items(query, parameters, TeamConfiguration)
         return teams
 
     async def delete_team(self, team_id: str) -> bool:
         """Delete a team configuration by team_id.
+
+        Only user-owned teams can be deleted; default teams cannot be deleted.
 
         Args:
             team_id: The team_id of the team configuration to delete
@@ -328,9 +331,12 @@ class CosmosDBClient(DatabaseBase):
         try:
             # First find the team to get its document id and partition key
             team = await self.get_team(team_id)
-            print(team)
-            if team:
-                await self.delete_item(item_id=team.id, partition_key=team.session_id)
+            if not team:
+                return False
+            # Prevent deletion of default teams
+            if team.is_default:
+                return False
+            await self.delete_item(item_id=team.id, partition_key=team.session_id)
             return True
         except Exception as e:
             logging.exception(f"Failed to delete team from Cosmos DB: {e}")
@@ -411,7 +417,7 @@ class CosmosDBClient(DatabaseBase):
             {"name": "@data_type", "value": DataType.user_current_team},
         ]
         items = self.container.query_items(query=query, parameters=params)
-        print("Items to delete:", items)
+        self.logger.debug("delete_current_team: querying items for user_id=%s", user_id)
         if items:
             async for doc in items:
                 try:
@@ -436,14 +442,16 @@ class CosmosDBClient(DatabaseBase):
         await self.update_item(current_team)
 
     async def delete_plan_by_plan_id(self, plan_id: str) -> bool:
-        """Delete a plan by its ID."""
-        query = "SELECT c.id, c.session_id FROM c WHERE c.id=@plan_id "
+        """Delete a plan by its ID, scoped to the current user."""
+        query = "SELECT c.id, c.session_id FROM c WHERE c.id=@plan_id AND c.data_type=@data_type AND c.user_id=@user_id"
 
         params = [
             {"name": "@plan_id", "value": plan_id},
+            {"name": "@data_type", "value": DataType.plan},
+            {"name": "@user_id", "value": self.user_id},
         ]
         items = self.container.query_items(query=query, parameters=params)
-        print("Items to delete planid:", items)
+        self.logger.debug("delete_plan_by_plan_id: querying items for plan_id=%s", plan_id)
         if items:
             async for doc in items:
                 try:
@@ -457,22 +465,23 @@ class CosmosDBClient(DatabaseBase):
 
         return True
 
-    async def add_mplan(self, mplan: messages.MPlan) -> None:
+    async def add_mplan(self, mplan: MPlan) -> None:
         """Add a team configuration to the database."""
         await self.add_item(mplan)
 
-    async def update_mplan(self, mplan: messages.MPlan) -> None:
+    async def update_mplan(self, mplan: MPlan) -> None:
         """Update a team configuration in the database."""
         await self.update_item(mplan)
 
-    async def get_mplan(self, plan_id: str) -> Optional[messages.MPlan]:
-        """Retrieve a mplan configuration by mplan_id."""
-        query = "SELECT * FROM c WHERE c.plan_id=@plan_id AND c.data_type=@data_type"
+    async def get_mplan(self, plan_id: str) -> Optional[MPlan]:
+        """Retrieve a mplan configuration by mplan_id, scoped to the current user."""
+        query = "SELECT * FROM c WHERE c.plan_id=@plan_id AND c.data_type=@data_type AND c.user_id=@user_id"
         parameters = [
             {"name": "@plan_id", "value": plan_id},
             {"name": "@data_type", "value": DataType.m_plan},
+            {"name": "@user_id", "value": self.user_id},
         ]
-        results = await self.query_items(query, parameters, messages.MPlan)
+        results = await self.query_items(query, parameters, MPlan)
         return results[0] if results else None
 
     async def add_agent_message(self, message: AgentMessageData) -> None:
@@ -484,11 +493,12 @@ class CosmosDBClient(DatabaseBase):
         await self.update_item(message)
 
     async def get_agent_messages(self, plan_id: str) -> List[AgentMessageData]:
-        """Retrieve an agent message by message_id."""
-        query = "SELECT * FROM c WHERE c.plan_id=@plan_id AND c.data_type=@data_type ORDER BY c._ts ASC"
+        """Retrieve agent messages for a plan, scoped to the current user."""
+        query = "SELECT * FROM c WHERE c.plan_id=@plan_id AND c.data_type=@data_type AND c.user_id=@user_id ORDER BY c._ts ASC"
         parameters = [
             {"name": "@plan_id", "value": plan_id},
             {"name": "@data_type", "value": DataType.m_plan_message},
+            {"name": "@user_id", "value": self.user_id},
         ]
 
         return await self.query_items(query, parameters, AgentMessageData)
@@ -508,7 +518,7 @@ class CosmosDBClient(DatabaseBase):
             {"name": "@data_type", "value": DataType.current_team_agent},
         ]
         items = self.container.query_items(query=query, parameters=params)
-        print("Items to delete:", items)
+        self.logger.debug("delete_team_agent: querying items for team_id=%s agent_name=%s", team_id, agent_name)
         if items:
             async for doc in items:
                 try:

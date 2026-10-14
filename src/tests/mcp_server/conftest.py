@@ -2,13 +2,20 @@
 Test configuration for MCP server tests.
 """
 
-import pytest
 import sys
 from pathlib import Path
 
-# Add the MCP server to path
-mcp_server_path = Path(__file__).parent.parent.parent / "backend" / "v4" / "mcp_server"
-sys.path.insert(0, str(mcp_server_path))
+import pytest
+
+# Put src/mcp_server at the FRONT of sys.path so its packages win over any
+# same-named backend packages (e.g. `services`, `config`) regardless of the
+# venv's base sys.path order. A guarded insert is insufficient: src/mcp_server
+# may already be on the path but AFTER src/backend, so `import services` would
+# otherwise resolve to src/backend/services.
+_MCP_ROOT = str(Path(__file__).resolve().parents[2] / "mcp_server")
+while _MCP_ROOT in sys.path:
+    sys.path.remove(_MCP_ROOT)
+sys.path.insert(0, _MCP_ROOT)
 
 
 @pytest.fixture

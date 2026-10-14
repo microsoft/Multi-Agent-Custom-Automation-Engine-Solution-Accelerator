@@ -72,10 +72,8 @@ env:
 
 jobs:
   docker-build:
+    if: inputs.trigger_type == 'workflow_dispatch' && inputs.build_docker_image == true
     uses: ./.github/workflows/job-docker-build.yml
-    with:
-      trigger_type: ${{ inputs.trigger_type }}
-      build_docker_image: ${{ inputs.build_docker_image }}
     secrets: inherit
 
   deploy:

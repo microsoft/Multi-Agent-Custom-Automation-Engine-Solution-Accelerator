@@ -7,7 +7,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 def configure_oltp_tracing(endpoint: str = None) -> trace.TracerProvider:
     # Configure Tracing
-    tracer_provider = TracerProvider(resource=Resource({"service.name": "macwe"}))
+    tracer_provider = TracerProvider(resource=Resource({"service.name": "macae"}))
     processor = BatchSpanProcessor(OTLPSpanExporter())
     tracer_provider.add_span_processor(processor)
     trace.set_tracer_provider(tracer_provider)

@@ -1,10 +1,14 @@
 # Base Python image
-FROM python:3.11-slim-bullseye AS base
+FROM python:3.11-slim-bookworm AS base
 WORKDIR /app
 
 FROM base AS builder
 COPY --from=ghcr.io/astral-sh/uv:0.6.3 /uv /uvx /bin/
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
+
+# Route uv/pip package resolution through the Microsoft Package Feed Proxy
+ENV UV_INDEX_URL=https://packagefeedproxy.microsoft.io/pypi/simple/ \
+    PIP_INDEX_URL=https://packagefeedproxy.microsoft.io/pypi/simple/
 
 WORKDIR /app
 COPY uv.lock pyproject.toml /app/
@@ -20,6 +24,9 @@ RUN uv sync --frozen --no-install-project --no-dev
 COPY . /app  
 #RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-dev
 RUN uv sync --frozen --no-dev
+# Fix: agent-framework-azure-ai-search ships an empty agent_framework/__init__.py
+# that overwrites the real one from agent-framework-core. Reinstall core last.
+RUN uv pip install --reinstall --no-deps agent-framework-core==1.2.2
 
 
 FROM base

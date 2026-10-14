@@ -2,6 +2,9 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
+    "deploymentFlavor": {
+      "value": "${AZURE_ENV_DEPLOYMENT_FLAVOR=bicep}"
+    },
     "solutionName": {
       "value": "${AZURE_ENV_NAME}"
     },
@@ -23,38 +26,29 @@
     "gptDeploymentCapacity": {
       "value": "${AZURE_ENV_GPT_MODEL_CAPACITY}"
     },
-    "gpt4_1ModelDeploymentType": {
-      "value": "${AZURE_ENV_MODEL_4_1_DEPLOYMENT_TYPE}"
+    "gpt5_4ModelDeploymentType": {
+      "value": "${AZURE_ENV_MODEL_5_4_DEPLOYMENT_TYPE}"
     },
-    "gpt4_1ModelName": {
-      "value": "${AZURE_ENV_MODEL_4_1_NAME}"
+    "gpt5_4ModelName": {
+      "value": "${AZURE_ENV_MODEL_5_4_NAME}"
     },
-    "gpt4_1ModelVersion": {
-      "value": "${AZURE_ENV_MODEL_4_1_VERSION}"
+    "gpt5_4ModelVersion": {
+      "value": "${AZURE_ENV_MODEL_5_4_VERSION}"
     },
-    "gpt4_1ModelCapacity": {
-      "value": "${AZURE_ENV_MODEL_4_1_CAPACITY}"
+    "gpt5_4ModelCapacity": {
+      "value": "${AZURE_ENV_MODEL_5_4_CAPACITY}"
     },
-    "gptReasoningModelDeploymentType": {
-      "value": "${AZURE_ENV_REASONING_MODEL_DEPLOYMENT_TYPE}"
+    "gptImageModelName": {
+      "value": "${AZURE_ENV_IMAGE_MODEL_NAME}"
     },
-    "gptReasoningModelName": {
-      "value": "${AZURE_ENV_REASONING_MODEL_NAME}"
+    "gptImageModelVersion": {
+      "value": "${AZURE_ENV_IMAGE_MODEL_VERSION}"
     },
-    "gptReasoningModelVersion": {
-      "value": "${AZURE_ENV_REASONING_MODEL_VERSION}"
+    "gptImageModelDeploymentType": {
+      "value": "${AZURE_ENV_IMAGE_MODEL_DEPLOYMENT_TYPE}"
     },
-    "gptReasoningModelCapacity": {
-      "value": "${AZURE_ENV_REASONING_MODEL_CAPACITY}"
-    },
-    "backendContainerImageTag": {
-      "value": "${AZURE_ENV_IMAGE_TAG=latest_v4}"
-    },
-    "frontendContainerImageTag": {
-      "value": "${AZURE_ENV_IMAGE_TAG=latest_v4}"
-    },
-    "MCPContainerImageTag": {
-      "value": "${AZURE_ENV_IMAGE_TAG=latest_v4}"
+    "gptImageModelCapacity": {
+      "value": "${AZURE_ENV_IMAGE_MODEL_CAPACITY}"
     },
     "enableTelemetry": {
       "value": "${AZURE_ENV_ENABLE_TELEMETRY}"
@@ -68,11 +62,20 @@
     "backendContainerRegistryHostname": {
       "value": "${AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT}"
     },
+     "backendContainerImageTag": {
+      "value": "${AZURE_ENV_IMAGE_TAG}"
+    },
     "frontendContainerRegistryHostname": {
       "value": "${AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT}"
     },
+    "frontendContainerImageTag": {
+      "value": "${AZURE_ENV_IMAGE_TAG}"
+    },
     "MCPContainerRegistryHostname": {
       "value": "${AZURE_ENV_CONTAINER_REGISTRY_ENDPOINT}"
+    },
+    "MCPContainerImageTag": {
+      "value": "${AZURE_ENV_IMAGE_TAG}"
     }
   }
 }

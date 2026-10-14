@@ -28,6 +28,8 @@ import {
     selectLoadingMessage,
     selectReloadLeftList,
     selectWaitingForPlan,
+    selectShowTimeoutDialog,
+    selectTimeoutMessage,
     setReloadLeftList,
     setProcessingApproval,
     setShowProcessingPlanSpinner,
@@ -73,10 +75,35 @@ import { useInlineToaster } from '../components/toast/InlineToaster';
 import Octo from '../commonComponents/imports/Octopus.png';
 import LoadingMessage, { loadingMessages } from '../commonComponents/components/LoadingMessage';
 import PlanCancellationDialog from '../components/common/PlanCancellationDialog';
+import TimeoutDialog from '../components/common/TimeoutDialog';
 import '../styles/PlanPage.css';
 
 // Singleton API service
 const apiService = new APIService();
+
+const getPlanProcessingStatusMessage = (elapsedSeconds: number): string => {
+    if (elapsedSeconds < 8) {
+        return 'Processing your plan and coordinating with AI agents...';
+    }
+
+    if (elapsedSeconds < 20) {
+        return 'Assigning tasks to specialized agents...';
+    }
+
+    if (elapsedSeconds < 35) {
+        return 'Agents are analyzing and researching...';
+    }
+
+    if (elapsedSeconds < 50) {
+        return 'Compiling results from agents...';
+    }
+
+    if (elapsedSeconds < 90) {
+        return 'Finalizing responses...';
+    }
+
+    return 'Still processing, please wait...';
+};
 
 /* ================================================================
  *  PlanPage — refactored to use Redux + extracted hooks
@@ -86,7 +113,7 @@ const PlanPage: React.FC = () => {
     const navigate = useNavigate();
     const dispatch = useAppDispatch();
     const { showToast, dismissToast } = useInlineToaster();
-    const { messagesContainerRef, scrollToBottom } = useAutoScroll();
+    const { messagesContainerRef, finalResultRef, scrollToBottom, scrollToFinalResult } = useAutoScroll();
     const { loadPlanData, resetPlanVariables } = usePlanActions();
 
     /* ── Redux Selectors (granular — Point 10) ──────────────── */
@@ -111,9 +138,13 @@ const PlanPage: React.FC = () => {
     const showBufferingText = useAppSelector(selectShowBufferingText);
     const wsConnected = useAppSelector(selectWsConnected);
     const selectedTeam = useAppSelector(selectSelectedTeam);
+    const showTimeoutDialog = useAppSelector(selectShowTimeoutDialog);
+    const timeoutMessage = useAppSelector(selectTimeoutMessage);
 
     /* ── Cancellation alert hook ────────────────────────────── */
     const [pendingNavigation, setPendingNavigation] = React.useState<(() => void) | null>(null);
+    const [processingElapsedSeconds, setProcessingElapsedSeconds] = React.useState<number>(0);
+    const processingStatusMessage = getPlanProcessingStatusMessage(processingElapsedSeconds);
 
     const { isPlanActive } = usePlanCancellationAlert({
         planData,
@@ -134,7 +165,7 @@ const PlanPage: React.FC = () => {
     }, []);
 
     /* ── WebSocket subscriptions (extracted hook) ───────────── */
-    usePlanWebSocket({ planId, scrollToBottom, formatErrorMessage, showToast });
+    usePlanWebSocket({ planId, scrollToBottom, scrollToFinalResult, formatErrorMessage, showToast });
 
     /* ── Navigation with cancellation check ─────────────────── */
     const handleNavigationWithAlert = useCallback(
@@ -176,6 +207,10 @@ const PlanPage: React.FC = () => {
         dispatch(setShowCancellationDialog(false));
         setPendingNavigation(null);
     }, [dispatch]);
+
+    const handleTimeoutGoHome = useCallback(() => {
+        navigate('/');
+    }, [navigate]);
 
     /* ── Plan Approval / Rejection ──────────────────────────── */
     const handleApprovePlan = useCallback(async () => {
@@ -288,6 +323,21 @@ const PlanPage: React.FC = () => {
         return () => clearInterval(interval);
     }, [loading, dispatch]);
 
+    /* ── Plan execution elapsed timer ───────────────────────── */
+    useEffect(() => {
+        if (!showProcessingPlanSpinner) {
+            setProcessingElapsedSeconds(0);
+            return;
+        }
+
+        setProcessingElapsedSeconds(0);
+        const interval = setInterval(() => {
+            setProcessingElapsedSeconds((currentSeconds: number) => currentSeconds + 1);
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [showProcessingPlanSpinner]);
+
     /* ── Initial plan load ──────────────────────────────────── */
     useEffect(() => {
         if (!planId) {
@@ -362,10 +412,13 @@ const PlanPage: React.FC = () => {
                                 planApprovalRequest={planApprovalRequest}
                                 waitingForPlan={waitingForPlan}
                                 messagesContainerRef={messagesContainerRef}
+                                finalResultRef={finalResultRef}
                                 streamingMessageBuffer={streamingMessageBuffer}
                                 showBufferingText={showBufferingText}
                                 agentMessages={agentMessages}
                                 showProcessingPlanSpinner={showProcessingPlanSpinner}
+                                processingElapsedSeconds={processingElapsedSeconds}
+                                processingStatusMessage={processingStatusMessage}
                                 showApprovalButtons={showApprovalButtons}
                                 processingApproval={processingApproval}
                                 handleApprovePlan={handleApprovePlan}
@@ -387,6 +440,12 @@ const PlanPage: React.FC = () => {
                 onConfirm={handleConfirmCancellation}
                 onCancel={handleCancelDialog}
                 loading={cancellingPlan}
+            />
+
+            <TimeoutDialog
+                isOpen={showTimeoutDialog}
+                message={timeoutMessage}
+                onGoHome={handleTimeoutGoHome}
             />
         </CoralShellColumn>
     );

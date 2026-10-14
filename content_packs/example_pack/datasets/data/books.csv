@@ -1,0 +1,6 @@
+id,title,author,genre,year,summary
+BK-0001,The Pragmatic Programmer,Andrew Hunt & David Thomas,Software,1999,Practical advice and timeless principles for working programmers.
+BK-0002,Designing Data-Intensive Applications,Martin Kleppmann,Software,2017,Deep dive into scalable storage, retrieval, and stream processing.
+BK-0003,The Lean Startup,Eric Ries,Business,2011,Build-measure-learn methodology for shipping products customers want.
+BK-0004,Sapiens,Yuval Noah Harari,History,2011,A brief history of humankind from the cognitive revolution to today.
+BK-0005,Project Hail Mary,Andy Weir,Science Fiction,2021,A lone astronaut wakes up on a desperate interstellar rescue mission.

@@ -8,7 +8,7 @@
  *  - agentIconUtils → agent-to-icon mapping
  */
 
-export { formatDate } from './utils';
+export { formatDate, formatElapsedTime } from './utils';
 export { getErrorMessage, getErrorStyle } from './errorUtils';
 export { formatErrorMessage, extractPlainAnswer, truncate } from './messageUtils';
 export {

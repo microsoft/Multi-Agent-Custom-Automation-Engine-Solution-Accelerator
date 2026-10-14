@@ -9,7 +9,6 @@ trigger:
       - src/*
       - infra/*
       - azure.yaml
-      - azure_custom.yaml
       - .azdo/pipelines/azure-dev.yml
     exclude:
       - '*.md'

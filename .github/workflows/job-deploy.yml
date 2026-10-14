@@ -98,9 +98,8 @@ on:
         value: ${{ jobs.azure-setup.outputs.QUOTA_FAILED }}
 
 env:
-  GPT_MIN_CAPACITY: 150
-  O4_MINI_MIN_CAPACITY: 50
-  GPT41_MINI_MIN_CAPACITY: 50
+  GPT_5_4_MINI_MIN_CAPACITY: 100
+  GPT_5_4_MIN_CAPACITY: 150
   BRANCH_NAME: ${{ github.event.workflow_run.head_branch || github.head_ref || github.ref_name }}
   WAF_ENABLED: ${{ inputs.trigger_type == 'workflow_dispatch' && (inputs.waf_enabled || false) || false }}
   EXP: ${{ inputs.trigger_type == 'workflow_dispatch' && (inputs.EXP || false) || false }}
@@ -289,10 +288,10 @@ jobs:
           echo "Final EXP status: $EXP_ENABLED"
           
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Login to Azure
-        uses: azure/login@v3
+        uses: azure/login@f5d393ae46f8fde4be8b75f32e3fc50e654ad0ca # v3
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -306,15 +305,14 @@ jobs:
         id: quota-check
         env:
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          GPT_MIN_CAPACITY: ${{ env.GPT_MIN_CAPACITY }}
-          O4_MINI_MIN_CAPACITY: ${{ env.O4_MINI_MIN_CAPACITY }}
-          GPT41_MINI_MIN_CAPACITY: ${{ env.GPT41_MINI_MIN_CAPACITY }}
+          GPT_5_4_MINI_MIN_CAPACITY: ${{ env.GPT_5_4_MINI_MIN_CAPACITY }}
+          GPT_5_4_MIN_CAPACITY: ${{ env.GPT_5_4_MIN_CAPACITY }}
           AZURE_REGIONS: ${{ vars.AZURE_REGIONS }}
         run: |
-          chmod +x infra/scripts/checkquota.sh
-          if ! infra/scripts/checkquota.sh; then
+          chmod +x infra/scripts/pre-provision/checkquota.sh
+          if ! infra/scripts/pre-provision/checkquota.sh; then
             # If quota check fails due to insufficient quota, set the flag
-            if grep -q "No region with sufficient quota found" infra/scripts/checkquota.sh; then
+            if grep -q "No region with sufficient quota found" infra/scripts/pre-provision/checkquota.sh; then
               echo "QUOTA_FAILED=true" >> $GITHUB_ENV
             fi
             exit 1  # Fail the pipeline if any other failure occurs
@@ -431,13 +429,13 @@ jobs:
             echo "Current branch: $BRANCH_NAME"
             
             if [[ "$BRANCH_NAME" == "main" ]]; then
-              IMAGE_TAG="latest_v4"
-            elif [[ "$BRANCH_NAME" == "dev-v4" ]]; then
-              IMAGE_TAG="dev_v4"
+              IMAGE_TAG="latest_v5"
+            elif [[ "$BRANCH_NAME" == "dev" ]]; then
+              IMAGE_TAG="dev_v5"
             elif [[ "$BRANCH_NAME" == "hotfix" ]]; then
               IMAGE_TAG="hotfix"
             else
-              IMAGE_TAG="latest_v4"
+              IMAGE_TAG="latest_v5"
             fi
             echo "Using existing Docker image tag: $IMAGE_TAG"
           fi

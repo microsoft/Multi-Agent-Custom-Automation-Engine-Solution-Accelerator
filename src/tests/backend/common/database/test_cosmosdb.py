@@ -23,14 +23,11 @@ sys.modules['azure.core'] = Mock()
 sys.modules['azure.core.exceptions'] = Mock()
 sys.modules['azure.identity'] = Mock()
 sys.modules['azure.identity.aio'] = Mock()
-# Mock v4 modules that cosmosdb.py tries to import
-sys.modules['v4'] = Mock()
-sys.modules['v4.models'] = Mock()
-sys.modules['v4.models.messages'] = Mock()
+# Mock v4 modules — no longer needed (flat layout migration complete)
 
 # Import the REAL modules using backend.* paths for proper coverage tracking
 from backend.common.database.cosmosdb import CosmosDBClient
-from backend.common.models.messages_af import (
+from backend.common.models.messages import (
     AgentMessage,
     AgentMessageData,
     BaseDataModel,
@@ -41,7 +38,7 @@ from backend.common.models.messages_af import (
     TeamConfiguration,
     UserCurrentTeam,
 )
-import v4.models.messages as messages
+from models.plan_models import MPlan
 
 
 class TestCosmosDBClientInitialization:
@@ -484,7 +481,7 @@ class TestCosmosDBPlanOperations:
         result = await client.get_plan_by_plan_id("test_plan_id")
         
         assert result == mock_plan
-        expected_query = "SELECT * FROM c WHERE c.id=@plan_id AND c.data_type=@data_type"
+        expected_query = "SELECT * FROM c WHERE c.id=@plan_id AND c.data_type=@data_type AND c.user_id=@user_id"
         expected_params = [
             {"name": "@plan_id", "value": "test_plan_id"},
             {"name": "@data_type", "value": DataType.plan},
@@ -611,10 +608,11 @@ class TestCosmosDBStepOperations:
         result = await client.get_steps_by_plan("test_plan_id")
         
         assert result == mock_steps
-        expected_query = "SELECT * FROM c WHERE c.plan_id=@plan_id AND c.data_type=@data_type ORDER BY c.timestamp"
+        expected_query = "SELECT * FROM c WHERE c.plan_id=@plan_id AND c.data_type=@data_type AND c.user_id=@user_id ORDER BY c.timestamp"
         expected_params = [
             {"name": "@plan_id", "value": "test_plan_id"},
             {"name": "@data_type", "value": DataType.step},
+            {"name": "@user_id", "value": "test_user"},
         ]
         client.query_items.assert_called_once_with(expected_query, expected_params, Step)
     
@@ -704,10 +702,11 @@ class TestCosmosDBTeamOperations:
         result = await client.get_team("test_team_id")
         
         assert result == mock_team
-        expected_query = "SELECT * FROM c WHERE c.team_id=@team_id AND c.data_type=@data_type"
+        expected_query = "SELECT * FROM c WHERE c.team_id=@team_id AND c.data_type=@data_type AND (c.user_id=@user_id OR c.is_default=true)"
         expected_params = [
             {"name": "@team_id", "value": "test_team_id"},
             {"name": "@data_type", "value": DataType.team_config},
+            {"name": "@user_id", "value": "test_user"},
         ]
         client.query_items.assert_called_once_with(expected_query, expected_params, TeamConfiguration)
     
@@ -739,9 +738,10 @@ class TestCosmosDBTeamOperations:
         result = await client.get_all_teams()
         
         assert result == mock_teams
-        expected_query = "SELECT * FROM c WHERE c.data_type=@data_type ORDER BY c.created DESC"
+        expected_query = "SELECT * FROM c WHERE c.data_type=@data_type AND (c.user_id=@user_id OR c.is_default=true) ORDER BY c.created DESC"
         expected_params = [
             {"name": "@data_type", "value": DataType.team_config},
+            {"name": "@user_id", "value": "test_user"},
         ]
         client.query_items.assert_called_once_with(expected_query, expected_params, TeamConfiguration)
     
@@ -751,6 +751,7 @@ class TestCosmosDBTeamOperations:
         mock_team = Mock(spec=TeamConfiguration)
         mock_team.id = "test_id"
         mock_team.session_id = "test_session"
+        mock_team.is_default = False
         
         # Mock get_team to return the team
         with patch.object(client, 'get_team', return_value=mock_team):
@@ -766,7 +767,7 @@ class TestCosmosDBTeamOperations:
         with patch.object(client, 'get_team', return_value=None):
             result = await client.delete_team("test_team_id")
         
-        assert result is True
+        assert result is False
         client.delete_item.assert_not_called()
 
 
@@ -963,10 +964,11 @@ class TestCosmosDBAgentMessageOperations:
         result = await client.get_agent_messages("test_plan_id")
         
         assert result == mock_messages
-        expected_query = "SELECT * FROM c WHERE c.plan_id=@plan_id AND c.data_type=@data_type ORDER BY c._ts ASC"
+        expected_query = "SELECT * FROM c WHERE c.plan_id=@plan_id AND c.data_type=@data_type AND c.user_id=@user_id ORDER BY c._ts ASC"
         expected_params = [
             {"name": "@plan_id", "value": "test_plan_id"},
             {"name": "@data_type", "value": DataType.m_plan_message},
+            {"name": "@user_id", "value": "test_user"},
         ]
         client.query_items.assert_called_once_with(expected_query, expected_params, AgentMessageData)
 
@@ -1038,12 +1040,13 @@ class TestCosmosDBMiscellaneousOperations:
         result = await client.get_mplan("test_plan_id")
         
         assert result == mock_mplan
-        expected_query = "SELECT * FROM c WHERE c.plan_id=@plan_id AND c.data_type=@data_type"
+        expected_query = "SELECT * FROM c WHERE c.plan_id=@plan_id AND c.data_type=@data_type AND c.user_id=@user_id"
         expected_params = [
             {"name": "@plan_id", "value": "test_plan_id"},
             {"name": "@data_type", "value": DataType.m_plan},
+            {"name": "@user_id", "value": "test_user"},
         ]
-        client.query_items.assert_called_once_with(expected_query, expected_params, messages.MPlan)
+        client.query_items.assert_called_once_with(expected_query, expected_params, MPlan)
     
     @pytest.mark.asyncio
     async def test_add_team_agent(self, client):

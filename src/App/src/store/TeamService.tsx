@@ -73,6 +73,17 @@ export class TeamService {
         }
     }
 
+    static clearStoredTeam(): boolean {
+        // Remove persisted team from localStorage
+        if (typeof window === 'undefined' || !window.localStorage) return false;
+        try {
+            window.localStorage.removeItem(TeamService.STORAGE_KEY);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
     static async uploadCustomTeam(teamFile: File): Promise<{
         modelError?: any; success: boolean; team?: TeamConfig; error?: string; raiError?: any; searchError?: any
     }> {
@@ -231,11 +242,9 @@ export class TeamService {
                     }
                 }
 
-                const isProxyAgent = agent.name && agent.name.toLowerCase() === 'proxyagent';
-
-                // Deployment name validation (skip for proxy agents)
-                if (!isProxyAgent && !agent.deployment_name) {
-                    errors.push(`Agent ${index + 1} (${agent.name}): Missing required field: deployment_name (required for non-proxy agents)`);
+                // Deployment name validation
+                if (!agent.deployment_name) {
+                    errors.push(`Agent ${index + 1} (${agent.name}): Missing required field: deployment_name`);
                 }
 
 

@@ -1,0 +1,19 @@
+{
+  "name": "example_pack",
+  "description": "Reference content pack used as a copy-paste starter. Provides a single ResearcherAgent grounded in a tiny book catalog.",
+  "search_indexes": [
+    {
+      "index_name": "example-pack-books-index",
+      "csv_path": "datasets/data/books.csv",
+      "key_field": "id",
+      "title_field": "title"
+    }
+  ],
+  "blob_uploads": [
+    {
+      "container": "example-pack-dataset",
+      "source": "datasets/data",
+      "pattern": "*.csv"
+    }
+  ]
+}

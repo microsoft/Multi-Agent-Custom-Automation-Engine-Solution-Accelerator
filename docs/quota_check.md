@@ -1,7 +1,7 @@
 ## Check Quota Availability Before Deployment
 
 Before deploying the accelerator, **ensure sufficient quota availability** for the required model.
-> **For Global Standard | GPT-4o - the capacity to at least 150k tokens for optimal performance.**
+> **For Global Standard | gpt-5.4 - set the capacity to at least 150k tokens for optimal performance.**
 
 ### Login if you have not done so already
 ```
@@ -16,7 +16,7 @@ az login --use-device-code
 
 ### 📌 Default Models & Capacities:
 ```
-gpt4.1:150,o4-mini:50,gpt4.1-mini:50
+gpt-5.4:150,gpt-5.4-mini:100
 ```
 ### 📌 Default Regions:
 ```
@@ -42,7 +42,8 @@ australiaeast, eastus2, francecentral, japaneast, norwayeast, swedencentral, uks
    ```
 ✔️ Check specific model(s) in default regions:
   ```
-  ./quota_check_params.sh --models gpt4.1:150
+  ./quota_check_params.sh --models gpt-5.4:150
+  ./quota_check_params.sh --models gpt-5.4:150
   ```
 ✔️ Check default models in specific region(s):
   ```
@@ -50,15 +51,15 @@ australiaeast, eastus2, francecentral, japaneast, norwayeast, swedencentral, uks
   ```
 ✔️ Passing Both models and regions:  
   ```
-  ./quota_check_params.sh --models gpt4.1:150 --regions eastus2,westus
+  ./quota_check_params.sh --models gpt-5.4:150 --regions eastus2,westus
   ```
 ✔️ All parameters combined:
   ```
- ./quota_check_params.sh --models gpt4.1:150 --regions eastus2,westus --verbose
+ ./quota_check_params.sh --models gpt-5.4:150 --regions eastus2,westus --verbose
   ```
 ✔️ Multiple models with single region:
   ```
- ./quota_check_params.sh --models gpt4.1:150,gpt4.1-mini:50 --regions eastus2 --verbose
+ ./quota_check_params.sh --models gpt-5.4:150,gpt-5.4-mini:100 --regions eastus2 --verbose
   ```
 
 ### **Sample Output**
@@ -76,7 +77,7 @@ The final table lists regions with available quota. You can select any of these 
    **To check quota for the deployment**  
 
     ```sh
-    curl -L -o quota_check_params.sh "https://raw.githubusercontent.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/main/infra/scripts/quota_check_params.sh"
+    curl -L -o quota_check_params.sh "https://raw.githubusercontent.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator/main/infra/scripts/pre-provision/quota_check_params.sh"
     chmod +x quota_check_params.sh
     ./quota_check_params.sh
     ```
@@ -86,10 +87,9 @@ The final table lists regions with available quota. You can select any of these 
 1. Open the terminal in VS Code or Codespaces.
 2. If you're using VS Code, click the dropdown on the right side of the terminal window, and select `Git Bash` / `bash`.
    ![git_bash](images/git_bash.png)
-3. Navigate to the `scripts` folder where the script files are located and make the script as executable:
+3. Navigate to the `pre-provision` folder where the script files are located and make the script as executable:
    ```sh
-    cd infra
-    cd scripts
+    cd infra/scripts/pre-provision
     chmod +x quota_check_params.sh
     ```
 4. Run the appropriate script based on your requirement:  

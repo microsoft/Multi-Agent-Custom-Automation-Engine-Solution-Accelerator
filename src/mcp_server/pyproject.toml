@@ -16,18 +16,21 @@ dynamic = ["version"]
 # Core runtime dependencies managed in this pyproject.toml
 dependencies = [
   "fastmcp==3.2.0",
-  "uvicorn[standard]==0.38.0",
-  "python-dotenv==1.2.2",
-  "azure-identity==1.19.0",
-  "pydantic==2.11.7",
+  "fastapi==0.136.1",
+  "uvicorn[standard]==0.35.0",
+  "python-dotenv==1.1.1",
+  "azure-identity==1.25.3",
+  "pydantic==2.13.4",
   "pydantic-settings==2.6.1",
-  "python-multipart==0.0.27",
+  "python-multipart==0.0.30",
   "httpx==0.28.1",
   "werkzeug==3.1.6",
-  "urllib3==2.7.0",
+  "urllib3==2.8.0",
   "azure-core==1.38.0",
-  "cryptography==46.0.7",
+  "cryptography==50.0.0",
   "authlib==1.6.12",
+  "azure-storage-blob==12.25.1",
+
 ]
 
 [project.optional-dependencies]
@@ -35,6 +38,11 @@ dev = [
   "pytest==9.0.3",
   "pytest-asyncio==1.3.0",
 ]
+
+[[tool.uv.index]]
+name = "microsoft-package-feed-proxy"
+url = "https://packagefeedproxy.microsoft.io/pypi/simple/"
+default = true
 
 [project.urls]
 Homepage = "https://github.com/microsoft/Multi-Agent-Custom-Automation-Engine-Solution-Accelerator"
@@ -52,3 +60,9 @@ include = ["**/*", "README.md"]
 
 [project.scripts]
 mcp-server = "mcp_server:main"
+
+[tool.pylint.main]
+init-hook = "import sys; sys.path.insert(0, '.')"
+
+[tool.pylint."messages control"]
+disable = ["broad-exception-caught", "redefined-outer-name", "protected-access", "import-error", "no-name-in-module", "unused-import", "unused-variable"]

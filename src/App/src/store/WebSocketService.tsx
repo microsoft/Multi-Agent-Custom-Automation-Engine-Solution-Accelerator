@@ -15,6 +15,8 @@ class WebSocketService {
     private intentionalDisconnect = false;
     private lastPlanId: string | undefined;
     private lastProcessId: string | undefined;
+    private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+    private heartbeatIntervalMs = 20000; // 20s client keepalive ping
 
 
     private buildSocketUrl(processId?: string, planId?: string): string {
@@ -59,6 +61,7 @@ class WebSocketService {
                         clearTimeout(this.reconnectTimer);
                         this.reconnectTimer = null;
                     }
+                    this.startHeartbeat();
                     this.emit('connection_status', { connected: true });
                     resolve();
                 };
@@ -75,6 +78,7 @@ class WebSocketService {
                 this.ws.onclose = (event) => {
                     this.isConnecting = false;
                     this.ws = null;
+                    this.stopHeartbeat();
                     this.emit('connection_status', { connected: false });
                     /* P1: Only auto-reconnect if not intentional and not a clean close */
                     if (!this.intentionalDisconnect && event.code !== 1000 &&
@@ -99,6 +103,7 @@ class WebSocketService {
 
     disconnect(): void {
         this.intentionalDisconnect = true;
+        this.stopHeartbeat();
         if (this.reconnectTimer) {
             clearTimeout(this.reconnectTimer);
             this.reconnectTimer = null;
@@ -129,6 +134,26 @@ class WebSocketService {
         this.isConnecting = false;
     }
 
+
+    private startHeartbeat(): void {
+        this.stopHeartbeat();
+        this.heartbeatTimer = setInterval(() => {
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                try {
+                    this.ws.send(JSON.stringify({ type: WebsocketMessageType.PING }));
+                } catch {
+                    /* onclose handles real drops */
+                }
+            }
+        }, this.heartbeatIntervalMs);
+    }
+
+    private stopHeartbeat(): void {
+        if (this.heartbeatTimer) {
+            clearInterval(this.heartbeatTimer);
+            this.heartbeatTimer = null;
+        }
+    }
 
     on(eventType: string, callback: (message: StreamMessage) => void): () => void {
         if (!this.listeners.has(eventType)) {
@@ -253,6 +278,14 @@ class WebSocketService {
                     const transformed = PlanDataService.parseFinalResultMessage(message);
                     this.emit(WebsocketMessageType.FINAL_RESULT_MESSAGE, transformed);
                 }
+                break;
+            }
+            case WebsocketMessageType.PING: {
+                // Server keepalive heartbeat — ignore.
+                break;
+            }
+            case WebsocketMessageType.TIMEOUT_NOTIFICATION: {
+                this.emit(WebsocketMessageType.TIMEOUT_NOTIFICATION, message);
                 break;
             }
             case WebsocketMessageType.ERROR_MESSAGE: {
