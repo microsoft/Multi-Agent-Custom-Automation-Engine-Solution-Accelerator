@@ -168,11 +168,41 @@ def _git_commit_all(ws: Path, message: str) -> bool:
     return True
 
 
+def _catch_up(sandbox: Path, share: Path) -> tuple[bool, str]:
+    """Antes de publicar, el sandbox se pone al día con la rama del share.
+
+    El share avanza sin el sandbox (otro escritor, un commit del usuario en
+    Monaco, el ritual post-merge) y un push desde atrás es un rechazo
+    non-fast-forward. Medido 2026-10-14 en local: el agente escribía y
+    commiteaba, el push era rechazado y el archivo nunca llegaba al explorador,
+    aunque la tool devolviera ``published: false``. Los commits del agente se
+    rebasan sobre la punta del share; un conflicto real se aborta y se reporta,
+    nunca se resuelve a ciegas.
+    """
+    branch = _declared_branch(share)
+    trust = (share, share / ".git")
+    fetched = _git(sandbox, "fetch", "-q", "origin", trust=trust)
+    if fetched.returncode != 0:
+        return False, fetched.stderr.decode("utf-8", errors="replace").strip()[-400:]
+    if _git(sandbox, "rev-parse", "--verify", "-q", f"origin/{branch}").returncode != 0:
+        return True, ""  # el share aún no tiene esa rama: nada con qué ponerse al día
+    rebased = _git(sandbox, "rebase", "-q", f"origin/{branch}")
+    if rebased.returncode == 0:
+        return True, ""
+    _git(sandbox, "rebase", "--abort")
+    detail = rebased.stderr.decode("utf-8", errors="replace").strip()[-300:]
+    return False, "the durable tree advanced and the agent's changes conflict with it: " + detail
+
+
 def _commit_and_publish(user_id: str, workspace_id: str, sandbox: Path, message: str) -> dict:
-    """Commit en el sandbox y push al share. Lo que devuelve va al ``details``
-    de la tool: el agente sabe si lo que escribió ya es visible o quedó local."""
+    """Commit en el sandbox, puesta al día con el share y push. Lo que devuelve
+    va al ``details`` de la tool: el agente sabe si lo que escribió ya es
+    visible o quedó local."""
     committed = _git_commit_all(sandbox, message)
-    ok, detail = _publish(sandbox, _workspace_dir(user_id, workspace_id))
+    share = _workspace_dir(user_id, workspace_id)
+    ok, detail = _catch_up(sandbox, share)
+    if ok:
+        ok, detail = _publish(sandbox, share)
     return {"committed": committed, "published": ok, "publish_detail": detail}
 
 

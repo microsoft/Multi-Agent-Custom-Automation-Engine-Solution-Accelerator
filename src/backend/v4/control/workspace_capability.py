@@ -193,6 +193,10 @@ class WorkspaceCapability:
                 "if ! git symbolic-ref -q HEAD >/dev/null && "
                 '[ -n "$(git rev-list -n 1 HEAD --not --branches --remotes)" ]; then '
                 "echo 'sandbox con commits sueltos sin publicar: no se adelanta'; exit 0; fi; "
+                # Con las guardas de arriba ya pasadas (árbol limpio, nada sin
+                # publicar), alinear la rama a la punta del share no pisa nada:
+                # es lo que evita el rechazo non-fast-forward del push final
+                # cuando el sandbox quedó detrás del share.
                 'git checkout --quiet -B "$b" "origin/$b" && '
                 "git fetch --quiet upstream && "
                 'if ! git rev-parse --verify --quiet "refs/remotes/upstream/$b" >/dev/null; then '

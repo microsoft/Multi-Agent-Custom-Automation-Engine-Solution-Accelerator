@@ -24,6 +24,9 @@ RUN uv sync --frozen --no-dev
 
 FROM base
 
+RUN apt-get update && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=builder /app /app
 COPY --from=builder /bin/uv /bin/uv
 

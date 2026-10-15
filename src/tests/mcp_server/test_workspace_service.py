@@ -412,6 +412,30 @@ class TestSandboxArchitecture:
         assert (share / "src" / "x.py").read_text() == "print(1)\n"
         assert _git_out(share, "status", "--short") == ""
 
+    def test_a_write_still_publishes_when_the_durable_tree_advanced_meanwhile(
+        self, workspace_tools, workspace_root
+    ):
+        """Medido 2026-10-14 en local: el share avanzó (ritual post-merge)
+        después de materializar el sandbox; el agente escribió y commiteó, el
+        push fue rechazado (non-fast-forward) y el archivo nunca llegó al
+        explorador. Antes de publicar, el sandbox se pone al día con el share
+        y el commit del agente queda encima de lo nuevo."""
+        tools, _ = workspace_tools
+        share, uid, wid = self._share(workspace_root)
+        tools["workspace_git_status"](uid, wid)  # materializa el sandbox
+        (share / "OTHER.md").write_text("otro escritor\n")
+        _commit(share, "advance the durable tree")
+
+        r = loads(tools["workspace_write_file"](uid, wid, "a.txt", "x"))
+
+        assert r["details"]["published"] is True, r["details"]
+        assert (share / "a.txt").read_text() == "x"
+        assert (share / "OTHER.md").read_text() == "otro escritor\n"
+        assert _git_out(share, "status", "--short") == ""
+        assert _git_out(share, "log", "--format=%s", "-2").splitlines()[1] == (
+            "advance the durable tree"
+        )
+
     def test_publish_is_refused_when_the_durable_tree_has_unsaved_edits(
         self, workspace_tools, workspace_root
     ):
