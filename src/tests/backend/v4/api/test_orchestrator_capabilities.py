@@ -142,20 +142,17 @@ async def test_the_orchestrator_offers_compose_and_its_own_capabilities():
     tools = fake.instances[-1].create_kwargs["tools"]
     # La decisión de componer es del dueño: ``compose`` con las cinco
     # semánticas del framework va en la misma oferta que sus capacidades
-    # propias. Sin workspace montado, la web sí se ofrece.
+    # propias.
     assert tools[0]["name"] == "compose"
     assert tools[0]["parameters"]["properties"]["pattern"]["enum"] == list(
         router._PATTERNS
     )
-    # La compuerta humana va en la misma oferta: pedir autorización es una
-    # decisión del dueño, como componer.
-    assert tools[1]["name"] == "request_human_approval"
-    assert [t["type"] for t in tools[2:]] == [
+    assert [t["type"] for t in tools[1:]] == [
         "image_generation",
         "web_search",
         "code_interpreter",
     ]
-    assert tools[4]["container"] == {"type": "auto"}
+    assert tools[3]["container"] == {"type": "auto"}
 
 
 @pytest.mark.asyncio
@@ -365,10 +362,6 @@ async def test_the_owner_can_ask_the_human_and_the_turn_waits(_ledger_store):
     with patch("openai.AsyncOpenAI", fake):
         updates = await _collect(client, prompt="trabajá INC-2026-013")
 
-    assert any(
-        t.get("name") == "request_human_approval"
-        for t in fake.instances[-1].create_kwargs["tools"]
-    )
     # La solicitud no puede compartir respuesta con una tool con efectos.
     assert fake.instances[-1].create_kwargs["parallel_tool_calls"] is False
     assert len(fake.instances[-1].calls) == 1  # sin veredicto: el turno espera
