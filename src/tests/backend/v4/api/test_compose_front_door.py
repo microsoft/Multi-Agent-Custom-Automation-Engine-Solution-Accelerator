@@ -374,6 +374,4 @@ async def test_a_mounted_workspace_is_a_fact_the_composer_receives():
     # "you have no tools yourself" hacía que narrara sin ejecutar (medido).
     assert "workspace_read_file" in instructions
     assert "no tools yourself" not in instructions
-    # Y con el repo en disco, buscar en la web no es alternativa a leerlo.
-    assert "web_search" not in {t["type"] for t in call["tools"]}
-    assert "web_search" in {t["type"] for t in fake.instances[0].create_kwargs["tools"]}
+    assert "web_search" in {t["type"] for t in call["tools"]}

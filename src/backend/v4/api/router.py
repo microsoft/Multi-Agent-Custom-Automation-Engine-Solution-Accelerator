@@ -2535,10 +2535,9 @@ class _RouterChatClient:
         """
         tools: list[dict[str, Any]] = [
             {"type": "image_generation"},
+            {"type": "web_search"},
             {"type": "code_interpreter", "container": {"type": "auto"}},
         ]
-        if not self._workspace_id:
-            tools.insert(1, {"type": "web_search"})
         tools.extend(
             {
                 "type": "mcp",
@@ -3236,7 +3235,6 @@ class _RouterChatClient:
                         Any,
                         [
                             *([_compose_tool(patterns)] if composing else []),
-                            _APPROVAL_TOOL,
                             *self._capabilities(bearer),
                             *workspace_tools,
                         ],
