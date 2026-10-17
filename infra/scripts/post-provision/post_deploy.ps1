@@ -322,6 +322,21 @@ function Get-ValuesUsingSolutionSuffix {
     # Endpoints (best-effort reconstruction; seed scripts will fail loudly if missing)
     $script:aiSearchEndpoint = "https://$($script:aiSearch).search.windows.net"
 
+    # AI Foundry account + project (naming convention: aif-<suffix>, proj-<suffix>)
+    $aiFoundryName = "aif-$solutionSuffix"
+    $foundryId = az cognitiveservices account show --name $aiFoundryName --resource-group $script:ResourceGroup --query "id" -o tsv 2>$null
+    if ($foundryId) {
+        $script:aiFoundryResourceId = $foundryId
+        if (-not $script:openaiEndpoint) {
+            $script:openaiEndpoint = az cognitiveservices account show --name $aiFoundryName --resource-group $script:ResourceGroup --query "properties.endpoint" -o tsv 2>$null
+        }
+        if (-not $script:projectEndpoint) {
+            # Project is a sub-resource (accounts/projects), construct endpoint from account's AI Foundry API base
+            $foundryApiBase = "https://$aiFoundryName.services.ai.azure.com"
+            $script:projectEndpoint = "$foundryApiBase/api/projects/proj-$solutionSuffix"
+        }
+    }
+
     if (-not $script:storageAccount -or -not $script:aiSearch -or -not $script:backendUrl) {
         Write-Host "Error: Failed to reconstruct all required resource names."
         return $false
@@ -589,6 +604,9 @@ try {
                 Write-Host "Error: Both fallback methods failed." -ForegroundColor Red
                 exit 1
             }
+        } elseif (-not $script:projectEndpoint -or -not $script:aiFoundryResourceId) {
+            # Deployment outputs succeeded but missing some optional values — supplement via naming convention
+            Get-ValuesUsingSolutionSuffix | Out-Null
         }
     }
 
