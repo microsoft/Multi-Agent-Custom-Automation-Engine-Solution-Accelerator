@@ -2138,7 +2138,7 @@ _PARTICIPANT_SCHEMA: dict = {
                 "type": "boolean",
                 "description": (
                     "true ONLY if it needs LIVE public web information (current "
-                    "prices, news, market data). Never together with use_reasoning."
+                    "prices, news, market data). "
                 ),
             },
             "use_reasoning": {
@@ -3296,6 +3296,45 @@ class _RouterChatClient:
                                 generated = True
                                 yield _img
                             produced_artifact = generated
+                        elif itype == "message":
+                            # Un archivo del code interpreter llega como
+                            # anotación ``container_file_citation`` del mensaje
+                            # (file_id + container_id + filename), no en el
+                            # ``code_interpreter_call``. Por el mismo canal que
+                            # la imagen: el manejador SSE emite el chip
+                            # ``generated_file`` y lo persiste en el store.
+                            _cited: set[str] = set()
+                            for _part in getattr(item, "content", None) or []:
+                                for _ann in getattr(_part, "annotations", None) or []:
+                                    if (
+                                        getattr(_ann, "type", "")
+                                        != "container_file_citation"
+                                    ):
+                                        continue
+                                    _fid = getattr(_ann, "file_id", None)
+                                    # Un archivo citado dos veces en el texto es
+                                    # un solo archivo: un chip.
+                                    if not _fid or _fid in _cited:
+                                        continue
+                                    _cited.add(_fid)
+                                    _fname = getattr(_ann, "filename", None) or _fid
+                                    yield AgentResponseUpdate(
+                                        contents=[
+                                            Content.from_hosted_file(
+                                                _fid,
+                                                name=_fname,
+                                                additional_properties={
+                                                    "container_id": getattr(
+                                                        _ann, "container_id", None
+                                                    ),
+                                                    "filename": _fname,
+                                                },
+                                            )
+                                        ],
+                                        role="assistant",
+                                        author_name=self.agent_name,
+                                    )
+                                    produced_artifact = True
                         elif (
                             itype == "function_call"
                             and getattr(item, "name", "") == "request_human_approval"

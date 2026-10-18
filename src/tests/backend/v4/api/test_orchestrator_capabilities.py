@@ -881,6 +881,46 @@ async def test_a_generated_image_is_stored_and_announced_as_a_hosted_file():
 
 
 @pytest.mark.asyncio
+async def test_a_code_interpreter_file_is_announced_as_a_hosted_file():
+    # El archivo del code interpreter viaja como anotación del mensaje; por el
+    # mismo canal que la imagen llega al chip ``generated_file`` del SSE.
+    ann = SimpleNamespace(
+        type="container_file_citation",
+        file_id="cfile_abc",
+        container_id="cntr_1",
+        filename="landing.html",
+    )
+    cite = SimpleNamespace(type="url_citation", url="https://x.invalid")
+    # El mismo archivo citado dos veces en el texto, y una segunda parte con
+    # otro archivo: un chip por archivo, en orden.
+    other = SimpleNamespace(
+        type="container_file_citation",
+        file_id="cfile_def",
+        container_id="cntr_1",
+        filename="chart.png",
+    )
+    message = SimpleNamespace(
+        type="message",
+        content=[
+            SimpleNamespace(
+                type="output_text", text="Listo.", annotations=[cite, ann, ann]
+            ),
+            SimpleNamespace(type="output_text", text="Y esto.", annotations=[other]),
+        ],
+    )
+    fake = _fake_openai(_Stream([_done(message)]))
+    with patch("openai.AsyncOpenAI", fake):
+        updates = await _collect(_client())
+
+    files = [c for u in updates for c in u.contents if c.type == "hosted_file"]
+    assert [c.file_id for c in files] == ["cfile_abc", "cfile_def"]
+    assert files[0].additional_properties == {
+        "container_id": "cntr_1",
+        "filename": "landing.html",
+    }
+
+
+@pytest.mark.asyncio
 async def test_the_format_the_tool_reports_is_the_one_stored():
     saved: list = []
 
