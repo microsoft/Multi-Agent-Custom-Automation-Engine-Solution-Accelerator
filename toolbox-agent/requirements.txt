@@ -20,6 +20,6 @@ agent-framework-foundry-hosting==1.0.0a260709
 # agent_framework_foundry_hosting/_responses.py does `from mcp import McpError`,
 # and MCPStreamableHTTPTool needs it too. Without `mcp` the container crashes at
 # import -> /readiness never returns 200 -> 424 session_not_ready.
-mcp==1.28.1
+mcp==1.30.0
 
 debugpy
