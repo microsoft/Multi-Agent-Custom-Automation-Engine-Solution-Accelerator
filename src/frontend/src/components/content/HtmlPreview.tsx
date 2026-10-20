@@ -23,14 +23,12 @@ import React, {
 } from 'react';
 import {
   Button,
-  DrawerBody,
   Menu,
   MenuDivider,
   MenuItem,
   MenuList,
   MenuPopover,
   MenuTrigger,
-  OverlayDrawer,
 } from '@fluentui/react-components';
 import { apiClient } from '../../api/apiClient';
 import {
@@ -453,14 +451,28 @@ const ResizableRightPanel: React.FC<{
   // izquierdo y se recalcula cuando cambia el tamaño de la ventana.
   const computeMaxWidth = useCallback(() => {
     const panelEl = panelRef.current;
-    const contentEl = panelEl?.previousElementSibling as HTMLElement | null;
-    if (!panelEl || !contentEl) return PANEL_MAX_WIDTH;
-    const available =
-      panelEl.offsetWidth + contentEl.offsetWidth - CONTENT_MIN_WIDTH;
-    return Math.max(
-      PANEL_MIN_WIDTH,
-      Math.min(PANEL_MAX_WIDTH, available)
+    const backdropEl = panelEl?.previousElementSibling as HTMLElement | null;
+    const contentEl =
+      backdropEl?.dataset.panelBackdrop === 'true'
+        ? (backdropEl.previousElementSibling as HTMLElement | null)
+        : backdropEl;
+    const parent = panelEl?.parentElement;
+    if (!panelEl || !contentEl || !parent) return PANEL_MAX_WIDTH;
+    const siblings = (Array.from(parent.children) as HTMLElement[]).filter(
+      (sibling) => sibling.dataset.panelBackdrop !== 'true'
     );
+    const contentIndex = siblings.indexOf(contentEl);
+    const precedingWidth = siblings
+      .slice(0, contentIndex)
+      .reduce((total, sibling) => total + sibling.offsetWidth, 0);
+    const gap = Number.parseFloat(getComputedStyle(parent).columnGap) || 0;
+    const gapsBeforePanel = Math.max(0, siblings.length - 1) * gap;
+    const available =
+      parent.clientWidth -
+      precedingWidth -
+      gapsBeforePanel -
+      CONTENT_MIN_WIDTH;
+    return Math.max(0, Math.min(PANEL_MAX_WIDTH, available));
   }, []);
 
   // Al encoger la ventana el panel podría dejar de caber: reajústalo al máximo
@@ -469,10 +481,19 @@ const ResizableRightPanel: React.FC<{
     if (!isMobile) setWidth((w) => Math.min(w, computeMaxWidth()));
   }, [isMobile, computeMaxWidth]);
   useEffect(() => {
-    const onResize = () =>
-      setWidth((w) => Math.min(w, computeMaxWidth()));
+    const resizePanel = () => setWidth((w) => Math.min(w, computeMaxWidth()));
+    const parent = panelRef.current?.parentElement;
+    const resizeObserver =
+      parent && typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(resizePanel)
+        : null;
+    if (parent && resizeObserver) resizeObserver.observe(parent);
+    const onResize = () => resizePanel();
     window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      resizeObserver?.disconnect();
+    };
   }, [computeMaxWidth]);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -482,7 +503,8 @@ const ResizableRightPanel: React.FC<{
     const onMouseMove = (ev: MouseEvent) => {
       // Panel a la derecha: mover el ratón a la izquierda (dx<0) ensancha.
       const next = startWidth - (ev.clientX - startX);
-      setWidth(Math.min(computeMaxWidth(), Math.max(PANEL_MIN_WIDTH, next)));
+      const maxWidth = computeMaxWidth();
+      setWidth(Math.min(maxWidth, Math.max(Math.min(PANEL_MIN_WIDTH, maxWidth), next)));
     };
     const onMouseUp = () => {
       document.removeEventListener('mousemove', onMouseMove);
@@ -496,68 +518,76 @@ const ResizableRightPanel: React.FC<{
     document.body.style.cursor = 'col-resize';
   };
 
-  if (isMobile) {
-    return (
-      <OverlayDrawer
-        open
-        position="end"
-        aria-label={ariaLabel}
-        onOpenChange={(_e, { open }) => {
-          if (!open) onClose();
-        }}
-        style={{ width: `min(100vw, ${PANEL_DEFAULT_WIDTH}px)` }}
-      >
-        <DrawerBody
-          style={{
-            padding: 0,
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            minHeight: 0,
-          }}
-        >
-          {children}
-        </DrawerBody>
-      </OverlayDrawer>
-    );
-  }
+  useEffect(() => {
+    if (!isMobile) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isMobile, onClose]);
 
   return (
-    <div
-      ref={panelRef}
-      style={{
-        width: `${width}px`,
-        flexShrink: 0,
-        height: '100%',
-        minHeight: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        position: 'relative',
-        boxSizing: 'border-box',
-        borderLeft: hovered
-          ? '2px solid var(--colorNeutralStroke2)'
-          : '1px solid var(--colorNeutralStroke1)',
-      }}
-    >
+    <>
       <div
-        role="separator"
-        aria-orientation="vertical"
-        aria-label="Redimensionar panel"
-        onMouseDown={handleMouseDown}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        data-panel-backdrop="true"
+        aria-hidden="true"
+        onClick={onClose}
         style={{
-          position: 'absolute',
-          top: 0,
-          bottom: 0,
-          left: -3,
-          width: 6,
-          cursor: 'col-resize',
-          zIndex: 1,
+          display: isMobile ? 'block' : 'none',
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.4)',
+          zIndex: 1000,
         }}
       />
-      {children}
-    </div>
+      <div
+        ref={panelRef}
+        role={isMobile ? 'dialog' : undefined}
+        aria-label={isMobile ? ariaLabel : undefined}
+        aria-modal={isMobile || undefined}
+        style={{
+          width: isMobile
+            ? `min(100vw, ${PANEL_DEFAULT_WIDTH}px)`
+            : `${width}px`,
+          flexShrink: 0,
+          height: isMobile ? '100dvh' : '100%',
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          position: isMobile ? 'fixed' : 'relative',
+          insetBlock: isMobile ? 0 : undefined,
+          insetInlineEnd: isMobile ? 0 : undefined,
+          zIndex: isMobile ? 1001 : undefined,
+          background: 'var(--colorNeutralBackground1)',
+          boxSizing: 'border-box',
+          borderLeft: hovered
+            ? '2px solid var(--colorNeutralStroke2)'
+            : '1px solid var(--colorNeutralStroke1)',
+          boxShadow: isMobile ? 'var(--shadow64)' : undefined,
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          role={isMobile ? undefined : 'separator'}
+          aria-orientation={isMobile ? undefined : 'vertical'}
+          aria-label={isMobile ? undefined : 'Redimensionar panel'}
+          onMouseDown={isMobile ? undefined : handleMouseDown}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          style={{
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            left: -3,
+            width: 6,
+            cursor: isMobile ? undefined : 'col-resize',
+            zIndex: 1,
+          }}
+        />
+        {children}
+      </div>
+    </>
   );
 };
 
@@ -621,6 +651,10 @@ export const PreviewRightSlot: React.FC<{ fallback?: React.ReactNode }> = ({
   const [explorerOpen, setExplorerOpen] = useState(false);
   useEffect(() => setExplorerOpen(false), [wsId]);
   const openArtifact = ctx?.open;
+  const closeArtifact = useCallback(() => {
+    setExplorerOpen(false);
+    ctx?.close();
+  }, [ctx?.close]);
   const [wsFiles, setWsFiles] = useState<Array<{ path: string }>>([]);
   const loadWsFiles = useCallback(async () => {
     if (!wsId) {
@@ -759,7 +793,7 @@ export const PreviewRightSlot: React.FC<{ fallback?: React.ReactNode }> = ({
   };
 
   return (
-    <ResizableRightPanel ariaLabel={active.title} onClose={ctx.close}>
+    <ResizableRightPanel ariaLabel={active.title} onClose={closeArtifact}>
       <div
         style={{
           display: 'flex',
@@ -862,7 +896,7 @@ export const PreviewRightSlot: React.FC<{ fallback?: React.ReactNode }> = ({
           size="small"
           icon={<Dismiss20Regular />}
           aria-label="Close preview"
-          onClick={ctx.close}
+          onClick={closeArtifact}
         />
       </div>
 
