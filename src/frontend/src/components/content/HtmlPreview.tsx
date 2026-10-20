@@ -23,12 +23,14 @@ import React, {
 } from 'react';
 import {
   Button,
+  DrawerBody,
   Menu,
   MenuDivider,
   MenuItem,
   MenuList,
   MenuPopover,
   MenuTrigger,
+  OverlayDrawer,
 } from '@fluentui/react-components';
 import { apiClient } from '../../api/apiClient';
 import {
@@ -418,12 +420,30 @@ const PANEL_MAX_WIDTH = 1200;
 // `CoralShellRow` oculta el overflow, así que el panel no debe ensancharse más
 // allá del espacio realmente disponible o recortaría el workspace.
 const CONTENT_MIN_WIDTH = 320;
+// Mismo breakpoint que PlanPanelLeft: por debajo, el panel pasa a ser un
+// OverlayDrawer modal. Por encima, el ancho inicial se ajusta al disponible.
+const MOBILE_QUERY = '(max-width: 768px)';
 
 /** Right-slot shell: resizable width, fills the parent's height (never
- *  `100vh`, which ignores the shell header and overflows below the fold). */
-const ResizableRightPanel: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+ *  `100vh`, which ignores the shell header and overflows below the fold).
+ *  On narrow screens it renders as an overlay drawer instead, so it can never
+ *  push its own close button off-screen; `onClose` handles Escape/backdrop. */
+const ResizableRightPanel: React.FC<{
+  children: React.ReactNode;
+  onClose: () => void;
+  ariaLabel: string;
+}> = ({ children, onClose, ariaLabel }) => {
+  const [isMobile, setIsMobile] = useState(
+    () => window.matchMedia?.(MOBILE_QUERY).matches ?? false
+  );
+  useEffect(() => {
+    if (!window.matchMedia) return;
+    const mq = window.matchMedia(MOBILE_QUERY);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    setIsMobile(mq.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
   const [width, setWidth] = useState(PANEL_DEFAULT_WIDTH);
   const [hovered, setHovered] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -445,6 +465,9 @@ const ResizableRightPanel: React.FC<{ children: React.ReactNode }> = ({
 
   // Al encoger la ventana el panel podría dejar de caber: reajústalo al máximo
   // disponible para no recortar el workspace.
+  useLayoutEffect(() => {
+    if (!isMobile) setWidth((w) => Math.min(w, computeMaxWidth()));
+  }, [isMobile, computeMaxWidth]);
   useEffect(() => {
     const onResize = () =>
       setWidth((w) => Math.min(w, computeMaxWidth()));
@@ -472,6 +495,32 @@ const ResizableRightPanel: React.FC<{ children: React.ReactNode }> = ({
     document.body.style.userSelect = 'none';
     document.body.style.cursor = 'col-resize';
   };
+
+  if (isMobile) {
+    return (
+      <OverlayDrawer
+        open
+        position="end"
+        aria-label={ariaLabel}
+        onOpenChange={(_e, { open }) => {
+          if (!open) onClose();
+        }}
+        style={{ width: `min(100vw, ${PANEL_DEFAULT_WIDTH}px)` }}
+      >
+        <DrawerBody
+          style={{
+            padding: 0,
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: 0,
+          }}
+        >
+          {children}
+        </DrawerBody>
+      </OverlayDrawer>
+    );
+  }
 
   return (
     <div
@@ -656,7 +705,10 @@ export const PreviewRightSlot: React.FC<{ fallback?: React.ReactNode }> = ({
       );
     }
     return (
-      <ResizableRightPanel>
+      <ResizableRightPanel
+        ariaLabel="Explorador de archivos"
+        onClose={() => setExplorerOpen(false)}
+      >
         <div
           style={{
             display: 'flex',
@@ -707,7 +759,7 @@ export const PreviewRightSlot: React.FC<{ fallback?: React.ReactNode }> = ({
   };
 
   return (
-    <ResizableRightPanel>
+    <ResizableRightPanel ariaLabel={active.title} onClose={ctx.close}>
       <div
         style={{
           display: 'flex',
