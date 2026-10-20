@@ -657,7 +657,7 @@ export const PreviewRightSlot: React.FC<{ fallback?: React.ReactNode }> = ({
   const closeArtifact = useCallback(() => {
     setExplorerOpen(false);
     ctx?.close();
-  }, [ctx?.close]);
+  }, [ctx]);
   const [wsFiles, setWsFiles] = useState<Array<{ path: string }>>([]);
   const loadWsFiles = useCallback(async () => {
     if (!wsId) {
