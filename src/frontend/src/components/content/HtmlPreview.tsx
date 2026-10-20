@@ -38,6 +38,7 @@ import {
   Dismiss20Regular,
   DocumentRegular,
   Eye20Regular,
+  FolderOpen20Regular,
 } from '@fluentui/react-icons';
 import { WorkspaceEditor } from './WorkspaceEditor';
 import { WorkspaceTree } from '../workspace/WorkspaceTree';
@@ -567,6 +568,9 @@ export const PreviewRightSlot: React.FC<{ fallback?: React.ReactNode }> = ({
   // only artifacts that passed through the chat. Same viewer, same identity:
   // a workspace path and a chat chip with the same name are ONE artifact.
   const wsId = ctx?.workspaceId ?? null;
+  // Explorer is opt-in. Files/artifact previews remain independently visible.
+  const [explorerOpen, setExplorerOpen] = useState(false);
+  useEffect(() => setExplorerOpen(false), [wsId]);
   const openArtifact = ctx?.open;
   const [wsFiles, setWsFiles] = useState<Array<{ path: string }>>([]);
   const loadWsFiles = useCallback(async () => {
@@ -632,8 +636,45 @@ export const PreviewRightSlot: React.FC<{ fallback?: React.ReactNode }> = ({
     // hunting for chips in the chat scrollback.
     if (fallback) return <>{fallback}</>;
     if (!wsId) return null;
+    if (!explorerOpen) {
+      return (
+        <Button
+          appearance="subtle"
+          icon={<FolderOpen20Regular />}
+          aria-label="Abrir explorador de archivos"
+          aria-expanded={false}
+          onClick={() => setExplorerOpen(true)}
+          style={{
+            position: 'fixed',
+            top: 56,
+            right: 12,
+            zIndex: 100,
+            background: 'var(--colorNeutralBackground1)',
+            boxShadow: 'var(--shadow4)',
+          }}
+        />
+      );
+    }
     return (
       <ResizableRightPanel>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '4px 8px 4px 12px',
+            borderBottom: '1px solid var(--colorNeutralStroke1)',
+          }}
+        >
+          <span>Archivos</span>
+          <Button
+            appearance="subtle"
+            icon={<Dismiss20Regular />}
+            aria-label="Cerrar explorador de archivos"
+            aria-expanded={true}
+            onClick={() => setExplorerOpen(false)}
+          />
+        </div>
         <WorkspaceTree workspaceId={wsId} onOpenFile={openWsFile} />
       </ResizableRightPanel>
     );
