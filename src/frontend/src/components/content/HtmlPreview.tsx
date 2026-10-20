@@ -38,6 +38,7 @@ import {
   Dismiss20Regular,
   DocumentRegular,
   Eye20Regular,
+  FolderOpen20Regular,
 } from '@fluentui/react-icons';
 import { WorkspaceEditor } from './WorkspaceEditor';
 import { WorkspaceTree } from '../workspace/WorkspaceTree';
@@ -417,12 +418,30 @@ const PANEL_MAX_WIDTH = 1200;
 // `CoralShellRow` oculta el overflow, así que el panel no debe ensancharse más
 // allá del espacio realmente disponible o recortaría el workspace.
 const CONTENT_MIN_WIDTH = 320;
+// Mismo breakpoint que PlanPanelLeft: por debajo, el panel pasa a ser un drawer
+// modal. Por encima, el ancho inicial se ajusta al disponible.
+const MOBILE_QUERY = '(max-width: 768px)';
 
 /** Right-slot shell: resizable width, fills the parent's height (never
- *  `100vh`, which ignores the shell header and overflows below the fold). */
-const ResizableRightPanel: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+ *  `100vh`, which ignores the shell header and overflows below the fold).
+ *  On narrow screens it renders as an overlay drawer instead, so it can never
+ *  push its own close button off-screen; `onClose` handles Escape/backdrop. */
+const ResizableRightPanel: React.FC<{
+  children: React.ReactNode;
+  onClose: () => void;
+  ariaLabel: string;
+}> = ({ children, onClose, ariaLabel }) => {
+  const [isMobile, setIsMobile] = useState(
+    () => window.matchMedia?.(MOBILE_QUERY).matches ?? false
+  );
+  useEffect(() => {
+    if (!window.matchMedia) return;
+    const mq = window.matchMedia(MOBILE_QUERY);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    setIsMobile(mq.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
   const [width, setWidth] = useState(PANEL_DEFAULT_WIDTH);
   const [hovered, setHovered] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -432,23 +451,50 @@ const ResizableRightPanel: React.FC<{ children: React.ReactNode }> = ({
   // izquierdo y se recalcula cuando cambia el tamaño de la ventana.
   const computeMaxWidth = useCallback(() => {
     const panelEl = panelRef.current;
-    const contentEl = panelEl?.previousElementSibling as HTMLElement | null;
-    if (!panelEl || !contentEl) return PANEL_MAX_WIDTH;
-    const available =
-      panelEl.offsetWidth + contentEl.offsetWidth - CONTENT_MIN_WIDTH;
-    return Math.max(
-      PANEL_MIN_WIDTH,
-      Math.min(PANEL_MAX_WIDTH, available)
+    const backdropEl = panelEl?.previousElementSibling as HTMLElement | null;
+    const contentEl =
+      backdropEl?.dataset.panelBackdrop === 'true'
+        ? (backdropEl.previousElementSibling as HTMLElement | null)
+        : backdropEl;
+    const parent = panelEl?.parentElement;
+    if (!panelEl || !contentEl || !parent) return PANEL_MAX_WIDTH;
+    if (parent.clientWidth === 0) return PANEL_DEFAULT_WIDTH;
+    const siblings = (Array.from(parent.children) as HTMLElement[]).filter(
+      (sibling) => sibling.dataset.panelBackdrop !== 'true'
     );
+    const contentIndex = siblings.indexOf(contentEl);
+    const precedingWidth = siblings
+      .slice(0, contentIndex)
+      .reduce((total, sibling) => total + sibling.offsetWidth, 0);
+    const gap = Number.parseFloat(getComputedStyle(parent).columnGap) || 0;
+    const gapsBeforePanel = Math.max(0, siblings.length - 1) * gap;
+    const available =
+      parent.clientWidth -
+      precedingWidth -
+      gapsBeforePanel -
+      CONTENT_MIN_WIDTH;
+    return Math.max(0, Math.min(PANEL_MAX_WIDTH, available));
   }, []);
 
   // Al encoger la ventana el panel podría dejar de caber: reajústalo al máximo
   // disponible para no recortar el workspace.
+  useLayoutEffect(() => {
+    if (!isMobile) setWidth((w) => Math.min(w, computeMaxWidth()));
+  }, [isMobile, computeMaxWidth]);
   useEffect(() => {
-    const onResize = () =>
-      setWidth((w) => Math.min(w, computeMaxWidth()));
+    const resizePanel = () => setWidth((w) => Math.min(w, computeMaxWidth()));
+    const parent = panelRef.current?.parentElement;
+    const resizeObserver =
+      parent && typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(resizePanel)
+        : null;
+    if (parent && resizeObserver) resizeObserver.observe(parent);
+    const onResize = () => resizePanel();
     window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      resizeObserver?.disconnect();
+    };
   }, [computeMaxWidth]);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -458,7 +504,10 @@ const ResizableRightPanel: React.FC<{ children: React.ReactNode }> = ({
     const onMouseMove = (ev: MouseEvent) => {
       // Panel a la derecha: mover el ratón a la izquierda (dx<0) ensancha.
       const next = startWidth - (ev.clientX - startX);
-      setWidth(Math.min(computeMaxWidth(), Math.max(PANEL_MIN_WIDTH, next)));
+      const maxWidth = computeMaxWidth();
+      setWidth(
+        Math.min(maxWidth, Math.max(Math.min(PANEL_MIN_WIDTH, maxWidth), next))
+      );
     };
     const onMouseUp = () => {
       document.removeEventListener('mousemove', onMouseMove);
@@ -472,42 +521,76 @@ const ResizableRightPanel: React.FC<{ children: React.ReactNode }> = ({
     document.body.style.cursor = 'col-resize';
   };
 
+  useEffect(() => {
+    if (!isMobile) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isMobile, onClose]);
+
   return (
-    <div
-      ref={panelRef}
-      style={{
-        width: `${width}px`,
-        flexShrink: 0,
-        height: '100%',
-        minHeight: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        position: 'relative',
-        boxSizing: 'border-box',
-        borderLeft: hovered
-          ? '2px solid var(--colorNeutralStroke2)'
-          : '1px solid var(--colorNeutralStroke1)',
-      }}
-    >
+    <>
       <div
-        role="separator"
-        aria-orientation="vertical"
-        aria-label="Redimensionar panel"
-        onMouseDown={handleMouseDown}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        data-panel-backdrop="true"
+        aria-hidden="true"
+        onClick={onClose}
         style={{
-          position: 'absolute',
-          top: 0,
-          bottom: 0,
-          left: -3,
-          width: 6,
-          cursor: 'col-resize',
-          zIndex: 1,
+          display: isMobile ? 'block' : 'none',
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.4)',
+          zIndex: 1000,
         }}
       />
-      {children}
-    </div>
+      <div
+        ref={panelRef}
+        role={isMobile ? 'dialog' : undefined}
+        aria-label={isMobile ? ariaLabel : undefined}
+        aria-modal={isMobile || undefined}
+        style={{
+          width: isMobile
+            ? `min(100vw, ${PANEL_DEFAULT_WIDTH}px)`
+            : `${width}px`,
+          flexShrink: 0,
+          height: isMobile ? '100dvh' : '100%',
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          position: isMobile ? 'fixed' : 'relative',
+          insetBlock: isMobile ? 0 : undefined,
+          insetInlineEnd: isMobile ? 0 : undefined,
+          zIndex: isMobile ? 1001 : undefined,
+          background: 'var(--colorNeutralBackground1)',
+          boxSizing: 'border-box',
+          borderLeft: hovered
+            ? '2px solid var(--colorNeutralStroke2)'
+            : '1px solid var(--colorNeutralStroke1)',
+          boxShadow: isMobile ? 'var(--shadow64)' : undefined,
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          role={isMobile ? undefined : 'separator'}
+          aria-orientation={isMobile ? undefined : 'vertical'}
+          aria-label={isMobile ? undefined : 'Redimensionar panel'}
+          onMouseDown={isMobile ? undefined : handleMouseDown}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          style={{
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            left: -3,
+            width: 6,
+            cursor: isMobile ? undefined : 'col-resize',
+            zIndex: 1,
+          }}
+        />
+        {children}
+      </div>
+    </>
   );
 };
 
@@ -567,7 +650,14 @@ export const PreviewRightSlot: React.FC<{ fallback?: React.ReactNode }> = ({
   // only artifacts that passed through the chat. Same viewer, same identity:
   // a workspace path and a chat chip with the same name are ONE artifact.
   const wsId = ctx?.workspaceId ?? null;
+  // Explorer is opt-in. Files/artifact previews remain independently visible.
+  const [explorerOpen, setExplorerOpen] = useState(false);
+  useEffect(() => setExplorerOpen(false), [wsId]);
   const openArtifact = ctx?.open;
+  const closeArtifact = useCallback(() => {
+    setExplorerOpen(false);
+    ctx?.close();
+  }, [ctx]);
   const [wsFiles, setWsFiles] = useState<Array<{ path: string }>>([]);
   const loadWsFiles = useCallback(async () => {
     if (!wsId) {
@@ -632,8 +722,48 @@ export const PreviewRightSlot: React.FC<{ fallback?: React.ReactNode }> = ({
     // hunting for chips in the chat scrollback.
     if (fallback) return <>{fallback}</>;
     if (!wsId) return null;
+    if (!explorerOpen) {
+      return (
+        <Button
+          appearance="subtle"
+          icon={<FolderOpen20Regular />}
+          aria-label="Abrir explorador de archivos"
+          aria-expanded={false}
+          onClick={() => setExplorerOpen(true)}
+          style={{
+            position: 'fixed',
+            top: 56,
+            right: 12,
+            zIndex: 100,
+            background: 'var(--colorNeutralBackground1)',
+            boxShadow: 'var(--shadow4)',
+          }}
+        />
+      );
+    }
     return (
-      <ResizableRightPanel>
+      <ResizableRightPanel
+        ariaLabel="Explorador de archivos"
+        onClose={() => setExplorerOpen(false)}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '4px 8px 4px 12px',
+            borderBottom: '1px solid var(--colorNeutralStroke1)',
+          }}
+        >
+          <span>Archivos</span>
+          <Button
+            appearance="subtle"
+            icon={<Dismiss20Regular />}
+            aria-label="Cerrar explorador de archivos"
+            aria-expanded={true}
+            onClick={() => setExplorerOpen(false)}
+          />
+        </div>
         <WorkspaceTree workspaceId={wsId} onOpenFile={openWsFile} />
       </ResizableRightPanel>
     );
@@ -666,7 +796,7 @@ export const PreviewRightSlot: React.FC<{ fallback?: React.ReactNode }> = ({
   };
 
   return (
-    <ResizableRightPanel>
+    <ResizableRightPanel ariaLabel={active.title} onClose={closeArtifact}>
       <div
         style={{
           display: 'flex',
@@ -769,7 +899,7 @@ export const PreviewRightSlot: React.FC<{ fallback?: React.ReactNode }> = ({
           size="small"
           icon={<Dismiss20Regular />}
           aria-label="Close preview"
-          onClick={ctx.close}
+          onClick={closeArtifact}
         />
       </div>
 
