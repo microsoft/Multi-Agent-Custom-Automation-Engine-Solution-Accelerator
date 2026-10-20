@@ -108,15 +108,15 @@ async def _materialize_hosted_file_to_workspace(
             workspace_for,
         )
 
+        # El contenedor lo creó un agente Foundry (AzureAIClient) en el
+        # Responses API del PROYECTO; desde el endpoint de la cuenta responde
+        # 404 "Container not found" (medido 2026-10-19).
         project = (config.AZURE_AI_PROJECT_ENDPOINT or "").rstrip("/")
-        account = project.split("/api/projects/")[0]
-        openai_base_url = f"{account}/openai"
         cred = config.get_shared_async_credential()
         token = await cred.get_token("https://ai.azure.com/.default")
         client = AsyncOpenAI(
             api_key=token.token,
-            base_url=openai_base_url,
-            default_query={"api-version": "2025-03-01-preview"},
+            base_url=f"{project}/openai/v1",
             timeout=120,
         )
         try:
@@ -276,6 +276,13 @@ def _stage_context(predecessor: str, step: str):
     predecesor dijo (por ``author_name``; si no firmó, la última respuesta del
     asistente) y se agrega el paso compuesto por el dueño. Sin paso, equivale a
     ``context_mode="last_agent"``.
+
+    A la etapa siguiente pasa el TEXTO del predecesor. Un archivo que generó
+    (``hosted_file``) ya llegó al usuario por el SSE y su enlace va en el
+    texto; como contenido de un mensaje ``assistant`` el cliente del framework
+    lo serializa como ``input_file`` y el Responses API lo rechaza (400
+    "Invalid value: 'input_file'. Supported values are: 'output_text' and
+    'refusal'", medido 2026-10-19: el workflow moría en la segunda etapa).
     """
 
     def _role(m: Any) -> str:
@@ -295,9 +302,17 @@ def _stage_context(predecessor: str, step: str):
                     break
                 tail.append(m)
             prior = list(reversed(tail))
+        spoken = [
+            Message(
+                role="assistant",
+                text=m.text,
+                author_name=getattr(m, "author_name", None),
+            )
+            for m in prior
+        ]
         if step:
-            return [*prior, Message(role="user", text=step)]
-        return prior
+            return [*spoken, Message(role="user", text=step)]
+        return spoken
 
     return _filter
 

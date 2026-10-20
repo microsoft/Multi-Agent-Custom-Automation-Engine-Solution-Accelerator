@@ -388,6 +388,8 @@ class TestMCPEnabledBase:
         )
         mock_creds = Mock()
         base.creds = mock_creds
+        mock_project_client = Mock()
+        base.project_client = mock_project_client
         base._agent = None
 
         mock_new_client = Mock()
@@ -399,11 +401,12 @@ class TestMCPEnabledBase:
             result = base.get_chat_client()
 
             assert result is mock_new_client
+            # Built from the SHARED project_client (which injects the image-gen
+            # header), not project_endpoint+credential.
             mock_client_class.assert_called_once_with(
-                project_endpoint="https://test.com",
+                project_client=mock_project_client,
                 agent_name="test_agent",
                 model_deployment_name="gpt-4",
-                credential=mock_creds,
                 use_latest_version=True,
             )
 
