@@ -914,9 +914,13 @@ async def test_a_code_interpreter_file_is_announced_as_a_hosted_file():
 
     files = [c for u in updates for c in u.contents if c.type == "hosted_file"]
     assert [c.file_id for c in files] == ["cfile_abc", "cfile_def"]
+    # El ámbito viaja con el archivo: el contenedor sólo existe en el endpoint
+    # que lo creó, y el manejador SSE lo persiste desde ahí.
     assert files[0].additional_properties == {
         "container_id": "cntr_1",
         "filename": "landing.html",
+        "openai_base_url": "https://account.invalid/openai",
+        "openai_api_version": "2025-03-01-preview",
     }
 
 
