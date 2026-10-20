@@ -418,8 +418,8 @@ const PANEL_MAX_WIDTH = 1200;
 // `CoralShellRow` oculta el overflow, así que el panel no debe ensancharse más
 // allá del espacio realmente disponible o recortaría el workspace.
 const CONTENT_MIN_WIDTH = 320;
-// Mismo breakpoint que PlanPanelLeft: por debajo, el panel pasa a ser un
-// OverlayDrawer modal. Por encima, el ancho inicial se ajusta al disponible.
+// Mismo breakpoint que PlanPanelLeft: por debajo, el panel pasa a ser un drawer
+// modal. Por encima, el ancho inicial se ajusta al disponible.
 const MOBILE_QUERY = '(max-width: 768px)';
 
 /** Right-slot shell: resizable width, fills the parent's height (never
@@ -458,6 +458,7 @@ const ResizableRightPanel: React.FC<{
         : backdropEl;
     const parent = panelEl?.parentElement;
     if (!panelEl || !contentEl || !parent) return PANEL_MAX_WIDTH;
+    if (parent.clientWidth === 0) return PANEL_DEFAULT_WIDTH;
     const siblings = (Array.from(parent.children) as HTMLElement[]).filter(
       (sibling) => sibling.dataset.panelBackdrop !== 'true'
     );
@@ -504,7 +505,9 @@ const ResizableRightPanel: React.FC<{
       // Panel a la derecha: mover el ratón a la izquierda (dx<0) ensancha.
       const next = startWidth - (ev.clientX - startX);
       const maxWidth = computeMaxWidth();
-      setWidth(Math.min(maxWidth, Math.max(Math.min(PANEL_MIN_WIDTH, maxWidth), next)));
+      setWidth(
+        Math.min(maxWidth, Math.max(Math.min(PANEL_MIN_WIDTH, maxWidth), next))
+      );
     };
     const onMouseUp = () => {
       document.removeEventListener('mousemove', onMouseMove);
