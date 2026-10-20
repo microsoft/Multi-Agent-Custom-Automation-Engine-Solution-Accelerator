@@ -526,7 +526,7 @@ class TestAppConfigClientMethods:
 
                 mock_logger.assert_called_once()
 
-    @patch("common.config.app_config.AIProjectClient")
+    @patch("common.config.app_config._FoundryProjectClient")
     def test_get_ai_project_client_success(self, mock_ai_client):
         """Test successful AI Project client creation."""
         mock_credential = MagicMock()
@@ -540,11 +540,13 @@ class TestAppConfigClientMethods:
             result = config.get_ai_project_client()
 
             mock_ai_client.assert_called_once_with(
-                endpoint="https://test.ai.azure.com", credential=mock_credential
+                endpoint="https://test.ai.azure.com",
+                credential=mock_credential,
+                image_deployment="gpt-image-2",
             )
             assert result == mock_ai_instance
 
-    @patch("common.config.app_config.AIProjectClient")
+    @patch("common.config.app_config._FoundryProjectClient")
     @patch("common.config.app_config.DefaultAzureCredential")
     def test_get_ai_project_client_caching(
         self, mock_default_credential, mock_ai_client
@@ -569,7 +571,7 @@ class TestAppConfigClientMethods:
             mock_ai_client.assert_called_once()
             assert result1 == result2 == mock_ai_instance
 
-    @patch("common.config.app_config.AIProjectClient")
+    @patch("common.config.app_config._FoundryProjectClient")
     def test_get_ai_project_client_credential_failure(self, mock_ai_client):
         """Test AI Project client creation with credential failure."""
         with patch.dict(os.environ, self._get_minimal_env()):
@@ -582,7 +584,7 @@ class TestAppConfigClientMethods:
                 ):
                     config.get_ai_project_client()
 
-    @patch("common.config.app_config.AIProjectClient")
+    @patch("common.config.app_config._FoundryProjectClient")
     @patch("common.config.app_config.DefaultAzureCredential")
     def test_get_ai_project_client_creation_failure(
         self, mock_default_credential, mock_ai_client
@@ -706,7 +708,7 @@ class TestAppConfigIntegration:
 
     @patch("common.config.app_config.ManagedIdentityCredential")
     @patch("common.config.app_config.CosmosClient")
-    @patch("common.config.app_config.AIProjectClient")
+    @patch("common.config.app_config._FoundryProjectClient")
     def test_production_environment_client_creation(
         self, mock_ai_client, mock_cosmos_client, mock_managed_credential
     ):
