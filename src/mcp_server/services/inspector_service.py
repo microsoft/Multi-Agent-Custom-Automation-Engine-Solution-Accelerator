@@ -1243,13 +1243,42 @@ async def _oauth_discovery_pivot(
     return disc, None
 
 
+def _principal_from_bearer(bearer: str | None) -> str | None:
+    """The ``oid`` (AAD object id) carried in a Bearer JWT, or ``None``.
+
+    The backend forwards the user's OBO token but NOT the
+    ``x-ms-client-principal-id`` header (``lifecycle.py`` sets only
+    ``Authorization``). The principal the backend expects IS that token's
+    ``oid`` claim — the same GUID EasyAuth would put in the header — so the
+    identity already travels with the token. No signature check here: the
+    token was minted by AAD's OBO exchange upstream and the backend trusts the
+    principal header it is echoed into; this only reads the claim already
+    present. ``sub`` is a last resort (pairwise, per-app — not the directory
+    object id, but better than anonymous).
+    """
+    if not bearer or bearer.count(".") < 2:
+        return None
+    try:
+        import base64
+
+        payload_b64 = bearer.split(".", 2)[1]
+        padded = payload_b64 + "=" * (-len(payload_b64) % 4)
+        claims = json.loads(base64.urlsafe_b64decode(padded).decode("utf-8"))
+        return claims.get("oid") or claims.get("sub") or None
+    except Exception:
+        return None
+
+
 def _caller_identity() -> tuple[str | None, str | None]:
     """(principal_id, bearer) of the MCP request being served, or (None, None).
 
-    The backend attaches ca-mcp with ``x-ms-client-principal-id`` (who) and the
-    user's EasyAuth ``Authorization: Bearer`` (proof the backend's EasyAuth
-    will validate on the hop back). Never trust ``user_id`` args from the model
-    when a principal is present.
+    The backend attaches ca-mcp with the user's EasyAuth
+    ``Authorization: Bearer`` (proof the backend validates on the hop back).
+    The ``x-ms-client-principal-id`` header is the preferred source of *who*,
+    but the backend→MCP forward does not send it — so when it is absent the
+    principal is recovered from the Bearer's ``oid`` claim (the identical GUID
+    the backend expects). Never trust ``user_id`` args from the model when a
+    principal is present.
     """
     try:
         from fastmcp.server.dependencies import get_http_headers
@@ -1263,6 +1292,10 @@ def _caller_identity() -> tuple[str | None, str | None]:
             # Tolerate a scheme-less token value (a caller that passed only the
             # token). Downstream always re-attaches the "Bearer " prefix.
             bearer = auth or None
+        # The hop from the backend carries the token but not the principal
+        # header; recover the authoritative principal from the token itself.
+        if not principal:
+            principal = _principal_from_bearer(bearer)
         return principal, bearer
     except Exception:
         return None, None

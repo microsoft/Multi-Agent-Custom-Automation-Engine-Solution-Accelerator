@@ -278,11 +278,10 @@ class FoundryAgentTemplate(AzureAgentBase):
                     self.agent_name,
                 )
                 return AzureAIClient(
-                    project_endpoint=self.project_endpoint,
+                    project_client=self.project_client,
                     agent_name=self.agent_name,
                     use_latest_version=True,
                     model_deployment_name=self.model_deployment_name,
-                    credential=self.creds,
                 )
 
             existing_agent = None
@@ -309,11 +308,10 @@ class FoundryAgentTemplate(AzureAgentBase):
                     getattr(existing_agent, "version", "unknown"),
                 )
                 return AzureAIClient(
-                    project_endpoint=self.project_endpoint,
+                    project_client=self.project_client,
                     agent_name=self.agent_name,
                     use_latest_version=True,
                     model_deployment_name=self.model_deployment_name,
-                    credential=self.creds,
                 )
 
             if force_republish:
@@ -367,11 +365,10 @@ class FoundryAgentTemplate(AzureAgentBase):
             )
 
             chat_client = AzureAIClient(
-                project_endpoint=self.project_endpoint,
+                project_client=self.project_client,
                 agent_name=azure_agent.name,
                 agent_version=azure_agent.version,
                 model_deployment_name=self.model_deployment_name,
-                credential=self.creds,
             )
             return chat_client
 
