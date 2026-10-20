@@ -1260,7 +1260,6 @@ def _principal_from_bearer(bearer: str | None) -> str | None:
         return None
     try:
         import base64
-        import json
 
         payload_b64 = bearer.split(".", 2)[1]
         padded = payload_b64 + "=" * (-len(payload_b64) % 4)
