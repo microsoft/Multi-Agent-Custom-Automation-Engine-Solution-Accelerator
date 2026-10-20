@@ -192,7 +192,7 @@ markupsafe==3.0.3
     #   werkzeug
 mccabe==0.7.0
     # via pylint
-mcp==1.28.1
+mcp==1.30.0
     # via backend
 msal==1.34.0
     # via
