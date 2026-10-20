@@ -373,11 +373,17 @@ class MCPEnabledBase:
         """
         if self._agent and self._agent.client:
             return cast("AzureAIClient[AzureAIProjectAgentOptions]", self._agent.client)
+        # Build from the SHARED project_client, not project_endpoint+credential:
+        # AzureAIClient derives its OpenAI client from project_client.get_openai_client(),
+        # and the shared client (config.get_ai_project_client) injects the
+        # image-generation deployment header on every call. Passing
+        # project_endpoint+credential instead makes AzureAIClient create its OWN
+        # headerless project_client — the cause of the 400 "imagegen deployment
+        # must be provided through header" for any agent offering image generation.
         chat_client = AzureAIClient(
-            project_endpoint=self.project_endpoint,
+            project_client=self.project_client,
             agent_name=self.agent_name,
             model_deployment_name=self.model_deployment_name,
-            credential=self.creds,
             use_latest_version=True,
         )
         self.logger.info(

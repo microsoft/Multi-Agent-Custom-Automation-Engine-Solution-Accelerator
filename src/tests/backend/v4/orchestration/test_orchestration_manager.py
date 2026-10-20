@@ -1394,6 +1394,37 @@ def test_a_stage_receives_its_predecessor_output_and_its_own_step():
     ]
 
 
+def test_a_stage_receives_the_predecessor_text_not_its_files():
+    # El archivo del predecesor ya llegó al usuario; como contenido assistant
+    # el framework lo serializa como input_file y el API lo rechaza (400).
+    from agent_framework import Content, Message
+
+    from v4.orchestration.orchestration_manager import _stage_context
+
+    full = [
+        Message(role="user", text="Graficá"),
+        Message(
+            role="assistant",
+            contents=[
+                Content.from_text("Acá está: [g.png](sandbox:/mnt/data/g.png)"),
+                Content.from_hosted_file(
+                    "cfile_1",
+                    name="g.png",
+                    additional_properties={"container_id": "cntr_1"},
+                ),
+            ],
+            author_name="ChartAgent",
+        ),
+    ]
+    out = _stage_context("ChartAgent", "ahora la imagen")(full)
+    assert [m.text for m in out] == [
+        "Acá está: [g.png](sandbox:/mnt/data/g.png)",
+        "ahora la imagen",
+    ]
+    assert [c.type for m in out for c in m.contents] == ["text", "text"]
+    assert out[0].author_name == "ChartAgent"
+
+
 def test_sequential_wraps_each_later_stage_with_its_own_context():
     from unittest.mock import patch
 

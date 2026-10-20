@@ -2018,6 +2018,19 @@ def _merge_teams_for_direct_response(
 _DIRECT_RESPONSES_API_VERSION = "2025-03-01-preview"
 
 
+def _project_openai_base_url() -> str:
+    """El Responses API del proyecto, ``{AZURE_AI_PROJECT_ENDPOINT}/openai/v1``:
+    donde los agentes Foundry (``AzureAIClient``) crean sus contenedores del
+    code interpreter. Un contenedor sólo es visible desde el endpoint que lo
+    creó (medido 2026-10-19: cuenta↔proyecto se dan 404 mutuamente), y este
+    endpoint no admite mensajes ``system``/``developer`` en el input, por eso
+    el carril directo sigue en el de la cuenta y el ámbito viaja con el archivo.
+    """
+    from common.config.app_config import config
+
+    return f"{(config.AZURE_AI_PROJECT_ENDPOINT or '').rstrip('/')}/openai/v1"
+
+
 # ── Composer ────────────────────────────────────────────────────────────────
 
 _PATTERNS: dict[str, str] = {
@@ -2511,8 +2524,8 @@ class _RouterChatClient:
             base_url=self._openai_base_url,
             default_query={"api-version": self._api_version},
             # Azure takes the image deployment from a request header, not from
-            # the tool spec: without it the whole call answers 400 "imagegen
-            # deployment must be provided through header" — including turns
+            # the tool spec: without it the whole call answers 400 "image
+            # generation deployment must be provided through header" — including turns
             # that were never going to generate an image.
             default_headers={
                 "x-ms-oai-image-generation-deployment": self._image_deployment
@@ -3328,6 +3341,10 @@ class _RouterChatClient:
                                                         _ann, "container_id", None
                                                     ),
                                                     "filename": _fname,
+                                                    # El ámbito donde existe el
+                                                    # contenedor: el de ESTE cliente.
+                                                    "openai_base_url": self._openai_base_url,
+                                                    "openai_api_version": self._api_version,
                                                 },
                                             )
                                         ],
@@ -3866,6 +3883,29 @@ class _RouterChatClient:
                 if p.get("autonomous") is True
             },
         ):
+            # Un archivo que generó un especialista vive en el endpoint del
+            # proyecto (AzureAIClient); el ámbito viaja con el archivo para que
+            # el manejador SSE lo persista desde donde existe. El contenido de
+            # un WorkflowEvent cuelga de ``event.data`` (AgentResponseUpdate.
+            # contents o AgentResponse.messages[].contents) — EXACTAMENTE como
+            # lo extraen los dos consumidores de este stream. Leer
+            # ``event.contents`` (inexistente) dejaba el hosted_file sin ámbito
+            # y el persist caía al endpoint de la CUENTA → 404 "Container not
+            # found", porque el contenedor sólo existe en el del PROYECTO.
+            _data = getattr(event, "data", None)
+            if isinstance(_data, AgentResponseUpdate):
+                _contents = _data.contents or []
+            elif isinstance(_data, AgentResponse):
+                _contents = [
+                    c for m in (_data.messages or []) for c in (m.contents or [])
+                ]
+            else:
+                _contents = []
+            for _c in _contents:
+                if getattr(_c, "type", None) == "hosted_file":
+                    _ap = getattr(_c, "additional_properties", None)
+                    if isinstance(_ap, dict) and "openai_base_url" not in _ap:
+                        _ap["openai_base_url"] = _project_openai_base_url()
             yield event
 
     def _spawn_container_file_persist(
@@ -3873,16 +3913,25 @@ class _RouterChatClient:
         file_id: str | None,
         container_id: str | None,
         filename: str | None,
+        base_url: str | None = None,
+        api_version: str | None = None,
     ) -> None:
         """Copy a code-interpreter output file to the persistent store the
         moment it exists — its Foundry container expires minutes later.
 
         Fetches with THIS client's bearer (OBO or shared): a user-scoped
         container is invisible to any other identity (same rule as
-        /chat/download-file).
+        /chat/download-file). And from the endpoint that created the
+        container (``base_url``/``api_version`` travel with the file in its
+        ``additional_properties``): the project one for a Foundry specialist,
+        this client's own for its code interpreter. Reading a container from
+        the other endpoint answers 404 "Container not found" (measured
+        2026-10-19).
         """
         if not file_id or not container_id:
             return
+        if base_url is None:
+            base_url, api_version = self._openai_base_url, self._api_version
 
         async def _run() -> None:
             from openai import AsyncOpenAI
@@ -3892,8 +3941,8 @@ class _RouterChatClient:
             bearer = await self._bearer()
             client = AsyncOpenAI(
                 api_key=bearer,
-                base_url=self._openai_base_url,
-                default_query={"api-version": _DIRECT_RESPONSES_API_VERSION},
+                base_url=base_url,
+                default_query={"api-version": api_version} if api_version else None,
                 timeout=120,
             )
             try:
@@ -4876,8 +4925,23 @@ async def chat_message_stream(
                             yield _sse_event({"type": "token", "content": _md})
                             # Persist to Blob (GeneratedFileStore) and workspace in parallel.
                             # Fire-and-forget: container file expires minutes after creation.
+                            # Desde el endpoint que creó el contenedor: viaja
+                            # con el archivo (proyecto para un especialista
+                            # Foundry, cuenta para el carril directo).
                             agent._spawn_container_file_persist(
-                                fid, container_id, fname
+                                fid,
+                                container_id,
+                                fname,
+                                base_url=(
+                                    add_props.get("openai_base_url")
+                                    if isinstance(add_props, dict)
+                                    else None
+                                ),
+                                api_version=(
+                                    add_props.get("openai_api_version")
+                                    if isinstance(add_props, dict)
+                                    else None
+                                ),
                             )
 
                     elif ct == "oauth_consent_request":

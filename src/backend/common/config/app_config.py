@@ -1,6 +1,7 @@
 # app_config.py
 import logging
 import os
+from typing import Any
 
 from azure.ai.projects.aio import AIProjectClient
 from azure.cosmos import CosmosClient
@@ -15,6 +16,34 @@ from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
+
+
+class _FoundryProjectClient(AIProjectClient):
+    """``AIProjectClient`` whose OpenAI client ALWAYS carries the image-generation
+    deployment header.
+
+    Azure's Responses API reads the image deployment from a REQUEST HEADER
+    (``x-ms-oai-image-generation-deployment``), not from the tool spec. Without
+    it, ANY turn that offers the ``image_generation`` tool answers 400
+    ("imagegen deployment must be provided through header") — even turns that
+    never generate an image. The orchestrator's own Responses client already
+    sends this header on every call; a composed Foundry agent
+    (``AzureAIClient``) builds its OpenAI client via ``get_openai_client()`` with
+    no headers, so ``ImageAgent`` (and any agent offering image generation)
+    failed 400. The header is harmless when no image is produced, so it belongs
+    on the shared client unconditionally — one invariant, no per-request branch.
+    """
+
+    def __init__(self, *args: "Any", image_deployment: str, **kwargs: "Any") -> None:
+        super().__init__(*args, **kwargs)
+        self._image_deployment = image_deployment
+
+    def get_openai_client(self, **kwargs: "Any"):  # type: ignore[override]
+        headers = {
+            "x-ms-oai-image-generation-deployment": self._image_deployment,
+            **dict(kwargs.pop("default_headers", None) or {}),
+        }
+        return super().get_openai_client(default_headers=headers, **kwargs)
 
 
 class StaticTokenCredential:
@@ -601,8 +630,12 @@ class AppConfig:
                 )
 
             endpoint = self.AZURE_AI_AGENT_ENDPOINT
-            self._ai_project_client = AIProjectClient(
-                endpoint=endpoint, credential=credential
+            self._ai_project_client = _FoundryProjectClient(
+                endpoint=endpoint,
+                credential=credential,
+                image_deployment=self._get_optional(
+                    "IMAGE_GENERATION_DEPLOYMENT", "gpt-image-2"
+                ),
             )
 
             return self._ai_project_client
