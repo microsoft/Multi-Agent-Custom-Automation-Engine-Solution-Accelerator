@@ -420,8 +420,8 @@ const PANEL_MAX_WIDTH = 1200;
 // `CoralShellRow` oculta el overflow, así que el panel no debe ensancharse más
 // allá del espacio realmente disponible o recortaría el workspace.
 const CONTENT_MIN_WIDTH = 320;
-// Mismo breakpoint que PlanPanelLeft: por debajo, el panel no cabe junto a
-// `Content` (520px + 320px) y pasa a ser un OverlayDrawer modal.
+// Mismo breakpoint que PlanPanelLeft: por debajo, el panel pasa a ser un
+// OverlayDrawer modal. Por encima, el ancho inicial se ajusta al disponible.
 const MOBILE_QUERY = '(max-width: 768px)';
 
 /** Right-slot shell: resizable width, fills the parent's height (never
@@ -465,6 +465,9 @@ const ResizableRightPanel: React.FC<{
 
   // Al encoger la ventana el panel podría dejar de caber: reajústalo al máximo
   // disponible para no recortar el workspace.
+  useLayoutEffect(() => {
+    if (!isMobile) setWidth((w) => Math.min(w, computeMaxWidth()));
+  }, [isMobile, computeMaxWidth]);
   useEffect(() => {
     const onResize = () =>
       setWidth((w) => Math.min(w, computeMaxWidth()));
