@@ -1,9 +1,0 @@
-{
-  "version": "1.0.0",
-  "agentId": "Agent975",
-  "endpoint": "https://eastus.api.azureml.ms",
-  "project": "booking-agents",
-  "workspace": "ml-foundry-prod",
-  "resourceGroup": "rg-DEV",
-  "subscriptionId": "380fa841-83f3-42fe-adc4-582a5ebe139b"
-}

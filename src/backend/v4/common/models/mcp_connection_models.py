@@ -60,7 +60,7 @@ class MCPCredentialSource(StrEnum):
     - ``static_secret``     — a fixed token stored in Key Vault. Expires; dev/fallback only.
     - ``oauth_refresh``     — OAuth2 with a stored refresh_token; the resolver refreshes
                               the access_token on expiry and writes the rotation back to
-                              Key Vault (Claude/Codex-style, for user-connected servers).
+                              Key Vault, for user-connected servers).
     - ``managed_identity``  — mint a fresh AAD token per call from the platform's Managed
                               Identity for ``audience``. Azure-only, operator-configured;
                               nothing is stored.

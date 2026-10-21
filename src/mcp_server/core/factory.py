@@ -4,9 +4,11 @@ Core MCP server components and factory patterns.
 
 from abc import ABC, abstractmethod
 from enum import Enum
+from pathlib import Path
 from typing import Any
 
 from fastmcp import FastMCP
+from fastmcp.server.providers.skills import SkillsDirectoryProvider
 
 
 class Domain(Enum):
@@ -29,7 +31,7 @@ class MCPToolBase(ABC):
 
     def __init__(self, domain: Domain):
         self.domain = domain
-        self.tools = []
+        self.tools: list = []
 
     @abstractmethod
     def register_tools(self, mcp: FastMCP) -> None:
@@ -62,6 +64,13 @@ class MCPToolFactory:
         for service in self._services.values():
             service.register_tools(self._mcp_server)
 
+        # Register skills directory provider.
+        # factory.py lives at <mcp_server>/core/factory.py, so parents[1] is the
+        # mcp_server root: src/mcp_server/skills locally and /app/skills in the
+        # container (Dockerfile does `COPY . /app`). One source of truth, no env var.
+        skills_root = Path(__file__).resolve().parents[1] / "skills"
+        self._mcp_server.add_provider(SkillsDirectoryProvider(roots=skills_root))
+
         return self._mcp_server
 
     def get_services_by_domain(self, domain: Domain) -> MCPToolBase | None:
@@ -74,14 +83,15 @@ class MCPToolFactory:
 
     def get_tool_summary(self) -> dict[str, Any]:
         """Get a summary of all tools and services."""
-        summary = {
+        services: dict[str, Any] = {}
+        summary: dict[str, Any] = {
             "total_services": len(self._services),
             "total_tools": sum(service.tool_count for service in self._services.values()),
-            "services": {},
+            "services": services,
         }
 
         for domain, service in self._services.items():
-            summary["services"][domain.value] = {
+            services[domain.value] = {
                 "tool_count": service.tool_count,
                 "class_name": service.__class__.__name__,
             }
