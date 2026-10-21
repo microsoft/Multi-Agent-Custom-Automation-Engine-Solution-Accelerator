@@ -2132,8 +2132,12 @@ _PARTICIPANT_SCHEMA: dict = {
                 "type": "boolean",
                 "description": (
                     "The MCP server's tools: the user's mounted workspace (files, "
-                    "search, exec, git) and registered external systems. "
-                    "Combinable with coding_tools."
+                    "search, exec, git) AND — through the same server's inspector "
+                    "tools — the project's Tool Box and registered external MCP "
+                    "servers, where live web search, GitHub and other external "
+                    "systems live. Set true whenever the specialist needs the "
+                    "workspace OR any external system/live data reachable via the "
+                    "Tool Box. Combinable with coding_tools."
                 ),
             },
             "use_rag": {
@@ -2180,12 +2184,18 @@ _COMPOSER_INSTRUCTIONS = (
     "belongs to (this session's turns, plus earlier turns retrieved from the "
     "user's history). Your first act on every request is ONE `compose` call: "
     "it states the request as the complete, self-contained task it really is "
-    "(read with the conversation) and how it runs — `direct` when you carry "
-    "it out yourself with the tools attached to this turn or simply answer it; "
-    "an orchestration of specialists when the request asks for specialists, "
-    "roles or a team, for work in sequence, in parallel, as a group or handed "
-    "off between roles, or when it spans separate domains of responsibility. "
-    "After a `direct` composition you work on the task yourself."
+    "(read with the conversation) and how it runs. IMPORTANT: `direct` when you "
+    "carry it out yourself with the tools attached to this turn; or an "
+    "orchestration of specialists when the request asks for specialists, roles "
+    "or a team, for work in sequence, in parallel, as a group or handed off "
+    "between roles, or when it spans separate domains of responsibility. After "
+    "a `direct` composition you work on the task yourself, prioritizing "
+    "persistent problem solving and fully addressing the user's details rather "
+    "than ending the turn with a brief answer when the task still requires "
+    "work. If you use the `direct` pattern and the answer does not return what "
+    "you believe the user expects, change the strategy if needed to a different "
+    "pattern, such as `group_chat`, or whichever is most appropriate to find "
+    "the solution the user expects."
 )
 
 

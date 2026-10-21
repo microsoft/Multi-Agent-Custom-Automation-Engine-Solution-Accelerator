@@ -27,27 +27,58 @@ class InvalidConfigurationError(Exception):
 
 
 def _with_workspace(
-    instructions: str, user_id: str, workspace_id: str | None, has_mcp: bool
+    instructions: str,
+    user_id: str,
+    workspace_id: str | None,
+    has_mcp: bool,
+    chat_toolboxes: str | None = None,
 ) -> str:
-    """Decirle al agente CUÁL es su workspace, o se lo inventa.
+    """Inyectar contexto de workspace y/o Toolbox en las instrucciones.
+
+    - workspace_id presente: añadir el contexto del workspace.
+    - chat_toolboxes presente: añadir el contexto del Toolbox mediante el
+      inspector de MacaeMcpServer, independientemente de workspace_id.
 
     El carril de chat ya lo hace; el de plan no lo hacía, y un agente con las
     tools de MacaeMcpServer pero sin el identificador llamaba ``workspace_exec``
     con un nombre inventado (``macae-local``) y respondía que no tenía acceso.
-    Sólo aplica a agentes con MCP: los demás no pueden tocar el workspace.
     """
-    if not (has_mcp and workspace_id):
-        return instructions
-    return instructions + (
-        f"\n\nWORKSPACE: trabajas sobre el workspace persistente '{workspace_id}' "
-        f"del usuario '{user_id}'. Es el ÚNICO que puedes ver y ya está montado; "
-        "no existe ningún otro y no debes inventar su nombre. Para mirarlo usa "
-        "las tools de MacaeMcpServer pasando exactamente esos dos valores: "
-        f"workspace_list_entries {{user_id='{user_id}', workspace_id='{workspace_id}', "
-        "path=''}}, workspace_read_file, workspace_search_content y workspace_exec "
-        "para comandos (git status, git log, pruebas). Nunca afirmes que no tienes "
-        "acceso sin haber llamado antes a una de esas tools."
-    )
+    result = instructions
+    # Contexto del workspace (si aplica)
+    if has_mcp and workspace_id:
+        result += (
+            f"\n\nWORKSPACE: trabajas sobre el workspace persistente '{workspace_id}' "
+            f"del usuario '{user_id}'. Es el ÚNICO que puedes ver y ya está montado; "
+            "no existe ningún otro y no debes inventar su nombre. Para mirarlo usa "
+            "las tools de MacaeMcpServer pasando exactamente esos dos valores: "
+            f"workspace_list_entries {{user_id='{user_id}', workspace_id='{workspace_id}', "
+            "path=''}}, workspace_read_file, workspace_search_content y workspace_exec "
+            "para comandos (git status, git log, pruebas). Nunca afirmes que no tienes "
+            "acceso sin haber llamado antes a una de esas tools."
+        )
+    # Contexto del Toolbox (independiente del workspace, pero SÍ depende de MCP)
+    # El Toolbox del proyecto y los servidores MCP externos se alcanzan por las
+    # MISMAS tools de inspector de MacaeMcpServer — no se adjuntan al agente
+    # como en el carril directo. Sin decírselo, el modelo responde "no tengo
+    # acceso a web/GitHub/…" aunque la capacidad esté a una tool de distancia.
+    # Sin MCP no hay vía, así que la consciencia sería falsa: se omite.
+    if has_mcp and chat_toolboxes:
+        result += (
+            f"\n\nTOOL BOX Y SERVIDORES EXTERNOS: a través de MacaeMcpServer "
+            f"tienes acceso al Tool Box '{chat_toolboxes}' del proyecto y a "
+            "servidores MCP externos registrados. Ahí viven capacidades que NO "
+            "se te adjuntan explícitamente, como búsqueda web en vivo, GitHub y "
+            "otros sistemas. Para usarlas: list_connected_servers (qué "
+            "servidores hay), discover_mcp_capabilities(server_name) o "
+            "tool_search(query) (qué tools expone cada uno) y call_external_tool"
+            "(server_name, target_tool, arguments) para invocarlas. Nunca "
+            "afirmes que no tienes búsqueda web ni acceso a un sistema externo "
+            "sin haber llamado antes a list_connected_servers o tool_search. "
+            "Si un servidor publica un recurso de skills (skill://index.json), "
+            "léelo con read_external_resource: trae recetas versionadas de cómo "
+            "usar sus herramientas para tareas concretas."
+        )
+    return result
 
 
 class MagenticAgentFactory:
@@ -77,6 +108,7 @@ class MagenticAgentFactory:
         memory_store: DatabaseBase,
         user_access_token: str | None = None,
         workspace_id: str | None = None,
+        chat_toolboxes: str | None = None,
     ) -> FoundryAgentTemplate | ProxyAgent:
         """
         Create an agent from configuration object.
@@ -192,6 +224,7 @@ class MagenticAgentFactory:
                 user_id,
                 workspace_id,
                 use_mcp_value,
+                chat_toolboxes,
             ),
             use_reasoning=use_reasoning,
             model_deployment_name=deployment_name,
@@ -247,6 +280,11 @@ class MagenticAgentFactory:
         try:
             initalized_agents = []
 
+            # El nombre del Tool Box es configuración del proyecto, igual para
+            # todos los participantes: se resuelve una vez y viaja a cada agente
+            # con MCP para que su instrucción nombre el Tool Box real.
+            chat_toolboxes = getattr(config, "CHAT_TOOLBOXES", None) or None
+
             for i, agent_cfg in enumerate(team_config_input.agents, 1):
                 try:
                     self.logger.info(
@@ -263,6 +301,7 @@ class MagenticAgentFactory:
                         memory_store,
                         user_access_token=user_access_token,
                         workspace_id=workspace_id,
+                        chat_toolboxes=chat_toolboxes,
                     )
                     initalized_agents.append(agent)
                     self._agent_list.append(agent)  # Keep track for cleanup
