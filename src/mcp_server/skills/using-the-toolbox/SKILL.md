@@ -17,9 +17,11 @@ through the inspector tools, not as direct local functions.
 1. **See what is connected.** Call `list_connected_servers` to list the
    reachable servers and `discover_mcp_capabilities` to see their tools and
    resources.
-2. **Find a tool by intent.** Use `tool_search` with a natural-language query
-   (for example "search the web" or "create an image") to locate the right
-   tool without knowing its exact name.
+2. **Find a tool by intent.** Call `discover_mcp_capabilities(server_name)` and
+   choose the right tool from the returned tool names, descriptions, and
+   schemas (for example to "search the web" or "create an image"). If a
+   connected upstream server advertises its own search tool, invoke it through
+   `call_external_tool`, not as a local function.
 3. **Invoke it.** Call the external tool with `call_external_tool`, passing the
    server, tool name, and arguments.
 4. **Read published skills/resources.** If a server advertises a skills
@@ -28,7 +30,7 @@ through the inspector tools, not as direct local functions.
 
 ## Guidance
 
-- Prefer `tool_search` over guessing tool names.
+- Prefer `discover_mcp_capabilities` over guessing tool names.
 - Check for a `skill://` resource first; it documents the server's own
   recommended strategy.
 - If a capability (web search, GitHub, image generation) might exist, discover
