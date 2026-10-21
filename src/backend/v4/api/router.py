@@ -2758,8 +2758,30 @@ class _RouterChatClient:
                     created = False
                     if tool is None:
                         cfg = MCPConfig.from_env()
+                        http_client = None
+                        if self._user_access_token:
+                            import httpx
+
+                            # El mismo salto que hacen los especialistas
+                            # (lifecycle.py): ca-mcp lee este bearer como la
+                            # identidad del llamador y lo reenvía al backend en
+                            # connect_from_registry. Sin él ese salto es anónimo:
+                            # EasyAuth descarta los x-ms-client-principal-* y el
+                            # backend responde "No EasyAuth principal found" (500
+                            # medido en prod 2026-10-21 09:23Z). Los timeouts
+                            # son los del SDK de MCP: 300 s de lectura para el
+                            # GET de larga vida del streamable-http.
+                            http_client = httpx.AsyncClient(
+                                headers={
+                                    "Authorization": f"Bearer {self._user_access_token}"
+                                },
+                                timeout=httpx.Timeout(30.0, read=300.0),
+                            )
                         tool = ReconnectingMCPTool(
-                            name=cfg.name, description=cfg.description, url=cfg.url
+                            name=cfg.name,
+                            description=cfg.description,
+                            url=cfg.url,
+                            http_client=http_client,
                         )
                         await tool.__aenter__()
                         created = True

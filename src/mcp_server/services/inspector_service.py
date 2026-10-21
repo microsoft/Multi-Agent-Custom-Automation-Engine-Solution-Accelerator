@@ -648,7 +648,7 @@ class ProxiedStdioSession(ToolSchemaCache):
         self._response_queues: dict[Any, asyncio.Queue] = {}
         self._sse_connected = asyncio.Event()
         self._sse_dead = asyncio.Event()  # set when SSE stream closes unexpectedly
-        self._sse_stream = None
+        self._sse_stream: Any = None
         self._request_id_counter = 0
         self._closing = False  # True when close() is called intentionally
         self.capabilities: dict[str, Any] = {}  # server capabilities from initialize
@@ -1557,12 +1557,12 @@ class InspectorService(MCPToolBase):
                                     # the session the source so later calls
                                     # keep resolving instead of freezing this
                                     # token.
-                                    session.credential_source = _cred_source
-                                    session.secret_ref = secret_ref
+                                    session.credential_source = "managed_identity"
+                                    session.audience = _audience
                                     logger.info(
                                         f"[connect_mcp_server] Resolved token for "
                                         f"'{server_name}' from Key Vault "
-                                        f"(source={_cred_source}, user={lookup_user_id})"
+                                        f"(source=managed_identity, user={lookup_user_id})"
                                     )
                     except Exception as kv_err:
                         logger.debug(f"[connect_mcp_server] Could not resolve token from registry: {kv_err}")
@@ -2378,7 +2378,7 @@ class InspectorService(MCPToolBase):
                 if extra_headers:
                     session.extra_headers = extra_headers
                 if _cred_source:
-                    session.credential_source = _cred_source
+                    session.credential_source = "managed_identity"
                     session.audience = _audience
                     session.secret_ref = _secret_ref
 
