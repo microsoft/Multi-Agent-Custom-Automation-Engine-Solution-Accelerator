@@ -96,7 +96,7 @@ azure-storage-blob==12.27.1
     # via
     #   azure-ai-evaluation
     #   azure-ai-projects
-certifi==2025.10.5
+certifi==2026.10.19
     # via
     #   httpcore
     #   httpx
