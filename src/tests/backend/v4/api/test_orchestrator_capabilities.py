@@ -742,6 +742,47 @@ async def test_workspace_tool_discovery_strips_identity_and_caches_metadata():
 
 
 @pytest.mark.asyncio
+async def test_the_orchestrator_forwards_the_user_bearer_to_the_mcp_server():
+    # El mismo salto que los especialistas: ca-mcp toma este bearer como la
+    # identidad del llamador y lo reenvía al backend (connect_from_registry).
+    # Sin él, en prod el salto es anónimo y el backend responde 500.
+    class _Tool:
+        kwargs: dict = {}
+
+        def __init__(self, **kwargs):
+            type(self).kwargs = kwargs
+            self.functions = []
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    cfg = SimpleNamespace(name="ws", description="workspace", url="https://mcp.invalid")
+    with (
+        patch("v4.api.router.ReconnectingMCPTool", _Tool),
+        patch(
+            "v4.magentic_agents.models.agent_models.MCPConfig.from_env",
+            return_value=cfg,
+        ),
+    ):
+        c = _client()
+        c._workspace_id = "my-repo"
+        c._user_access_token = "user-token"
+        await c._workspace_tools()
+        http_client = _Tool.kwargs["http_client"]
+        assert http_client.headers["Authorization"] == "Bearer user-token"
+        await http_client.aclose()
+
+        anonymous = _client()
+        anonymous._workspace_id = "my-repo"
+        anonymous._user_access_token = None
+        await anonymous._workspace_tools()
+        assert _Tool.kwargs["http_client"] is None
+
+
+@pytest.mark.asyncio
 async def test_workspace_tool_results_are_serialized_when_not_text_chunks():
     class _Tool:
         async def call_tool(self, name, **kwargs):
