@@ -16,7 +16,7 @@ agent-framework-orchestrations==1.0.0b260311
     # via backend
 aiohappyeyeballs==2.6.1
     # via aiohttp
-aiohttp==3.14.3
+aiohttp==3.14.4
     # via
     #   agent-framework-azure-ai
     #   azure-ai-evaluation
