@@ -74,7 +74,7 @@
     "eslint-plugin-react": "^7.37.5",
     "jsdom": "^26.1.0",
     "typescript": "5.1.6",
-    "vite": "^8.2.1",
+    "vite": "^8.3.4",
     "vitest": "^4.1.11"
   }
 }
