@@ -1664,21 +1664,28 @@ class InspectorService(MCPToolBase):
                 tools = []
                 resources = []
                 prompts = []
+                # Track per-capability failures so a list error is reported to
+                # the model instead of masquerading as "0 tools" — a silent
+                # empty list is indistinguishable from a real failure.
+                errors: dict[str, str] = {}
 
                 try:
                     tools = await session.list_tools()
                 except Exception as e:
                     logger.warning(f"Failed to list tools from {server_name}: {e}")
+                    errors["tools"] = str(e)
 
                 try:
                     resources = await session.list_resources()
                 except Exception as e:
                     logger.warning(f"Failed to list resources from {server_name}: {e}")
+                    errors["resources"] = str(e)
 
                 try:
                     prompts = await session.list_prompts()
                 except Exception as e:
                     logger.warning(f"Failed to list prompts from {server_name}: {e}")
+                    errors["prompts"] = str(e)
 
                 capabilities = {
                     "server_name": server_name,
@@ -1714,7 +1721,10 @@ class InspectorService(MCPToolBase):
                         "total_prompts": len(prompts),
                     },
                 }
+                if errors:
+                    capabilities["errors"] = errors
 
+                error_note = f" (errores al listar: {', '.join(errors)})" if errors else ""
                 return format_success_response(
                     action="Capabilities Discovered",
                     details=capabilities,
@@ -1724,7 +1734,7 @@ class InspectorService(MCPToolBase):
                         f"{len(resources)} resources, "
                         f"{len(prompts)} prompts. "
                         f"Use call_external_tool or read_external_resource "
-                        f"to interact."
+                        f"to interact.{error_note}"
                     ),
                 )
 
