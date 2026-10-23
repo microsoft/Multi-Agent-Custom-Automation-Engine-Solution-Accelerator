@@ -1410,7 +1410,7 @@ class InspectorService(MCPToolBase):
                 # Identity of the MCP request (principal + forwarded bearer),
                 # resolved ONCE here and reused below — one source of truth.
                 _principal, _inbound_bearer = _caller_identity()
-                if not user_id and _principal:
+                if _principal:
                     user_id = _principal
                     logger.info(f"[connect_mcp_server] Auto-detected user_id: {user_id}")
 
@@ -2539,6 +2539,12 @@ class InspectorService(MCPToolBase):
                 Connection status with server info and tool count.
             """
             try:
+                # Identity is the authenticated principal, NOT the model-supplied
+                # ``user_id`` — same rule as connect_mcp_server and the reader
+                # (_my_sessions): the principal is the single source of truth and
+                # the model-supplied value is only a fallback when anonymous.
+                _principal, _ = _caller_identity()
+                user_id = _principal or user_id
                 # Already connected?
                 _stdio_key = (user_id, server_name)
                 if _stdio_key in proxied_sessions:
