@@ -518,13 +518,11 @@ class DirectStdioSession(ToolSchemaCache):
         result = await self._session.list_tools()
         tools = []
         for t in result.tools:
-            tools.append(
-                {
-                    "name": t.name,
-                    "description": t.description or "",
-                    "inputSchema": t.inputSchema if t.inputSchema else {},
-                }
-            )
+            tools.append({
+                "name": t.name,
+                "description": t.description or "",
+                "inputSchema": t.inputSchema if t.inputSchema else {},
+            })
         return tools
 
     async def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
@@ -1965,37 +1963,33 @@ class InspectorService(MCPToolBase):
                 for (uid, name), session in sessions.items():
                     if user_id and uid != user_id:
                         continue
-                    active.append(
-                        {
-                            "server_name": name,
-                            "user_id": uid,
-                            "server_url": session.server_url,
-                            "server_info": session.server_info,
-                            "initialized": session._initialized,
-                            "connected_at": session.connected_at,
-                            "session_id": session.session_id,
-                            "transport": "streamable-http",
-                            "source": "ram_session",
-                        }
-                    )
+                    active.append({
+                        "server_name": name,
+                        "user_id": uid,
+                        "server_url": session.server_url,
+                        "server_info": session.server_info,
+                        "initialized": session._initialized,
+                        "connected_at": session.connected_at,
+                        "session_id": session.session_id,
+                        "transport": "streamable-http",
+                        "source": "ram_session",
+                    })
 
                 # --- Active proxied stdio sessions ---
                 for (uid, name), psession in proxied_sessions.items():
                     if user_id and uid != user_id:
                         continue
-                    active.append(
-                        {
-                            "server_name": name,
-                            "user_id": uid,
-                            "server_url": psession.server_url,
-                            "server_info": psession.server_info,
-                            "initialized": psession._initialized,
-                            "connected_at": psession.connected_at,
-                            "session_id": psession.session_id,
-                            "transport": "stdio-via-proxy",
-                            "source": "proxied_session",
-                        }
-                    )
+                    active.append({
+                        "server_name": name,
+                        "user_id": uid,
+                        "server_url": psession.server_url,
+                        "server_info": psession.server_info,
+                        "initialized": psession._initialized,
+                        "connected_at": psession.connected_at,
+                        "session_id": psession.session_id,
+                        "transport": "stdio-via-proxy",
+                        "source": "proxied_session",
+                    })
 
                 # --- Inspector config servers (best-effort) ---
                 inspector_servers = []
@@ -2006,14 +2000,12 @@ class InspectorService(MCPToolBase):
                 }
                 for sname, sdef in cfg_servers.items():
                     transport = "streamable-http" if sdef.get("url") else "stdio"
-                    inspector_servers.append(
-                        {
-                            "server_name": sname,
-                            "transport": transport,
-                            "is_connected": sname in all_connected,
-                            "source": "inspector_config",
-                        }
-                    )
+                    inspector_servers.append({
+                        "server_name": sname,
+                        "transport": transport,
+                        "is_connected": sname in all_connected,
+                        "source": "inspector_config",
+                    })
 
                 # --- Registry catalog (best-effort) ---
                 catalog = []
@@ -2021,17 +2013,15 @@ class InspectorService(MCPToolBase):
                     catalog_entries = await registry.list_catalog()
                     for entry in catalog_entries:
                         sname = entry.get("server_name", "")
-                        catalog.append(
-                            {
-                                "server_name": sname,
-                                "endpoint": entry.get("endpoint", ""),
-                                "auth_type": entry.get("auth_type", "none"),
-                                "display_name": entry.get("display_name", sname),
-                                "description": entry.get("description", ""),
-                                "is_connected": sname in all_connected,
-                                "source": "registry",
-                            }
-                        )
+                        catalog.append({
+                            "server_name": sname,
+                            "endpoint": entry.get("endpoint", ""),
+                            "auth_type": entry.get("auth_type", "none"),
+                            "display_name": entry.get("display_name", sname),
+                            "description": entry.get("description", ""),
+                            "is_connected": sname in all_connected,
+                            "source": "registry",
+                        })
                 except Exception as e:
                     logger.debug(f"Registry catalog unavailable: {e}")
 

@@ -263,16 +263,14 @@ class TenantConnectionRegistry:
                 parameters=params,
                 partition_key=pk,
             ):
-                results.append(
-                    {
-                        "tenant_id": item.get("tenant_id", ""),
-                        "user_id": item.get("user_id", ""),
-                        "server_name": item.get("server_name", ""),
-                        "server_url": item.get("server_url", ""),
-                        "transport": item.get("transport", "streamable-http"),
-                        "registered_at": item.get("registered_at"),
-                    }
-                )
+                results.append({
+                    "tenant_id": item.get("tenant_id", ""),
+                    "user_id": item.get("user_id", ""),
+                    "server_name": item.get("server_name", ""),
+                    "server_url": item.get("server_url", ""),
+                    "transport": item.get("transport", "streamable-http"),
+                    "registered_at": item.get("registered_at"),
+                })
             logger.info(
                 "TenantRegistry.recover_sessions: found %d session(s) for tenant=%s",
                 len(results),

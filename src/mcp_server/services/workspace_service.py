@@ -447,13 +447,11 @@ class WorkspaceToolService(MCPToolBase):
                     if entry.is_dir():
                         dirs.append({"name": entry.name, "type": "directory"})
                     else:
-                        files.append(
-                            {
-                                "name": entry.name,
-                                "type": "file",
-                                "size": entry.stat().st_size,
-                            }
-                        )
+                        files.append({
+                            "name": entry.name,
+                            "type": "file",
+                            "size": entry.stat().st_size,
+                        })
                 return format_success_response(
                     action="workspace_list_entries",
                     details={"path": path or "/", "entries": dirs + files},
@@ -632,14 +630,12 @@ class WorkspaceToolService(MCPToolBase):
                 for line in result.stdout.decode("utf-8", errors="replace").splitlines():
                     parts = line.split("\x1f", 3)
                     if len(parts) == 4:
-                        entries.append(
-                            {
-                                "hash": parts[0][:12],
-                                "author": parts[1],
-                                "date": parts[2],
-                                "message": parts[3],
-                            }
-                        )
+                        entries.append({
+                            "hash": parts[0][:12],
+                            "author": parts[1],
+                            "date": parts[2],
+                            "message": parts[3],
+                        })
                 return format_success_response(
                     action="workspace_git_log",
                     details={"entries": entries},
