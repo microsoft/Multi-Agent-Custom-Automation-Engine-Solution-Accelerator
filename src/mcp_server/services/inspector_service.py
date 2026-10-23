@@ -918,7 +918,7 @@ class ProxiedStdioSession(ToolSchemaCache):
 
 def _load_inspector_config() -> dict[str, Any]:
     """Load the mcp-inspector-config.json file if it exists."""
-    config_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "mcp-inspector-config.json")
+    config_path = os.path.join(os.path.dirname(__file__), "..", "mcp-inspector-config.json")
     config_path = os.path.normpath(config_path)
     try:
         with open(config_path) as f:
