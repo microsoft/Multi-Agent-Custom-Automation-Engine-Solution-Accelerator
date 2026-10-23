@@ -2195,7 +2195,12 @@ _COMPOSER_INSTRUCTIONS = (
     "work. If you use the `direct` pattern and the answer does not return what "
     "you believe the user expects, change the strategy if needed to a different "
     "pattern, such as `group_chat`, or whichever is most appropriate to find "
-    "the solution the user expects."
+    "the solution the user expects. When you compose specialists after already "
+    "inspecting the situation this turn (you ran tools, read the workspace, "
+    "confirmed a server or an endpoint), the `task` MUST carry those concrete "
+    "findings — the specialist receives only the `task` as its trigger and "
+    "cannot see the tools you already ran, so a task missing them makes the "
+    "specialist re-ask the user for what you already know."
 )
 
 
@@ -2233,7 +2238,15 @@ def _compose_tool(patterns: list[str]) -> dict:
                         "actually done, not just looked at; if the conversation "
                         "left something open and this request continues it, start "
                         "from there. Keep the user's intent intact; expand only "
-                        "what was implicit."
+                        "what was implicit. When you compose specialists, carry "
+                        "into this task the CONCRETE FACTS you already "
+                        "established this turn — the outputs of tools you already "
+                        "ran (server names, endpoints, ids, values, statuses) and "
+                        "what the conversation settled — because a specialist "
+                        "sees only this task as its trigger, not your earlier "
+                        "tool calls; a task that paraphrases the user's mood or "
+                        "intent without those facts forces the specialist to "
+                        "re-ask for what is already known."
                     ),
                 },
                 "participants": _PARTICIPANT_SCHEMA,

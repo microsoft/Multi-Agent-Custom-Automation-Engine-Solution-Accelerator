@@ -76,6 +76,7 @@ known-first-party = ["mcp_server"]
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
+preview = true
 
 
 [project.urls]

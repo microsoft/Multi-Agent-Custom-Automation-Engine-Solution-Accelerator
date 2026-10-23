@@ -1,9 +1,6 @@
 ---
 name: using-the-toolbox
-description: >-
-  How to discover and use the external capabilities exposed through the Tool
-  Box: web search, GitHub, image generation and other registered MCP servers.
-  Read this before claiming a task cannot be done for lack of tools.
+description: Discover and use external capabilities exposed through Foundry Toolbox, including web search, GitHub and registered MCP servers. Read this skill before concluding that an external capability is unavailable.
 ---
 
 # Using the Tool Box
@@ -30,7 +27,6 @@ through the inspector tools, not as direct local functions.
 
 ## Guidance
 
-- Prefer `discover_mcp_capabilities` over guessing tool names.
 - Check for a `skill://` resource first; it documents the server's own
   recommended strategy.
 - If a capability (web search, GitHub, image generation) might exist, discover

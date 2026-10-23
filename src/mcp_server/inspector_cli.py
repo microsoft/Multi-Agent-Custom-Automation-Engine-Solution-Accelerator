@@ -570,23 +570,19 @@ async def cmd_validate(client: MCPClient, args) -> int:
             try:
                 result = await client.call_tool(tool_name, {})
                 is_err = result.get("isError", False)
-                checks.append(
-                    (
-                        f"call {tool_name} (no args)",
-                        not is_err,
-                        "error response" if is_err else "success",
-                    )
-                )
+                checks.append((
+                    f"call {tool_name} (no args)",
+                    not is_err,
+                    "error response" if is_err else "success",
+                ))
             except Exception as e:
                 checks.append((f"call {tool_name}", False, str(e)[:60]))
         else:
-            checks.append(
-                (
-                    f"call {tool_name} (skipped)",
-                    True,
-                    f"requires: {', '.join(required)}",
-                )
-            )
+            checks.append((
+                f"call {tool_name} (skipped)",
+                True,
+                f"requires: {', '.join(required)}",
+            ))
 
     total_time = (time.monotonic() - t_start) * 1000
 

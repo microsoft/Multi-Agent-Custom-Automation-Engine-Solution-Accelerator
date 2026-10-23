@@ -29,6 +29,7 @@ from typing import Any
 from urllib.parse import quote
 
 import httpx
+from fastmcp.exceptions import ToolError
 from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
@@ -517,13 +518,11 @@ class DirectStdioSession(ToolSchemaCache):
         result = await self._session.list_tools()
         tools = []
         for t in result.tools:
-            tools.append(
-                {
-                    "name": t.name,
-                    "description": t.description or "",
-                    "inputSchema": t.inputSchema if t.inputSchema else {},
-                }
-            )
+            tools.append({
+                "name": t.name,
+                "description": t.description or "",
+                "inputSchema": t.inputSchema if t.inputSchema else {},
+            })
         return tools
 
     async def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
@@ -1353,22 +1352,28 @@ class InspectorService(MCPToolBase):
         inspector_config = self._inspector_config
 
         def _all_sessions(user_id: str = "") -> dict[str, Any]:
-            """Return sessions for *user_id*, keyed by server_name.
+            """Return the CALLER's sessions, keyed by server_name.
 
-            When user_id is empty every session is included (anonymous /
-            dev fallback).  The returned dict is keyed by plain server_name
-            so all existing ``server_name in all_sess`` checks keep working.
+            Identity is the authenticated principal of the request, NOT the
+            ``user_id`` the model passes: the model calls with an empty or
+            guessed value, and an empty value used to return EVERY user's
+            sessions — one identity's live session leaking into another's
+            view. The principal on the request is the single source of truth;
+            the model-supplied ``user_id`` is only a last resort when no
+            principal is present (anonymous/dev with no auth header at all).
             """
+            _principal, _ = _caller_identity()
+            scope = _principal or user_id
             merged: dict[str, Any] = {}
             for (uid, sname), sess in sessions.items():
-                if not user_id or uid == user_id:
+                if not scope or uid == scope:
                     merged[sname] = sess
-            for (uid, sname), sess in proxied_sessions.items():
-                if not user_id or uid == user_id:
-                    merged[sname] = sess
+            for (uid, sname), psess in proxied_sessions.items():
+                if not scope or uid == scope:
+                    merged[sname] = psess
             return merged
 
-        @mcp.tool(tags={self.domain.value})
+        @mcp.tool(tags={self.domain.value}, annotations={"readOnlyHint": True})
         async def connect_mcp_server(
             server_url: str = "",
             server_name: str = "",
@@ -1405,7 +1410,7 @@ class InspectorService(MCPToolBase):
                 # Identity of the MCP request (principal + forwarded bearer),
                 # resolved ONCE here and reused below — one source of truth.
                 _principal, _inbound_bearer = _caller_identity()
-                if not user_id and _principal:
+                if _principal:
                     user_id = _principal
                     logger.info(f"[connect_mcp_server] Auto-detected user_id: {user_id}")
 
@@ -1501,11 +1506,12 @@ class InspectorService(MCPToolBase):
                     # Platform-minted token WINS over anything the caller passed.
                     # Attach the SOURCE too: the session re-resolves per call,
                     # so the minted token's ~1h lifetime never strands it.
-                    session.credential_source = "managed_identity"
+                    session.credential_source = _cred_source
                     session.audience = _audience
+
                     try:
                         bearer = await credential_resolver.resolve_valid_token(
-                            credential_source="managed_identity",
+                            credential_source=_cred_source,
                             audience=_audience,
                         )
                         if bearer:
@@ -1557,12 +1563,13 @@ class InspectorService(MCPToolBase):
                                     # the session the source so later calls
                                     # keep resolving instead of freezing this
                                     # token.
-                                    session.credential_source = "managed_identity"
+                                    session.credential_source = _cred_source
                                     session.audience = _audience
+                                    session.secret_ref = secret_ref
                                     logger.info(
                                         f"[connect_mcp_server] Resolved token for "
                                         f"'{server_name}' from Key Vault "
-                                        f"(source=managed_identity, user={lookup_user_id})"
+                                        f"(source={_cred_source}, user={lookup_user_id})"
                                     )
                     except Exception as kv_err:
                         logger.debug(f"[connect_mcp_server] Could not resolve token from registry: {kv_err}")
@@ -1765,14 +1772,14 @@ class InspectorService(MCPToolBase):
             """
             try:
                 all_sess = _all_sessions(user_id)
-                if server_name not in all_sess:
+                session = all_sess.get(server_name)
+                if session is None:
                     available = list(all_sess.keys())
-                    return format_error_response(
-                        error_message=(f"Server '{server_name}' not connected. Available: {available or 'none'}."),
-                        context="calling external tool",
-                    )
-
-                session = all_sess[server_name]
+                    # ToolError (not a formatted string): a returned string is
+                    # reported by FastMCP as "call_external_tool succeeded",
+                    # masking the failure. Raising marks the result isError=true
+                    # and propagates the message to the model.
+                    raise ToolError(f"Server '{server_name}' not connected. Available: {available or 'none'}.")
 
                 # Parse arguments — accept dict (normal), string (legacy), or None
                 if isinstance(arguments, dict):
@@ -1781,10 +1788,7 @@ class InspectorService(MCPToolBase):
                     try:
                         args = json.loads(arguments) if arguments else {}
                     except json.JSONDecodeError as e:
-                        return format_error_response(
-                            error_message=f"Invalid JSON arguments: {e}",
-                            context="parsing tool arguments",
-                        )
+                        raise ToolError(f"Invalid JSON arguments: {e}") from e
                 else:
                     args = {}
 
@@ -1815,15 +1819,12 @@ class InspectorService(MCPToolBase):
                             problems.append(f"missing required {check.missing_required}")
                         if check.unknown:
                             problems.append(f"unknown {check.unknown} (schema declares additionalProperties: false)")
-                        return format_error_response(
-                            error_message=(
-                                f"Arguments for '{target_tool}' on '{server_name}' "
-                                f"do not match its inputSchema: "
-                                f"{'; '.join(problems)}. The call was NOT sent. "
-                                f"Retry using exactly these properties: "
-                                f"{_truncate(json.dumps(schema, ensure_ascii=False), 4000)}"
-                            ),
-                            context="validating arguments before calling external tool",
+                        raise ToolError(
+                            f"Arguments for '{target_tool}' on '{server_name}' "
+                            f"do not match its inputSchema: "
+                            f"{'; '.join(problems)}. The call was NOT sent. "
+                            f"Retry using exactly these properties: "
+                            f"{_truncate(json.dumps(schema, ensure_ascii=False), 4000)}"
                         )
 
                 # Call the tool
@@ -1848,13 +1849,12 @@ class InspectorService(MCPToolBase):
                         if schema is not None
                         else ""
                     )
-                    return format_error_response(
-                        error_message=(text_content or f"'{target_tool}' returned isError with no message."),
-                        context=(
-                            f"'{target_tool}' on '{server_name}' reported an error "
-                            f"for arguments {_truncate(json.dumps(args), 1000)}."
-                            f"{schema_hint}"
-                        ),
+                    message = text_content or f"'{target_tool}' returned isError with no message."
+                    raise ToolError(
+                        f"{message} "
+                        f"('{target_tool}' on '{server_name}' reported an error "
+                        f"for arguments {_truncate(json.dumps(args), 1000)}."
+                        f"{schema_hint})"
                     )
 
                 return format_success_response(
@@ -1874,11 +1874,13 @@ class InspectorService(MCPToolBase):
                     ),
                 )
 
+            except ToolError:
+                # Already a typed tool failure — let FastMCP mark isError=true.
+                raise
             except Exception as e:
-                return format_error_response(
-                    error_message=str(e),
-                    context=f"executing '{target_tool}' on '{server_name}'",
-                )
+                # Any other failure must also surface as a real error, not a
+                # formatted "success" string the framework would log as OK.
+                raise ToolError(f"Error executing '{target_tool}' on '{server_name}': {e}") from e
 
         @mcp.tool(tags={self.domain.value}, annotations={"readOnlyHint": True})
         async def read_external_resource(server_name: str, resource_uri: str, user_id: str = "") -> str:
@@ -1949,42 +1951,45 @@ class InspectorService(MCPToolBase):
                 summary counts.
             """
             try:
+                # Identity is the authenticated principal of the request, NOT
+                # the model-supplied user_id (empty/guessed). An empty user_id
+                # used to list EVERY user's sessions — one identity's live
+                # session leaking into another's view.
+                _principal, _ = _caller_identity()
+                user_id = _principal or user_id
+
                 # --- Active RAM sessions (direct HTTP) ---
                 active = []
                 for (uid, name), session in sessions.items():
                     if user_id and uid != user_id:
                         continue
-                    active.append(
-                        {
-                            "server_name": name,
-                            "user_id": uid,
-                            "server_url": session.server_url,
-                            "server_info": session.server_info,
-                            "initialized": session._initialized,
-                            "connected_at": session.connected_at,
-                            "session_id": session.session_id,
-                            "transport": "streamable-http",
-                            "source": "ram_session",
-                        }
-                    )
+                    active.append({
+                        "server_name": name,
+                        "user_id": uid,
+                        "server_url": session.server_url,
+                        "server_info": session.server_info,
+                        "initialized": session._initialized,
+                        "connected_at": session.connected_at,
+                        "session_id": session.session_id,
+                        "transport": "streamable-http",
+                        "source": "ram_session",
+                    })
 
                 # --- Active proxied stdio sessions ---
                 for (uid, name), psession in proxied_sessions.items():
                     if user_id and uid != user_id:
                         continue
-                    active.append(
-                        {
-                            "server_name": name,
-                            "user_id": uid,
-                            "server_url": psession.server_url,
-                            "server_info": psession.server_info,
-                            "initialized": psession._initialized,
-                            "connected_at": psession.connected_at,
-                            "session_id": psession.session_id,
-                            "transport": "stdio-via-proxy",
-                            "source": "proxied_session",
-                        }
-                    )
+                    active.append({
+                        "server_name": name,
+                        "user_id": uid,
+                        "server_url": psession.server_url,
+                        "server_info": psession.server_info,
+                        "initialized": psession._initialized,
+                        "connected_at": psession.connected_at,
+                        "session_id": psession.session_id,
+                        "transport": "stdio-via-proxy",
+                        "source": "proxied_session",
+                    })
 
                 # --- Inspector config servers (best-effort) ---
                 inspector_servers = []
@@ -1995,14 +2000,12 @@ class InspectorService(MCPToolBase):
                 }
                 for sname, sdef in cfg_servers.items():
                     transport = "streamable-http" if sdef.get("url") else "stdio"
-                    inspector_servers.append(
-                        {
-                            "server_name": sname,
-                            "transport": transport,
-                            "is_connected": sname in all_connected,
-                            "source": "inspector_config",
-                        }
-                    )
+                    inspector_servers.append({
+                        "server_name": sname,
+                        "transport": transport,
+                        "is_connected": sname in all_connected,
+                        "source": "inspector_config",
+                    })
 
                 # --- Registry catalog (best-effort) ---
                 catalog = []
@@ -2010,17 +2013,15 @@ class InspectorService(MCPToolBase):
                     catalog_entries = await registry.list_catalog()
                     for entry in catalog_entries:
                         sname = entry.get("server_name", "")
-                        catalog.append(
-                            {
-                                "server_name": sname,
-                                "endpoint": entry.get("endpoint", ""),
-                                "auth_type": entry.get("auth_type", "none"),
-                                "display_name": entry.get("display_name", sname),
-                                "description": entry.get("description", ""),
-                                "is_connected": sname in all_connected,
-                                "source": "registry",
-                            }
-                        )
+                        catalog.append({
+                            "server_name": sname,
+                            "endpoint": entry.get("endpoint", ""),
+                            "auth_type": entry.get("auth_type", "none"),
+                            "display_name": entry.get("display_name", sname),
+                            "description": entry.get("description", ""),
+                            "is_connected": sname in all_connected,
+                            "source": "registry",
+                        })
                 except Exception as e:
                     logger.debug(f"Registry catalog unavailable: {e}")
 
@@ -2084,7 +2085,7 @@ class InspectorService(MCPToolBase):
                     context="listing connected servers",
                 )
 
-        @mcp.tool(tags={self.domain.value})
+        @mcp.tool(tags={self.domain.value}, annotations={"readOnlyHint": True})
         async def register_mcp_server(
             server_url: str,
             server_name: str,
@@ -2231,8 +2232,8 @@ class InspectorService(MCPToolBase):
             except Exception as e:
                 return format_error_response(error_message=str(e), context="register_mcp_server")
 
-        @mcp.tool(tags={self.domain.value})
-        async def connect_from_registry(server_name: str, user_id: str = "sample_user") -> str:
+        @mcp.tool(tags={self.domain.value}, annotations={"readOnlyHint": True})
+        async def connect_from_registry(server_name: str, user_id: str = "") -> str:
             """
             Connect to an MCP server from the registry with
             user authorization check.
@@ -2378,7 +2379,7 @@ class InspectorService(MCPToolBase):
                 if extra_headers:
                     session.extra_headers = extra_headers
                 if _cred_source:
-                    session.credential_source = "managed_identity"
+                    session.credential_source = _cred_source
                     session.audience = _audience
                     session.secret_ref = _secret_ref
 
@@ -2511,7 +2512,7 @@ class InspectorService(MCPToolBase):
                     context=f"disconnecting from '{server_name}'",
                 )
 
-        @mcp.tool(tags={self.domain.value})
+        @mcp.tool(tags={self.domain.value}, annotations={"readOnlyHint": True})
         async def connect_stdio_server(server_name: str, user_id: str = "") -> str:
             """
             Connect to a stdio-based MCP server DIRECTLY (no proxy needed).
@@ -2538,6 +2539,12 @@ class InspectorService(MCPToolBase):
                 Connection status with server info and tool count.
             """
             try:
+                # Identity is the authenticated principal, NOT the model-supplied
+                # ``user_id`` — same rule as connect_mcp_server and the reader
+                # (_my_sessions): the principal is the single source of truth and
+                # the model-supplied value is only a fallback when anonymous.
+                _principal, _ = _caller_identity()
+                user_id = _principal or user_id
                 # Already connected?
                 _stdio_key = (user_id, server_name)
                 if _stdio_key in proxied_sessions:
