@@ -938,9 +938,7 @@ def _detect_inspector_token() -> str:
     """
     import re
 
-    log_path = os.path.join(
-        os.path.dirname(__file__), "..", "..", "..", ".inspector.log"
-    )
+    log_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", ".inspector.log")
     log_path = os.path.normpath(log_path)
     try:
         with open(log_path) as f:
