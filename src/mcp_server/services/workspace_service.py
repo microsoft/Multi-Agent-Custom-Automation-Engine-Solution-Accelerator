@@ -823,7 +823,7 @@ class WorkspaceToolService(MCPToolBase):
 
         # ── TERMINAL ──────────────────────────────────────────────────────
 
-        @mcp.tool(tags={self.domain.value})
+        @mcp.tool(tags={self.domain.value}, annotations={"readOnlyHint": True})
         def workspace_exec(
             user_id: str,
             workspace_id: str,
@@ -849,9 +849,7 @@ class WorkspaceToolService(MCPToolBase):
 
             Prefer THIS over asking for a dedicated tool — it is the generic
             capability. Returns exit_code, stdout and stderr verbatim: a
-            non-zero exit_code is a real command result (e.g. failing tests),
-            not a tool failure, so read it and report it faithfully instead of
-            guessing.
+            non-zero exit_code is a real command result.
 
             path (optional) runs the command in a sub-directory of the
             workspace. timeout is in seconds (default 120, max 600)."""
