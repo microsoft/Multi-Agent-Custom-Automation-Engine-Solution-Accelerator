@@ -11,12 +11,26 @@ import asyncio
 import json
 
 import pytest
+from fastmcp import Client, FastMCP
+from fastmcp.exceptions import ToolError
 
 from utils.tool_arguments import (
     canonical_key,
     normalize_arguments,
     validate_arguments,
 )
+
+
+async def _call_registered(fn, **kwargs):
+    """Run ``fn`` as a real FastMCP-registered tool and return the result.
+
+    Raising ``ToolError`` is only half the contract: FastMCP must translate it
+    into a tool result with ``isError=true`` so the model sees the failure.
+    """
+    server = FastMCP("test")
+    server.tool(fn)
+    async with Client(server) as client:
+        return await client.call_tool(fn.__name__, kwargs, raise_on_error=False)
 
 JOB_ID = "512fda58-82c1-44db-8a66-49ce9263fa94"
 MP4 = f"https://d8j0ntlcm91z4.cloudfront.net/u/hf_{JOB_ID}.mp4"
@@ -219,24 +233,29 @@ class TestCallExternalTool:
     async def test_missing_required_is_rejected_before_any_network_call(self, external_tool):
         fn, install = external_tool
         sess = install(LISTED)
-        raw = await (
-            fn(
-                server_name="higgsfield",
-                target_tool="job_status",
-                arguments={"sync": True},
-                user_id="u1",
+        with pytest.raises(ToolError) as excinfo:
+            await (
+                fn(
+                    server_name="higgsfield",
+                    target_tool="job_status",
+                    arguments={"sync": True},
+                    user_id="u1",
+                )
             )
-        )
         assert sess.calls == []
-        payload = json.loads(raw)
-        assert payload["status"] == "error"
-        # El motivo vive en summary. Se lee el campo parseado, no el texto crudo:
-        # dentro del JSON las comillas del schema van escapadas.
-        reason = payload["summary"]
+        reason = str(excinfo.value)
         assert "missing required ['jobId']" in reason
         assert "NOT sent" in reason
         assert '"jobId"' in reason  # schema included for a one-step retry
-        assert "TOOL SUCCESS" not in raw
+        # Registered as a FastMCP tool, the failure surfaces as isError=true.
+        result = await _call_registered(
+            fn,
+            server_name="higgsfield",
+            target_tool="job_status",
+            arguments={"sync": True},
+            user_id="u1",
+        )
+        assert result.is_error
 
     @pytest.mark.asyncio
     async def test_unlisted_tool_passes_through_untouched(self, external_tool):
@@ -257,20 +276,28 @@ class TestCallExternalTool:
         fn, install = external_tool
         # Schema unknown → no conformance → the remote rejects with isError.
         sess = install([])
-        raw = await (
-            fn(
-                server_name="higgsfield",
-                target_tool="job_status",
-                arguments={"job_id": JOB_ID},
-                user_id="u1",
+        with pytest.raises(ToolError) as excinfo:
+            await (
+                fn(
+                    server_name="higgsfield",
+                    target_tool="job_status",
+                    arguments={"job_id": JOB_ID},
+                    user_id="u1",
+                )
             )
-        )
         assert sess.calls == [("job_status", {"job_id": JOB_ID})]
-        payload = json.loads(raw)
-        assert payload["status"] == "error"
-        assert "Invalid arguments for tool job_status" in payload["summary"]
-        assert "Input validation error" in payload["summary"]
-        assert "TOOL SUCCESS" not in raw
+        reason = str(excinfo.value)
+        assert "Invalid arguments for tool job_status" in reason
+        assert "Input validation error" in reason
+        # Registered as a FastMCP tool, the failure surfaces as isError=true.
+        result = await _call_registered(
+            fn,
+            server_name="higgsfield",
+            target_tool="job_status",
+            arguments={"job_id": JOB_ID},
+            user_id="u1",
+        )
+        assert result.is_error
 
     @pytest.mark.asyncio
     async def test_schema_index_is_cached_across_calls(self, external_tool):
