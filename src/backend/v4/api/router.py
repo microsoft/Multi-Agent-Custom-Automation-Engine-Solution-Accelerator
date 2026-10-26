@@ -630,10 +630,7 @@ async def _team_from_router_roster(
         deployment = str(supported[0])
 
     # Los únicos índices reales son los descubiertos en AI Search al componer
-    # (``_load_knowledge_indexes``). El roster del Router puede nombrar uno
-    # alucinado o caduco; dejarlo pasar hace fallar la creación del agente de
-    # Azure Search y aborta la run compuesta. Si hay un conjunto conocido, se
-    # valida la membresía y, ante un nombre desconocido, se desactiva RAG.
+    # (``_load_knowledge_indexes``).
     allowed_indexes: set[str] | None = (
         {n.strip() for n in known_indexes if n and n.strip()}
         if known_indexes is not None
@@ -709,6 +706,7 @@ async def _team_from_router_roster(
                 "use_rag": use_rag,
                 "use_mcp": bool(raw.get("use_mcp")),
                 "use_bing": use_bing,
+                "use_web_search": bool(raw.get("use_web_search")),
                 "use_reasoning": use_reasoning,
                 "index_name": index_name,
                 "coding_tools": coding_tools,
@@ -721,21 +719,6 @@ async def _team_from_router_roster(
     if not agents:
         raise ValueError("router roster contained no usable agents")
 
-    # Un workspace montado es parte del contrato de la petición, no una
-    # preferencia del Router. El esquema de ``run_plan`` describe ``use_mcp``
-    # como "external systems or live data" y no lo exige, así que el Router lo
-    # reparte mal para un trabajo sobre el repositorio del propio usuario:
-    # medido el 2026-09-19, una vez lo omitió en los cuatro agentes (rev 0000130:
-    # auditoría entera fabricada — config.yaml, pyaudio, Dockerfile, nada de eso
-    # existe) y otra se lo dio sólo al agente de cloud, dejando ciego al
-    # RepositoryForensicsAgent, que era justamente el que debía leer el árbol.
-    # Por eso NO es un piso ("que al menos uno vea") sino el contrato completo:
-    # el manager Magentic reparte los pasos por nombre y descripción, sin saber
-    # quién tiene herramientas, y al agente ciego que le toque mirar el árbol le
-    # queda responder de memoria. Sólo añade capacidad; nunca quita la que el
-    # Router pidió. Tampoco se exceptúa a quien lleva ``coding_tools``: el
-    # workspace no se sacrifica frente a una herramienta incompatible en el
-    # cliente; la plantilla sirve MCP + code interpreter juntos.
     if workspace_id:
         blind = [a["name"] for a in agents if not a["use_mcp"]]
         for a in agents:
@@ -2158,6 +2141,14 @@ _PARTICIPANT_SCHEMA: dict = {
                     "prices, news, market data). "
                 ),
             },
+            "use_web_search": {
+                "type": "boolean",
+                "description": (
+                    "true if it must search the public web itself (news, "
+                    "releases, documentation, prices): the specialist gets the "
+                    "native web search tool."
+                ),
+            },
             "use_reasoning": {
                 "type": "boolean",
                 "description": (
@@ -2383,6 +2374,14 @@ def _read_composition(
         roster = []
     elif not roster:
         raise ValueError(f"pattern '{pattern}' requires at least one participant")
+    # Semántica del patrón: ``handoff`` traspasa entre participantes y
+    # ``group_chat`` los hace discutir. Con uno solo no hay a quién traspasar
+    # ni con quién discutir: el framework lo avisa ("may get stuck") y lo
+    # ejecuta como bucle autónomo de un agente sobre la conversación completa
+    # (medido 2026-10-23: handoff de un participante → superstep tras
+    # superstep hasta "input exceeds the context window").
+    elif pattern in ("handoff", "group_chat") and len(roster) < 2:
+        raise ValueError(f"pattern '{pattern}' requires at least two participants")
     return (pattern, str(args.get("task") or "").strip(), roster)
 
 
@@ -2666,7 +2665,7 @@ class _RouterChatClient:
 
     async def _load_knowledge_indexes(self) -> None:
         """Los índices que existen hoy en AI Search, para que la composición
-        los asigne por agente; una lectura por turno."""
+        los asigne por agente."""
         if self._index_names:
             return
         from v4.common.services.team_service import TeamService
@@ -3257,19 +3256,13 @@ class _RouterChatClient:
         logger.info("Orquestador: %d tools de workspace", len(workspace_tools))
         composed = False
         # El modelo elige el roster y, de forma no determinista, a veces
-        # devuelve participantes vacíos para un patrón que sí los exige. Se le
-        # devuelve el error (una vez) para que recomponga; si reincide, el turno
-        # degrada a ``direct`` en vez de caer en bucle de recomposición.
+        # devuelve participantes vacíos para un patrón que sí los exige.
         compose_retries = 0
         try:
             while resume is None:
                 pending = ""
                 marker_blocked = False
                 answer = ""
-                # Todo lo que el modelo dijo en la pasada, se haya emitido como
-                # avance o quede como respuesta. Sin esto su propio turno le
-                # volvía como "(sin respuesta)": se le borraban sus palabras
-                # del historial y dejaba de comentar.
                 said = ""
                 executed: list[tuple[dict, dict]] = []
                 restated = False
@@ -3300,10 +3293,6 @@ class _RouterChatClient:
                     tool_choice=(
                         {"type": "function", "name": "compose"} if composing else "auto"
                     ),
-                    # La compuerta humana debe ir sola: con llamadas paralelas
-                    # una respuesta podía traer request_human_approval junto a
-                    # workspace_exec o compose, y el efecto corría antes de
-                    # que el humano decidiera.
                     parallel_tool_calls=False,
                     stream=True,
                     store=False,
@@ -3337,10 +3326,6 @@ class _RouterChatClient:
                         item = getattr(evt, "item", None)
                         itype = getattr(item, "type", None)
                         if itype not in (None, "message", "reasoning"):
-                            # Lo escrito antes de una tool es avance: el modelo
-                            # habla cuando tiene algo que decir y eso llega al
-                            # usuario ahora, no al final mezclado con la
-                            # respuesta. Nadie se lo pide; sale si lo escribe.
                             if pending and not marker_blocked:
                                 answer += pending
                                 pending = ""
@@ -3528,9 +3513,8 @@ class _RouterChatClient:
                                                 "call_id": _cid,
                                                 "output": (
                                                     f"ERROR: {e}. Vuelve a "
-                                                    "componer eligiendo al menos "
-                                                    "un participante para este "
-                                                    "patrón (o usa 'direct')."
+                                                    "componer respetando el "
+                                                    "contrato del patrón."
                                                 ),
                                             },
                                         )

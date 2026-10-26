@@ -473,12 +473,23 @@ class FoundryAgentTemplate(AzureAgentBase):
                             *tools,
                             responses_client.get_code_interpreter_tool(),
                         ]
+                    if self.enable_web_search:
+                        # Web search is server-side on AzureAIClient's published
+                        # definition, which this path does NOT use. Attach it as
+                        # the Responses API's hosted web search tool so a
+                        # workspace/MCP specialist that also asked for live web
+                        # keeps both, next to MCP.
+                        tools = [
+                            *tools,
+                            responses_client.get_web_search_tool(),
+                        ]
                     self.logger.info(
-                        "Using AzureOpenAIResponsesClient for '%s' (runtime tools%s).",
+                        "Using AzureOpenAIResponsesClient for '%s' (runtime tools%s%s).",
                         self.agent_name,
                         " + hosted Code Interpreter"
                         if self.enable_code_interpreter
                         else "",
+                        " + hosted Web Search" if self.enable_web_search else "",
                     )
                     self._agent = Agent(
                         id=self.get_agent_id(),
@@ -503,6 +514,15 @@ class FoundryAgentTemplate(AzureAgentBase):
                 else:
                     # No runtime tools → AzureAIClient with published
                     # Foundry agent (server-side KB + tools).
+                    #
+                    # Web search is a server-side tool: AzureAIClient reaches it
+                    # only through the published definition (use_latest_version).
+                    # A Router-composed web-only specialist is new, so publish
+                    # NOW with WebSearchTool or the request runs blind to live
+                    # web. _register_in_foundry is reuse-first: an identical
+                    # existing definition is left untouched.
+                    if self.enable_web_search and not self._ephemeral:
+                        await self._register_in_foundry()
                     self.logger.info(
                         "Using AzureAIClient for '%s' (published agent, server-side tools).",
                         self.agent_name,
