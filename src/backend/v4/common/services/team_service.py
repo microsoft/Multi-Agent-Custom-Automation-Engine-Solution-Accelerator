@@ -147,6 +147,7 @@ class TeamService:
             use_rag=agent_data.get("use_rag", False),
             use_mcp=agent_data.get("use_mcp", False),
             use_bing=agent_data.get("use_bing", False),
+            use_web_search=agent_data.get("use_web_search", False),
             use_reasoning=agent_data.get("use_reasoning", False),
             index_name=agent_data.get("index_name", ""),
             coding_tools=agent_data.get("coding_tools", False),
