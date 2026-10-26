@@ -114,3 +114,24 @@ async def test_reasoning_agents_are_composed_on_the_reasoning_deployment():
     assert agents["RepositoryAuditAgent"].deployment_name == reasoning
     assert agents["DevSecOpsAuditAgent"].deployment_name == reasoning
     assert agents["ValidationAgent"].deployment_name != reasoning
+
+
+@pytest.mark.asyncio
+async def test_a_specialist_that_must_search_the_web_gets_the_native_web_search():
+    # La fábrica ya publica WebSearchTool con ``use_web_search``; el roster lo
+    # ofrecía sólo como ``use_bing``, y el investigador de un sequential nacía
+    # sin web (medido 2026-10-20: "no tengo acceso a web browsing").
+    team = await compose(
+        [
+            {
+                "name": "WebResearchAgent",
+                "description": "Busca novedades en la web",
+                "system_message": "Busca y cita fuentes.",
+                "use_web_search": True,
+            }
+        ],
+        None,
+    )
+    agent = by_name(team)["WebResearchAgent"]
+    assert agent.use_web_search is True
+    assert agent.use_bing is False

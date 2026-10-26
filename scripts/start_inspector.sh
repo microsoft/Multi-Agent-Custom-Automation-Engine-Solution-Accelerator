@@ -26,8 +26,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-CONFIG_FILE="$PROJECT_ROOT/mcp-inspector-config.json"
-
+CONFIG_FILE="$PROJECT_ROOT/src/mcp_server/mcp-inspector-config.json"
 # Ports
 CLIENT_PORT="${MCP_INSPECTOR_CLIENT_PORT:-16274}"
 SERVER_PORT="${MCP_INSPECTOR_SERVER_PORT:-16277}"

@@ -122,7 +122,7 @@ class ToolSchemaCache:
 
 
 class ExternalMCPSession(ToolSchemaCache):
-    """Manages a single connection to an external MCP server."""
+    """Manages connections to an external MCP servers."""
 
     def __init__(self, server_url: str, server_name: str):
         self.server_url = server_url.rstrip("/")
@@ -132,14 +132,7 @@ class ExternalMCPSession(ToolSchemaCache):
         self._initialized: bool = False
         self.server_info: dict[str, Any] = {}
         self.extra_headers: dict[str, str] = {}
-        # Per-call credential SOURCE — the resolver's design contract
-        # (managed_identity mints fresh per call, oauth_refresh rotates near
-        # expiry, static_secret reads KV). When set, every outbound request
-        # resolves Authorization at call time instead of freezing the token
-        # minted at connect time: a frozen header outlives its token (~1h)
-        # and every later call 401s while the session still looks healthy.
-        # None = direct/manual connection: whatever token the caller supplied
-        # stays verbatim, unchanged behavior.
+        self.capabilities: dict[str, Any] = {}
         self.credential_source: str | None = None
         self.audience: str | None = None
         self.secret_ref: str = ""
@@ -152,8 +145,7 @@ class ExternalMCPSession(ToolSchemaCache):
         """Resolve a valid Authorization header for THIS call.
 
         No-op unless a credential_source is attached (registry-managed
-        servers). Resolution failures keep the previous header rather than
-        blocking the call — the server's 401 then reports the truth.
+        servers).
         """
         if not (self.credential_source and credential_resolver):
             return
@@ -191,6 +183,7 @@ class ExternalMCPSession(ToolSchemaCache):
             )
 
             self.server_info = init_result.get("serverInfo", {})
+            self.capabilities = init_result.get("capabilities", {})
 
             # Step 2: Send initialized notification
             await self._send_notification("notifications/initialized")
@@ -639,6 +632,7 @@ class ProxiedStdioSession(ToolSchemaCache):
         self.server_info: dict[str, Any] = {}
         self.extra_headers: dict[str, str] = {}
         self.connected_at: float = time.time()
+        self.capabilities: dict[str, Any] = {}  # server capabilities from initialize
 
         # SSE reader state
         self._msg_endpoint: str | None = None
@@ -650,7 +644,6 @@ class ProxiedStdioSession(ToolSchemaCache):
         self._sse_stream: Any = None
         self._request_id_counter = 0
         self._closing = False  # True when close() is called intentionally
-        self.capabilities: dict[str, Any] = {}  # server capabilities from initialize
 
     @property
     def is_alive(self) -> bool:
