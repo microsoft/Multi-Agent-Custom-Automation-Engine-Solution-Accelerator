@@ -1176,6 +1176,83 @@ class TestFoundryAgentTemplate:
         agent._register_in_foundry.assert_called_once()
 
     @pytest.mark.asyncio
+    @patch("v4.magentic_agents.foundry_agent.Agent")
+    @patch("v4.magentic_agents.foundry_agent.agent_registry")
+    @patch("v4.magentic_agents.foundry_agent.config")
+    @patch("v4.magentic_agents.foundry_agent.logging.getLogger")
+    async def test_web_search_rides_the_responses_client_next_to_mcp(
+        self, mock_get_logger, mock_config, mock_registry, mock_agent_cls
+    ):
+        """A workspace/MCP specialist that also asked for live web must keep
+        its MCP tool AND receive the Responses API's hosted web search tool;
+        neither is dropped for the other."""
+        mock_get_logger.return_value = Mock()
+        mock_config.get_ai_project_client.return_value = AsyncMock()
+
+        agent = FoundryAgentTemplate(
+            agent_name="WebResearchAgent",
+            agent_description="Searches the web",
+            agent_instructions="Cite sources",
+            use_reasoning=False,
+            model_deployment_name="test-model",
+            project_endpoint="https://test.project.azure.com/",
+            enable_web_search=True,
+        )
+
+        mcp_tool = Mock()
+        hosted_web = {"type": "web_search"}
+        responses_client = Mock()
+        responses_client.get_web_search_tool.return_value = hosted_web
+        agent._collect_tools = AsyncMock(return_value=[mcp_tool])
+        agent.get_agent_id = Mock(return_value="agent-id")
+        agent.get_responses_client = Mock(return_value=responses_client)
+        agent.get_chat_client = Mock(return_value=Mock())
+        agent._register_in_foundry = AsyncMock()
+
+        await agent._after_open()
+
+        agent.get_chat_client.assert_not_called()
+        kwargs = mock_agent_cls.call_args.kwargs
+        assert kwargs["client"] is responses_client
+        assert kwargs["tools"] == [mcp_tool, hosted_web]
+
+    @pytest.mark.asyncio
+    @patch("v4.magentic_agents.foundry_agent.Agent")
+    @patch("v4.magentic_agents.foundry_agent.agent_registry")
+    @patch("v4.magentic_agents.foundry_agent.config")
+    @patch("v4.magentic_agents.foundry_agent.logging.getLogger")
+    async def test_web_search_only_agent_publishes_its_definition(
+        self, mock_get_logger, mock_config, mock_registry, mock_agent_cls
+    ):
+        """A web-only specialist takes the AzureAIClient path, which reaches web
+        search only through the published definition. _after_open must publish it
+        (_register_in_foundry) so the WebSearchTool is available server-side."""
+        mock_get_logger.return_value = Mock()
+        mock_config.get_ai_project_client.return_value = AsyncMock()
+
+        agent = FoundryAgentTemplate(
+            agent_name="WebOnlyAgent",
+            agent_description="Searches the web",
+            agent_instructions="Cite sources",
+            use_reasoning=False,
+            model_deployment_name="test-model",
+            project_endpoint="https://test.project.azure.com/",
+            enable_web_search=True,
+        )
+
+        agent._collect_tools = AsyncMock(return_value=[])
+        agent.get_agent_id = Mock(return_value="agent-id")
+        agent.get_responses_client = Mock(return_value=Mock())
+        agent.get_chat_client = Mock(return_value=Mock())
+        agent._register_in_foundry = AsyncMock()
+
+        await agent._after_open()
+
+        agent.get_chat_client.assert_called_once()
+        agent.get_responses_client.assert_not_called()
+        agent._register_in_foundry.assert_called_once()
+
+    @pytest.mark.asyncio
     @patch("v4.magentic_agents.foundry_agent.agent_registry")
     @patch("v4.magentic_agents.foundry_agent.config")
     @patch("v4.magentic_agents.foundry_agent.logging.getLogger")
