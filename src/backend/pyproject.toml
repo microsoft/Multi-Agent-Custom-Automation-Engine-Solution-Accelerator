@@ -19,7 +19,7 @@ dependencies = [
     # versión actual del lock: declararla no mueve nada, la mueve Dependabot.
     "starlette>=0.47.3,<2",
     "openai>=2.16.0,<3",
-    "opentelemetry-api>=1.39.0,<2",
+    "opentelemetry-api>=1.45.1,<2",
     "opentelemetry-exporter-otlp-proto-grpc>=1.39.0,<2",
     "opentelemetry-exporter-otlp-proto-http>=1.39.0,<2",
     "opentelemetry-instrumentation-fastapi>=0.60b0,<1",

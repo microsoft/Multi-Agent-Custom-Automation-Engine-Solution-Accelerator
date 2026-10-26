@@ -222,7 +222,7 @@ openai==2.16.0
     #   azure-ai-evaluation
     #   azure-ai-projects
     #   backend
-opentelemetry-api==1.39.0
+opentelemetry-api==1.45.1
     # via
     #   agent-framework-core
     #   azure-core-tracing-opentelemetry
