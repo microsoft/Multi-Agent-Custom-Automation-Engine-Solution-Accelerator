@@ -196,8 +196,7 @@ async def test_invalid_composition_then_direct_preserves_tool_call_history():
             "call_id": "invalid-compose",
             "output": (
                 "ERROR: pattern 'sequential' requires at least one participant. "
-                "Vuelve a componer eligiendo al menos un participante para este "
-                "patrón (o usa 'direct')."
+                "Vuelve a componer respetando el contrato del patrón."
             ),
         },
     ]
@@ -1080,3 +1079,37 @@ def test_a_declared_toolbox_version_pins_the_url(monkeypatch):
 
 def test_no_declared_toolboxes_means_no_attachments(monkeypatch):
     assert _build(monkeypatch, toolboxes="")._toolboxes == []
+
+
+def test_the_composition_contract_follows_each_pattern_semantics():
+    # handoff traspasa entre participantes y group_chat los hace discutir: con
+    # uno solo no hay a quién traspasar ni con quién discutir (medido
+    # 2026-10-23: handoff de un participante → bucle autónomo hasta desbordar
+    # la ventana del modelo). sequential y concurrent sí corren con uno.
+    patterns = list(router._PATTERNS)
+    one = [{"name": "Solo", "instruction": "x"}]
+    two = [
+        {"name": "Triage", "instruction": "x"},
+        {"name": "Experto", "instruction": "y"},
+    ]
+    for pattern in ("handoff", "group_chat"):
+        with pytest.raises(ValueError, match="at least two participants"):
+            router._read_composition(
+                json.dumps({"pattern": pattern, "task": "t", "participants": one}),
+                patterns,
+            )
+        assert (
+            router._read_composition(
+                json.dumps({"pattern": pattern, "task": "t", "participants": two}),
+                patterns,
+            )[0]
+            == pattern
+        )
+    for pattern in ("sequential", "concurrent"):
+        assert (
+            router._read_composition(
+                json.dumps({"pattern": pattern, "task": "t", "participants": one}),
+                patterns,
+            )[2]
+            == one
+        )
