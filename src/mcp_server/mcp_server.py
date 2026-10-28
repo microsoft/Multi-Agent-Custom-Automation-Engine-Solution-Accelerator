@@ -51,13 +51,21 @@ def create_fastmcp_server():
                 "issuer": config.issuer,
                 "audience": config.audience,
             }
-            if all(auth_config.values()):
-                auth = JWTVerifier(
-                    jwks_uri=auth_config["jwks_uri"],
-                    issuer=auth_config["issuer"],
-                    algorithm="RS256",
-                    audience=auth_config["audience"],
+            missing = [name.upper() for name, value in auth_config.items() if not value]
+            if missing:
+                # Fail at startup, not at the first request: an "Enabled" banner
+                # over a server with no verifier is an open perimeter.
+                raise RuntimeError(
+                    "ENABLE_AUTH is true but "
+                    + ", ".join(missing)
+                    + " not configured; set them or set ENABLE_AUTH=false"
                 )
+            auth = JWTVerifier(
+                jwks_uri=auth_config["jwks_uri"],
+                issuer=auth_config["issuer"],
+                algorithm="RS256",
+                audience=auth_config["audience"],
+            )
 
         # Create MCP server
         mcp_server = factory.create_mcp_server(name=config.server_name, auth=auth)
@@ -70,8 +78,10 @@ def create_fastmcp_server():
         return None
 
 
-# Create FastMCP server instance for fastmcp run command
-mcp = create_fastmcp_server()
+# Create FastMCP server instance for the `fastmcp run` command. When the module
+# is executed directly, defer creation until main() has applied CLI overrides
+# (e.g. --no-auth) so startup validation does not run against stale config.
+mcp = None if __name__ == "__main__" else create_fastmcp_server()
 
 
 def log_server_info():
@@ -141,16 +151,15 @@ def main():
 
     # Override config with command line arguments
     if args.debug:
-        import os
-
-        os.environ["MCP_DEBUG"] = "true"
         config.debug = True
 
     if args.no_auth:
-        import os
-
-        os.environ["MCP_ENABLE_AUTH"] = "false"
         config.enable_auth = False
+
+    # Construct and validate the server after CLI overrides are applied so that
+    # flags like --no-auth take effect before authentication validation runs.
+    global mcp
+    mcp = create_fastmcp_server()
 
     # Print startup info
     print("🚀 Starting MACAE MCP Server")

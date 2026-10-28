@@ -186,17 +186,6 @@ if config.APPLICATIONINSIGHTS_CONNECTION_STRING:
         enable_live_metrics=True,
     )
 
-    # Instrument FastAPI app.
-    #
-    # ``exclude_spans``: los spans hijos ``receive``/``send`` del ASGI NO son
-    # dependencias — son eventos internos del protocolo (``asgi.event.type:
-    # http.response.start``) — pero se exportan como tales y quedan en
-    # AppDependencies duplicando cada petición con Target "<ruta> http send".
-    # Medido en prod (24 h): 74.946 filas ``InProc`` contra 67.894 ``HTTP``
-    # reales, o sea más de la mitad de la telemetría de dependencias es esto,
-    # ingestado y facturado. Se corta en el origen; filtrarlo en la consulta de
-    # una alerta sería esconder el defecto del modelo de telemetría en vez de
-    # corregirlo.
     FastAPIInstrumentor.instrument_app(
         app,
         exclude_spans=["receive", "send"],

@@ -1,6 +1,6 @@
 // src/config.js
 
-import { UserInfo, claim } from '@/models';
+import { UserInfo, claim } from "@/models";
 
 declare global {
   interface Window {
@@ -15,13 +15,13 @@ export let USER_ID: string | null = null;
 export let USER_INFO: UserInfo | null = null;
 
 export let config = {
-  API_URL: '/api',
+  API_URL: "/api",
   ENABLE_AUTH: false,
 };
 
 export function setApiUrl(url: string | null) {
   if (url) {
-    API_URL = url.includes('/api') ? url : `${url}/api`;
+    API_URL = url.includes("/api") ? url : `${url}/api`;
   }
 }
 export function setUserInfoGlobal(userInfo: UserInfo | null) {
@@ -32,7 +32,7 @@ export function setUserInfoGlobal(userInfo: UserInfo | null) {
 }
 export function setEnvData(configData: Record<string, any>) {
   if (configData) {
-    config.API_URL = configData.API_URL || '';
+    config.API_URL = configData.API_URL || "";
     config.ENABLE_AUTH = configData.ENABLE_AUTH || false;
   }
 }
@@ -49,30 +49,30 @@ export function getConfigData() {
 }
 export async function getUserInfo(): Promise<UserInfo> {
   try {
-    const response = await fetch('/.auth/me');
+    const response = await fetch("/.auth/me");
     if (!response.ok) {
       console.log(
-        'No identity provider found. Access to chat will be blocked.'
+        "No identity provider found. Access to chat will be blocked.",
       );
       return {} as UserInfo;
     }
     const payload = await response.json();
     const userInfo: UserInfo = {
-      access_token: payload[0].access_token || '',
-      expires_on: payload[0].expires_on || '',
-      id_token: payload[0].id_token || '',
-      provider_name: payload[0].provider_name || '',
+      access_token: payload[0].access_token || "",
+      expires_on: payload[0].expires_on || "",
+      id_token: payload[0].id_token || "",
+      provider_name: payload[0].provider_name || "",
       user_claims: payload[0].user_claims || [],
-      user_email: payload[0].user_id || '',
+      user_email: payload[0].user_id || "",
       user_first_last_name:
-        payload[0].user_claims?.find((claim: claim) => claim.typ === 'name')
-          ?.val || '',
+        payload[0].user_claims?.find((claim: claim) => claim.typ === "name")
+          ?.val || "",
       user_id:
         payload[0].user_claims?.find(
           (claim: claim) =>
             claim.typ ===
-            'http://schemas.microsoft.com/identity/claims/objectidentifier'
-        )?.val || '',
+            "http://schemas.microsoft.com/identity/claims/objectidentifier",
+        )?.val || "",
     };
     return userInfo;
   } catch (e) {
@@ -91,10 +91,10 @@ export async function getUserInfo(): Promise<UserInfo> {
  * cheap to call before every request.
  */
 let _refreshInFlight: Promise<void> | null = null;
-const _REAUTH_GUARD_KEY = 'macae_last_reauth';
+const _REAUTH_GUARD_KEY = "macae_last_reauth";
 
 export async function ensureFreshToken(
-  skewMs: number = 5 * 60 * 1000
+  skewMs: number = 5 * 60 * 1000,
 ): Promise<void> {
   const info = getUserInfoGlobal();
   const expMs = info?.expires_on ? Date.parse(info.expires_on) : 0;
@@ -106,13 +106,13 @@ export async function ensureFreshToken(
   if (!_refreshInFlight) {
     _refreshInFlight = (async () => {
       try {
-        await fetch('/.auth/refresh', { credentials: 'include' });
+        await fetch("/.auth/refresh", { credentials: "include" });
         const fresh = await getUserInfo();
         if (fresh?.access_token) {
           setUserInfoGlobal(fresh);
         }
       } catch (e) {
-        console.warn('[auth] /.auth/refresh failed', e);
+        console.warn("[auth] /.auth/refresh failed", e);
       } finally {
         _refreshInFlight = null;
       }
@@ -141,7 +141,7 @@ export function reauthSilently(): void {
     // bounces the SPA through the catch-all route to "/", producing a full-page
     // reload (the "flicker"). Never hard-redirect to EasyAuth in local dev.
     const host = window.location.hostname;
-    if (host === 'localhost' || host === '127.0.0.1' || host === '[::1]') {
+    if (host === "localhost" || host === "127.0.0.1" || host === "[::1]") {
       return;
     }
     const now = Date.now();
@@ -151,10 +151,10 @@ export function reauthSilently(): void {
     const here =
       window.location.pathname + window.location.search + window.location.hash;
     window.location.assign(
-      `/.auth/login/aad?post_login_redirect_uri=${encodeURIComponent(here)}`
+      `/.auth/login/aad?post_login_redirect_uri=${encodeURIComponent(here)}`,
     );
   } catch (e) {
-    console.warn('[auth] silent re-auth redirect failed', e);
+    console.warn("[auth] silent re-auth redirect failed", e);
   }
 }
 
@@ -167,7 +167,7 @@ export function getApiUrl() {
   }
 
   if (!API_URL) {
-    console.info('API URL not yet configured');
+    console.info("API URL not yet configured");
     return null;
   }
 
@@ -180,10 +180,10 @@ export function getApiUrl() {
 // to the SPA's index.html fallback and breaks <img>/<a> (verified live:
 // frontend returned text/html 200 for /api/v4/chat/download-file/...).
 export function resolveApiUrl(path?: string): string {
-  if (!path || !path.startsWith('/api/')) return path || '';
+  if (!path || !path.startsWith("/api/")) return path || "";
   const base = getApiUrl();
-  if (!base || base === '/api') return path;
-  return `${base}${path.slice('/api'.length)}`;
+  if (!base || base === "/api") return path;
+  return `${base}${path.slice("/api".length)}`;
 }
 
 export function getUserInfoGlobal() {
@@ -209,13 +209,13 @@ export function getUserId(): string {
   }
   const userId =
     USER_ID ??
-    (config.ENABLE_AUTH ? '' : 'dev-local-user-0000-0000-000000000001');
+    (config.ENABLE_AUTH ? "" : "dev-local-user-0000-0000-000000000001");
   return userId;
 }
 
 export function getUserName(): string {
   const info = getUserInfoGlobal();
-  return info?.user_email || info?.user_first_last_name || 'dev-user@local';
+  return info?.user_email || info?.user_first_last_name || "dev-user@local";
 }
 
 /**
@@ -224,14 +224,14 @@ export function getUserName(): string {
  * @returns Combined headers object with authentication
  */
 export function headerBuilder(
-  headers?: Record<string, string>
+  headers?: Record<string, string>,
 ): Record<string, string> {
   const userId = getUserId();
   const userName = getUserName();
   const accessToken = getUserInfoGlobal()?.access_token;
   const defaultHeaders: Record<string, string> = {
-    'x-ms-client-principal-id': String(userId) || '',
-    'x-ms-client-principal-name': userName,
+    "x-ms-client-principal-id": String(userId) || "",
+    "x-ms-client-principal-name": userName,
     ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
   };
   return {
@@ -241,10 +241,10 @@ export function headerBuilder(
 }
 
 export const toBoolean = (value: any): boolean => {
-  if (typeof value !== 'string') {
+  if (typeof value !== "string") {
     return false;
   }
-  return value.trim().toLowerCase() === 'true';
+  return value.trim().toLowerCase() === "true";
 };
 
 const apiConfig = {

@@ -8,8 +8,8 @@ services:
     environment:
       - MCP_HOST=0.0.0.0
       - MCP_PORT=9000
-      - MCP_DEBUG=true
-      - MCP_ENABLE_AUTH=false
+      - DEBUG=true
+      - ENABLE_AUTH=false
       - MCP_SERVER_NAME=MACAE MCP Server
     volumes:
       - .:/app
