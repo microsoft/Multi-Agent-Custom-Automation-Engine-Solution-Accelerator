@@ -78,8 +78,10 @@ def create_fastmcp_server():
         return None
 
 
-# Create FastMCP server instance for fastmcp run command
-mcp = create_fastmcp_server()
+# Create FastMCP server instance for the `fastmcp run` command. When the module
+# is executed directly, defer creation until main() has applied CLI overrides
+# (e.g. --no-auth) so startup validation does not run against stale config.
+mcp = None if __name__ == "__main__" else create_fastmcp_server()
 
 
 def log_server_info():
@@ -152,11 +154,12 @@ def main():
         config.debug = True
 
     if args.no_auth:
-        # The server object was built at import time; rebuild it so the flag
-        # really removes the verifier instead of only changing the banner.
         config.enable_auth = False
-        global mcp
-        mcp = create_fastmcp_server()
+
+    # Construct and validate the server after CLI overrides are applied so that
+    # flags like --no-auth take effect before authentication validation runs.
+    global mcp
+    mcp = create_fastmcp_server()
 
     # Print startup info
     print("🚀 Starting MACAE MCP Server")
