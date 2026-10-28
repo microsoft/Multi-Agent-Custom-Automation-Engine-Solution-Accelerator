@@ -52,8 +52,14 @@ async def serve_app(full_path: str):
     # Remediation: normalize and check containment before serving
     file_path = os.path.normpath(os.path.join(BUILD_DIR, full_path))
     # Block traversal and dotfiles
+    try:
+        is_contained = (
+            os.path.commonpath([BUILD_DIR, file_path]) == BUILD_DIR
+        )
+    except ValueError:
+        is_contained = False
     if (
-        not file_path.startswith(BUILD_DIR)
+        not is_contained
         or ".." in full_path
         or "/." in full_path
         or "\\." in full_path
