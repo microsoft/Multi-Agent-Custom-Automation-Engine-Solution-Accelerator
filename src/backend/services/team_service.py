@@ -139,6 +139,8 @@ class TeamService:
             knowledge_base_name=agent_data.get("knowledge_base_name"),
             use_toolbox=agent_data.get("use_toolbox", False),
             toolbox_filter=agent_data.get("toolbox_filter"),
+            web_search_provider=agent_data.get("web_search_provider"),
+            web_search_tools=agent_data.get("web_search_tools", ["web_search", "web_fetch"]),
             user_responses=agent_data.get("user_responses", False),
             coding_tools=agent_data.get("coding_tools", False),
             temperature=agent_data.get("temperature"),
