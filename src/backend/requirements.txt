@@ -384,7 +384,7 @@ pyjwt==2.15.0
     #   azure-ai-evaluation
     #   mcp
     #   msal
-pylint==3.3.9
+pylint==4.0.9
     # via
     #   pylint-plugin-utils
     #   pylint-pydantic
