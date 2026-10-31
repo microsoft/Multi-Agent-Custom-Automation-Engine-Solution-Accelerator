@@ -5,7 +5,6 @@ from contextlib import asynccontextmanager
 from azure.monitor.opentelemetry import configure_azure_monitor
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 from common.config.app_config import config
@@ -161,18 +160,9 @@ app = FastAPI(lifespan=lifespan)
 
 
 @app.exception_handler(PermissionError)
-async def _auth_required(request: Request, exc: PermissionError) -> JSONResponse:
-    """Falta de principal EasyAuth = 401, nunca un 500 sin manejar.
+async def _auth_required(request: Request, exc: PermissionError):
+    from fastapi.responses import JSONResponse
 
-    ``get_authenticated_user_details`` lanza ``PermissionError`` pelado
-    (auth/auth_utils.py) y una sola ruta lo atrapaba, así que la MISMA causa
-    daba 401 en las rutas de workspace y 500 en las de chat. El cliente sólo
-    reintenta con refresco ante 401 (apiClient.tsx): un 500 se saltea el
-    reintento y deja la ruta muerta hasta recargar. Medido en prod: en el
-    refresco del 2026-09-26 18:01 las de workspace se recuperaron solas a los
-    4 s y las de chat no; 7 de estos en las últimas 24 h, el error más
-    frecuente de la app. Aquí en vez de por ruta: el contrato es del borde.
-    """
     return JSONResponse(status_code=401, content={"detail": str(exc)})
 
 

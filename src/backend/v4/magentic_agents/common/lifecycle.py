@@ -806,6 +806,7 @@ class MCPEnabledBase:
                 # truncates. Passing our own client made us responsible for this.
                 http_client = httpx.AsyncClient(
                     headers={"Authorization": f"Bearer {self.user_access_token}"},
+                    verify=getattr(config, "HTTPS_VERIFY", True),
                     timeout=httpx.Timeout(30.0, read=300.0),
                 )
                 self.logger.info(

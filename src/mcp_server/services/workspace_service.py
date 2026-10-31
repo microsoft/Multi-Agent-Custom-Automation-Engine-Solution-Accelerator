@@ -827,28 +827,7 @@ class WorkspaceToolService(MCPToolBase):
             path: str = "",
             timeout: int = EXEC_TIMEOUT_DEFAULT,
         ) -> str:
-            """Run a shell command in the workspace's local sandbox — a REAL terminal.
 
-            The sandbox is a clone of the workspace on local disk: install
-            dependencies (`uv sync`, `npm ci`), run tests, build, run scripts.
-            All of it is fast and none of it touches the durable workspace.
-            Nothing a command leaves uncommitted survives the sandbox; call
-            workspace_publish to keep results, or use the write tools, which
-            publish on their own.
-
-            The command runs through bash with the sandbox as the working
-            directory, so pipes, globs, redirections and && all work:
-            `git status`, `git diff HEAD~1`, `git log --oneline -10`,
-            `git commit -am "msg"`, `uv run pytest -q`, `npm ci && npm run build`,
-            `find . -name '*.py'`, `grep -rn TODO src | head -20`,
-            `python script.py`.
-
-            Prefer THIS over asking for a dedicated tool — it is the generic
-            capability. Returns exit_code, stdout and stderr verbatim: a
-            non-zero exit_code is a real command result.
-
-            path (optional) runs the command in a sub-directory of the
-            workspace. timeout is in seconds (default 120, max 600)."""
             try:
                 if not EXEC_ENABLED:
                     raise WorkspaceAccessError("Shell execution is disabled on this server (MACAE_WORKSPACE_EXEC=0).")
