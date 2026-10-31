@@ -1247,7 +1247,7 @@ def _principal_from_bearer(bearer: str | None) -> str | None:
     token was minted by AAD's OBO exchange upstream and the backend trusts the
     principal header it is echoed into; this only reads the claim already
     present. ``sub`` is a last resort (pairwise, per-app — not the directory
-    object id, but better than anonymous).
+    object id).
     """
     if not bearer or bearer.count(".") < 2:
         return None
@@ -1257,7 +1257,7 @@ def _principal_from_bearer(bearer: str | None) -> str | None:
         payload_b64 = bearer.split(".", 2)[1]
         padded = payload_b64 + "=" * (-len(payload_b64) % 4)
         claims = json.loads(base64.urlsafe_b64decode(padded).decode("utf-8"))
-        return claims.get("oid") or claims.get("sub") or None
+        return claims.get("oid") or None
     except Exception:
         return None
 
@@ -2428,82 +2428,6 @@ class InspectorService(MCPToolBase):
                 return format_error_response(
                     error_message=str(e),
                     context=(f"connecting to '{server_name}' from registry"),
-                )
-
-        # Exposed as an MCP tool on purpose (design change 2026-09-10): the user
-        # connects servers from the chat, so they must be able to disconnect
-        # from the chat too — e.g. they signed in with the wrong account and
-        # need a fresh login. It acts on the CALLER's identity only (the
-        # principal on the request wins over any user_id the model passes),
-        # clears the live session AND the stored connection/credential, and
-        # never removes the server from the catalog.
-        @mcp.tool(tags={self.domain.value})
-        async def disconnect_mcp_server(server_name: str, user_id: str = "") -> str:
-            """
-            Disconnect the current user from an external MCP server and forget
-            its stored credential.
-
-            Use this when the user asks to disconnect, or signed in to the
-            server with the WRONG account and needs to re-authenticate: it drops
-            the live session AND deletes the user's connection record in the
-            catalog (discarding any stored OAuth token), so the next
-            connect_from_registry starts a fresh sign-in. The server itself
-            stays registered in the catalog.
-
-            Args:
-                server_name: Name of the server to disconnect from.
-                user_id: Optional; the authenticated caller identity on the
-                         request always wins.
-
-            Returns:
-                What was cleared (live session, stored connection) or an error.
-            """
-            try:
-                _principal, _bearer = _caller_identity()
-                user_id = _principal or user_id
-                cleared: list[str] = []
-
-                # 1. Drop the live in-memory session, if this replica holds one.
-                _dis_key = (user_id, server_name)
-                session = sessions.pop(_dis_key, None) or proxied_sessions.pop(_dis_key, None)
-                if session is not None:
-                    try:
-                        await session.close()
-                    except Exception as close_err:
-                        logger.debug("session close on disconnect: %s", close_err)
-                    cleared.append("live session")
-
-                # 2. Delete the stored user connection (and its credential) so a
-                #    re-connect triggers a fresh sign-in instead of reusing it.
-                if await registry.disconnect_user_connection(user_id, server_name, bearer_token=_bearer):
-                    cleared.append("stored connection/credential")
-
-                if not cleared:
-                    return format_error_response(
-                        error_message=(
-                            f"Server '{server_name}' is not connected for this "
-                            f"user (no live session and no stored connection)."
-                        ),
-                        context="disconnecting server",
-                    )
-                return format_success_response(
-                    action="Server Disconnected",
-                    details={
-                        "server_name": server_name,
-                        "user_id": user_id,
-                        "cleared": cleared,
-                        "next_step": (f"connect_from_registry('{server_name}') to sign in again"),
-                    },
-                    summary=(
-                        f"Disconnected from '{server_name}' ({', '.join(cleared)}). "
-                        f"Re-connect to sign in again, e.g. with a different account."
-                    ),
-                )
-
-            except Exception as e:
-                return format_error_response(
-                    error_message=str(e),
-                    context=f"disconnecting from '{server_name}'",
                 )
 
         @mcp.tool(tags={self.domain.value}, annotations={"readOnlyHint": True})
