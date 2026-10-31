@@ -296,7 +296,6 @@ class Reconciler:
             try:
                 await self._task
             except asyncio.CancelledError:
-                # Esperado durante shutdown tras cancel(): no requiere acción.
                 pass
             except Exception as ex:
                 logger.warning(

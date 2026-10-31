@@ -3,7 +3,7 @@ import {
   getApiUrl,
   ensureFreshToken,
   reauthSilently,
-} from './config';
+} from "./config";
 
 // Helper function to build URL with query parameters
 const buildUrl = (url: string, params?: Record<string, any>): string => {
@@ -23,8 +23,8 @@ const buildUrl = (url: string, params?: Record<string, any>): string => {
 // Fetch with Authentication Headers
 const fetchWithAuth = async (
   url: string,
-  method: string = 'GET',
-  body: BodyInit | null = null
+  method: string = "GET",
+  body: BodyInit | null = null,
 ) => {
   // Serialize the body ONCE so it can be replayed on a 401 retry.
   const isForm = body instanceof FormData;
@@ -39,8 +39,8 @@ const fetchWithAuth = async (
   // freshly-minted token, never the dead one.
   const buildOptions = (): RequestInit => {
     const headers: Record<string, string> = { ...headerBuilder() };
-    if (isForm) delete headers['Content-Type'];
-    else headers['Content-Type'] = 'application/json';
+    if (isForm) delete headers["Content-Type"];
+    else headers["Content-Type"] = "application/json";
     return { method, headers, body: serializedBody || undefined };
   };
 
@@ -52,34 +52,28 @@ const fetchWithAuth = async (
     let response = await fetch(finalUrl, buildOptions());
 
     if (response.status === 401) {
-      // The EasyAuth token expired mid-session (it lives ~1h). Do NOT
-      // redirect yet — that reload loses the in-flight response and
-      // resets SPA state. First FORCE a token refresh and replay the
-      // request ONCE: a live /.auth/refresh renews it silently and the
-      // user never sees the 401. Only if the replay is ALSO 401 is the
-      // session truly dead → then, and only then, re-auth via redirect.
-      await ensureFreshToken(Number.POSITIVE_INFINITY); // force, ignore skew
+      await ensureFreshToken(Number.POSITIVE_INFINITY);
       response = await fetch(finalUrl, buildOptions());
 
       if (response.status === 401) {
-        const errorText = await response.text().catch(() => '');
+        const errorText = await response.text().catch(() => "");
         reauthSilently();
-        throw new Error(errorText || 'Session expired — re-authenticating');
+        throw new Error(errorText || "Session expired — re-authenticating");
       }
     }
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(errorText || 'Something went wrong');
+      throw new Error(errorText || "Something went wrong");
     }
 
     const isJson = response.headers
-      .get('content-type')
-      ?.includes('application/json');
+      .get("content-type")
+      ?.includes("application/json");
     const responseData = isJson ? await response.json() : null;
     return responseData;
   } catch (error) {
-    console.info('API Error:', (error as Error).message);
+    console.info("API Error:", (error as Error).message);
     throw error;
   }
 };
@@ -87,11 +81,11 @@ const fetchWithAuth = async (
 // Vanilla Fetch without Auth for Login
 const fetchWithoutAuth = async (
   url: string,
-  method: string = 'POST',
-  body: BodyInit | null = null
+  method: string = "POST",
+  body: BodyInit | null = null,
 ) => {
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   };
 
   const options: RequestInit = {
@@ -106,14 +100,14 @@ const fetchWithoutAuth = async (
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(errorText || 'Login failed');
+      throw new Error(errorText || "Login failed");
     }
     const isJson = response.headers
-      .get('content-type')
-      ?.includes('application/json');
+      .get("content-type")
+      ?.includes("application/json");
     return isJson ? await response.json() : null;
   } catch (error) {
-    console.log('Login Error:', (error as Error).message);
+    console.log("Login Error:", (error as Error).message);
     throw error;
   }
 };
@@ -122,15 +116,15 @@ const fetchWithoutAuth = async (
 export const apiClient = {
   get: (url: string, config?: { params?: Record<string, any> }) => {
     const finalUrl = buildUrl(url, config?.params);
-    return fetchWithAuth(finalUrl, 'GET');
+    return fetchWithAuth(finalUrl, "GET");
   },
-  post: (url: string, body?: any) => fetchWithAuth(url, 'POST', body),
-  put: (url: string, body?: any) => fetchWithAuth(url, 'PUT', body),
-  patch: (url: string, body?: any) => fetchWithAuth(url, 'PATCH', body),
-  delete: (url: string) => fetchWithAuth(url, 'DELETE'),
+  post: (url: string, body?: any) => fetchWithAuth(url, "POST", body),
+  put: (url: string, body?: any) => fetchWithAuth(url, "PUT", body),
+  patch: (url: string, body?: any) => fetchWithAuth(url, "PATCH", body),
+  delete: (url: string) => fetchWithAuth(url, "DELETE"),
   upload: (url: string, formData: FormData) =>
-    fetchWithAuth(url, 'POST', formData),
-  login: (url: string, body?: any) => fetchWithoutAuth(url, 'POST', body), // For login without auth
+    fetchWithAuth(url, "POST", formData),
+  login: (url: string, body?: any) => fetchWithoutAuth(url, "POST", body), // For login without auth
 
   /**
    * Raw streaming POST — returns the Response object for SSE consumption.
@@ -139,7 +133,7 @@ export const apiClient = {
   stream: async (
     url: string,
     body?: any,
-    signal?: AbortSignal
+    signal?: AbortSignal,
   ): Promise<Response> => {
     const apiUrl = getApiUrl();
     const finalUrl = `${apiUrl}${url}`;
@@ -148,8 +142,8 @@ export const apiClient = {
     // Rebuild options from the CURRENT auth state so a replay after a forced
     // refresh carries the fresh token, never the dead one.
     const buildOptions = (): RequestInit => ({
-      method: 'POST',
-      headers: { ...headerBuilder(), 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { ...headerBuilder(), "Content-Type": "application/json" },
       body: serializedBody,
       signal,
     });
@@ -166,15 +160,15 @@ export const apiClient = {
       await ensureFreshToken(Number.POSITIVE_INFINITY); // force, ignore skew
       response = await fetch(finalUrl, buildOptions());
       if (response.status === 401) {
-        const errorText = await response.text().catch(() => '');
+        const errorText = await response.text().catch(() => "");
         reauthSilently();
-        throw new Error(errorText || 'Session expired — re-authenticating');
+        throw new Error(errorText || "Session expired — re-authenticating");
       }
     }
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(errorText || 'Stream request failed');
+      throw new Error(errorText || "Stream request failed");
     }
     return response;
   },

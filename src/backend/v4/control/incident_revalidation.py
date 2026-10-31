@@ -11,7 +11,7 @@ la fecha, no el reloj):
 - ``reconciled``       la evidencia y el estado operacional resultante.
 
 Git no se escribe: el estado vivo es el pliegue de ``reconciled``
-(``operational_state``); avanzar la fecha en el registro es un PR humano.
+(``operational_state``); avanzar la fecha en el registro es un PR.
 
 Veredicto de la sonda: ``exit_code == 0`` es señal sana; cualquier otro deja el
 INC en ``needs_revalidation`` con ``operational=false``. Sin shell aquí: la
