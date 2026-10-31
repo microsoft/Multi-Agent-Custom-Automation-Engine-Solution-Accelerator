@@ -184,6 +184,7 @@ class ExternalMCPSession(ToolSchemaCache):
 
             self.server_info = init_result.get("serverInfo", {})
             self.capabilities = init_result.get("capabilities", {})
+            self.registered_tools = init_result.get("registeredTools", [])
 
             # Step 2: Send initialized notification
             await self._send_notification("notifications/initialized")
@@ -2612,4 +2613,4 @@ class InspectorService(MCPToolBase):
     @property
     def tool_count(self) -> int:
         """Return the number of tools provided by this service."""
-        return 9  # connect_mcp_server, discover_mcp_capabilities, call_external_tool, read_external_resource, list_connected_servers, register_mcp_server, connect_from_registry, disconnect_mcp_server, connect_stdio_server
+        return len(self._registered_tools)
