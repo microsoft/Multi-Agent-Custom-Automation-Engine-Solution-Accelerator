@@ -158,12 +158,12 @@ logging.getLogger("azure.monitor.opentelemetry.exporter.export._base").setLevel(
 # Initialize the FastAPI app
 app = FastAPI(lifespan=lifespan)
 
+
 @app.exception_handler(PermissionError)
 async def _auth_required(request: Request, exc: PermissionError):
     from fastapi.responses import JSONResponse
 
     return JSONResponse(status_code=401, content={"detail": str(exc)})
-
 
 
 frontend_url = config.FRONTEND_SITE_NAME

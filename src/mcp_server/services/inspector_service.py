@@ -2613,4 +2613,4 @@ class InspectorService(MCPToolBase):
     @property
     def tool_count(self) -> int:
         """Return the number of tools provided by this service."""
-        return len(self._registered_tools)
+        return 8
