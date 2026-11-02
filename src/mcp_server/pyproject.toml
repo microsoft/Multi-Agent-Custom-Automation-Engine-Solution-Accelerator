@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "macae-mcp-server"
 description = "FastMCP-based Model Context Protocol (MCP) server for the MACAE solution accelerator"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [
   { name = "Microsoft MACAE Team" }
@@ -28,7 +28,9 @@ dependencies = [
   "urllib3==2.8.0",
   "azure-core==1.38.0",
   "cryptography==50.0.0",
-  "authlib==1.6.12",
+  "authlib==1.9.1",
+  "certifi==2026.10.18",
+  "dnspython==2.9.0",
   "azure-storage-blob==12.25.1",
 
 ]

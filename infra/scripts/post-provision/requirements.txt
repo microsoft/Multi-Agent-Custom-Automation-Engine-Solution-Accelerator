@@ -3,7 +3,7 @@ azure-search-documents==11.5.3
 azure-identity==1.24.0
 azure-storage-blob==12.26.0
 azure-cosmos==4.9.0
-aiohttp
+aiohttp==3.14.4
 requests==2.33.0
 httpx
 azure-core

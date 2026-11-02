@@ -14,6 +14,7 @@ dependencies = [
     "httpx==0.28.1",
     "urllib3==2.8.0",
     "cryptography==50.0.0",
+    "certifi==2026.10.18",
 ]
 
 [[tool.uv.index]]
