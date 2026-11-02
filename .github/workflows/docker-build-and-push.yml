@@ -50,7 +50,8 @@ permissions:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    environment: production
+    # Pull request runs (including forks) never use the production environment or Azure credentials.
+    environment: ${{ github.event_name != 'pull_request' && 'production' || '' }}
 
     steps:
       - name: Checkout repository
@@ -60,7 +61,7 @@ jobs:
         uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
 
       - name: Login to Azure
-        if: ${{ github.ref_name == 'main' || github.ref_name == 'dev'|| github.ref_name == 'demo-v4' || github.ref_name == 'hotfix' }}
+        if: ${{ github.event_name != 'pull_request' && (github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo-v4' || github.ref_name == 'hotfix') }}
         uses: azure/login@f5d393ae46f8fde4be8b75f32e3fc50e654ad0ca # v3
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -68,7 +69,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Log in to Azure Container Registry
-        if: ${{ github.ref_name == 'main' || github.ref_name == 'dev'|| github.ref_name == 'demo-v4' || github.ref_name == 'hotfix' }}
+        if: ${{ github.event_name != 'pull_request' && (github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo-v4' || github.ref_name == 'hotfix') }}
         run: az acr login --name ${{ secrets.ACR_LOGIN_SERVER || 'acrlogin.azurecr.io' }}
 
       - name: Get current date
