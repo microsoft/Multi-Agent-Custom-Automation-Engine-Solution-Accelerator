@@ -39,6 +39,7 @@ perform, not around a template. Ask yourself:
 | Question | Design decision |
 |----------|----------------|
 | Does the team need to look up data? | Add a **ResearchAgent** with `use_knowledge_base: true` |
+| Does it need current public web sources? | Agents inherit Parallel web search by default; use `web_search_provider: "none"` for internal-only agents. See [web research controls](../src/backend/README.md#public-web-research). |
 | Does it need to generate images? | Add an agent with `use_toolbox: true` and the appropriate `toolbox_filter` |
 | Should it ask the user clarifying questions? | Set `user_responses: true` on the relevant agent |
 | Are there multiple distinct tasks? | Add specialist agents and a **TriageAgent** to route between them |
