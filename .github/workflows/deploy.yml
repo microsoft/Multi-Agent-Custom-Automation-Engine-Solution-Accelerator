@@ -23,6 +23,11 @@ env:
 
 jobs:
   deploy:
+    # Only deploy for workflow_run events from this repository (not forks) whose build succeeded.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.head_repository.full_name == github.repository &&
+       github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     environment: production
     outputs:
