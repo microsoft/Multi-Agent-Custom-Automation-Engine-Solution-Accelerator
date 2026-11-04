@@ -7,4 +7,5 @@ azure-identity
 python-dotenv
 python-multipart
 httpx
+certifi==2026.10.18
 websockets
