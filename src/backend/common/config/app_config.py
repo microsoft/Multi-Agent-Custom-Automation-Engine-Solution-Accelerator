@@ -95,6 +95,10 @@ class AppConfig:
         # Foundry project connection ID for the MCP server (optional — only needed
         # when the MCP server requires a managed-connection credential in Foundry).
         self.MCP_SERVER_CONNECTION_ID = self._get_optional("MCP_SERVER_CONNECTION_ID")
+        # Public web research is separate from the authenticated domain toolbox.
+        # 'none' is an operator-wide deny, including agents explicitly using Parallel.
+        self.WEB_SEARCH_PROVIDER = self._get_optional("WEB_SEARCH_PROVIDER", "parallel")
+        self.PARALLEL_API_KEY = self._get_optional("PARALLEL_API_KEY")
         self.TENANT_ID = self._get_optional("AZURE_TENANT_ID")
         self.CLIENT_ID = self._get_optional("AZURE_CLIENT_ID")
         self.AZURE_AI_SEARCH_CONNECTION_NAME = self._get_optional(

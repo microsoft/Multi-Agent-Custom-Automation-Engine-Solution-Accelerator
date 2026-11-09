@@ -12,6 +12,7 @@ Single code path:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from contextlib import AsyncExitStack
 from typing import Any, AsyncGenerator, Optional, cast
@@ -31,6 +32,8 @@ from common.models.messages import CurrentTeamAgent, TeamConfiguration
 from common.utils.agent_utils import get_database_team_agent_id
 from config.agent_registry import agent_registry
 from config.mcp_config import KnowledgeBaseConfig, MCPConfig, VectorStoreConfig
+from config.web_search_config import PARALLEL_SEARCH_URL, WebSearchConfig
+from httpx import AsyncClient, Timeout
 
 
 class AgentTemplate:
@@ -56,6 +59,7 @@ class AgentTemplate:
         team_config: TeamConfiguration | None = None,
         memory_store: DatabaseBase | None = None,
         extra_tools: list | None = None,
+        web_search_config: WebSearchConfig | None = None,
     ) -> None:
         self.agent_name = agent_name
         self.agent_description = agent_description
@@ -70,6 +74,7 @@ class AgentTemplate:
         self.team_config = team_config
         self.memory_store = memory_store
         self.extra_tools = extra_tools or []
+        self.web_search_config = web_search_config
 
         self.logger = logging.getLogger(__name__)
 
@@ -485,12 +490,36 @@ class AgentTemplate:
                     [f.name for f in mcp_tool.functions],
                 )
 
-            # Combine Toolbox tools (Search, CodeInterpreter) + client-side MCP + extra tools.
+            # A separate HTTP client prevents Azure/toolbox credentials from reaching
+            # public web search. The stack closes the MCP session before its client.
+            web_search_tool = None
+            if self.web_search_config:
+                web_client = await self._stack.enter_async_context(AsyncClient(
+                    headers=self.web_search_config.get_headers(),
+                    timeout=Timeout(60.0, connect=10.0),
+                ))
+                web_search_tool = MCPStreamableHTTPTool(
+                    name="parallel_search",
+                    tool_name_prefix="parallel",
+                    url=PARALLEL_SEARCH_URL,
+                    http_client=web_client,
+                    allowed_tools=self.web_search_config.allowed_tools,
+                    load_prompts=False,
+                    request_timeout=60,
+                )
+                # Register cleanup before discovery so a failed/cancelled handshake
+                # also releases the framework's MCP lifecycle task.
+                self._stack.push_async_callback(web_search_tool.close)
+                await web_search_tool.connect()
+
+            # Combine Toolbox tools, independent client-side MCPs and extra tools.
             all_tools: list = []
             if maf_tools:
                 all_tools.extend(maf_tools)
             if mcp_tool:
                 all_tools.append(mcp_tool)
+            if web_search_tool:
+                all_tools.append(web_search_tool)
             # Extra tools (e.g. approval-gated clarification tool) injected by
             # AgentFactory for agents with user_responses=true.
             if self.extra_tools:
@@ -582,12 +611,14 @@ class AgentTemplate:
             )
             self._agent = await self._stack.enter_async_context(agent)
 
-        except Exception as exc:
+        except (Exception, asyncio.CancelledError) as exc:
             self.logger.error(
                 "Failed to initialize agent '%s': %s", self.agent_name, exc
             )
             await self._stack.aclose()
             self._stack = None
+            self._agent = None
+            self._credential = None
             raise
 
         # Register (best-effort)

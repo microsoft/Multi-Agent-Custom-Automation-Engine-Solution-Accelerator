@@ -175,6 +175,10 @@ class TeamAgent(BaseModel):
     knowledge_base_name: str | None = None
     use_toolbox: bool = False
     toolbox_filter: str | None = None
+    web_search_provider: Literal["parallel", "none"] | None = None
+    web_search_tools: List[Literal["web_search", "web_fetch"]] = Field(
+        default_factory=lambda: ["web_search", "web_fetch"]
+    )
     user_responses: bool = False
     coding_tools: bool = False
     temperature: float | None = None
