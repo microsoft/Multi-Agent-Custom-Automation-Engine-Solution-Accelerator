@@ -54,7 +54,8 @@ dependencies = [
     # ── Agent Framework ────────────────────────────────────────────────────────
     # OLD (restore to revert): "agent-framework>=1.0.0b251105",
     # OLD (restore to revert): "agent-framework==1.2.2",
-    "agent-framework==1.6.0",                # GA umbrella — pulls agent-framework-core[all]
+    "agent-framework==1.8.1",                # GA umbrella — pulls agent-framework-core[all]
+    "claude-agent-sdk==0.2.121",
     # OLD (restore to revert): "agent-framework-foundry==1.2.2",
     "agent-framework-foundry==1.6.0",        # FoundryChatClient + AIProjectClient integration
     # TODO: Remove when v4/ directory is deleted (Phase 9)
@@ -64,7 +65,8 @@ dependencies = [
     "urllib3==2.8.0",
     "protobuf==6.33.6",
     "cryptography==50.0.0",
-    "aiohttp==3.14.3",
+    "aiohttp==3.14.4",
+    "certifi==2026.10.18",
     "pyasn1==0.6.4",
 ]
 
