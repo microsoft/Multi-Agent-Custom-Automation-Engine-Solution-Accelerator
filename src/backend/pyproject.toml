@@ -67,7 +67,7 @@ dependencies = [
     "cryptography==50.0.0",
     "aiohttp==3.14.4",
     "certifi==2026.10.18",
-    "pyasn1==0.6.4",
+    "pyasn1==0.6.5",
 ]
 
 [[tool.uv.index]]
