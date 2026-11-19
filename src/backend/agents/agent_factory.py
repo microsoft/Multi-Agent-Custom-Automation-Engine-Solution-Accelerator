@@ -16,6 +16,7 @@ from common.config.app_config import config
 from common.database.database_base import DatabaseBase
 from common.models.messages import TeamConfiguration
 from config.mcp_config import KnowledgeBaseConfig, MCPConfig, VectorStoreConfig
+from config.web_search_config import WebSearchConfig
 from tools.clarification_tool import request_user_clarification
 
 
@@ -176,6 +177,13 @@ class AgentFactory:
         # Agents with user_responses=true get the clarification tool directly.
         extra_tools = [request_user_clarification] if user_responses else None
 
+        web_search_config = WebSearchConfig.resolve(
+            getattr(agent_obj, "web_search_provider", None),
+            getattr(agent_obj, "web_search_tools", None),
+            default_provider=config.WEB_SEARCH_PROVIDER,
+            api_key=config.PARALLEL_API_KEY,
+        )
+
         agent = AgentTemplate(
             agent_name=agent_obj.name,
             agent_description=getattr(agent_obj, "description", ""),
@@ -190,6 +198,7 @@ class AgentFactory:
             team_config=team_config,
             memory_store=memory_store,
             extra_tools=extra_tools,
+            web_search_config=web_search_config,
         )
 
         await agent.open()
