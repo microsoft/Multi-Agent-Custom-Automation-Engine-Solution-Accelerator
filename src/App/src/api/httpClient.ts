@@ -8,10 +8,10 @@
  * 
  * Eliminates duplicated localStorage/header logic across API functions.
  */
-import { getUserId } from './config';
+import { getIdToken, getUserId } from './config';
 
 type RequestConfig = RequestInit & { url: string };
-type RequestInterceptor = (config: RequestConfig) => RequestConfig;
+type RequestInterceptor = (config: RequestConfig) => RequestConfig | Promise<RequestConfig>;
 type ResponseInterceptor = (response: Response) => Response | Promise<Response>;
 
 class HttpClient {
@@ -73,7 +73,7 @@ class HttpClient {
 
         // Run request interceptors
         for (const interceptor of this.requestInterceptors) {
-            config = interceptor(config);
+            config = await interceptor(config);
         }
 
         const { url: finalUrl, ...rest } = config;
@@ -227,9 +227,9 @@ const httpClient = new HttpClient();
  * Auth interceptor — single source of truth for userId header.
  * Eliminates repeated localStorage.getItem("userId") and manual headerBuilder() calls.
  */
-httpClient.addRequestInterceptor((config) => {
+httpClient.addRequestInterceptor(async (config) => {
     const userId = getUserId();
-    const token = localStorage.getItem('token');
+    const token = await getIdToken();
 
     const headers = new Headers(config.headers as HeadersInit);
 

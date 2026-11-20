@@ -283,6 +283,62 @@ class TestAuthUtilsIntegration:
         assert tenant_id == ""  # Should return empty string for invalid base64
 
 
+class TestApiAuthentication:
+    """API authentication enforced via AUTH_CLIENT_ID and Entra ID bearer tokens."""
+
+    CLIENT_ID = "11111111-1111-1111-1111-111111111111"
+    TENANT_ID = "22222222-2222-2222-2222-222222222222"
+
+    @pytest.fixture(autouse=True)
+    def _setup(self, monkeypatch):
+        import time
+        import jwt as pyjwt
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        from backend.auth import auth_utils
+
+        self.pyjwt = pyjwt
+        self.now = int(time.time())
+        self.private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        monkeypatch.setenv("AUTH_CLIENT_ID", self.CLIENT_ID)
+        monkeypatch.setenv("AZURE_TENANT_ID", self.TENANT_ID)
+        signing_key = MagicMock(key=self.private_key.public_key())
+        monkeypatch.setattr(auth_utils, "_get_signing_key", lambda tenant, kid: signing_key)
+
+    def _token(self, **overrides):
+        claims = {
+            "aud": self.CLIENT_ID,
+            "iss": f"https://login.microsoftonline.com/{self.TENANT_ID}/v2.0",
+            "oid": "token-user-oid",
+            "preferred_username": "user@contoso.com",
+            "exp": self.now + 3600,
+        }
+        claims.update(overrides)
+        return self.pyjwt.encode(claims, self.private_key, algorithm="RS256", headers={"kid": "k1"})
+
+    def test_valid_token_sets_identity_and_ignores_spoofed_header(self):
+        result = get_authenticated_user_details({
+            "Authorization": f"Bearer {self._token()}",
+            "x-ms-client-principal-id": "victim-oid",
+        })
+        assert result["user_principal_id"] == "token-user-oid"
+        assert result["user_name"] == "user@contoso.com"
+
+    @pytest.mark.parametrize("overrides", [
+        {"aud": "another-app"},
+        {"iss": "https://login.microsoftonline.com/other-tenant/v2.0"},
+        {"exp": 1},
+    ])
+    def test_invalid_token_is_rejected(self, overrides):
+        result = get_authenticated_user_details(
+            {"authorization": f"Bearer {self._token(**overrides)}"}
+        )
+        assert result["user_principal_id"] is None
+
+    def test_missing_token_does_not_fall_back_to_header_or_sample_user(self):
+        result = get_authenticated_user_details({"x-ms-client-principal-id": "victim-oid"})
+        assert result["user_principal_id"] is None
+
+
 if __name__ == "__main__":
     # Allow manual execution for debugging
     pytest.main([__file__, "-v"])

@@ -170,7 +170,7 @@ param existingFoundryProjectResourceId string = ''
 param enableTelemetry bool = true
 
 @description('Optional. Additional tags to apply to deployed resources.')
-param tags object = {}
+param tags object = {SecurityControl: 'Ignore'}
 
 // ============================================================================
 // Parameters — Data

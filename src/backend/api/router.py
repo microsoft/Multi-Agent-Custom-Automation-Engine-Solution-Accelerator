@@ -8,7 +8,7 @@ from opentelemetry import trace
 
 import models.messages as messages
 from models.messages import WebsocketMessageType
-from auth.auth_utils import get_authenticated_user_details
+from auth.auth_utils import get_authenticated_user_details, is_auth_enabled
 from common.config.app_config import config
 from common.database.database_factory import DatabaseFactory
 from common.models.messages import (InputTask, Plan, PlanStatus,
@@ -32,6 +32,10 @@ app_router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
+# Browsers cannot set headers on a WebSocket, so the client sends the token as
+# Sec-WebSocket-Protocol: access_token, <token>. Only the name is echoed back.
+WS_AUTH_SUBPROTOCOL = "access_token"
+
 
 @app_router.websocket("/socket/{process_id}")
 async def start_comms(
@@ -39,8 +43,20 @@ async def start_comms(
 ):
     """Web-Socket endpoint for real-time process status updates."""
 
-    # Always accept the WebSocket connection first
-    await websocket.accept()
+    protocols = websocket.scope.get("subprotocols") or []
+    subprotocol = WS_AUTH_SUBPROTOCOL if WS_AUTH_SUBPROTOCOL in protocols else None
+
+    if is_auth_enabled():
+        token_index = protocols.index(WS_AUTH_SUBPROTOCOL) + 1 if subprotocol else len(protocols)
+        token = protocols[token_index] if token_index < len(protocols) else ""
+        user_id = get_authenticated_user_details(
+            request_headers={"authorization": f"Bearer {token}"}
+        )["user_principal_id"]
+        if not user_id:
+            await websocket.close(code=1008)
+            return
+
+    await websocket.accept(subprotocol=subprotocol)
 
     user_id = user_id or "00000000-0000-0000-0000-000000000000"
 
@@ -645,6 +661,15 @@ async def clarification_ask(request: Request):
     body = await request.json()
     question = body.get("question", "")
     user_id = body.get("user_id", "")
+
+    if is_auth_enabled():
+        user_id = get_authenticated_user_details(request_headers=request.headers)[
+            "user_principal_id"
+        ]
+        if not user_id:
+            raise HTTPException(
+                status_code=401, detail="Missing or invalid user information"
+            )
 
     if not question or not user_id:
         raise HTTPException(status_code=400, detail="question and user_id are required")

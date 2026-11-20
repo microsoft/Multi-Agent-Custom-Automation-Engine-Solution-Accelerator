@@ -80,6 +80,10 @@ if not candidate_files:
 
 upload_endpoint = backend_url.rstrip('/') + '/api/v4/upload_team_config'
 
+# Required only when API authentication is enabled on the backend (AUTH_CLIENT_ID):
+# the signed-in user's Entra ID token (id_token from https://<frontend>/.auth/me).
+auth_token = os.environ.get("MACAE_AUTH_TOKEN", "").strip()
+
 # Process each JSON file in the directory
 uploaded_count = 0
 for filename, team_id in candidate_files:
@@ -94,6 +98,8 @@ for filename, team_id in candidate_files:
             headers = {
                 'x-ms-client-principal-id': user_principal_id
             }
+            if auth_token:
+                headers['Authorization'] = f'Bearer {auth_token}'
             params = {
                 'team_id': team_id
             }
@@ -118,6 +124,8 @@ for filename, team_id in candidate_files:
                     sys.exit(1)
             else:
                 print(f"Failed to upload {filename}. Status code: {response.status_code}, Response: {response.text}")
+                if response.status_code in (400, 401):
+                    print("If API authentication is enabled, set MACAE_AUTH_TOKEN to your id_token from https://<frontend-url>/.auth/me and re-run.")
                 sys.exit(1)
     except Exception as e:
         print(f"Error processing {filename}: {str(e)}")

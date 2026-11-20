@@ -31,3 +31,19 @@ This document provides step-by-step instructions to configure Azure App Registra
 ![Add Provider](./images/azure-app-service-auth-setup/AppAuthIdentityProviderAdded.png)
 
 6. You have successfully added app authentication, and now required to log in to access the application.
+
+## Step 2: Enable API authentication on the backend
+
+This step makes the backend API accept only requests that carry a valid Microsoft Entra ID token for the signed-in user. It applies to both standard and WAF (private networking) deployments.
+
+1. In the App Service `Authentication` page, copy the `App (client) ID` of the identity provider added in Step 1.
+
+2. Set it on the backend Container App (named `ca-<suffix>`, not `ca-mcp-<suffix>`):
+
+    ```bash
+    az containerapp update --name <backend-container-app-name> --resource-group <resource-group-name> --set-env-vars AUTH_CLIENT_ID=<app-client-id>
+    ```
+
+> NOTE: Re-run this command after re-provisioning (for example `azd up` or `azd provision`), because provisioning resets the backend environment variables. To remove API authentication, set `AUTH_CLIENT_ID` to an empty value.
+
+> NOTE: To re-run the post-deployment script after this step, sign in to the application, open `https://<frontend-url>/.auth/me`, copy the `id_token` value, and set it in the `MACAE_AUTH_TOKEN` environment variable before running the script.
