@@ -212,15 +212,21 @@ main() {
   app_object_id="$(jq -r '.id' <<<"${app_json}")"
   graph_uri="https://graph.microsoft.com/v1.0/applications/${app_object_id}"
 
-  local -a redirect_uris identifier_uris
-  mapfile -t redirect_uris < <(jq -r --arg u "${redirect_uri}" \
+  # Read loops instead of mapfile, which macOS's bundled Bash 3.2 lacks
+  local -a redirect_uris=() identifier_uris=()
+  local uri
+  while IFS= read -r uri; do
+    redirect_uris+=("${uri}")
+  done < <(jq -r --arg u "${redirect_uri}" \
     '[(.web.redirectUris // [])[], $u] | unique[]' <<<"${app_json}")
   az ad app update --id "${CLIENT_ID}" \
     --enable-id-token-issuance true \
     --web-redirect-uris "${redirect_uris[@]}" \
     --output none
 
-  mapfile -t identifier_uris < <(jq -r --arg u "api://${CLIENT_ID}" \
+  while IFS= read -r uri; do
+    identifier_uris+=("${uri}")
+  done < <(jq -r --arg u "api://${CLIENT_ID}" \
     '[(.identifierUris // [])[], $u] | unique[]' <<<"${app_json}")
   az ad app update --id "${CLIENT_ID}" \
     --identifier-uris "${identifier_uris[@]}" \
@@ -256,15 +262,19 @@ main() {
     --body "${scopes_body}" --output none
 
   # A pre-authorization can only reference a scope that already exists, so it is a separate update.
+  # Keep any permissions Azure CLI is already pre-authorized for and add the MACAE scope.
   local preauth_body
-  preauth_body="$(jq -c --arg cli "${AZURE_CLI_APP_ID}" --arg id "${scope_id}" '{
-    api: {
-      preAuthorizedApplications: (
-        [(.api.preAuthorizedApplications // [])[] | select(.appId != $cli)]
-        + [{ appId: $cli, delegatedPermissionIds: [$id] }]
-      )
-    }
-  }' <<<"${app_json}")"
+  preauth_body="$(jq -c --arg cli "${AZURE_CLI_APP_ID}" --arg id "${scope_id}" '
+    (.api.preAuthorizedApplications // []) as $apps
+    | (first($apps[] | select(.appId == $cli) | .delegatedPermissionIds) // []) as $cli_ids
+    | {
+        api: {
+          preAuthorizedApplications: (
+            [$apps[] | select(.appId != $cli)]
+            + [{ appId: $cli, delegatedPermissionIds: (($cli_ids + [$id]) | unique) }]
+          )
+        }
+      }' <<<"${app_json}")"
   az rest --method patch --uri "${graph_uri}" \
     --headers "Content-Type=application/json" \
     --body "${preauth_body}" --output none

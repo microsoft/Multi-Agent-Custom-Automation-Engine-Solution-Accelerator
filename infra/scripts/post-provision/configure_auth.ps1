@@ -277,8 +277,11 @@ function Invoke-Main {
     }
 
     # A pre-authorization can only reference a scope that already exists, so it is a separate update.
+    # Keep any permissions Azure CLI is already pre-authorized for and add the MACAE scope.
+    $existingCli = $application.api.preAuthorizedApplications | Where-Object { $_ -and $_.appId -eq $AzureCliAppId } | Select-Object -First 1
+    $cliPermissionIds = @(@($existingCli.delegatedPermissionIds) + $scope.id | Where-Object { $_ } | Sort-Object -Unique)
     $preAuthorized = @($application.api.preAuthorizedApplications | Where-Object { $_ -and $_.appId -ne $AzureCliAppId })
-    $preAuthorized += [pscustomobject]@{ appId = $AzureCliAppId; delegatedPermissionIds = @($scope.id) }
+    $preAuthorized += [pscustomobject]@{ appId = $AzureCliAppId; delegatedPermissionIds = $cliPermissionIds }
     Invoke-AzRestWithBody -Method 'patch' -Uri $graphUri -Body @{
         api = @{ preAuthorizedApplications = $preAuthorized }
     }
