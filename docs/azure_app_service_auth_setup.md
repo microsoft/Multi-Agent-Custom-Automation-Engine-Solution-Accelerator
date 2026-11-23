@@ -6,7 +6,25 @@ This document provides step-by-step instructions to configure Azure App Registra
 
 - Access to **Microsoft Entra ID**
 - Necessary permissions to create and manage **App Registrations**
-  
+
+## Automated setup
+
+Instead of Steps 1 and 2 below, you can run the following script from the project root, after the post-deployment script has finished. It creates (or reuses) the app registration, configures App Service authentication on the frontend, and sets `AUTH_CLIENT_ID` on the backend Container App.
+
+- **For Bash (Linux/macOS/WSL):**
+
+    ```bash
+    bash infra/scripts/post-provision/configure_auth.sh
+    ```
+
+- **For PowerShell (Windows):**
+
+    ```powershell
+    .\infra\scripts\post-provision\configure_auth.ps1
+    ```
+
+The script reads the resource names from the current `azd` environment. If you deployed without `azd`, pass the resource group, frontend App Service name, and backend Container App name (`--resource-group`, `--frontend-app-name`, `--backend-container-app` in Bash; `-ResourceGroup`, `-FrontendAppName`, `-BackendContainerAppName` in PowerShell). To reuse an existing app registration, pass `--client-id` or `-ClientId`. The Bash script requires `jq`. Re-run the script after re-provisioning (for example `azd up` or `azd provision`).
+
 ## Step 1: Add Authentication in Azure App Service configuration
 
 1. Click on `Authentication` from left menu.
