@@ -148,6 +148,7 @@ def rt(monkeypatch):
     get_user = MagicMock(return_value={"user_principal_id": "user-1"})
 
     monkeypatch.setattr(router_mod, "get_authenticated_user_details", get_user)
+    monkeypatch.setattr(router_mod, "is_auth_enabled", MagicMock(return_value=False))
     monkeypatch.setattr(router_mod, "DatabaseFactory", database_factory)
     monkeypatch.setattr(router_mod, "TeamService", team_service_cls)
     monkeypatch.setattr(router_mod, "PlanService", plan_service)
@@ -780,3 +781,54 @@ class TestWebSocket:
         with contextlib.suppress(Exception):
             with rt.client.websocket_connect("/api/v4/socket/proc-2") as ws:
                 ws.close()
+
+    def test_auth_enabled_rejects_connection_without_valid_token(self, rt, monkeypatch):
+        from starlette.websockets import WebSocketDisconnect
+
+        monkeypatch.setattr(router_mod, "is_auth_enabled", MagicMock(return_value=True))
+        _no_user(rt)
+        with pytest.raises(WebSocketDisconnect):
+            with rt.client.websocket_connect("/api/v4/socket/proc-1?user_id=victim"):
+                pass
+        rt.connection_config.add_connection.assert_not_called()
+
+    def test_auth_enabled_uses_token_identity_not_query_user_id(self, rt, monkeypatch):
+        monkeypatch.setattr(router_mod, "is_auth_enabled", MagicMock(return_value=True))
+        rt.get_user.return_value = {"user_principal_id": "token-user"}
+        with rt.client.websocket_connect(
+            "/api/v4/socket/proc-1?user_id=victim", subprotocols=["access_token", "tok"]
+        ) as ws:
+            assert ws.accepted_subprotocol == "access_token"
+            ws.send_text("hello")
+        rt.get_user.assert_called_with(request_headers={"authorization": "Bearer tok"})
+        assert rt.connection_config.add_connection.call_args.kwargs["user_id"] == "token-user"
+
+
+class TestClarificationAskAuth:
+    def test_auth_enabled_requires_token(self, rt, monkeypatch):
+        monkeypatch.setattr(router_mod, "is_auth_enabled", MagicMock(return_value=True))
+        _no_user(rt)
+        resp = rt.client.post(
+            "/api/v4/clarification/ask", json={"question": "why?", "user_id": "victim"}
+        )
+        assert resp.status_code == 401
+
+
+class TestAuthOffEventLoop:
+    def test_user_resolution_runs_in_worker_thread(self, rt):
+        """Token validation may block on a signing-key download; it must not run on the event loop."""
+        import asyncio
+
+        def resolve_user(**_kwargs):
+            try:
+                asyncio.get_running_loop()
+                on_event_loop = True
+            except RuntimeError:
+                on_event_loop = False
+            assert not on_event_loop, "authentication ran on the event loop"
+            return {"user_principal_id": "user-1"}
+
+        rt.get_user.side_effect = resolve_user
+        resp = rt.client.get("/api/v4/plans")
+        assert resp.status_code == 200
+        rt.get_user.assert_called_once()

@@ -1,4 +1,4 @@
-import { getApiUrl, getUserId } from '../api/config';
+import { getApiUrl, getIdToken, getUserId } from '../api/config';
 import { PlanDataService } from './PlanDataService';
 import { ParsedPlanApprovalRequest, StreamingPlanUpdate, StreamMessage, WebsocketMessageType } from '../models';
 
@@ -17,6 +17,7 @@ class WebSocketService {
     private lastProcessId: string | undefined;
     private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
     private heartbeatIntervalMs = 20000; // 20s client keepalive ping
+    private connectAttempt = 0;
 
 
     private buildSocketUrl(processId?: string, planId?: string): string {
@@ -36,23 +37,34 @@ class WebSocketService {
         const url = `${base}${socketPath}${processId ? `/${processId}` : `/${planId}`}?user_id=${userId || ''}`;
         return url;
     }
-    connect(planId: string, processId?: string): Promise<void> {
+    async connect(planId: string, processId?: string): Promise<void> {
+        if (this.isConnecting) {
+            throw new Error('Connection already in progress');
+        }
+        if (this.ws?.readyState === WebSocket.OPEN) {
+            return;
+        }
+        this.isConnecting = true;
+        this.intentionalDisconnect = false;
+        const attempt = ++this.connectAttempt;
+        const token = await getIdToken();
+        // Skip if disconnect() or a newer connect() happened while fetching the token
+        if (attempt !== this.connectAttempt || this.intentionalDisconnect) {
+            return;
+        }
+        return this.openSocket(planId, processId, token);
+    }
+
+    private openSocket(planId: string, processId: string | undefined, token: string): Promise<void> {
         return new Promise((resolve, reject) => {
-            if (this.isConnecting) {
-                reject(new Error('Connection already in progress'));
-                return;
-            }
-            if (this.ws?.readyState === WebSocket.OPEN) {
-                resolve();
-                return;
-            }
             try {
                 this.isConnecting = true;
                 this.intentionalDisconnect = false;
                 this.lastPlanId = planId;
                 this.lastProcessId = processId;
                 const wsUrl = this.buildSocketUrl(processId, planId);
-                this.ws = new WebSocket(wsUrl);
+                // Browsers cannot set headers on a WebSocket; the token travels as a subprotocol
+                this.ws = token ? new WebSocket(wsUrl, ['access_token', token]) : new WebSocket(wsUrl);
 
                 this.ws.onopen = () => {
                     this.isConnecting = false;

@@ -130,6 +130,60 @@ export function getUserId(): string {
     return userId;
 }
 
+const TOKEN_REFRESH_MARGIN_SECONDS = 300;
+let tokenRefreshPromise: Promise<string> | null = null;
+
+function getTokenExpiry(token: string): number {
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+        return typeof payload.exp === 'number' ? payload.exp : 0;
+    } catch {
+        return 0;
+    }
+}
+
+function isTokenValid(token: string, marginSeconds = 0): boolean {
+    return !!token && getTokenExpiry(token) - marginSeconds > Date.now() / 1000;
+}
+
+async function refreshIdToken(currentToken: string): Promise<string> {
+    try {
+        await fetch('/.auth/refresh');
+    } catch {
+        // Ignore: fall back to the token currently held by App Service Authentication
+    }
+    const refreshed = await getUserInfo();
+    if (isTokenValid(refreshed.id_token)) {
+        window.userInfo = refreshed;
+        setUserInfoGlobal(refreshed);
+        return refreshed.id_token;
+    }
+    if (isTokenValid(currentToken)) {
+        return currentToken;
+    }
+    // The sign-in session can no longer be refreshed silently; sign in again.
+    window.location.href = `/.auth/login/aad?post_login_redirect_uri=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+    return '';
+}
+
+/**
+ * Returns the Entra ID token from App Service Authentication (/.auth/me) for
+ * calling the backend API, refreshing it shortly before it expires.
+ * Returns an empty string when App Service Authentication is not configured.
+ */
+export async function getIdToken(): Promise<string> {
+    const token = getUserInfoGlobal()?.id_token || '';
+    if (!token || isTokenValid(token, TOKEN_REFRESH_MARGIN_SECONDS)) {
+        return token;
+    }
+    if (!tokenRefreshPromise) {
+        tokenRefreshPromise = refreshIdToken(token).finally(() => {
+            tokenRefreshPromise = null;
+        });
+    }
+    return tokenRefreshPromise;
+}
+
 export const toBoolean = (value: any): boolean => {
     if (typeof value !== 'string') {
         return false;

@@ -98,7 +98,8 @@ if PROXY_API_REQUESTS:
     @app.websocket("/api/{path:path}")
     async def proxy_websocket(websocket: WebSocket, path: str):
         """Proxy WebSocket connections to the private backend over VNet."""
-        await websocket.accept()
+        # Forward the subprotocols (they carry the API auth token) to the backend
+        subprotocols = websocket.scope.get("subprotocols") or []
 
         # Build the backend WebSocket URL
         backend_ws_url = BACKEND_API_URL.replace("https://", "wss://").replace("http://", "ws://")
@@ -108,7 +109,11 @@ if PROXY_API_REQUESTS:
             target_url = f"{target_url}?{query_string}"
 
         try:
-            async with websockets.connect(target_url) as backend_ws:
+            async with websockets.connect(target_url, subprotocols=subprotocols or None) as backend_ws:
+                # Accept only after the backend accepted, so a rejected backend handshake
+                # (e.g. invalid token) reaches the browser as a failed connection that it
+                # retries, not as a normal close (1000) that it treats as final.
+                await websocket.accept(subprotocol=backend_ws.subprotocol)
 
                 async def forward_to_backend():
                     try:
