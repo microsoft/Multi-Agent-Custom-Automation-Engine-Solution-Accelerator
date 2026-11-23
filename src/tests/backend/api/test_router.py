@@ -812,3 +812,23 @@ class TestClarificationAskAuth:
             "/api/v4/clarification/ask", json={"question": "why?", "user_id": "victim"}
         )
         assert resp.status_code == 401
+
+
+class TestAuthOffEventLoop:
+    def test_user_resolution_runs_in_worker_thread(self, rt):
+        """Token validation may block on a signing-key download; it must not run on the event loop."""
+        import asyncio
+
+        def resolve_user(**_kwargs):
+            try:
+                asyncio.get_running_loop()
+                on_event_loop = True
+            except RuntimeError:
+                on_event_loop = False
+            assert not on_event_loop, "authentication ran on the event loop"
+            return {"user_principal_id": "user-1"}
+
+        rt.get_user.side_effect = resolve_user
+        resp = rt.client.get("/api/v4/plans")
+        assert resp.status_code == 200
+        rt.get_user.assert_called_once()

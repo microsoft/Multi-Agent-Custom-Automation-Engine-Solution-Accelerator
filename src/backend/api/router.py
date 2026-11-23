@@ -37,6 +37,17 @@ app_router = APIRouter(
 WS_AUTH_SUBPROTOCOL = "access_token"
 
 
+async def _get_authenticated_user(request_headers) -> dict:
+    """Resolve the caller in a worker thread.
+
+    Token validation may download Entra ID signing keys (blocking network I/O),
+    which must not stall the event loop shared by all HTTP and WebSocket clients.
+    """
+    return await asyncio.to_thread(
+        get_authenticated_user_details, request_headers=request_headers
+    )
+
+
 @app_router.websocket("/socket/{process_id}")
 async def start_comms(
     websocket: WebSocket, process_id: str, user_id: str = Query(None)
@@ -49,8 +60,8 @@ async def start_comms(
     if is_auth_enabled():
         token_index = protocols.index(WS_AUTH_SUBPROTOCOL) + 1 if subprotocol else len(protocols)
         token = protocols[token_index] if token_index < len(protocols) else ""
-        user_id = get_authenticated_user_details(
-            request_headers={"authorization": f"Bearer {token}"}
+        user_id = (
+            await _get_authenticated_user({"authorization": f"Bearer {token}"})
         )["user_principal_id"]
         if not user_id:
             await websocket.close(code=1008)
@@ -164,9 +175,7 @@ async def init_team(
     # Falls back to HR if no teams are available.
     logger.debug("Init team called, team_switched=%s", team_switched)
     try:
-        authenticated_user = get_authenticated_user_details(
-            request_headers=request.headers
-        )
+        authenticated_user = await _get_authenticated_user(request.headers)
         user_id = authenticated_user["user_principal_id"]
         if not user_id:
             track_event_if_configured(
@@ -303,7 +312,7 @@ async def process_request(
               type: string
               description: Error message
     """
-    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    authenticated_user = await _get_authenticated_user(request.headers)
     user_id = authenticated_user["user_principal_id"]
     if not user_id:
         event_props = {"status_code": 400, "detail": "no user"}
@@ -530,7 +539,7 @@ async def plan_approval(
       500:
         description: Internal server error
     """
-    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    authenticated_user = await _get_authenticated_user(request.headers)
     user_id = authenticated_user["user_principal_id"]
     if not user_id:
         raise HTTPException(
@@ -663,7 +672,7 @@ async def clarification_ask(request: Request):
     user_id = body.get("user_id", "")
 
     if is_auth_enabled():
-        user_id = get_authenticated_user_details(request_headers=request.headers)[
+        user_id = (await _get_authenticated_user(request.headers))[
             "user_principal_id"
         ]
         if not user_id:
@@ -755,7 +764,7 @@ async def user_clarification(
         description: Internal server error
     """
 
-    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    authenticated_user = await _get_authenticated_user(request.headers)
     user_id = authenticated_user["user_principal_id"]
     if not user_id:
         raise HTTPException(
@@ -911,7 +920,7 @@ async def agent_message_user(
         description: Missing or invalid user information
     """
 
-    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    authenticated_user = await _get_authenticated_user(request.headers)
     user_id = authenticated_user["user_principal_id"]
     if not user_id:
         raise HTTPException(
@@ -999,7 +1008,7 @@ async def upload_team_config(
         description: Internal server error
     """
     # Validate user authentication
-    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    authenticated_user = await _get_authenticated_user(request.headers)
     user_id = authenticated_user["user_principal_id"]
     if not user_id:
         track_event_if_configured(
@@ -1172,7 +1181,7 @@ async def get_team_configs(request: Request):
         description: Missing or invalid user information
     """
     # Validate user authentication
-    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    authenticated_user = await _get_authenticated_user(request.headers)
     user_id = authenticated_user["user_principal_id"]
     if not user_id:
         raise HTTPException(
@@ -1225,7 +1234,7 @@ async def get_team_config_by_id(team_id: str, request: Request):
         description: Team configuration not found
     """
     # Validate user authentication
-    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    authenticated_user = await _get_authenticated_user(request.headers)
     user_id = authenticated_user["user_principal_id"]
     if not user_id:
         raise HTTPException(
@@ -1282,7 +1291,7 @@ async def delete_team_config(team_id: str, request: Request):
         description: Team configuration not found
     """
     # Validate user authentication
-    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    authenticated_user = await _get_authenticated_user(request.headers)
     user_id = authenticated_user["user_principal_id"]
     if not user_id:
         raise HTTPException(
@@ -1329,7 +1338,7 @@ async def select_team(selection: TeamSelectionRequest, request: Request):
     Select the current team for the user session.
     """
     # Validate user authentication
-    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    authenticated_user = await _get_authenticated_user(request.headers)
     user_id = authenticated_user["user_principal_id"]
     if not user_id:
         raise HTTPException(
@@ -1424,7 +1433,7 @@ async def get_plans(request: Request):
       - Plans
     """
 
-    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    authenticated_user = await _get_authenticated_user(request.headers)
     user_id = authenticated_user["user_principal_id"]
     if not user_id:
         track_event_if_configured(
@@ -1460,7 +1469,7 @@ async def get_plan_by_id(
       - Plans
     """
 
-    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    authenticated_user = await _get_authenticated_user(request.headers)
     user_id = authenticated_user["user_principal_id"]
     if not user_id:
         track_event_if_configured(
