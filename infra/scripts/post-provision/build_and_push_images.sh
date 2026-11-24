@@ -7,6 +7,13 @@
 # Intended to run as an `azd` postprovision hook. Reads provisioning outputs
 # via `azd env get-values`.
 #
+# Usage:
+#   bash build_and_push_images.sh [RESOURCE_GROUP_NAME]
+#
+#   If RESOURCE_GROUP_NAME is provided, the script queries Azure directly to
+#   discover resources (ACR, Container Apps, Web App) in that RG.
+#   If omitted, it reads values from `azd env get-values` / environment vars.
+#
 # Environment variables (all optional):
 #   AZURE_ENV_BUILD_MODE        remote | local          (default: remote)
 #   AZURE_ENV_IMAGE_TAG         tag applied to images   (default: latest)
@@ -87,40 +94,84 @@ if [ "${AZURE_ENV_SKIP_IMAGE_BUILD:-}" = "true" ]; then
     exit 0
 fi
 
-if ! command -v jq >/dev/null 2>&1; then
-    echo "ERROR: 'jq' is required to update Container App images and ingress ports." >&2
-    exit 1
-fi
+# --- Determine configuration source -----------------------------------------
+ARG_RESOURCE_GROUP="${1:-}"
 
-section "Reading azd environment values"
+if [ -n "${ARG_RESOURCE_GROUP}" ]; then
+    section "Discovering resources from resource group: ${ARG_RESOURCE_GROUP}"
 
-# Load azd outputs into the current shell without overriding vars already set.
-if command -v azd >/dev/null 2>&1; then
-    while IFS='=' read -r key value; do
-        [ -z "${key}" ] && continue
-        # Strip surrounding quotes
-        value="${value%\"}"
-        value="${value#\"}"
-        if [ -z "${!key:-}" ]; then
-            export "${key}=${value}"
+    if ! command -v az >/dev/null 2>&1; then
+        echo "ERROR: 'az' CLI is required when specifying a resource group argument." >&2
+        exit 1
+    fi
+
+    RESOURCE_GROUP="${ARG_RESOURCE_GROUP}"
+
+    # Discover ACR (tr -d '\r' strips Windows carriage returns in Git Bash)
+    ACR_NAME="$(az acr list --resource-group "${RESOURCE_GROUP}" --query "[0].name" -o tsv 2>/dev/null | tr -d '\r' || true)"
+    ACR_ENDPOINT="$(az acr list --resource-group "${RESOURCE_GROUP}" --query "[0].loginServer" -o tsv 2>/dev/null | tr -d '\r' || true)"
+
+    # Discover Container Apps
+    CA_LIST="$(az containerapp list --resource-group "${RESOURCE_GROUP}" --query "[].name" -o tsv 2>/dev/null | tr -d '\r' || true)"
+    BACKEND_CA=""
+    MCP_CA=""
+    while IFS= read -r ca_name; do
+        [ -z "${ca_name}" ] && continue
+        ca_lower="$(echo "${ca_name}" | tr '[:upper:]' '[:lower:]')"
+        if [[ "${ca_lower}" == *"mcp"* ]]; then
+            MCP_CA="${ca_name}"
+        else
+            BACKEND_CA="${ca_name}"
         fi
-    done < <(azd env get-values 2>/dev/null || true)
-else
-    echo "WARN: 'azd' not found on PATH; relying on environment variables only." >&2
-fi
+    done <<< "${CA_LIST}"
 
-ACR_NAME="${AZURE_CONTAINER_REGISTRY_NAME:-}"
-ACR_ENDPOINT="${AZURE_CONTAINER_REGISTRY_ENDPOINT:-}"
-RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-}"
-BACKEND_CA="${BACKEND_CONTAINER_APP_NAME:-}"
-MCP_CA="${MCP_CONTAINER_APP_NAME:-}"
-FRONTEND_APP="${FRONTEND_WEB_APP_NAME:-}"
-BACKEND_IMAGE="${BACKEND_IMAGE_NAME:-macaebackend}"
-FRONTEND_IMAGE="${FRONTEND_IMAGE_NAME:-macaefrontend}"
-MCP_IMAGE="${MCP_IMAGE_NAME:-macaemcp}"
-FRONTEND_PORT="${FRONTEND_WEBSITES_PORT:-3000}"
-BUILD_MODE="${AZURE_ENV_BUILD_MODE:-remote}"
-IMAGE_TAG="${AZURE_ENV_IMAGE_TAG:-latest}"
+    # Discover Frontend Web App
+    FRONTEND_APP="$(az webapp list --resource-group "${RESOURCE_GROUP}" --query "[0].name" -o tsv 2>/dev/null | tr -d '\r' || true)"
+
+    # Use defaults or env overrides for image names
+    BACKEND_IMAGE="${BACKEND_IMAGE_NAME:-macaebackend}"
+    FRONTEND_IMAGE="${FRONTEND_IMAGE_NAME:-macaefrontend}"
+    MCP_IMAGE="${MCP_IMAGE_NAME:-macaemcp}"
+    FRONTEND_PORT="${FRONTEND_WEBSITES_PORT:-3000}"
+    BUILD_MODE="${AZURE_ENV_BUILD_MODE:-remote}"
+    IMAGE_TAG="${AZURE_ENV_IMAGE_TAG:-latest}"
+
+    echo "Discovered resources:"
+    echo "  ACR:            ${ACR_NAME:-<not found>} (${ACR_ENDPOINT:-<not found>})"
+    echo "  Backend CA:     ${BACKEND_CA:-<not found>}"
+    echo "  MCP CA:         ${MCP_CA:-<not found>}"
+    echo "  Frontend App:   ${FRONTEND_APP:-<not found>}"
+else
+    section "Reading azd environment values"
+
+    # Load azd outputs into the current shell without overriding vars already set.
+    if command -v azd >/dev/null 2>&1; then
+        while IFS='=' read -r key value; do
+            [ -z "${key}" ] && continue
+            # Strip surrounding quotes
+            value="${value%\"}"
+            value="${value#\"}"
+            if [ -z "${!key:-}" ]; then
+                export "${key}=${value}"
+            fi
+        done < <(azd env get-values 2>/dev/null | tr -d '\r' || true)
+    else
+        echo "WARN: 'azd' not found on PATH; relying on environment variables only." >&2
+    fi
+
+    ACR_NAME="${AZURE_CONTAINER_REGISTRY_NAME:-}"
+    ACR_ENDPOINT="${AZURE_CONTAINER_REGISTRY_ENDPOINT:-}"
+    RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-}"
+    BACKEND_CA="${BACKEND_CONTAINER_APP_NAME:-}"
+    MCP_CA="${MCP_CONTAINER_APP_NAME:-}"
+    FRONTEND_APP="${FRONTEND_WEB_APP_NAME:-}"
+    BACKEND_IMAGE="${BACKEND_IMAGE_NAME:-macaebackend}"
+    FRONTEND_IMAGE="${FRONTEND_IMAGE_NAME:-macaefrontend}"
+    MCP_IMAGE="${MCP_IMAGE_NAME:-macaemcp}"
+    FRONTEND_PORT="${FRONTEND_WEBSITES_PORT:-3000}"
+    BUILD_MODE="${AZURE_ENV_BUILD_MODE:-remote}"
+    IMAGE_TAG="${AZURE_ENV_IMAGE_TAG:-latest}"
+fi
 
 require AZURE_CONTAINER_REGISTRY_NAME     "${ACR_NAME}"
 require AZURE_CONTAINER_REGISTRY_ENDPOINT "${ACR_ENDPOINT}"
@@ -155,7 +206,7 @@ for ctx in "${IMAGE_CTXS[@]}"; do
 done
 
 # --- WAF: temporarily relax ACR restrictions for build/push, restored on exit ---
-DEPLOYMENT_TYPE="$(az group show --name "${RESOURCE_GROUP}" --query "tags.Type" -o tsv 2>/dev/null || true)"
+DEPLOYMENT_TYPE="$(az group show --name "${RESOURCE_GROUP}" --query "tags.Type" -o tsv 2>/dev/null | tr -d '\r' || true)"
 
 restore_acr_waf() {
     if [ "${DEPLOYMENT_TYPE}" = "WAF" ]; then
