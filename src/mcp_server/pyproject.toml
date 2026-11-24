@@ -30,7 +30,7 @@ dependencies = [
   "cryptography==50.0.0",
   "authlib==1.9.1",
   "certifi==2026.10.18",
-  "dnspython==2.9.0",
+  "dnspython==2.9.2",
   "azure-storage-blob==12.25.1",
 
 ]
