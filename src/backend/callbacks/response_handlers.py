@@ -17,6 +17,54 @@ from common.utils.markdown_utils import normalize_markdown_tables
 
 logger = logging.getLogger(__name__)
 
+# Per-(user_id, agent_id) buffer holding a trailing, not-yet-closed citation marker until its closing "】" streams in a later chunk.
+_stream_citation_buffers: dict[tuple[str, str], str] = {}
+
+# Per user_id grouped "AI thinking" snapshot: ordered {agent_display_name: latest-round text}, keeping first-appearance order.
+_thinking_sections: dict[str, dict[str, str]] = {}
+# Per user_id currently-streaming agent display name (None = turn boundary; next delta starts fresh).
+_thinking_current: dict[str, str | None] = {}
+
+
+def reset_thinking_state(user_id: str) -> None:
+    """Clear grouped thinking-process snapshot + citation state for a user at the start of a new run."""
+    _thinking_sections.pop(user_id, None)
+    _thinking_current.pop(user_id, None)
+    for key in [k for k in _stream_citation_buffers if k[0] == user_id]:
+        _stream_citation_buffers.pop(key, None)
+
+
+def mark_streaming_turn_complete(user_id: str) -> None:
+    """Mark an agent turn boundary so the next streamed delta starts a fresh section (keeps only the latest turn, even for consecutive same-agent rounds)."""
+    _thinking_current[user_id] = None
+    # Drop any trailing partial-citation buffer so an unclosed "【" can't leak
+    # into the next turn (the callback is always called with is_final=False, so
+    # the final-chunk flush path never runs at a turn boundary).
+    for key in [k for k in _stream_citation_buffers if k[0] == user_id]:
+        _stream_citation_buffers.pop(key, None)
+
+
+def _build_thinking_snapshot(user_id: str) -> str:
+    """Render the grouped snapshot: each agent once (first-appearance order) with its latest-round text."""
+    sections = _thinking_sections.get(user_id)
+    if not sections:
+        return ""
+    parts = []
+    for name, text in sections.items():
+        body = (text or "").strip()
+        parts.append(f"---\n### {name}\n\n{body}" if body else f"---\n### {name}")
+    return "\n\n".join(parts)
+
+
+def _split_trailing_partial_citation(text: str) -> tuple[str, str]:
+    """Split off a trailing, not-yet-closed full-width citation marker (【...); returns (emittable, held_back)."""
+    if not text:
+        return text, ""
+    open_idx = text.rfind('【')
+    if open_idx != -1 and text.find('】', open_idx) == -1:
+        return text[:open_idx], text[open_idx:]
+    return text, ""
+
 
 def format_agent_display_name(raw_name: str) -> str:
     """Convert raw agent IDs (e.g. 'HRHelperAgent', 'hr_helper_agent') to
@@ -164,7 +212,19 @@ async def streaming_agent_response_callback(
                     collected.append(str(txt))
             chunk_text = "".join(collected) if collected else ""
 
-        cleaned = clean_citations(chunk_text or "")
+        # Prepend any buffered partial marker so markers split across chunks are reassembled before stripping.
+        buffer_key = (user_id, agent_id)
+        combined = _stream_citation_buffers.pop(buffer_key, "") + (chunk_text or "")
+
+        if is_final:
+            # Final chunk: strip complete markers, then drop any trailing unclosed "【..." tail.
+            cleaned = clean_citations(combined)
+            cleaned = re.sub(r'【[^】]*$', '', cleaned)
+        else:
+            emittable, held_back = _split_trailing_partial_citation(combined)
+            if held_back:
+                _stream_citation_buffers[buffer_key] = held_back
+            cleaned = clean_citations(emittable)
 
         contents = getattr(update, "contents", []) or []
         tool_calls = _extract_tool_calls_from_contents(contents)
@@ -178,10 +238,21 @@ async def streaming_agent_response_callback(
             )
             logger.info("Tool calls streamed from %s: %d", agent_id, len(tool_calls))
 
+        # Group by agent, keeping only each agent's latest round: on a switch to this agent
+        # (a re-invocation across Magentic rounds), reset its text but preserve first-appearance order.
+        sections = _thinking_sections.setdefault(user_id, {})
+        if _thinking_current.get(user_id) != display_name:
+            sections[display_name] = ""
+            _thinking_current[user_id] = display_name
         if cleaned:
+            sections[display_name] = sections.get(display_name, "") + cleaned
+
+        snapshot = _build_thinking_snapshot(user_id)
+        if snapshot:
+            # Backend emits the full grouped snapshot; the frontend replaces (not appends) its buffer.
             streaming_payload = AgentMessageStreaming(
                 agent_name=display_name,
-                content=cleaned,
+                content=snapshot,
                 is_final=is_final,
             )
             await connection_config.send_status_update_async(
@@ -189,6 +260,6 @@ async def streaming_agent_response_callback(
                 user_id,
                 message_type=WebsocketMessageType.AGENT_MESSAGE_STREAMING,
             )
-            logger.debug("Streaming chunk (agent=%s final=%s len=%d)", agent_id, is_final, len(cleaned))
+            logger.debug("Streaming snapshot (agent=%s final=%s len=%d)", agent_id, is_final, len(snapshot))
     except Exception as e:
         logger.error("streaming_agent_response_callback error: %s", e)
