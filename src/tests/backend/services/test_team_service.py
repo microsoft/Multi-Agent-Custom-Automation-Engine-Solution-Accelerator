@@ -83,6 +83,8 @@ class MockTeamAgent:
     knowledge_base_name: str = None
     use_toolbox: bool = False
     toolbox_filter: str = None
+    web_search_provider: str = None
+    web_search_tools: List[str] = field(default_factory=lambda: ["web_search", "web_fetch"])
     user_responses: bool = False
     coding_tools: bool = False
     temperature: float = None
